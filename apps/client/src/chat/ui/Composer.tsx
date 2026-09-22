@@ -713,6 +713,9 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                         ? 'border-accent bg-[color-mix(in_srgb,var(--accent-soft)_60%,var(--surface-raised))]'
                         : 'border-border bg-[color-mix(in_srgb,var(--surface-raised)_92%,transparent)]'
                 )}
+                /* The whole card takes a dropped file as a mention, so the grid leaves it alone
+                   instead of offering a split over it (`shell/SplitGrid.tsx`). */
+                data-takes-drop="all"
                 onDragOver={(e) => {
                     if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes(MENTION_DRAG_TYPE)) {
                         e.preventDefault();

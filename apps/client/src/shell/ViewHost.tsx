@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isCanvasView, isFileView, isOpenableView, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
+import { isFilesView, type CellView } from '@/shell/files-view';
+import { FileViewer } from '@/shell/panels/FileViewer';
 import { Canvas } from '@/canvas/Canvas';
 import { ProjectStartScreen } from '@/shell/ProjectStartScreen';
 import { SplitGrid } from '@/shell/SplitGrid';
@@ -16,6 +18,7 @@ import { FileSurface } from '@/shell/panels/FileSurface';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { isApplePlatform } from '@/desktop/bridge';
+import { useFiles } from '@/state/files';
 import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { focusViewRow } from '@/shell/sidebar-focus';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
@@ -81,6 +84,43 @@ function StandaloneView({ view }: { view: ProjectView }) {
     );
 }
 
+/*
+ * The files of this client in their cell: the body under the tabs, which stand in the bar above.
+ * It takes the keyboard the way a standalone view does, so the file that just opened answers to the
+ * shortcuts the workspace binds for a files cell (`canvas/canvas-shortcuts.ts`).
+ */
+function FilesSurface() {
+    const { t } = useTranslation('shell');
+    const active = useFiles((s) => s.active);
+    /* Counts what was opened by hand, in the files panel, the git panel or the palette. */
+    const focusRequest = useFiles((s) => s.focusRequest);
+    const bodyRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (focusRequest === 0) {
+            return;
+        }
+        /* A frame later, not now: the palette that opened this file is still closing, and a dialog
+           puts focus back where it found it on its way out. */
+        const frame = requestAnimationFrame(() => bodyRef.current?.focus());
+        return () => window.cancelAnimationFrame(frame);
+    }, [focusRequest]);
+
+    return (
+        <div
+            ref={bodyRef}
+            tabIndex={-1}
+            className="absolute inset-0 flex flex-col bg-surface outline-none"
+            onPointerDownCapture={() => useDocument.getState().setBodyFocused(true)}
+        >
+            {/* The tabs stay in the bar above, so another file is one click away from a broken one. */}
+            <ErrorBoundary label={t('filesView.failed')} resetKeys={[active]} className="flex min-h-0 grow flex-col">
+                <FileViewer />
+            </ErrorBoundary>
+        </div>
+    );
+}
+
 /* The page of a browser view is the parked element, placed over this whole column by the layer. A
    view without an address has no page yet, so what is left under it is the splash. */
 function BrowserViewSurface({ id }: { id: string }) {
@@ -94,13 +134,16 @@ function BrowserViewSurface({ id }: { id: string }) {
  * mounted under every other kind because it carried the app's shortcuts, and with up to nine cells that
  * would mean nine hidden canvases. The shortcuts moved to the workspace (`canvas/canvas-shortcuts.ts`).
  */
-export function ViewSurface({ view }: { view: ProjectView }) {
+export function ViewSurface({ view }: { view: CellView }) {
     const { t } = useTranslation('shell');
     /* A view draws from the project document, and a drawing or a diagram from a file of its own as
        well. Reading an editor this cell has none of is the blank one, which never changes. */
     const rev = useProject((s) => s.rev);
     const drawing = useDrawing((s) => s.elements);
     const diagram = useDiagram((s) => s.content);
+    if (isFilesView(view)) {
+        return <FilesSurface />;
+    }
     return (
         /* Inside the cell and around the view alone: the cell's toolbar and the dock stay usable,
            and the cells beside it never notice. */
@@ -113,7 +156,9 @@ export function ViewSurface({ view }: { view: ProjectView }) {
 /* The main column: the grid of cells of the open project. */
 export function ViewHost() {
     const { t } = useTranslation('shell');
-    const empty = useDocument((s) => !s.views.some(isOpenableView));
+    /* The layout answers this, not the list of views: a project whose only cell holds the files has
+       no view of its own and still has something on screen. */
+    const empty = useDocument((s) => s.layout === null);
     const projectId = useProject((s) => s.current?.projectId);
     return empty ? (
         <ErrorBoundary label={t('projectStart.failed')} resetKeys={[projectId]}>

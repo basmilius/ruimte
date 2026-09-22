@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { closeTab, openTab, pinTab, RECENT_FILES_LIMIT, rememberClosed, useFiles, type FileTab, type TabState } from './files.ts';
-import { useUi } from './ui.ts';
+import { FILES_VIEW_ID } from '@/shell/files-view';
+import { viewIdsIn } from '@/shell/split';
+import { useDocument } from './document.ts';
 
 const tab = (path: string, pinned = false): FileTab => ({ key: path, path, pinned, dirty: false });
 
@@ -84,19 +86,28 @@ describe('closeTab', () => {
     });
 });
 
-describe('the store and the preview panel', () => {
+describe('the store and the files cell', () => {
     beforeEach(() => {
         // Without a project id, the tabs stay out of storage the test environment does not have.
         useFiles.setState({ projectId: null, tabs: [], active: null, focusRequest: 0 });
-        useUi.setState({ preview: { open: false } });
+        useDocument.getState().load(
+            {
+                version: 3,
+                rev: 1,
+                name: 'p',
+                color: '#000',
+                views: [{ kind: 'canvas', id: 'a', name: 'a', nodes: [], texts: [], edges: [], layouts: [] }]
+            },
+            { activeViewId: 'a', views: {} }
+        );
     });
 
-    test('opening a file brings the preview up', () => {
+    test('opening a file puts the files on the grid', () => {
         useFiles.getState().open('a', 5);
-        expect(useUi.getState().preview.open).toBe(true);
+        expect(useDocument.getState().activeViewId).toBe(FILES_VIEW_ID);
     });
 
-    test('a file opened by hand asks the preview for the keyboard, a restored project does not', () => {
+    test('a file opened by hand asks the cell for the keyboard, a restored project does not', () => {
         useFiles.getState().open('a', 5);
         useFiles.getState().open('b', 5);
         expect(useFiles.getState().focusRequest).toBe(2);
@@ -104,13 +115,16 @@ describe('the store and the preview panel', () => {
         expect(useFiles.getState().focusRequest).toBe(2);
     });
 
-    test('the last tab that closes takes the preview with it', () => {
+    /* The empty cell is a blank column, so it goes with the last tab and a file opened later brings
+       it back. Only where it stands alone on the grid does it stay, since a grid has to hold a cell. */
+    test('the last tab that closes takes the cell with it', () => {
         useFiles.getState().open('a', 5);
         useFiles.getState().open('b', 5);
         useFiles.getState().close('a');
-        expect(useUi.getState().preview.open).toBe(true);
+        expect(useDocument.getState().activeViewId).toBe(FILES_VIEW_ID);
         useFiles.getState().close('b');
-        expect(useUi.getState().preview.open).toBe(false);
+        expect(useFiles.getState().tabs).toEqual([]);
+        expect(viewIdsIn(useDocument.getState().layout!)).not.toContain(FILES_VIEW_ID);
     });
 });
 

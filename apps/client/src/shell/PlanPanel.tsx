@@ -24,7 +24,7 @@ import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { MenuPopup } from '@/ui/MenuPopup';
 
-// The grid beside the panel keeps at least this much, the same floor the preview keeps.
+// The grid beside the panel keeps at least this much, whatever the drag asks for.
 const MIN_GRID_WIDTH = 360;
 
 /* Only the ids; the words a person reads are `planPanel.filters.<id>`, read inside the menu. */
@@ -33,16 +33,15 @@ const FILTERS: readonly PlanFilter[] = ['all', 'open', 'issues'];
 const hasLockedStep = (plan: Plan): boolean => allSteps(plan.items).some((step) => effectiveChecks(plan, step) === 'agent');
 
 /*
- * The plan of one chat, between the grid and the file preview. Built like the preview: a column of
- * width 0 and inert while closed, its contents mounted until the slide ends, its width dragged from
- * the left edge. Whether it is open is not its own business: `plan/panel-rules.ts` decides that from
+ * The plan of one chat, between the grid and the panels. A column of width 0 and inert while
+ * closed, its contents mounted until the slide ends, its width dragged from the left edge. Whether it is open is not its own business: `plan/panel-rules.ts` decides that from
  * what is on screen.
  */
 export function PlanPanel() {
     const { t } = useTranslation('shell');
     const anchor = useUi((s) => s.planAnchor);
     const open = useUi((s) => s.planOpen);
-    const rightOfIt = useUi((s) => s.preview.open || s.panel.open);
+    const rightOfIt = useUi((s) => s.panel.open);
     const stored = useUi((s) => s.planWidth);
     const endpointId = useEndpointId();
     const plans = useChatPlans(anchor?.chatId ?? '');
@@ -55,7 +54,7 @@ export function PlanPanel() {
     const ref = useRef<HTMLElement>(null);
     const bounds = {
         min: PLAN_MIN_WIDTH,
-        // Measured at drag time: the preview and the files panel beside it take their share of the window too.
+        // Measured at drag time: the files panel beside it takes its share of the window too.
         max: (): number => {
             const column = ref.current;
             const grid = column?.previousElementSibling;

@@ -24,9 +24,7 @@ const read = (): PanelsState => {
     const files = useFiles.getState();
     return {
         panel: ui.panel,
-        preview: ui.preview,
         panelWidth: ui.panelWidth,
-        previewWidth: ui.previewWidth,
         planAnchor: ui.planAnchor,
         planWidth: ui.planWidth,
         tabs: files.tabs,

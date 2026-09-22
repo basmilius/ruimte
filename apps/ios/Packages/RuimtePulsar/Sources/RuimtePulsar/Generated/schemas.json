@@ -18565,23 +18565,7 @@
                   "kind"
                 ]
               },
-              "preview": {
-                "type": "object",
-                "properties": {
-                  "open": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "open"
-                ]
-              },
               "panelWidth": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
-              },
-              "previewWidth": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
                 "maximum": 9007199254740991
@@ -20596,23 +20580,7 @@
                   "kind"
                 ]
               },
-              "preview": {
-                "type": "object",
-                "properties": {
-                  "open": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "open"
-                ]
-              },
               "panelWidth": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
-              },
-              "previewWidth": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
                 "maximum": 9007199254740991

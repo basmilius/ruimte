@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { parsePanel, parsePreview, parseWidth, useUi } from './ui';
+import { parsePanel, parseWidth, useUi } from './ui';
 
 describe('ui', () => {
     beforeEach(() => {
         useUi.setState({
             sidebarOpen: true,
             panel: { open: false, kind: 'files' },
-            preview: { open: false },
             panelWidth: null,
-            previewWidth: null,
             panelsRestoring: true
         });
     });
@@ -46,21 +44,7 @@ describe('ui', () => {
         expect(parsePanel('files')).toEqual({ open: true, kind: 'files' });
     });
 
-    test('the preview opens and closes on its own, next to whichever panel is up', () => {
-        useUi.getState().togglePanel('files');
-        useUi.getState().setPreviewOpen(true);
-        expect(useUi.getState().preview).toEqual({ open: true });
-        expect(useUi.getState().panel).toEqual({ open: true, kind: 'files' });
-        useUi.getState().togglePanel('files');
-        expect(useUi.getState().preview).toEqual({ open: true });
-        useUi.getState().setPreviewOpen(false);
-        expect(useUi.getState().preview).toEqual({ open: false });
-    });
-
-    test('only an open preview is stored as open, and a width has to be a positive number', () => {
-        expect(parsePreview('open')).toEqual({ open: true });
-        expect(parsePreview(null)).toEqual({ open: false });
-        expect(parsePreview('yes')).toEqual({ open: false });
+    test('a width has to be a positive number', () => {
         expect(parseWidth('540')).toBe(540);
         expect(parseWidth(null)).toBeNull();
         expect(parseWidth('wide')).toBeNull();
@@ -84,9 +68,7 @@ describe('ui', () => {
 
         useUi.getState().setPanels({
             panel: { open: true, kind: 'files' },
-            preview: { open: false },
             panelWidth: 720,
-            previewWidth: null,
             planAnchor: null,
             planWidth: null
         });
@@ -100,9 +82,7 @@ describe('ui', () => {
         // A project that opens after that brings its own panels, which land without sliding again.
         useUi.getState().setPanels({
             panel: { open: false, kind: 'git' },
-            preview: { open: false },
             panelWidth: null,
-            previewWidth: null,
             planAnchor: null,
             planWidth: null
         });
@@ -113,9 +93,7 @@ describe('ui', () => {
         const moves: Array<() => void> = [
             () => useUi.getState().setPanel({ open: true }),
             () => useUi.getState().togglePanel('git'),
-            () => useUi.getState().setPreviewOpen(true),
             () => useUi.getState().setPanelWidth(600),
-            () => useUi.getState().setPreviewWidth(480),
             () => useUi.getState().setSidebarOpen(false)
         ];
         for (const move of moves) {
@@ -132,9 +110,7 @@ describe('ui', () => {
         });
         useUi.getState().setPanels({
             panel: { open: true, kind: 'files' },
-            preview: { open: true },
             panelWidth: 720,
-            previewWidth: 480,
             planAnchor: null,
             planWidth: null
         });

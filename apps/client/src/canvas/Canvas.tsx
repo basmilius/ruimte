@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent 
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useShallow } from 'zustand/react/shallow';
 import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
+import { gridTakesPath } from '@/shell/view-drag';
 import { finderPaths } from '@/canvas/finder-drop';
 import { GRID, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
 import { isSpaceDown } from '@/canvas/canvas-shortcuts';
@@ -500,6 +501,12 @@ export function Canvas() {
        marks a drop as refused unless both handlers say otherwise, hence the preventDefault on the
        drag as well as on the drop. */
     const onDragOver = (e: React.DragEvent): void => {
+        /* Along the edge of the cell the grid takes the file as a view of its own, so the canvas
+           neither lights up nor makes a node of it (`shell/SplitGrid.tsx`). */
+        if (gridTakesPath()) {
+            setDropping(false);
+            return;
+        }
         if (!carriesPaths(e.dataTransfer.types) && !carriesFiles(e.dataTransfer.types)) {
             return;
         }
@@ -517,7 +524,7 @@ export function Canvas() {
 
     const onDrop = (e: React.DragEvent): void => {
         setDropping(false);
-        if (!carriesPaths(e.dataTransfer.types) && !carriesFiles(e.dataTransfer.types)) {
+        if (gridTakesPath() || (!carriesPaths(e.dataTransfer.types) && !carriesFiles(e.dataTransfer.types))) {
             return;
         }
         e.preventDefault();
@@ -562,6 +569,9 @@ export function Canvas() {
                     cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : isSpaceDown() ? 'grab' : undefined
                 }}
                 data-gesture={activeGesture ?? undefined}
+                /* A file dropped here becomes a node, so the grid keeps the strip along the edge
+                   and leaves the rest of the canvas to it (`shell/SplitGrid.tsx`). */
+                data-takes-drop="middle"
                 onMouseDown={onMouseDown}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}

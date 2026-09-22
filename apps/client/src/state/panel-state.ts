@@ -39,11 +39,7 @@ export const parsePanels = (stored: ProjectPanels | undefined, defaults: PanelsS
     const active = tabs.some((tab) => tab.key === stored?.activeTab) ? (stored?.activeTab ?? null) : (tabs[0]?.key ?? null);
     return {
         panel: stored?.panel ?? defaults.panel,
-        /* The tabs decide, not what was stored, since nothing else opens the preview, so a file that
-           stayed open behind a closed preview would have no way back on screen. */
-        preview: { open: tabs.length > 0 },
         panelWidth: width(stored?.panelWidth, defaults.panelWidth),
-        previewWidth: width(stored?.previewWidth, defaults.previewWidth),
         planAnchor: stored?.plan ?? defaults.planAnchor,
         planWidth: width(stored?.planWidth, defaults.planWidth),
         tabs,
@@ -61,9 +57,7 @@ export const parsePanels = (stored: ProjectPanels | undefined, defaults: PanelsS
 /* The other way, for the machine-local file. A width nobody dragged stays out of it. */
 export const serializePanels = (state: PanelsState): ProjectPanels => ({
     panel: state.panel,
-    preview: state.preview,
     ...(state.panelWidth === null ? {} : { panelWidth: Math.round(state.panelWidth) }),
-    ...(state.previewWidth === null ? {} : { previewWidth: Math.round(state.previewWidth) }),
     ...(state.planAnchor === null ? {} : { plan: state.planAnchor }),
     ...(state.planWidth === null ? {} : { planWidth: Math.round(state.planWidth) }),
     tabs: state.tabs.map((tab) => ({ path: tab.path, pinned: tab.pinned, ...(tab.view ? { view: tab.view } : {}) })),

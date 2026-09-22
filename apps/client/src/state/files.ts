@@ -1,5 +1,6 @@
 import type { GitDiffScope, ProjectFileTabView } from '@ruimte/contracts';
 import { create } from 'zustand';
+import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 
 export type FileTabView = ProjectFileTabView;
@@ -122,7 +123,7 @@ interface FilesStore extends TabState {
     projectId: string | null;
     /* Files of this project closed in this session, newest first. Not saved: the tabs that are open are what the project keeps. */
     recent: string[];
-    /* Counts the files opened by hand. The preview watches it to take the keyboard, so the tab
+    /* Counts the files opened by hand. The files cell watches it to take the keyboard, so the tab
        that just opened answers to ⌘W. Restoring a project does not count: nothing was asked for. */
     focusRequest: number;
     /* The directories the tree has open, the way the tree names one: relative, POSIX, trailing slash. */
@@ -161,12 +162,13 @@ export const useFiles = create<FilesStore>((set, get) => ({
     load(projectId, state) {
         set({ projectId, tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs, reveal: null, revealLine: null, recent: [] });
     },
-    /* A tab and the panel that draws it are one thing to the person opening a file: the first open
-       brings the preview up and the last close takes it away again. */
+    /* A tab and the cell that draws it are one thing to the person opening a file: the first open
+       puts the files on the grid, beside whatever they were working in, and the last close takes
+       the cell away again. */
     open(path, limit, view, line) {
         const reveal = line === undefined ? get().revealLine : { key: tabKey(path, view), line, nonce: (get().revealLine?.nonce ?? 0) + 1 };
         set({ ...openTab(get(), path, limit, view), focusRequest: get().focusRequest + 1, revealLine: reveal });
-        useUi.getState().setPreviewOpen(true);
+        useDocument.getState().showFiles();
     },
     close(key) {
         const next = closeTab(get(), key);
@@ -178,7 +180,7 @@ export const useFiles = create<FilesStore>((set, get) => ({
             )
         });
         if (next.tabs.length === 0) {
-            useUi.getState().setPreviewOpen(false);
+            useDocument.getState().hideFiles();
         }
     },
     /* A pinned tab goes with the rest, since the person asked for this one file and nothing else. */
@@ -205,7 +207,7 @@ export const useFiles = create<FilesStore>((set, get) => ({
         set({ tabs: get().tabs.map((tab) => (tab.key === key && tab.view ? { ...tab, view: { ...tab.view, staged } } : tab)) });
     },
     /* The files panel listens for this; it comes up if it was closed, the way opening a file brings
-       the preview up. */
+       the files cell onto the grid. */
     revealInFiles(path) {
         useUi.getState().setPanel({ open: true, kind: 'files' });
         set({ reveal: { path, nonce: (get().reveal?.nonce ?? 0) + 1 } });

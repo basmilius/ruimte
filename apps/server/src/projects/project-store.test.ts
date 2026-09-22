@@ -184,7 +184,6 @@ describe('ProjectStore', () => {
         expect(opened.summary.folder).toBe(join(root, 'scratch'));
         const panels = {
             panel: { open: true, kind: 'files' as const },
-            preview: { open: true },
             panelWidth: 480,
             tabs: [{ path: '/scratch/notes.md', pinned: true }],
             activeTab: '/scratch/notes.md',

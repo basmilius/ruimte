@@ -6,6 +6,7 @@ import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { PanelControls } from '@/shell/PanelControls';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { ViewMenu } from '@/shell/ViewMenu';
+import { FILES_VIEW_ID } from '@/shell/files-view';
 import { useHasViewToolbar, useShowsSubagents, useToolbarView, useViewToolbarLeads, ViewToolbar } from '@/shell/ViewToolbar';
 import { STRIP_PADDING_PX } from '@/shell/Sidebar';
 import { SidebarToggle } from '@/shell/SidebarToggle';
@@ -36,11 +37,12 @@ export function Toolbar() {
     const dirty = projectDirty || drawingDirty || diagramDirty;
     const switching = useProject((s) => s.switching);
     const panel = useUi((s) => s.panel);
-    const previewOpen = useUi((s) => s.preview.open);
     const voiceOpen = useVoice((s) => s.open);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
     const bodyFocused = useDocument((s) => s.bodyFocused);
-    const hasView = useDocument((s) => s.activeViewId !== null);
+    /* The files are in no document, so the switcher has nothing to name while they hold the cell;
+       the tabs beside it say which file is up. */
+    const hasView = useDocument((s) => s.activeViewId !== null && s.activeViewId !== FILES_VIEW_ID);
     /* With the views side by side every cell carries its own bar, and this one goes back to being
        the application's: two bars speaking for two different views would read as one bar for both. */
     const split = useDocument((s) => (s.layout === null ? false : cellCount(s.layout) > 1));
@@ -91,7 +93,7 @@ export function Toolbar() {
             {/* The palette keeps the toolbar's right end, so with no panel beside it the search icon
                 is what sits under the window controls on Windows and Linux and the inset lands here.
                 An open panel reaches the window's edge instead and its header takes the inset over. */}
-            <div className={clsx(BTN_GROUP, !panel.open && !previewOpen && !voiceOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
+            <div className={clsx(BTN_GROUP, !panel.open && !voiceOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <UpdateButton />
                 <VoiceButton />
                 <Tooltip label={t('toolbar.search')} kbd={APP_SHORTCUTS.palette} name>

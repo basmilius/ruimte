@@ -733,11 +733,11 @@
      */
     .chat-column .chat-column-content { margin-inline: auto; max-width: 768px; }
 
-    /* Every page the app embeds steps out of the pointer's way while a view is dragged; otherwise
+    /* Every page the app embeds steps out of the pointer's way while anything is dragged; otherwise
        its own document absorbs the event before the cell underneath can see the drag arrive. The
        attribute is set in `shell/view-drag.ts` for as long as the drag lasts. */
-    body[data-view-drag] .browser-host,
-    body[data-view-drag] .file-preview-page { pointer-events: none; }
+    body[data-dragging] .browser-host,
+    body[data-dragging] .file-preview-page { pointer-events: none; }
 
     /* A page fills the bottom of the node it belongs to, so it takes that node's corners. A browser
        view is a whole cell and has none. */

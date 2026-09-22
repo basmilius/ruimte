@@ -196,9 +196,9 @@
         "moreActions": "More actions",
         "closeCell": "Close this cell"
     },
-    "preview": {
-        "closeAll": "Close all tabs",
-        "failed": "This preview failed to render"
+    "filesView": {
+        "name": "Files",
+        "failed": "These files failed to draw"
     },
     "viewKinds": {
         "canvas": "Canvas",

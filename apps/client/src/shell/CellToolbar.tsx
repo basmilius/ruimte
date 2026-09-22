@@ -3,9 +3,10 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Popover } from '@base-ui-components/react/popover';
-import { MoreHorizontal, X } from 'lucide-react';
-import { viewIconOf, type ProjectView } from '@ruimte/contracts';
+import { Files, MoreHorizontal, X } from 'lucide-react';
+import { viewIconOf } from '@ruimte/contracts';
 import { ViewGlyph } from '@/project/ViewGlyph';
+import { isFilesView, type CellView } from '@/shell/files-view';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
@@ -68,7 +69,7 @@ const useFolded = (bar: React.RefObject<HTMLElement | null>, actions: React.RefO
  * do. The bar is the handle as well: drag it anywhere to move the view to another cell, which is
  * where a tab bar would be in an app that had tabs, and this app does not.
  */
-export function CellToolbar({ at, view, focused, children }: { at: CellAt; view: ProjectView; focused: boolean; children: ReactElement }) {
+export function CellToolbar({ at, view, focused, children }: { at: CellAt; view: CellView; focused: boolean; children: ReactElement }) {
     const { t } = useTranslation('shell');
     /* The file's controls are portaled up into this bar, so every cell holds a host of its own:
        one shared host would put the controls of one file over the bar of another. */
@@ -82,8 +83,11 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     const bar = useRef<HTMLDivElement>(null);
     const actions = useRef<HTMLSpanElement>(null);
     const bodyFocused = useDocument((s) => s.bodyFocused);
+    const files = isFilesView(view);
     const hasViewToolbar = useHasViewToolbar(view);
-    const folded = useFolded(bar, actions, hasViewToolbar);
+    /* The files never fold: their controls are the tab strip, and a strip inside a popover is a list
+       of files you have to open a menu to see. It gives way by scrolling sideways instead. */
+    const folded = useFolded(bar, actions, hasViewToolbar && !files);
     const leads = useViewToolbarLeads(view);
     const inSubagents = useShowsSubagents(view);
     const title = useBrowserDisplayTitle(view.id, view.name ?? '', 'titleSource' in view ? view.titleSource : undefined);
@@ -124,23 +128,32 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                     {/* The title is what gives way: it truncates down to its glyph before anything else
                     in the bar has to move. */}
                     <span className={clsx('flex min-w-5 items-center gap-2 pl-1', folded || !hasViewToolbar ? 'grow' : 'shrink')}>
-                        <ViewGlyph
-                            id={view.id}
-                            kind={view.kind}
-                            icon={viewIconOf(view)}
-                            provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
-                            path={view.kind === 'file' ? view.path : null}
-                        />
-                        <SubagentTitleCrumb chatId={view.id} className="text-text-muted hover:text-text">
-                            <span className="min-w-0 truncate font-medium">{visibleTitle}</span>
-                        </SubagentTitleCrumb>
+                        {/* The tabs beside it say which files are open, so the glyph stands alone:
+                            a name here would take the room the strip needs. */}
+                        {files ? (
+                            <Icon icon={Files} size={14} className="shrink-0" />
+                        ) : (
+                            <>
+                                <ViewGlyph
+                                    id={view.id}
+                                    kind={view.kind}
+                                    icon={viewIconOf(view)}
+                                    provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
+                                    path={view.kind === 'file' ? view.path : null}
+                                />
+                                <SubagentTitleCrumb chatId={view.id} className="text-text-muted hover:text-text">
+                                    <span className="min-w-0 truncate font-medium">{visibleTitle}</span>
+                                </SubagentTitleCrumb>
+                            </>
+                        )}
                     </span>
                     {hasViewToolbar && !folded && (
                         <>
                             {leads && !inSubagents && <Separator />}
                             {/* At least as wide as the controls at their smallest, so a bar too narrow
-                            for them overflows, and that is how it knows to fold. */}
-                            <span ref={actions} className="flex min-w-min grow items-center">
+                            for them overflows, and that is how it knows to fold. The bar centers
+                            what it holds, so a tab strip that runs its full height has to say so. */}
+                            <span ref={actions} className={clsx('flex min-w-min grow items-center', files && 'self-stretch')}>
                                 {controls}
                             </span>
                         </>
@@ -179,7 +192,8 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                     <ContextMenu.Positioner className="z-(--z-popup)">
                         <ContextMenu.Popup className="menu-popup">
                             <SplitItems at={at} separated />
-                            <ViewMenuItems viewId={view.id} kind={view.kind} />
+                            {/* The files are no view of the project: nothing to rename, share or delete. */}
+                            {!files && <ViewMenuItems viewId={view.id} kind={view.kind} />}
                         </ContextMenu.Popup>
                     </ContextMenu.Positioner>
                 </ContextMenu.Portal>

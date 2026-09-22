@@ -1,11 +1,15 @@
-import { Fragment, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactElement } from 'react';
+import { Fragment, useEffect, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactElement } from 'react';
 import clsx from 'clsx';
 import { isCanvasView, type SplitLayout } from '@ruimte/contracts';
 import { PromptStack } from '@/canvas/PromptStack';
+import { carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
+import { isFilesView } from '@/shell/files-view';
+import { useCellView } from '@/shell/use-cell-view';
+import { newFileView } from '@/project/views';
 import { useDocument } from '@/state/document';
 import { CellViewContext } from '@/state/workspace-stores';
 import { canSplit, cellCount, isSameCell, locateView, snapToEven, type CellAt, type SplitZone } from '@/shell/split';
-import { carriesView, draggedViewId, dragging, isNowhereDrop, shapeOf, zoneAt } from '@/shell/view-drag';
+import { carriesView, draggedViewId, dragging, edgeZoneAt, isNowhereDrop, setGridTakesPath, shapeOf, zoneAt } from '@/shell/view-drag';
 import { ViewSurface } from '@/shell/ViewHost';
 import { CellToolbar } from '@/shell/CellToolbar';
 import { cellsMoved, registerCell } from '@/shell/cell-rects';
@@ -14,6 +18,15 @@ import { CellOverlay } from '@/shell/CellOverlay';
 
 /* The smallest a cell may be dragged to, as a share of its axis. Below this nothing in it is legible. */
 const MIN_SHARE = 0.15;
+
+/*
+ * What a surface inside a cell says about the paths dropped on it, so the grid does not carry a list
+ * of which view kinds handle a drop. `all` keeps the grid out entirely (a chat's composer, which
+ * mentions the file); `middle` leaves the grid the strip along the edge and takes the rest (the
+ * canvas, which makes a node of it). A surface that says nothing lets the whole cell split.
+ */
+const takesDrop = (target: EventTarget | null): string | null =>
+    (target as HTMLElement | null)?.closest?.('[data-takes-drop]')?.getAttribute('data-takes-drop') ?? null;
 
 /*
  * Dragging the line between two columns or two cells. Sizes are shares of an axis rather than pixels,
@@ -126,7 +139,7 @@ function Cell({
     split: boolean;
     onZone: (zone: SplitZone | null, box: { top: number; height: number }) => void;
 }) {
-    const view = useDocument((s) => s.views.find((candidate) => candidate.id === viewId) ?? null);
+    const view = useCellView(viewId);
     const [dockHidden, setDockHidden] = useState(false);
 
     /* Where the drag would land, or null for a drop the grid cannot take: the pointer then reads
@@ -146,6 +159,39 @@ function Cell({
             : null;
     };
 
+    /*
+     * Where a path out of the files panel would land, which is always an edge and never the middle:
+     * a file dropped on the grid becomes a view of its own, in a cell beside the one it was aimed
+     * at. How much of the cell answers is the surface under the pointer's to say, so a cell whose
+     * contents do nothing with a path splits over its whole face and a drag over it always has an
+     * answer, however large the cell or the page filling it.
+     */
+    const pathZoneFor = (event: ReactDragEvent<HTMLElement>): SplitZone | null => {
+        const taken = takesDrop(event.target);
+        if (taken === 'all') {
+            return null;
+        }
+        const box = event.currentTarget.getBoundingClientRect();
+        const spot = { x: event.clientX - box.left, y: event.clientY - box.top };
+        const here = taken === 'middle' ? zoneAt(box, spot) : edgeZoneAt(box, spot);
+        const layout = useDocument.getState().layout;
+        return here !== 'center' && layout !== null && canSplit(layout, at, here) ? here : null;
+    };
+
+    /* The claim, staked before anything inside the cell sees the drag; the canvas reads it and holds off. */
+    const claimPath = (event: ReactDragEvent<HTMLElement>): void => {
+        if (!carriesPaths(event.dataTransfer.types)) {
+            return;
+        }
+        const zone = pathZoneFor(event);
+        setGridTakesPath(zone !== null);
+        if (zone === null) {
+            /* A surface that takes the drop itself stops the event, so the handler below never runs
+               and the hint the grid left standing has to be taken back here. */
+            onZone(null, boxIn(event.currentTarget));
+        }
+    };
+
     /* The cell's box inside the column it stands in, for the indicator to be drawn against. The
        column is the offset parent, so this is what the browser already measured. */
     const boxIn = (element: HTMLElement): { top: number; height: number } => ({ top: element.offsetTop, height: element.offsetHeight });
@@ -163,7 +209,7 @@ function Cell({
                     focus and nowhere else: nine docks would be nine rows of the same buttons. */}
                 {focused && <Dock onHiddenChange={setDockHidden} />}
                 {/* A stack per canvas, not per dock: a cell without the focus has no dock, and its prompts still need a place. */}
-                {isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
+                {!isFilesView(view) && isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
             </CellOverlay>
         </div>
     );
@@ -176,31 +222,56 @@ function Cell({
                 /* A press inside a <webview> never reaches this page, only the focus it takes does. The
                    preview of an HTML file is one, and Tab into anything in the cell counts the same. */
                 onFocusCapture={() => useDocument.getState().focusCellAt(at)}
+                onDragOverCapture={claimPath}
+                onDropCapture={claimPath}
                 onDragOver={(event) => {
-                    const next = zoneFor(event);
+                    const paths = carriesPaths(event.dataTransfer.types);
+                    const next = paths ? pathZoneFor(event) : zoneFor(event);
                     if (next !== null) {
                         // Only a prevented dragover accepts the drop; without it the browser refuses it.
                         event.preventDefault();
-                        event.dataTransfer.dropEffect = 'move';
+                        /* And the effect has to be one the source allows: the file tree drags with
+                           `effectAllowed: 'move'`, and a 'copy' against that makes the operation
+                           none, which the browser answers by dropping nothing and saying nothing. */
+                        event.dataTransfer.dropEffect = paths ? dropEffectFor(event.dataTransfer.effectAllowed) : 'move';
                     }
                     onZone(next, boxIn(event.currentTarget));
                 }}
                 onDragLeave={(event) => {
                     // A drag crossing into a child fires leave on the parent; only leaving the cell counts.
                     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        setGridTakesPath(false);
                         onZone(null, boxIn(event.currentTarget));
                     }
                 }}
                 onDrop={(event) => {
-                    const here = zoneFor(event);
-                    const dragged = draggedViewId(event.dataTransfer);
+                    const paths = carriesPaths(event.dataTransfer.types) ? droppedPaths(event.dataTransfer) : [];
+                    const here = paths.length > 0 ? pathZoneFor(event) : zoneFor(event);
                     onZone(null, boxIn(event.currentTarget));
-                    if (here === null || dragged === null) {
+                    setGridTakesPath(false);
+                    if (here === null) {
                         return;
                     }
                     event.preventDefault();
                     event.stopPropagation();
-                    useDocument.getState().dropViewAt(dragged, at, here);
+                    if (paths.length === 0) {
+                        const dragged = draggedViewId(event.dataTransfer);
+                        if (dragged !== null) {
+                            useDocument.getState().dropViewAt(dragged, at, here);
+                        }
+                        return;
+                    }
+                    /* A file of its own, not a tab: the cell beside this one shows that one file and
+                       keeps showing it. The files cell is for looking through a folder; this is for
+                       keeping a file in sight while working next to it. Every path becomes a view so
+                       the sidebar lists them all, and the first takes the cell that was aimed at,
+                       since one drop is one place on the grid. */
+                    for (const [index, path] of paths.entries()) {
+                        const id = newFileView(path, false);
+                        if (id !== null && index === 0) {
+                            useDocument.getState().dropViewAt(id, at, here);
+                        }
+                    }
                 }}
             >
                 {/* One cell means the window's toolbar speaks for the view, and a second bar under it
@@ -252,6 +323,13 @@ function Column({ layout, at }: { layout: SplitLayout; at: number }) {
  */
 export function SplitGrid(): ReactElement | null {
     const layout = useDocument((s) => s.layout);
+    useEffect(() => {
+        /* A drag called off with Escape ends with neither a leave nor a drop, so a claim left
+           standing would hold the canvas off on the next drag that has nothing to do with it. */
+        const clear = (): void => setGridTakesPath(false);
+        window.addEventListener('dragend', clear);
+        return () => window.removeEventListener('dragend', clear);
+    }, []);
     if (layout === null) {
         return null;
     }

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { openFileLink, parseFileRef, resolveFileRef } from '@/shell/panels/file-links';
+import { FILES_VIEW_ID } from '@/shell/files-view';
+import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
-import { useUi } from '@/state/ui';
 
 describe('parseFileRef', () => {
     test('takes a path with a separator, whatever the extension is', () => {
@@ -81,13 +82,13 @@ describe('openFileLink', () => {
     beforeEach(() => {
         // Without a project id, the tabs stay out of the storage the test environment does not have.
         useFiles.setState({ projectId: null, tabs: [], active: null, focusRequest: 0, reveal: null, revealLine: null });
-        useUi.setState({ preview: { open: false } });
+        useDocument.getState().load(null, null);
     });
 
-    test('a file opens as a tab in the preview', () => {
+    test('a file opens as a tab, and the files take a cell of the grid', () => {
         openFileLink('/repo', { path: 'src/main.ts', directory: false }, LIMIT);
         expect(useFiles.getState().tabs.map((tab) => tab.path)).toEqual(['/repo/src/main.ts']);
-        expect(useUi.getState().preview.open).toBe(true);
+        expect(useDocument.getState().activeViewId).toBe(FILES_VIEW_ID);
     });
 
     test('the line a reference names travels to the viewer, once per ask', () => {
@@ -112,6 +113,6 @@ describe('openFileLink', () => {
     test('a relative reference with no folder to count from opens nothing', () => {
         openFileLink(null, { path: 'src/main.ts', directory: false }, LIMIT);
         expect(useFiles.getState().tabs).toEqual([]);
-        expect(useUi.getState().preview.open).toBe(false);
+        expect(useDocument.getState().layout).toBeNull();
     });
 });

@@ -661,7 +661,7 @@ export const ProjectFileTabViewSchema = z.object({
 });
 export type ProjectFileTabView = z.infer<typeof ProjectFileTabViewSchema>;
 
-// One file the preview has open. Whether it is edited is view state and stays out of the file.
+// One file the files cell has open. Whether it is edited is view state and stays out of the file.
 export const ProjectFileTabSchema = z.object({
     path: z.string().min(1),
     pinned: z.boolean(),
@@ -677,10 +677,8 @@ export type ProjectFileTab = z.infer<typeof ProjectFileTabSchema>;
  */
 export const ProjectPanelsSchema = z.object({
     panel: z.object({ open: z.boolean(), kind: ProjectPanelKindSchema }).optional(),
-    preview: z.object({ open: z.boolean() }).optional(),
     // Whole pixels. Absent means the panel opens at the width the app picks for it.
     panelWidth: z.number().int().positive().optional(),
-    previewWidth: z.number().int().positive().optional(),
     // The plan the plan panel shows. Whether it is open follows from whether its chat is on screen, never from this file.
     plan: z.object({ chatId: z.string().min(1), planId: z.string().min(1), dismissed: z.boolean() }).optional(),
     planWidth: z.number().int().positive().optional(),

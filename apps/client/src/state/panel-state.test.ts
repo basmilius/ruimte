@@ -4,9 +4,7 @@ import { parsePanels, serializePanels, type PanelsState } from './panel-state.ts
 
 const defaults: PanelsState = {
     panel: { open: false, kind: 'files' },
-    preview: { open: false },
     panelWidth: null,
-    previewWidth: null,
     planAnchor: null,
     planWidth: null,
     tabs: [],
@@ -22,9 +20,7 @@ const defaults: PanelsState = {
 
 const full: PanelsState = {
     panel: { open: true, kind: 'git' },
-    preview: { open: true },
     panelWidth: 480,
-    previewWidth: 640,
     planAnchor: { chatId: 'chat-1', planId: 'plan-1', dismissed: true },
     planWidth: 400,
     tabs: [
@@ -65,12 +61,7 @@ describe('panels in the machine-local file', () => {
 
     test('a width nobody dragged stays out of the file, and one that makes no sense is ignored', () => {
         expect(serializePanels(defaults)).not.toHaveProperty('panelWidth');
-        expect(parsePanels({ panelWidth: 0, previewWidth: -20 }, defaults)).toMatchObject({ panelWidth: null, previewWidth: null });
-    });
-
-    test('the preview is open exactly while a file is, whatever was stored', () => {
-        expect(parsePanels({ preview: { open: true } }, defaults).preview).toEqual({ open: false });
-        expect(parsePanels({ preview: { open: false }, tabs: [{ path: 'a', pinned: false }] }, defaults).preview).toEqual({ open: true });
+        expect(parsePanels({ panelWidth: 0 }, defaults)).toMatchObject({ panelWidth: null });
     });
 
     test('an active tab that is not open is not what the viewer points at', () => {

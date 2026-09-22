@@ -196,9 +196,9 @@
         "moreActions": "Meer acties",
         "closeCell": "Deze cel sluiten"
     },
-    "preview": {
-        "closeAll": "Alle tabs sluiten",
-        "failed": "Deze voorvertoning kon niet worden getekend"
+    "filesView": {
+        "name": "Bestanden",
+        "failed": "Deze bestanden konden niet worden getekend"
     },
     "viewKinds": {
         "canvas": "Canvas",

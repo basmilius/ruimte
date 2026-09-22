@@ -18,6 +18,8 @@ import { focusedCanvas } from '@/state/canvas';
 import { transportFor } from '@/transport';
 import { focusedDiagram } from '@/state/diagram';
 import { activeViewOf, useDocument } from '@/state/document';
+import { FILES_VIEW_ID } from '@/shell/files-view';
+import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
 import { cellCount, type SplitDirection } from '@/shell/split';
 import { matchesShortcut, type Shortcut } from '@/ui/shortcut';
@@ -31,11 +33,18 @@ const workspaceEndpointId = (): string | null => windowWorkspace()?.connection.e
 const entryFor = <T extends string>(table: Record<T, Shortcut>, e: KeyboardEvent, apple: boolean): T | null =>
     (Object.keys(table) as T[]).find((name) => matchesShortcut(table[name], e, apple)) ?? null;
 
-/* The canvas keeps its own keys to itself while a view of its own has the focus. */
+/* The canvas keeps its own keys to itself while a view of its own has the focus; the files are one. */
 const onStandaloneView = (): boolean => {
-    const view = activeViewOf(useDocument.getState());
+    const state = useDocument.getState();
+    if (state.activeViewId === FILES_VIEW_ID) {
+        return true;
+    }
+    const view = activeViewOf(state);
     return view !== null && !isCanvasView(view);
 };
+
+/* The tab the files cell has up, or null when another cell has the focus or the cell holds none. */
+const focusedFileTab = (): string | null => (useDocument.getState().activeViewId === FILES_VIEW_ID ? useFiles.getState().active : null);
 
 /* The page the keyboard means: a browser view in the focused cell, or the active browser node on its canvas. */
 const focusedBrowserKey = (): string | null => {
@@ -143,10 +152,32 @@ export const useCanvasShortcuts = (): void => {
                 useDocument.getState().focusTowards(direction);
                 return;
             }
-            /* The preview closes its own tab on this shortcut and says so by stopping the event; only with
-               the keyboard outside it does the shortcut reach the cell. Off macOS the window menu's Close
-               answers Ctrl+W, so the shortcut is always taken there, even with nothing to close. */
+            /* Stepping between the open files, which is the one thing a files cell has that no other
+               cell does. It never leaves the cell, so the grid's own keys stay where they are. */
+            if (e.key === 'Tab' && e.ctrlKey && !e.metaKey && !e.altKey && focusedFileTab() !== null) {
+                const { tabs, active } = useFiles.getState();
+                if (tabs.length > 1) {
+                    e.preventDefault();
+                    const index = tabs.findIndex((tab) => tab.key === active);
+                    const next = tabs[(index + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length];
+                    if (next) {
+                        useFiles.getState().activate(next.key);
+                    }
+                    return;
+                }
+            }
+            /* The files cell closes its tab, and the cell goes with the last one (`state/files.ts`),
+               so one shortcut walks out of a stack of files and then out of the cell that held them.
+               A handler that already answered says so by stopping the event. Off macOS the window
+               menu's Close answers Ctrl+W, so the shortcut is always taken there, even with nothing
+               to close. */
             if (is(CANVAS_SHORTCUTS.closeCell)) {
+                const tab = focusedFileTab();
+                if (tab !== null && !e.defaultPrevented) {
+                    e.preventDefault();
+                    useFiles.getState().close(tab);
+                    return;
+                }
                 const layout = useDocument.getState().layout;
                 const closes = !e.defaultPrevented && layout !== null && cellCount(layout) > 1;
                 if (closes || !apple) {

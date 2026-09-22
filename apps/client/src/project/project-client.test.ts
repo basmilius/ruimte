@@ -234,7 +234,7 @@ const setup = (
 ) => {
     const stores = options.stores ?? defaultWorkspaceStores;
     stores.document.getState().load(null, null);
-    useUi.setState({ panel: { open: false, kind: 'files' }, preview: { open: false }, panelWidth: null, previewWidth: null });
+    useUi.setState({ panel: { open: false, kind: 'files' }, panelWidth: null });
     useFiles.setState({ projectId: null, tabs: [], active: null, expandedDirs: [] });
     const transport = new FakeTransport();
     if (options.projects) {
@@ -656,7 +656,6 @@ describe('ProjectClient', () => {
         const { transport, dispose } = setup();
         transport.panels = {
             panel: { open: true, kind: 'git' },
-            preview: { open: true },
             panelWidth: 420,
             tabs: [{ path: '/repo/readme.md', pinned: true }],
             activeTab: '/repo/readme.md',

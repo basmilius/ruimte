@@ -1,4 +1,4 @@
-import { MAX_COLUMNS, type CellAt, type SplitZone } from '@/shell/split';
+import { MAX_COLUMNS, type CellAt, type SplitDirection, type SplitZone } from '@/shell/split';
 
 /*
  * What a dragged view carries. A row in the sidebar and a cell of the grid are the same gesture with
@@ -31,16 +31,61 @@ export const dragging = (): string | null => held;
 
 export const setDragging = (viewId: string | null): void => {
     held = viewId;
-    /*
-     * A <webview> eats the drag events of the page around it, so a drag passing over a cell holding
-     * one would lose its `dragover` and that cell would never light up. Every embedded page (a
-     * browser node or view, the preview of an HTML file) is taken out of the pointer's way for as
-     * long as the drag lasts (`body[data-view-drag]` in `styles.css`). It is an attribute rather
-     * than state because the pages are not all in this tree.
-     */
-    if (typeof document !== 'undefined') {
-        document.body.toggleAttribute('data-view-drag', viewId !== null);
+};
+
+/*
+ * A <webview> eats the drag events of the page around it, so a drag passing over a cell holding one
+ * would lose its `dragover` and that cell would never light up. Every embedded page (a browser node
+ * or view, the preview of an HTML file) steps out of the pointer's way for as long as any drag
+ * lasts (`body[data-dragging]` in `styles.css`), whatever is being dragged: a view, a file out of
+ * the tree, or something out of the file manager. An attribute rather than state, because the pages
+ * are not all in one tree.
+ *
+ * Watched on the window and not set by each source, since a source that forgets it leaves a drag
+ * that works everywhere except over a page, which is the hardest kind of gap to find.
+ */
+export const watchDrags = (): (() => void) => {
+    const mark = (dragging: boolean) => (): void => {
+        document.body.toggleAttribute('data-dragging', dragging);
+    };
+    const begin = mark(true);
+    const end = mark(false);
+    // `dragenter` as well as `dragstart`: a drag out of the file manager begins outside this page.
+    const starts = ['dragstart', 'dragenter'];
+    const ends = ['dragend', 'drop'];
+    for (const type of starts) {
+        window.addEventListener(type, begin, true);
     }
+    for (const type of ends) {
+        window.addEventListener(type, end, true);
+    }
+    return () => {
+        for (const type of starts) {
+            window.removeEventListener(type, begin, true);
+        }
+        for (const type of ends) {
+            window.removeEventListener(type, end, true);
+        }
+        end();
+    };
+};
+
+let gridTakes = false;
+
+/*
+ * Whether the grid has claimed the path being dragged, which it does along the edge of a cell and
+ * never in its middle. What stands in the cell reads this and leaves the drop alone, so one file
+ * dropped once never becomes both a node on the canvas and a view beside it. Module state for the
+ * same reason `dragging()` is: there is one pointer, so there is one drag.
+ *
+ * The cell sets it while the drag passes over it, before what is inside the cell has seen the event,
+ * and clears it on the way out. Nothing here stops the event: a drop on a page mid-drag is decided
+ * by the browser, and a handler that cuts the propagation short takes that decision away from it.
+ */
+export const gridTakesPath = (): boolean => gridTakes;
+
+export const setGridTakesPath = (takes: boolean): void => {
+    gridTakes = takes;
 };
 
 /*
@@ -84,6 +129,28 @@ export const zoneAt = (box: Box, spot: Spot): SplitZone => {
         return left <= right ? 'left' : 'right';
     }
     return top <= bottom ? 'up' : 'down';
+};
+
+/*
+ * The same points minus the middle: whichever edge is nearest, measured as a share of the cell's own
+ * width and height so the corners divide it along its diagonals and a wide cell does not answer
+ * sideways everywhere. For a cell whose contents do nothing with what is being dragged, which has
+ * no reason to keep a middle free, so the whole of it splits and the drag always has an answer.
+ */
+export const edgeZoneAt = (box: Box, spot: Spot): SplitDirection => {
+    const width = box.width || 1;
+    const height = box.height || 1;
+    const left = spot.x / width;
+    const right = (box.width - spot.x) / width;
+    const top = spot.y / height;
+    const nearest = Math.min(left, right, top, (box.height - spot.y) / height);
+    if (nearest === left) {
+        return 'left';
+    }
+    if (nearest === right) {
+        return 'right';
+    }
+    return nearest === top ? 'up' : 'down';
 };
 
 /*

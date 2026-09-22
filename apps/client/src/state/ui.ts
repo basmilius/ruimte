@@ -12,9 +12,7 @@ const SIDEBAR_STORAGE_KEY = 'ruimte.sidebar';
 /* The keys the panels lived in before they became a per-project thing. They are read once, as what
    a project that has never had panels of its own starts from, and never written again. */
 const LEGACY_PANEL_KEY = 'ruimte.panel';
-const LEGACY_PREVIEW_KEY = 'ruimte.preview';
 const LEGACY_PANEL_WIDTH_KEY = 'ruimte.panel.width';
-const LEGACY_PREVIEW_WIDTH_KEY = 'ruimte.preview.width';
 
 const readSidebarOpen = (): boolean => {
     try {
@@ -38,15 +36,10 @@ export interface PanelState {
     kind: PanelKind;
 }
 
-export interface PreviewState {
-    open: boolean;
-}
-
 /* The chat and the plan the plan panel shows, and whether a person closed it. */
 export type PlanAnchor = NonNullable<ProjectPanels['plan']>;
 
 const CLOSED_PANEL: PanelState = { open: false, kind: 'files' };
-const CLOSED_PREVIEW: PreviewState = { open: false };
 
 /* The kind on its own for an open panel, `closed:` in front for one that is not, so a toggle still
    knows which panel it reopens. The shape the legacy key was written in. */
@@ -58,8 +51,6 @@ export const parsePanel = (raw: string | null): PanelState => {
     const kind = (open ? raw : raw.slice('closed:'.length)) as PanelKind;
     return PANEL_KINDS.includes(kind) ? { open, kind } : CLOSED_PANEL;
 };
-
-export const parsePreview = (raw: string | null): PreviewState => ({ open: raw === 'open' });
 
 /* A width the legacy key holds, in whole pixels; null is "no width of the person's own". */
 export const parseWidth = (raw: string | null): number | null => {
@@ -77,9 +68,7 @@ const readLegacy = (key: string): string | null => {
 
 export interface PanelDefaults {
     panel: PanelState;
-    preview: PreviewState;
     panelWidth: number | null;
-    previewWidth: number | null;
     planAnchor: PlanAnchor | null;
     planWidth: number | null;
 }
@@ -87,9 +76,7 @@ export interface PanelDefaults {
 /* What a project whose local file says nothing about the panels opens with. */
 export const PANEL_DEFAULTS: PanelDefaults = {
     panel: parsePanel(readLegacy(LEGACY_PANEL_KEY)),
-    preview: parsePreview(readLegacy(LEGACY_PREVIEW_KEY)),
     panelWidth: parseWidth(readLegacy(LEGACY_PANEL_WIDTH_KEY)),
-    previewWidth: parseWidth(readLegacy(LEGACY_PREVIEW_WIDTH_KEY)),
     planAnchor: null,
     planWidth: null
 };
@@ -147,10 +134,8 @@ interface UiStore {
     filePick: FilePick | null;
     settings: SettingsState;
     panel: PanelState;
-    preview: PreviewState;
     /* Null until a drag gives the column a width of the person's own for this project. */
     panelWidth: number | null;
-    previewWidth: number | null;
     /* One per window, since a window shows one project. Open follows from the rules in
        `plan/panel-rules.ts` and never from the project's file. */
     planAnchor: PlanAnchor | null;
@@ -197,10 +182,7 @@ interface UiStore {
     setSettings(patch: Partial<SettingsState>): void;
     setPanel(patch: Partial<PanelState>): void;
     togglePanel(kind?: PanelKind): void;
-    /* Only the file tabs call this. The preview is up exactly while a file is open. */
-    setPreviewOpen(open: boolean): void;
     setPanelWidth(width: number): void;
-    setPreviewWidth(width: number): void;
     setPlanPanel(state: { anchor: PlanAnchor | null; open: boolean }): void;
     setPlanWidth(width: number): void;
     /* Puts a project's panels on screen in one go, when it opens; they land without sliding. */
@@ -224,9 +206,7 @@ export const useUi = create<UiStore>((set, get) => ({
     /* Closed until a project says otherwise. The panels belong to a project and there is none
        yet, so the first paint of a reload cannot flash open a panel the project has closed. */
     panel: CLOSED_PANEL,
-    preview: CLOSED_PREVIEW,
     panelWidth: null,
-    previewWidth: null,
     planAnchor: null,
     planOpen: false,
     planWidth: null,
@@ -307,17 +287,8 @@ export const useUi = create<UiStore>((set, get) => ({
         const panel = kind ? { open: !(was.open && was.kind === kind), kind } : { ...was, open: !was.open };
         set({ panel, panelsRestoring: false });
     },
-    setPreviewOpen(open) {
-        if (get().preview.open === open) {
-            return;
-        }
-        set({ preview: { open }, panelsRestoring: false });
-    },
     setPanelWidth(width) {
         set({ panelWidth: width, panelsRestoring: false });
-    },
-    setPreviewWidth(width) {
-        set({ previewWidth: width, panelsRestoring: false });
     },
     setPlanPanel({ anchor, open }) {
         if (get().planAnchor === anchor && get().planOpen === open) {
@@ -336,9 +307,7 @@ export const useUi = create<UiStore>((set, get) => ({
            frame with the default width in between, and that frame is a slide. */
         set({
             panel: state.panel,
-            preview: state.preview,
             panelWidth: state.panelWidth,
-            previewWidth: state.previewWidth,
             planAnchor: state.planAnchor,
             // Closed until the chat is on screen. The rules open it, never the file.
             planOpen: false,

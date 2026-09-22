@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { carriesView, draggedViewId, shapeOf, VIEW_DRAG_TYPE, zoneAt } from './view-drag';
+import { carriesView, draggedViewId, edgeZoneAt, shapeOf, VIEW_DRAG_TYPE, zoneAt } from './view-drag';
 
 const transfer = (types: string[], data: Record<string, string> = {}): Pick<DataTransfer, 'types' | 'getData'> => ({
     types,
@@ -52,6 +52,32 @@ describe('the five drop points of a cell', () => {
         const narrow = { width: 200, height: 160 };
         expect(zoneAt(narrow, { x: 20, y: 80 })).toBe('left');
         expect(zoneAt(narrow, { x: 100, y: 80 })).toBe('center');
+    });
+});
+
+/* A cell that does nothing with what is dragged over it gives all of itself to the grid, so every
+   point in it answers with an edge and a drag is never left without a suggestion. */
+describe('where a drag lands in a cell that keeps no middle', () => {
+    const box = { width: 800, height: 600 };
+
+    test('the middle answers with an edge too, the one it is nearest to', () => {
+        expect(edgeZoneAt(box, { x: 390, y: 300 })).toBe('left');
+        expect(edgeZoneAt(box, { x: 410, y: 300 })).toBe('right');
+        expect(edgeZoneAt(box, { x: 400, y: 100 })).toBe('up');
+        expect(edgeZoneAt(box, { x: 400, y: 500 })).toBe('down');
+    });
+
+    /* Shares of its own axis, not pixels: 200px from the side of a wide cell is nearer its edge than
+       200px from the top of a short one, and the corners divide the cell along its diagonals. */
+    test('a wide cell divides along its diagonals rather than by distance in pixels', () => {
+        const wide = { width: 2000, height: 400 };
+        // Nearer the top in pixels, nearer the left as a share of the axis it is on, so it reads left.
+        expect(edgeZoneAt(wide, { x: 200, y: 150 })).toBe('left');
+        expect(edgeZoneAt(wide, { x: 600, y: 100 })).toBe('up');
+    });
+
+    test('a cell with no size at all still answers', () => {
+        expect(edgeZoneAt({ width: 0, height: 0 }, { x: 0, y: 0 })).toBe('left');
     });
 });
 

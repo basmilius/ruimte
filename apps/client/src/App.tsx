@@ -20,7 +20,6 @@ import { UsageDialog } from '@/shell/usage/UsageDialog';
 import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { Panel } from '@/shell/Panel';
 import { PlanPanel } from '@/shell/PlanPanel';
-import { PreviewPanel } from '@/shell/PreviewPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
 import { MachineLostScreen } from '@/shell/MachineLostScreen';
 import { ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
@@ -32,6 +31,7 @@ import { ReleaseNotesDialog } from '@/shell/ReleaseNotesDialog';
 import { Sidebar } from '@/shell/Sidebar';
 import { Toasts } from '@/shell/Toasts';
 import { Toolbar } from '@/shell/Toolbar';
+import { watchDrags } from '@/shell/view-drag';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi, type SettingsSectionId } from '@/state/ui';
@@ -79,7 +79,6 @@ function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                         </div>
                     </FileToolbarSlotProvider>
                     <PlanPanel />
-                    <PreviewPanel />
                     <Panel />
                     <VoicePanel />
                 </main>
@@ -130,6 +129,10 @@ export function App() {
 
     // Once, with the preference as it stands. The shell reads it again from About.
     useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload) ?? undefined, []);
+
+    /* Every embedded page steps aside for as long as any drag lasts, so a drop target is wherever
+       it looks like it is and never behind a page that swallowed the drag. */
+    useEffect(() => watchDrags(), []);
 
     // The macOS application menu names a pane, and switches to it when the dialog is already open.
     useEffect(

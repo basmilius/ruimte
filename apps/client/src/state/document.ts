@@ -26,6 +26,7 @@ import {
     type DeviceReference,
     type StandaloneNode
 } from '@ruimte/contracts';
+import { FILES_VIEW_ID } from '@/shell/files-view';
 import type { CanvasPatch } from '@/project/merge';
 import { NODE_SIZE, defaultCanvases, nextId, type CanvasState } from '@/state/canvas';
 import { defaultDiagrams, type DiagramState } from '@/state/diagram';
@@ -108,6 +109,10 @@ export interface DocumentState {
     dismissNotice(): void;
     /* A view into a cell's zone: the four edges split, the middle takes the place of what is there. */
     dropViewAt(viewId: string, at: CellAt, zone: SplitZone): void;
+    /* The files into a cell of their own, beside the one the person is in; the focus when they already stand somewhere. */
+    showFiles(): void;
+    /* Takes that cell off the grid again, which is what closing the last tab does. */
+    hideFiles(): void;
     /* Splits the focused cell and puts a view in the new one. */
     splitFocused(direction: SplitDirection, viewId: string): void;
     /* Takes a cell off the grid; the neighbors grow into it. The last cell stays, there has to be one. */
@@ -128,7 +133,10 @@ export interface DocumentState {
     addDrawingView(name: string): string;
     addDiagramView(name: string): string;
     /* One file on disk, read and never written. The path is all it holds. */
-    addFileView(name: string, path: string): string;
+    /* A file as a view of its own. `opens` is false for a caller that places it on the grid itself:
+       opening it first would take the cell that has the focus, and the view standing there is gone
+       by the time that caller says where this one really goes. */
+    addFileView(name: string, path: string, opens?: boolean): string;
     /* A chat, terminal or browser without a canvas under it. The id is the session id, as for a node. */
     addStandaloneView(view: StandaloneRequest): string;
     renameView(id: string, name: string, source?: NodeTitleSource | null): void;
@@ -253,10 +261,15 @@ const settledOn = (
         layout,
         activeViewId,
         lastCanvasViewId: canvas ? activeViewId : was.lastCanvasViewId,
-        // A view of its own has no canvas to fall back to, so the keyboard starts inside its body.
-        bodyFocused: active !== null && !canvas
+        /* A view of its own has no canvas to fall back to, so the keyboard starts inside its body.
+           The files are in no document, hence the id rather than the view. */
+        bodyFocused: activeViewId === FILES_VIEW_ID || (active !== null && !canvas)
     };
 };
+
+/* Whether an id may stand in a cell: an openable view of the document, or the files of this client. */
+const canStandInCell = (views: readonly ProjectView[], id: string): boolean =>
+    id === FILES_VIEW_ID || views.some((view) => view.id === id && isOpenableView(view));
 
 /* Which view a banner would put on screen if its button were pressed; null for one that offers nothing. */
 const noticeTarget = (notice: ViewNotice | null): string | null => {
@@ -371,8 +384,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
 
             setActiveView(id) {
                 const state = get();
-                const next = state.views.find((view) => view.id === id);
-                if (!next || !isOpenableView(next) || state.activeViewId === id) {
+                if (!canStandInCell(state.views, id) || state.activeViewId === id) {
                     return;
                 }
                 if (state.layout === null) {
@@ -387,8 +399,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
 
             showView(id) {
                 const state = get();
-                const view = state.views.find((candidate) => candidate.id === id);
-                if (!view || !isOpenableView(view)) {
+                if (!canStandInCell(state.views, id)) {
                     return null;
                 }
                 if (state.layout === null) {
@@ -433,11 +444,43 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
 
             dropViewAt(viewId, at, zone) {
                 const state = get();
-                const view = state.views.find((candidate) => candidate.id === viewId);
-                if (state.layout === null || !view || !isOpenableView(view) || !canSplit(state.layout, at, zone, viewId)) {
+                if (state.layout === null || !canStandInCell(state.views, viewId) || !canSplit(state.layout, at, zone, viewId)) {
                     return;
                 }
                 commit(dropView(state.layout, viewId, at, zone));
+            },
+
+            showFiles() {
+                const state = get();
+                if (state.layout === null) {
+                    commit(singleLayout(FILES_VIEW_ID));
+                    return;
+                }
+                const standing = locateView(state.layout, FILES_VIEW_ID);
+                if (standing !== null) {
+                    if (!isSameCell(state.layout.focus, standing)) {
+                        commit(focusCell(state.layout, standing));
+                    }
+                    return;
+                }
+                /* Beside what the person was working in, never over it: a chat in the one cell there
+                   is would otherwise be gone behind a file they only meant to read. A grid at its
+                   limit has no room beside, and there the cell does give way. */
+                const at = state.layout.focus;
+                const zone: SplitZone = canSplit(state.layout, at, 'right', FILES_VIEW_ID)
+                    ? 'right'
+                    : canSplit(state.layout, at, 'down', FILES_VIEW_ID)
+                      ? 'down'
+                      : 'center';
+                commit(dropView(state.layout, FILES_VIEW_ID, at, zone));
+            },
+
+            hideFiles() {
+                const state = get();
+                const at = state.layout === null ? null : locateView(state.layout, FILES_VIEW_ID);
+                if (at !== null) {
+                    get().closeCellAt(at);
+                }
             },
 
             splitFocused(direction, viewId) {
@@ -528,8 +571,8 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 return addView({ kind: 'diagram', id: nextId('view'), name }, true);
             },
 
-            addFileView(name, path) {
-                return addView({ kind: 'file', id: nextId('view'), name, path }, true);
+            addFileView(name, path, opens = true) {
+                return addView({ kind: 'file', id: nextId('view'), name, path }, opens);
             },
 
             addStandaloneView(request) {

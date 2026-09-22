@@ -199,7 +199,7 @@ export const showFileOnCanvas = (path: string, at?: Point): string | null => {
 };
 
 /* A file as a view of its own, a column beside the canvas rather than a frame on it. */
-export const newFileView = (path: string): string | null => useDocument.getState().addFileView(basenameOf(path), storedFilePath(path));
+export const newFileView = (path: string, opens = true): string | null => useDocument.getState().addFileView(basenameOf(path), storedFilePath(path), opens);
 
 /*
  * Puts a view in the shared file, or takes it back out, and says what happened with a way back. No
