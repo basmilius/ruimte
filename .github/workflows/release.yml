@@ -2,7 +2,7 @@ name: Release
 
 # A tag `v1.2.3` builds the desktop app for macOS and Linux and uploads it to a draft GitHub release
 # with the files electron-updater reads (`latest-mac.yml`, `latest-linux.yml`,
-# `latest-linux-arm64.yml`). Publish the draft to ship.
+# `latest-linux-arm64.yml`). The notes come off the annotated tag. Publish the draft to ship.
 on:
   push:
     tags:
@@ -18,13 +18,25 @@ jobs:
   draft:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-tags: true
       - name: The draft release, before anything uploads
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && exit 0
-          gh release create "$GITHUB_REF_NAME" --draft --title "${GITHUB_REF_NAME#v}" --notes ''
+          # An annotated tag carries the release notes; a lightweight one would hand back the commit
+          # message, which is not what anyone wrote for the release. Nothing here may fail: without a
+          # draft the three builds race to create one and the loser's upload goes missing, so a tag
+          # this cannot read leaves the notes empty rather than the release unmade.
+          notes="$RUNNER_TEMP/notes.md"
+          : > "$notes"
+          if [ "$(git cat-file -t "$GITHUB_REF_NAME" 2>/dev/null)" = tag ]; then
+              git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > "$notes"
+          fi
+          gh release create "$GITHUB_REF_NAME" --draft --title "Release ${GITHUB_REF_NAME#v}" --notes-file "$notes"
 
   verify:
     runs-on: macos-latest

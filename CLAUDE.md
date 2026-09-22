@@ -100,5 +100,5 @@ A release runs to the end without asking. Bas names a version and the next thing
 
 - The gate is CI, not this machine. The `ci.yml` run on the commit being tagged has to be green; nothing is built, checked or tested here for a release, and a published build is never downloaded to try the daemon in it.
 - A red CI is fixed before the tag: find it, fix it, push to main, wait for green. Only something that needs a decision of Bas comes back to him.
-- Then push `v<version>`. `release.yml` builds macOS and Linux into a draft; once the run succeeds the notes go on that draft and it is published as Latest at once, titled `Release <version>`.
+- The notes ride on the tag, so the draft is never empty and publishing needs no second edit: write them to a file and tag with `git tag -a v<version> -F <file> --cleanup=verbatim`, since git strips every `##` heading out of a tag message without it. `release.yml` builds macOS and Linux into that draft, and once the run succeeds it is published as Latest at once.
 - Publishing starts `npm.yml`, which puts `ruimte` and its three platform packages on npm at the same version. The recipe, the secrets and what has broken in them: `docs/RELEASE.md`.

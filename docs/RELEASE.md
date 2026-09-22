@@ -110,12 +110,15 @@ a few minutes after publishing, a check still answers that the app is up to date
 why the feed can answer 404 just after a repository is made public. Wait and check again before
 going looking for a bug in the updater.
 
-Write the notes on the draft before publishing it. The app reads them from the GitHub API and shows
-them in About and behind the toast after an update from the moment the release is published, so a
-release published with empty notes reads "No notes for this version." until someone fills them in
-and the app asks again. The draft itself stays out of the app, but not out of the feed: a pushed tag
-whose release is still a draft already appears in `releases.atom`, with the last commit message as
-its content.
+The notes ride on the tag. `git tag -a v<version> -F <file> --cleanup=verbatim` puts them in the tag
+message, and the `draft` job reads them back, so the draft carries its notes from the moment it
+exists and publishing it takes no second edit. `--cleanup=verbatim` is not optional: git cleans a
+tag message the way it cleans a commit message, and every `## Features` in the notes is a comment to
+it. A lightweight tag leaves the notes empty. The app reads them from the GitHub API and shows them
+in About and behind the toast after an update from the moment the release is published, so a release
+published with empty notes reads "No notes for this version." until someone fills them in and the
+app asks again. The draft itself stays out of the app, but not out of the feed: a pushed tag whose
+release is still a draft already appears in `releases.atom`.
 
 The draft is published as soon as its notes are written; the build is not downloaded to try the daemon
 in it first. If a release does turn out broken on start, that is where to look: start
