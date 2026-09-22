@@ -526,7 +526,7 @@ export function GitPanel() {
                             {operation === undefined ? t('git.conflict.plain') : t(`git.conflict.${operation}`)}
                             {named ? ` (${checkout.label})` : ''}
                         </span>
-                        <span className="shrink-0 text-xs text-text-faint">{t('git.conflict.files', { count: conflicted })}</span>
+                        {conflicted > 0 && <span className="shrink-0 text-xs text-text-faint">{t('git.conflict.files', { count: conflicted })}</span>}
                         <Button size="sm" variant="secondary" onClick={() => useUi.getState().setConflicts({ cwd: checkout.path })}>
                             {t('git.conflict.resolve')}
                         </Button>

@@ -3,13 +3,14 @@
         "all": "Ask AI for all {{count}}",
         "done_one": "An agent answered 1 conflict.",
         "done_other": "An agent answered {{count}} conflicts.",
-        "done_zero": "The agent left every conflict to you.",
         "failed": "The agent could not resolve this",
+        "none": "The agent left every conflict to you.",
         "file": "Ask AI to resolve this file",
         "working": "{{path}}, {{done}} of {{total}}"
     },
     "counter": "{{open}} of {{total}} open",
     "empty": {
+        "title": "Nothing conflicts any more",
         "cherry-pick": "Everything is resolved. Finish the cherry-pick below.",
         "merge": "Everything is resolved. Finish the merge below.",
         "plain": "Nothing waits on you in this checkout.",
@@ -18,7 +19,11 @@
     },
     "failed": "Something went wrong.",
     "finish": {
-        "failed": "That did not go through"
+        "aborted": "The {{operation}} was taken back",
+        "done": "The {{operation}} is finished",
+        "failed": "That did not go through",
+        "more_one": "1 file conflicts in the next commit",
+        "more_other": "{{count}} files conflict in the next commit"
     },
     "footer": {
         "abort": {
@@ -33,9 +38,9 @@
             "rebase": "Continue rebase",
             "revert": "Finish revert"
         },
+        "done": "Every file is resolved",
         "left_one": "1 file left",
         "left_other": "{{count}} files left",
-        "left_zero": "Every file is resolved",
         "resolve": "Mark resolved",
         "resolveAll": "Mark {{count}} resolved"
     },

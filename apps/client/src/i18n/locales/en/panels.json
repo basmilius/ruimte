@@ -224,7 +224,6 @@
       "cherry-pick": "A cherry-pick waits on you",
       "files_one": "1 file",
       "files_other": "{{count}} files",
-      "files_zero": "nothing left",
       "merge": "A merge waits on you",
       "plain": "Files conflict",
       "rebase": "A rebase waits on you",

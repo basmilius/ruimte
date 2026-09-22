@@ -224,7 +224,6 @@
       "cherry-pick": "Er wacht een cherry-pick op je",
       "files_one": "1 bestand",
       "files_other": "{{count}} bestanden",
-      "files_zero": "niets meer",
       "merge": "Er wacht een merge op je",
       "plain": "Bestanden conflicteren",
       "rebase": "Er wacht een rebase op je",

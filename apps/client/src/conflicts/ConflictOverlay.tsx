@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { Ban, Check, ChevronDown, ChevronUp, FileWarning, LoaderCircle, Sparkles, Wand2, X } from 'lucide-react';
-import type { GitConflictFile, GitConflictsResult } from '@ruimte/contracts';
+import type { GitConflictFile, GitConflictsResult, GitOperation } from '@ruimte/contracts';
 import { bothLines, sideLines, wandLines, type MergeSide } from '@ruimte/merge';
 import { ConflictEditor, type EditorHandle } from '@/conflicts/ConflictEditor';
 import { ConflictSides } from '@/conflicts/ConflictSides';
@@ -240,7 +240,7 @@ export function ConflictOverlay() {
                 }
                 answered += await askOne(target, actionId);
             }
-            useToasts.getState().show({ title: t('ai.done', { count: answered }), kind: 'success' });
+            useToasts.getState().show({ title: answered === 0 ? t('ai.none') : t('ai.done', { count: answered }), kind: 'success' });
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : t('failed');
             useToasts.getState().show({ title: t('ai.failed'), description: message.split('\n')[0], kind: 'error', output: message });
@@ -301,15 +301,20 @@ export function ConflictOverlay() {
         }
     };
 
-    const finish = async (action: 'continue' | 'abort'): Promise<void> => {
+    const finish = async (action: 'continue' | 'abort', operation: GitOperation): Promise<void> => {
         if (cwd === null) {
             return;
         }
         setBusy(true);
         try {
             const result = await transport.request('git.operation', { cwd, actionId: nextActionId(), action });
-            useToasts.getState().show({ title: result.summary, kind: 'success' });
-            if ((result.conflicts?.length ?? 0) === 0) {
+            const left = result.conflicts?.length ?? 0;
+            /* The daemon's summary is English wherever it lands; what happened is known here, so the
+               toast says it in the language the rest of the overlay is in. */
+            const title =
+                action === 'abort' ? t('finish.aborted', { operation }) : left > 0 ? t('finish.more', { count: left }) : t('finish.done', { operation });
+            useToasts.getState().show({ title, kind: 'success' });
+            if (left === 0) {
                 useUi.getState().setConflicts(null);
             } else {
                 files.current.clear();
@@ -479,10 +484,10 @@ export function ConflictOverlay() {
                     </div>
 
                     <footer className="flex h-12 shrink-0 items-center gap-2 border-t border-border px-3">
-                        <span className="text-xs text-text-muted">{t('footer.left', { count: left })}</span>
+                        <span className="text-xs text-text-muted">{left === 0 ? t('footer.done') : t('footer.left', { count: left })}</span>
                         <span className="grow" />
                         {operation !== null && (
-                            <Button variant="ghost" disabled={busy} onClick={() => void finish('abort')}>
+                            <Button variant="ghost" disabled={busy} onClick={() => void finish('abort', operation)}>
                                 <Icon icon={Ban} size={13} />
                                 {t(`footer.abort.${operation}`)}
                             </Button>
@@ -498,7 +503,7 @@ export function ConflictOverlay() {
                             </Button>
                         )}
                         {operation !== null && (
-                            <Button variant="primary" disabled={busy || left > 0} onClick={() => void finish('continue')}>
+                            <Button variant="primary" disabled={busy || left > 0} onClick={() => void finish('continue', operation)}>
                                 {t(`footer.continue.${operation}`)}
                             </Button>
                         )}

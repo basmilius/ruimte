@@ -3,13 +3,14 @@
         "all": "Vraag AI voor alle {{count}}",
         "done_one": "Een agent beantwoordde 1 conflict.",
         "done_other": "Een agent beantwoordde {{count}} conflicten.",
-        "done_zero": "De agent liet elk conflict aan jou.",
         "failed": "De agent kon dit niet oplossen",
+        "none": "De agent liet elk conflict aan jou.",
         "file": "Vraag AI dit bestand op te lossen",
         "working": "{{path}}, {{done}} van {{total}}"
     },
     "counter": "{{open}} van {{total}} open",
     "empty": {
+        "title": "Er conflicteert niets meer",
         "cherry-pick": "Alles is opgelost. Rond de cherry-pick hieronder af.",
         "merge": "Alles is opgelost. Rond de merge hieronder af.",
         "plain": "Er wacht niets op je in deze checkout.",
@@ -18,7 +19,11 @@
     },
     "failed": "Er ging iets mis.",
     "finish": {
-        "failed": "Dat ging niet door"
+        "aborted": "De {{operation}} is teruggedraaid",
+        "done": "De {{operation}} is afgerond",
+        "failed": "Dat ging niet door",
+        "more_one": "1 bestand conflicteert in de volgende commit",
+        "more_other": "{{count}} bestanden conflicteren in de volgende commit"
     },
     "footer": {
         "abort": {
@@ -33,9 +38,9 @@
             "rebase": "Rebase voortzetten",
             "revert": "Revert afronden"
         },
+        "done": "Elk bestand is opgelost",
         "left_one": "Nog 1 bestand",
         "left_other": "Nog {{count}} bestanden",
-        "left_zero": "Elk bestand is opgelost",
         "resolve": "Markeer als opgelost",
         "resolveAll": "Markeer {{count}} als opgelost"
     },
