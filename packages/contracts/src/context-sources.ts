@@ -38,9 +38,10 @@ const sourceOf = (
         // The path the daemon's machine knows it by, since that is where the agent runs.
         return { id: node.id, kind: 'file', title: node.title, text: resolveStoredPath(folder, node.path) ?? node.path };
     }
-    if (node.kind === 'browser' && node.url) {
-        // The address travels along, so a read opens with it even when the page itself cannot be reached.
-        return { id: node.id, kind: 'browser', title: node.title, text: node.url };
+    if (node.kind === 'browser') {
+        /* The address travels along, so a read opens with it even when the page itself cannot be
+           reached. A node without one is a source all the same: it is a page an agent may send somewhere. */
+        return { id: node.id, kind: 'browser', title: node.title, text: node.url ?? '' };
     }
     if (node.kind === 'device' && node.device) {
         // What the node points at, never what it is: the daemon looks the device up at the moment of reading.

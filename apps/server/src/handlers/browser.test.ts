@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ServerFrame } from '@ruimte/contracts';
 import type { BrowserManager } from '../browser/manager.ts';
+import { BrowserPages } from '../browser/pages.ts';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
 import { registerBrowserHandlers } from './browser.ts';
 
@@ -30,7 +31,7 @@ describe('browser handlers', () => {
             }
         } as unknown as BrowserManager;
         const dispatcher = new Dispatcher();
-        registerBrowserHandlers(dispatcher, browsers, () => allowed);
+        registerBrowserHandlers(dispatcher, browsers, new BrowserPages(), () => allowed);
         const frames: ServerFrame[] = [];
         const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
 
@@ -65,7 +66,7 @@ describe('browser handlers', () => {
             }
         } as unknown as BrowserManager;
         const dispatcher = new Dispatcher();
-        registerBrowserHandlers(dispatcher, browsers, () => false);
+        registerBrowserHandlers(dispatcher, browsers, new BrowserPages(), () => false);
         const frames: ServerFrame[] = [];
         const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
 

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import {
     BROWSER_FAVICON_MAX_BYTES,
     BROWSER_FAVICON_MAX_DATA_URL_LENGTH,
+    type BrowserDriveAction,
     type BrowserFrame,
     type BrowserInfo,
     type BrowserInput,
@@ -216,6 +217,12 @@ class BrowserSession implements LiveFrameSource {
     async text(): Promise<string> {
         const value = await this.enqueuePage(() => this.page.evaluate<unknown>(PAGE_TEXT_EXPRESSION)).catch(() => null);
         return typeof value === 'string' ? value.trim() : '';
+    }
+
+    /* A png of the page as it stands, for an agent that asked for a picture of what it is working on. */
+    async capture(): Promise<Uint8Array> {
+        const captured = await this.enqueueCdp<CapturedFrame>('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false });
+        return Buffer.from(captured.data, 'base64');
     }
 
     async navigate(input: string): Promise<void> {
@@ -555,8 +562,39 @@ export class BrowserManager {
      * session under the id answers.
      */
     async text(browserId: string): Promise<string | null> {
-        const session = [...this.sessions.values()].find((candidate) => candidate.id === browserId);
+        const session = this.sessionOf(browserId);
         return session ? session.text() : null;
+    }
+
+    /*
+     * Where the page this machine runs under that node goes next, for an agent that has a line into
+     * it. Null when this machine runs none, which in the desktop shell is the usual answer: the page
+     * lives in the client there, and `BrowserPages` asks that client instead.
+     */
+    async drive(browserId: string, action: BrowserDriveAction): Promise<BrowserInfo | null> {
+        const session = this.sessionOf(browserId);
+        if (!session) {
+            return null;
+        }
+        if (action.kind === 'go') {
+            await session.navigate(action.url);
+        } else if (action.kind === 'reload') {
+            await session.command('reload', action.ignoreCache);
+        } else if (action.kind === 'back' || action.kind === 'forward' || action.kind === 'stop') {
+            await session.command(action.kind);
+        }
+        return session.info();
+    }
+
+    /* A png of the page this machine runs under that node; null when it runs none. */
+    async capture(browserId: string): Promise<Uint8Array | null> {
+        const session = this.sessionOf(browserId);
+        return session ? session.capture() : null;
+    }
+
+    /* Whichever client opened it, the page under one node is one page, so the first session answers. */
+    private sessionOf(browserId: string): BrowserSession | undefined {
+        return [...this.sessions.values()].find((candidate) => candidate.id === browserId);
     }
 
     detach(browserId: string, clientId: string): void {

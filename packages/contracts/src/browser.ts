@@ -109,3 +109,59 @@ export type BrowserInfo = z.infer<typeof BrowserInfoSchema>;
 export type BrowserFrame = z.infer<typeof BrowserFrameSchema>;
 export type BrowserInput = z.infer<typeof BrowserInputPayloadSchema>['input'];
 export type DevServer = z.infer<typeof DevServerSchema>;
+
+/*
+ * What an agent may ask of a page it has a line to: where to go, through the history it already
+ * has, and a picture of what stands there. Never a click, a keystroke or a scroll: an agent works
+ * a page by its address, and typing into one is a person's.
+ */
+export const BrowserDriveActionSchema = z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('state') }),
+    z.object({ kind: z.literal('go'), url: z.string().max(8192) }),
+    z.object({ kind: z.literal('back') }),
+    z.object({ kind: z.literal('forward') }),
+    z.object({ kind: z.literal('reload'), ignoreCache: z.boolean().optional() }),
+    z.object({ kind: z.literal('stop') }),
+    z.object({ kind: z.literal('shot') })
+]);
+
+/*
+ * Where a page stands, as the client that holds it knows it. Smaller than `BrowserInfo` on purpose:
+ * a stream and an icon belong to the client drawing the page, and neither says anything to an agent.
+ */
+export const BrowserPageStateSchema = z.object({
+    browserId: BrowserIdSchema,
+    url: z.string().max(8192),
+    title: z.string().max(1024),
+    loading: z.boolean(),
+    canGoBack: z.boolean(),
+    canGoForward: z.boolean(),
+    /* What the last load failed on, in the browser's own words; null when it arrived. */
+    error: z.string().max(1024).nullable()
+});
+
+/* A client telling the daemon it has this page open, and where the page stands now. */
+export const BrowserHoldPayloadSchema = z.object({ state: BrowserPageStateSchema });
+
+/* One ask, to the clients holding that page. `askId` is what the answer comes back under. */
+export const BrowserDriveEventSchema = z.object({
+    askId: z.string().min(1).max(128),
+    browserId: BrowserIdSchema,
+    action: BrowserDriveActionSchema
+});
+
+/* A png of the page, base64, which is only ever the answer to a shot. */
+const BrowserShotSchema = z.string().max(16 * 1024 * 1024);
+
+export const BrowserDriveResultPayloadSchema = z.object({
+    askId: z.string().min(1).max(128),
+    state: BrowserPageStateSchema.optional(),
+    image: BrowserShotSchema.optional(),
+    /* Why it did not happen; absent when it did. */
+    error: z.string().max(1024).optional()
+});
+
+export type BrowserDriveAction = z.infer<typeof BrowserDriveActionSchema>;
+export type BrowserPageState = z.infer<typeof BrowserPageStateSchema>;
+export type BrowserDriveEvent = z.infer<typeof BrowserDriveEventSchema>;
+export type BrowserDriveResult = z.infer<typeof BrowserDriveResultPayloadSchema>;

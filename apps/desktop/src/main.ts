@@ -664,6 +664,23 @@ ipcMain.handle('shell:open-external', async (_event, url: string) => {
 ipcMain.on('devtools:guest', (_event, id: number) => guestDevTools(id));
 
 /*
+ * A png of a guest page, for an agent that asked what the page it drives looks like. Only the app's
+ * own page may ask: a guest carries its own preload, which has none of this, and a picture of
+ * another guest is not something a page gets to take.
+ */
+ipcMain.handle('browser:capture', async (event, id: number) => {
+    if (event.sender !== mainWindow?.webContents) {
+        return null;
+    }
+    const guest = webContents.fromId(id);
+    if (!guest) {
+        return null;
+    }
+    const image = await guest.capturePage();
+    return image.toPNG();
+});
+
+/*
  * The daemon's local secret, which is how the app proves it runs on this machine now that a loopback
  * address proves nothing. Read on every ask rather than once: the daemon mints it on its first start,
  * which in `bun dev` may come after this window. Only the app's own page gets it.

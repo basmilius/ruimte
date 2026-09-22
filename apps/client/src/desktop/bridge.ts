@@ -107,6 +107,9 @@ export interface DesktopBridge {
     pickFolder(initialPath?: string): Promise<string | null>;
     openExternal(url: string): Promise<void>;
     openGuestDevTools(webContentsId: number): void;
+    /* A png of a guest page, which is how an agent gets a picture of the page it drives. Optional
+       for the same reason `onBrowserContextMenu` is. */
+    capturePage?(webContentsId: number): Promise<Uint8Array | null>;
     /* A right-click inside a page. The shell says what the click landed on, the client draws the
        menu. Optional, because a shell that is already running carries the preload it started with,
        so a method added since then is missing until it restarts. */

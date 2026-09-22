@@ -1,9 +1,10 @@
 import type { BrowserManager } from '../browser/manager.ts';
+import type { BrowserPages } from '../browser/pages.ts';
 import { probeDevServers } from '../browser/dev-servers.ts';
 import { translate, type Dispatcher } from '../dispatcher.ts';
 import { streamingGate } from './streaming.ts';
 
-export const registerBrowserHandlers = (dispatcher: Dispatcher, browsers: BrowserManager, streamingAllowed: () => boolean): void => {
+export const registerBrowserHandlers = (dispatcher: Dispatcher, browsers: BrowserManager, pages: BrowserPages, streamingAllowed: () => boolean): void => {
     const requireStreaming = streamingGate(streamingAllowed);
 
     dispatcher.register('browser.open', (payload, client) => {
@@ -42,6 +43,23 @@ export const registerBrowserHandlers = (dispatcher: Dispatcher, browsers: Browse
             await browsers.input(payload.browserId, client.id, payload.input);
             return {};
         });
+    });
+    /*
+     * Holding a page and answering for it. Outside the streaming gate: these open no browser here.
+     * The page is the client's own, and all this machine does is remember who has it and pass an
+     * agent's word along to them.
+     */
+    dispatcher.register('browser.hold', (payload, client) => {
+        pages.hold(client.id, payload.state);
+        return {};
+    });
+    dispatcher.register('browser.release', (payload, client) => {
+        pages.release(client.id, payload.browserId);
+        return {};
+    });
+    dispatcher.register('browser.driveResult', (payload) => {
+        pages.settle(payload);
+        return {};
     });
     // Outside the gate: it opens no browser and only reports which local ports answer.
     dispatcher.register('browser.devServers', async (payload) => ({ servers: await probeDevServers(payload.ports) }));

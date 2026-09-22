@@ -8,6 +8,11 @@ import { BROWSER_TEXT_MAX_CHARS } from '../browser/manager.ts';
  * lines of the page and leaves the address standing, the way a drawing's tail leaves its picture out.
  */
 export const renderPage = (url: string, text: string | null, tail: number | null = null): string => {
+    if (url === '') {
+        return ['# Page', '', 'This node has no address yet, so there is nothing to read. `ruimte-context browser go <id> --url <address>` gives it one.'].join(
+            '\n'
+        );
+    }
     const heading = `# Page: ${url}`;
     if (text === null) {
         return [heading, '', 'No page of this node is open on this machine, so its address is all that can be read here.'].join('\n');

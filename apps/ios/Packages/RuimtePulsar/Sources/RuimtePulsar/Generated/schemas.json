@@ -6136,6 +6136,160 @@
       "servers"
     ]
   },
+  "request.browser.hold.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "state": {
+        "type": "object",
+        "properties": {
+          "browserId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 8192
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "loading": {
+            "type": "boolean"
+          },
+          "canGoBack": {
+            "type": "boolean"
+          },
+          "canGoForward": {
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "browserId",
+          "url",
+          "title",
+          "loading",
+          "canGoBack",
+          "canGoForward",
+          "error"
+        ]
+      }
+    },
+    "required": [
+      "state"
+    ]
+  },
+  "request.browser.hold.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.browser.release.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "browserId"
+    ]
+  },
+  "request.browser.release.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.browser.driveResult.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "askId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "state": {
+        "type": "object",
+        "properties": {
+          "browserId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 8192
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "loading": {
+            "type": "boolean"
+          },
+          "canGoBack": {
+            "type": "boolean"
+          },
+          "canGoForward": {
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "browserId",
+          "url",
+          "title",
+          "loading",
+          "canGoBack",
+          "canGoForward",
+          "error"
+        ]
+      },
+      "image": {
+        "type": "string",
+        "maxLength": 16777216
+      },
+      "error": {
+        "type": "string",
+        "maxLength": 1024
+      }
+    },
+    "required": [
+      "askId"
+    ]
+  },
+  "request.browser.driveResult.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.device.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -30124,6 +30278,123 @@
       "canGoBack",
       "canGoForward",
       "error"
+    ]
+  },
+  "event.browser.drive": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "askId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "action": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "state"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "go"
+              },
+              "url": {
+                "type": "string",
+                "maxLength": 8192
+              }
+            },
+            "required": [
+              "kind",
+              "url"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "back"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "forward"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "reload"
+              },
+              "ignoreCache": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "stop"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "shot"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        ]
+      }
+    },
+    "required": [
+      "askId",
+      "browserId",
+      "action"
     ]
   },
   "event.device.frame": {

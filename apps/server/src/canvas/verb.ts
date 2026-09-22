@@ -1,6 +1,7 @@
 import {
     isCanvasView,
     type AgentKind,
+    type BrowserDriveAction,
     type DiagramContent,
     type GitDiffResult,
     type ProjectCanvasView,
@@ -13,6 +14,7 @@ import {
     type WorktreeMergeResult
 } from '@ruimte/contracts';
 import { z } from 'zod';
+import type { DriveOutcome, ShotOutcome } from '../browser/drive.ts';
 import type { NoticeDelivery, Notice } from '../context/notices.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -76,6 +78,18 @@ export interface CanvasHost {
     plans: Pick<PlanStore, 'read' | 'create' | 'apply' | 'delete'>;
     /* Reading and merging the worktrees of the project's repository; a host without git has none. */
     worktrees?: WorktreeHost;
+    /* Driving the page under a browser node, wherever that page is open; absent on a host without one. */
+    browsers?: BrowserDriveHost;
+}
+
+/*
+ * What a verb reaches a page through. One door for both kinds of page: one this machine runs itself
+ * and one a client holds in a <webview>. Null is the answer when nobody has the page open at all.
+ */
+export interface BrowserDriveHost {
+    drive(browserId: string, action: BrowserDriveAction): Promise<DriveOutcome | null>;
+    /* Writes a png of the page under the machine's own folder; null when nobody has the page open. */
+    shot(browserId: string): Promise<ShotOutcome | null>;
 }
 
 export interface WorktreeHost {
@@ -167,7 +181,7 @@ export type VerbEntry = Verb | Noun | ContextVerb;
 
 /* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
 export const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; node, link, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; node, link, browser, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you';
 
 export const DRY_RUN_FLAG = 'dry-run';
 

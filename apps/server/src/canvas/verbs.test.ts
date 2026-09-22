@@ -14,6 +14,8 @@ import {
     DiagramNodeSchema,
     DrawingColorSchema,
     EDGE_ROLES,
+    type BrowserDriveAction,
+    type BrowserPageState,
     GROUP_HEADER,
     GROUP_PADDING,
     NODE_ACCENT_NAMES,
@@ -82,6 +84,10 @@ let tasks: TaskStore;
 let modes: Record<string, RuntimeMode>;
 let terminalPreference: RuntimeMode | undefined;
 let branches: string[] | null;
+let driven: Array<{ browserId: string; action: BrowserDriveAction }>;
+/* Whether any client on this machine has the page open, which is what a driver answers null without. */
+let pageOpen: boolean;
+let shotPath: string;
 let madeWorktrees: Worktree[];
 let removedWorktrees: string[];
 
@@ -134,6 +140,9 @@ beforeEach(async () => {
     modes = {};
     terminalPreference = undefined;
     branches = null;
+    driven = [];
+    pageOpen = true;
+    shotPath = join(root, 'home', 'screenshots', 'page.png');
     madeWorktrees = [];
     removedWorktrees = [];
     breakWrites = false;
@@ -227,7 +236,25 @@ const host = (): CanvasHost => ({
         },
         involving: (nodeId) => tasks.involving(nodeId)
     },
-    plans: { read: async () => [], create: unusedPlans, apply: unusedPlans, delete: unusedPlans }
+    plans: { read: async () => [], create: unusedPlans, apply: unusedPlans, delete: unusedPlans },
+    browsers: {
+        drive: async (browserId, action) => {
+            driven.push({ browserId, action });
+            return pageOpen ? { state: pageStand(browserId) } : null;
+        },
+        shot: async (browserId) => (pageOpen ? { path: shotPath, state: pageStand(browserId) } : null)
+    }
+});
+
+/* Where the fake page stands: enough for a test to read every column the verb prints. */
+const pageStand = (browserId: string): BrowserPageState => ({
+    browserId,
+    url: 'https://example.com/two',
+    title: 'Two',
+    loading: false,
+    canGoBack: true,
+    canGoForward: false,
+    error: null
 });
 
 const unusedPlans = (): Promise<never> => Promise.reject(new Error('no plans in these tests'));
@@ -3095,5 +3122,106 @@ describe('task list', () => {
             'note\t1 older task is hidden, settled and already reported; ruimte-context task list --all lists them'
         ]);
         expect((await post('task', ['list', '--all'], 'chat')).lines.map((line) => line.split('\t')[1])).toEqual([earlier, later]);
+    });
+});
+
+describe('browser', () => {
+    /* A page of the caller's own: `node new` draws the line from the agent to it, which is what driving takes. */
+    const ownPage = async (): Promise<string> => (await post('node', ['new', 'browser', '--url', 'https://example.com'])).lines[0]!.split('\t')[0]!;
+
+    test('state prints where the page stands, without asking the page to move', async () => {
+        const id = await ownPage();
+        const { status, lines } = await post('browser', ['state', id]);
+        expect(status).toBe(200);
+        expect(lines).toEqual(['open\tyes\tThe page answered', `page\t${id}\thttps://example.com/two\tTwo`, 'loading\tno', 'back\tyes', 'forward\tno']);
+        expect(driven).toEqual([{ browserId: id, action: { kind: 'state' } }]);
+    });
+
+    test('go sends the page to an address and answers where it landed', async () => {
+        const id = await ownPage();
+        const { lines } = await post('browser', ['go', id, '--url', 'https://example.com/two']);
+        expect(driven).toEqual([{ browserId: id, action: { kind: 'go', url: 'https://example.com/two' } }]);
+        expect(lines[1]).toBe(`page\t${id}\thttps://example.com/two\tTwo`);
+    });
+
+    test('go on a node that has no address yet writes that address into the project', async () => {
+        // The node a person's splash makes: a browser with no page at all, with a line from the agent to it.
+        await store.mutate(projectId, (current) => ({
+            content: {
+                ...current,
+                views: current.views.map((view) =>
+                    view.id === 'main' && view.kind === 'canvas'
+                        ? {
+                              ...view,
+                              nodes: [...view.nodes, { id: 'page-blank', kind: 'browser' as const, title: 'Page', x: 900, y: 0, w: 560, h: 360 }],
+                              edges: [...view.edges, { id: 'edge-blank', from: 'term-1', to: 'page-blank' }]
+                          }
+                        : view
+                )
+            },
+            result: undefined
+        }));
+        const { lines } = await post('browser', ['go', 'page-blank', '--url', 'https://example.com/start']);
+        expect(driven).toEqual([]);
+        expect(lines[0]).toBe('open\tno\tThis node had no address yet, so https://example.com/start is now the page it opens with');
+        expect((await canvasOnDisk()).nodes.find((node) => node.id === 'page-blank')?.url).toBe('https://example.com/start');
+    });
+
+    test('reload --hard asks past the cache, and the plain one does not', async () => {
+        const id = await ownPage();
+        await post('browser', ['reload', id, '--hard']);
+        await post('browser', ['reload', id]);
+        expect(driven.map((call) => call.action)).toEqual([
+            { kind: 'reload', ignoreCache: true },
+            { kind: 'reload', ignoreCache: false }
+        ]);
+    });
+
+    test('back, forward and stop are the page words they say they are', async () => {
+        const id = await ownPage();
+        await post('browser', ['back', id]);
+        await post('browser', ['forward', id]);
+        await post('browser', ['stop', id]);
+        expect(driven.map((call) => call.action.kind)).toEqual(['back', 'forward', 'stop']);
+    });
+
+    test('nobody with the page on screen is an answer and not a failure', async () => {
+        const id = await ownPage();
+        pageOpen = false;
+        const { status, lines } = await post('browser', ['go', id, '--url', 'https://example.com/two']);
+        expect(status).toBe(200);
+        expect(lines).toEqual(['open\tno\tNobody has this page open right now, so nothing was driving it']);
+    });
+
+    test('a shot answers with the file it wrote, and with nothing when no page is open', async () => {
+        const id = await ownPage();
+        const { lines } = await post('browser', ['shot', id]);
+        expect(lines[1]).toBe(`shot\t${shotPath}\tRead it with your own tools`);
+        expect(lines[2]).toBe(`page\t${id}\thttps://example.com/two\tTwo`);
+        pageOpen = false;
+        expect((await post('browser', ['shot', id])).lines).toEqual(['open\tno\tNobody has this page open right now, so there was nothing to photograph']);
+    });
+
+    test('a page no line runs to is refused, and the pages that do run to one are listed', async () => {
+        const stranger = (await post('node', ['new', 'browser', '--url', 'https://example.com/far', '--view', 'board'])).lines[0]!.split('\t')[0]!;
+        const mine = await ownPage();
+        const { status, lines } = await post('browser', ['state', stranger]);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe(`refused\tnot-linked\tNo line runs between you and ${stranger}, and that line is what lets you drive its page`);
+        expect(lines.some((line) => line.startsWith(`browser\t${mine}\t`))).toBe(true);
+        expect(driven).toEqual([]);
+    });
+
+    test('a node that is not a browser, and an id that is no node at all, are refused by name', async () => {
+        expect((await post('browser', ['state', 'note-1'])).lines[0]).toBe(
+            'refused\tnot-a-browser\tnote-1 is a note node, and only a browser node has a page to drive'
+        );
+        expect((await post('browser', ['state', 'nowhere'])).lines[0]).toBe('refused\tunknown-node\tnowhere is not a node of this project');
+    });
+
+    test('go takes an http or https address and nothing else', async () => {
+        const id = await ownPage();
+        expect((await post('browser', ['go', id, '--url', 'ftp://example.com'])).lines[0]).toContain('refused\tbad-url');
+        expect(driven).toEqual([]);
     });
 });

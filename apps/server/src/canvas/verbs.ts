@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { agentVerb } from './agent-verb.ts';
 import { arrangeAction } from './arrange-verb.ts';
+import { BROWSER_ACTIONS, BROWSER_DETAIL, BROWSER_SUMMARY } from './browser-verb.ts';
 import { diagramAction } from './diagram-verb.ts';
 import { nodeEditAction } from './edit-verb.ts';
 import { groupAction } from './group-verb.ts';
@@ -152,6 +153,7 @@ const readVerb: ContextVerb = {
         'kind\tdiagram\tIts title, every node layer by layer (sub in brackets), every edge with its label, what each group wraps, and the SVG under it\t--tail counts lines of that list and leaves the SVG out',
         'kind\tfile\tIts path and a line telling you to read it yourself, since your own tools see a fresher copy\t--tail does nothing here',
         'kind\tbrowser\tThe address of the page and, under it, the text of that page as this machine has it open, read the moment you ask; the address alone when no page of it is open here\t--tail counts lines of the page text and keeps the address',
+        'kind\tbrowser\tReading leaves the page where it is; ruimte-context browser is what sends it somewhere, over the same line',
         'kind\tdevice\tWhich device the node points at: its name, platform, kind and runtime, and the state, deviceId and backendId this machine knows it by, or a line saying the device is not here right now\t--tail does nothing here',
         'cheap\tThe last fifteen lines of a neighbour is usually the whole answer; read the source whole only when it is not',
         'direction\tA line runs one way: the one you draw into another agent lets it read you, and reading it back takes a line from it into you, which ruimte-context link new --from <id> --to <you> draws',
@@ -175,6 +177,13 @@ const linkNoun = defineNoun({
     summary: 'Lists, draws and removes the lines of a canvas, which is what lets an agent read the node a line runs from',
     detail: [SCOPE_LINE],
     actions: [linkListAction, linkNewAction, linkDeleteAction]
+});
+
+const browserNoun = defineNoun({
+    name: 'browser',
+    summary: BROWSER_SUMMARY,
+    detail: BROWSER_DETAIL,
+    actions: [...BROWSER_ACTIONS]
 });
 
 const viewNoun = defineNoun({
@@ -206,6 +215,7 @@ export const VERBS: readonly VerbEntry[] = [
     teamVerb,
     nodeNoun,
     linkNoun,
+    browserNoun,
     viewNoun,
     taskNoun,
     planVerb,

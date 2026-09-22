@@ -109,7 +109,9 @@ import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
 import { UsageMonitor } from './usage/limits/monitor.ts';
 import { UsageService } from './usage/usage-service.ts';
 import { errorText } from './error-text.ts';
+import { BrowserDriver } from './browser/drive.ts';
 import { BrowserManager } from './browser/manager.ts';
+import { BrowserPages } from './browser/pages.ts';
 import { registerBrowserHandlers } from './handlers/browser.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from './streams/http-stream.ts';
 import { DeviceManager } from './devices/manager.ts';
@@ -268,6 +270,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const folders = new FolderWatcher();
     const liveStreams = new LiveStreamHub();
     const browsers = BrowserManager.withBun(config.home, liveStreams);
+    // The pages the clients draw themselves, which this machine can only reach by asking them.
+    const browserPages = new BrowserPages();
     const deviceHelperCommand = compiled ? [process.execPath, 'device-helper'] : [process.execPath, resolve(import.meta.dir, 'main.ts'), 'device-helper'];
     const physicalStreamSource = createPhysicalStreamSourceFactory(physicalStreamHelperPath(compiled, process.execPath, resolve(import.meta.dir, '../..')));
     const devices = new DeviceManager(
@@ -356,6 +360,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         claimWorktree: (folder: string, path: string, nodeId: string) => worktrees.claim(folder, path, nodeId),
         removeWorktree: (folder: string, path: string) => worktrees.remove(folder, path),
         worktrees: worktreeHost(worktrees, merges),
+        browsers: new BrowserDriver(config.home, browsers, browserPages),
         depthOf: (nodeId: string) => lineage.depthOf(nodeId),
         openedCount: (callerId: string) => lineage.openedCount(callerId),
         recordMade: (record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean }) => lineage.put(record),
@@ -441,7 +446,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager, endChildren.owe);
-    registerBrowserHandlers(dispatcher, browsers, () => identity.streamingAllowed);
+    registerBrowserHandlers(dispatcher, browsers, browserPages, () => identity.streamingAllowed);
     registerDeviceHandlers(dispatcher, devices, () => identity.streamingAllowed);
     const forkDeps = chatForkDeps({ chats, host: canvasHost, titleFor: (id) => projects.index.titleFor(id), lineage, worktrees, checkpoints });
     registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, {
@@ -573,6 +578,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         sessions: manager,
         chats,
         browsers,
+        browserPages,
         devices,
         identity,
         projects,

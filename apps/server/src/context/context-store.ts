@@ -173,8 +173,8 @@ export class ContextStore {
                 const plans = (await this.readers.chatPlans?.(source.id).catch(() => [])) ?? [];
                 return plans.length === 0 ? thread : `${plans.map((plan) => renderPlanText(plan)).join('\n\n')}\n\n${thread}`;
             }
-            /* The page as it stands, under the address the project file knows. Reading it is the whole
-               of what a line into a browser may do: nothing here navigates, reloads or clicks. */
+            /* The page as it stands, under the address the project file knows. Reading never moves it;
+               where the page goes is `ruimte-context browser`, over the same line. */
             case 'browser': {
                 const text = (await this.readers.browserText?.(source.id).catch(() => null)) ?? null;
                 return renderPage(source.text ?? '', text, tail);

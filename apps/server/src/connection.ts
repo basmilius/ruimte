@@ -43,6 +43,8 @@ export interface ConnectionServices {
     sessions: Attachable & { get(sessionId: string): ScreenSource | undefined };
     chats: Attachable;
     browsers?: Attachable;
+    /* The pages the clients hold themselves, which the daemon only knows of while they say so. */
+    browserPages?: Attachable;
     devices?: Attachable;
     identity: Subscribable;
     projects: Subscribable;
@@ -96,6 +98,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             services.sessions.subscribe(clientId, sink),
             services.chats.subscribe(clientId, sink),
             services.browsers?.subscribe(clientId, sink) ?? (() => undefined),
+            services.browserPages?.subscribe(clientId, sink) ?? (() => undefined),
             services.devices?.subscribe(clientId, sink) ?? (() => undefined),
             services.identity.subscribe(clientId, sink),
             services.projects.subscribe(clientId, sink),
@@ -126,6 +129,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             services.sessions.detachAll(clientId);
             services.chats.detachAll(clientId);
             services.browsers?.detachAll(clientId);
+            services.browserPages?.detachAll(clientId);
             services.devices?.detachAll(clientId);
             services.folders.detachAll(clientId);
             services.statuses.detachAll(clientId);

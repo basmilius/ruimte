@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
        and the renderer has no `webUtils`. Empty for anything that is not a file on disk. */
     pathForFile: (file: File): string | null => webUtils.getPathForFile(file) || null,
     openGuestDevTools: (webContentsId: number): void => ipcRenderer.send('devtools:guest', webContentsId),
+    capturePage: (webContentsId: number): Promise<Uint8Array | null> => ipcRenderer.invoke('browser:capture', webContentsId),
     onBrowserContextMenu: (listener: (params: unknown) => void): (() => void) => {
         const handler = (_event: unknown, params: unknown): void => listener(params);
         ipcRenderer.on('browser:context-menu', handler);

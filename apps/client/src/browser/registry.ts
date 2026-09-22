@@ -270,6 +270,21 @@ class BrowserRegistry {
         }
     }
 
+    /* A png of the page, taken by the shell: a page cannot photograph itself, and the element has no camera. */
+    async capture(key: string): Promise<Uint8Array | null> {
+        const element = this.elements.get(key);
+        const shell = desktop();
+        if (!element || !shell?.capturePage) {
+            return null;
+        }
+        try {
+            return await shell.capturePage(element.getWebContentsId());
+        } catch {
+            // The guest is not attached yet, so there is nothing to photograph.
+            return null;
+        }
+    }
+
     inspect(key: string): void {
         const element = this.elements.get(key);
         if (element) {
