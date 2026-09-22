@@ -157,6 +157,7 @@
     "project.save",
     "project.save-local",
     "project.close",
+    "project.closing",
     "project.release",
     "project.setIcon",
     "project.setIdentity",

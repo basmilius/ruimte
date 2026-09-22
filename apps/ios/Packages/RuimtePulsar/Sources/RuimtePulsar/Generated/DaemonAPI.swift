@@ -65,6 +65,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `projectSave` = "project.save"
     case `projectSaveLocal` = "project.save-local"
     case `projectClose` = "project.close"
+    case `projectClosing` = "project.closing"
     case `projectRelease` = "project.release"
     case `projectSetIcon` = "project.setIcon"
     case `projectSetIdentity` = "project.setIdentity"

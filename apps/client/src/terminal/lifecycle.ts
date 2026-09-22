@@ -25,12 +25,15 @@ const end: NodeEnder = (endpointId, id, kind) => {
 export const startSessionLifecycle = (): (() => void) => watchNodes(end);
 
 /*
- * Ends every session a project holds, on the machine that project was opened on. The watcher above
- * cannot do this, it skips a document that is swapping out, which is exactly what closing a project
- * looks like to it, and a switch to another project has to leave the sessions where they are.
+ * What a closing project leaves behind inside this client. Ending the sessions themselves is the
+ * daemon's: a project can be closed from a client that never had it on screen, and one that another
+ * client still has open keeps its sessions running. The last screen of a terminal is a cache either
+ * way, and a reattach fills it again.
  */
-export const endProjectSessions = (endpointId: string, views: readonly ProjectView[]): void => {
+export const forgetProjectSessions = (endpointId: string, views: readonly ProjectView[]): void => {
     for (const node of sessionNodesOf(views)) {
-        end(endpointId, node.id, node.kind);
+        if (node.kind === 'terminal') {
+            forgetScreen(endpointId, node.id);
+        }
     }
 };

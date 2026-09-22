@@ -848,6 +848,24 @@ export type ProjectSaveLocalPayload = z.infer<typeof ProjectSaveLocalPayloadSche
 export const ProjectTargetPayloadSchema = z.object({ projectId: ProjectIdSchema });
 export type ProjectTargetPayload = z.infer<typeof ProjectTargetPayloadSchema>;
 
+/*
+ * What closing this project would do, asked before the confirmation so it can name a number rather
+ * than hedge. `otherClients` are the clients that also have it open: as long as one of them does,
+ * nothing ends and the project keeps its place in their menu.
+ */
+export const ProjectClosingResultSchema = z.object({
+    sessions: z.number(),
+    otherClients: z.number()
+});
+export type ProjectClosingResult = z.infer<typeof ProjectClosingResultSchema>;
+
+/* What closing did. Absent from a daemon that answered nothing but an acknowledgement. */
+export const ProjectCloseResultSchema = z.object({
+    ended: z.number().optional(),
+    otherClients: z.number().optional()
+});
+export type ProjectCloseResult = z.infer<typeof ProjectCloseResultSchema>;
+
 /* A project a person closed. The menu keeps it under Recent until someone opens it again. */
 export const isRecentProject = (summary: ProjectSummary): boolean => summary.closedAt !== null && summary.closedAt !== undefined;
 

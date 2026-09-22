@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode, ProjectView } from '@ruimte/contracts';
-import { closeWarning, sessionNodesOf } from './project-sessions';
+import { closeWarning, closingCount, sessionNodesOf } from './project-sessions';
 
 const node = (id: string, kind: ProjectNode['kind']): ProjectNode => ({ id, kind, x: 0, y: 0, w: 100, h: 100, title: id });
 
@@ -37,6 +37,20 @@ describe('sessionNodesOf', () => {
     });
 });
 
+describe('closingCount', () => {
+    test('the document on screen counts its own sessions, over the copy the machine has of it', () => {
+        expect(closingCount({ sessions: 1, otherClients: 0 }, 3)).toEqual({ sessions: 3, otherClients: 0 });
+    });
+
+    test('a project this window is not showing has no count of its own', () => {
+        expect(closingCount({ sessions: 1, otherClients: 0 }, null)).toEqual({ sessions: 1, otherClients: 0 });
+    });
+
+    test('a project another client keeps ends nothing, whatever the document on screen holds', () => {
+        expect(closingCount({ sessions: 0, otherClients: 2 }, 3)).toEqual({ sessions: 0, otherClients: 2 });
+    });
+});
+
 describe('closeWarning', () => {
     test('says what is lost, with the number of sessions in it', () => {
         expect(closeWarning(3)).toStartWith('Closing ends its 3 running sessions.');
@@ -46,5 +60,11 @@ describe('closeWarning', () => {
     test('a project with nothing running says so instead of counting zero', () => {
         expect(closeWarning(0)).toStartWith('Nothing in this project is running.');
         expect(closeWarning(0)).not.toInclude('session');
+    });
+
+    test('a project another client still has open loses nothing, whatever it holds', () => {
+        expect(closeWarning(3, 1)).toStartWith('Another client still has this project open');
+        expect(closeWarning(3, 2)).toStartWith('2 other clients still have this project open');
+        expect(closeWarning(3, 1)).toInclude('nothing stops running');
     });
 });

@@ -398,7 +398,7 @@ describe('ProjectStore', () => {
         const { projectId } = opened.summary;
         expect(opened.summary.closedAt).toBeNull();
 
-        await store.closeProject(projectId);
+        await store.closeProject(projectId, 'c1');
         const listed = (await store.list()).find((project) => project.projectId === projectId)!;
         expect(listed.closedAt).toBeNumber();
         /* The other clients hear it, so every machine draws the same list. The summary goes out
@@ -418,7 +418,7 @@ describe('ProjectStore', () => {
 
     test('a project that is closed while it is open is let go of as well', async () => {
         const { summary } = await store.openProject({ folder });
-        await store.closeProject(summary.projectId);
+        await store.closeProject(summary.projectId, 'c1');
         expect(store.openProjectIds()).toEqual([]);
         // Nothing was saved or removed, so the canvas is still where it was.
         expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain(`"version": ${PROJECT_VERSION}`);
@@ -426,9 +426,64 @@ describe('ProjectStore', () => {
 
     test('closing survives a restart, because the registry carries it and not the client', async () => {
         const { summary } = await store.openProject({ folder });
-        await store.closeProject(summary.projectId);
+        await store.closeProject(summary.projectId, 'c1');
         const restarted = new ProjectStore(home, fake);
         expect((await restarted.list())[0]?.closedAt).toBeNumber();
+    });
+
+    test('a project another client still holds keeps its place, its watcher and its sessions', async () => {
+        const ended: string[] = [];
+        store.attachSessionEnder(async (kind, nodeId) => {
+            ended.push(`${kind}:${nodeId}`);
+        });
+        const { summary } = await store.openProject({ folder });
+        store.hold('c1', summary.projectId);
+        store.hold('c2', summary.projectId);
+        summaries.length = 0;
+
+        expect(await store.closeProject(summary.projectId, 'c1')).toEqual({ ended: 0, otherClients: 1 });
+        expect(ended).toEqual([]);
+        expect(store.openProjectIds()).toEqual([summary.projectId]);
+        expect((await store.list())[0]?.closedAt).toBeNull();
+        expect(summaries).toEqual([]);
+    });
+
+    test('the last client out ends the sessions the project holds', async () => {
+        const ended: string[] = [];
+        store.attachSessionEnder(async (kind, nodeId) => {
+            ended.push(`${kind}:${nodeId}`);
+        });
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        await store.save(projectId, opened.document.rev, content());
+        store.hold('c1', projectId);
+
+        expect(await store.closeProject(projectId, 'c1')).toEqual({ ended: 1, otherClients: 0 });
+        expect(ended).toEqual(['terminal:n1']);
+        expect((await store.list())[0]?.closedAt).toBeNumber();
+    });
+
+    test('what closing would do counts the sessions, or counts the clients that keep them running', async () => {
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        await store.save(projectId, opened.document.rev, content());
+        store.hold('c1', projectId);
+        expect(store.closing('c1', projectId)).toEqual({ sessions: 1, otherClients: 0 });
+
+        store.hold('c2', projectId);
+        expect(store.closing('c1', projectId)).toEqual({ sessions: 0, otherClients: 1 });
+    });
+
+    test('a socket that goes lets the project go and leaves the list where it was', async () => {
+        const { summary } = await store.openProject({ folder });
+        const other = store.subscribe('c2', () => undefined);
+        store.hold('c2', summary.projectId);
+        summaries.length = 0;
+
+        other();
+        expect(store.openProjectIds()).toEqual([]);
+        expect((await store.list())[0]?.closedAt).toBeNull();
+        expect(summaries).toEqual([]);
     });
 
     test('letting go of a project leaves the list where it was', async () => {
@@ -441,7 +496,7 @@ describe('ProjectStore', () => {
     });
 
     test('closing a project nobody knows is refused', async () => {
-        await expect(store.closeProject('nope')).rejects.toMatchObject({ code: 'project-not-found' });
+        await expect(store.closeProject('nope', 'c1')).rejects.toMatchObject({ code: 'project-not-found' });
     });
 
     test('a folder that is gone and an unknown id are refused', async () => {
@@ -505,7 +560,7 @@ describe('the project index', () => {
         // Switching away is what `release` is; the shell on that canvas keeps running and keeps its links.
         store.release(projectId);
         expect(store.index.sourcesFor('agent')[0]).toMatchObject({ text: 'second' });
-        await store.closeProject(projectId);
+        await store.closeProject(projectId, 'c1');
         expect(store.index.locate('agent')).toEqual({ projectId, folder, canvasId: 'main' });
 
         await store.delete(projectId, false);
@@ -515,7 +570,7 @@ describe('the project index', () => {
     test('warming reads a project nobody opened since the daemon started', async () => {
         const opened = await store.openProject({ folder });
         await store.save(opened.summary.projectId, 0, linked('from disk'));
-        await store.closeProject(opened.summary.projectId);
+        await store.closeProject(opened.summary.projectId, 'c1');
 
         const restarted = new ProjectStore(home, fake);
         expect(restarted.index.sourcesFor('agent')).toEqual([]);
@@ -885,7 +940,7 @@ describe('reading the combined sidebar', () => {
         const broken = await store.openProject({ folder });
         const closed = await store.openProject({ folder: join(root, 'Closed'), createFolder: true, name: 'Closed' });
         const healthy = await store.openProject({ folder: join(root, 'Healthy'), createFolder: true, name: 'Healthy' });
-        await store.closeProject(closed.summary.projectId);
+        await store.closeProject(closed.summary.projectId, 'c1');
         store.release(broken.summary.projectId);
         await writeFile(documentPathInFolder(folder), 'broken json');
         const overview = await store.sidebar();

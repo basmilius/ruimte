@@ -8,9 +8,11 @@
     "reopenFailed": "Het project kon niet opnieuw worden geopend"
   },
   "close": {
-    "idle": "Er draait niets in dit project. Het gaat naar Recent met het canvas zoals je het achterliet.",
-    "ending_one": "Sluiten beëindigt de lopende sessie. Een terminal verliest zijn scrollback en een agent stopt. Het project gaat naar Recent met het canvas zoals je het achterliet.",
-    "ending_other": "Sluiten beëindigt de {{count}} lopende sessies. Een terminal verliest zijn scrollback en een agent stopt. Het project gaat naar Recent met het canvas zoals je het achterliet."
+    "idle": "Er draait niets in dit project. Het gaat naar Recent zoals je het achterliet.",
+    "ending_one": "Sluiten beëindigt de lopende sessie. Een terminal verliest zijn scrollback en een agent stopt. De rest gaat naar Recent zoals je het achterliet.",
+    "ending_other": "Sluiten beëindigt de {{count}} lopende sessies. Een terminal verliest zijn scrollback en een agent stopt. De rest gaat naar Recent zoals je het achterliet.",
+    "held_one": "Een andere client heeft dit project nog open, dus er stopt niets. Het gaat alleen hier naar Recent.",
+    "held_other": "{{count}} andere clients hebben dit project nog open, dus er stopt niets. Het gaat alleen hier naar Recent."
   },
   "showView": {
     "someone": "Een agent",

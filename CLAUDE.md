@@ -65,6 +65,7 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 - Agents cannot type into or close another node's session or start a command through a verb (only `agent` starts anything); `--cwd` stays inside the project folder or its worktrees. A browser node is driven only over a line between it and the agent, and only by address: where the page goes, its own history and a picture of it (`ruimte-context browser`), never a click, a keystroke or a scroll.
 - Whatever the daemon enforces against an agent (depth, lineage, tasks) lives under `$RUIMTE_HOME`, never in `project.json`, which an agent with a shell can rewrite. An observer only notes; only the outbox acts. Nothing removes a worktree on its own.
 - Nothing reads a vendor credential (keychain, `~/.codex/auth.json`, usage endpoints); plan windows come from the CLIs. A stuck process gets a warning, never a signal a person did not press.
+- Closing a project is one client's. The machine keeps it, and keeps its sessions running, as long as another client still has it open; only the last client out ends them and drops the project under Recent. Which projects a person keeps in their own menu is that client's and is written there, so closing on a laptop leaves the iPhone where it was. A socket that drops ends nothing.
 - A page never sees a refresh token, a daemon never holds an account token, and accounts are never merged.
 - A zustand selector that builds a new array or object per call loops forever under `useShallow`: select the object and derive with `useMemo`.
 

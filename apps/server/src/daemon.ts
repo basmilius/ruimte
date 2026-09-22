@@ -261,6 +261,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const endChildren = outboxWiring.endChildren;
     const summaries = outboxWiring.summaries;
     projects.index.onPlaces = outboxWiring.places;
+    /* A node that has never been shown has no session, and a project going down is not the place to
+       fail over one, so an id neither manager knows is already ended as far as the caller goes. */
+    const endSession = async (kind: 'terminal' | 'chat', nodeId: string): Promise<void> => {
+        await endChildren.owe(nodeId);
+        await (kind === 'terminal' ? manager.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
+    };
+    projects.attachSessionEnder(endSession);
     const drawings = new DrawingStore(projects);
     projects.attachDrawings(drawings);
     const diagrams = new DiagramStore(projects);
@@ -370,12 +377,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         writeDiagram: (projectId: string, viewId: string, content: DiagramContent) => diagrams.write(projectId, viewId, content),
         tasks: taskWiring.host,
         plans,
-        /* A node that has never been shown has no session, and a canvas going down is not the place
-           to fail over one, so an id neither manager knows is already ended as far as the verb goes. */
-        endSession: async (kind: 'terminal' | 'chat', nodeId: string) => {
-            await endChildren.owe(nodeId);
-            await (kind === 'terminal' ? manager.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
-        },
+        endSession,
         notify: async (notice: Omit<Notice, 'createdAt'>) => {
             const delivery = await deliverNotice(
                 notices,

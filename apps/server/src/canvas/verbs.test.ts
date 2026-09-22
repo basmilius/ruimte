@@ -2217,7 +2217,7 @@ describe('view open', () => {
 
     test('tells the clients that have the project on screen, and writes nothing', async () => {
         await store.openProject({ projectId });
-        store.addViewer('client-1', projectId);
+        store.hold('client-1', projectId);
         const { status, lines } = await post('view', ['open', 'board']);
         expect(status).toBe(200);
         expect(lines).toEqual(['showing\tboard\tcanvas\tBoard', 'sent\tyes\tEveryone with this project on screen was told']);
@@ -2234,9 +2234,9 @@ describe('view open', () => {
     });
 
     test('a client that let the project go stops being told', async () => {
-        store.addViewer('client-1', projectId);
+        store.hold('client-1', projectId);
         expect((await post('view', ['open', 'board'])).lines[1]).toStartWith('sent\tyes\t');
-        store.removeViewer('client-1', projectId);
+        store.letGo('client-1', projectId);
         expect((await post('view', ['open', 'board'])).lines[1]).toStartWith('sent\tno\t');
         expect(watching).toHaveLength(1);
     });

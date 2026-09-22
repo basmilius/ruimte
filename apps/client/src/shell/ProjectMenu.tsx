@@ -5,8 +5,8 @@ import { Menu } from '@base-ui-components/react/menu';
 import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { projectClient } from '@/project';
-import { closeListedProjectLocally, menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
-import { closeProject, openProject } from '@/project/open';
+import { menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
+import { closeProjectOn, closingProject, openProject } from '@/project/open';
 import { closeWarning, sessionNodesOf } from '@/project/project-sessions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { setProjectFolderIcon, setProjectIdentity, uploadProjectIcon, type ProjectSettingsResult } from '@/project/settings';
@@ -128,7 +128,7 @@ export function ProjectMenu() {
     const [settingsTarget, setSettingsTarget] = useState<ProjectMenuRow | null>(null);
     /* Apart from the target, which outlives it: the dialog closes first and is emptied afterwards. */
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [closing, setClosing] = useState<{ name: string; sessions: number } | null>(null);
+    const [closing, setClosing] = useState<{ row: ProjectMenuRow; name: string; sessions: number; otherClients: number } | null>(null);
     const currentKey = current !== null && currentEndpointId !== null ? `${currentEndpointId}:${current.projectId}` : null;
     const { open, recent } = useMemo(() => {
         const lists = menuProjects(rows, endpoints, connected);
@@ -151,13 +151,6 @@ export function ProjectMenu() {
                 settingsTarget.summary);
     const settingsEndpoint = settingsTarget === null ? null : (endpoints.find((endpoint) => endpoint.id === settingsTarget.endpointId) ?? null);
     useMachineHold(settingsEndpoint);
-
-    const activate = async (row: ProjectMenuRow): Promise<boolean> => {
-        if (isCurrent(row)) {
-            return true;
-        }
-        return (await openProject(row.endpointId, row.summary.projectId)) === 'done';
-    };
 
     const openSettings = (row: ProjectMenuRow): void => {
         setSettingsTarget(row);
@@ -208,24 +201,25 @@ export function ProjectMenu() {
                   }
               };
 
+    /* Only the project on screen has a document here to count; every other row is the machine's to answer. */
     const askClose = async (row: ProjectMenuRow): Promise<void> => {
-        if (transportFor(row.endpointId)?.status !== 'open') {
-            closeListedProjectLocally(row.endpointId, row.summary);
-            if (isCurrent(row)) {
-                await closeProject();
-            }
+        const here = isCurrent(row);
+        const local = here ? sessionNodesOf(useDocument.getState().exportViews()).length : null;
+        const answer = await closingProject(row.endpointId, row.summary, local);
+        if (answer === null) {
+            // A machine out of reach has nothing to say about it; the row goes here and that is all.
+            await closeProjectOn(row.endpointId, row.summary);
             return;
         }
-        if (!(await activate(row))) {
-            return;
-        }
-        const active = useProject.getState().current;
-        setClosing({ name: active?.name ?? row.summary.name, sessions: sessionNodesOf(useDocument.getState().exportViews()).length });
+        setClosing({ row, name: (here ? current?.name : null) ?? row.summary.name, ...answer });
     };
 
     const close = async (): Promise<void> => {
+        const target = closing;
         setClosing(null);
-        await closeProject();
+        if (target) {
+            await closeProjectOn(target.row.endpointId, target.row.summary);
+        }
     };
 
     return (
@@ -295,10 +289,10 @@ export function ProjectMenu() {
             <PromptDialog
                 open={closing !== null}
                 title={t('projectMenu.closeTitle', { name: closing?.name ?? '' })}
-                description={closeWarning(closing?.sessions ?? 0)}
+                description={closeWarning(closing?.sessions ?? 0, closing?.otherClients ?? 0)}
                 confirmLabel={t('common:action.close')}
                 confirmIcon={X}
-                danger={closing !== null && closing.sessions > 0}
+                danger={closing !== null && closing.otherClients === 0 && closing.sessions > 0}
                 onConfirm={() => void close()}
                 onClose={() => setClosing(null)}
             />

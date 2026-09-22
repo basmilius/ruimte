@@ -8,9 +8,11 @@
     "reopenFailed": "The project could not be opened again"
   },
   "close": {
-    "idle": "Nothing in this project is running. It moves to Recent with its canvas as you left it.",
-    "ending_one": "Closing ends its running session. A terminal loses its scrollback and an agent stops. The project moves to Recent with its canvas as you left it.",
-    "ending_other": "Closing ends its {{count}} running sessions. A terminal loses its scrollback and an agent stops. The project moves to Recent with its canvas as you left it."
+    "idle": "Nothing in this project is running. It moves to Recent just as you left it.",
+    "ending_one": "Closing ends its running session. A terminal loses its scrollback and an agent stops. The rest moves to Recent as you left it.",
+    "ending_other": "Closing ends its {{count}} running sessions. A terminal loses its scrollback and an agent stops. The rest moves to Recent as you left it.",
+    "held_one": "Another client still has this project open, so nothing stops running. It moves to Recent here only.",
+    "held_other": "{{count}} other clients still have this project open, so nothing stops running. It moves to Recent here only."
   },
   "showView": {
     "someone": "An agent",

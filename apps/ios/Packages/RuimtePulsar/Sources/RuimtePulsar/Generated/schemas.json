@@ -20849,7 +20849,43 @@
   "request.project.close.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "properties": {}
+    "properties": {
+      "ended": {
+        "type": "number"
+      },
+      "otherClients": {
+        "type": "number"
+      }
+    }
+  },
+  "request.project.closing.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.project.closing.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sessions": {
+        "type": "number"
+      },
+      "otherClients": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "sessions",
+      "otherClients"
+    ]
   },
   "request.project.release.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

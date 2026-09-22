@@ -8,6 +8,7 @@ import type {
     ProjectLocal,
     ProjectPanels,
     ProjectSummary,
+    ProjectView,
     RequestMap,
     RequestType
 } from '@ruimte/contracts';
@@ -244,13 +245,14 @@ const setup = (
     const endpointId = options.endpointId ?? 'daemon-a';
     const open = options.open === undefined ? (transport.projects[0]?.projectId ?? null) : options.open;
     const panels = new PanelsPort();
-    /* What the client asked to end, in the words the caller would kill it with: kind and id, on the machine it named. */
-    const ended: Array<{ endpointId: string; nodes: string[] }> = [];
+    /* What the client dropped its cache of, as kind and id, on the machine that project was opened on. */
+    const forgotten: Array<{ endpointId: string; nodes: string[] }> = [];
     const client = new ProjectClient(transport, stores.canvases, stores.document, panels, sink, {
         saveDelayMs: 1,
         localDelayMs: 1,
         endpointId: () => endpointId,
-        endSessions: (machine, views) => ended.push({ endpointId: machine, nodes: sessionNodesOf(views).map((node) => `${node.kind}:${node.id}`) }),
+        forgetSessions: (machine: string, views: readonly ProjectView[]) =>
+            forgotten.push({ endpointId: machine, nodes: sessionNodesOf(views).map((node) => `${node.kind}:${node.id}`) }),
         storage: fakeStorage(storage),
         window: options.window ?? null
     });
@@ -262,7 +264,7 @@ const setup = (
         client.dispose();
         panels.dispose();
     };
-    return { transport, sink, state, client, storage, panels, stores, ended, dispose };
+    return { transport, sink, state, client, storage, panels, stores, forgotten, dispose };
 };
 
 describe('ProjectClient', () => {
@@ -692,8 +694,8 @@ describe('ProjectClient', () => {
         dispose();
     });
 
-    test('closing offline clears the workspace without requesting the daemon or ending sessions', async () => {
-        const { state, client, transport, ended, dispose } = setup();
+    test('closing offline clears the workspace without telling the daemon, and does not tell it later', async () => {
+        const { state, client, transport, dispose } = setup();
         await tick();
         transport.setStatus('closed');
         focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 });
@@ -701,7 +703,6 @@ describe('ProjectClient', () => {
         expect(state.current).toBeNull();
         expect(focusedCanvas().getState().order).toEqual([]);
         expect(transport.of('project.close')).toEqual([]);
-        expect(ended).toEqual([]);
         const opens = transport.of('project.open').length;
         transport.setStatus('open');
         await tick();
@@ -710,8 +711,8 @@ describe('ProjectClient', () => {
         dispose();
     });
 
-    test('closing ends every session the project holds, on the machine it was opened on', async () => {
-        const { client, ended, dispose } = setup();
+    test('closing asks the daemon to close the project and forgets what it cached for its sessions', async () => {
+        const { client, transport, forgotten, dispose } = setup();
         await tick();
         const terminal = focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 })!;
         const chat = focusedCanvas().getState().addNode('chat', { x: 0, y: 0 })!;
@@ -720,16 +721,25 @@ describe('ProjectClient', () => {
         const view = useDocument.getState().addStandaloneView({ kind: 'terminal', name: 'Shell', node: {} });
         useDocument.getState().setActiveView('main');
         await client.closeProject();
-        expect(ended).toEqual([{ endpointId: 'daemon-a', nodes: [`terminal:${terminal}`, `chat:${chat}`, `terminal:${view}`] }]);
+        expect(transport.of('project.close')[0]?.payload).toEqual({ projectId: 'p1' });
+        expect(forgotten).toEqual([{ endpointId: 'daemon-a', nodes: [`terminal:${terminal}`, `chat:${chat}`, `terminal:${view}`] }]);
         dispose();
     });
 
-    test('leaving for another project leaves the sessions of the one that left running', async () => {
-        const { client, ended, dispose } = setup();
+    test('closing is remembered here, so the row reads as closed whatever the machine still has open', async () => {
+        const { client, storage, dispose } = setup();
+        await tick();
+        await client.closeProject();
+        expect([...storage.keys()].some((key) => key.startsWith('ruimte.closedProject.'))).toBe(true);
+        dispose();
+    });
+
+    test('leaving for another project keeps what it cached for the sessions of the one that left', async () => {
+        const { client, forgotten, dispose } = setup();
         await tick();
         focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 });
         await client.leave();
-        expect(ended).toEqual([]);
+        expect(forgotten).toEqual([]);
         dispose();
     });
 });

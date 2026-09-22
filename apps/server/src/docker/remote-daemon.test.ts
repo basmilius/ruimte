@@ -417,23 +417,62 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         }
     });
 
-    test('the sessions of a project outlive its close, so the client is the one that ends them', async () => {
+    test('closing a project ends the sessions of its nodes, and only those', async () => {
         const opened = await client.request<ProjectOpenResult>('project.open', { folder: '/work/beacon', name: 'Beacon' });
         const { projectId } = opened.summary;
         openedProjects.push(projectId);
-        const sessionId = `node-${Date.now()}`;
-        startedSessions.push(sessionId);
-        await client.request<SessionInfo>('session.create', { sessionId, cwd: '/work/beacon', cols: 80, rows: 24 });
+        const onCanvas = `node-${Date.now()}`;
+        const loose = `loose-${Date.now()}`;
+        startedSessions.push(onCanvas, loose);
+        // The machine reads which sessions a project holds off the document it saved, so this is what ties them.
+        await client.request<ProjectSaveResult>('project.save', {
+            projectId,
+            baseRev: opened.document.rev,
+            content: {
+                name: 'Beacon',
+                color: '#000',
+                views: [
+                    {
+                        kind: 'canvas',
+                        id: 'main',
+                        name: 'Canvas',
+                        nodes: [{ id: onCanvas, kind: 'terminal', title: 'shell', x: 0, y: 0, w: 560, h: 360 }],
+                        texts: [],
+                        edges: []
+                    }
+                ]
+            }
+        });
+        await client.request<SessionInfo>('session.create', { sessionId: onCanvas, cwd: '/work/beacon', cols: 80, rows: 24 });
+        await client.request<SessionInfo>('session.create', { sessionId: loose, cwd: '/work/beacon', cols: 80, rows: 24 });
 
-        /* A session is keyed on a node id and nothing on the machine ties it to a project, which is
-           why closing one stops its sessions from the client, one `session.kill` at a time. */
         await client.request('project.close', { projectId });
         const kept = await client.request<{ sessions: SessionInfo[] }>('session.list', {});
-        expect(kept.sessions.some((session) => session.sessionId === sessionId)).toBe(true);
+        expect(kept.sessions.some((session) => session.sessionId === onCanvas)).toBe(false);
+        // A session no node of the project stands for is nobody's to end here.
+        expect(kept.sessions.some((session) => session.sessionId === loose)).toBe(true);
 
-        await client.request('session.kill', { sessionId });
-        const gone = await client.request<{ sessions: SessionInfo[] }>('session.list', {});
-        expect(gone.sessions.some((session) => session.sessionId === sessionId)).toBe(false);
+        await client.request('session.kill', { sessionId: loose });
+    });
+
+    test('a project another client still has open keeps its place and its sessions', async () => {
+        const other = await RemoteClient.connect(sessionToken);
+        try {
+            const opened = await client.request<ProjectOpenResult>('project.open', { folder: '/work/beacon', name: 'Beacon' });
+            const { projectId } = opened.summary;
+            openedProjects.push(projectId);
+            await other.request<ProjectOpenResult>('project.open', { projectId });
+
+            await client.request('project.close', { projectId });
+            const listed = (await other.request<ProjectListResult>('project.list', {})).projects.find((project) => project.projectId === projectId);
+            expect(listed?.closedAt).toBeNull();
+
+            await other.request('project.close', { projectId });
+            const closed = (await client.request<ProjectListResult>('project.list', {})).projects.find((project) => project.projectId === projectId);
+            expect(closed?.closedAt).toBeNumber();
+        } finally {
+            other.close();
+        }
     });
 
     test('a terminal session runs a shell in the repository', async () => {

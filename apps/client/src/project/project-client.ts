@@ -92,11 +92,8 @@ interface ProjectClientOptions {
     beforeLeave?: () => Promise<void>;
     /* Runs in the tick the opened project reaches the stores, so the window shows it with nothing in between. */
     onLoad?: () => void;
-    /*
-     * Ends what the views still hold on the machine they were opened on. Only a person closing a
-     * project reaches this. Switching away releases the project and leaves its sessions running.
-     */
-    endSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
+    /* Drops what this client cached for the views of a project it is putting away. */
+    forgetSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
     /* Runs once the project is open on the daemon again after the link came back, so the drawings on screen can follow. */
     afterResume?: () => Promise<void>;
     /* Left out in tests, where there is no window to listen on. */
@@ -124,7 +121,7 @@ export class ProjectClient {
     private readonly localDelayMs: number;
     private readonly beforeLeave: () => Promise<void>;
     private readonly onLoad: () => void;
-    private readonly endSessions: (endpointId: string, views: readonly ProjectView[]) => void;
+    private readonly forgetSessions: (endpointId: string, views: readonly ProjectView[]) => void;
     private readonly afterResume: () => Promise<void>;
     private readonly unsubscribe: Array<() => void> = [];
     private saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -158,7 +155,7 @@ export class ProjectClient {
         this.localDelayMs = options.localDelayMs ?? 1000;
         this.beforeLeave = options.beforeLeave ?? (() => Promise.resolve());
         this.onLoad = options.onLoad ?? ((): void => undefined);
-        this.endSessions = options.endSessions ?? ((): void => undefined);
+        this.forgetSessions = options.forgetSessions ?? ((): void => undefined);
         this.afterResume = options.afterResume ?? (() => Promise.resolve());
         this.unsubscribe.push(
             transport.on('project.changed', ({ projectId, document }) => this.onChanged(projectId, document)),
@@ -224,21 +221,22 @@ export class ProjectClient {
         }
     }
 
-    // Save before ending sessions when connected; offline closing only dismisses the project locally.
+    /*
+     * Puts this project away. What is on screen is written first, so the daemon counts and ends the
+     * sessions of the document as it stands. Whether anything ends is the daemon's call: another
+     * client with the same project open keeps it running. Closing is this client's either way, so
+     * the row moves under Recent here even while the machine still has the project in use.
+     */
     async closeProject(): Promise<void> {
         const current = this.sink.getState().current;
         await this.flush();
         this.flushLocal();
-        if (this.transport.status === 'open') {
-            this.endSessions(this.endpointId(), this.documents.getState().exportViews());
-            if (current) {
+        if (current) {
+            this.forgetSessions(this.endpointId(), this.documents.getState().exportViews());
+            if (this.transport.status === 'open') {
                 await this.transport.request('project.close', { projectId: current.projectId }).catch(() => undefined);
             }
-        }
-        if (current) {
-            if (this.transport.status !== 'open') {
-                rememberClosedProject(this.endpointId(), current.projectId, this.storage);
-            }
+            rememberClosedProject(this.endpointId(), current.projectId, this.storage);
             this.sink.patchProject({ ...current, closedAt: Date.now() });
         }
         this.remember(null);

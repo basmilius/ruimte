@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { sessionNodesOfView, type ProjectView, type ViewSessionNode } from '@ruimte/contracts';
+import { sessionNodesOfView, type ProjectClosingResult, type ProjectView, type ViewSessionNode } from '@ruimte/contracts';
 
 /*
  * Every session a project holds, over every view it has. The views have to be the exported ones
@@ -10,9 +10,22 @@ import { sessionNodesOfView, type ProjectView, type ViewSessionNode } from '@rui
 export const sessionNodesOf = (views: readonly ProjectView[]): ViewSessionNode[] => views.flatMap(sessionNodesOfView);
 
 /*
+ * What the confirmation counts. The document on screen knows its own sessions better than the
+ * machine's copy of it does, since a node made a moment ago has not been saved yet, so it wins
+ * whenever there is one. A project another client keeps loses nothing either way.
+ */
+export const closingCount = (answer: ProjectClosingResult, local: number | null): ProjectClosingResult =>
+    answer.otherClients > 0 || local === null ? answer : { ...answer, sessions: local };
+
+/*
  * What the confirmation says before a project closes. It counts rather than hedges, since a person
  * about to lose an agent mid-run wants to know how many, and the scrollback of a terminal is gone
- * with the session, which is the part that cannot be undone.
+ * with the session, which is the part that cannot be undone. A project another client still has
+ * open loses nothing, so that is what it says instead of a count of what stays.
  */
-export const closeWarning = (sessions: number): string =>
-    sessions === 0 ? i18next.t('project:close.idle') : i18next.t('project:close.ending', { count: sessions });
+export const closeWarning = (sessions: number, otherClients = 0): string => {
+    if (otherClients > 0) {
+        return i18next.t('project:close.held', { count: otherClients });
+    }
+    return sessions === 0 ? i18next.t('project:close.idle') : i18next.t('project:close.ending', { count: sessions });
+};

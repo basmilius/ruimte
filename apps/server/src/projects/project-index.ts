@@ -1,4 +1,13 @@
-import { deriveProjectContextSources, isCanvasView, isSessionView, type ContextSource, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
+import {
+    deriveProjectContextSources,
+    isCanvasView,
+    isSessionView,
+    sessionNodesOfView,
+    type ContextSource,
+    type ProjectCanvasView,
+    type ProjectContent,
+    type ViewSessionNode
+} from '@ruimte/contracts';
 
 /* Where an id sits: the project it belongs to, and the canvas it is a node on (null for a chat,
    terminal or browser that is a view of its own). */
@@ -92,6 +101,14 @@ export class ProjectIndex {
             return view && isCanvasView(view) ? view : null;
         }
         return null;
+    }
+
+    /*
+     * Every session this project holds, over every view it has. Read when a project closes from a
+     * client that never had it on screen, which has no document of its own to count.
+     */
+    sessionNodes(projectId: string): ViewSessionNode[] {
+        return (this.projects.get(projectId)?.content.views ?? []).flatMap(sessionNodesOfView);
     }
 
     locate(id: string): IndexedPlace | null {

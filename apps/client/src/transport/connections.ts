@@ -19,7 +19,7 @@ import { sessionSinkFor, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { defaultWorkspaceStores } from '@/state/workspace';
 import { workspaceOf, useWindow, windowWorkspace } from '@/state/window';
-import { endProjectSessions } from '@/terminal/lifecycle';
+import { forgetProjectSessions } from '@/terminal/lifecycle';
 import { SessionClient } from '@/terminal/session-client';
 import { machineTransport, pool } from '@/transport';
 import { useOptionalConnection } from '@/transport/context';
@@ -173,7 +173,7 @@ const connect = (endpoint: Endpoint, onLoad: (connection: Connection) => void): 
         beforeLeave: async (): Promise<void> => {
             await Promise.all([drawings.flush(), diagrams.flush()]);
         },
-        endSessions: endProjectSessions,
+        forgetSessions: forgetProjectSessions,
         afterResume: async (): Promise<void> => {
             await Promise.all([drawings.resume(), diagrams.resume()]);
         },

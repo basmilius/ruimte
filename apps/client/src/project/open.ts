@@ -1,15 +1,18 @@
 import i18next from 'i18next';
+import type { ProjectClosingResult, ProjectSummary } from '@ruimte/contracts';
 import { useStore } from 'zustand';
 import { ensureMachine } from '@/endpoint/reach';
 import { dropClientLocal } from '@/project/client-local';
 import { browserStorage, readLastProject, type LastProjectStorage } from '@/project/last-project';
-import { listProjects } from '@/project/list';
+import { closeListedProjectLocally, listProjects } from '@/project/list';
+import { closingCount } from '@/project/project-sessions';
 import { ProjectSwitch, type SwitchOutcome, type SwitchRun, type SwitchState, type SwitchTarget } from '@/project/project-switch';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useWindow, windowWorkspace } from '@/state/window';
+import { transportFor } from '@/transport';
 import { enterWorkspace, leaveWorkspace, machineFor, showStart, type OpenRequest } from '@/transport/connections';
 
 /* Where the window is going. */
@@ -144,6 +147,42 @@ export const closeProject = async (): Promise<void> => {
     }
     await workspace.connection.projects.closeProject();
     showStart();
+};
+
+const isOpenHere = (endpointId: string, projectId: string): boolean => {
+    const { current, currentEndpointId } = useProject.getState();
+    return windowWorkspace() !== null && current?.projectId === projectId && currentEndpointId === endpointId;
+};
+
+/*
+ * Closes any project on any machine, the one on screen included. A project this window is not
+ * showing never has to be opened for it: the daemon holds its document and knows who else has it
+ * open, so closing one from the menu leaves the canvas where it is.
+ */
+export const closeProjectOn = async (endpointId: string, summary: ProjectSummary): Promise<void> => {
+    if (isOpenHere(endpointId, summary.projectId)) {
+        await closeProject();
+        return;
+    }
+    const transport = transportFor(endpointId);
+    if (transport?.status === 'open') {
+        await transport.request('project.close', { projectId: summary.projectId }).catch(() => undefined);
+    }
+    // Closing is this client's, whatever the machine does with it: the row moves here either way.
+    closeListedProjectLocally(endpointId, summary);
+};
+
+/*
+ * What closing would do, asked of the machine the project lives on. A machine that cannot be
+ * reached answers nothing, and closing it there is this client letting go and no more.
+ */
+export const closingProject = async (endpointId: string, summary: ProjectSummary, local: number | null): Promise<ProjectClosingResult | null> => {
+    const transport = transportFor(endpointId);
+    if (transport?.status !== 'open') {
+        return null;
+    }
+    const closing = await transport.request('project.closing', { projectId: summary.projectId }).catch(() => null);
+    return closing === null ? null : closingCount(closing, local);
 };
 
 /* Removes a project from its machine. The open one is closed first, so its sessions end with it. */

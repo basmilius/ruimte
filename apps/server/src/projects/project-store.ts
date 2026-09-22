@@ -16,6 +16,8 @@ import {
     migrateLocal,
     privateFileOf,
     splitContent,
+    type ProjectCloseResult,
+    type ProjectClosingResult,
     type ProjectContent,
     type ProjectDocument,
     type ProjectIcon,
@@ -57,6 +59,7 @@ import {
     ICON_EXTENSION_BY_MIME,
     PROJECT_FILE
 } from './project-files.ts';
+import { ProjectHolds } from './project-holds.ts';
 import { ProjectIndex } from './project-index.ts';
 import { IdentityCache, readIdeaName, sniffIconMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 import { errorText } from '../error-text.ts';
@@ -160,6 +163,9 @@ interface OpenProject {
  */
 export type TrackedProbe = (path: string) => Promise<boolean>;
 
+/* Ends the session behind one node, handed over by the daemon so the store stays out of the managers. */
+export type SessionEnder = (kind: 'terminal' | 'chat', nodeId: string) => Promise<void>;
+
 /* A view of a kind this daemon does not know may own a file under either folder, so it counts as live for both. */
 const viewIdsIn = (views: ProjectView[], kind: 'drawing' | 'diagram'): Set<string> =>
     new Set(views.filter((view) => view.kind === kind || view.kind === UNKNOWN_KIND).map((view) => view.id));
@@ -175,12 +181,12 @@ export class ProjectStore {
     readonly home: string;
     /* Every known project's last document, which outlives `release`: the sessions of a project keep running after a client lets go of it. */
     readonly index = new ProjectIndex();
-    private readonly sinks = new ClientSinks((clientId) => this.viewers.delete(clientId));
+    private readonly sinks = new ClientSinks((clientId) => this.dropClient(clientId));
     private readonly open = new Map<string, OpenProject>();
     /* Which client has which project on screen. `project.changed` goes to every socket, since a
        client that let go of a project may still hold its document, but showing a view is aimed at a
        person: a client without the project in a workspace has nothing to do with it and is not told. */
-    private readonly viewers = new Map<string, Set<string>>();
+    private readonly holds = new ProjectHolds();
     private registry: RegistryEntry[] | null = null;
     private readonly identity = new IdentityCache();
     private drawings: ProjectViewFiles | null = null;
@@ -193,6 +199,9 @@ export class ProjectStore {
     /* Nothing is shared until the daemon hands over a probe that can ask git; see `TrackedProbe`. */
     private tracked: TrackedProbe = async () => false;
 
+    /* The store knows which sessions a project holds; the managers know how to stop one. */
+    private endSession: SessionEnder = async () => undefined;
+
     constructor(home: string, seams: WatchSeams = SYSTEM_WATCH) {
         this.home = home;
         this.seams = seams;
@@ -200,6 +209,10 @@ export class ProjectStore {
 
     attachTracked(tracked: TrackedProbe): void {
         this.tracked = tracked;
+    }
+
+    attachSessionEnder(endSession: SessionEnder): void {
+        this.endSession = endSession;
     }
 
     /*
@@ -281,18 +294,30 @@ export class ProjectStore {
     }
 
     /* This client put the project on screen, which is what makes it one `showView` reaches. */
-    addViewer(clientId: string, projectId: string): void {
-        const held = this.viewers.get(clientId);
-        if (held) {
-            held.add(projectId);
-            return;
-        }
-        this.viewers.set(clientId, new Set([projectId]));
+    hold(clientId: string, projectId: string): void {
+        this.holds.add(clientId, projectId);
     }
 
-    /* This client let the project go; its sessions keep running, but it is not watching any more. */
-    removeViewer(clientId: string, projectId: string): void {
-        this.viewers.get(clientId)?.delete(projectId);
+    /*
+     * This client switched away or its socket went. The project is only let go of when nobody else
+     * has it open, since the watcher and the loaded document are shared by everyone holding it.
+     */
+    letGo(clientId: string, projectId: string): void {
+        if (this.holds.remove(clientId, projectId)) {
+            this.release(projectId);
+        }
+    }
+
+    private dropClient(clientId: string): void {
+        for (const projectId of this.holds.dropClient(clientId)) {
+            this.release(projectId);
+        }
+    }
+
+    /* What closing would do, for the confirmation that asks before it. */
+    closing(clientId: string, projectId: string): ProjectClosingResult {
+        const otherClients = this.holds.others(clientId, projectId);
+        return { sessions: otherClients > 0 ? 0 : this.index.sessionNodes(projectId).length, otherClients };
     }
 
     /* Every project in the registry, without opening or resolving anything: what a folder is called
@@ -590,7 +615,7 @@ export class ProjectStore {
     showView(projectId: string, viewId: string, by: string): boolean {
         let told = 0;
         for (const clientId of this.sinks.clientIds()) {
-            if (this.viewers.get(clientId)?.has(projectId) === true) {
+            if (this.holds.has(clientId, projectId)) {
                 this.sinks.to(clientId, { event: 'project.showView', payload: { projectId, viewId, by } });
                 told += 1;
             }
@@ -735,9 +760,24 @@ export class ProjectStore {
         this.open.delete(projectId);
     }
 
-    /* A person closed this project: it lets go and drops under Recent until someone opens it again. */
-    closeProject(projectId: string): Promise<void> {
-        return this.locked(async () => {
+    /*
+     * A person closed this project on one client. Another client that still has it open keeps it:
+     * its sessions go on running and its place in the list does not move, so only this client's hold
+     * goes. The last one out ends the sessions and drops the project under Recent.
+     */
+    async closeProject(projectId: string, clientId: string): Promise<ProjectCloseResult> {
+        const otherClients = this.holds.others(clientId, projectId);
+        this.holds.remove(clientId, projectId);
+        if (otherClients > 0) {
+            return { ended: 0, otherClients };
+        }
+        /* The sessions go before the write, the rule `view delete` follows: a shell that outlived
+           the project it stood in would answer to a canvas nobody can open any more. */
+        const sessions = this.index.sessionNodes(projectId);
+        for (const node of sessions) {
+            await this.endSession(node.kind, node.id);
+        }
+        await this.locked(async () => {
             this.release(projectId);
             const entries = await this.loadRegistry();
             const entry = entries.find((candidate) => candidate.projectId === projectId);
@@ -746,9 +786,11 @@ export class ProjectStore {
             }
             const closed = { ...entry, closedAt: Date.now() };
             await this.saveRegistry(entries.map((candidate) => (candidate.projectId === projectId ? closed : candidate)));
-            // Every client shows the same list, so the row moves on the other machines too.
+            // What a machine holds is the same for everyone on it, agents included; which projects a
+            // person keeps in their own menu is that client's business.
             this.publish(closed);
         });
+        return { ended: sessions.length, otherClients: 0 };
     }
 
     delete(projectId: string, removeFiles: boolean): Promise<void> {
