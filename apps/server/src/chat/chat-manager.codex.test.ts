@@ -353,13 +353,13 @@ describe('ChatManager with Codex', () => {
             selection: { model: 'sol', options: { effort: 'xhigh' } },
             runtimeMode: 'supervised'
         });
-        expect(info).toMatchObject({ selection: { model: 'gpt-5.6-sol', options: { effort: 'xhigh' } }, runtimeMode: 'supervised' });
+        expect(info).toMatchObject({ selection: { model: 'gpt-6-sol', options: { effort: 'xhigh' } }, runtimeMode: 'supervised' });
         expect(manager.configure({ chatId: 'chat-c', runtimeMode: 'supervised' })).toBe(info);
 
         await manager.send('chat-c', 'again');
         await recorder.until(() => recorder.info?.usage.turns === 2 && idle());
         expect(recorder.info?.agentSessionId).toBe(threadId ?? null);
-        expect(recorder.info?.model).toBe('gpt-5.6-sol untrusted read-only');
+        expect(recorder.info?.model).toBe('gpt-6-sol untrusted read-only');
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: first (medium)', 'echo: again (xhigh)']);
         expect(codex.started).toHaveLength(2);
         expect(await codex.started[0]!.exited).toBe(0);
