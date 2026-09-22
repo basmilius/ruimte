@@ -26,8 +26,13 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   Unsaved drawing drafts persist locally for recovery.
 - SwiftTerm terminals with snapshots, output, resync, keyboard controls and paste confirmation.
   `session.attach` uses `follow:true` so opening a phone never resizes the desktop PTY.
-- File and media previews, filesystem updates, Git changes/staging/commits,
-  usage and machine access management. Destructive actions require confirmation.
+- File and media previews, filesystem updates, usage and machine access management.
+  Destructive actions require confirmation.
+- Git over every repository a project folder holds: the one the folder is in, its initialized
+  submodules and the repositories beside it. Changes are grouped per state and named per repository,
+  the staged files decide where a commit lands, and fetch, pull and push run over the whole folder.
+  A repository of its own has its branches, its stash, its pull request and its history behind it.
+  Diffs read a working-tree file or a whole commit.
   Usage follows the OS region: EUR regions use the supplied exchange rate; other regions use USD.
   Missing or invalid rates keep dollar amounts and show an explanation.
 - Optional encrypted push alerts and approval actions, per-session follows, a notification

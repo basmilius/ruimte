@@ -43,7 +43,7 @@ struct WorkspaceDetail: View {
         Group {
             switch navigation.section {
             case .files: MachineFilesPage(client: workspace.client, path: workspace.folder)
-            case .git: GitPage(client: workspace.client, cwd: workspace.folder)
+            case .git: GitPage(client: workspace.client, folder: workspace.folder)
             case .views, .search:
                 if let id = navigation.selectedViewID,
                     let item = workspace.views.first(where: { $0.stableID == id })

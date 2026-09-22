@@ -166,7 +166,7 @@ struct WorkspacePage: View {
                 Label("Files", lucideIcon: "folder")
             }
             Tab(value: ProjectSection.git) {
-                if isSidebar { viewList(query: "") } else { GitPage(client: workspace.client, cwd: workspace.folder) }
+                if isSidebar { viewList(query: "") } else { GitPage(client: workspace.client, folder: workspace.folder) }
             } label: {
                 Label("Git", lucideIcon: "git-branch")
             }
