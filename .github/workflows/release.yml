@@ -28,9 +28,9 @@ jobs:
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && exit 0
           # An annotated tag carries the release notes; a lightweight one would hand back the commit
-          # message, which is not what anyone wrote for the release. Nothing here may fail: without a
+          # message, which is not what anyone wrote for the release. Nothing here may fail. Without a
           # draft the three builds race to create one and the loser's upload goes missing, so a tag
-          # this cannot read leaves the notes empty rather than the release unmade.
+          # this cannot read leaves the notes empty and the release still gets made.
           notes="$RUNNER_TEMP/notes.md"
           : > "$notes"
           if [ "$(git cat-file -t "$GITHUB_REF_NAME" 2>/dev/null)" = tag ]; then
