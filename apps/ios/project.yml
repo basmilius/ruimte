@@ -69,7 +69,8 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         RuimtePushKeychainGroup: $(AppIdentifierPrefix)app.ruimte.mobile.push
-        UIBackgroundModes: [remote-notification]
+        UIBackgroundModes: [remote-notification, fetch]
+        BGTaskSchedulerPermittedIdentifiers: [app.ruimte.mobile.usage-widget]
         NSSupportsLiveActivities: true
         ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: Ruimte does not access your camera. Camera support is included in the connection framework.
@@ -126,6 +127,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.ruimte.mobile.activity
+        CODE_SIGN_ENTITLEMENTS: Extensions/ActivityWidget/ActivityWidget.entitlements
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
     info:

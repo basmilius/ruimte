@@ -1,3 +1,4 @@
+import BackgroundTasks
 import SwiftUI
 
 @main
@@ -13,6 +14,22 @@ struct RuimteApp: App {
                 .tint(MobileStyle.accent)
                 .toggleStyle(SystemToggleStyle())
         }
+        .backgroundTask(.appRefresh(UsageWidgetRefresh.identifier)) { await UsageWidgetRefresh.run() }
+    }
+}
+
+enum UsageWidgetRefresh {
+    static let identifier = "app.ruimte.mobile.usage-widget"
+
+    static func schedule() {
+        let request = BGAppRefreshTaskRequest(identifier: identifier)
+        request.earliestBeginDate = .now.addingTimeInterval(30 * 60)
+        BGTaskScheduler.shared.submitTaskRequest(request) { _ in }
+    }
+
+    @MainActor static func run() async {
+        schedule()
+        await NotificationAppDelegate.runtime.refreshUsageWidgets()
     }
 }
 

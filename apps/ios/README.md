@@ -37,6 +37,10 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   Missing or invalid rates keep dollar amounts and show an explanation.
 - Optional encrypted push alerts and approval actions, per-session follows, a notification
   service extension and Live Activities. APNs delivery requires the service configuration below.
+- Small and medium Home Screen widgets with the usage limits and today's cost of one chosen machine.
+  A widget never connects itself: the app writes what a connected machine reports into the app group,
+  and a background refresh asks again at most every half hour. Offline the widget shows the last numbers
+  and the time they came in.
 
 ## AI conversations
 

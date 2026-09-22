@@ -97,6 +97,7 @@ struct AppHome: View {
         .onChange(of: phase, initial: true) { _, current in
             runtime.connections.setScene(sceneID, foreground: current != .background)
             if current == .active { Task { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) } }
+            if current == .background, !runtime.machines.isEmpty { UsageWidgetRefresh.schedule() }
         }
         .onDisappear {
             projects.stop()

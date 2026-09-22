@@ -4,7 +4,7 @@ import RuimtePulsar
 import SwiftUI
 import WidgetKit
 
-@main struct RuimteActivityWidget: Widget {
+struct RuimteActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RuimteActivityAttributes.self) { context in
             ActivityCard(

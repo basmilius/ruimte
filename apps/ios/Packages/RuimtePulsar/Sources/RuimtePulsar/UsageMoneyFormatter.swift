@@ -1,14 +1,13 @@
 import Foundation
-import RuimtePulsar
 
-struct UsageMoneyFormatter {
-    let locale: Locale
-    let preferredCurrency: String
-    let currencyCode: String
-    let rateDate: String?
+public struct UsageMoneyFormatter: Sendable {
+    public let locale: Locale
+    public let preferredCurrency: String
+    public let currencyCode: String
+    public let rateDate: String?
     private let factor: Double
 
-    init(locale: Locale, rate: JSONValue?) {
+    public init(locale: Locale, rate: JSONValue?) {
         self.locale = locale
         preferredCurrency = locale.currency?.identifier == "EUR" ? "EUR" : "USD"
         // usage.summary prices are USD; an absent or invalid rate must never relabel those amounts as euros.
@@ -25,7 +24,7 @@ struct UsageMoneyFormatter {
         }
     }
 
-    var explanation: String? {
+    public var explanation: String? {
         if preferredCurrency == "EUR", currencyCode == "USD" {
             return "Showing US dollars until a euro exchange rate is available."
         }
@@ -33,10 +32,10 @@ struct UsageMoneyFormatter {
         return nil
     }
 
-    func amount(usd: Double) -> Double { usd * factor }
-    func string(usd: Double) -> String { string(amount: amount(usd: usd)) }
+    public func amount(usd: Double) -> Double { usd * factor }
+    public func string(usd: Double) -> String { string(amount: amount(usd: usd)) }
 
-    func string(amount: Double) -> String {
+    public func string(amount: Double) -> String {
         let digits = amount != 0 && abs(amount) < 0.01 ? 2...4 : 2...2
         return amount.formatted(.currency(code: currencyCode).locale(locale).precision(.fractionLength(digits)))
     }

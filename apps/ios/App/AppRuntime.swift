@@ -3,6 +3,7 @@ import Observation
 import RuimtePulsar
 import RuimteTransport
 import UIKit
+import WidgetKit
 
 @MainActor @Observable
 final class AppRuntime {
@@ -241,6 +242,7 @@ final class AppRuntime {
         invalidateMachine(id, forgetPairing: true)
         savePairedMachines(pairedMachines.filter { $0.id != id })
         machines.removeAll { $0.id == id }
+        publishWidgetMachines()
     }
 
     private func applyMachines(_ next: [Machine]) {
@@ -257,6 +259,26 @@ final class AppRuntime {
             }
         }
         machines = next
+        publishWidgetMachines()
+    }
+
+    private func publishWidgetMachines() {
+        UsageWidgetStore.setMachines(machines.map { UsageWidgetMachine(id: $0.id, name: $0.name) })
+        WidgetCenter.shared.reloadTimelines(ofKind: UsageWidgetStore.kind)
+    }
+
+    /// For a background refresh, which has no scene of its own to let connections open.
+    func refreshUsageWidgets() async {
+        await start()
+        let scene = "usage-widget-refresh"
+        connections.setScene(scene, foreground: true)
+        defer { connections.setScene(scene, foreground: false) }
+        await withTaskGroup(of: Void.self) { group in
+            for machine in machines {
+                let held = self.session(for: machine)
+                group.addTask { await held.refreshUsageWidget() }
+            }
+        }
     }
 
     private func invalidateMachine(_ id: String, forgetPairing: Bool) {
@@ -282,6 +304,7 @@ final class AppRuntime {
         invalidateMachine(machine.id, forgetPairing: false)
         machines.removeAll { $0.id == machine.id }
         machines.append(machine)
+        publishWidgetMachines()
     }
 
     func signOut() async {
@@ -300,6 +323,7 @@ final class AppRuntime {
         connections.disconnectAll()
         account = nil
         machines = []
+        publishWidgetMachines()
         defaults.removeObject(forKey: "ruimte.ios.pairedMachines")
         problem = nil
         do {

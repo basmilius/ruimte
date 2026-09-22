@@ -31,6 +31,7 @@ final class SharedMachineSession {
     @ObservationIgnored lazy var tasks = TaskStore(client: rpc)
     @ObservationIgnored lazy var plans = PlanStore(client: rpc)
     @ObservationIgnored lazy var icons = MachineIconState(client: rpc, fallback: machine.icon)
+    @ObservationIgnored lazy var usageWidget = UsageWidgetRecorder(machineID: machine.id, client: rpc)
     @ObservationIgnored lazy var rpc = MachineClient(send: { [weak self] text in
         guard let lease = self?.lease else { throw TransportFailure.invalid("This machine is not connected.") }
         try lease.send(text)
@@ -102,6 +103,7 @@ final class SharedMachineSession {
         tasks.start()
         plans.start()
         icons.start()
+        usageWidget.start()
         startPreferences()
     }
 
@@ -133,6 +135,7 @@ final class SharedMachineSession {
         tasks.stop()
         plans.stop()
         icons.stop()
+        usageWidget.stop()
         stopPreferences()
         lease?.release()
         lease = nil
@@ -202,6 +205,7 @@ final class SharedMachineSession {
         tasks.stop()
         plans.stop()
         icons.stop()
+        usageWidget.stop()
         stopPreferences()
         projectSubscriptions.invalidate()
         lease?.release()
@@ -216,6 +220,37 @@ final class SharedMachineSession {
     func markSeen(_ nodeID: String) async {
         attention.markSeen(nodeID)
         await runtime?.notifications.markSeen(machineID: machine.id, nodeID: nodeID)
+    }
+
+    func waitForConnection(timeout: Duration = .seconds(15)) async throws {
+        if connected { return }
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { try await self.connectionBecameReady() }
+            group.addTask {
+                try await Task.sleep(for: timeout)
+                throw MachineClientError.timeout("connect")
+            }
+            defer { group.cancelAll() }
+            _ = try await group.next()
+        }
+    }
+
+    private func connectionBecameReady() async throws {
+        let (stream, continuation) = AsyncStream<Bool>.makeStream()
+        let stop = rpc.observeConnection { continuation.yield($0) }
+        defer {
+            stop()
+            continuation.finish()
+        }
+        for await connected in stream { if connected { return } }
+        throw CancellationError()
+    }
+
+    func refreshUsageWidget() async {
+        retain()
+        defer { release() }
+        guard (try? await waitForConnection(timeout: .seconds(20))) != nil else { return }
+        await usageWidget.refresh()
     }
 
     func reconnect() {

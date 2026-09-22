@@ -308,7 +308,7 @@ struct NotificationDestination: Identifiable, Hashable {
         let session = runtime.session(for: machine)
         session.retain()
         defer { session.release() }
-        try await waitForConnection(session)
+        try await session.waitForConnection()
         guard enabled, revision == current, try SharedPushStore().context()?.handle == context.handle else { return }
         let key = try SharedPushStore().key()
         // Older daemons ignore followAll, so keep their known sessions subscribed during an upgrade.
@@ -642,7 +642,7 @@ struct NotificationDestination: Identifiable, Hashable {
         let session = runtime.session(for: machine)
         session.retain()
         defer { session.release() }
-        try await waitForConnection(session)
+        try await session.waitForConnection()
         guard Double(alert.expiresAt) > Date().timeIntervalSince1970 * 1000 else { throw PushCryptoError.expired }
         if alert.target == .chat {
             let lease = session.rpc.acquireAttachment("chat", id: alert.nodeId)
@@ -662,28 +662,6 @@ struct NotificationDestination: Identifiable, Hashable {
             let result = try await session.rpc.request("agent.answerApproval", payload: payload)
             guard result["accepted"] == .bool(true) else { throw PushCryptoError.expired }
         }
-    }
-    private func waitForConnection(_ session: SharedMachineSession) async throws {
-        if session.connected { return }
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask { try await self.connectionBecameReady(session) }
-            group.addTask {
-                try await Task.sleep(for: .seconds(15))
-                throw MachineClientError.timeout("connect")
-            }
-            defer { group.cancelAll() }
-            _ = try await group.next()
-        }
-    }
-    private func connectionBecameReady(_ session: SharedMachineSession) async throws {
-        let (stream, continuation) = AsyncStream<Bool>.makeStream()
-        let stop = session.rpc.observeConnection { continuation.yield($0) }
-        defer {
-            stop()
-            continuation.finish()
-        }
-        for await connected in stream { if connected { return } }
-        throw CancellationError()
     }
     private static let machineActivityNode = "__ruimte_machine_activity__"
     private static func hex(_ data: Data) -> String { data.map { String(format: "%02x", $0) }.joined() }
