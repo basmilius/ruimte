@@ -45,9 +45,7 @@ larger ones becomes a GitHub issue when it starts.
    after the turn undone; another CLI with a handoff of the last whole turns; a summary written by
    the fork and delivered to the original as a note and a preamble). Left for later: "Restore files to this turn" as its own action on a turn
    (the shared-folder undo) and a verb for agents to fork. The iOS app forks too (a sheet from a
-   message's menu, the way back, summaries and a message index in place of the strip). Resuming a
-   chat that sat idle with a large context offers to compact it first
-   (`docs/reports/2026-09-16-resume-compaction.html`, designed, nothing built). Two small ones:
+   message's menu, the way back, summaries and a message index in place of the strip). Two small ones:
    a question in a finished turn stays outside its fold, since it explains the answer below it, and
    after Stop an empty composer offers "Continue" in place of the send button.
 9. **The action registry** (`packages/actions`): one typed layer under everything a person can do,

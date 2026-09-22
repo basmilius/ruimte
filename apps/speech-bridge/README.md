@@ -39,4 +39,4 @@ The composer previews speech inline at the captured selection without changing t
 
 The default tests use fake processes, audio capture and clocks. They cover model integrity, helper readiness, cancellation, stale session messages, final audio delivery, warm reuse, selection mapping and terminal sanitization. `cargo test --locked` covers sample and protocol validation.
 
-Real microphone quality, recognition latency, native undo behavior in prompt answers, CPU-only performance and signed packaged builds still require device acceptance testing. Model weights have their own NVIDIA license; the app does not bundle them. The original offline-model measurements in `docs/reports/2026-09-20-dictation.html` do not measure this streaming implementation.
+Real microphone quality, recognition latency, native undo behavior in prompt answers, CPU-only performance and signed packaged builds still require device acceptance testing. Model weights have their own NVIDIA license; the app does not bundle them.

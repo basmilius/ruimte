@@ -111,10 +111,12 @@ and history replies apply before the next stream event. Older daemons still retu
 full snapshot; the app accepts it and does not issue unsupported history requests.
 Pagination becomes live only after the daemon is updated.
 
-The current implementation summary and remaining checks are recorded in the
-[iOS report](../../docs/reports/2026-09-15-ios-app.html).
 Physical iPhone builds were installed at milestones. Visual timing, selection during
-streaming, VoiceOver, larger text and iPad multitasking still require hands-on acceptance.
+streaming, VoiceOver, larger text and iPad multitasking still require hands-on acceptance,
+and so do long background runs, network switches and a full round of a push handled on the
+Mac. Startup time and memory on the device are unmeasured. Distribution waits on Xcode
+Cloud and App Store Connect setup, distribution signing and a first upload; push under a
+distribution-signed build is tested there and nowhere else.
 
 ## Build locally
 
