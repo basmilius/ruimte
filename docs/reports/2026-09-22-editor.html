@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Bestanden bewerken in drie fases</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #353e53;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; font-variant-numeric: tabular-nums; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.panel p:last-child, .panel ul:last-child { margin-bottom: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+.step p:last-child { margin-bottom: 0; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+.diagram { display: block; max-width: 100%; height: auto; margin: 20px 0; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 14px; }
+.diagram .label { fill: var(--muted); font-size: 12px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); stroke-width: 1.5; }
+.diagram .ghost { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split, .split.three { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split, .split.three { grid-template-columns: 1fr; }
+  tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#kern">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">Ruimte / Ontwerp / 22 september 2026</p>
+  <h1>Bestanden bewerken in drie fases</h1>
+  <p class="intro">Ruimte laat een bestand zien op drie plekken en kan het nergens wijzigen. Dit rapport zet uit wat er ligt, wat een editor moet kunnen, hoe de file preview eerst een view wordt zodat de editor daarna op één plek gebouwd wordt, en waarom de editor Monaco wordt met de kleuren van Shiki, achter een interface van onszelf.</p>
+  <p class="status">Enginekeuze gemaakt op 22 september 2026, verder nog niets gebouwd</p>
+  <p class="caption">Gelezen op <code>main</code> bij <code>c8040ad1</code>. Bereik: <code>apps/client/src/shell/PreviewPanel.tsx</code>, <code>shell/panels/*</code>, <code>state/files.ts</code>, <code>shell/SplitGrid.tsx</code>, <code>shell/ViewHost.tsx</code>, <code>packages/contracts/src/fs.ts</code> en punt 12 van <code>docs/NEXT.md</code>.</p>
+  <nav aria-label="Inhoud">
+    <a href="#kern">De kern</a>
+    <a href="#nu">Hoe het nu zit</a>
+    <a href="#fase-0">Fase 0: de editor uitdenken</a>
+    <a href="#fase-1">Fase 1: de preview als view</a>
+    <a href="#fase-2">Fase 2: de editor</a>
+    <a href="#volgorde">Volgorde en open vragen</a>
+  </nav>
+</header>
+<main>
+
+<section id="kern" class="recommendation">
+  <h2>De kern</h2>
+  <p>Drie beslissingen, één per fase.</p>
+  <ul>
+    <li><strong>Fase 0.</strong> De editor is <code>monaco-editor</code> met <code>@shikijs/monaco</code> voor de kleuren, zodat de viewer en de editor dezelfde tokens onder hetzelfde thema tekenen. Beide zitten in een package van onszelf, <code>packages/editor</code>, achter een interface van een handvol methodes. De client kent Monaco niet, dus een andere engine is later een tweede adapter en geen verbouwing. Wat bewerkt mag worden is elk bestand dat <code>fs.read</code> als tekst teruggeeft en dat onder de leesgrens blijft. Opslaan is een nieuw request, <code>fs.write</code>, dat de <code>mtime</code> meestuurt die de client las en weigert als het bestand intussen veranderd is.</li>
+    <li><strong>Fase 1.</strong> De preview stopt als kolom naast de canvas en wordt een view die niet in de sidebar staat. De tabs verhuizen naar de toolbar, via het slot dat een file view daar al heeft. Daarmee kan de preview in een split cel en verdwijnt een derde kolom uit de shell. Een bestand slepen naar de sidebar of naar een split blijft één file view opleveren.</li>
+    <li><strong>Fase 2.</strong> De editor komt in <code>CodeFile</code>, en daarmee op elke plek die <code>FileBody</code> tekent: een preview tab, een file view en een file node op de canvas. Markdown en HTML krijgen een bronmodus naast hun weergave. Niets wordt gebouwd voordat fase 0 <code>fs.write</code>, het conflictgedrag en de interface van de package heeft vastgelegd.</li>
+  </ul>
+  <p>Fase 1 gaat vóór fase 2, ook al is de editor het doel. Een editor in een kolom die niet in een split past, staat in de weg zodra iemand naast een chat wil typen. En de toolbar-verhuizing raakt dezelfde bestanden die de editor straks aanpast, dus twee keer door <code>FileTabs</code> en <code>FileToolbar</code> gaan is duurder dan één keer.</p>
+</section>
+
+<section id="nu">
+  <h2>Hoe het nu zit</h2>
+  <p>Een bestand komt op drie plekken op het scherm, en alle drie lezen via dezelfde laag. Dat is de reden dat een editor op één plek gebouwd kan worden.</p>
+  <svg class="diagram" viewBox="0 0 900 250" role="img" aria-label="Drie oppervlakken lopen via FileBody naar de renderers en fs.read">
+    <rect class="node" x="20" y="20" width="200" height="56" rx="10"/>
+    <text x="120" y="44" text-anchor="middle">Preview tab</text>
+    <text class="label" x="120" y="64" text-anchor="middle">PreviewPanel + FileTabs</text>
+    <rect class="node" x="20" y="96" width="200" height="56" rx="10"/>
+    <text x="120" y="120" text-anchor="middle">File view</text>
+    <text class="label" x="120" y="140" text-anchor="middle">ViewHost, kind file</text>
+    <rect class="node" x="20" y="172" width="200" height="56" rx="10"/>
+    <text x="120" y="196" text-anchor="middle">File node</text>
+    <text class="label" x="120" y="216" text-anchor="middle">NodeFrame op de canvas</text>
+    <path class="edge" d="M220 48 H300 V124 H340"/>
+    <path class="edge" d="M220 124 H340"/>
+    <path class="edge" d="M220 200 H300 V124"/>
+    <rect class="node" x="340" y="96" width="160" height="56" rx="10"/>
+    <text x="420" y="120" text-anchor="middle">FileBody</text>
+    <text class="label" x="420" y="140" text-anchor="middle">één read, één foutstaat</text>
+    <path class="edge" d="M500 124 H540"/>
+    <rect class="node" x="540" y="96" width="160" height="56" rx="10"/>
+    <text x="620" y="120" text-anchor="middle">renderers</text>
+    <text class="label" x="620" y="140" text-anchor="middle">markdown, html, code, ...</text>
+    <path class="edge" d="M700 124 H740"/>
+    <rect class="node" x="740" y="96" width="140" height="56" rx="10"/>
+    <text x="810" y="120" text-anchor="middle">fs.read</text>
+    <text class="label" x="810" y="140" text-anchor="middle">text, binary, too-large</text>
+    <rect class="ghost" x="740" y="172" width="140" height="56" rx="10"/>
+    <text class="label" x="810" y="205" text-anchor="middle">fs.write bestaat niet</text>
+  </svg>
+  <div class="table" role="region" aria-label="Wat er nu staat" tabindex="0">
+    <table>
+      <caption>Wat de code vandaag doet, per onderdeel</caption>
+      <thead><tr><th scope="col">Onderdeel</th><th scope="col">Nu</th><th scope="col">Weegt mee voor</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Preview</th><td><code>PreviewPanel</code> is een schuivende kolom tussen de canvas en het files panel, met een eigen breedte in <code>useUi</code>. Open zolang er een tab is. Cmd+W sluit de tab, Ctrl+Tab wisselt.</td><td>Fase 1</td></tr>
+        <tr><th scope="row">Tabs</th><td><code>state/files.ts</code>: een tab per pad, diff- en committabs ernaast, pinnen, een limiet uit de settings, en recente bestanden. Elke tab heeft al een veld <code>dirty</code>, gereserveerd voor een editor.</td><td>Fase 1 en 2</td></tr>
+        <tr><th scope="row">File view</th><td><code>ProjectFileViewSchema</code> is alleen een pad. <code>ViewHost</code> tekent hem met <code>FileSurface</code>. Slepen uit het files panel naar de sidebar maakt er een (<code>dropFilesAt</code>).</td><td>Fase 1</td></tr>
+        <tr><th scope="row">Split</th><td><code>SplitGrid</code> neemt alleen een drag die een view draagt (<code>carriesView</code>). Een pad uit het files panel valt er nu naast.</td><td>Fase 1</td></tr>
+        <tr><th scope="row">Toolbar</th><td><code>ViewToolbar</code> kent kind <code>file</code> al. <code>file-toolbar-slot.ts</code> portaleert de knoppen van een bestand naar de toolbar van het venster of de header van een node, en tekent een eigen balk alleen in de preview.</td><td>Fase 1</td></tr>
+        <tr><th scope="row">Code lezen</th><td><code>CodeFile</code> tekent blokken van 400 regels, highlight ze met Shiki zodra ze in beeld komen, en boven 20.000 regels als platte tekst. De taal komt van de daemon (<code>languageOf</code> in <code>fs/read.ts</code>).</td><td>Fase 0 en 2</td></tr>
+        <tr><th scope="row">Schrijven</th><td>Er is geen <code>fs.write</code>. <code>fs.watch</code> en het event <code>fs.changed</code> bestaan wel, maar noemen alleen mappen die bewogen.</td><td>Fase 0</td></tr>
+        <tr><th scope="row">CodeMirror</th><td>Al een dependency: <code>chat/ui/composer/editor.ts</code> bouwt er een markdown-editor mee, met lezer-tags naar CSS-classes zodat de kleuren uit <code>styles.css</code> komen.</td><td>Fase 0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Punt 12 van <code>docs/NEXT.md</code> zegt het al: opslaan is het hele werk, en <code>fs.write</code> is een beslissing over wat een client op een machine mag veranderen. Dat is de vraag die fase 0 moet beantwoorden.</p>
+</section>
+
+<section id="fase-0">
+  <h2>Fase 0: de editor uitdenken</h2>
+  <p>Drie vragen. Waarmee bewerk je, wat mag bewerkt worden, en hoe komt een wijziging op schijf.</p>
+
+  <h3>Waarmee</h3>
+  <p>De keuze is gemaakt na drie rondes. Wat de doorslag gaf is één ding: de viewer kleurt met Shiki en dat ziet er goed uit, dus de editor moet dezelfde tokens tekenen. Alles wat een tweede tokenbron introduceert valt daarmee af.</p>
+  <div class="split three">
+    <div class="panel">
+      <h3>Shiki <span class="badge">blijft de viewer</span></h3>
+      <p>Shiki maakt statische spans en heeft geen cursor, selectie, undo of IME-invoer. Een <code>textarea</code> eroverheen werkt voor een snippet en gaat stuk bij wrap, bij samengestelde invoer en op een iPad. Shiki blijft waar hij is, in de viewer, de diff en de chat, en levert straks ook de tokens van de editor.</p>
+    </div>
+    <div class="panel">
+      <h3>CodeMirror 6 <span class="badge danger">afgewezen</span></h3>
+      <p>Zit al in de client voor de composer en werkt met touch. Maar CodeMirror kleurt met lezer-grammatica's, een tweede tokenbron naast Shiki, met minder talen en andere grenzen. Shiki-tokens als decorations in CodeMirror leggen is te bouwen, maar dat is eigen werk met incrementeel tokenizen erbij, en daar bestaat geen onderhouden pakket voor.</p>
+    </div>
+    <div class="panel">
+      <h3>Monaco + <code>@shikijs/monaco</code> <span class="badge confirmed">gekozen</span></h3>
+      <p>Monaco is de editor van VS Code en <code>@shikijs/monaco</code> is van het Shiki-team zelf: het vervangt Monaco's Monarch-tokenizer door Shiki, met dezelfde grammatica's en thema's die de viewer laadt. Twee onderhouders die allebei blijven. De prijs is bekend en wordt hieronder benoemd.</p>
+    </div>
+  </div>
+  <p>Ook bekeken: <code>modern-monaco</code> van esm.sh, dat precies deze combinatie kant-en-klaar biedt met lazy laden en een Workspace. Het is versie 0.4, ontworpen om vanaf een CDN te laden, en brengt een eigen bestandssysteem mee dat Ruimte niet wil. Het blijft een goede bron om af te kijken hoe zij de Shiki-koppeling en het lazy laden doen, maar geen dependency onder <code>script-src 'self'</code> in een app die offline moet werken.</p>
+  <p>Wat Monaco kost, en waar we van weten dat we het accepteren:</p>
+  <ul>
+    <li><strong>Geen touch.</strong> De station-client op een iPad kijkt alleen. Dat was al zo.</li>
+    <li><strong>Layout-meting.</strong> Monaco meet zijn container zelf. Met <code>automaticLayout</code> gebruikt hij een <code>ResizeObserver</code>, wat in een split cel moet volstaan. De spike hieronder controleert dat.</li>
+    <li><strong>Gewicht.</strong> De kern van Monaco is enkele megabytes en laadt daarom pas bij het eerste bewerken, zoals Shiki pas bij het eerste codebestand laadt. Geen TypeScript-, JSON- of CSS-taalservice: die brengen Monarch en eigen workers mee, en de kleuren komen toch van Shiki. Alleen de basisworker van de editor, via <code>worker-src 'self' blob:</code> dat de CSP al toestaat.</li>
+    <li><strong>Eigen thema.</strong> Monaco heeft een thema-object en geen CSS-variabelen. <code>@shikijs/monaco</code> zet een Shiki-thema om naar dat object, dus de tokenkleuren komen mee. Wat overblijft (achtergrond, gutter, selectie, cursor) zet de adapter uit de tokens van <code>styles.css</code>.</li>
+  </ul>
+
+  <h3>De grens: een package van onszelf</h3>
+  <p>De editor komt in <code>packages/editor</code>, de eerste package met DOM erin. De reden is niet hergebruik maar de grens. De client importeert de interface en een fabriek, nooit Monaco. Een andere engine later is een tweede bestand naast <code>monaco.ts</code> en verder niets.</p>
+  <pre><code>export interface EditorOptions {
+    text: string;
+    /* Het Shiki-id dat fs.read meegeeft; zonder id is het platte tekst. */
+    language?: string;
+    theme: 'light' | 'dark';
+    readOnly?: boolean;
+    wrap?: boolean;
+    /* Eén-gebaseerd, de regel waar de cursor opent. */
+    line?: number;
+}
+
+export interface Editor {
+    getText(): string;
+    /* Een wijziging van buiten (herladen na fs.changed); wordt niet als change gemeld. */
+    setText(text: string): void;
+    onChange(listener: () => void): () => void;
+    /* Cmd+S van binnen de editor; wat er dan gebeurt is aan de client. */
+    onSave(listener: () => void): () => void;
+    revealLine(line: number): void;
+    setTheme(theme: 'light' | 'dark'): void;
+    setReadOnly(readOnly: boolean): void;
+    focus(): void;
+    dispose(): void;
+}
+
+export interface EditorEngine {
+    mount(element: HTMLElement, options: EditorOptions): Editor;
+}
+
+/* De enige plek die Monaco kent. De highlighter is die van de viewer, zodat een grammatica één keer laadt. */
+export const monacoEngine = (highlighter: () => Promise&lt;Highlighter&gt;): EditorEngine =&gt; ...</code></pre>
+  <p>Wat er bewust niet in zit: een bestandssysteem, tabs, opslaan, conflicten. Dat is allemaal van de client, die het al heeft of in fase 2 bouwt. De interface kent tekst, taal, thema, een cursor en wijzigingen, en meer niet. Een adapter die meer nodig heeft, vraagt om een interface-uitbreiding en niet om een import in de client.</p>
+
+  <h3>De spike, één dag</h3>
+  <p>Vier dingen die de documentatie niet beantwoordt en die de keuze definitief maken of terugdraaien:</p>
+  <ol>
+    <li>De bundel met alleen <code>editor.api</code> en de basisworker, gemeten na een Vite-build, en of hij pas laadt bij het eerste bewerken.</li>
+    <li>Of Monaco draait onder de CSP van de client zoals die is, zonder een directive te verruimen.</li>
+    <li>Een editor in een split cel die van maat verandert, en in een file node die op de canvas gezoomd wordt.</li>
+    <li>Of de highlighter van de viewer één keer laadt en zowel <code>CodeFile</code> als <code>@shikijs/monaco</code> bedient.</li>
+  </ol>
+
+  <h3>Wat</h3>
+  <div class="table" role="region" aria-label="Wat bewerkt mag worden" tabindex="0">
+    <table>
+      <caption>Per uitkomst van <code>fs.read</code></caption>
+      <thead><tr><th scope="col">Bestand</th><th scope="col">Bewerken</th><th scope="col">Hoe</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Tekst, taal bekend</th><td><span class="badge confirmed">ja</span></td><td>CodeMirror met de grammatica van die taal.</td></tr>
+        <tr><th scope="row">Tekst, taal onbekend</th><td><span class="badge confirmed">ja</span></td><td>CodeMirror zonder grammatica, platte tekst.</td></tr>
+        <tr><th scope="row">Markdown, HTML</th><td><span class="badge confirmed">ja</span></td><td>Een schakel tussen weergave en bron in de toolbar. De weergave blijft de standaard, de bron is de editor.</td></tr>
+        <tr><th scope="row">Tekst boven de leesgrens</th><td><span class="badge warning">nee</span></td><td>2 MiB is de grens van <code>fs.read</code>. Zo'n bestand wordt niet eens gelezen, dus ook niet bewerkt. De editor toont wat de viewer toont.</td></tr>
+        <tr><th scope="row">Tekst boven 20.000 regels</th><td><span class="badge warning">later</span></td><td>De viewer valt hier terug op platte tekst. CodeMirror kan dit aan, maar de vraag is of iemand een gegenereerd bestand in Ruimte wil bewerken. Eerst niet.</td></tr>
+        <tr><th scope="row">Afbeelding, video, overig binair</th><td><span class="badge danger">nooit</span></td><td>Geen editor.</td></tr>
+        <tr><th scope="row">Buiten de projectmap</th><td><span class="badge info">vraag</span></td><td>Een file view mag buiten de map wijzen. Bewerken daar is technisch hetzelfde, maar het is een groter recht op een gekoppelde machine. Mijn voorkeur: eerst alleen binnen de projectmap en zijn worktrees, dezelfde grens als <code>--cwd</code> voor een agent.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Hoe het op schijf komt</h3>
+  <p>Een nieuw request op de wire, dus geen <code>PROTOCOL_VERSION</code>-bump.</p>
+  <pre><code>fs.write
+  payload: { path, text, expectedMtime }
+  result:  { mtime, size }
+  error:   'stale'  (het bestand op schijf heeft een andere mtime dan expectedMtime)
+           'too-large', 'not-text', 'outside-project'</code></pre>
+  <p>De <code>expectedMtime</code> is de <code>mtime</code> die <code>fs.read</code> teruggaf. Schrijft een agent het bestand intussen (en dat gebeurt voortdurend), dan komt <code>stale</code> terug en beslist de persoon: opnieuw laden en de eigen wijziging kwijt, of overschrijven. Geen driewegmerge in de eerste versie. Die is later te bouwen op dezelfde fout.</p>
+  <p>Aanroepen mag elke client die <code>fs.read</code> mag doen, dus een gekoppelde sleutel of het lokale geheim. Een agent komt hier nooit langs. Die schrijft met zijn eigen CLI en dat verandert niet. Er komt geen <code>ruimte-context</code>-werkwoord voor.</p>
+  <p>Opslaan is expliciet, Cmd+S, met de dirty-stip in de tab die daar al voor gereserveerd is. Autosave zoals JetBrains het doet zou ik pas na een paar weken gebruik beslissen: in een canvas waar een agent tegelijk aan hetzelfde bestand werkt, is een halve regel die automatisch weggeschreven wordt eerder een bron van conflicten dan gemak. Dit is een van de open vragen hieronder.</p>
+  <p>Wat er nog bijkomt op de daemon: <code>fs.changed</code> noemt nu alleen mappen. Een editor met een open bestand wil weten of dát bestand veranderde. De simpelste weg is dat de client bij een <code>fs.changed</code> voor de map van het bestand een nieuwe <code>fs.read</code> doet en de <code>mtime</code> vergelijkt. Geen nieuw event nodig.</p>
+
+  <h3>Wat fase 0 oplevert</h3>
+  <ul>
+    <li>De package <code>packages/editor</code> met de interface, de Monaco-adapter en de uitkomst van de spike.</li>
+    <li>Het schema van <code>fs.write</code> in <code>packages/contracts</code>, met tests, en de daemon-kant met de projectmapgrens en de <code>stale</code>-controle.</li>
+    <li>Een antwoord op de open vragen aan het eind, minstens die over autosave en buiten de projectmap. De enginevraag is beantwoord.</li>
+  </ul>
+</section>
+
+<section id="fase-1">
+  <h2>Fase 1: de preview als view, de tabs in de toolbar</h2>
+  <p>Vandaag is de preview een derde kolom: sidebar, canvas, preview, panel. Hij heeft een eigen breedte, een eigen open-toestand en een eigen tabstrook. Het voorstel maakt er een view van die in een cel van de split grid staat, met de tabs in de toolbar van het venster.</p>
+  <div class="split">
+    <div class="panel">
+      <h3>Nu</h3>
+      <ul>
+        <li>De preview schuift open naast de canvas en neemt breedte van hem af.</li>
+        <li>Niet te combineren met een split: hij staat er altijd naast, nooit erin.</li>
+        <li>Eigen tabstrook, eigen breedte, eigen sneltoetsen in <code>PreviewPanel</code>.</li>
+        <li>Een file view en de preview tekenen hetzelfde bestand op twee manieren: de een met de toolbar van het venster, de ander met een eigen balk.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Voorstel</h3>
+      <ul>
+        <li>Een view van een eigen soort, <code>files</code>, die niet in de sidebar staat en niet in <code>project.json</code>. Zijn toestand (tabs, actieve tab) is al lokaal in <code>state/files.ts</code> en blijft dat.</li>
+        <li>Hij staat in een cel zoals elke view, dus naast een chat, onder een terminal, of alleen.</li>
+        <li>De tabs tekenen in de toolbar via de leads die <code>ViewToolbar</code> al voor een file view heeft. In een split krijgt de cel ze in zijn <code>CellToolbar</code>, zoals een browser daar zijn adresbalk krijgt.</li>
+        <li>De knoppen van een bestand gaan door het bestaande slot, de eigen balk in de preview vervalt.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Wat er precies verandert</h3>
+  <ol class="steps">
+    <li class="step"><div>
+      <h3>Een view die het document niet kent</h3>
+      <p>De layout is lokaal (<code>exportLocal</code> in <code>state/document.ts</code>), dus een cel kan een id dragen dat niet in <code>views</code> voorkomt. Eén vaste id, bijvoorbeeld <code>files</code>, die <code>ViewSurface</code>, <code>CellToolbar</code>, <code>locateView</code> en <code>ViewMenu</code> herkennen. Dat is de eigenlijke omvang van de fase, elke plek die aanneemt dat een cel een view uit het document is.</p>
+      <p>Acceptatie: een project dat de preview in een cel had, opent na een herstart met die cel op dezelfde plek, en het shared bestand in git is niet veranderd.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Een bestand openen</h3>
+      <p>Openen uit het files panel, het git panel of het palet doet nu <code>useFiles.open</code> en zet de preview open. Straks werkt het zo. Staat de files-view in een cel, dan wordt de tab daar actief. Staat hij nergens, dan neemt hij de gefocuste cel over als die geen canvas is, en anders splitst hij naast de canvas. Dat laatste is een keuze. Het alternatief is altijd vervangen, en dat verliest een chat die iemand open had.</p>
+      <p>Acceptatie: Cmd+P op een bestand vanuit een chat-cel toont het bestand zonder dat de chat verdwijnt.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Tabs in de toolbar</h3>
+      <p><code>FileTabs</code> verhuist van de header van het panel naar een lead in <code>ViewToolbar</code>. De strook scrollt al horizontaal en heeft zijn contextmenu. Wat verandert is de hoogte (de toolbar is 48px) en de plek van de sluitknop. Bij één cel staan ze in de toolbar van het venster, bij meer cellen in de balk van de cel.</p>
+      <p>Acceptatie: pinnen, sluiten, Ctrl+Tab en het contextmenu werken op beide plekken, en de tabs blijven leesbaar naast de breadcrumb.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Slepen naar een split</h3>
+      <p><code>SplitGrid.zoneFor</code> neemt alleen een view-drag. Een drag met <code>PATHS_DRAG_TYPE</code> uit het files panel moet er ook een zone krijgen, en op de drop <code>newFileView</code> aanroepen, zoals de sidebar dat al doet. Meerdere paden geven meerdere views, waarvan de eerste in de cel landt en de rest in de sidebar.</p>
+      <p>Acceptatie: een bestand uit het files panel op de rechterrand van een cel laten vallen geeft een file view in een nieuwe kolom, en de sidebar toont hem.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Opruimen</h3>
+      <p><code>PreviewPanel.tsx</code>, <code>preview</code> en <code>previewWidth</code> in <code>useUi</code>, de legacy-sleutels <code>ruimte.preview</code> en <code>ruimte.preview.width</code>, en de eigen balk in de renderers. De toolbar hoeft <code>previewOpen</code> niet meer te kennen.</p>
+      <p>Acceptatie: <code>bun run check</code> en de tests slagen, en het woord preview komt in <code>state/ui.ts</code> niet meer voor.</p>
+    </div></li>
+  </ol>
+
+  <h3>Wat dit aan bestaand gedrag raakt</h3>
+  <ul>
+    <li>De preview kon open zijn terwijl de canvas de hele breedte hield, omdat hij ernaast schoof. Straks neemt hij een cel. Bij één cel betekent openen van een bestand dus een split of een vervanging. Dat is de grootste gedragsverandering en de reden voor de keuze in stap 2.</li>
+    <li>De sneltoetsen in <code>PreviewPanel.onKeyDown</code> (Cmd+W sluit een tab, Ctrl+Tab wisselt) worden sneltoetsen van de cel. Cmd+W is nu ook <code>closeCell</code>; in een files-cel sluit hij de tab, en de cel pas als er geen tab meer is.</li>
+    <li>De lege preview (recente bestanden, zoeken, openen) blijft: dat is wat de view toont zonder tab.</li>
+    <li>Op iOS verandert niets. De iPhone-app kent geen split grid en geen preview-kolom.</li>
+  </ul>
+</section>
+
+<section id="fase-2">
+  <h2>Fase 2: de editor</h2>
+  <p>Na fase 1 is er één plek waar een bestand getekend wordt en één toolbar-slot waar zijn knoppen terechtkomen. De editor komt in <code>CodeFile</code> en gaat daarmee vanzelf mee naar een tab, een view en een node.</p>
+
+  <h3>Bouw</h3>
+  <ul>
+    <li><strong>Lezen blijft de standaard.</strong> Een bestand opent zoals nu, gehighlight door Shiki in blokken. Een klik in de tekst, of een knop in de toolbar, zet de editor aan. Twee redenen: een viewer van 400 regels per blok is goedkoper dan tien Monaco-instanties op een canvas met tien file nodes, en een klik die per ongeluk een bestand van een agent aanpast is erger dan een klik extra.</li>
+    <li><strong>De editor vervangt de viewer in dezelfde ruimte.</strong> Zelfde scroller, zelfde regelnummers, zelfde regelhoogte van 20px, zodat de overgang niets verplaatst. De inhoud komt uit de <code>FsReadText</code> die de viewer al had.</li>
+    <li><strong>Talen.</strong> De <code>language</code> die de daemon meegeeft is een Shiki-id en gaat ongewijzigd door naar de adapter. Elke taal die de viewer kleurt, kleurt de editor, een onbekend id is platte tekst.</li>
+    <li><strong>Kleuren.</strong> Dezelfde Shiki-highlighter en hetzelfde thema als de viewer, dus per constructie dezelfde tokens. Wat de adapter zelf zet (achtergrond, gutter, selectie) komt uit <code>styles.css</code>.</li>
+    <li><strong>Markdown en HTML.</strong> De schakel weergave/bron in de toolbar. Een bestand met een dirty editor blijft in de bronmodus tot het opgeslagen is. De weergave toont wat op schijf staat.</li>
+    <li><strong>Opslaan.</strong> Cmd+S roept <code>fs.write</code> aan met de <code>mtime</code> van de laatste read. Bij <code>stale</code> een balk boven de editor: "Het bestand is op schijf veranderd", met opnieuw laden of overschrijven. Sluiten van een dirty tab, view of node vraagt eerst.</li>
+    <li><strong>Dirty-markering.</strong> De stip in de tab (het veld is er), een stip in de sidebar-rij van een file view en op de plaat van een file node. De laatste twee zijn nieuw.</li>
+    <li><strong>Veranderingen van buiten.</strong> Een <code>fs.changed</code> voor de map van een open bestand leidt tot een nieuwe read. Niet dirty: stil herladen, zoals de viewer nu al zou moeten doen. Wel dirty: dezelfde balk als bij <code>stale</code>, maar dan vóór het opslaan.</li>
+  </ul>
+
+  <h3>Per oppervlak</h3>
+  <div class="table" role="region" aria-label="De editor per oppervlak" tabindex="0">
+    <table>
+      <caption>Waar de editor verschijnt en wat er per plek bij komt</caption>
+      <thead><tr><th scope="col">Oppervlak</th><th scope="col">Editor</th><th scope="col">Extra</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Files-view (tab)</th><td>Ja</td><td>Dirty-stip in de tab, sluitvraag bij Cmd+W, de tab-limiet laat een dirty tab nooit vallen.</td></tr>
+        <tr><th scope="row">File view</th><td>Ja</td><td>Dirty-stip in de sidebar-rij. Sluiten van de view vraagt.</td></tr>
+        <tr><th scope="row">File node op de canvas</th><td>Ja, maar met de klik-om-te-bewerken drempel</td><td>Dirty-stip op de plaat. De toetsen van de editor gaan alleen naar de node met <code>bodyFocusId</code>, wat de canvas al regelt voor een terminal.</td></tr>
+        <tr><th scope="row">Diff tab</th><td>Nee</td><td>Een diff is een weergave van git, niet van een bestand. "Open bestand" vanuit een diff-regel gaat naar de editor op die regel.</td></tr>
+        <tr><th scope="row">Station en iOS</th><td>Station ja, iOS nee</td><td>Station is dezelfde client, maar Monaco doet geen touch, dus een iPad in Safari leest alleen. iOS heeft geen editor in dit plan. De wire krijgt er wel <code>fs.write</code> bij, zodat het later kan.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Acceptatie</h3>
+  <ul>
+    <li>Een TypeScript-bestand openen, een regel wijzigen, Cmd+S: het git panel toont het bestand als gewijzigd binnen een seconde, zonder herladen.</li>
+    <li>Een agent schrijft hetzelfde bestand terwijl het dirty is: de balk verschijnt en opslaan overschrijft niets zonder een klik.</li>
+    <li>Een file node op de canvas met de editor aan: de sneltoetsen van de canvas blijven uit zolang de editor de focus heeft, en Escape geeft de focus terug.</li>
+    <li>Een markdown-bestand: weergave, bron, wijzigen, opslaan, weergave toont de wijziging.</li>
+    <li><code>bun run test</code> zonder wandkloktiming: het conflictgedrag is een test op een <code>FakeTransport</code> die <code>stale</code> teruggeeft, en de tab- en dirty-logica draait tegen een fake <code>EditorEngine</code> zonder DOM.</li>
+  </ul>
+</section>
+
+<section id="volgorde">
+  <h2>Volgorde en open vragen</h2>
+  <p>Fase 0 is denkwerk plus het schema. Fase 1 is de meeste code in de shell, fase 2 de editor zelf. Fase 1 en het daemon-deel van fase 0 kunnen naast elkaar.</p>
+  <div class="table" role="region" aria-label="Volgorde" tabindex="0">
+    <table>
+      <thead><tr><th scope="col">Fase</th><th scope="col">Levert</th><th scope="col">Hangt af van</th><th scope="col">Grootte, geschat</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">0</th><td><code>packages/editor</code> met interface en Monaco-adapter, de spike, <code>fs.write</code> in contracts en daemon, antwoorden op de vragen hieronder</td><td>Niets</td><td>Twee dagen</td></tr>
+        <tr><th scope="row">1</th><td>Files-view in een cel, tabs in de toolbar, drop op een split, preview-kolom weg</td><td>Niets, maar wel vóór fase 2</td><td>Drie tot vier dagen</td></tr>
+        <tr><th scope="row">2</th><td>Editor in <code>CodeFile</code> via de package, opslaan, conflict, dirty-markering op drie plekken, bronmodus voor markdown en HTML</td><td>0 en 1</td><td>Drie tot vier dagen</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="caption">De schattingen zijn van mij en niet gemeten. Ze passen in de maat die <code>NEXT.md</code> hanteert.</p>
+
+  <h3>Open vragen voor Bas</h3>
+  <ol>
+    <li><strong>Autosave of Cmd+S?</strong> Mijn voorstel is expliciet opslaan en autosave als latere instelling. Een JetBrains-gebruiker mist autosave vanaf dag één, dus dit is een echte keuze.</li>
+    <li><strong>Bewerken buiten de projectmap?</strong> Een file view mag erbuiten wijzen. Voorstel: eerst niet, dezelfde grens als <code>--cwd</code>.</li>
+    <li><strong>Eén files-view per venster, of meer?</strong> Eén is simpel en dekt "de preview in een split". Twee zou twee tabstroken betekenen die elk hun eigen tabs hebben, wat <code>state/files.ts</code> nu niet kan. Voorstel: één.</li>
+    <li><strong>Wat doet openen bij één cel?</strong> Splitsen naast de canvas, of de cel vervangen? Voorstel: splitsen als de cel een canvas is, vervangen als het al een files-view is, en anders splitsen. Vervangen van een chat verliest te veel.</li>
+    <li><strong>Klik-om-te-bewerken op een file node, of ook in een view en tab?</strong> Voorstel: overal dezelfde drempel, zodat een bestand op drie plekken hetzelfde doet. Een klik in de tekst zet de cursor en de editor aan. Een selectie slepen in de viewer selecteert alleen.</li>
+    <li><strong>De preview-kolom helemaal weg, of als optie behouden?</strong> Voorstel: weg. Twee manieren om hetzelfde bestand te tonen is precies wat deze fase oplost.</li>
+  </ol>
+</section>
+
+</main>
+<footer><p>Gebaseerd op het lezen van de code bij <code>c8040ad1</code>. Niets is gedraaid of gemeten. De bundelgrootte van Monaco, het touch-gedrag en de werking onder de CSP komen uit documentatie en niet uit een meting in dit project. De spike in fase 0 meet ze. Het rapport is gecontroleerd op ankers, licht en donker en op een smal venster in de bron. Het is niet in een browser gerenderd.</p></footer>
+</body>
+</html>
