@@ -50,11 +50,10 @@
   },
   "contextMeter": {
     "aria": "{{percent}}% van de context gebruikt",
-    "percent": "{{percent}}% van de context",
     "title": "Context",
-    "turns": "Turns",
-    "cost": "Kosten",
-    "compact": "Context comprimeren"
+    "used": "gebruikt",
+    "usedOf": "van {{window}} gebruikt · {{percent}}%",
+    "compactNow": "Nu comprimeren"
   },
   "rows": {
     "user": {
@@ -207,7 +206,11 @@
     },
     "placeholder": {
       "disconnected": "Niet verbonden met de machine",
-      "ready": "Vraag maar raak, / voor commando's, @ voor bestanden, $ voor skills"
+      "lead": "Vraag maar raak",
+      "joiner": ", of",
+      "commands": "commando's",
+      "files": "bestanden",
+      "skills": "skills"
     },
     "jumpToEnd": "Naar het einde",
     "mentions": {
@@ -221,6 +224,7 @@
       "sendNow": "Nu versturen"
     },
     "removeAttachment": "{{name}} verwijderen",
+    "attach": "Bestanden toevoegen",
     "tooLong": "tekens, te lang om te versturen",
     "stop": "Stoppen, Shift-klik stopt ook de sub-agents",
     "queueButton": "In de wachtrij zetten",
@@ -268,22 +272,30 @@
   "modes": {
     "supervised": {
       "label": "Met toezicht",
-      "hint": "Vraagt het eerst bij commando's en wijzigingen in bestanden"
+      "hint": "Vraagt het eerst bij commando's en wijzigingen in bestanden",
+      "short": "Vragen"
     },
     "auto-accept-edits": {
       "label": "Bewerkingen automatisch accepteren",
-      "hint": "Bewerkingen gaan door, commando's vragen het nog"
+      "hint": "Bewerkingen gaan door, commando's vragen het nog",
+      "short": "Bewerken"
     },
     "auto": {
       "label": "Automatisch",
-      "hint": "De agent beoordeelt routineklussen zelf"
+      "hint": "De agent beoordeelt routineklussen zelf",
+      "short": "Automatisch"
     },
     "full-access": {
       "label": "Volledige toegang",
-      "hint": "Vraagt nooit om goedkeuring"
+      "hint": "Vraagt nooit om goedkeuring",
+      "short": "Volledig"
     }
   },
   "pickers": {
+    "settings": {
+      "title": "Model en rechten",
+      "model": "Model"
+    },
     "model": {
       "choose": "Model kiezen",
       "search": "Modellen zoeken",
@@ -292,9 +304,6 @@
       "legacyGroup_one": "Legacy-modellen ({{count}})",
       "legacyGroup_other": "Legacy-modellen ({{count}})",
       "legacy": "Legacy"
-    },
-    "options": {
-      "label": "Opties"
     },
     "stash": {
       "title": "Stashed prompts",

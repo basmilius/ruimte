@@ -990,9 +990,18 @@
 .composer-input .cm-editor { max-height: 200px; }
 .composer-input .cm-editor.cm-focused { outline: none; }
 .composer-input .cm-editor .cm-scroller { overflow: auto; font-family: inherit; line-height: inherit; }
-.composer-input .cm-editor .cm-scroller .cm-content { padding: 12px 14px 4px; caret-color: var(--text); }
+.composer-input .cm-editor .cm-scroller .cm-content { padding: 18px 14px 6px 20px; caret-color: var(--text); }
 .composer-input .cm-scroller .cm-content .cm-line { padding: 0; }
 .composer-input .cm-scroller .cm-content .cm-placeholder { color: var(--text-faint); }
+.composer-hints, .composer-hints-extra { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+/* The joiner starts with its own comma, so it sits against the lead without the gap. */
+.composer-hints-extra { margin-left: -8px; }
+.composer-hints kbd { padding: 0 6px; border-radius: 5px; background: var(--surface-active); color: var(--text-muted); font-family: var(--font-mono); font-size: var(--text-code); line-height: var(--text-code--line-height); }
+/* The widths of Tailwind's `@md` container variant, which the rest of the composer narrows at. */
+@container composer (width < 28rem) {
+    .composer-input .cm-editor .cm-scroller .cm-content { padding: 14px 12px 4px 14px; }
+    .composer-hints-extra { display: none; }
+}
 /* Markdown stays source while you type: the markers stay put and dim, and what they wrap takes its look. */
 .composer-input .cm-md-mark { color: var(--text-faint); }
 .composer-input .cm-md-strong, .composer-input .cm-md-heading { font-weight: 600; }

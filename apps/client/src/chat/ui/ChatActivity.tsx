@@ -17,7 +17,7 @@ import { useNow } from '@/ui/useNow';
 
 const NO_TASKS: readonly ChatBackgroundTask[] = [];
 
-const CHIP = `${FLOAT} pointer-events-auto inline-flex h-6 items-center gap-1 rounded-full px-2 text-xs text-text-muted`;
+const CHIP = `${FLOAT} pointer-events-auto inline-flex h-7.5 items-center gap-1.5 rounded-full px-3 text-xs text-text-muted`;
 
 /* What the chat keeps working on beside the thread, in one small line over the composer: its sub-agents and what runs in the background. */
 export function ChatActivity({ chatId }: { chatId: string }) {
@@ -32,25 +32,25 @@ export function ChatActivity({ chatId }: { chatId: string }) {
     const { shells, monitors } = backgroundCounts(background);
     const subagentLabel = t('activity.subagents', { count: subagents });
     return (
-        <div className="mb-1.5 flex flex-wrap items-center gap-1.5 px-1">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
             {subagents > 0 &&
                 (openable ? (
                     <Tooltip label={t('activity.openSubagents')} name>
                         <button type="button" className={clsx(CHIP, 'hover:text-text')} onClick={() => show(toggleList(trail))}>
-                            <Icon icon={Bot} size={12} />
+                            <Icon icon={Bot} size={14} />
                             {subagentLabel}
                         </button>
                     </Tooltip>
                 ) : (
                     <span className={CHIP}>
-                        <Icon icon={Bot} size={12} />
+                        <Icon icon={Bot} size={14} />
                         {subagentLabel}
                     </span>
                 ))}
             {background.length > 0 && (
                 <Popover.Root>
                     <Popover.Trigger className={clsx(CHIP, 'hover:text-text')}>
-                        <Icon icon={shells > 0 ? SquareTerminal : Activity} size={12} />
+                        <Icon icon={shells > 0 ? SquareTerminal : Activity} size={14} />
                         {[shells > 0 && t('activity.shells', { count: shells }), monitors > 0 && t('activity.monitors', { count: monitors })]
                             .filter(Boolean)
                             .join(' · ')}
@@ -94,7 +94,7 @@ function BackgroundTaskRows({ chatId, tasks }: { chatId: string; tasks: readonly
             <span className="shrink-0 text-xs tabular-nums text-text-faint">{formatElapsedShort(now - task.startedAt)}</span>
             <Tooltip label={t('activity.stop')} name>
                 <button type="button" className="icon-btn h-6 w-6 shrink-0" onClick={() => stop(task.id)}>
-                    <Icon icon={Square} size={12} />
+                    <Icon icon={Square} size={14} />
                 </button>
             </Tooltip>
         </div>

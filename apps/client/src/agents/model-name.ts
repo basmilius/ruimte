@@ -27,3 +27,26 @@ export const modelName = (slug: string, models: readonly ModelInfo[] | undefined
 /* The same answer for the machine in scope, whose catalog is the only one that can name the slug. */
 export const useModelName = (provider: AgentKind | undefined, slug: string): string =>
     useProviders((state) => modelName(slug, state.providers.find((entry) => entry.kind === provider)?.models));
+
+/*
+ * The leading words every model of a catalog shares, so a tight spot can say `Opus 5.5` where the
+ * CLI says `Claude Opus 5.5`. Whole words only, so `GPT-6` never loses its `GPT-`, and never all of a name.
+ */
+export const sharedModelPrefix = (models: readonly ModelInfo[]): string => {
+    const names = models.map((entry) => entry.name.split(' '));
+    const first = names[0];
+    if (first === undefined || names.length < 2) {
+        return '';
+    }
+    let count = 0;
+    while (names.every((words) => words.length > count + 1 && words[count] === first[count])) {
+        count++;
+    }
+    return count === 0 ? '' : `${first.slice(0, count).join(' ')} `;
+};
+
+/* A model's name without the words its whole catalog shares. */
+export const shortModelName = (name: string, models: readonly ModelInfo[] | undefined): string => {
+    const prefix = sharedModelPrefix(models ?? []);
+    return prefix !== '' && name.startsWith(prefix) ? name.slice(prefix.length) : name;
+};

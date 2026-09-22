@@ -20,7 +20,8 @@ interface ComposerInputProps {
     ref?: Ref<ComposerInputHandle>;
     dictationToolbar?: HTMLElement | null;
     value: string;
-    placeholder: string;
+    /* An element for a placeholder with markup of its own; keep its reference stable, as with `extensions`. */
+    placeholder: string | HTMLElement;
     disabled: boolean;
     tabbable: boolean;
     className?: string;

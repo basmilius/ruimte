@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ModelInfo } from '@ruimte/contracts';
-import { modelName, modelNameFromSlug } from './model-name.ts';
+import { modelName, modelNameFromSlug, sharedModelPrefix, shortModelName } from './model-name.ts';
 
 const model = (slug: string, name: string): ModelInfo => ({ slug, name, legacy: false, isDefault: false, options: [] });
 
@@ -24,5 +24,31 @@ describe('a model the CLI offers', () => {
     test('falls back to the slug when the catalog has dropped it or has not arrived', () => {
         expect(modelName('gpt-5.5', models)).toBe('GPT 5.5');
         expect(modelName('claude-opus-5', undefined)).toBe('Claude Opus 5');
+    });
+});
+
+const catalog = (...names: string[]): ModelInfo[] => names.map((name) => model(name.toLowerCase(), name));
+
+describe('shortModelName', () => {
+    test('drops the words every model shares', () => {
+        const models = catalog('Claude Opus 5.5', 'Claude Sonnet 5', 'Claude Haiku 4.5');
+        expect(sharedModelPrefix(models)).toBe('Claude ');
+        expect(shortModelName('Claude Opus 5.5', models)).toBe('Opus 5.5');
+    });
+
+    test('keeps a prefix that is only part of a word', () => {
+        const models = catalog('GPT-6 Astra', 'GPT-6 Sol', 'GPT-5.5');
+        expect(sharedModelPrefix(models)).toBe('');
+        expect(shortModelName('GPT-6 Sol', models)).toBe('GPT-6 Sol');
+    });
+
+    test('never takes a whole name', () => {
+        const models = catalog('Claude Opus', 'Claude Opus 5');
+        expect(shortModelName('Claude Opus', models)).toBe('Opus');
+        expect(shortModelName('Claude Opus 5', models)).toBe('Opus 5');
+    });
+
+    test('leaves a catalog of one alone', () => {
+        expect(shortModelName('Claude Opus 5.5', catalog('Claude Opus 5.5'))).toBe('Claude Opus 5.5');
     });
 });

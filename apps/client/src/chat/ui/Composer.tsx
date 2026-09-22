@@ -7,7 +7,7 @@ import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import clsx from 'clsx';
-import { ArrowUp, ChevronDown, Clock, Copy, FastForward, Paperclip, Square, SquareSlash, X, Zap } from 'lucide-react';
+import { ArrowUp, ChevronDown, Clock, Copy, FastForward, Paperclip, Plus, Square, SquareSlash, X, Zap } from 'lucide-react';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatItem, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { askBeforeStoppingSubagents } from '@/agents/end-children';
 import { chatClient, type ChatSendExtras } from '@/chat';
@@ -35,11 +35,11 @@ import { ChatActivity } from '@/chat/ui/ChatActivity';
 import { chipDecorations } from '@/chat/ui/composer/chips';
 import { enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirection, tabSpaces } from '@/chat/ui/composer/keys';
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
-import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { PromptComposer } from '@/chat/ui/PromptComposer';
 import { ResumeCompactionDock } from '@/chat/ui/ResumeCompactionDock';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
-import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
+import { StashPicker } from '@/chat/ui/Pickers';
+import { RunSettings } from '@/chat/ui/RunSettings';
 import { UploadThumb } from '@/chat/ui/UploadThumb';
 import { isApplePlatform } from '@/desktop/bridge';
 import { formatNumber } from '@/format/number';
@@ -106,6 +106,22 @@ const usePendingRequests = (chatId: string) => {
     }, [items, order]);
 };
 
+/* The empty box names its sigils as key caps, so they read as keys to press rather than as punctuation. */
+const hintedPlaceholder = (lead: string, joiner: string, hints: ReadonlyArray<{ key: string; label: string }>): HTMLElement => {
+    const root = document.createElement('span');
+    root.className = 'composer-hints';
+    const extra = document.createElement('span');
+    extra.className = 'composer-hints-extra';
+    extra.append(joiner);
+    for (const hint of hints) {
+        const cap = document.createElement('kbd');
+        cap.textContent = hint.key;
+        extra.append(cap, hint.label);
+    }
+    root.append(lead, extra);
+    return root;
+};
+
 const splitPath = (path: string): { name: string; dir: string } => {
     const slash = path.lastIndexOf('/');
     return slash < 0 ? { name: path, dir: '' } : { name: path.slice(slash + 1), dir: path.slice(0, slash) };
@@ -127,6 +143,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const [confirmClear, setConfirmClear] = useState(false);
     const endpointId = useEndpointId();
     const inputRef = useRef<ComposerInputHandle>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [dictationToolbar, setDictationToolbar] = useState<HTMLDivElement | null>(null);
     // A paste event says nothing about the keys behind it, so the key that asked for text inline is remembered here.
     const pasteInlineRef = useRef(false);
@@ -689,7 +706,19 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
         () => true
     );
 
-    const placeholder = disabled ? t('composer.placeholder.disconnected') : t('composer.placeholder.ready');
+    const mentionable = capabilities?.mentions !== false;
+    const hasSkills = skills.length > 0;
+    const placeholder = useMemo(() => {
+        if (disabled) {
+            return t('composer.placeholder.disconnected');
+        }
+        return hintedPlaceholder(t('composer.placeholder.lead'), t('composer.placeholder.joiner'), [
+            { key: '/', label: t('composer.placeholder.commands') },
+            ...(mentionable ? [{ key: '@', label: t('composer.placeholder.files') }] : []),
+            ...(hasSkills ? [{ key: '$', label: t('composer.placeholder.skills') }] : [])
+        ]);
+    }, [disabled, mentionable, hasSkills, t]);
+    const attachable = capabilities?.attachments !== false;
 
     return (
         <div className="chat-column-content pointer-events-none relative z-10 w-full">
@@ -710,7 +739,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             <ChatActivity chatId={chatId} />
             <div
                 className={clsx(
-                    'pointer-events-auto flex flex-col overflow-hidden rounded-2xl border shadow-float backdrop-blur-[14px] focus-within:border-accent',
+                    '@container/composer pointer-events-auto flex flex-col overflow-hidden rounded-2xl border shadow-float backdrop-blur-[14px] focus-within:border-accent',
                     dragging
                         ? 'border-accent bg-[color-mix(in_srgb,var(--accent-soft)_60%,var(--surface-raised))]'
                         : 'border-border bg-[color-mix(in_srgb,var(--surface-raised)_92%,transparent)]'
@@ -886,7 +915,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                         </div>
                     )}
                     {draft.attachments.length > 0 && (
-                        <div className="flex flex-wrap gap-2 px-3 pt-3">
+                        <div className="flex flex-wrap gap-2 px-5 pt-4 @max-md/composer:px-3.5 @max-md/composer:pt-3">
                             {draft.attachments.map((attachment, index) => (
                                 <div key={`${attachment.name}-${index}`} className="group/thumb relative">
                                     {isImageAttachment(attachment.mime) ? (
@@ -937,54 +966,84 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                         onKeyDown={onKeyDown}
                         onPaste={onPaste}
                     />
-                    {notice && <div className="px-3.5 pb-1 text-xs text-status-error">{notice}</div>}
+                    {notice && <div className="px-5 pb-1 text-xs text-status-error @max-md/composer:px-3.5">{notice}</div>}
                     {guard.visible && (
-                        <div className={clsx('px-3.5 pb-1 text-right text-xs tabular-nums', guard.tooLong ? 'text-status-error' : 'text-text-faint')}>
+                        <div
+                            className={clsx(
+                                'px-5 pb-1 text-right text-xs tabular-nums @max-md/composer:px-3.5',
+                                guard.tooLong ? 'text-status-error' : 'text-text-faint'
+                            )}
+                        >
                             {formatNumber(guard.count)} / {formatNumber(PROMPT_MAX_CHARS)}
                             {guard.tooLong && ` ${t('composer.tooLong')}`}
                         </div>
                     )}
-                    <div className="flex items-center gap-1 px-2 pb-2">
-                        <ModelPicker
+                    <div className="flex items-center gap-2 pt-3 pr-3.5 pb-3.5 pl-5 @max-md/composer:gap-1.5 @max-md/composer:p-3 @max-md/composer:pt-2.5">
+                        {attachable && (
+                            <Tooltip label={t('composer.attach')} name>
+                                <button
+                                    type="button"
+                                    className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-40"
+                                    disabled={disabled}
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    <Icon icon={Plus} size={16} />
+                                </button>
+                            </Tooltip>
+                        )}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            hidden
+                            onChange={(e) => {
+                                addFiles(Array.from(e.target.files ?? []));
+                                e.target.value = '';
+                                inputRef.current?.focus();
+                            }}
+                        />
+                        <RunSettings
                             providers={pickable}
                             provider={info.provider}
                             selection={info.selection}
+                            model={model}
+                            runtimeMode={info.runtimeMode}
                             open={modelPickerOpen}
                             onOpenChange={setModelPickerOpen}
-                            onChange={chooseModel}
+                            onModel={chooseModel}
+                            onOption={(id, value) => configure({ selection: { ...info.selection, options: { ...info.selection.options, [id]: value } } })}
+                            onMode={(runtimeMode) => configure({ runtimeMode })}
+                            usage={info.usage}
+                            compactDisabled={busy || disabled}
+                            onCompact={compact}
                         />
-                        <OptionsPicker
-                            model={model}
-                            selection={info.selection}
-                            onChange={(id, value) => configure({ selection: { ...info.selection, options: { ...info.selection.options, [id]: value } } })}
-                        />
-                        <ModePicker runtimeMode={info.runtimeMode} onChange={(runtimeMode) => configure({ runtimeMode })} />
                         <StashPicker onRestore={restoreStashed} />
                         <span className="grow" />
-                        <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={compact} />
-                        <div ref={setDictationToolbar} className="flex shrink-0 items-center" />
-                        {busy && (
-                            <Tooltip label={composerStopLabel()} name>
-                                <button
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-status-error text-accent-text"
-                                    onClick={(event) => stop(event.shiftKey)}
-                                >
-                                    <Icon icon={Square} size={16} />
-                                </button>
-                            </Tooltip>
-                        )}
-                        {/* While a turn runs the same button queues the message instead of sending it. */}
-                        {(!busy || !isEmptyDraft(draft)) && (
-                            <Tooltip label={busy ? t('composer.queueButton') : t('composer.send')} kbd={KEY_SHORTCUTS.modEnter} name>
-                                <button
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text hover:brightness-90 disabled:opacity-40 disabled:hover:brightness-100"
-                                    disabled={isEmptyDraft(draft) || disabled || guard.tooLong}
-                                    onClick={submit}
-                                >
-                                    <Icon icon={ArrowUp} size={16} />
-                                </button>
-                            </Tooltip>
-                        )}
+                        <div className="flex h-9 shrink-0 items-center gap-0.5 rounded-full bg-surface-hover">
+                            <div ref={setDictationToolbar} className="flex items-center pl-1 empty:hidden [&_.icon-btn]:rounded-full" />
+                            {busy && (
+                                <Tooltip label={composerStopLabel()} name>
+                                    <button
+                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-status-error text-accent-text"
+                                        onClick={(event) => stop(event.shiftKey)}
+                                    >
+                                        <Icon icon={Square} size={16} />
+                                    </button>
+                                </Tooltip>
+                            )}
+                            {/* While a turn runs the same button queues the message instead of sending it. */}
+                            {(!busy || !isEmptyDraft(draft)) && (
+                                <Tooltip label={busy ? t('composer.queueButton') : t('composer.send')} kbd={KEY_SHORTCUTS.modEnter} name>
+                                    <button
+                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text hover:brightness-90 disabled:opacity-40 disabled:hover:brightness-100"
+                                        disabled={isEmptyDraft(draft) || disabled || guard.tooLong}
+                                        onClick={submit}
+                                    >
+                                        <Icon icon={ArrowUp} size={16} />
+                                    </button>
+                                </Tooltip>
+                            )}
+                        </div>
                     </div>
                 </PromptComposer>
             </div>

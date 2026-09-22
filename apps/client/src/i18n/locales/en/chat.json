@@ -50,11 +50,10 @@
   },
   "contextMeter": {
     "aria": "{{percent}}% of the context used",
-    "percent": "{{percent}}% of context",
     "title": "Context",
-    "turns": "Turns",
-    "cost": "Cost",
-    "compact": "Compact context"
+    "used": "used",
+    "usedOf": "of {{window}} used · {{percent}}%",
+    "compactNow": "Compact now"
   },
   "rows": {
     "user": {
@@ -207,7 +206,11 @@
     },
     "placeholder": {
       "disconnected": "Not connected to the machine",
-      "ready": "Ask anything, / for commands, @ for files, $ for skills"
+      "lead": "Ask anything",
+      "joiner": ", or",
+      "commands": "commands",
+      "files": "files",
+      "skills": "skills"
     },
     "jumpToEnd": "Jump to the end",
     "mentions": {
@@ -221,6 +224,7 @@
       "sendNow": "Send now"
     },
     "removeAttachment": "Remove {{name}}",
+    "attach": "Attach files",
     "tooLong": "characters, too long to send",
     "stop": "Stop, Shift-click to also stop its sub-agents",
     "queueButton": "Queue",
@@ -268,22 +272,30 @@
   "modes": {
     "supervised": {
       "label": "Supervised",
-      "hint": "Asks before commands and file changes"
+      "hint": "Asks before commands and file changes",
+      "short": "Ask"
     },
     "auto-accept-edits": {
       "label": "Auto-accept edits",
-      "hint": "File edits go through, commands still ask"
+      "hint": "File edits go through, commands still ask",
+      "short": "Edits"
     },
     "auto": {
       "label": "Auto",
-      "hint": "The agent reviews routine actions itself"
+      "hint": "The agent reviews routine actions itself",
+      "short": "Auto"
     },
     "full-access": {
       "label": "Full access",
-      "hint": "Never asks for approval"
+      "hint": "Never asks for approval",
+      "short": "Full access"
     }
   },
   "pickers": {
+    "settings": {
+      "title": "Model and permissions",
+      "model": "Model"
+    },
     "model": {
       "choose": "Choose model",
       "search": "Search models",
@@ -292,9 +304,6 @@
       "legacyGroup_one": "Legacy models ({{count}})",
       "legacyGroup_other": "Legacy models ({{count}})",
       "legacy": "Legacy"
-    },
-    "options": {
-      "label": "Options"
     },
     "stash": {
       "title": "Stashed prompts",

@@ -1,51 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
 import { Popover } from '@base-ui-components/react/popover';
-import clsx from 'clsx';
-import { Bookmark, Check, ChevronDown, ChevronRight, Search, Shield, SlidersHorizontal, Trash2 } from 'lucide-react';
-import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
+import { Bookmark, Check, ChevronDown, ChevronRight, Search, Trash2 } from 'lucide-react';
+import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { modelName } from '@/agents/model-name';
-import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { forgetStashed, STASH_SHORTCUT, useStash, type StashedPrompt } from '@/chat/stash';
-import { MENU_LABEL, MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
-import { Select, type SelectItem } from '@/ui/Select';
+import { MENU_LABEL, SECTION_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
 const triggerClass =
     'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text';
-
-function Popup({ children, minWidth }: { children: React.ReactNode; minWidth?: string }) {
-    return (
-        <Menu.Portal>
-            <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
-                <Menu.Popup className={clsx('menu-popup', minWidth)}>{children}</Menu.Popup>
-            </Menu.Positioner>
-        </Menu.Portal>
-    );
-}
-
-function RadioRow({ value, label, hint, badge }: { value: string; label: string; hint?: string; badge?: string }) {
-    return (
-        <Menu.RadioItem value={value} className={clsx('menu-item', hint && 'items-start')}>
-            {/* A hint makes the row two lines high; the 20 pixel box keeps the check on the label's line. */}
-            <span className="grid h-5 w-4 shrink-0 place-items-center">
-                <Menu.RadioItemIndicator>
-                    <Icon icon={Check} size={14} />
-                </Menu.RadioItemIndicator>
-            </span>
-            <span className="flex min-w-0 flex-col">
-                <span className="flex items-center gap-1.5">
-                    {label}
-                    {badge && <span className="rounded bg-accent-soft px-1 text-xs font-medium text-accent">{badge}</span>}
-                </span>
-                {hint && <span className="text-xs text-text-faint">{hint}</span>}
-            </span>
-        </Menu.RadioItem>
-    );
-}
 
 /* A model row, or the one row that folds the legacy models open. Both take a turn in the arrow keys. */
 type PickerEntry = { kind: 'model'; provider: ProviderInfo; model: ModelInfo } | { kind: 'legacy'; count: number };
@@ -224,78 +190,6 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
     );
 }
 
-/* The model's own knobs (reasoning, context window, thinking), one group per option. */
-export function OptionsPicker({
-    model,
-    selection,
-    onChange
-}: {
-    model: ModelInfo | undefined;
-    selection: ModelSelection;
-    onChange(id: string, value: string | boolean): void;
-}) {
-    const { t } = useTranslation('chat');
-    if (!model || model.options.length === 0) {
-        return null;
-    }
-    const summary = model.options
-        .map((option) => {
-            const value = selection.options[option.id];
-            if (option.type === 'select') {
-                return option.choices.find((choice) => choice.id === value)?.label ?? null;
-            }
-            return value === true ? option.label : null;
-        })
-        .filter((label): label is string => label !== null)
-        .join(' · ');
-    return (
-        <Menu.Root>
-            <Menu.Trigger className={triggerClass}>
-                <Icon icon={SlidersHorizontal} size={12} />
-                <span className="max-w-48 truncate">{summary || t('pickers.options.label')}</span>
-            </Menu.Trigger>
-            <Popup minWidth="min-w-52">
-                {model.options.map((option, index) => (
-                    <div key={option.id}>
-                        {index > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
-                        <div className={MENU_LABEL}>{option.label}</div>
-                        {option.type === 'select' ? (
-                            <Menu.RadioGroup
-                                value={String(selection.options[option.id] ?? option.defaultChoice)}
-                                onValueChange={(value: string) => onChange(option.id, value)}
-                            >
-                                {option.choices.map((choice) => (
-                                    <RadioRow key={choice.id} value={choice.id} label={choice.label} hint={choice.description} />
-                                ))}
-                            </Menu.RadioGroup>
-                        ) : (
-                            <Menu.CheckboxItem
-                                className={clsx('menu-item', option.description && 'items-start')}
-                                checked={selection.options[option.id] === true}
-                                onCheckedChange={(checked) => onChange(option.id, checked)}
-                                closeOnClick={false}
-                            >
-                                {/* A hint makes the row two lines high; the 20 pixel box keeps the box on the label's line. */}
-                                <span className="grid h-5 w-4 shrink-0 place-items-center">
-                                    <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
-                                        <Menu.CheckboxItemIndicator>
-                                            <Icon icon={Check} size={12} />
-                                        </Menu.CheckboxItemIndicator>
-                                    </span>
-                                </span>
-                                <span className="flex min-w-0 flex-col">
-                                    {option.label}
-                                    {option.description && <span className="text-xs text-text-faint">{option.description}</span>}
-                                </span>
-                            </Menu.CheckboxItem>
-                        )}
-                    </div>
-                ))}
-            </Popup>
-        </Menu.Root>
-    );
-}
-
 /*
  * Prompts put aside with Cmd+S. The shelf is the whole app's, not this chat's. On a canvas a
  * stashed prompt usually moves to another node, which is the reason to put it away in the first
@@ -347,33 +241,5 @@ export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): v
                 </Popover.Positioner>
             </Popover.Portal>
         </Popover.Root>
-    );
-}
-
-/* When the agent has to ask, from ask-for-everything to never. Full access is tinted, because it
-   is the one setting where the composer should keep reminding you what it agreed to. */
-export function ModePicker({ runtimeMode, onChange }: { runtimeMode: RuntimeMode; onChange(mode: RuntimeMode): void }) {
-    const { t } = useTranslation('chat');
-    const items = useMemo<SelectItem<RuntimeMode>[]>(
-        () =>
-            RUNTIME_MODES.map((mode) => ({
-                value: mode,
-                label: t(`modes.${mode}.label`),
-                description: t(`modes.${mode}.hint`),
-                icon: <Icon icon={Shield} size={12} />
-            })),
-        // The words change with the language, and `t` is the one thing that says it did.
-        [t]
-    );
-    return (
-        <Select
-            value={runtimeMode}
-            label={t('pickers.mode.label')}
-            size="sm"
-            variant="ghost"
-            items={items}
-            className={clsx(runtimeMode === 'full-access' && 'text-status-needs-you hover:text-status-needs-you')}
-            onValueChange={onChange}
-        />
     );
 }
