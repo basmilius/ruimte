@@ -66,6 +66,14 @@ export const claudeArgs = (launch: ClaudeLaunch): string[] => {
     return args;
 };
 
+/*
+ * Leaving out `[1m]` does not cap a model the CLI runs natively on 1M on a subscription (Fable,
+ * Opus 5.5, Sonnet 5), and `autoCompactWindow` in `--settings` is ignored under `-p`: only this
+ * variable holds a 200k pick (measured on Claude Code 2.1.280).
+ */
+export const claudeEnv = (selection: ModelSelection): Record<string, string> =>
+    selection.options.contextWindow === '200k' ? { CLAUDE_CODE_AUTO_COMPACT_WINDOW: '200000' } : {};
+
 // What the CLI can do, as far as a client has to know.
 export const CLAUDE_CAPABILITIES: ProviderCapabilities = {
     chat: true,
@@ -81,7 +89,7 @@ export const CLAUDE_CAPABILITIES: ProviderCapabilities = {
     compaction: 'prompt',
     reportsCost: true,
     /*
-     * The CLI's `modelUsage.contextWindow` is the model's maximum, not the window the process runs on:
+     * The CLI's `modelUsage.contextWindow` is the model's maximum, not the window a 200k pick compacts at:
      * a run started without `[1m]` reports 1000000 too (measured on Claude Code 2.1.274). The catalog
      * knows what the pick asked for, so the meter reads that and nothing here reports a window.
      */

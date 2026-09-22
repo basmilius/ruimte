@@ -1,5 +1,5 @@
 import { chatPrompt } from '../context/context-note.ts';
-import { claudeArgs, promptPrefix } from '../providers/claude.ts';
+import { claudeArgs, claudeEnv, promptPrefix } from '../providers/claude.ts';
 import type { ApprovalDecision, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
 import { spawnChatProcess, type ChatProcess } from './chat-process.ts';
 import { ClaudeProtocol } from './claude-protocol.ts';
@@ -49,7 +49,7 @@ export class ClaudeBackend implements ChatBackend {
         const process: ChatProcess = spawn({
             command: args,
             cwd: this.launch.cwd,
-            env: this.launch.env,
+            env: { ...this.launch.env, ...claudeEnv(selection) },
             onExit: (exitCode) => this.handleExit(process, exitCode)
         });
         this.process = process;

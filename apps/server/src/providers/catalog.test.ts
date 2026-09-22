@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { ModelCatalog } from './catalog.ts';
-import { CLAUDE_ALLOW_CONTEXT, claudeArgs, promptPrefix } from './claude.ts';
+import { CLAUDE_ALLOW_CONTEXT, claudeArgs, claudeEnv, promptPrefix } from './claude.ts';
 
 const catalog = new ModelCatalog();
 
@@ -73,6 +73,12 @@ describe('claudeArgs', () => {
         expect(supervised).not.toContain('--effort');
         expect(promptPrefix(selection)).toBe('ultrathink\n\n');
         expect(promptPrefix({ model: 'x', options: { effort: 'high' } })).toBe('');
+    });
+
+    test('a 200k pick caps the compact window, since leaving out [1m] does not on a native 1M model', () => {
+        expect(claudeEnv({ model: 'claude-fable-5-1', options: { contextWindow: '200k' } })).toEqual({ CLAUDE_CODE_AUTO_COMPACT_WINDOW: '200000' });
+        expect(claudeEnv({ model: 'claude-fable-5-1', options: { contextWindow: '1m' } })).toEqual({});
+        expect(claudeEnv({ model: 'claude-haiku-4-5', options: { thinking: true } })).toEqual({});
     });
 
     test('every mode lets ruimte-context through without a prompt', () => {
