@@ -484,7 +484,7 @@ export class ProjectClient {
                     return;
                 }
                 if (!isConnectionError(e)) {
-                    this.sink.setError(e instanceof Error ? e.message : i18next.t('project:error.canvasNotSaved'));
+                    this.sink.setError(e instanceof Error ? e.message : i18next.t('project:error.projectNotSaved'));
                 }
             })
             .finally(() => {

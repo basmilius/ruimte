@@ -24,7 +24,7 @@ export function ProjectBanner() {
             ? 'drawing'
             : diagramConflict !== null || (diagramError !== null && projectError === null)
               ? 'diagram'
-              : 'canvas';
+              : 'project';
     const conflict = projectConflict ?? drawingConflict ?? diagramConflict;
     const error = projectError ?? drawingError ?? diagramError;
     if (!conflict && !error) {

@@ -4,7 +4,7 @@
     "machineDisconnected": "Die machine is niet meer verbonden",
     "openFailed": "Dat project kon niet worden geopend",
     "couldNotOpen": "Dat kon niet worden geopend",
-    "canvasNotSaved": "Het canvas kon niet worden opgeslagen",
+    "projectNotSaved": "Het project kon niet worden opgeslagen",
     "reopenFailed": "Het project kon niet opnieuw worden geopend"
   },
   "close": {

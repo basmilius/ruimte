@@ -142,7 +142,7 @@
         "takeTheirs": "Take the file",
         "keepMine": "Keep mine",
         "conflict": {
-            "canvas": "The canvas changed on disk while you had unsaved edits.",
+            "project": "The project changed on disk while you had unsaved edits.",
             "drawing": "The drawing changed on disk while you had unsaved edits.",
             "diagram": "The diagram changed on disk while you had unsaved edits."
         }

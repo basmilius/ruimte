@@ -142,7 +142,7 @@
         "takeTheirs": "Het bestand nemen",
         "keepMine": "Die van mij houden",
         "conflict": {
-            "canvas": "Het canvas is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had.",
+            "project": "Het project is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had.",
             "drawing": "De tekening is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had.",
             "diagram": "Het diagram is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had."
         }
