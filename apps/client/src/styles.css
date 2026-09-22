@@ -827,6 +827,11 @@
         --trees-font-size-override: var(--text-xs);
     }
 
+    /* A tree standing under a repository row of its own, which the row's name has to stay left of. */
+    .panel-tree-indented {
+        --trees-padding-inline-override: 20px;
+    }
+
     /* A file icon outside the tree. The glyph fills with `currentColor`, so the hue the set gives
        the file type is the element's own color; a type the set leaves uncolored keeps the muted
        text it would have in the tree. The hue is an attribute the resolver puts on the element. */

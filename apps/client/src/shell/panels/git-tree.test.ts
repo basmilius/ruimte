@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitFile } from '@ruimte/contracts';
-import type { TabState } from '@/state/files';
-import { activeDiffPath, allDirs, collapsedPathsOf, expansionChanges, mergeCollapsedPaths, pathsUnder, statusColor, type GitTreeRow } from './git-tree.ts';
+import { activeDiff, allDirs, collapsedPathsOf, expansionChanges, mergeCollapsedPaths, pathsUnder, statusColor, type GitTreeRow } from './git-tree.ts';
 
 const file = (path: string, status = 'M'): GitFile => ({ path, state: 'unstaged', status, added: 1, deleted: 0, binary: false });
 
@@ -28,6 +27,10 @@ describe('what the tree is told about a group', () => {
     test('every folder on the way counts as one to fold up', () => {
         expect(allDirs([file('apps/client/a.ts'), file('readme.md')])).toEqual(['apps', 'apps/client']);
     });
+
+    test('a folder of one repository among several is folded up under that repository', () => {
+        expect(allDirs([file('src/a.ts')], 'backend')).toEqual(['backend/src']);
+    });
 });
 
 describe('which folders stand folded up', () => {
@@ -52,6 +55,20 @@ describe('which folders stand folded up', () => {
         expect(collapsedPathsOf([dir('src/', false), dir('apps/client/', true), { path: 'a.ts', kind: 'file', isExpanded: false }])).toEqual(['src']);
     });
 
+    test('two repositories fold the same folder name apart', () => {
+        const current = ['backend/src'];
+        expect(collapsedPathsOf([dir('src/', false)], 'frontend')).toEqual(['frontend/src']);
+        // The tree of the other module says nothing about a folder it does not have.
+        expect(mergeCollapsedPaths(current, [dir('src/', true)], 'frontend')).toBe(current);
+        expect(mergeCollapsedPaths(current, [dir('src/', true)], 'backend')).toEqual([]);
+    });
+
+    test('a tree of one repository only moves the rows its own keys name', () => {
+        const rows = [dir('src/', true)];
+        expect(expansionChanges(rows, new Set(['backend/src']), 'frontend')).toEqual({ collapse: [], expand: [] });
+        expect(expansionChanges(rows, new Set(['backend/src']), 'backend')).toEqual({ collapse: ['src/'], expand: [] });
+    });
+
     test('only the rows that differ from the set move, and the folders of other groups are left alone', () => {
         const rows = [dir('src/', true), dir('apps/', false), dir('docs/', false)];
         expect(expansionChanges(rows, new Set(['src', 'apps', 'elsewhere']))).toEqual({ collapse: ['src/'], expand: ['docs/'] });
@@ -62,7 +79,7 @@ describe('which folders stand folded up', () => {
     });
 });
 
-describe('activeDiffPath', () => {
+describe('activeDiff', () => {
     const diff = (path: string, cwd = '/repo') => ({
         key: `diff:${path}`,
         path,
@@ -71,16 +88,14 @@ describe('activeDiffPath', () => {
         dirty: false
     });
 
-    test('names the change the preview has open, as the repository names it', () => {
-        const state: TabState = { tabs: [diff('/repo/src/main.ts')], active: 'diff:/repo/src/main.ts' };
-        expect(activeDiffPath(state, '/repo')).toBe('src/main.ts');
+    test('names the change the preview has open, and the checkout it belongs to', () => {
+        expect(activeDiff(diff('/repo/src/main.ts'))).toEqual({ cwd: '/repo', path: 'src/main.ts' });
+        expect(activeDiff(diff('/work/docksal/backend/a.ts', '/work/docksal/backend'))).toEqual({ cwd: '/work/docksal/backend', path: 'a.ts' });
     });
 
-    test('a file tab, another checkout and no repository at all mark nothing', () => {
-        const file = { key: '/repo/a.ts', path: '/repo/a.ts', pinned: false, dirty: false };
-        expect(activeDiffPath({ tabs: [file], active: '/repo/a.ts' }, '/repo')).toBeNull();
-        expect(activeDiffPath({ tabs: [diff('/wt/a.ts', '/wt')], active: 'diff:/wt/a.ts' }, '/repo')).toBeNull();
-        expect(activeDiffPath({ tabs: [diff('/repo/a.ts')], active: 'diff:/repo/a.ts' }, null)).toBeNull();
-        expect(activeDiffPath({ tabs: [diff('/repo/a.ts')], active: null }, '/repo')).toBeNull();
+    test('a file tab, a tab outside its own checkout and no tab at all mark nothing', () => {
+        expect(activeDiff({ key: '/repo/a.ts', path: '/repo/a.ts', pinned: false, dirty: false })).toBeNull();
+        expect(activeDiff(diff('/elsewhere/a.ts'))).toBeNull();
+        expect(activeDiff(undefined)).toBeNull();
     });
 });

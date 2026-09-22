@@ -11,6 +11,7 @@ export interface PanelsState extends PanelDefaults {
     gitScope: GitDiffScope;
     gitCollapsedDirs: string[];
     gitLogHeight: number;
+    gitHiddenRepos: string[];
     /* The canvases the sidebar has open, or null while nobody has folded the list by hand. */
     sidebarExpanded: string[] | null;
     /* The last favicon of every browser node, by node id. */
@@ -51,6 +52,7 @@ export const parsePanels = (stored: ProjectPanels | undefined, defaults: PanelsS
         gitScope: stored?.git?.scope ?? DEFAULT_SCOPE,
         gitCollapsedDirs: stored?.git?.collapsedDirs ?? [],
         gitLogHeight: width(stored?.git?.logHeight, DEFAULT_LOG_HEIGHT) ?? DEFAULT_LOG_HEIGHT,
+        gitHiddenRepos: stored?.git?.hiddenRepos ?? [],
         sidebarExpanded: stored?.sidebarExpanded ?? null,
         favicons: stored?.favicons ?? {}
     };
@@ -67,7 +69,12 @@ export const serializePanels = (state: PanelsState): ProjectPanels => ({
     tabs: state.tabs.map((tab) => ({ path: tab.path, pinned: tab.pinned, ...(tab.view ? { view: tab.view } : {}) })),
     activeTab: state.active,
     expandedDirs: state.expandedDirs,
-    git: { scope: state.gitScope, collapsedDirs: state.gitCollapsedDirs, logHeight: Math.round(state.gitLogHeight) },
+    git: {
+        scope: state.gitScope,
+        collapsedDirs: state.gitCollapsedDirs,
+        logHeight: Math.round(state.gitLogHeight),
+        ...(state.gitHiddenRepos.length === 0 ? {} : { hiddenRepos: state.gitHiddenRepos })
+    },
     /* A list nobody has folded stays out of the file, so the next open still seeds itself. */
     ...(state.sidebarExpanded === null ? {} : { sidebarExpanded: state.sidebarExpanded }),
     /* A project with no page open writes no map at all. */

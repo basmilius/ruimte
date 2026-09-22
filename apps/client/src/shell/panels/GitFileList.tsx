@@ -1,16 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import type { FileTree as FileTreeModel, FileTreeRowDecoration, FileTreeRowDecorationContext, FileTreeVisibleRow } from '@pierre/trees';
 import { FileTree, useFileTree, useFileTreeSelector } from '@pierre/trees/react';
-import { ChevronsDownUp, ChevronsUpDown, Copy, CornerUpRight, FileDiff, FileText, Folder, GitBranch, Minus, Plus, Trash2 } from 'lucide-react';
-import type { GitFile, GitFileState, GitStatus } from '@ruimte/contracts';
-import { GIT_GROUP } from '@/shell/panels/classes';
+import {
+    Boxes,
+    ChevronsDownUp,
+    ChevronsUpDown,
+    Copy,
+    CornerUpRight,
+    EyeOff,
+    FileDiff,
+    FileText,
+    Folder,
+    FolderGit2,
+    GitBranch,
+    Minus,
+    Plus,
+    Trash2
+} from 'lucide-react';
+import type { GitFile, GitFileState } from '@ruimte/contracts';
+import { GIT_GROUP, GIT_REPO } from '@/shell/panels/classes';
 import { revealableInFiles } from '@/shell/panels/files-tree';
 import { dirPathOf, expansionChanges, mergeCollapsedPaths, pathsUnder, statusColor, type GitTreeRow } from '@/shell/panels/git-tree';
 import { directoryHandle, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
+import type { GitCheckout } from '@/state/git-repos';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
@@ -66,9 +83,9 @@ const visibleRows = (model: FileTreeModel): GitTreeRow[] =>
     model.getVisibleRows(0, model.getVisibleCount()).map((row) => ({ path: pathOfRow(row), kind: row.kind, isExpanded: row.isExpanded }));
 
 /* Folds the tree the way the collapse set says. */
-const applyExpansion = (model: FileTreeModel, collapsed: ReadonlySet<string>): void => {
+const applyExpansion = (model: FileTreeModel, collapsed: ReadonlySet<string>, scope: string): void => {
     for (let pass = 0; pass < EXPANSION_PASSES; pass++) {
-        const { collapse, expand } = expansionChanges(visibleRows(model), collapsed);
+        const { collapse, expand } = expansionChanges(visibleRows(model), collapsed, scope);
         if (collapse.length === 0 && expand.length === 0) {
             return;
         }
@@ -81,93 +98,159 @@ const applyExpansion = (model: FileTreeModel, collapsed: ReadonlySet<string>): v
     }
 };
 
+/* The changes of one checkout in one group. */
+interface Section {
+    checkout: GitCheckout;
+    files: GitFile[];
+}
+
 interface ListProps {
-    status: GitStatus | null;
+    checkouts: readonly GitCheckout[];
     collapsed: string[];
-    /* The path of the change the preview has open, which is the row that reads as selected. */
+    /* The change the preview has open and the checkout it belongs to, so that list marks the row. */
+    reading: { cwd: string; path: string } | null;
+    /* Set when the folder holds more repositories than the panel was given. */
+    reposTruncated: boolean;
+    busy: boolean;
+    onOpen(cwd: string, file: GitFile): void;
+    /* The file itself rather than its diff, in a tab of its own. */
+    onOpenFile(cwd: string, file: GitFile): void;
+    onStage(cwd: string, paths: string[], staged: boolean): void;
+    onDiscard(cwd: string, file: GitFile): void;
+}
+
+/*
+ * The changed files, grouped the way a person acts on them: conflicts first, then the index, then
+ * the working tree, then what git has never seen. A group holds a tree per repository, each of the
+ * folders its files sit in, the same tree the Files panel draws, so a path reads the same on both
+ * sides of the window. A folder with one repository has no row for it and reads as it always did.
+ * A row opens its diff in the preview panel; a right click stages it, discards it behind a confirm,
+ * and offers the things a row has no room for: the file itself, the two reveals, the paths.
+ */
+export function GitFileList({ checkouts, collapsed, reading, reposTruncated, busy, onOpen, onOpenFile, onStage, onDiscard }: ListProps) {
+    const { t } = useTranslation('panels');
+    const platform = useServer((s) => s.platform);
+    const folder = useProject((s) => s.current?.folder ?? null);
+
+    const read = checkouts.filter((checkout) => checkout.status !== null);
+    if (checkouts.length === 0 || (read.length > 0 && read.every((checkout) => checkout.status?.repo !== true))) {
+        return <PanelEmpty icon={GitBranch}>{t('git.list.noRepo')}</PanelEmpty>;
+    }
+    if (read.length === 0) {
+        return <div className="grid min-h-0 grow place-items-center" />;
+    }
+    const changes = read.reduce((count, checkout) => count + (checkout.status?.files.length ?? 0), 0);
+    if (changes === 0) {
+        return <PanelEmpty icon={GitBranch}>{t('git.list.noChanges')}</PanelEmpty>;
+    }
+
+    /* A folder with one repository names none: the row would say what the header already says. */
+    const named = checkouts.length > 1;
+    const truncated = reposTruncated || read.some((checkout) => checkout.status?.truncated === true);
+
+    return (
+        <div className="min-h-0 grow overflow-y-auto py-1">
+            {GROUPS.map((state) => {
+                const sections: Section[] = checkouts
+                    .map((checkout) => ({ checkout, files: (checkout.status?.files ?? []).filter((file) => file.state === state) }))
+                    .filter((section) => section.files.length > 0);
+                if (sections.length === 0) {
+                    return null;
+                }
+                const label = t(`git.group.${state}`);
+                const count = sections.reduce((sum, section) => sum + section.files.length, 0);
+                const staged = state === 'staged';
+                return (
+                    <section key={state}>
+                        <header className={GIT_GROUP}>
+                            <span className={SECTION_LABEL}>{label}</span>
+                            <span className="tabular-nums text-text-faint">{count}</span>
+                            <span className="grow" />
+                            {state !== 'conflicted' && (
+                                <Tooltip label={staged ? t('git.list.unstageGroup', { group: label }) : t('git.list.stageGroup', { group: label })} name>
+                                    <button
+                                        className="icon-btn h-6 w-6"
+                                        disabled={busy}
+                                        onClick={() => {
+                                            for (const section of sections) {
+                                                onStage(
+                                                    section.checkout.path,
+                                                    section.files.map((file) => file.path),
+                                                    !staged
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        <Icon icon={staged ? Minus : Plus} size={12} />
+                                    </button>
+                                </Tooltip>
+                            )}
+                        </header>
+                        {sections.map(({ checkout, files }) => (
+                            <GitRepoTree
+                                key={checkout.path}
+                                state={state}
+                                checkout={checkout}
+                                files={files}
+                                named={named}
+                                folder={folder}
+                                platform={platform}
+                                collapsed={collapsed}
+                                reading={reading?.cwd === checkout.path ? reading.path : null}
+                                busy={busy}
+                                onOpen={(file) => onOpen(checkout.path, file)}
+                                onOpenFile={(file) => onOpenFile(checkout.path, file)}
+                                onStage={(paths, next) => onStage(checkout.path, paths, next)}
+                                onDiscard={(file) => onDiscard(checkout.path, file)}
+                            />
+                        ))}
+                    </section>
+                );
+            })}
+            {truncated && <p className="px-3 py-2 text-xs text-text-faint">{t('diff.moreFiles')}</p>}
+        </div>
+    );
+}
+
+/* The mark a repository row carries: a module git tracks for the project reads apart from one that
+   only happens to sit beside it. */
+const REPO_ICONS = { root: FolderGit2, nested: FolderGit2, submodule: Boxes, worktree: GitBranch } as const;
+
+interface TreeProps {
+    state: GitFileState;
+    checkout: GitCheckout;
+    files: GitFile[];
+    /* Whether the repository gets a row of its own above its tree. */
+    named: boolean;
+    folder: string | null;
+    platform: string | null;
+    collapsed: string[];
     reading: string | null;
     busy: boolean;
     onOpen(file: GitFile): void;
-    /* The file itself rather than its diff, in a tab of its own. */
     onOpenFile(file: GitFile): void;
     onStage(paths: string[], staged: boolean): void;
     onDiscard(file: GitFile): void;
 }
 
 /*
- * The changed files, grouped the way a person acts on them: conflicts first, then the index, then
- * the working tree, then what git has never seen. Every group is a tree of the folders its files
- * sit in, the same tree the Files panel draws, so a path reads the same on both sides of the
- * window. A row opens its diff in the preview panel; a right click stages it, discards it behind a
- * confirm, and offers the things a row has no room for: the file itself, the two reveals, the paths.
+ * One repository's share of one group, as a tree of its own. The trees share the folded-up folders
+ * and nothing else: a folder that is staged and changed again is one folder to a person, so closing
+ * it in one group closes it in the other, while the same folder name in another repository stays its
+ * own. Each tree is exactly as tall as its rows, so all of them scroll as one list.
  */
-export function GitFileList({ status, collapsed, reading, busy, onOpen, onOpenFile, onStage, onDiscard }: ListProps) {
-    const { t } = useTranslation('panels');
-    const platform = useServer((s) => s.platform);
-    const folder = useProject((s) => s.current?.folder ?? null);
-
-    if (status === null) {
-        return <div className="grid min-h-0 grow place-items-center" />;
-    }
-    if (!status.repo) {
-        return <PanelEmpty icon={GitBranch}>{t('git.list.noRepo')}</PanelEmpty>;
-    }
-    if (status.files.length === 0) {
-        return <PanelEmpty icon={GitBranch}>{t('git.list.noChanges')}</PanelEmpty>;
-    }
-    return (
-        <div className="min-h-0 grow overflow-y-auto py-1">
-            {GROUPS.map((state) => {
-                const files = status.files.filter((file) => file.state === state);
-                if (files.length === 0) {
-                    return null;
-                }
-                return (
-                    <GitGroup
-                        key={state}
-                        label={t(`git.group.${state}`)}
-                        state={state}
-                        files={files}
-                        root={status.root}
-                        folder={folder}
-                        platform={platform}
-                        collapsed={collapsed}
-                        reading={reading}
-                        busy={busy}
-                        onOpen={onOpen}
-                        onOpenFile={onOpenFile}
-                        onStage={onStage}
-                        onDiscard={onDiscard}
-                    />
-                );
-            })}
-            {status.truncated && <p className="px-3 py-2 text-xs text-text-faint">{t('diff.moreFiles')}</p>}
-        </div>
-    );
-}
-
-interface GroupProps extends Omit<ListProps, 'status'> {
-    label: string;
-    state: GitFileState;
-    files: GitFile[];
-    root: string | null;
-    folder: string | null;
-    platform: string | null;
-}
-
-/*
- * One group as a tree of its own. The trees share the folded-up folders and nothing else: a folder
- * that is staged and changed again is one folder to a person, so closing it in one group closes it
- * in the other. Each tree is exactly as tall as its rows, so the four of them scroll as one list.
- */
-function GitGroup({ label, state, files, root, folder, platform, collapsed, reading, busy, onOpen, onOpenFile, onStage, onDiscard }: GroupProps) {
+function GitRepoTree({ state, checkout, files, named, folder, platform, collapsed, reading, busy, onOpen, onOpenFile, onStage, onDiscard }: TreeProps) {
     const { t } = useTranslation('panels');
     const staged = state === 'staged';
     const conflicted = state === 'conflicted';
+    const root = checkout.path;
+    /* While the folder holds one repository the folds are keyed as they always were. */
+    const scope = named ? checkout.label : '';
     const [menuPath, setMenuPath] = useState<string | null>(null);
     const byPath = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
     const filesRef = useRef<ReadonlyMap<string, GitFile>>(new Map());
     const collapsedRef = useRef<ReadonlySet<string>>(new Set());
+    const scopeRef = useRef(scope);
     /* Set while this component folds the tree, so the folding is not read back as a person's doing. */
     const applyingRef = useRef(false);
 
@@ -216,7 +299,8 @@ function GitGroup({ label, state, files, root, folder, platform, collapsed, read
     useEffect(() => {
         filesRef.current = byPath;
         collapsedRef.current = new Set(collapsed);
-    }, [byPath, collapsed]);
+        scopeRef.current = scope;
+    }, [byPath, collapsed, scope]);
 
     useEffect(() => {
         const paths = files.map((file) => file.path);
@@ -227,15 +311,15 @@ function GitGroup({ label, state, files, root, folder, platform, collapsed, read
         builtRef.current = key;
         applyingRef.current = true;
         model.resetPaths(paths);
-        applyExpansion(model, collapsedRef.current);
+        applyExpansion(model, collapsedRef.current, scopeRef.current);
         applyingRef.current = false;
     }, [files, model]);
 
     useEffect(() => {
         applyingRef.current = true;
-        applyExpansion(model, new Set(collapsed));
+        applyExpansion(model, new Set(collapsed), scope);
         applyingRef.current = false;
-    }, [collapsed, model]);
+    }, [collapsed, scope, model]);
 
     /*
      * The tree reports a fold nowhere, so every change of its own is the moment to read back which
@@ -249,7 +333,7 @@ function GitGroup({ label, state, files, root, folder, platform, collapsed, read
                     return;
                 }
                 const current = useGit.getState().collapsedDirs;
-                const next = mergeCollapsedPaths(current, visibleRows(model));
+                const next = mergeCollapsedPaths(current, visibleRows(model), scopeRef.current);
                 if (next !== current) {
                     useGit.getState().setCollapsedDirs(next);
                 }
@@ -277,34 +361,57 @@ function GitGroup({ label, state, files, root, folder, platform, collapsed, read
 
     const menuFile = menuPath === null ? undefined : byPath.get(menuPath);
     const menuDir = menuFile === undefined && menuPath !== null ? dirPathOf(menuPath) : null;
+    const menuDirKey = menuDir === null ? null : scope === '' ? menuDir : `${scope}/${menuDir}`;
     const height = rowCount * model.getItemHeight();
 
     return (
-        <section>
-            <header className={GIT_GROUP}>
-                <span className={SECTION_LABEL}>{label}</span>
-                <span className="tabular-nums text-text-faint">{files.length}</span>
-                <span className="grow" />
-                {!conflicted && (
-                    <Tooltip label={staged ? t('git.list.unstageGroup', { group: label }) : t('git.list.stageGroup', { group: label })} name>
-                        <button
-                            className="icon-btn h-6 w-6"
-                            disabled={busy}
-                            onClick={() =>
-                                onStage(
-                                    files.map((file) => file.path),
-                                    !staged
-                                )
+        <>
+            {named && (
+                <div className={GIT_REPO}>
+                    <ContextMenu.Root>
+                        <ContextMenu.Trigger
+                            render={
+                                <span className="flex min-w-0 items-center gap-1.5">
+                                    <Icon icon={REPO_ICONS[checkout.kind]} size={12} className="shrink-0 text-text-faint" />
+                                    <span className="truncate text-text-muted">{checkout.label}</span>
+                                </span>
                             }
-                        >
-                            <Icon icon={staged ? Minus : Plus} size={12} />
-                        </button>
-                    </Tooltip>
-                )}
-            </header>
+                        />
+                        <ContextMenu.Portal>
+                            <ContextMenu.Positioner className="z-(--z-popup)">
+                                <ContextMenu.Popup className="menu-popup">
+                                    <ContextMenu.Item className="menu-item" onClick={() => useGit.getState().toggleRepo(checkout.label)}>
+                                        <Icon icon={EyeOff} size={14} /> {t('git.repo.hide')}
+                                    </ContextMenu.Item>
+                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
+                                    <RowPathItems absolute={root} relative={checkout.label} folder={folder} platform={platform} gone={false} />
+                                </ContextMenu.Popup>
+                            </ContextMenu.Positioner>
+                        </ContextMenu.Portal>
+                    </ContextMenu.Root>
+                    <span className="grow" />
+                    <span className="tabular-nums text-text-faint">{files.length}</span>
+                    {!conflicted && (
+                        <Tooltip label={staged ? t('git.repo.unstageAll', { repo: checkout.label }) : t('git.repo.stageAll', { repo: checkout.label })} name>
+                            <button
+                                className="icon-btn h-5 w-5"
+                                disabled={busy}
+                                onClick={() =>
+                                    onStage(
+                                        files.map((file) => file.path),
+                                        !staged
+                                    )
+                                }
+                            >
+                                <Icon icon={staged ? Minus : Plus} size={12} />
+                            </button>
+                        </Tooltip>
+                    )}
+                </div>
+            )}
             <ContextMenu.Root>
                 <ContextMenu.Trigger render={<div />} style={{ height }} onContextMenu={(event) => setMenuPath(rowPathOf(event))}>
-                    <FileTree model={model} className="panel-tree" onClick={onClick} />
+                    <FileTree model={model} className={clsx('panel-tree', named && 'panel-tree-indented')} onClick={onClick} />
                 </ContextMenu.Trigger>
                 <ContextMenu.Portal>
                     <ContextMenu.Positioner className="z-(--z-popup)">
@@ -339,11 +446,11 @@ function GitGroup({ label, state, files, root, folder, platform, collapsed, read
                                     />
                                 </>
                             )}
-                            {menuDir !== null && (
+                            {menuDir !== null && menuDirKey !== null && (
                                 <>
-                                    <ContextMenu.Item className="menu-item" onClick={() => useGit.getState().toggleDir(menuDir)}>
-                                        <Icon icon={collapsed.includes(menuDir) ? ChevronsUpDown : ChevronsDownUp} size={14} />
-                                        {collapsed.includes(menuDir) ? t('git.list.expandFolder') : t('git.list.collapseFolder')}
+                                    <ContextMenu.Item className="menu-item" onClick={() => useGit.getState().toggleDir(menuDirKey)}>
+                                        <Icon icon={collapsed.includes(menuDirKey) ? ChevronsUpDown : ChevronsDownUp} size={14} />
+                                        {collapsed.includes(menuDirKey) ? t('git.list.expandFolder') : t('git.list.collapseFolder')}
                                     </ContextMenu.Item>
                                     {/* A conflict is staged file by file, after it has been looked at; a whole
                                         folder of them at once is not a thing to offer behind one click. */}
@@ -366,7 +473,7 @@ function GitGroup({ label, state, files, root, folder, platform, collapsed, read
                     </ContextMenu.Positioner>
                 </ContextMenu.Portal>
             </ContextMenu.Root>
-        </section>
+        </>
     );
 }
 

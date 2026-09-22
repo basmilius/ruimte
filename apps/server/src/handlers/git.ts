@@ -5,6 +5,7 @@ import { diffCheckout, diffCommit, diffFile } from '../git/diff.ts';
 import { readLog } from '../git/log.ts';
 import { suggestMessage } from '../git/message.ts';
 import { listRefs } from '../git/refs.ts';
+import { listRepos } from '../git/repos.ts';
 import { discardPaths, stagePaths, unstagePaths } from '../git/stage.ts';
 import type { GitStatusWatcher } from '../git/status-watcher.ts';
 import { mergeBaseWith } from '../git/status.ts';
@@ -101,6 +102,8 @@ export const registerGitHandlers = (
     dispatcher.register('git.discard', (payload) => translate(() => discardPaths(payload.cwd, payload.paths)));
 
     dispatcher.register('git.refs', (payload) => translate(() => listRefs(payload.cwd)));
+
+    dispatcher.register('git.repos', (payload) => translate(() => listRepos(payload.folder)));
 
     dispatcher.register('git.log', (payload) => translate(() => readLog(payload.cwd, payload.limit, payload.cursor)));
 

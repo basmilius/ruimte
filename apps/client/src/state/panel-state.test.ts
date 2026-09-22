@@ -15,6 +15,7 @@ const defaults: PanelsState = {
     gitScope: 'worktree',
     gitCollapsedDirs: [],
     gitLogHeight: 200,
+    gitHiddenRepos: [],
     sidebarExpanded: null,
     favicons: {}
 };
@@ -42,6 +43,7 @@ const full: PanelsState = {
     gitScope: 'base',
     gitCollapsedDirs: ['src', 'src/state'],
     gitLogHeight: 260,
+    gitHiddenRepos: ['tools'],
     sidebarExpanded: ['main', 'notes'],
     favicons: { 'browser-1': 'https://bas.dev/favicon.ico' }
 };
@@ -55,6 +57,10 @@ describe('panels in the machine-local file', () => {
         const other: PanelsState = { ...defaults, panel: { open: true, kind: 'git' }, panelWidth: 300 };
         expect(parsePanels(undefined, other)).toEqual(other);
         expect(parsePanels({ panel: { open: false, kind: 'files' } }, other)).toEqual({ ...other, panel: { open: false, kind: 'files' } });
+    });
+
+    test('a folder where nothing is hidden writes no list of hidden repositories', () => {
+        expect(serializePanels(defaults).git?.hiddenRepos).toBeUndefined();
     });
 
     test('a width nobody dragged stays out of the file, and one that makes no sense is ignored', () => {

@@ -14,6 +14,7 @@ const defaults = (): PanelsState => ({
     gitScope: DEFAULT_SCOPE,
     gitCollapsedDirs: [],
     gitLogHeight: DEFAULT_LOG_HEIGHT,
+    gitHiddenRepos: [],
     sidebarExpanded: null,
     favicons: {}
 });
@@ -34,6 +35,7 @@ const read = (): PanelsState => {
         gitScope: useGit.getState().scope,
         gitCollapsedDirs: useGit.getState().collapsedDirs,
         gitLogHeight: useGit.getState().logHeight,
+        gitHiddenRepos: useGit.getState().hiddenRepos,
         sidebarExpanded: ui.sidebarExpanded,
         favicons: faviconsOfProject(useBrowser.getState().byKey, currentEndpointId())
     };
@@ -67,6 +69,7 @@ export class PanelsPort {
             useGit.getState().setScope(state.gitScope);
             useGit.getState().setCollapsedDirs(state.gitCollapsedDirs);
             useGit.getState().setLogHeight(state.gitLogHeight);
+            useGit.getState().setHiddenRepos(state.gitHiddenRepos);
             useUi.getState().setSidebarExpanded(state.sidebarExpanded);
             useBrowser.getState().loadFavicons(currentEndpointId(), state.favicons);
         } finally {

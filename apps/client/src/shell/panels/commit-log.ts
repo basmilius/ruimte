@@ -19,10 +19,43 @@ export const relativeTime = (at: number, now: number): string => {
     return seconds < 7 * DAY ? formatAgo(seconds * 1000) : dateOf(at, now);
 };
 
+/* One commit with the checkout it came out of, which is what opening a row needs and what a row says
+   while the folder holds more than one repository. */
+export interface LogRow extends GitCommit {
+    cwd: string;
+    /* The name of the repository, empty while the folder holds a single one. */
+    repo: string;
+}
+
+/* A page of one checkout's log, as the merge below takes it. */
+export interface LoadedLog {
+    cwd: string;
+    repo: string;
+    commits: readonly GitCommit[];
+    /* Null when this checkout has no further page. */
+    cursor: string | null;
+}
+
 export interface LogSection {
     label: string;
-    commits: GitCommit[];
+    commits: LogRow[];
 }
+
+/*
+ * The logs of several checkouts as one history, newest first. Every page covers a different stretch
+ * of time, so the merge reaches no further down than the newest of the pages that have more to give:
+ * under that line a repository could still hold a commit older than the rows around it, and putting
+ * those rows in now would mean moving them later. They come with the next page instead.
+ */
+export const mergeLogs = (logs: readonly LoadedLog[]): { rows: LogRow[]; more: boolean } => {
+    const floors = logs.filter((log) => log.cursor !== null && log.commits.length > 0).map((log) => log.commits[log.commits.length - 1]!.at);
+    const floor = floors.length === 0 ? null : Math.max(...floors);
+    const rows = logs
+        .flatMap((log) => log.commits.map((commit) => ({ ...commit, cwd: log.cwd, repo: log.repo })))
+        .filter((row) => floor === null || row.at >= floor)
+        .sort((left, right) => right.at - left.at);
+    return { rows, more: logs.some((log) => log.cursor !== null) };
+};
 
 const startOfDay = (seconds: number): number => {
     const date = new Date(seconds * 1000);
@@ -35,7 +68,7 @@ const startOfDay = (seconds: number): number => {
  * from midnight and not from the elapsed hours, so a commit from last night is under Yesterday the
  * way a person remembers it, not under Today because it was eleven hours ago.
  */
-export const groupCommits = (commits: readonly GitCommit[], now: number): LogSection[] => {
+export const groupCommits = (commits: readonly LogRow[], now: number): LogSection[] => {
     const today = startOfDay(now);
     const sections: LogSection[] = [];
     for (const commit of commits) {

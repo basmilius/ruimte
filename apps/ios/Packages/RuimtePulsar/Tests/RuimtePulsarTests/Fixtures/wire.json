@@ -195,6 +195,7 @@
     "git.stage",
     "git.discard",
     "git.refs",
+    "git.repos",
     "git.log",
     "git.action",
     "git.cancel",

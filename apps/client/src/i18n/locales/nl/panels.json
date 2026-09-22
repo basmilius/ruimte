@@ -168,21 +168,23 @@
     "actions": {
       "deleteBranch": "Branch verwijderen...",
       "fetch": "Fetch",
+      "fetchAll": "Fetch alles",
       "forcePush": "Force push",
       "merge": "Branch mergen...",
       "more": "Meer git-acties",
       "popStash": "Stash poppen",
       "pull": "Pull",
+      "pullAll": "Pull alles",
       "pullRequest": "Pull request aanmaken...",
       "push": "Push",
       "rebase": "Rebasen op...",
       "renameBranch": "Branch hernoemen...",
       "stash": "Wijzigingen stashen...",
       "sync": "Sync",
+      "syncAll": "Sync alles",
       "syncHint": "eerst pull, dan push"
     },
     "branchMenu": {
-      "branches": "Branches",
       "checkout": "Checkout",
       "create": "Branch aanmaken...",
       "default": "standaard",
@@ -191,17 +193,23 @@
       "loading": "De branches lezen.",
       "noCheckouts": "Geen checkouts",
       "noMatch": "Geen branch met die naam.",
+      "repositories": "Repositories",
       "search": "Branches zoeken",
       "tooltip": "De branch waar deze checkout op staat",
-      "tooltipWorktree": "{{branch}}, in de worktree {{worktree}}"
+      "tooltipRepos_one": "{{count}} repository en zijn branches",
+      "tooltipRepos_other": "{{count}} repositories en hun branches",
+      "tooltipWorktree": "{{branch}}, in de worktree {{worktree}}",
+      "worktrees": "Worktrees"
     },
     "commit": {
       "commit": "Commit",
       "commitAndPush": "Commit & Push",
       "commitAndPushHint": "Committen en pushen",
       "commitStagedHint": "Committen wat gestaged is",
+      "in": "Commit in {{repos}}",
       "letWrite": "{{provider}} het bericht laten schrijven op basis van de gestagede wijzigingen",
       "needsMessage": "Heeft een bericht en een wijziging nodig",
+      "needsStaged": "Stage eerst wat in deze commit hoort",
       "placeholder": "Samenvatting, dan een lege regel en de details",
       "stageAllAndCommit": "Alles stagen en committen",
       "stageAllHint": "Alle wijzigingen stagen en committen",
@@ -209,6 +217,7 @@
       "write": "Bericht schrijven",
       "writeFailedBody": "Het bericht kon niet geschreven worden.",
       "writeFailedTitle": "Kon het bericht niet schrijven",
+      "writeOneRepo": "Een message wordt uit één repository geschreven",
       "writing": "Schrijven"
     },
     "dialog": {
@@ -308,6 +317,20 @@
       "today": "Vandaag",
       "yesterday": "Gisteren"
     },
+    "many": {
+      "commit": "{{repo}} committen ({{done}}/{{total}})",
+      "commit-push": "{{repo}} committen en pushen ({{done}}/{{total}})",
+      "done_one": "Klaar in {{count}} repository",
+      "done_other": "Klaar in {{count}} repositories",
+      "failed_one": "{{count}} repository is mislukt: {{repos}}",
+      "failed_other": "{{count}} repositories zijn mislukt: {{repos}}",
+      "fetch": "{{repo}} fetchen ({{done}}/{{total}})",
+      "publish": "{{repo}} publiceren ({{done}}/{{total}})",
+      "pull": "{{repo}} pullen ({{done}}/{{total}})",
+      "push": "{{repo}} pushen ({{done}}/{{total}})",
+      "sync": "{{repo}} syncen ({{done}}/{{total}})",
+      "working": "{{repo}} ({{done}}/{{total}})"
+    },
     "panel": {
       "collapseAll": "Alle mappen inklappen",
       "discardFailed": "Weggooien mislukt",
@@ -334,14 +357,25 @@
       "stash": "Stashen"
     },
     "push": {
+      "allLabel": "Push alles",
+      "allReason_one": "Push {{count}} repository",
+      "allReason_other": "Push {{count}} repositories",
       "detached": "Geen branch om te pushen op een detached HEAD",
       "label": "Push",
       "noRepo": "Geen repository",
       "nothing": "Niets te pushen",
+      "one": "Push één repository",
       "publish": "Branch publiceren",
       "publishReason": "{{branch}} naar origin pushen en volgen",
       "reason_one": "{{count}} commit naar {{upstream}} pushen",
       "reason_other": "{{count}} commits naar {{upstream}} pushen"
+    },
+    "repo": {
+      "hide": "Verberg deze repository",
+      "showAll_one": "Toon {{count}} verborgen repository",
+      "showAll_other": "Toon {{count}} verborgen repositories",
+      "stageAll": "Stage alles in {{repo}}",
+      "unstageAll": "Unstage alles in {{repo}}"
     },
     "stage": {
       "failed": "Stagen mislukt",

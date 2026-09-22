@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import type { GitCommit, GitStatus } from '@ruimte/contracts';
-import { groupCommits, relativeTime } from './commit-log';
-import { actionTitle, isUnmergedRefusal, phaseLabel, pushButton, splitMessage } from './git-actions';
+import type { GitCommit, GitFile, GitStatus } from '@ruimte/contracts';
+import { groupCommits, mergeLogs, relativeTime, type LoadedLog } from './commit-log';
+import { actionTitle, commitTargets, isUnmergedRefusal, manySummary, phaseLabel, pushable, pushButton, pushEntries, splitMessage } from './git-actions';
 
 const status = (patch: Partial<GitStatus> = {}): GitStatus => ({
     repo: true,
@@ -19,7 +19,78 @@ const status = (patch: Partial<GitStatus> = {}): GitStatus => ({
     ...patch
 });
 
+const checkout = (label: string, patch: Partial<GitStatus> | null): { path: string; label: string; status: GitStatus | null } => ({
+    path: `/work/${label}`,
+    label,
+    status: patch === null ? null : status(patch)
+});
+
 const commit = (at: number, hash: string): GitCommit => ({ hash, shortHash: hash.slice(0, 7), subject: hash, author: 'Ada', at, refs: [] });
+
+const row = (at: number, hash: string) => ({ ...commit(at, hash), cwd: '/work/one', repo: '' });
+
+const log = (repo: string, ats: number[], cursor: string | null): LoadedLog => ({
+    cwd: `/work/${repo}`,
+    repo,
+    commits: ats.map((at) => commit(at, `${repo}-${at}`)),
+    cursor
+});
+
+describe('pushing a folder of repositories', () => {
+    test('every repository says for itself what a push would do', () => {
+        const entries = pushEntries([checkout('one', { ahead: 2 }), checkout('two', { upstream: null }), checkout('three', {})]);
+        expect(entries.map((entry) => [entry.label, entry.button.kind, entry.button.disabled, entry.ahead])).toEqual([
+            ['one', 'push', false, 2],
+            ['two', 'publish', false, 0],
+            ['three', 'push', true, 0]
+        ]);
+    });
+
+    test('a repository whose status is not in yet is nothing to push', () => {
+        expect(pushable(pushEntries([checkout('one', null)]))).toEqual([]);
+    });
+
+    test('"push all" runs only the ones that would move', () => {
+        const entries = pushEntries([checkout('one', { ahead: 1 }), checkout('two', {}), checkout('three', { ahead: 4 })]);
+        expect(pushable(entries).map((entry) => entry.label)).toEqual(['one', 'three']);
+    });
+
+    test('the summary counts what went well, and names what did not', () => {
+        expect(manySummary(1, [])).toBe('Done in 1 repository');
+        expect(manySummary(3, [])).toBe('Done in 3 repositories');
+        expect(manySummary(1, ['two'])).toBe('1 repository failed: two');
+        expect(manySummary(0, ['two', 'three'])).toBe('2 repositories failed: two, three');
+    });
+});
+
+describe('where a commit lands', () => {
+    const repo = (label: string, states: GitFile['state'][]) => ({
+        path: `/work/${label}`,
+        label,
+        status: status({ files: states.map((state, index) => ({ path: `${index}.ts`, state, status: 'M', added: 1, deleted: 0, binary: false })) })
+    });
+
+    test('every repository with something staged takes the commit', () => {
+        const { targets, stageAll } = commitTargets([repo('one', ['staged']), repo('two', ['unstaged']), repo('three', ['staged', 'unstaged'])]);
+        expect(targets.map((target) => target.label)).toEqual(['one', 'three']);
+        expect(stageAll).toBe(false);
+    });
+
+    test('a single repository with nothing staged is the commit that stages first', () => {
+        const { targets, stageAll } = commitTargets([repo('one', ['unstaged'])]);
+        expect(targets.map((target) => target.label)).toEqual(['one']);
+        expect(stageAll).toBe(true);
+    });
+
+    test('two repositories with nothing staged have no commit to make yet', () => {
+        expect(commitTargets([repo('one', ['unstaged']), repo('two', ['untracked'])]).targets).toEqual([]);
+    });
+
+    test('a folder with nothing changed anywhere has none either', () => {
+        expect(commitTargets([repo('one', [])]).targets).toEqual([]);
+        expect(commitTargets([{ path: '/work/one', label: 'one', status: null }]).targets).toEqual([]);
+    });
+});
 
 describe('the push button', () => {
     test('a branch without an upstream is published', () => {
@@ -82,11 +153,30 @@ describe('the log', () => {
 
     test('commits fall under the day they were written on, in the order they came in', () => {
         const midnight = Math.floor(new Date('2026-09-10T00:00:00').getTime() / 1000);
-        const sections = groupCommits([commit(midnight + 3600, 'a'), commit(midnight - 3600, 'b'), commit(midnight - 5 * 86400, 'c')], now);
+        const sections = groupCommits([row(midnight + 3600, 'a'), row(midnight - 3600, 'b'), row(midnight - 5 * 86400, 'c')], now);
 
         expect(sections.map((section) => section.label)).toEqual(['Today', 'Yesterday', expect.any(String)]);
         expect(sections[0]?.commits.map((entry) => entry.hash)).toEqual(['a']);
         expect(sections[1]?.commits.map((entry) => entry.hash)).toEqual(['b']);
+    });
+
+    test('the logs of several repositories read as one history, newest first', () => {
+        const { rows, more } = mergeLogs([log('one', [500, 400], null), log('two', [450, 300], null)]);
+        expect(rows.map((entry) => entry.at)).toEqual([500, 450, 400, 300]);
+        expect(rows.map((entry) => entry.repo)).toEqual(['one', 'two', 'one', 'two']);
+        expect(more).toBe(false);
+    });
+
+    test('rows a later page could still slip above wait for that page', () => {
+        // `one` has more to give below 400, so nothing older than 400 can be placed yet.
+        const { rows, more } = mergeLogs([log('one', [500, 400], '2'), log('two', [450, 300], null)]);
+        expect(rows.map((entry) => entry.at)).toEqual([500, 450, 400]);
+        expect(more).toBe(true);
+    });
+
+    test('a repository whose page ran out holds nothing back', () => {
+        const { rows } = mergeLogs([log('one', [500], null), log('two', [200], null)]);
+        expect(rows.map((entry) => entry.at)).toEqual([500, 200]);
     });
 
     test('an empty log has no sections', () => {

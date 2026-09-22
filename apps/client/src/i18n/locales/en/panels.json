@@ -168,21 +168,23 @@
     "actions": {
       "deleteBranch": "Delete branch...",
       "fetch": "Fetch",
+      "fetchAll": "Fetch all",
       "forcePush": "Force push",
       "merge": "Merge branch...",
       "more": "More git actions",
       "popStash": "Pop stash",
       "pull": "Pull",
+      "pullAll": "Pull all",
       "pullRequest": "Create pull request...",
       "push": "Push",
       "rebase": "Rebase onto...",
       "renameBranch": "Rename branch...",
       "stash": "Stash changes...",
       "sync": "Sync",
+      "syncAll": "Sync all",
       "syncHint": "pull, then push"
     },
     "branchMenu": {
-      "branches": "Branches",
       "checkout": "Checkout",
       "create": "Create branch...",
       "default": "default",
@@ -191,17 +193,23 @@
       "loading": "Reading the branches.",
       "noCheckouts": "No checkouts",
       "noMatch": "No branch by that name.",
+      "repositories": "Repositories",
       "search": "Search branches",
       "tooltip": "The branch this checkout is on",
-      "tooltipWorktree": "{{branch}}, in the worktree {{worktree}}"
+      "tooltipRepos_one": "{{count}} repository and its branches",
+      "tooltipRepos_other": "{{count}} repositories and their branches",
+      "tooltipWorktree": "{{branch}}, in the worktree {{worktree}}",
+      "worktrees": "Worktrees"
     },
     "commit": {
       "commit": "Commit",
       "commitAndPush": "Commit & Push",
       "commitAndPushHint": "Commit and push",
       "commitStagedHint": "Commit what is staged",
+      "in": "Commit in {{repos}}",
       "letWrite": "Let {{provider}} write the message from the staged changes",
       "needsMessage": "Needs a message and a change",
+      "needsStaged": "Stage what belongs in this commit first",
       "placeholder": "Summary, then a blank line and the details",
       "stageAllAndCommit": "Stage all and commit",
       "stageAllHint": "Stage every change and commit it",
@@ -209,6 +217,7 @@
       "write": "Write message",
       "writeFailedBody": "The message could not be written.",
       "writeFailedTitle": "Could not write the message",
+      "writeOneRepo": "A message is written from one repository at a time",
       "writing": "Writing"
     },
     "dialog": {
@@ -308,6 +317,20 @@
       "today": "Today",
       "yesterday": "Yesterday"
     },
+    "many": {
+      "commit": "Committing {{repo}} ({{done}}/{{total}})",
+      "commit-push": "Committing and pushing {{repo}} ({{done}}/{{total}})",
+      "done_one": "Done in {{count}} repository",
+      "done_other": "Done in {{count}} repositories",
+      "failed_one": "{{count}} repository failed: {{repos}}",
+      "failed_other": "{{count}} repositories failed: {{repos}}",
+      "fetch": "Fetching {{repo}} ({{done}}/{{total}})",
+      "publish": "Publishing {{repo}} ({{done}}/{{total}})",
+      "pull": "Pulling {{repo}} ({{done}}/{{total}})",
+      "push": "Pushing {{repo}} ({{done}}/{{total}})",
+      "sync": "Syncing {{repo}} ({{done}}/{{total}})",
+      "working": "{{repo}} ({{done}}/{{total}})"
+    },
     "panel": {
       "collapseAll": "Collapse all folders",
       "discardFailed": "Discard failed",
@@ -334,14 +357,25 @@
       "stash": "Stashing"
     },
     "push": {
+      "allLabel": "Push all",
+      "allReason_one": "Push {{count}} repository",
+      "allReason_other": "Push {{count}} repositories",
       "detached": "No branch to push on a detached HEAD",
       "label": "Push",
       "noRepo": "No repository",
       "nothing": "Nothing to push",
+      "one": "Push one repository",
       "publish": "Publish branch",
       "publishReason": "Push {{branch}} to origin and track it",
       "reason_one": "Push {{count}} commit to {{upstream}}",
       "reason_other": "Push {{count}} commits to {{upstream}}"
+    },
+    "repo": {
+      "hide": "Hide this repository",
+      "showAll_one": "Show {{count}} hidden repository",
+      "showAll_other": "Show {{count}} hidden repositories",
+      "stageAll": "Stage everything in {{repo}}",
+      "unstageAll": "Unstage everything in {{repo}}"
     },
     "stage": {
       "failed": "Staging failed",

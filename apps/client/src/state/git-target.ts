@@ -1,4 +1,4 @@
-import type { Worktree } from '@ruimte/contracts';
+import type { GitRepo, Worktree } from '@ruimte/contracts';
 import { membersOf, type CanvasNode } from '@/state/canvas';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { worktreeOfPath } from '@/shell/panels/worktree-rows';
@@ -9,7 +9,7 @@ export interface GitTarget {
     /* What the chip says: the folder's name, or the branch of the worktree. */
     label: string;
     branch: string | null;
-    kind: 'project' | 'worktree';
+    kind: 'project' | 'repo' | 'worktree';
     /* The name of the group that binds this worktree, when one does. */
     group?: string;
 }
@@ -52,12 +52,29 @@ export const gitTarget = (nodes: Record<string, CanvasNode>, selection: string[]
 };
 
 /*
- * Every checkout the panel can be pointed at by hand: the project folder first, then the worktrees
- * the daemon knows, each with the group that binds it when there is one. The order is the one the
- * repository reports, so a menu built from this reads the same way twice.
+ * Every checkout the panel can be pointed at by hand: the repositories of the project folder first,
+ * then the worktrees the daemon knows, each with the group that binds it when there is one. The order
+ * is the one the daemon reports, so a menu built from this reads the same way twice. A folder whose
+ * repositories are not in yet still offers itself, which is every project with exactly one.
  */
-export const gitTargets = (nodes: Record<string, CanvasNode>, worktrees: readonly Worktree[], folder: string | null): GitTarget[] => {
-    const targets: GitTarget[] = folder === null ? [] : [{ cwd: folder, label: basenameOf(folder), branch: null, kind: 'project' }];
+export const gitTargets = (
+    nodes: Record<string, CanvasNode>,
+    worktrees: readonly Worktree[],
+    folder: string | null,
+    repos: readonly GitRepo[] = []
+): GitTarget[] => {
+    const targets: GitTarget[] =
+        repos.length > 0
+            ? repos.map((repo) => ({
+                  cwd: repo.path,
+                  label: repo.label,
+                  branch: null,
+                  // `project` is the folder being the only checkout there is; anything else is named.
+                  kind: repos.length === 1 && repo.path === folder ? 'project' : 'repo'
+              }))
+            : folder === null
+              ? []
+              : [{ cwd: folder, label: basenameOf(folder), branch: null, kind: 'project' }];
     for (const worktree of worktrees) {
         if (worktree.missing) {
             continue;

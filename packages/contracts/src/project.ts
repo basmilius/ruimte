@@ -699,7 +699,9 @@ export const ProjectPanelsSchema = z.object({
             // Relative to the repository root, POSIX, no trailing slash, as `git.status` names a path.
             collapsedDirs: z.array(z.string()).optional(),
             // Whole pixels the commit log takes at the bottom of the panel.
-            logHeight: z.number().int().positive().optional()
+            logHeight: z.number().int().positive().optional(),
+            // The repositories under the folder a person folded away, by the label the panel gave them.
+            hiddenRepos: z.array(z.string()).optional()
         })
         .optional()
 });

@@ -132,6 +132,34 @@ export const GitCwdPayloadSchema = z.object({
 });
 export type GitCwdPayload = z.infer<typeof GitCwdPayloadSchema>;
 
+// Which checkout a repository under the project folder is: the folder's own, a submodule of it, or one
+// that happens to sit beside it.
+export const GitRepoKindSchema = z.enum(['root', 'submodule', 'nested']);
+export type GitRepoKind = z.infer<typeof GitRepoKindSchema>;
+
+export const GitRepoSchema = z.object({
+    // Absolute on the daemon's machine, which is what every git verb takes as its cwd.
+    path: z.string(),
+    // What a person reads and what a hidden repository is remembered under: the path under the project
+    // folder, or the folder's own name for the repository the folder itself is in.
+    label: z.string(),
+    kind: GitRepoKindSchema
+});
+export type GitRepo = z.infer<typeof GitRepoSchema>;
+
+export const GitReposPayloadSchema = z.object({
+    folder: z.string().min(1)
+});
+export type GitReposPayload = z.infer<typeof GitReposPayloadSchema>;
+
+export const GitReposResultSchema = z.object({
+    // The folder's own repository first, then the rest by label.
+    repos: z.array(GitRepoSchema),
+    // Set when more repositories sit under the folder than the list carries.
+    truncated: z.boolean()
+});
+export type GitReposResult = z.infer<typeof GitReposResultSchema>;
+
 export const GitStatusEventSchema = z.object({
     cwd: z.string(),
     status: GitStatusSchema

@@ -1,32 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Folder, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
-import {
-    type GitActionKind,
-    type GitCapabilitiesResult,
-    type GitCommit,
-    type GitFile,
-    type GitRef,
-    type GitStash,
-    type GitStatus,
-    type Worktree
-} from '@ruimte/contracts';
+import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Eye, Folder, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
+import { type GitActionKind, type GitCapabilitiesResult, type GitFile, type GitRef, type GitStash, type Worktree } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
-import { BranchMenu } from '@/shell/panels/BranchMenu';
+import { BranchMenu, type CheckoutRefs } from '@/shell/panels/BranchMenu';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { CommitBox } from '@/shell/panels/CommitBox';
-import { CommitLog } from '@/shell/panels/CommitLog';
+import { CommitLog, type LogSource } from '@/shell/panels/CommitLog';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { GitChoice, type Choice } from '@/shell/panels/GitDialogs';
 import { PromptDialog } from '@/ui/PromptDialog';
 import { GitFileList } from '@/shell/panels/GitFileList';
-import { isUnmergedRefusal, pushButton } from '@/shell/panels/git-actions';
-import { GIT_PANEL_PACE_MS, paced } from '@/shell/panels/pace';
-import { activeDiffPath, allDirs } from '@/shell/panels/git-tree';
+import { isUnmergedRefusal, pushButton, pushable, pushEntries, type CommitCandidate } from '@/shell/panels/git-actions';
+import { PushMenu } from '@/shell/panels/PushMenu';
+import { activeDiff, allDirs } from '@/shell/panels/git-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
-import { useGitActions } from '@/shell/panels/use-git-actions';
+import { useGitActions, type ActionOutcome } from '@/shell/panels/use-git-actions';
 import { WorktreeSection } from '@/shell/panels/WorktreeSection';
 import { worktreeBase, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
@@ -35,7 +26,7 @@ import { revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
-import { watchGit } from '@/state/git-watch';
+import { useGitCheckouts, useProjectRepos, visibleRepos, withoutNestedRepos, type GitCheckoutRef } from '@/state/git-repos';
 import { gitTarget, gitTargets, type GitTarget } from '@/state/git-target';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -44,7 +35,6 @@ import { useUi } from '@/state/ui';
 import { useToasts } from '@/state/toasts';
 import { useProjectNodes, useWorktrees, worktreeLists } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
-import { Button } from '@/ui/Button';
 import { BTN_GROUP, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
@@ -60,23 +50,26 @@ const PILLS_FROM_WIDTH = 320;
 const MIN_LOG_HEIGHT = 80;
 const MIN_LIST_HEIGHT = 160;
 
+/* Every dialog names the repository it acts on: with more than one on screen, "the checkout" is not
+   a thing a person can point at any more. */
 type Dialog =
-    | { kind: 'create-branch' }
-    | { kind: 'rename-branch' }
-    | { kind: 'pick-branch'; action: 'merge' | 'rebase' | 'delete-branch' }
-    | { kind: 'confirm-delete'; ref: string; force: boolean }
-    | { kind: 'force-push' }
-    | { kind: 'stash' }
-    | { kind: 'pick-stash' }
-    | { kind: 'switch'; ref: GitRef }
-    | { kind: 'discard'; file: GitFile }
-    | { kind: 'pull-request'; subject: string };
+    | { kind: 'create-branch'; cwd: string }
+    | { kind: 'rename-branch'; cwd: string; branch: string }
+    | { kind: 'pick-branch'; cwd: string; action: 'merge' | 'rebase' | 'delete-branch' }
+    | { kind: 'confirm-delete'; cwd: string; ref: string; force: boolean }
+    | { kind: 'force-push'; cwd: string }
+    | { kind: 'stash'; cwd: string }
+    | { kind: 'pick-stash'; cwd: string }
+    | { kind: 'switch'; cwd: string; ref: GitRef }
+    | { kind: 'discard'; cwd: string; file: GitFile }
+    | { kind: 'pull-request'; cwd: string; subject: string };
 
 /*
- * What the daemon knows about the checkout the panel is on: the branch it is on and every branch it
- * could be on, the changed files grouped the way a person acts on them, the message of the commit
- * to come, and the history under it. Every action goes through one `git.action` request whose
- * progress lands in a toast, so a push says where it is and a failure keeps what git wrote.
+ * What the daemon knows about the checkouts of a project: every repository the folder holds, the
+ * changed files of each grouped the way a person acts on them, and for the one the panel is pointed
+ * at the branch it is on, every branch it could be on, the message of the commit to come and the
+ * history under it. Every action goes through one `git.action` request whose progress lands in a
+ * toast, so a push says where it is and a failure keeps what git wrote.
  */
 export function GitPanel() {
     const { t } = useTranslation('panels');
@@ -86,39 +79,66 @@ export function GitPanel() {
     const scope = useGit((s) => s.scope);
     const collapsedDirs = useGit((s) => s.collapsedDirs);
     const logHeight = useGit((s) => s.logHeight);
+    const hiddenRepos = useGit((s) => s.hiddenRepos);
     const tabLimit = useSettings((s) => s.filesTabLimit);
     const endpointId = useEndpointId();
     const transport = useTransport();
     const worktrees = useWorktrees(transport, endpointId, folder, true);
     const derived = useMemo(() => gitTarget(nodes, selection, folder, worktrees), [nodes, selection, folder, worktrees]);
-    /* A checkout picked by hand outranks the selection, until the selection points somewhere else
-       of its own: `from` is the target it was picked over, so a click on the canvas takes over again. */
+    /* A worktree picked by hand outranks the selection, until the selection points somewhere else of
+       its own: `from` is the target it was picked over, so a click on the canvas takes over again. A
+       repository is not picked here but remembered, since it travels with the project's local file. */
     const [picked, setPicked] = useState<{ target: GitTarget; from: string | null } | null>(null);
     const projectNodes = useProjectNodes();
-    const targets = useMemo(() => gitTargets(nodes, worktrees, folder), [nodes, worktrees, folder]);
+    const { repos, truncated: reposTruncated, reload: reloadRepos } = useProjectRepos(folder);
+    const targets = useMemo(() => gitTargets(nodes, worktrees, folder, repos), [nodes, worktrees, folder, repos]);
     // A worktree picked by hand that has since been removed hands the panel back to the selection.
-    const pickedStands =
-        picked !== null && picked.from === derived.cwd && (picked.target.kind !== 'worktree' || targets.some((entry) => entry.cwd === picked.target.cwd));
-    const target = pickedStands ? picked.target : derived;
-    const cwd = target.cwd;
+    const pickedStands = picked !== null && picked.from === derived.cwd && targets.some((entry) => entry.cwd === picked.target.cwd);
+    /* The worktree the panel is in, if it is in one: that is the whole list then, the way it always was. */
+    const worktree = pickedStands ? picked.target : derived.kind === 'worktree' ? derived : null;
 
-    /* What was read, and which checkout it was read from: a target that just changed shows nothing
-       until its own status lands, without an effect that empties the state first. */
-    const [held, setHeld] = useState<{ cwd: string; status: GitStatus | null; failure: string | null } | null>(null);
-    const shown = held !== null && held.cwd === cwd ? held : null;
-    const status = shown?.status ?? null;
-    const failure = shown?.failure ?? null;
+    const refs = useMemo<readonly GitCheckoutRef[]>(
+        () =>
+            worktree !== null && worktree.cwd !== null ? [{ path: worktree.cwd, label: worktree.label, kind: 'worktree' }] : visibleRepos(repos, hiddenRepos),
+        [worktree, repos, hiddenRepos]
+    );
+    const read = useGitCheckouts(refs);
+    /* A repository this panel draws is not also an untracked folder in the one above it. */
+    const checkouts = useMemo(() => {
+        const roots = read.checkouts.map((checkout) => checkout.path);
+        return read.checkouts.map((checkout) => ({ ...checkout, status: withoutNestedRepos(checkout.status, checkout.path, roots) }));
+    }, [read.checkouts]);
+    const refresh = read.refresh;
+
+    /* A folder with one repository names none: in the list, in the log and in the commit box, and its
+       chip still carries the branch. With more than one, no single branch is the panel's. */
+    const named = checkouts.length > 1;
+    /* The one checkout a folder with a single repository has, which is what the chip, the capabilities
+       and the one-repository push button read. Over several there is no such thing. */
+    const only = named ? null : (checkouts[0] ?? null);
+    const cwd = only?.path ?? null;
+    const status = only?.status ?? null;
+    const target = useMemo<GitTarget>(
+        () => targets.find((entry) => entry.cwd === cwd) ?? { cwd, label: only?.label ?? '', branch: null, kind: cwd === folder ? 'project' : 'repo' },
+        [targets, cwd, only, folder]
+    );
+    /* A message is typed once and commits whatever is staged, so it belongs to the project. */
+    const messageKey = worktree?.cwd ?? folder ?? '';
+    const sources = useMemo<readonly LogSource[]>(
+        () => checkouts.map((checkout) => ({ cwd: checkout.path, repo: named ? checkout.label : '', revision: checkout.revision })),
+        [checkouts, named]
+    );
+
     const [capabilities, setCapabilities] = useState<GitCapabilitiesResult | null>(null);
-    const [refs, setRefs] = useState<readonly GitRef[]>([]);
-    const [stashes, setStashes] = useState<readonly GitStash[]>([]);
-    const [loadingRefs, setLoadingRefs] = useState(false);
-    /* The change the preview is showing, so the row a person is reading stands out in the list. */
-    const reading = useFiles((s) => activeDiffPath(s, status?.root ?? null));
-    const readingCommit = useFiles((s) => s.tabs.find((tab) => tab.key === s.active)?.view?.commit ?? null);
+    /* The branches and stashes of every checkout a person walked into, read when its level opens: a
+       folder of nine repositories is nine `git.refs` calls only for whoever asks for all nine. */
+    const [refsByCwd, setRefsByCwd] = useState<Record<string, { refs: readonly GitRef[]; stashes: readonly GitStash[]; loading: boolean }>>({});
+    /* The change the preview is showing, so the row a person is reading stands out in its own list. */
+    const readingTab = useFiles((s) => s.tabs.find((tab) => tab.key === s.active));
+    const reading = useMemo(() => activeDiff(readingTab), [readingTab]);
+    const readingCommit = readingTab?.view?.commit ?? null;
     const [dialog, setDialog] = useState<Dialog | null>(null);
     const [busy, setBusy] = useState(false);
-    /* Goes up whenever the status moved, which is when the log below it may have moved too. */
-    const [revision, setRevision] = useState(0);
     const bodyRef = useRef<HTMLDivElement>(null);
     const logRef = useRef<HTMLDivElement>(null);
     /* Dragging the line between the list and the log; both keep a whole number of pixels. */
@@ -132,136 +152,103 @@ export function GitPanel() {
     const roomForPills = (useUi((s) => s.panelWidth) ?? 540) >= PILLS_FROM_WIDTH;
     const run = useGitActions();
 
-    /* Every status the panel draws goes through here, so the pace below covers a read of its own
-       as well as one the daemon pushed. */
-    const show = useCallback(
-        (status: GitStatus): void => {
-            if (cwd === null) {
-                return;
-            }
-            setHeld({ cwd, status, failure: null });
-            setRevision((count) => count + 1);
+    const loadRefs = useCallback(
+        (path: string): void => {
+            setRefsByCwd((previous) => ({ ...previous, [path]: { refs: previous[path]?.refs ?? [], stashes: previous[path]?.stashes ?? [], loading: true } }));
+            transport
+                .request('git.refs', { cwd: path })
+                .then((answer) => setRefsByCwd((previous) => ({ ...previous, [path]: { refs: answer.refs, stashes: answer.stashes, loading: false } })))
+                .catch(() => setRefsByCwd((previous) => ({ ...previous, [path]: { refs: [], stashes: [], loading: false } })));
         },
-        [cwd]
+        [transport]
     );
 
-    /* A status the daemon pushed waits its turn; one the panel read itself is drawn at once and
-       opens the next window, so an action and the push that follows it are one redraw. */
-    const pace = useMemo(() => paced(GIT_PANEL_PACE_MS, show), [show]);
+    const refsOf = useCallback(
+        (path: string): CheckoutRefs => ({
+            refs: refsByCwd[path]?.refs ?? [],
+            loading: refsByCwd[path]?.loading ?? false,
+            branch: checkouts.find((checkout) => checkout.path === path)?.status?.branch ?? null
+        }),
+        [refsByCwd, checkouts]
+    );
 
-    const refresh = useCallback(async (): Promise<void> => {
-        if (cwd === null) {
-            return;
-        }
-        try {
-            const answer = await transport.request('git.status', { cwd });
-            show(answer);
-            pace.mark();
-        } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : i18next.t('panels:git.panel.statusFailed');
-            setHeld((previous) => ({ cwd, status: previous?.cwd === cwd ? previous.status : null, failure: message }));
-        }
-    }, [transport, cwd, show, pace]);
-
-    const loadRefs = useCallback((): void => {
-        if (cwd === null) {
-            return;
-        }
-        setLoadingRefs(true);
-        transport
-            .request('git.refs', { cwd })
-            .then((answer) => {
-                setRefs(answer.refs);
-                setStashes(answer.stashes);
-            })
-            .catch(() => {
-                setRefs([]);
-                setStashes([]);
-            })
-            .finally(() => setLoadingRefs(false));
-    }, [transport, cwd]);
+    const probe = checkouts[0]?.path ?? null;
 
     useEffect(() => {
-        if (cwd === null) {
+        if (probe === null) {
             return;
         }
-        // The watch goes up before the first status, so a write in between is reported, not missed.
-        const watch = watchGit(cwd);
-        void watch.ready.then(() => refresh());
+        // What this machine can offer is the same for every repository on it; one is enough to ask.
         transport
-            .request('git.capabilities', { cwd })
+            .request('git.capabilities', { cwd: probe })
             .then(setCapabilities)
             .catch(() => setCapabilities(null));
-        return () => {
-            watch.release();
-        };
-    }, [transport, cwd, refresh]);
+    }, [transport, probe]);
 
-    useEffect(() => {
-        return () => pace.stop();
-    }, [pace]);
-
-    useEffect(() => {
-        return transport.on('git.status', (payload) => {
-            if (payload.cwd === cwd) {
-                pace.offer(payload.status);
-            }
-        });
-    }, [transport, cwd, pace]);
-
-    useEffect(() => {
-        // A repository the daemon gave up watching only moves when this window asks it to.
-        if (status?.live !== false) {
-            return;
-        }
-        const onFocus = (): void => void refresh();
-        window.addEventListener('focus', onFocus);
-        return () => window.removeEventListener('focus', onFocus);
-    }, [refresh, status?.live]);
-
-    /* Every action of the panel: it runs, it says how it went, and the status is read again after. */
-    const act = useCallback(
-        async (kind: GitActionKind, extra: Record<string, unknown> = {}, done?: Parameters<typeof run>[1]): Promise<boolean> => {
-            if (cwd === null) {
-                return false;
-            }
+    /* One action on one checkout: it runs, it says how it went, and that checkout is read again after. */
+    const actOn = useCallback(
+        async (target: string, kind: GitActionKind, extra: Record<string, unknown> = {}, done?: Parameters<typeof run.run>[1]): Promise<ActionOutcome> => {
             setBusy(true);
             setDialog(null);
             try {
-                const outcome = await run({ cwd, kind, ...extra }, done);
-                await refresh();
-                if (outcome.ok) {
-                    return true;
-                }
-                if (kind === 'delete-branch' && typeof extra.ref === 'string' && extra.force !== true && isUnmergedRefusal(outcome.message)) {
-                    setDialog({ kind: 'confirm-delete', ref: extra.ref, force: true });
-                }
-                return false;
+                const outcome = await run.run({ cwd: target, kind, ...extra }, done);
+                await refresh(target);
+                return outcome;
             } finally {
                 setBusy(false);
             }
         },
-        [cwd, refresh, run]
+        [refresh, run]
     );
 
-    const stage = (paths: string[], staged: boolean): void => {
-        if (cwd !== null && paths.length > 0) {
-            setBusy(true);
-            void stageFiles(transport, cwd, paths, staged).finally(() => {
-                setBusy(false);
-                void refresh();
-            });
-        }
-    };
+    /* An action on one repository, with the second question a failure can raise. */
+    const act = useCallback(
+        async (path: string, kind: GitActionKind, extra: Record<string, unknown> = {}, done?: Parameters<typeof run.run>[1]): Promise<boolean> => {
+            const outcome = await actOn(path, kind, extra, done);
+            if (outcome.ok) {
+                return true;
+            }
+            if (kind === 'delete-branch' && typeof extra.ref === 'string' && extra.force !== true && isUnmergedRefusal(outcome.message)) {
+                setDialog({ kind: 'confirm-delete', cwd: path, ref: extra.ref, force: true });
+            }
+            return false;
+        },
+        [actOn]
+    );
 
-    const discard = (file: GitFile): void => {
-        setDialog(null);
-        if (cwd === null) {
+    /* Every repository at once, in order under one toast. Fetch, pull and push are the actions a
+       folder of repositories is asked for as a whole; everything else names the one it acts on. */
+    const actAll = useCallback(
+        (kind: GitActionKind): void => {
+            const jobs = checkouts.map((checkout) => ({ cwd: checkout.path, kind, label: checkout.label }));
+            if (jobs.length === 0) {
+                return;
+            }
+            setBusy(true);
+            void run
+                .runMany(jobs)
+                .then(() => refresh())
+                .finally(() => setBusy(false));
+        },
+        [checkouts, run, refresh]
+    );
+
+    const stage = (path: string, paths: string[], staged: boolean): void => {
+        if (paths.length === 0) {
             return;
         }
         setBusy(true);
+        void stageFiles(transport, path, paths, staged).finally(() => {
+            setBusy(false);
+            void refresh(path);
+        });
+    };
+
+    const discard = (path: string, file: GitFile): void => {
+        setDialog(null);
+        setBusy(true);
         transport
-            .request('git.discard', { cwd, paths: [file.path] })
+            .request('git.discard', { cwd: path, paths: [file.path] })
             .then(({ stash }) => {
                 useToasts.getState().show({
                     title: stash === null ? t('git.panel.discardNothing', { path: file.path }) : t('git.panel.discardStashed', { path: file.path }),
@@ -275,81 +262,137 @@ export function GitPanel() {
             })
             .finally(() => {
                 setBusy(false);
-                void refresh();
+                void refresh(path);
             });
     };
 
-    const openDiff = (file: GitFile): void => {
-        if (status?.root) {
-            // A worktree's own changes are measured against the branch it was made from, not the repository's base.
-            const worktree = worktrees.find((entry) => entry.path === status.root);
-            const base = worktree === undefined ? undefined : worktreeBase(worktree);
-            useFiles.getState().open(`${status.root}/${file.path}`, tabLimit, {
-                kind: 'diff',
-                cwd: status.root,
-                scope,
-                staged: file.state === 'staged',
-                ...(base === undefined ? {} : { base })
-            });
-        }
+    const openDiff = (path: string, file: GitFile): void => {
+        // A worktree's own changes are measured against the branch it was made from, not the repository's base.
+        const entry = worktrees.find((candidate) => candidate.path === path);
+        const base = entry === undefined ? undefined : worktreeBase(entry);
+        useFiles.getState().open(`${path}/${file.path}`, tabLimit, {
+            kind: 'diff',
+            cwd: path,
+            scope,
+            staged: file.state === 'staged',
+            ...(base === undefined ? {} : { base })
+        });
     };
 
     /* The file next to its diff, for a change a person wants to read whole rather than as a patch. */
-    const openFile = (file: GitFile): void => {
-        if (status?.root) {
-            useFiles.getState().open(`${status.root}/${file.path}`, tabLimit);
-        }
+    const openFile = (path: string, file: GitFile): void => {
+        useFiles.getState().open(`${path}/${file.path}`, tabLimit);
     };
 
-    const openCommit = (commit: GitCommit): void => {
-        if (status?.root) {
-            useFiles.getState().open(status.root, tabLimit, { kind: 'diff', cwd: status.root, scope: 'commit', staged: false, commit: commit.hash });
-        }
+    const openCommit = (path: string, commit: { hash: string }): void => {
+        useFiles.getState().open(path, tabLimit, { kind: 'diff', cwd: path, scope: 'commit', staged: false, commit: commit.hash });
     };
 
-    /* The one chip asks two questions, so opening it reads the branches and the worktrees at once. */
+    /* The chip lists the worktrees beside the repositories, so opening it reads them again. */
     const openBranchMenu = (): void => {
-        loadRefs();
         if (folder !== null) {
             worktreeLists.reload(endpointId, folder);
         }
     };
 
+    /* A worktree takes the panel over whole and is remembered per session; picking anything else is
+       leaving it, which puts the folder's repositories back. */
+    const pickTarget = (next: GitTarget): void => {
+        setPicked(next.kind === 'worktree' ? { target: next, from: derived.cwd } : null);
+    };
+
     /* Viewing a worktree points the panel at it, the way picking it from the chip does, and opens everything it holds in a tab. */
-    const viewWorktree = (worktree: Worktree): void => {
-        const next = targets.find((candidate) => candidate.cwd === worktree.path);
+    const viewWorktree = (entry: Worktree): void => {
+        const next = targets.find((candidate) => candidate.cwd === entry.path);
         if (next) {
             setPicked({ target: next, from: derived.cwd });
         }
-        const tab = worktreeDiffTab(worktree);
+        const tab = worktreeDiffTab(entry);
         useFiles.getState().open(tab.path, tabLimit, tab.view);
     };
 
     /* A switch that would lose the working tree asks first; a clean tree switches straight away. */
-    const checkout = (ref: GitRef): void => {
-        if ((status?.files.length ?? 0) > 0) {
-            setDialog({ kind: 'switch', ref });
+    const checkout = (path: string, ref: GitRef): void => {
+        const entry = checkouts.find((candidate) => candidate.path === path);
+        if ((entry?.status?.files.length ?? 0) > 0) {
+            setDialog({ kind: 'switch', cwd: path, ref });
             return;
         }
-        void act('checkout', { ref: ref.name });
+        void actOn(path, 'checkout', { ref: ref.name });
     };
 
-    const openPullRequest = (): void => {
-        if (cwd === null) {
-            return;
-        }
+    const openPullRequest = (path: string): void => {
         transport
-            .request('git.log', { cwd, limit: 1 })
-            .then((answer) => setDialog({ kind: 'pull-request', subject: answer.commits[0]?.subject ?? '' }))
-            .catch(() => setDialog({ kind: 'pull-request', subject: '' }));
+            .request('git.log', { cwd: path, limit: 1 })
+            .then((answer) => setDialog({ kind: 'pull-request', cwd: path, subject: answer.commits[0]?.subject ?? '' }))
+            .catch(() => setDialog({ kind: 'pull-request', cwd: path, subject: '' }));
     };
 
-    if (cwd === null) {
+    /* One message over every repository that has something staged: one commit each, same words. */
+    const commit = (message: { subject: string; body: string }, options: { targets: readonly CommitCandidate[]; stageAll: boolean; push: boolean }): void => {
+        const kind: GitActionKind = options.push ? 'commit-push' : 'commit';
+        const extra = { subject: message.subject, body: message.body, stageAll: options.stageAll };
+        const clear = (ok: boolean): void => {
+            if (ok) {
+                useGit.getState().setMessage(messageKey, '');
+            }
+        };
+        const one = options.targets[0];
+        if (options.targets.length === 1 && one !== undefined) {
+            void act(one.path, kind, extra).then(clear);
+            return;
+        }
+        setBusy(true);
+        void run
+            .runMany(options.targets.map((entry) => ({ cwd: entry.path, kind, label: entry.label, extra })))
+            .then((outcome) => {
+                void refresh();
+                clear(outcome.failed === 0);
+            })
+            .finally(() => setBusy(false));
+    };
+
+    const entries = useMemo(() => pushEntries(checkouts), [checkouts]);
+
+    /* Every repository that has something to push, one after another under one toast. */
+    const pushAll = (): void => {
+        const jobs = pushable(entries).map((entry) => ({ cwd: entry.cwd, kind: entry.button.kind, label: entry.label }));
+        if (jobs.length === 0) {
+            return;
+        }
+        setBusy(true);
+        void run
+            .runMany(jobs)
+            .then(() => refresh())
+            .finally(() => setBusy(false));
+    };
+
+    if (folder === null) {
         return <PanelEmpty icon={Folder}>{t('git.panel.noFolder')}</PanelEmpty>;
     }
 
     const push = pushButton(status);
-    const branches = refs.filter((ref) => ref.kind === 'local');
+    const changes = checkouts.reduce((count, checkout) => count + (checkout.status?.files.length ?? 0), 0);
+    const failures = checkouts.filter((checkout) => checkout.failure !== null);
+    /* Over several repositories the counts are the whole folder's, which is what the button beside
+       them acts on as well. */
+    const ahead = checkouts.reduce((count, checkout) => count + (checkout.status?.ahead ?? 0), 0);
+    const behind = checkouts.reduce((count, checkout) => count + (checkout.status?.behind ?? 0), 0);
+
+    /* What acts on one repository: the whole actions menu of a folder with a single one, and the head
+       of every repository's own level while it holds more. */
+    const repoActions = (path: string): ReactNode => (
+        <RepoActionItems
+            cwd={path}
+            busy={busy}
+            canPullRequest={capabilities?.gh === true}
+            stashes={refsByCwd[path]?.stashes ?? []}
+            branch={checkouts.find((checkout) => checkout.path === path)?.status?.branch ?? ''}
+            onAction={(kind) => void act(path, kind)}
+            onDialog={setDialog}
+            onPullRequest={() => openPullRequest(path)}
+        />
+    );
 
     return (
         <div
@@ -369,34 +412,33 @@ export function GitPanel() {
                     targets={targets}
                     branch={status?.branch ?? null}
                     detached={status?.detached ?? false}
-                    refs={refs}
-                    loading={loadingRefs}
-                    onOpen={openBranchMenu}
-                    onPickTarget={(next) => setPicked({ target: next, from: derived.cwd })}
+                    nested={named}
+                    refsOf={refsOf}
+                    renderActions={repoActions}
+                    onOpenMenu={openBranchMenu}
+                    onOpen={loadRefs}
+                    onPickTarget={pickTarget}
                     onCheckout={checkout}
-                    onCreate={() => setDialog({ kind: 'create-branch' })}
+                    onCreate={(path) => setDialog({ kind: 'create-branch', cwd: path })}
                 />
-                {roomForPills && status !== null && status.ahead > 0 && (
+                {roomForPills && ahead > 0 && (
                     <Pill icon={<Icon icon={ArrowUp} size={12} />} className="tabular-nums">
-                        {status.ahead}
+                        {ahead}
                     </Pill>
                 )}
-                {roomForPills && status !== null && status.behind > 0 && (
+                {roomForPills && behind > 0 && (
                     <Pill icon={<Icon icon={ArrowDown} size={12} />} className="tabular-nums">
-                        {status.behind}
+                        {behind}
                     </Pill>
                 )}
                 <span className="grow" />
-                <Tooltip label={push.reason}>
-                    <Button size="sm" variant="primary" disabled={push.disabled || busy} onClick={() => void act(push.kind)}>
-                        {push.label}
-                    </Button>
-                </Tooltip>
+                <PushMenu button={push} active={cwd} entries={entries} busy={busy} onPush={(path, kind) => void actOn(path, kind)} onPushAll={pushAll} />
                 <Separator />
             </PanelHeaderSlot>
-            {status?.repo && (
+            {/* A folder whose every repository is hidden keeps this row, since the menu on it is the way back. */}
+            {(checkouts.length > 0 || hiddenRepos.length > 0) && (
                 <div className={FILE_TOOLBAR}>
-                    {status.files.length > 0 && (
+                    {changes > 0 && (
                         <span className={BTN_GROUP}>
                             <Tooltip label={t('git.panel.expandAll')} name>
                                 <button className="icon-btn h-7 w-7" onClick={() => useGit.getState().setCollapsedDirs([])}>
@@ -404,7 +446,16 @@ export function GitPanel() {
                                 </button>
                             </Tooltip>
                             <Tooltip label={t('git.panel.collapseAll')} name>
-                                <button className="icon-btn h-7 w-7" onClick={() => useGit.getState().setCollapsedDirs(allDirs(status.files))}>
+                                <button
+                                    className="icon-btn h-7 w-7"
+                                    onClick={() =>
+                                        useGit
+                                            .getState()
+                                            .setCollapsedDirs(
+                                                checkouts.flatMap((checkout) => allDirs(checkout.status?.files ?? [], named ? checkout.label : ''))
+                                            )
+                                    }
+                                >
                                     <Icon icon={ChevronsDownUp} size={14} />
                                 </button>
                             </Tooltip>
@@ -417,6 +468,7 @@ export function GitPanel() {
                             disabled={busy}
                             onClick={() => {
                                 void refresh();
+                                reloadRepos();
                                 if (folder !== null) {
                                     worktreeLists.reload(endpointId, folder);
                                 }
@@ -428,45 +480,36 @@ export function GitPanel() {
                     <Separator />
                     <ActionsMenu
                         busy={busy}
-                        canPullRequest={capabilities?.gh === true}
-                        stashes={stashes}
-                        onOpen={loadRefs}
-                        onAction={(kind) => void act(kind)}
-                        onDialog={setDialog}
-                        onPullRequest={openPullRequest}
-                    />
+                        hidden={hiddenRepos.length}
+                        onOpen={() => cwd !== null && loadRefs(cwd)}
+                        onAll={actAll}
+                        onShowRepos={() => useGit.getState().setHiddenRepos([])}
+                    >
+                        {/* One repository keeps the menu it always had; over several, what acts on one
+                            of them sits in that repository's own level of the branch menu. */}
+                        {!named && cwd !== null ? repoActions(cwd) : undefined}
+                    </ActionsMenu>
                 </div>
             )}
-            {failure !== null && <p className="border-b border-border px-3 py-2 text-xs text-status-error">{failure}</p>}
+            {failures.map((checkout) => (
+                <p key={checkout.path} className="border-b border-border px-3 py-2 text-xs text-status-error">
+                    {named ? `${checkout.label}: ${checkout.failure}` : checkout.failure}
+                </p>
+            ))}
             <div ref={bodyRef} className="flex min-h-0 grow flex-col">
                 <GitFileList
-                    status={status}
+                    checkouts={checkouts}
                     collapsed={collapsedDirs}
                     reading={reading}
+                    reposTruncated={reposTruncated}
                     busy={busy}
                     onOpen={openDiff}
                     onOpenFile={openFile}
                     onStage={stage}
-                    onDiscard={(file) => setDialog({ kind: 'discard', file })}
+                    onDiscard={(path, file) => setDialog({ kind: 'discard', cwd: path, file })}
                 />
-                {status?.repo && (
-                    <CommitBox
-                        cwd={cwd}
-                        status={status}
-                        capabilities={capabilities}
-                        busy={busy}
-                        onCommit={(message, options) => {
-                            void act(options.push ? 'commit-push' : 'commit', {
-                                subject: message.subject,
-                                body: message.body,
-                                stageAll: options.stageAll
-                            }).then((ok) => {
-                                if (ok) {
-                                    useGit.getState().setMessage(cwd, '');
-                                }
-                            });
-                        }}
-                    />
+                {checkouts.length > 0 && (
+                    <CommitBox messageKey={messageKey} checkouts={checkouts} named={named} capabilities={capabilities} busy={busy} onCommit={commit} />
                 )}
                 {folder !== null && (
                     <WorktreeSection
@@ -476,19 +519,19 @@ export function GitPanel() {
                         current={cwd}
                         busy={busy}
                         onView={viewWorktree}
-                        onMerge={(worktree) => useUi.getState().setWorktreeMerge({ folder, paths: [worktree.path] })}
-                        onRemove={(worktree) => useUi.getState().setWorktreeRemoval({ folder, paths: [worktree.path] })}
+                        onMerge={(entry) => useUi.getState().setWorktreeMerge({ folder, paths: [entry.path] })}
+                        onRemove={(entry) => useUi.getState().setWorktreeRemoval({ folder, paths: [entry.path] })}
                         onReveal={revealNode}
                     />
                 )}
-                {status?.repo && (
+                {checkouts.length > 0 && (
                     <>
                         <div
                             className="-mb-px h-[5px] shrink-0 cursor-row-resize border-b border-border hover:border-border-strong"
                             onPointerDown={startLogResize}
                         />
                         <div ref={logRef} className="flex shrink-0 flex-col" style={{ height: logHeight }}>
-                            <CommitLog cwd={cwd} revision={revision} reading={readingCommit} onOpen={openCommit} />
+                            <CommitLog sources={sources} reading={readingCommit} onOpen={openCommit} />
                         </div>
                     </>
                 )}
@@ -501,17 +544,25 @@ export function GitPanel() {
                 field={{ mono: true, label: t('git.dialog.name'), placeholder: 'feature/what-it-does' }}
                 confirmLabel={t('git.dialog.createBranch.confirm')}
                 busy={busy}
-                onConfirm={(name) => void act('create-branch', { name })}
+                onConfirm={(name) => {
+                    if (dialog?.kind === 'create-branch') {
+                        void actOn(dialog.cwd, 'create-branch', { name });
+                    }
+                }}
                 onClose={() => setDialog(null)}
             />
             <PromptDialog
                 open={dialog?.kind === 'rename-branch'}
                 title={t('git.dialog.renameBranch.title')}
                 description={t('git.dialog.renameBranch.description')}
-                field={{ mono: true, label: t('git.dialog.name'), initial: status?.branch ?? '' }}
+                field={{ mono: true, label: t('git.dialog.name'), initial: dialog?.kind === 'rename-branch' ? dialog.branch : '' }}
                 confirmLabel={t('git.dialog.renameBranch.confirm')}
                 busy={busy}
-                onConfirm={(name) => void act('rename-branch', { name })}
+                onConfirm={(name) => {
+                    if (dialog?.kind === 'rename-branch') {
+                        void act(dialog.cwd, 'rename-branch', { name });
+                    }
+                }}
                 onClose={() => setDialog(null)}
             />
             <PromptDialog
@@ -521,7 +572,11 @@ export function GitPanel() {
                 field={{ mono: true, label: t('git.dialog.message'), placeholder: t('git.dialog.optional') }}
                 confirmLabel={t('git.dialog.stash.confirm')}
                 busy={busy}
-                onConfirm={(subject) => void act('stash', { subject })}
+                onConfirm={(subject) => {
+                    if (dialog?.kind === 'stash') {
+                        void act(dialog.cwd, 'stash', { subject });
+                    }
+                }}
                 onClose={() => setDialog(null)}
             />
             <PromptDialog
@@ -531,7 +586,11 @@ export function GitPanel() {
                 confirmLabel={t('git.dialog.forcePush.confirm')}
                 danger
                 busy={busy}
-                onConfirm={() => void act('force-push')}
+                onConfirm={() => {
+                    if (dialog?.kind === 'force-push') {
+                        void act(dialog.cwd, 'force-push');
+                    }
+                }}
                 onClose={() => setDialog(null)}
             />
             <PromptDialog
@@ -542,7 +601,7 @@ export function GitPanel() {
                 busy={busy}
                 onConfirm={() => {
                     if (dialog?.kind === 'switch') {
-                        void act('checkout', { ref: dialog.ref.name, stash: true });
+                        void actOn(dialog.cwd, 'checkout', { ref: dialog.ref.name, stash: true });
                     }
                 }}
                 onClose={() => setDialog(null)}
@@ -558,7 +617,7 @@ export function GitPanel() {
                 busy={busy}
                 onConfirm={() => {
                     if (dialog?.kind === 'confirm-delete') {
-                        void act('delete-branch', { ref: dialog.ref, ...(dialog.force ? { force: true } : {}) });
+                        void act(dialog.cwd, 'delete-branch', { ref: dialog.ref, ...(dialog.force ? { force: true } : {}) });
                     }
                 }}
                 onClose={() => setDialog(null)}
@@ -572,7 +631,7 @@ export function GitPanel() {
                 busy={busy}
                 onConfirm={() => {
                     if (dialog?.kind === 'discard') {
-                        discard(dialog.file);
+                        discard(dialog.cwd, dialog.file);
                     }
                 }}
                 onClose={() => setDialog(null)}
@@ -585,21 +644,19 @@ export function GitPanel() {
                 area={{ label: t('git.dialog.pullRequest.body'), placeholder: t('git.dialog.pullRequest.bodyPlaceholder') }}
                 confirmLabel={t('git.dialog.pullRequest.confirm')}
                 busy={busy}
-                onConfirm={(subject, body) =>
-                    void act(
-                        'create-pr',
-                        { subject, body },
-                        {
-                            done: (result) =>
-                                result.url === undefined
-                                    ? undefined
-                                    : {
-                                          label: t('common:action.open'),
-                                          run: () => openUrl(result.url ?? '')
-                                      }
-                        }
-                    )
-                }
+                onConfirm={(subject, body) => {
+                    if (dialog?.kind === 'pull-request') {
+                        void act(
+                            dialog.cwd,
+                            'create-pr',
+                            { subject, body },
+                            {
+                                done: (result) =>
+                                    result.url === undefined ? undefined : { label: t('common:action.open'), run: () => openUrl(result.url ?? '') }
+                            }
+                        );
+                    }
+                }}
                 onClose={() => setDialog(null)}
             />
             <GitChoice
@@ -613,17 +670,17 @@ export function GitPanel() {
                               : t('git.dialog.pick.delete')
                         : t('git.dialog.pick.fallback')
                 }
-                choices={pickableBranches(dialog, refs, branches, status)}
+                choices={pickableBranches(dialog, dialog?.kind === 'pick-branch' ? refsOf(dialog.cwd) : null)}
                 empty={t('git.dialog.pick.empty')}
                 onPick={(name) => {
                     if (dialog?.kind !== 'pick-branch') {
                         return;
                     }
                     if (dialog.action === 'delete-branch') {
-                        setDialog({ kind: 'confirm-delete', ref: name, force: false });
+                        setDialog({ kind: 'confirm-delete', cwd: dialog.cwd, ref: name, force: false });
                         return;
                     }
-                    void act(dialog.action, { ref: name });
+                    void act(dialog.cwd, dialog.action, { ref: name });
                 }}
                 onClose={() => setDialog(null)}
             />
@@ -631,9 +688,17 @@ export function GitPanel() {
                 open={dialog?.kind === 'pick-stash'}
                 title={t('git.dialog.popStash.title')}
                 description={t('git.dialog.popStash.description')}
-                choices={stashes.map((stash) => ({ value: stash.ref, label: stash.ref, hint: stash.message }))}
+                choices={(dialog?.kind === 'pick-stash' ? (refsByCwd[dialog.cwd]?.stashes ?? []) : []).map((stash) => ({
+                    value: stash.ref,
+                    label: stash.ref,
+                    hint: stash.message
+                }))}
                 empty={t('git.dialog.popStash.empty')}
-                onPick={(ref) => void act('stash-pop', { ref })}
+                onPick={(ref) => {
+                    if (dialog?.kind === 'pick-stash') {
+                        void act(dialog.cwd, 'stash-pop', { ref });
+                    }
+                }}
                 onClose={() => setDialog(null)}
             />
         </div>
@@ -641,13 +706,13 @@ export function GitPanel() {
 }
 
 /* The branches a pick offers: everything but the one that is out, and only local ones to delete. */
-const pickableBranches = (dialog: Dialog | null, refs: readonly GitRef[], locals: readonly GitRef[], status: GitStatus | null): Choice[] => {
-    if (dialog?.kind !== 'pick-branch') {
+const pickableBranches = (dialog: Dialog | null, state: CheckoutRefs | null): Choice[] => {
+    if (dialog?.kind !== 'pick-branch' || state === null) {
         return [];
     }
-    const source = dialog.action === 'delete-branch' ? locals : refs;
+    const source = dialog.action === 'delete-branch' ? state.refs.filter((ref) => ref.kind === 'local') : state.refs;
     return source
-        .filter((ref) => !ref.current && ref.name !== status?.branch)
+        .filter((ref) => !ref.current && ref.name !== state.branch)
         .map((ref) => ({ value: ref.name, label: ref.name, ...(ref.isDefault ? { hint: i18next.t('panels:git.branchMenu.default') } : {}) }));
 };
 
@@ -663,16 +728,22 @@ const openUrl = (url: string): void => {
 
 interface ActionsMenuProps {
     busy: boolean;
-    canPullRequest: boolean;
-    stashes: readonly GitStash[];
+    /* How many repositories of the folder a person folded away, which is the only way back to them. */
+    hidden: number;
     onOpen(): void;
-    onAction(kind: GitActionKind): void;
-    onDialog(dialog: Dialog): void;
-    onPullRequest(): void;
+    /* Fetch, pull and push over every repository the folder holds. */
+    onAll(kind: GitActionKind): void;
+    onShowRepos(): void;
+    /* What acts on one repository, which a folder with a single one has right here. */
+    children?: ReactNode;
 }
 
-/* Everything that is not the one button next to it. The order is how often a person reaches for it. */
-function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog, onPullRequest }: ActionsMenuProps) {
+/*
+ * Everything that is not the one button next to it. A folder with a single repository has the menu it
+ * always had; over several, the three that make sense for the whole folder stay here and everything
+ * that names one repository sits in that repository's own level of the branch menu.
+ */
+function ActionsMenu({ busy, hidden, onOpen, onAll, onShowRepos, children }: ActionsMenuProps) {
     const { t } = useTranslation('panels');
     return (
         <Menu.Root onOpenChange={(open) => open && onOpen()}>
@@ -682,58 +753,102 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                 </Menu.Trigger>
             </Tooltip>
             <MenuPopup align="end">
-                <Menu.Item className="menu-item" onClick={() => onAction('pull')}>
-                    {t('git.actions.pull')}
-                </Menu.Item>
-                <Menu.Item className="menu-item" onClick={() => onAction('push')}>
-                    {t('git.actions.push')}
-                </Menu.Item>
-                <Menu.Item className="menu-item" onClick={() => onAction('sync')}>
-                    {t('git.actions.sync')}
-                    <span className={MENU_HINT}>{t('git.actions.syncHint')}</span>
-                </Menu.Item>
-                <Menu.Separator className={MENU_SEPARATOR} />
-                <Menu.Item className="menu-item" onClick={() => onAction('fetch')}>
-                    {t('git.actions.fetch')}
-                </Menu.Item>
-                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'force-push' })}>
-                    {t('git.actions.forcePush')}
-                </Menu.Item>
-                <Menu.Separator className={MENU_SEPARATOR} />
-                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'merge' })}>
-                    {t('git.actions.merge')}
-                </Menu.Item>
-                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'rebase' })}>
-                    {t('git.actions.rebase')}
-                </Menu.Item>
-                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'rename-branch' })}>
-                    {t('git.actions.renameBranch')}
-                </Menu.Item>
-                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'delete-branch' })}>
-                    {t('git.actions.deleteBranch')}
-                </Menu.Item>
-                <Menu.Separator className={MENU_SEPARATOR} />
-                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'stash' })}>
-                    {t('git.actions.stash')}
-                </Menu.Item>
-                <Menu.Item
-                    className="menu-item"
-                    disabled={stashes.length === 0}
-                    onClick={() => (stashes.length > 1 ? onDialog({ kind: 'pick-stash' }) : onAction('stash-pop'))}
-                >
-                    {t('git.actions.popStash')}
-                    {stashes.length > 1 && <span className={MENU_HINT}>{stashes.length}</span>}
-                </Menu.Item>
-                {canPullRequest && (
+                {children ?? (
+                    <>
+                        <Menu.Item className="menu-item" onClick={() => onAll('pull')}>
+                            {t('git.actions.pullAll')}
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={() => onAll('sync')}>
+                            {t('git.actions.syncAll')}
+                            <span className={MENU_HINT}>{t('git.actions.syncHint')}</span>
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={() => onAll('fetch')}>
+                            {t('git.actions.fetchAll')}
+                        </Menu.Item>
+                    </>
+                )}
+                {hidden > 0 && (
                     <>
                         <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item className="menu-item" onClick={onPullRequest}>
-                            <Icon icon={GitPullRequest} size={14} />
-                            {t('git.actions.pullRequest')}
+                        <Menu.Item className="menu-item" onClick={onShowRepos}>
+                            <Icon icon={Eye} size={14} />
+                            {t('git.repo.showAll', { count: hidden })}
                         </Menu.Item>
                     </>
                 )}
             </MenuPopup>
         </Menu.Root>
+    );
+}
+
+interface RepoActionItemsProps {
+    cwd: string;
+    busy: boolean;
+    canPullRequest: boolean;
+    stashes: readonly GitStash[];
+    /* What HEAD is on, which the rename dialog opens with. */
+    branch: string;
+    onAction(kind: GitActionKind): void;
+    onDialog(dialog: Dialog): void;
+    onPullRequest(): void;
+}
+
+/* Everything that acts on one repository. The order is how often a person reaches for it. */
+function RepoActionItems({ cwd, busy, canPullRequest, stashes, branch, onAction, onDialog, onPullRequest }: RepoActionItemsProps) {
+    const { t } = useTranslation('panels');
+    return (
+        <>
+            <Menu.Item className="menu-item" disabled={busy} onClick={() => onAction('pull')}>
+                {t('git.actions.pull')}
+            </Menu.Item>
+            <Menu.Item className="menu-item" disabled={busy} onClick={() => onAction('push')}>
+                {t('git.actions.push')}
+            </Menu.Item>
+            <Menu.Item className="menu-item" disabled={busy} onClick={() => onAction('sync')}>
+                {t('git.actions.sync')}
+                <span className={MENU_HINT}>{t('git.actions.syncHint')}</span>
+            </Menu.Item>
+            <Menu.Separator className={MENU_SEPARATOR} />
+            <Menu.Item className="menu-item" disabled={busy} onClick={() => onAction('fetch')}>
+                {t('git.actions.fetch')}
+            </Menu.Item>
+            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'force-push', cwd })}>
+                {t('git.actions.forcePush')}
+            </Menu.Item>
+            <Menu.Separator className={MENU_SEPARATOR} />
+            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'pick-branch', cwd, action: 'merge' })}>
+                {t('git.actions.merge')}
+            </Menu.Item>
+            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'pick-branch', cwd, action: 'rebase' })}>
+                {t('git.actions.rebase')}
+            </Menu.Item>
+            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'rename-branch', cwd, branch })}>
+                {t('git.actions.renameBranch')}
+            </Menu.Item>
+            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'pick-branch', cwd, action: 'delete-branch' })}>
+                {t('git.actions.deleteBranch')}
+            </Menu.Item>
+            <Menu.Separator className={MENU_SEPARATOR} />
+            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'stash', cwd })}>
+                {t('git.actions.stash')}
+            </Menu.Item>
+            <Menu.Item
+                className="menu-item"
+                disabled={busy || stashes.length === 0}
+                onClick={() => (stashes.length > 1 ? onDialog({ kind: 'pick-stash', cwd }) : onAction('stash-pop'))}
+            >
+                {t('git.actions.popStash')}
+                {stashes.length > 1 && <span className={MENU_HINT}>{stashes.length}</span>}
+            </Menu.Item>
+            {canPullRequest && (
+                <>
+                    <Menu.Separator className={MENU_SEPARATOR} />
+                    <Menu.Item className="menu-item" disabled={busy} onClick={onPullRequest}>
+                        <Icon icon={GitPullRequest} size={14} />
+                        {t('git.actions.pullRequest')}
+                    </Menu.Item>
+                </>
+            )}
+        </>
     );
 }

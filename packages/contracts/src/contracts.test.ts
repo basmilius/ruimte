@@ -458,6 +458,13 @@ describe('git', () => {
     });
 
     test('staging and discarding both need at least one path', () => {
+        expect(REQUEST_SCHEMAS['git.repos'].payload.safeParse({ folder: '/work/apps' }).success).toBe(true);
+        expect(
+            REQUEST_SCHEMAS['git.repos'].result.safeParse({ repos: [{ path: '/work/apps/one', label: 'one', kind: 'nested' }], truncated: false }).success
+        ).toBe(true);
+        expect(REQUEST_SCHEMAS['git.repos'].result.safeParse({ repos: [{ path: '/work', label: 'work', kind: 'worktree' }], truncated: false }).success).toBe(
+            false
+        );
         expect(REQUEST_SCHEMAS['git.stage'].payload.safeParse({ cwd: '/repo', paths: ['a'], staged: true }).success).toBe(true);
         expect(REQUEST_SCHEMAS['git.stage'].payload.safeParse({ cwd: '/repo', paths: [], staged: true }).success).toBe(false);
         expect(REQUEST_SCHEMAS['git.discard'].payload.safeParse({ cwd: '/repo', paths: ['a'] }).success).toBe(true);

@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, GitCommitHorizontal } from 'lucide-react';
-import type { GitCommit } from '@ruimte/contracts';
 import { GIT_GROUP } from '@/shell/panels/classes';
-import { groupCommits, relativeTime } from '@/shell/panels/commit-log';
+import { groupCommits, mergeLogs, relativeTime, type LoadedLog, type LogRow } from '@/shell/panels/commit-log';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
@@ -24,70 +23,91 @@ const REFS_SHOWN = 2;
 const LOG_ROW =
     'group flex h-7 w-full min-w-0 items-center gap-1.5 pr-1 pl-3 text-xs text-inherit hover:bg-surface-hover hover:text-text data-[selected]:bg-surface-active data-[selected]:text-text';
 
-interface CommitLogProps {
+/* The checkouts the log is read from, named so a row can say which one it came out of. The panel hands
+   this list over memoized: a new one of the same checkouts would read every log again. */
+export interface LogSource {
     cwd: string;
-    /* Bumped by the panel whenever the status moved, which is when the log may have too. */
+    /* Empty while the folder holds a single repository, which is a log that names none. */
+    repo: string;
+    /* Goes up whenever that checkout's status moved, which is when its log may have moved too. */
     revision: number;
+}
+
+interface CommitLogProps {
+    sources: readonly LogSource[];
     /* The commit the preview has open, so the row a person is reading stands out. */
     reading: string | null;
-    onOpen(commit: GitCommit): void;
+    onOpen(cwd: string, commit: LogRow): void;
 }
 
 /*
- * The history of the checkout under the commit box. It reloads from the top whenever the status
- * changes, because a commit, a pull and a rebase all move the log and all move the status with it;
- * the pages that were loaded past the first are read again on the way down. A right click on a row
- * offers the commit and the two things a person copies out of one.
+ * The history under the commit box: every repository of the folder at once, newest first, each row
+ * saying where it came from. It reloads from the top whenever a status moves, because a commit, a
+ * pull and a rebase all move a log and all move the status with it; the pages loaded past the first
+ * are read again on the way down. A right click on a row offers the commit and the two things a
+ * person copies out of one.
  */
-export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
+export function CommitLog({ sources, reading, onOpen }: CommitLogProps) {
     /* What was asked for, so the answer to the question before this one is not drawn and a status
        that moved reads as loading without an effect that has to empty the state first. */
     const { t } = useTranslation('panels');
-    const asked = `${cwd}\u0000${revision}`;
-    const [held, setHeld] = useState<{ asked: string; commits: GitCommit[]; cursor: string | null; failed: boolean } | null>(null);
-    const [page, setPage] = useState<string | null>(null);
+    const asked = sources.map((source) => `${source.cwd}\u0000${source.revision}`).join('\u0001');
+    const [held, setHeld] = useState<{ asked: string; logs: LoadedLog[]; failed: boolean } | null>(null);
+    const [paging, setPaging] = useState(false);
     const [now] = useState(() => Math.floor(Date.now() / 1000));
     const transport = useTransport();
     const shown = held !== null && held.asked === asked ? held : null;
 
     useEffect(() => {
         let alive = true;
-        transport
-            .request('git.log', { cwd, limit: PAGE })
-            .then((answer) => {
-                if (alive) {
-                    setHeld({ asked, commits: answer.commits, cursor: answer.cursor, failed: false });
+        const list = asked === '' ? [] : sources;
+        Promise.all(
+            list.map(async (source): Promise<LoadedLog | null> => {
+                try {
+                    const answer = await transport.request('git.log', { cwd: source.cwd, limit: PAGE });
+                    return { cwd: source.cwd, repo: source.repo, commits: answer.commits, cursor: answer.cursor };
+                } catch {
+                    return null;
                 }
             })
-            .catch(() => {
-                if (alive) {
-                    setHeld({ asked, commits: [], cursor: null, failed: true });
-                }
-            });
+        ).then((answers) => {
+            if (alive) {
+                const logs = answers.filter((log): log is LoadedLog => log !== null);
+                // Only a folder where not one repository answered has nothing to say but the failure.
+                setHeld({ asked, logs, failed: list.length > 0 && logs.length === 0 });
+            }
+        });
         return () => {
             alive = false;
         };
-    }, [transport, asked, cwd]);
+    }, [transport, sources, asked]);
 
-    const loadMore = (cursor: string): void => {
-        setPage(cursor);
-        transport
-            .request('git.log', { cwd, limit: PAGE, cursor })
-            .then((answer) => {
-                setHeld((previous) =>
-                    previous === null || previous.asked !== asked
-                        ? previous
-                        : { ...previous, commits: [...previous.commits, ...answer.commits], cursor: answer.cursor }
-                );
+    /* The next page of every repository that still has one, which is one step down the whole log. */
+    const loadMore = (): void => {
+        const current = shown;
+        if (current === null) {
+            return;
+        }
+        setPaging(true);
+        Promise.all(
+            current.logs.map(async (log): Promise<LoadedLog> => {
+                if (log.cursor === null) {
+                    return log;
+                }
+                try {
+                    const answer = await transport.request('git.log', { cwd: log.cwd, limit: PAGE, cursor: log.cursor });
+                    return { ...log, commits: [...log.commits, ...answer.commits], cursor: answer.cursor };
+                } catch {
+                    return { ...log, cursor: null };
+                }
             })
-            .catch(() => undefined)
-            .finally(() => setPage(null));
+        )
+            .then((logs) => setHeld((previous) => (previous === null || previous.asked !== asked ? previous : { ...previous, logs })))
+            .finally(() => setPaging(false));
     };
 
     const state = shown === null ? 'loading' : shown.failed ? 'error' : 'ready';
-    const commits = shown?.commits ?? [];
-    const cursor = shown?.cursor ?? null;
-    const loadingMore = page !== null;
+    const { rows: commits, more } = mergeLogs(shown?.logs ?? []);
 
     if (state === 'error') {
         return <PanelEmpty icon={GitCommitHorizontal}>{t('git.log.failed')}</PanelEmpty>;
@@ -104,14 +124,15 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
                         <span className={SECTION_LABEL}>{section.label}</span>
                     </header>
                     {section.commits.map((commit) => (
-                        <ContextMenu.Root key={commit.hash}>
+                        <ContextMenu.Root key={`${commit.cwd}\u0000${commit.hash}`}>
                             <ContextMenu.Trigger
                                 render={<button />}
                                 className={LOG_ROW}
                                 aria-current={commit.hash === reading}
                                 data-selected={commit.hash === reading || undefined}
-                                onClick={() => onOpen(commit)}
+                                onClick={() => onOpen(commit.cwd, commit)}
                             >
+                                {commit.repo !== '' && <span className="max-w-24 shrink-0 truncate text-text-faint">{commit.repo}</span>}
                                 <span className="truncate text-text">{commit.subject}</span>
                                 {commit.refs.slice(0, REFS_SHOWN).map((ref) => (
                                     <Tooltip key={ref} label={ref}>
@@ -132,7 +153,7 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
                             <ContextMenu.Portal>
                                 <ContextMenu.Positioner className="z-(--z-popup)">
                                     <ContextMenu.Popup className="menu-popup">
-                                        <ContextMenu.Item className="menu-item" onClick={() => onOpen(commit)}>
+                                        <ContextMenu.Item className="menu-item" onClick={() => onOpen(commit.cwd, commit)}>
                                             <Icon icon={GitCommitHorizontal} size={14} /> {t('git.log.open')}
                                         </ContextMenu.Item>
                                         <ContextMenu.Separator className={MENU_SEPARATOR} />
@@ -149,10 +170,10 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
                     ))}
                 </section>
             ))}
-            {cursor !== null && (
+            {more && (
                 <div className="flex justify-center p-2">
-                    <Button size="sm" variant="secondary" disabled={loadingMore} onClick={() => loadMore(cursor)}>
-                        {loadingMore ? t('common:state.loading') : t('git.log.loadMore')}
+                    <Button size="sm" variant="secondary" disabled={paging} onClick={loadMore}>
+                        {paging ? t('common:state.loading') : t('git.log.loadMore')}
                     </Button>
                 </div>
             )}

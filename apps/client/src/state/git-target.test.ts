@@ -84,6 +84,27 @@ describe('gitTargets', () => {
         ]);
     });
 
+    test('the repositories of the folder take the place the folder itself had', () => {
+        const repos = [
+            { path: '/repo', label: 'repo', kind: 'root' as const },
+            { path: '/repo/backend', label: 'backend', kind: 'submodule' as const }
+        ];
+        expect(gitTargets({}, [], '/repo', repos)).toEqual([
+            { cwd: '/repo', label: 'repo', branch: null, kind: 'repo' },
+            { cwd: '/repo/backend', label: 'backend', branch: null, kind: 'repo' }
+        ]);
+    });
+
+    test('a folder that is no repository itself offers only the ones inside it', () => {
+        const repos = [{ path: '/apps/one', label: 'one', kind: 'nested' as const }];
+        expect(gitTargets({}, [], '/apps', repos)).toEqual([{ cwd: '/apps/one', label: 'one', branch: null, kind: 'repo' }]);
+    });
+
+    test('a folder that is the one repository it holds is not a repository to name', () => {
+        const repos = [{ path: '/repo', label: 'repo', kind: 'root' as const }];
+        expect(gitTargets({}, [], '/repo', repos)).toEqual([{ cwd: '/repo', label: 'repo', branch: null, kind: 'project' }]);
+    });
+
     test('without an open project only supplied worktrees are offered', () => {
         expect(gitTargets({}, [{ path: '/wt/feature', branch: 'feature/x' }], null).map((target) => target.cwd)).toEqual(['/wt/feature']);
     });
