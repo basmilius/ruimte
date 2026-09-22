@@ -1141,7 +1141,7 @@ describe('agent model selection', () => {
     test('a model alias selects that model for a chat, including its defaults', async () => {
         const result = await post('agent', ['codex', '--model', 'sol', '--prompt', 'implement']);
         expect(result.status).toBe(200);
-        expect(started[0]?.selection).toEqual({ model: 'gpt-5.6-sol', options: { effort: 'low', serviceTier: false } });
+        expect(started[0]?.selection).toEqual({ model: 'gpt-6-sol', options: { effort: 'medium', serviceTier: false } });
     });
 
     test('unknown and terminal models refuse before creating nodes, also in a dry run', async () => {
@@ -1149,7 +1149,7 @@ describe('agent model selection', () => {
         for (const tail of [[], ['--dry-run']]) {
             const unknown = await post('agent', ['codex', '--model', 'missing', ...tail]);
             expect(unknown.lines[0]).toStartWith('refused\tunknown-model\t');
-            expect(unknown.lines.some((line) => line.includes('gpt-5.6-sol'))).toBe(true);
+            expect(unknown.lines.some((line) => line.includes('gpt-6-sol'))).toBe(true);
             const terminal = await post('agent', ['codex', '--terminal', '--model', 'sol', ...tail]);
             expect(terminal.lines[0]).toStartWith('refused\tmodel-needs-chat\t');
         }
@@ -1168,7 +1168,7 @@ describe('agent model selection', () => {
         expect((await onDisk()).rev).toBe(before.rev);
         expect(started).toEqual([]);
         expect((await post('team', ['--label', 'Team', '--roles', JSON.stringify(roles)])).status).toBe(200);
-        expect(started.map((start) => start.selection?.model)).toEqual(['gpt-5.6-sol', 'gpt-6-astra']);
+        expect(started.map((start) => start.selection?.model)).toEqual(['gpt-6-sol', 'gpt-6-astra']);
     });
 });
 

@@ -24,7 +24,7 @@ describe('createOpenAiLiveSession', () => {
                 delegation: {
                     type: 'responses',
                     responses: {
-                        model: 'gpt-5.6-terra',
+                        model: 'gpt-6-luna',
                         instructions: expect.stringContaining('Do not stop after partial success'),
                         max_output_tokens: 1024,
                         reasoning: { effort: 'none' },

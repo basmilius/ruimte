@@ -68,7 +68,7 @@ export async function createOpenAiLiveSession(fetch: Fetch, apiKey: string, sdp:
                 delegation: {
                     type: 'responses',
                     responses: {
-                        model: 'gpt-5.6-terra',
+                        model: 'gpt-6-luna',
                         instructions: RESPONSES_INSTRUCTIONS,
                         max_output_tokens: 1024,
                         reasoning: { effort: 'none' },

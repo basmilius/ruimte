@@ -12,6 +12,15 @@ describe('codex catalog', () => {
         const models = codex.list();
         expect(models.filter((model) => model.isDefault).map((model) => model.slug)).toEqual(['gpt-6-astra']);
         expect(models.find((model) => model.slug === 'gpt-5.6-sol')?.options[0]).toMatchObject({ id: 'effort', type: 'select', defaultChoice: 'low' });
+        for (const alias of ['sol', 'luna']) {
+            expect(codex.normalize({ model: alias })).toEqual({
+                model: `gpt-6-${alias}`,
+                options: { effort: 'medium', serviceTier: false }
+            });
+            expect(codex.normalize({ model: `gpt-6-${alias}`, options: { effort: 'max' } }).options.effort).toBe('max');
+        }
+        expect(models.find((model) => model.slug === 'gpt-5.6-terra')).toMatchObject({ legacy: true, badge: 'retiring' });
+        expect(codex.normalize({ model: 'gpt-5.6-terra', options: { effort: 'high' } }).model).toBe('gpt-5.6-terra');
         expect(codex.normalize({ model: 'astra', options: { effort: 'ultra', contextWindow: '1m' } })).toEqual({
             model: 'gpt-6-astra',
             options: { effort: 'ultra', serviceTier: false }
