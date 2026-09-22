@@ -1087,7 +1087,18 @@ function appMenu(): Electron.MenuItemConstructorOptions {
 function viewMenu(): Electron.MenuItemConstructorOptions {
     return {
         label: 'View',
-        submenu: [{ role: 'toggleDevTools' }, { type: 'separator' }, { role: 'togglefullscreen' }]
+        submenu: [
+            {
+                /* Named instead of the role: that one follows the focused web contents, which is the
+                   page inside a browser node as soon as one has the keyboard, and then the app's own
+                   tools are out of reach. A page has its own inspector in the right-click menu. */
+                label: 'Toggle Developer Tools',
+                accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+                click: () => mainWindow?.webContents.toggleDevTools()
+            },
+            { type: 'separator' },
+            { role: 'togglefullscreen' }
+        ]
     };
 }
 
