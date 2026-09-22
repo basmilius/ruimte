@@ -93,3 +93,12 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 - Real shells, watchers, sockets or processes go in `*.integration.test.ts` (`bun run test:integration`), which cleans up its own processes. A real `git` fixture is fine; build it once per file (`apps/server/src/git/test-repo.ts`).
 - `bun run format` and `bun run check` (typecheck plus oxlint in every workspace) pass before a commit. Conventional commits (`feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`).
 - Written from scratch. Do not copy code from any other product; sharing ideas and npm packages is fine.
+
+## Releasing
+
+A release runs to the end without asking. Bas names a version and the next thing he reads is that it is live.
+
+- The gate is CI, not this machine. The `ci.yml` run on the commit being tagged has to be green; nothing is built, checked or tested here for a release, and a published build is never downloaded to try the daemon in it.
+- A red CI is fixed before the tag: find it, fix it, push to main, wait for green. Only something that needs a decision of Bas comes back to him.
+- Then push `v<version>`. `release.yml` builds macOS and Linux into a draft; once the run succeeds the notes go on that draft and it is published as Latest at once, titled `Release <version>`.
+- Publishing starts `npm.yml`, which puts `ruimte` and its three platform packages on npm at the same version. The recipe, the secrets and what has broken in them: `docs/RELEASE.md`.

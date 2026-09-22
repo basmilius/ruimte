@@ -117,12 +117,13 @@ and the app asks again. The draft itself stays out of the app, but not out of th
 whose release is still a draft already appears in `releases.atom`, with the last commit message as
 its content.
 
-Try the daemon in the draft before publishing, since `bun dev` and the tests never run the compiled
-bundle. Download the arm64 zip, start `Contents/Resources/bin/ruimte` with a temporary `RUIMTE_HOME`
-and another port, and wait for `/health` to answer. Then open a socket with
-`?protocol=N&token=<local.key>` and check that `endpoint.info` carries `protocol`. v0.0.12 shipped a
-daemon that crashed on start (tsyringe loaded before reflect-metadata in the bundle), and v0.0.12 and
-v0.0.13 left `protocol` out of `endpoint.info`, so every client refused every machine as older.
+The draft is published as soon as its notes are written; the build is not downloaded to try the daemon
+in it first. If a release does turn out broken on start, that is where to look: start
+`Contents/Resources/bin/ruimte` from the arm64 zip with a temporary `RUIMTE_HOME` and another port,
+wait for `/health`, then open a socket with `?protocol=N&token=<local.key>` and check that
+`endpoint.info` carries `protocol`. v0.0.12 shipped a daemon that crashed on start (tsyringe loaded
+before reflect-metadata in the bundle), and v0.0.12 and v0.0.13 left `protocol` out of `endpoint.info`,
+so every client refused every machine as older.
 
 ## The secrets in CI
 
