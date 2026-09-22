@@ -1,0 +1,85 @@
+{
+    "ai": {
+        "all": "Vraag AI voor alle {{count}}",
+        "done_one": "Een agent beantwoordde 1 conflict.",
+        "done_other": "Een agent beantwoordde {{count}} conflicten.",
+        "done_zero": "De agent liet elk conflict aan jou.",
+        "failed": "De agent kon dit niet oplossen",
+        "file": "Vraag AI dit bestand op te lossen",
+        "working": "{{path}}, {{done}} van {{total}}"
+    },
+    "counter": "{{open}} van {{total}} open",
+    "empty": {
+        "cherry-pick": "Alles is opgelost. Rond de cherry-pick hieronder af.",
+        "merge": "Alles is opgelost. Rond de merge hieronder af.",
+        "plain": "Er wacht niets op je in deze checkout.",
+        "rebase": "Alles is opgelost. Zet de rebase hieronder voort.",
+        "revert": "Alles is opgelost. Rond de revert hieronder af."
+    },
+    "failed": "Er ging iets mis.",
+    "finish": {
+        "failed": "Dat ging niet door"
+    },
+    "footer": {
+        "abort": {
+            "cherry-pick": "Cherry-pick afbreken",
+            "merge": "Merge afbreken",
+            "rebase": "Rebase afbreken",
+            "revert": "Revert afbreken"
+        },
+        "continue": {
+            "cherry-pick": "Cherry-pick afronden",
+            "merge": "Merge afronden",
+            "rebase": "Rebase voortzetten",
+            "revert": "Revert afronden"
+        },
+        "left_one": "Nog 1 bestand",
+        "left_other": "Nog {{count}} bestanden",
+        "left_zero": "Elk bestand is opgelost",
+        "resolve": "Markeer als opgelost",
+        "resolveAll": "Markeer {{count}} als opgelost"
+    },
+    "list": {
+        "none": "Geen enkel bestand conflicteert.",
+        "pick": "Kies een bestand om op te lossen."
+    },
+    "loading": "Bestand wordt gelezen...",
+    "nav": {
+        "next": "Volgend conflict",
+        "previous": "Vorig conflict"
+    },
+    "save": {
+        "failed": "Dat is niet opgeslagen"
+    },
+    "side": {
+        "bothOurs": "Allebei, {{ours}} eerst",
+        "bothTheirs": "Allebei, {{theirs}} eerst",
+        "none": "Kies een conflict in het bestand hierboven.",
+        "nothing": "Deze kant heeft hier niets.",
+        "settled": "Beantwoord",
+        "take": "Neem deze kant"
+    },
+    "sides": "{{ours}} tegen {{theirs}}",
+    "title": {
+        "cherry-pick": "Los de cherry-pick op",
+        "merge": "Los de merge op",
+        "plain": "Los de conflicten op",
+        "rebase": "Los de rebase op",
+        "revert": "Los de revert op"
+    },
+    "wand": {
+        "nothing": "Er lost niets meer zichzelf op",
+        "tip_one": "Los het 1 conflict op dat geen keuze vraagt",
+        "tip_other": "Los de {{count}} conflicten op die geen keuze vragen"
+    },
+    "whole": {
+        "binary": "Dit bestand is geen tekst. Houd een kant heel of gooi het weg.",
+        "deleted-by-them": "{{theirs}} verwijderde dit bestand terwijl het op {{ours}} veranderde.",
+        "deleted-by-us": "{{ours}} verwijderde dit bestand terwijl het op {{theirs}} veranderde.",
+        "drop": "Bestand weggooien",
+        "keepOurs": "Houd {{ours}}",
+        "submodule": "Dit is een submodule. Kies de commit waar een kant naar wijst.",
+        "takeTheirs": "Neem {{theirs}}",
+        "text": "Kies een kant voor dit bestand."
+    }
+}

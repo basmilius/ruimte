@@ -28,6 +28,7 @@
     "@ruimte/desktop-bridge": "workspace:*",
     "@ruimte/diagram": "workspace:*",
     "@ruimte/drawing": "workspace:*",
+    "@ruimte/merge": "workspace:*",
     "@ruimte/plan": "workspace:*",
     "@ruimte/pulsar": "workspace:*",
     "@tanstack/react-virtual": "^3.14.11",

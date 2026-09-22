@@ -81,3 +81,49 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
         </Dialog.Root>
     );
 }
+
+interface DivergedProps {
+    open: boolean;
+    branch: string;
+    busy: boolean;
+    onPick(strategy: 'merge' | 'rebase'): void;
+    onClose(): void;
+}
+
+/*
+ * The one question a pull asks: a branch that moved here and on the remote comes together as a merge
+ * commit or as the local commits replayed on top. Git picks neither on its own, and neither does the
+ * panel, since the answer is about what the history should read like afterwards.
+ */
+export function GitDiverged({ open, branch, busy, onPick, onClose }: DivergedProps) {
+    const { t } = useTranslation('panels');
+    return (
+        <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
+            <Dialog.Portal>
+                <Dialog.Backdrop className="dialog-backdrop" />
+                <Dialog.Popup className="dialog-popup w-[420px] p-5">
+                    <Dialog.Title className="text-base font-semibold text-text">{t('git.dialog.diverged.title', { branch })}</Dialog.Title>
+                    <p className="mt-1 text-sm text-text-muted">{t('git.dialog.diverged.description')}</p>
+                    <div className="mt-4 flex flex-col gap-2">
+                        <button
+                            className="rounded-lg border border-border px-3 py-2 text-left hover:bg-surface-hover"
+                            disabled={busy}
+                            onClick={() => onPick('merge')}
+                        >
+                            <span className="block text-sm text-text">{t('git.dialog.diverged.merge')}</span>
+                            <span className="block text-xs text-text-muted">{t('git.dialog.diverged.mergeHint')}</span>
+                        </button>
+                        <button
+                            className="rounded-lg border border-border px-3 py-2 text-left hover:bg-surface-hover"
+                            disabled={busy}
+                            onClick={() => onPick('rebase')}
+                        >
+                            <span className="block text-sm text-text">{t('git.dialog.diverged.rebase')}</span>
+                            <span className="block text-xs text-text-muted">{t('git.dialog.diverged.rebaseHint')}</span>
+                        </button>
+                    </div>
+                </Dialog.Popup>
+            </Dialog.Portal>
+        </Dialog.Root>
+    );
+}

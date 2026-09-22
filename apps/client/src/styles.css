@@ -1013,3 +1013,30 @@
 .file-markdown .chat-markdown :is(th, td) :is(code, button[data-file-path]) { white-space: nowrap; }
 .file-markdown .chat-markdown details { margin-block: 1em; }
 .file-markdown .chat-markdown summary { cursor: pointer; font-weight: 500; }
+
+/* The merged side of the conflict overlay is a CodeMirror editor, whose base theme lands unlayered
+   at mount. These rules stay unlayered too, and carry one class more than the theme's selectors. */
+.conflict-editor .cm-editor { height: 100%; background: var(--surface); }
+.conflict-editor .cm-editor.cm-focused { outline: none; }
+.conflict-editor .cm-editor .cm-scroller {
+    overflow: auto;
+    font-family: var(--font-mono);
+    font-size: var(--text-code);
+    line-height: var(--text-code--line-height);
+}
+.conflict-editor .cm-editor .cm-content { caret-color: var(--text); }
+.conflict-editor .cm-editor .cm-gutters { border-right: 1px solid var(--border); background: var(--surface); color: var(--text-faint); }
+.conflict-editor .cm-editor .cm-activeLineGutter { background: var(--surface-hover); color: var(--text-muted); }
+/* A stretch one side alone changed, and the one both made the same change to: marked, never asked about. */
+.conflict-editor .cm-line.cm-merge-ours { background: color-mix(in srgb, var(--status-running) 10%, transparent); }
+.conflict-editor .cm-line.cm-merge-theirs { background: color-mix(in srgb, var(--status-idle) 10%, transparent); }
+.conflict-editor .cm-line.cm-merge-both { background: var(--surface-sunken); }
+/* A conflict: the line it sits on carries the edge, so it is readable in one glance down the gutter. */
+.conflict-editor .cm-line.cm-merge-conflict {
+    box-shadow: inset 2px 0 0 var(--status-idle);
+    background: color-mix(in srgb, var(--status-idle) 8%, transparent);
+}
+.conflict-editor .cm-line.cm-merge-conflict.cm-merge-open {
+    box-shadow: inset 2px 0 0 var(--status-needs-you);
+    background: color-mix(in srgb, var(--status-needs-you) 12%, transparent);
+}

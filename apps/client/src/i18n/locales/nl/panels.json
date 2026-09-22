@@ -220,11 +220,30 @@
       "writeOneRepo": "Een message wordt uit één repository geschreven",
       "writing": "Schrijven"
     },
+    "conflict": {
+      "cherry-pick": "Er wacht een cherry-pick op je",
+      "files_one": "1 bestand",
+      "files_other": "{{count}} bestanden",
+      "files_zero": "niets meer",
+      "merge": "Er wacht een merge op je",
+      "plain": "Bestanden conflicteren",
+      "rebase": "Er wacht een rebase op je",
+      "resolve": "Oplossen",
+      "revert": "Er wacht een revert op je"
+    },
     "dialog": {
       "createBranch": {
         "confirm": "Branch aanmaken",
         "description": "Begint bij de huidige commit en gaat er meteen naartoe.",
         "title": "Een branch aanmaken"
+      },
+      "diverged": {
+        "description": "Jouw branch en de remote hebben allebei commits die de ander niet heeft.",
+        "merge": "Mergen",
+        "mergeHint": "Houdt beide geschiedenissen en schrijft een merge commit.",
+        "rebase": "Rebasen",
+        "rebaseHint": "Zet jouw commits boven op die van de remote, zodat de geschiedenis één lijn blijft.",
+        "title": "Hoe moet {{branch}} samenkomen?"
       },
       "deleteBranch": {
         "anyway": "Toch verwijderen",

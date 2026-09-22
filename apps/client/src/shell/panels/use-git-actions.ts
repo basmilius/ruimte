@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import type { GitActionKind, GitActionPayload, GitActionResult } from '@ruimte/contracts';
 import { actionTitle, manySummary, manyTitle, phaseLabel } from '@/shell/panels/git-actions';
 import { useToasts, type ToastAction } from '@/state/toasts';
+import { TransportError } from '@/transport/transport';
 import { useTransport } from '@/transport/context';
 
 let counter = 0;
@@ -13,7 +14,7 @@ export const nextActionId = (): string => {
     return `git-${Date.now()}-${counter}`;
 };
 
-export type ActionOutcome = { ok: true; result: GitActionResult } | { ok: false; message: string };
+export type ActionOutcome = { ok: true; result: GitActionResult } | { ok: false; message: string; code: string | null };
 
 /* One repository's turn in a run over several of them. */
 export interface ManyJob {
@@ -87,14 +88,20 @@ export const useGitActions = (): GitActions => {
                 return { ok: true, result };
             } catch (error: unknown) {
                 const message = error instanceof Error ? error.message : i18next.t('panels:error.generic');
-                useToasts.getState().show({
-                    id: toastId,
-                    title: i18next.t('panels:git.actionFailed', { action: actionTitle(payload.kind) }),
-                    description: message.split('\n')[0],
-                    kind: 'error',
-                    output: message
-                });
-                return { ok: false, message };
+                const code = error instanceof TransportError ? error.code : null;
+                // A branch that moved on both sides is a question the panel asks, not a failure to read.
+                if (code === 'diverged') {
+                    useToasts.getState().dismiss(toastId);
+                } else {
+                    useToasts.getState().show({
+                        id: toastId,
+                        title: i18next.t('panels:git.actionFailed', { action: actionTitle(payload.kind) }),
+                        description: message.split('\n')[0],
+                        kind: 'error',
+                        output: message
+                    });
+                }
+                return { ok: false, message, code };
             } finally {
                 toastByAction.current.delete(actionId);
             }

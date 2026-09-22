@@ -220,11 +220,30 @@
       "writeOneRepo": "A message is written from one repository at a time",
       "writing": "Writing"
     },
+    "conflict": {
+      "cherry-pick": "A cherry-pick waits on you",
+      "files_one": "1 file",
+      "files_other": "{{count}} files",
+      "files_zero": "nothing left",
+      "merge": "A merge waits on you",
+      "plain": "Files conflict",
+      "rebase": "A rebase waits on you",
+      "resolve": "Resolve",
+      "revert": "A revert waits on you"
+    },
     "dialog": {
       "createBranch": {
         "confirm": "Create branch",
         "description": "Starts from the current commit and switches to it.",
         "title": "Create a branch"
+      },
+      "diverged": {
+        "description": "Your branch and the remote have each gained commits the other does not have.",
+        "merge": "Merge",
+        "mergeHint": "Keeps both histories and writes a merge commit.",
+        "rebase": "Rebase",
+        "rebaseHint": "Replays your commits on top of the remote, leaving one line of history.",
+        "title": "How should {{branch}} come together?"
       },
       "deleteBranch": {
         "anyway": "Delete anyway",

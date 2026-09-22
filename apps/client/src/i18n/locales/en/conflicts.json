@@ -1,0 +1,85 @@
+{
+    "ai": {
+        "all": "Ask AI for all {{count}}",
+        "done_one": "An agent answered 1 conflict.",
+        "done_other": "An agent answered {{count}} conflicts.",
+        "done_zero": "The agent left every conflict to you.",
+        "failed": "The agent could not resolve this",
+        "file": "Ask AI to resolve this file",
+        "working": "{{path}}, {{done}} of {{total}}"
+    },
+    "counter": "{{open}} of {{total}} open",
+    "empty": {
+        "cherry-pick": "Everything is resolved. Finish the cherry-pick below.",
+        "merge": "Everything is resolved. Finish the merge below.",
+        "plain": "Nothing waits on you in this checkout.",
+        "rebase": "Everything is resolved. Carry the rebase on below.",
+        "revert": "Everything is resolved. Finish the revert below."
+    },
+    "failed": "Something went wrong.",
+    "finish": {
+        "failed": "That did not go through"
+    },
+    "footer": {
+        "abort": {
+            "cherry-pick": "Abort cherry-pick",
+            "merge": "Abort merge",
+            "rebase": "Abort rebase",
+            "revert": "Abort revert"
+        },
+        "continue": {
+            "cherry-pick": "Finish cherry-pick",
+            "merge": "Finish merge",
+            "rebase": "Continue rebase",
+            "revert": "Finish revert"
+        },
+        "left_one": "1 file left",
+        "left_other": "{{count}} files left",
+        "left_zero": "Every file is resolved",
+        "resolve": "Mark resolved",
+        "resolveAll": "Mark {{count}} resolved"
+    },
+    "list": {
+        "none": "No files conflict.",
+        "pick": "Pick a file to resolve."
+    },
+    "loading": "Reading the file...",
+    "nav": {
+        "next": "Next conflict",
+        "previous": "Previous conflict"
+    },
+    "save": {
+        "failed": "That was not saved"
+    },
+    "side": {
+        "bothOurs": "Both, {{ours}} first",
+        "bothTheirs": "Both, {{theirs}} first",
+        "none": "Pick a conflict in the file above.",
+        "nothing": "This side holds nothing here.",
+        "settled": "Answered",
+        "take": "Take this side"
+    },
+    "sides": "{{ours}} against {{theirs}}",
+    "title": {
+        "cherry-pick": "Resolve the cherry-pick",
+        "merge": "Resolve the merge",
+        "plain": "Resolve the conflicts",
+        "rebase": "Resolve the rebase",
+        "revert": "Resolve the revert"
+    },
+    "wand": {
+        "nothing": "Nothing left that resolves itself",
+        "tip_one": "Resolve the 1 conflict that needs no choice",
+        "tip_other": "Resolve the {{count}} conflicts that need no choice"
+    },
+    "whole": {
+        "binary": "This file is not text. Keep one side whole or drop it.",
+        "deleted-by-them": "{{theirs}} deleted this file while it changed on {{ours}}.",
+        "deleted-by-us": "{{ours}} deleted this file while it changed on {{theirs}}.",
+        "drop": "Drop the file",
+        "keepOurs": "Keep {{ours}}",
+        "submodule": "This is a submodule. Pick the commit one side points at.",
+        "takeTheirs": "Take {{theirs}}",
+        "text": "Pick a side for this file."
+    }
+}

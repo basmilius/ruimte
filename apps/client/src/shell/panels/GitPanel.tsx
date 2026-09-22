@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Eye, Folder, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Eye, Folder, GitMerge, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
 import { type GitActionKind, type GitCapabilitiesResult, type GitFile, type GitRef, type GitStash, type Worktree } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { BranchMenu, type CheckoutRefs } from '@/shell/panels/BranchMenu';
@@ -10,7 +10,7 @@ import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { CommitBox } from '@/shell/panels/CommitBox';
 import { CommitLog, type LogSource } from '@/shell/panels/CommitLog';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { GitChoice, type Choice } from '@/shell/panels/GitDialogs';
+import { GitChoice, GitDiverged, type Choice } from '@/shell/panels/GitDialogs';
 import { PromptDialog } from '@/ui/PromptDialog';
 import { GitFileList } from '@/shell/panels/GitFileList';
 import { isUnmergedRefusal, pushButton, pushable, pushEntries, type CommitCandidate } from '@/shell/panels/git-actions';
@@ -35,6 +35,7 @@ import { useUi } from '@/state/ui';
 import { useToasts } from '@/state/toasts';
 import { useProjectNodes, useWorktrees, worktreeLists } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
+import { Button } from '@/ui/Button';
 import { BTN_GROUP, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
@@ -62,6 +63,7 @@ type Dialog =
     | { kind: 'pick-stash'; cwd: string }
     | { kind: 'switch'; cwd: string; ref: GitRef }
     | { kind: 'discard'; cwd: string; file: GitFile }
+    | { kind: 'diverged'; cwd: string; action: GitActionKind; branch: string }
     | { kind: 'pull-request'; cwd: string; subject: string };
 
 /*
@@ -193,6 +195,10 @@ export function GitPanel() {
             try {
                 const outcome = await run.run({ cwd: target, kind, ...extra }, done);
                 await refresh(target);
+                // A merge, a pull or a rebase that ended in conflicts opens where they are resolved.
+                if (outcome.ok && (outcome.result.conflicts?.length ?? 0) > 0) {
+                    useUi.getState().setConflicts({ cwd: target });
+                }
                 return outcome;
             } finally {
                 setBusy(false);
@@ -211,9 +217,13 @@ export function GitPanel() {
             if (kind === 'delete-branch' && typeof extra.ref === 'string' && extra.force !== true && isUnmergedRefusal(outcome.message)) {
                 setDialog({ kind: 'confirm-delete', cwd: path, ref: extra.ref, force: true });
             }
+            if (outcome.code === 'diverged') {
+                const branch = checkouts.find((checkout) => checkout.path === path)?.status?.branch ?? '';
+                setDialog({ kind: 'diverged', cwd: path, action: kind, branch });
+            }
             return false;
         },
-        [actOn]
+        [actOn, checkouts]
     );
 
     /* Every repository at once, in order under one toast. Fetch, pull and push are the actions a
@@ -267,6 +277,11 @@ export function GitPanel() {
     };
 
     const openDiff = (path: string, file: GitFile): void => {
+        // A conflict has three versions, so a diff with two sides is the wrong thing to open on it.
+        if (file.state === 'conflicted') {
+            useUi.getState().setConflicts({ cwd: path, path: file.path });
+            return;
+        }
         // A worktree's own changes are measured against the branch it was made from, not the repository's base.
         const entry = worktrees.find((candidate) => candidate.path === path);
         const base = entry === undefined ? undefined : worktreeBase(entry);
@@ -496,6 +511,28 @@ export function GitPanel() {
                     {named ? `${checkout.label}: ${checkout.failure}` : checkout.failure}
                 </p>
             ))}
+            {/* A checkout that stopped halfway says so until it is finished or taken back, however
+                the panel is left and come back to. */}
+            {checkouts.map((checkout) => {
+                const conflicted = checkout.status?.files.filter((file) => file.state === 'conflicted').length ?? 0;
+                const operation = checkout.status?.operation;
+                if (operation === undefined && conflicted === 0) {
+                    return null;
+                }
+                return (
+                    <div key={checkout.path} className="flex items-center gap-2 border-b border-border bg-surface-sunken px-3 py-2">
+                        <Icon icon={GitMerge} size={13} className="shrink-0 text-status-needs-you" />
+                        <span className="min-w-0 grow truncate text-xs text-text">
+                            {operation === undefined ? t('git.conflict.plain') : t(`git.conflict.${operation}`)}
+                            {named ? ` (${checkout.label})` : ''}
+                        </span>
+                        <span className="shrink-0 text-xs text-text-faint">{t('git.conflict.files', { count: conflicted })}</span>
+                        <Button size="sm" variant="secondary" onClick={() => useUi.getState().setConflicts({ cwd: checkout.path })}>
+                            {t('git.conflict.resolve')}
+                        </Button>
+                    </div>
+                );
+            })}
             <div ref={bodyRef} className="flex min-h-0 grow flex-col">
                 <GitFileList
                     checkouts={checkouts}
@@ -655,6 +692,17 @@ export function GitPanel() {
                                     result.url === undefined ? undefined : { label: t('common:action.open'), run: () => openUrl(result.url ?? '') }
                             }
                         );
+                    }
+                }}
+                onClose={() => setDialog(null)}
+            />
+            <GitDiverged
+                open={dialog?.kind === 'diverged'}
+                branch={dialog?.kind === 'diverged' ? dialog.branch : ''}
+                busy={busy}
+                onPick={(strategy) => {
+                    if (dialog?.kind === 'diverged') {
+                        void act(dialog.cwd, dialog.action, { strategy });
                     }
                 }}
                 onClose={() => setDialog(null)}

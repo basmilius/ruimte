@@ -322,19 +322,11 @@ const toastOf = (
                     : i18next.t('shell:merge.resolve', { rest }),
             kind: 'error',
             output: outcome.result.output,
+            /* The overlay is where a conflict is worked through, and taking the whole merge back is
+               one of the things it offers, so this is the only button the toast needs. */
             action: {
-                label: i18next.t('shell:merge.abort'),
-                run: () =>
-                    void transport
-                        .request('git.worktree-abort', { cwd })
-                        .then(() => useToasts.getState().show({ title: i18next.t('shell:merge.tookBack'), kind: 'success' }))
-                        .catch((error: unknown) =>
-                            useToasts.getState().show({
-                                title: i18next.t('shell:merge.abortFailed'),
-                                description: error instanceof Error ? error.message : undefined,
-                                kind: 'error'
-                            })
-                        )
+                label: i18next.t('shell:merge.resolveAction'),
+                run: () => useUi.getState().setConflicts({ cwd })
             }
         };
     }

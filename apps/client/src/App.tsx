@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import { WebviewParking } from '@/browser/WebviewParking';
+import { ConflictOverlay } from '@/conflicts/ConflictOverlay';
 import { CellOverlayLayer } from '@/shell/CellOverlay';
 import { useCanvasShortcuts } from '@/canvas/canvas-shortcuts';
 import { desktop } from '@/desktop/bridge';
@@ -91,6 +92,7 @@ function WorkspaceShell({ workspace }: { workspace: Workspace }) {
             <WorktreeDialog />
             <RemoveWorktreeDialog />
             <MergeWorktreeDialog />
+            <ConflictOverlay />
             <ForkDialog />
         </ConnectionProvider>
     );

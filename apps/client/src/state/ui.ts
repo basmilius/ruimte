@@ -112,6 +112,12 @@ export interface WorktreeMergeRequest {
     remove?: boolean;
 }
 
+/* The checkout whose unmerged files are being resolved, and the file the overlay opens on. */
+export interface ConflictRequest {
+    cwd: string;
+    path?: string;
+}
+
 interface UiStore {
     paletteOpen: boolean;
     paletteMode: PaletteMode;
@@ -152,6 +158,8 @@ interface UiStore {
     worktreeRemoval: { folder: string; paths: string[] } | null;
     /* The worktrees a person is merging, one or a group's all, while the merge dialog is up. */
     worktreeMerge: WorktreeMergeRequest | null;
+    /* The checkout whose conflicts are open in the overlay; null while it is closed. */
+    conflicts: ConflictRequest | null;
     /* The chat and the turn a fork goes on after, while its dialog is up. */
     forkDialog: { chatId: string; turnId: string } | null;
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
@@ -163,6 +171,7 @@ interface UiStore {
     setWorktreeDialogFor(groupId: string | null): void;
     setWorktreeRemoval(removal: { folder: string; paths: string[] } | null): void;
     setWorktreeMerge(merge: WorktreeMergeRequest | null): void;
+    setConflicts(request: ConflictRequest | null): void;
     setForkDialog(fork: { chatId: string; turnId: string } | null): void;
     setViewDialog(dialog: ViewDialog): void;
     setRenamingViewId(viewId: string | null): void;
@@ -215,6 +224,7 @@ export const useUi = create<UiStore>((set, get) => ({
     worktreeDialogFor: null,
     worktreeRemoval: null,
     worktreeMerge: null,
+    conflicts: null,
     forkDialog: null,
     viewDialog: null,
     renamingViewId: null,
@@ -229,6 +239,9 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setWorktreeMerge(merge) {
         set({ worktreeMerge: merge });
+    },
+    setConflicts(request) {
+        set({ conflicts: request });
     },
     setForkDialog(fork) {
         set({ forkDialog: fork });
