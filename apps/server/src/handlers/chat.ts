@@ -44,6 +44,13 @@ export const registerChatHandlers = (
         })
     );
 
+    dispatcher.register('chat.stopTask', (payload) =>
+        translate(async () => {
+            await manager.stopTask(payload.chatId, payload.taskId);
+            return {};
+        })
+    );
+
     dispatcher.register('chat.detach', (payload, client) =>
         translate(() => {
             manager.detach(payload.chatId, client.id);

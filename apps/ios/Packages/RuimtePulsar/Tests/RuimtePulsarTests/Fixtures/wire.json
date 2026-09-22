@@ -149,6 +149,7 @@
     "chat.summarize",
     "chat.subagent",
     "chat.stopSubagent",
+    "chat.stopTask",
     "skills.list",
     "provider.list",
     "project.sidebar",

@@ -470,3 +470,38 @@ describe('subagents', () => {
         expect(stripAgentFooter('kept as it is')).toEqual({ text: 'kept as it is', usage: null });
     });
 });
+
+describe('background tasks', () => {
+    test('a task takes its kind and command from the call that started it and leaves with its process', () => {
+        const { thread, project } = setup();
+        project(
+            { type: 'tool.started', ref: 'toolu_b', name: 'Bash', input: { command: 'bun run dev', run_in_background: true }, parentRef: null },
+            { type: 'tool.started', ref: 'toolu_m', name: 'Monitor', input: { command: 'tail -f log' }, parentRef: null },
+            { type: 'background.started', taskId: 'b', ref: 'toolu_b', monitor: false, description: 'Start the dev server' },
+            { type: 'background.started', taskId: 'm', ref: 'toolu_m', monitor: false, description: 'Watch the log' },
+            { type: 'background.started', taskId: 'b', ref: 'toolu_b', monitor: false, description: 'Start the dev server' }
+        );
+        expect(thread.info.background).toEqual([
+            { id: 'b', kind: 'shell', description: 'Start the dev server', command: 'bun run dev', startedAt: expect.any(Number) },
+            { id: 'm', kind: 'monitor', description: 'Watch the log', command: 'tail -f log', startedAt: expect.any(Number) }
+        ]);
+        project({ type: 'background.ended', taskId: 'b' });
+        expect(thread.info.background?.map((task) => task.id)).toEqual(['m']);
+        project({ type: 'exit', exitCode: 0 });
+        expect(thread.info.background).toEqual([]);
+    });
+
+    test('a call that runs on past its turn keeps its row running and settles it without opening a turn', () => {
+        const { thread, project } = setup();
+        project(
+            { type: 'tool.started', ref: 'exec', name: 'Bash', input: { command: 'bun run dev' }, parentRef: null },
+            { type: 'background.started', taskId: '44653', ref: 'exec', monitor: false, description: null },
+            { type: 'turn.done', state: 'done', costUsd: 0 }
+        );
+        expect(thread.get('1:exec')).toMatchObject({ state: 'running' });
+        expect(thread.info.background).toEqual([{ id: '44653', kind: 'shell', description: '', command: 'bun run dev', startedAt: expect.any(Number) }]);
+        project({ type: 'tool.done', ref: 'exec', output: 'stopped', state: 'error' }, { type: 'background.ended', taskId: '44653' });
+        expect(thread.get('1:exec')).toMatchObject({ state: 'error', output: 'stopped' });
+        expect(thread.info).toMatchObject({ activeTurnId: null, status: 'idle', background: [] });
+    });
+});

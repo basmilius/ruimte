@@ -232,6 +232,20 @@
     },
     "waitingBelow": "Waiting for your answer below"
   },
+  "activity": {
+    "subagents_one": "{{count}} sub-agent",
+    "subagents_other": "{{count}} sub-agents",
+    "shells_one": "{{count}} shell",
+    "shells_other": "{{count}} shells",
+    "monitors_one": "{{count}} monitor",
+    "monitors_other": "{{count}} monitors",
+    "openSubagents": "Show the sub-agents",
+    "background": "Running in the background",
+    "shell": "Shell",
+    "monitor": "Monitor",
+    "stop": "Stop",
+    "stopFailed": "The task could not be stopped"
+  },
   "subagents": {
     "stop": {
       "task": "Stop this task",

@@ -232,6 +232,20 @@
     },
     "waitingBelow": "Wacht hieronder op je antwoord"
   },
+  "activity": {
+    "subagents_one": "{{count}} sub-agent",
+    "subagents_other": "{{count}} sub-agents",
+    "shells_one": "{{count}} shell",
+    "shells_other": "{{count}} shells",
+    "monitors_one": "{{count}} monitor",
+    "monitors_other": "{{count}} monitors",
+    "openSubagents": "Toon de sub-agents",
+    "background": "Draait op de achtergrond",
+    "shell": "Shell",
+    "monitor": "Monitor",
+    "stop": "Stoppen",
+    "stopFailed": "De taak kon niet worden gestopt"
+  },
   "subagents": {
     "stop": {
       "task": "Deze taak stoppen",

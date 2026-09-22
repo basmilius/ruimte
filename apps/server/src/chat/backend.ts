@@ -94,6 +94,10 @@ export type BackendEvent =
     // A task the CLI runs beside the turn (a background subagent, a backgrounded command) settled.
     // Its summary is what the CLI says came of it, and what a turn the CLI opens on its own is about.
     | { type: 'task.done'; ref: string | null; summary: string | null; ok: boolean; usage?: ChatSubagentUsage | null; outputFile?: string | null }
+    // A command or a monitor the CLI keeps running beside its turns. `ref` is the call that started it, when a
+    // call did; `monitor` is set when the CLI's own frame already says it is one.
+    | { type: 'background.started'; taskId: string; ref: string | null; monitor: boolean; description: string | null }
+    | { type: 'background.ended'; taskId: string }
     | { type: 'usage'; contextTokens?: number; contextWindow?: number }
     // What the CLI said in passing about the plan it runs on; it belongs to the machine, not the chat.
     | { type: 'limits'; update: LimitsUpdate }
@@ -122,6 +126,8 @@ export interface ChatBackend {
     // False when nothing waits under that id, so the caller can answer the client with an error.
     respondApproval(requestId: string, decision: ApprovalDecision, message?: string): boolean;
     respondQuestion(requestId: string, answers: Record<string, string>): boolean;
+    // Ends one command or monitor the CLI runs beside its turns, for a protocol that can name one.
+    stopTask?(taskId: string): void;
     // Drops an asynchronous question without telling the CLI, for a protocol that keeps one waiting.
     dismissRequest?(requestId: string): boolean;
     // Gives the CLI's own thread the name the chat got, for a protocol whose thread list and resume carry one.

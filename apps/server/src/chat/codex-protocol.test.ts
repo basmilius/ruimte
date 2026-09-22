@@ -355,4 +355,38 @@ describe('rate limits', () => {
             protocol.handle({ method: 'account/rateLimits/updated', params: { rateLimits: { limitId: 'codex_spark', primary: { usedPercent: 3 } } } })
         ).toEqual([]);
     });
+
+    test('a terminal session still open when the turn ends runs on in the background until its item completes', () => {
+        const protocol = new CodexProtocol(1);
+        const command = (status: string) => ({
+            type: 'commandExecution',
+            id: 'exec-bg',
+            command: "/bin/zsh -lc 'bun run dev'",
+            cwd: '/w',
+            processId: '44653',
+            source: 'unifiedExecStartup',
+            status,
+            aggregatedOutput: status === 'inProgress' ? null : 'ready\n'
+        });
+        protocol.handle({ method: 'turn/started', params: { threadId: 't1', turn: { id: 'ct1' } } });
+        protocol.handle({ method: 'item/started', params: { ...ids, item: command('inProgress') } });
+        expect(protocol.handle({ method: 'turn/completed', params: { threadId: 't1', turn: { id: 'ct1', status: 'completed' } } })).toEqual([
+            { type: 'background.started', taskId: '44653', ref: 'exec-bg', monitor: false, description: null },
+            { type: 'turn.done', state: 'done', costUsd: 0, native: { turnId: 'ct1' } }
+        ]);
+        expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: command('failed') } })).toEqual([
+            { type: 'tool.done', ref: 'exec-bg', output: 'ready\n', state: 'error' },
+            { type: 'background.ended', taskId: '44653' }
+        ]);
+    });
+
+    test('a command that ended inside its turn never reaches the background', () => {
+        const protocol = new CodexProtocol(1);
+        const command = { type: 'commandExecution', id: 'exec-2', command: 'ls', cwd: '/w', processId: '1', status: 'inProgress' };
+        protocol.handle({ method: 'item/started', params: { ...ids, item: command } });
+        protocol.handle({ method: 'item/completed', params: { ...ids, item: { ...command, status: 'completed', aggregatedOutput: '' } } });
+        expect(protocol.handle({ method: 'turn/completed', params: { threadId: 't1', turn: { id: 'ct1', status: 'completed' } } })).toEqual([
+            { type: 'turn.done', state: 'done', costUsd: 0, native: { turnId: 'ct1' } }
+        ]);
+    });
 });

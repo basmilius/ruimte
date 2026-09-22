@@ -8001,6 +8001,44 @@
           ]
         }
       },
+      "background": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "shell",
+                "monitor"
+              ]
+            },
+            "description": {
+              "type": "string"
+            },
+            "command": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "startedAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "description",
+            "command",
+            "startedAt"
+          ]
+        }
+      },
       "usage": {
         "type": "object",
         "properties": {
@@ -9209,6 +9247,44 @@
                 "id",
                 "text",
                 "createdAt"
+              ]
+            }
+          },
+          "background": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "shell",
+                    "monitor"
+                  ]
+                },
+                "description": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "startedAt": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "description",
+                "command",
+                "startedAt"
               ]
             }
           },
@@ -12169,6 +12245,44 @@
                         ]
                       }
                     },
+                    "background": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "shell",
+                              "monitor"
+                            ]
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "command": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "description",
+                          "command",
+                          "startedAt"
+                        ]
+                      }
+                    },
                     "usage": {
                       "type": "object",
                       "properties": {
@@ -12431,6 +12545,44 @@
                           "id",
                           "text",
                           "createdAt"
+                        ]
+                      }
+                    },
+                    "background": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "shell",
+                              "monitor"
+                            ]
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "command": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "description",
+                          "command",
+                          "startedAt"
                         ]
                       }
                     },
@@ -13883,6 +14035,44 @@
           ]
         }
       },
+      "background": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "shell",
+                "monitor"
+              ]
+            },
+            "description": {
+              "type": "string"
+            },
+            "command": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "startedAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "description",
+            "command",
+            "startedAt"
+          ]
+        }
+      },
       "usage": {
         "type": "object",
         "properties": {
@@ -14414,6 +14604,44 @@
                 "id",
                 "text",
                 "createdAt"
+              ]
+            }
+          },
+          "background": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "shell",
+                    "monitor"
+                  ]
+                },
+                "description": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "startedAt": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "description",
+                "command",
+                "startedAt"
               ]
             }
           },
@@ -15641,6 +15869,30 @@
     ]
   },
   "request.chat.stopSubagent.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.chat.stopTask.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "taskId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "chatId",
+      "taskId"
+    ]
+  },
+  "request.chat.stopTask.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
@@ -29453,6 +29705,44 @@
                 ]
               }
             },
+            "background": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "shell",
+                      "monitor"
+                    ]
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "command": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "startedAt": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "id",
+                  "kind",
+                  "description",
+                  "command",
+                  "startedAt"
+                ]
+              }
+            },
             "usage": {
               "type": "object",
               "properties": {
@@ -31977,6 +32267,44 @@
                       ]
                     }
                   },
+                  "background": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "shell",
+                            "monitor"
+                          ]
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "command": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "startedAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "description",
+                        "command",
+                        "startedAt"
+                      ]
+                    }
+                  },
                   "usage": {
                     "type": "object",
                     "properties": {
@@ -32239,6 +32567,44 @@
                         "id",
                         "text",
                         "createdAt"
+                      ]
+                    }
+                  },
+                  "background": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "shell",
+                            "monitor"
+                          ]
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "command": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "startedAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "description",
+                        "command",
+                        "startedAt"
                       ]
                     }
                   },
@@ -33397,6 +33763,44 @@
                 "id",
                 "text",
                 "createdAt"
+              ]
+            }
+          },
+          "background": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "shell",
+                    "monitor"
+                  ]
+                },
+                "description": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "startedAt": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "description",
+                "command",
+                "startedAt"
               ]
             }
           },

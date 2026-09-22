@@ -73,6 +73,10 @@ export class ClaudeBackend implements ChatBackend {
         this.write({ type: 'control_request', request_id: `interrupt-${Date.now()}`, request: { subtype: 'interrupt' } });
     }
 
+    stopTask(taskId: string): void {
+        this.write(this.protocol.stopTaskRequest(taskId));
+    }
+
     respondApproval(requestId: string, decision: ApprovalDecision, message?: string): boolean {
         const frame = this.protocol.approvalResponse(requestId, decision, message);
         if (frame === null) {

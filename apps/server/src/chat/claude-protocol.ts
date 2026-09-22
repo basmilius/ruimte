@@ -31,6 +31,10 @@ const taskUsage = (usage: unknown): ChatSubagentUsage | null =>
 const contextTokens = (usage: unknown): number =>
     isRecord(usage) ? num(usage.input_tokens) + num(usage.cache_creation_input_tokens) + num(usage.cache_read_input_tokens) : 0;
 
+// The kinds of task Claude Code keeps beside its turns that are a command or a monitor; a subagent has a row of its own.
+const BACKGROUND_TASK_TYPES = new Set(['local_bash', 'monitor_mcp', 'monitor_ws']);
+const ENDED_TASK_STATUSES = new Set(['completed', 'failed', 'killed', 'stopped']);
+
 // The CLI's AskUserQuestion input, as far as the person needs to see it.
 const parseQuestions = (input: unknown): ChatQuestion[] => {
     if (!isRecord(input) || !Array.isArray(input.questions)) {
@@ -67,6 +71,9 @@ export class ClaudeProtocol {
     private readonly streamBlocks = new Map<number, string>();
     private readonly frameTextCount = new Map<string, number>();
     private readonly frameThinkingCount = new Map<string, number>();
+    // Commands started in the foreground, which the CLI may still send to the background, and what runs there now.
+    private readonly foregroundShells = new Map<string, { ref: string | null; description: string | null }>();
+    private readonly backgroundTasks = new Set<string>();
     // The uuid of the last main-chain assistant frame of the turn, which is the line of the transcript the turn ends on.
     private lastUuid: string | null = null;
 
@@ -178,26 +185,9 @@ export class ClaudeProtocol {
             const skills = Array.isArray(frame.skills) ? frame.skills.filter((skill): skill is string => typeof skill === 'string') : [];
             events.push({ type: 'session', agentSessionId: str(frame.session_id), model: str(frame.model), slashCommands: commands, skills });
         } else if (frame.subtype === 'task_started') {
-            const ref = str(frame.tool_use_id);
-            if (!ref) {
-                return;
-            }
-            if (frame.task_type === 'local_agent') {
-                events.push({
-                    type: 'task.started',
-                    ref,
-                    description: str(frame.description),
-                    subagentType: str(frame.subagent_type),
-                    prompt: str(frame.prompt),
-                    background: frame.is_backgrounded === true
-                });
-            } else {
-                // A Bash call became a task; its description is the CLI's own words for the work.
-                const description = str(frame.description);
-                if (description) {
-                    events.push({ type: 'tool.progress', ref, startedAt: null, description });
-                }
-            }
+            this.handleTaskStarted(frame, events);
+        } else if (frame.subtype === 'task_updated') {
+            this.handleTaskUpdated(frame, events);
         } else if (frame.subtype === 'task_progress') {
             const ref = str(frame.tool_use_id);
             if (!ref) {
@@ -219,6 +209,10 @@ export class ClaudeProtocol {
                 }
             }
         } else if (frame.subtype === 'task_notification') {
+            const taskId = str(frame.task_id);
+            if (taskId) {
+                this.endBackground(taskId, events);
+            }
             // The CLI wakes the main agent itself when a background task settles; this frame is the only
             // thing that says what it was about, and it arrives before the turn nobody asked for.
             events.push({
@@ -234,6 +228,74 @@ export class ClaudeProtocol {
             const preTokens = num(meta.pre_tokens);
             events.push({ type: 'compaction', preTokens: preTokens > 0 ? preTokens : null });
         }
+    }
+
+    private handleTaskStarted(frame: Frame, events: BackendEvent[]): void {
+        const ref = str(frame.tool_use_id);
+        if (frame.task_type === 'local_agent') {
+            if (ref) {
+                events.push({
+                    type: 'task.started',
+                    ref,
+                    description: str(frame.description),
+                    subagentType: str(frame.subagent_type),
+                    prompt: str(frame.prompt),
+                    background: frame.is_backgrounded === true
+                });
+            }
+            return;
+        }
+        const taskId = str(frame.task_id);
+        const description = str(frame.description);
+        if (taskId && typeof frame.task_type === 'string' && BACKGROUND_TASK_TYPES.has(frame.task_type) && frame.ambient !== true) {
+            if (frame.is_backgrounded === false) {
+                this.foregroundShells.set(taskId, { ref, description });
+            } else {
+                this.startBackground(taskId, ref, frame.task_type !== 'local_bash', description, events);
+            }
+        }
+        // A Bash call became a task; its description is the CLI's own words for the work.
+        if (ref && description) {
+            events.push({ type: 'tool.progress', ref, startedAt: null, description });
+        }
+    }
+
+    /* A command the person or the CLI sent to the background halfway, or a task that ended. */
+    private handleTaskUpdated(frame: Frame, events: BackendEvent[]): void {
+        const taskId = str(frame.task_id);
+        const patch = isRecord(frame.patch) ? frame.patch : {};
+        if (!taskId) {
+            return;
+        }
+        const shell = this.foregroundShells.get(taskId);
+        if (shell && patch.is_backgrounded === true) {
+            this.foregroundShells.delete(taskId);
+            this.startBackground(taskId, shell.ref, false, str(patch.description) ?? shell.description, events);
+        }
+        const status = str(patch.status);
+        if (status !== null && ENDED_TASK_STATUSES.has(status)) {
+            this.foregroundShells.delete(taskId);
+            this.endBackground(taskId, events);
+        }
+    }
+
+    private startBackground(taskId: string, ref: string | null, monitor: boolean, description: string | null, events: BackendEvent[]): void {
+        if (this.backgroundTasks.has(taskId)) {
+            return;
+        }
+        this.backgroundTasks.add(taskId);
+        events.push({ type: 'background.started', taskId, ref, monitor, description });
+    }
+
+    private endBackground(taskId: string, events: BackendEvent[]): void {
+        if (this.backgroundTasks.delete(taskId)) {
+            events.push({ type: 'background.ended', taskId });
+        }
+    }
+
+    /* The control request that ends one task the CLI runs beside its turns. */
+    stopTaskRequest(taskId: string): unknown {
+        return { type: 'control_request', request_id: `stop-task-${taskId}-${Date.now()}`, request: { subtype: 'stop_task', task_id: taskId } };
     }
 
     private handleStreamEvent(frame: Frame, events: BackendEvent[]): void {

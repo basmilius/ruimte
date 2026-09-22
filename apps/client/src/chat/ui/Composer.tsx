@@ -31,6 +31,7 @@ import { PROMPT_MAX_CHARS, pasteBecomesAttachment, pastedTextName, promptGuard, 
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
+import { ChatActivity } from '@/chat/ui/ChatActivity';
 import { chipDecorations } from '@/chat/ui/composer/chips';
 import { enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirection, tabSpaces } from '@/chat/ui/composer/keys';
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
@@ -706,6 +707,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                     </Tooltip>
                 </div>
             )}
+            <ChatActivity chatId={chatId} />
             <div
                 className={clsx(
                     'pointer-events-auto flex flex-col overflow-hidden rounded-2xl border shadow-float backdrop-blur-[14px] focus-within:border-accent',

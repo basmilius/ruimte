@@ -97,6 +97,17 @@ export const ChatQueuedMessageSchema = z.object({
 });
 export type ChatQueuedMessage = z.infer<typeof ChatQueuedMessageSchema>;
 
+// A command or a monitor the CLI keeps running beside its turns, until it ends or its process does.
+export const ChatBackgroundTaskSchema = z.object({
+    // The CLI's own id for the task, which is what stopping it names.
+    id: z.string().min(1),
+    kind: z.enum(['shell', 'monitor']),
+    description: z.string(),
+    command: z.string().nullable(),
+    startedAt: z.number()
+});
+export type ChatBackgroundTask = z.infer<typeof ChatBackgroundTaskSchema>;
+
 export const ChatInfoSchema = z.object({
     chatId: ChatIdSchema,
     provider: AgentKindSchema,
@@ -117,6 +128,7 @@ export const ChatInfoSchema = z.object({
     skills: z.array(z.string()).optional(),
     // Messages typed while a turn ran, in the order they go out once it settles.
     queue: z.array(ChatQueuedMessageSchema).optional(),
+    background: z.array(ChatBackgroundTaskSchema).optional(),
     usage: ChatUsageSchema,
     // The name the CLI gave the session, when it gives one; a node that nobody named takes it.
     suggestedTitle: SuggestedTitleSchema.optional(),
@@ -500,6 +512,9 @@ export const ChatStopSubagentPayloadSchema = ChatTargetPayloadSchema.extend({
     toolUseId: z.string().min(1).max(256)
 });
 export type ChatStopSubagentPayload = z.infer<typeof ChatStopSubagentPayloadSchema>;
+
+export const ChatStopTaskPayloadSchema = ChatTargetPayloadSchema.extend({ taskId: z.string().min(1).max(256) });
+export type ChatStopTaskPayload = z.infer<typeof ChatStopTaskPayloadSchema>;
 
 // `start` is the place in the conversation for a source that numbers it; a Codex thread pages by its own cursor only.
 export const ChatSubagentPageSchema = z.object({

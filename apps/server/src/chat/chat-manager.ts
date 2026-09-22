@@ -502,6 +502,12 @@ export class ChatManager {
         session.markSubagentStopped(toolUseId);
     }
 
+    /* Ends a command or a monitor a chat's CLI runs in the background, for a person who pressed Stop on it. */
+    async stopTask(chatId: string, taskId: string): Promise<void> {
+        await this.creating.get(chatId)?.catch(() => undefined);
+        this.require(chatId).stopTask(taskId);
+    }
+
     /* The whole conversation of a subagent, for an agent that reads it as text. */
     async subagentItems(chatId: string, toolUseId: string): Promise<ChatItem[]> {
         const childId = this.taskChildOf(chatId, toolUseId);

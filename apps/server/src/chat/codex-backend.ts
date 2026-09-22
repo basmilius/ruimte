@@ -218,6 +218,15 @@ export class CodexBackend implements ChatBackend {
         });
     }
 
+    stopTask(taskId: string): void {
+        if (!this.transport) {
+            return;
+        }
+        void this.transport.request('thread/backgroundTerminals/terminate', { threadId: this.threadId, processId: taskId }).catch(() => {
+            // A process that already ended has nothing to terminate; its item says so on its own.
+        });
+    }
+
     respondApproval(requestId: string, decision: ApprovalDecision): boolean {
         if (!this.transport) {
             return false;

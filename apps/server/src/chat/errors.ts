@@ -8,6 +8,7 @@ type ChatErrorCode =
     | 'chat-unsupported'
     | 'invalid-attachments'
     | 'subagent-not-found'
+    | 'task-not-found'
     // What a fork is refused with.
     | 'turn-not-found'
     | 'turn-running'

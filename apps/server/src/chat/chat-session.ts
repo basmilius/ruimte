@@ -285,6 +285,17 @@ export class ChatSession {
         this.run((backend) => backend.interrupt());
     }
 
+    /* Ends a command or a monitor the CLI runs in the background; the CLI's own report takes it off the list. */
+    stopTask(taskId: string): void {
+        if (!this.thread.info.background?.some((task) => task.id === taskId)) {
+            throw new ChatError('task-not-found', 'This chat runs no such task');
+        }
+        if (!this.backend?.stopTask) {
+            throw new ChatError('chat-unsupported', 'This CLI cannot stop a task on its own');
+        }
+        this.backend.stopTask(taskId);
+    }
+
     /* Answers a pending approval; false when nothing waits under that id. */
     approve(requestId: string, decision: 'allow' | 'allow-always' | 'deny', message?: string): boolean {
         const item = this.thread.get(`approval-${requestId}`);
@@ -351,6 +362,7 @@ export class ChatSession {
                 status: 'idle',
                 activeTurnId: null,
                 queue: [],
+                background: [],
                 slashCommands: [],
                 // The next CLI starts on the current pick, so the window the one that just went reported is not its.
                 usage: { ...usage, contextTokens: 0, contextWindow: this.options.provider.catalog.contextWindowFor(this.thread.info.selection) }
@@ -382,6 +394,10 @@ export class ChatSession {
         }
         const info = this.thread.info;
         const patch: Partial<ChatInfo> = { selection, running: false, status: resumeTurnId === null ? 'idle' : 'running', activeTurnId: resumeTurnId };
+        // No process of the daemon that went down is left to run what it kept in the background.
+        if (info.background?.length) {
+            patch.background = [];
+        }
         // The window stored is whatever the session that went left behind; the next CLI starts on the pick.
         const contextWindow = this.options.provider.catalog.contextWindowFor(selection);
         if (contextWindow !== info.usage.contextWindow) {
@@ -391,6 +407,7 @@ export class ChatSession {
             JSON.stringify(selection) !== JSON.stringify(info.selection) ||
             patch.usage !== undefined ||
             info.running ||
+            patch.background !== undefined ||
             info.status !== patch.status ||
             info.activeTurnId !== resumeTurnId
         ) {
@@ -592,7 +609,15 @@ export class ChatSession {
         if (turnId !== null) {
             events.push(this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'warning', text: reason }));
         }
-        events.push(this.thread.patchInfo({ running: false, status: 'idle', activeTurnId: null, ...(this.queue.length > 0 ? { queue: [] } : {}) }));
+        events.push(
+            this.thread.patchInfo({
+                running: false,
+                status: 'idle',
+                activeTurnId: null,
+                ...(this.queue.length > 0 ? { queue: [] } : {}),
+                ...(this.thread.info.background?.length ? { background: [] } : {})
+            })
+        );
         this.emit(events);
         this.options.persist();
     }

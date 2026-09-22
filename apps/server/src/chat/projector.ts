@@ -1,4 +1,4 @@
-import type { ChatEvent, ChatItem, ChatSubagentItem, ChatSubagentUsage, ChatToolItem, ChatToolProgress } from '@ruimte/contracts';
+import type { ChatBackgroundTask, ChatEvent, ChatItem, ChatSubagentItem, ChatSubagentUsage, ChatToolItem, ChatToolProgress } from '@ruimte/contracts';
 import type { BackendEvent } from './backend.ts';
 import type { ChatThread } from './thread.ts';
 
@@ -100,6 +100,8 @@ export class ThreadProjector {
     private taskToolUseId: string | null = null;
     // Per subagent item: how much of its own work the thread already keeps.
     private readonly budgets = new Map<string, { items: number; textBytes: number }>();
+    // Calls whose command runs on past the turn that made them, so settling that turn leaves their rows running.
+    private readonly backgroundCalls = new Set<string>();
     // The stretch of thinking still open: its item, and which refs already streamed into it.
     private thinking: { id: string; refs: Set<string>; last: string | null } | null = null;
 
@@ -114,6 +116,7 @@ export class ThreadProjector {
         this.taskSummary = null;
         this.taskToolUseId = null;
         this.budgets.clear();
+        this.backgroundCalls.clear();
         this.thinking = null;
     }
 
@@ -252,6 +255,16 @@ export class ThreadProjector {
                 }
                 break;
             }
+            case 'background.started':
+                this.startBackground(generation, event, events);
+                break;
+            case 'background.ended': {
+                const background = info.background ?? [];
+                if (background.some((task) => task.id === event.taskId)) {
+                    events.push(this.thread.patchInfo({ background: background.filter((task) => task.id !== event.taskId) }));
+                }
+                break;
+            }
             case 'usage':
                 events.push(
                     this.thread.patchInfo({
@@ -338,7 +351,7 @@ export class ThreadProjector {
                 events.push(this.thread.upsert({ ...item, decision: 'cancelled' }));
             } else if (item.kind === 'question' && item.state === 'pending') {
                 events.push(this.thread.upsert({ ...item, state: 'cancelled' }));
-            } else if (item.kind === 'tool' && item.state === 'running') {
+            } else if (item.kind === 'tool' && item.state === 'running' && (processGone || !this.backgroundCalls.has(item.id))) {
                 events.push(this.thread.upsert({ ...item, state: 'error' }));
             } else if (item.kind === 'subagent' && item.status === 'running' && (processGone || !item.background)) {
                 events.push(this.thread.upsert({ ...item, status: 'failed', finishedAt: this.now() }));
@@ -448,6 +461,7 @@ export class ThreadProjector {
         if (tool?.kind !== 'tool') {
             return;
         }
+        this.backgroundCalls.delete(tool.id);
         if (tool.parentToolUseId !== null) {
             const parent = this.subagent(generation, tool.parentToolUseId);
             if (parent) {
@@ -653,6 +667,28 @@ export class ThreadProjector {
         );
     }
 
+    /* A shell or a monitor, told apart by the call that started it when the CLI's frame does not say. */
+    private startBackground(generation: number, event: Extract<BackendEvent, { type: 'background.started' }>, events: ChatEvent[]): void {
+        const background = this.thread.info.background ?? [];
+        if (background.some((task) => task.id === event.taskId)) {
+            return;
+        }
+        const call = event.ref === null ? undefined : this.thread.get(this.itemId(generation, event.ref));
+        const tool = call?.kind === 'tool' ? call : null;
+        if (tool !== null) {
+            this.backgroundCalls.add(tool.id);
+        }
+        const input = tool && isRecord(tool.input) ? tool.input : {};
+        const task: ChatBackgroundTask = {
+            id: event.taskId,
+            kind: event.monitor || event.ref === null || tool?.name === 'Monitor' ? 'monitor' : 'shell',
+            description: event.description ?? str(input.description) ?? '',
+            command: str(input.command),
+            startedAt: this.now()
+        };
+        events.push(this.thread.patchInfo({ background: [...background, task] }));
+    }
+
     private withdraw(requestId: string, events: ChatEvent[]): void {
         const approval = this.thread.get(`approval-${requestId}`);
         if (approval?.kind === 'approval' && approval.decision === 'pending') {
@@ -695,7 +731,15 @@ export class ThreadProjector {
             events.push(this.note('error', exitCode === null ? `${this.providerName} stopped` : `${this.providerName} exited with code ${exitCode}`));
         }
         this.closeTurn(busy ? 'error' : 'done', 0, events);
-        events.push(this.thread.patchInfo({ running: false, status: busy ? 'error' : 'idle', activeTurnId: null }));
+        // Whatever ran beside the turns went with the process.
+        events.push(
+            this.thread.patchInfo({
+                running: false,
+                status: busy ? 'error' : 'idle',
+                activeTurnId: null,
+                ...(this.thread.info.background?.length ? { background: [] } : {})
+            })
+        );
     }
 
     private closeTurn(state: 'done' | 'aborted' | 'error', costUsd: number, events: ChatEvent[], native?: { turnId?: string; lastUuid?: string }): void {

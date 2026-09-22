@@ -137,6 +137,9 @@ export class CodexProtocol {
     // The input the thread shows for an item, so an approval about it can repeat what it is for.
     private readonly toolInputs = new Map<string, { input: unknown; changes: ChatFileChange[] }>();
     private codexTurnId: string | null = null;
+    // Command items with a terminal session of their own, by item id, to the process id that ending one names.
+    private readonly openTerminals = new Map<string, string>();
+    private readonly backgroundTerminals = new Map<string, string>();
 
     constructor(generation: number) {
         this.generation = generation;
@@ -408,17 +411,34 @@ export class CodexProtocol {
                 }
                 return;
             }
-            case 'commandExecution':
+            case 'commandExecution': {
+                const output = str(item.aggregatedOutput) ?? '';
+                const succeeded = str(item.status) === 'completed';
+                // Its turn is long over, so only the row learns how it ended; a start again would open a turn nobody ends.
+                const backgroundId = this.backgroundTerminals.get(ref);
+                if (completed && backgroundId !== undefined) {
+                    this.backgroundTerminals.delete(ref);
+                    events.push({ type: 'tool.done', ref, output, state: succeeded ? 'done' : 'error' });
+                    events.push({ type: 'background.ended', taskId: backgroundId });
+                    return;
+                }
+                const processId = str(item.processId);
+                if (!completed && processId !== null) {
+                    this.openTerminals.set(ref, processId);
+                } else {
+                    this.openTerminals.delete(ref);
+                }
                 this.tool(
                     ref,
                     'Bash',
                     { command: unwrapCommand(str(item.command) ?? ''), cwd: str(item.cwd) ?? undefined },
                     completed,
-                    str(item.aggregatedOutput) ?? '',
-                    str(item.status) === 'completed',
+                    output,
+                    succeeded,
                     events
                 );
                 return;
+            }
             case 'fileChange': {
                 const changes = parseChanges(item.changes);
                 this.tool(
@@ -483,6 +503,12 @@ export class CodexProtocol {
         const turnId = str(turn.id) ?? this.codexTurnId;
         this.codexTurnId = null;
         this.pending.clear();
+        // A terminal session still open as the turn ends is one Codex left running; it only completes once its process does.
+        for (const [ref, processId] of this.openTerminals) {
+            this.backgroundTerminals.set(ref, processId);
+            events.push({ type: 'background.started', taskId: processId, ref, monitor: false, description: null });
+        }
+        this.openTerminals.clear();
         events.push({
             type: 'turn.done',
             state: status === 'interrupted' ? 'aborted' : status === 'failed' ? 'error' : 'done',

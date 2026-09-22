@@ -346,4 +346,47 @@ describe('ClaudeProtocol', () => {
             }
         ]);
     });
+
+    test('a command or a monitor in the background is started once and ended by whatever says so first', () => {
+        const protocol = new ClaudeProtocol();
+        const started = (taskId: string, extra: Record<string, unknown>) =>
+            protocol.handle({ type: 'system', subtype: 'task_started', task_id: taskId, description: 'Watch the build', ...extra });
+        expect(started('b1', { task_type: 'local_bash', tool_use_id: 'toolu_b1', is_backgrounded: true })).toEqual([
+            { type: 'background.started', taskId: 'b1', ref: 'toolu_b1', monitor: false, description: 'Watch the build' },
+            { type: 'tool.progress', ref: 'toolu_b1', startedAt: null, description: 'Watch the build' }
+        ]);
+        // A plugin's monitor has no call behind it, and an ambient one is the CLI's own business.
+        expect(started('m1', { task_type: 'monitor_mcp' })).toEqual([
+            { type: 'background.started', taskId: 'm1', ref: null, monitor: true, description: 'Watch the build' }
+        ]);
+        expect(started('m2', { task_type: 'monitor_ws', ambient: true })).toEqual([]);
+        expect(protocol.handle({ type: 'system', subtype: 'task_updated', task_id: 'b1', patch: { status: 'killed' } })).toEqual([
+            { type: 'background.ended', taskId: 'b1' }
+        ]);
+        expect(protocol.handle({ type: 'system', subtype: 'task_notification', task_id: 'b1', status: 'killed' })).toEqual([
+            { type: 'task.done', ref: null, summary: null, ok: false, usage: null, outputFile: null }
+        ]);
+        expect(protocol.handle({ type: 'system', subtype: 'task_notification', task_id: 'm1', status: 'completed' })[0]).toEqual({
+            type: 'background.ended',
+            taskId: 'm1'
+        });
+    });
+
+    test('a foreground command joins the background only once the CLI moves it there', () => {
+        const protocol = new ClaudeProtocol();
+        expect(
+            protocol.handle({
+                type: 'system',
+                subtype: 'task_started',
+                task_id: 'b2',
+                task_type: 'local_bash',
+                tool_use_id: 'toolu_b2',
+                is_backgrounded: false
+            })
+        ).toEqual([]);
+        expect(
+            protocol.handle({ type: 'system', subtype: 'task_updated', task_id: 'b2', patch: { is_backgrounded: true, description: 'Run the tests' } })
+        ).toEqual([{ type: 'background.started', taskId: 'b2', ref: 'toolu_b2', monitor: false, description: 'Run the tests' }]);
+        expect(protocol.stopTaskRequest('b2')).toMatchObject({ type: 'control_request', request: { subtype: 'stop_task', task_id: 'b2' } });
+    });
 });
