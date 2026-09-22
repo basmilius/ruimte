@@ -13,6 +13,7 @@ import { resizedRect } from '@/canvas/resize';
 import { canLink } from '@/canvas/edge-lines';
 import { resizedText } from '@/canvas/text-resize';
 import { framePressHandsKeyboard } from '@/canvas/frame-press';
+import { stackingOrder } from '@/canvas/stacking';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { carriedByGroups, isNodeActive, NODE_SIZE, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
@@ -24,6 +25,7 @@ import { PortHints } from '@/canvas/PortHints';
 import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
 import { TextToolbar } from '@/canvas/TextToolbar';
+import { CellOverlay } from '@/shell/CellOverlay';
 import { isInFloatingLayer } from '@/ui/floating';
 
 type Gesture =
@@ -106,12 +108,7 @@ export function Canvas() {
        keyboard loses it. Bringing a node to the front is a click in it, so that is exactly when it
        may not happen. */
     const drawIds = useMemo(() => [...order].sort(), [order]);
-    // Groups paint under everything else, whatever their place in the stacking order.
-    const stacking = useMemo(() => {
-        const groups = order.filter((id) => nodes[id]?.kind === 'group');
-        const rest = order.filter((id) => nodes[id]?.kind !== 'group');
-        return Object.fromEntries([...groups, ...rest].map((id, index) => [id, index + 1]));
-    }, [order, nodes]);
+    const stacking = useMemo(() => stackingOrder(nodes, order), [order, nodes]);
 
     useLayoutEffect(() => {
         const gesture = gestureRef.current;
@@ -595,21 +592,24 @@ export function Canvas() {
                     {/* Over the nodes, so a port beside one is never covered by the node standing next to it. */}
                     <PortHints rootRef={rootRef} />
                 </div>
-                <AlignmentGuides guides={guides} camera={camera} />
-                <TextToolbar />
                 {drawIds.length === 0 && textIds.length === 0 && <EmptyCanvas />}
-                {dropping && <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-accent ring-inset" aria-hidden />}
-                {box && (
-                    <div
-                        className="pointer-events-none absolute rounded-sm border border-accent bg-accent/10"
-                        style={{
-                            left: box.x,
-                            top: box.y,
-                            width: box.w,
-                            height: box.h
-                        }}
-                    />
-                )}
+                {/* Over the pages, which the canvas itself cannot draw over. */}
+                <CellOverlay slot="view">
+                    <AlignmentGuides guides={guides} camera={camera} />
+                    <TextToolbar />
+                    {dropping && <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-accent ring-inset" aria-hidden />}
+                    {box && (
+                        <div
+                            className="pointer-events-none absolute rounded-sm border border-accent bg-accent/10"
+                            style={{
+                                left: box.x,
+                                top: box.y,
+                                width: box.w,
+                                height: box.h
+                            }}
+                        />
+                    )}
+                </CellOverlay>
             </ContextMenu.Trigger>
             <CanvasMenuPopup at={() => menuPoint.current} />
         </ContextMenu.Root>

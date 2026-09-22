@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import { WebviewParking } from '@/browser/WebviewParking';
+import { CellOverlayLayer } from '@/shell/CellOverlay';
 import { useCanvasShortcuts } from '@/canvas/canvas-shortcuts';
 import { desktop } from '@/desktop/bridge';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
@@ -68,6 +69,8 @@ function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                             <div className="relative min-h-0 grow">
                                 <ViewHost />
                                 <WebviewParking />
+                                {/* The chrome of a cell, over the pages a cell cannot draw over itself. */}
+                                <CellOverlayLayer />
                                 {/* After the parked pages, which carry no z-index of their own and would otherwise draw over it. */}
                                 <MachineLostScreen />
                                 <ProjectSwitchScreen />

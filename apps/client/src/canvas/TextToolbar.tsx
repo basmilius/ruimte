@@ -82,7 +82,7 @@ export function TextToolbar() {
             ref={toolbarRef}
             role="toolbar"
             aria-label={t('text.format')}
-            className={`absolute z-10 flex h-10 items-center gap-1 rounded-xl px-1.5 ${FLOAT}`}
+            className={`pointer-events-auto absolute z-10 flex h-10 items-center gap-1 rounded-xl px-1.5 ${FLOAT}`}
             style={{
                 left,
                 top: Math.max(GAP, Math.min(above < GAP ? below : above, viewport.h - BAR_HEIGHT - GAP)),

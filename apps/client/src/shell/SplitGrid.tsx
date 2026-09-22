@@ -10,6 +10,7 @@ import { ViewSurface } from '@/shell/ViewHost';
 import { CellToolbar } from '@/shell/CellToolbar';
 import { cellsMoved, registerCell } from '@/shell/cell-rects';
 import { Dock } from '@/shell/Dock';
+import { CellOverlay } from '@/shell/CellOverlay';
 
 /* The smallest a cell may be dragged to, as a share of its axis. Below this nothing in it is legible. */
 const MIN_SHARE = 0.15;
@@ -157,11 +158,13 @@ function Cell({
            with a splitter drag, which moves no state at all, hence the observer. */
         <div ref={(element) => watchCell(viewId, element)} className="relative min-h-0 grow overflow-hidden">
             <ViewSurface view={view} />
-            {/* The dock belongs to the canvas under it, so it is drawn in the cell that has the
-                focus and nowhere else: nine docks would be nine rows of the same buttons. */}
-            {focused && <Dock onHiddenChange={setDockHidden} />}
-            {/* A stack per canvas, not per dock: a cell without the focus has no dock, and its prompts still need a place. */}
-            {isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
+            <CellOverlay slot="cell">
+                {/* The dock belongs to the canvas under it, so it is drawn in the cell that has the
+                    focus and nowhere else: nine docks would be nine rows of the same buttons. */}
+                {focused && <Dock onHiddenChange={setDockHidden} />}
+                {/* A stack per canvas, not per dock: a cell without the focus has no dock, and its prompts still need a place. */}
+                {isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
+            </CellOverlay>
         </div>
     );
     return (

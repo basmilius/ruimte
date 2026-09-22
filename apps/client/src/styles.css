@@ -739,6 +739,11 @@
     body[data-view-drag] .browser-host,
     body[data-view-drag] .file-preview-page { pointer-events: none; }
 
+    /* A page fills the bottom of the node it belongs to, so it takes that node's corners. A browser
+       view is a whole cell and has none. */
+    .browser-host { border-radius: 0 0 var(--radius-xl) var(--radius-xl); }
+    .browser-host[data-square] { border-radius: 0; }
+
     /* A diff inside a chat tool block; the library paints its own colors inside a shadow root and
        takes the face it draws them in through these variables. */
     .chat-diff { font-size: var(--text-code); --diffs-font-size: var(--text-code); --diffs-font-family: var(--font-mono); }
