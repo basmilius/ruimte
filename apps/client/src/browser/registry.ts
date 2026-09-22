@@ -345,6 +345,9 @@ class BrowserRegistry {
                 }
             } else if (message.channel === 'ruimte:wheel' && isWheelSample(payload)) {
                 this.feedSwipe(key, element, payload);
+            } else if (message.channel === 'ruimte:ground' && typeof payload === 'string') {
+                // A page is transparent where it paints nothing, so its own ground goes behind it.
+                element.style.backgroundColor = payload;
             }
         });
     }

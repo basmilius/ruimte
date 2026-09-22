@@ -95,3 +95,28 @@ window.addEventListener('keydown', (event) => {
         ipcRenderer.sendToHost('ruimte:navigate', event.code === 'BracketLeft' ? 'back' : 'forward');
     }
 });
+
+/*
+ * What Chromium would paint under this page if it drew no ground of its own: the CSS system color,
+ * which already follows the page's own `color-scheme` and the app's theme. The element the page sits
+ * in is what shows through a transparent page, so without this a page that leaves its background to
+ * the browser stands on the app's ground instead of the white every browser gives it.
+ */
+const reportGround = (): void => {
+    // The system color can only be read off an element in the document, so one is put there for a tick.
+    const probe = document.createElement('div');
+    probe.style.cssText = 'background-color: Canvas; display: none';
+    document.documentElement.appendChild(probe);
+    const ground = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    ipcRenderer.sendToHost('ruimte:ground', ground);
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', reportGround, { once: true });
+} else {
+    reportGround();
+}
+
+// A page that leaves the choice to the reader (`color-scheme: light dark`) changes ground with the app.
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', reportGround);
