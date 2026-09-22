@@ -2,6 +2,8 @@ import { ProjectSidebarResultSchema } from './project-sidebar.ts';
 import { z } from 'zod';
 import {
     BrowserCommandPayloadSchema,
+    BrowserDevServersPayloadSchema,
+    BrowserDevServersResultSchema,
     BrowserFrameSchema,
     BrowserInfoSchema,
     BrowserInputPayloadSchema,
@@ -268,6 +270,7 @@ export const REQUEST_SCHEMAS = {
     'browser.command': { payload: BrowserCommandPayloadSchema, result: BrowserInfoSchema },
     'browser.resize': { payload: BrowserResizePayloadSchema, result: EmptySchema },
     'browser.input': { payload: BrowserInputPayloadSchema, result: EmptySchema },
+    'browser.devServers': { payload: BrowserDevServersPayloadSchema, result: BrowserDevServersResultSchema },
     'device.list': { payload: EmptySchema, result: DeviceListResultSchema },
     'device.boot': { payload: DeviceTargetPayloadSchema, result: DeviceInfoSchema },
     'device.shutdown': { payload: DeviceTargetPayloadSchema, result: DeviceInfoSchema },

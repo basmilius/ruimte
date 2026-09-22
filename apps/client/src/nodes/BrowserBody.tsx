@@ -20,7 +20,9 @@ import {
     WifiOff,
     X
 } from 'lucide-react';
+import { BrowserSplash } from '@/browser/BrowserSplash';
 import { classifyLoadError, type LoadErrorKind } from '@/browser/load-error';
+import { openPage } from '@/browser/open-page';
 import { prettyUrl } from '@/browser/pretty-url';
 import { browserRegistry, useBrowserRow } from '@/browser/registry';
 import { BrowserStream } from '@/browser/BrowserStream';
@@ -38,27 +40,26 @@ import { Select } from '@/ui/Select';
 import { formatShortcut, KEY_SHORTCUTS } from '@/ui/shortcut';
 import { browserClientFor } from '@/transport/connections';
 
-export const DEFAULT_URL = 'https://bas.dev';
-
 /*
  * Keeps one page alive for this client. The view's address starts it; navigation stays in the
- * client runtime. The page itself is a <webview> in the parking layer, never here.
+ * client runtime. The page itself is a <webview> in the parking layer, never here. A node without
+ * an address has no page at all: it shows the splash until something gives it one.
  */
 export const usePage = (id: string): { url: string; available: boolean } => {
     const host = useNodeHost(id);
-    const savedUrl = host?.url;
+    const savedUrl = host?.url ?? '';
     const state = useBrowserRow(id, (row) => row);
     const key = endpointKey(useEndpointId(), id);
     const available = isDesktop();
 
     useEffect(() => {
-        if (available) {
-            browserRegistry.ensure(key, savedUrl ?? DEFAULT_URL);
+        if (available && savedUrl !== '') {
+            browserRegistry.ensure(key, savedUrl);
         }
         // The page stays when this unmounts (culling, a view switch); only a delete destroys it.
     }, [key, available, savedUrl]);
 
-    return { url: state?.url ?? savedUrl ?? DEFAULT_URL, available };
+    return { url: state?.url ?? savedUrl, available };
 };
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
@@ -88,7 +89,9 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     const [editing, setEditing] = useState(false);
     const field = useRef<HTMLInputElement>(null);
     const saved = useNodeHost(id)?.url;
-    const url = draft ?? state?.url ?? saved ?? DEFAULT_URL;
+    const url = draft ?? state?.url ?? saved ?? '';
+    // A node showing its splash has no page behind the bar, so nothing there is worth pressing.
+    const hasPage = (state?.url ?? saved ?? '') !== '';
     const secure = url.startsWith('https://');
     const scaleLimit = browserStreamScaleLimit();
     const scale = clampBrowserStreamScale(preferredScale, scaleLimit);
@@ -127,7 +130,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                         kbd={t('browser.reloadHint', { shortcut: formatShortcut(KEY_SHORTCUTS.shift, isApplePlatform()) })}
                         name
                     >
-                        <button className="icon-btn h-7 w-7" onClick={(e) => command('reload', e.shiftKey)}>
+                        <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!hasPage} onClick={(e) => command('reload', e.shiftKey)}>
                             <Icon icon={RotateCw} size={16} />
                         </button>
                     </Tooltip>
@@ -159,12 +162,8 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                             return;
                         }
                         e.stopPropagation();
-                        if (e.key === 'Enter') {
-                            if (native) {
-                                browserRegistry.navigate(key, url);
-                            } else {
-                                browserClientFor(endpointId)?.navigate(id, url);
-                            }
+                        if (e.key === 'Enter' && url.trim() !== '') {
+                            openPage(id, endpointId, url);
                             setDraft(null);
                             e.currentTarget.blur();
                         }
@@ -190,7 +189,8 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                 )}
                 <Tooltip label={t('browser.openExternal')} name>
                     <button
-                        className="icon-btn h-7 w-7"
+                        className="icon-btn h-7 w-7 disabled:opacity-40"
+                        disabled={!hasPage}
                         onClick={() => {
                             const target = state?.url ?? url;
                             if (native) {
@@ -205,7 +205,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                 </Tooltip>
                 {native && (
                     <Tooltip label={t('browser.inspect')} name>
-                        <button className="icon-btn h-7 w-7" onClick={() => browserRegistry.inspect(key)}>
+                        <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!hasPage} onClick={() => browserRegistry.inspect(key)}>
                             <Icon icon={Code} size={16} />
                         </button>
                     </Tooltip>
@@ -310,10 +310,13 @@ function SwipeArrow({ id }: { id: string }) {
     );
 }
 
-/* What a browser draws under its own page: a streamed copy where there is no native <webview>, or an
-   empty placeholder where the desktop app's <webview> lands. */
+/* What a browser draws under its own page: the splash while it has no address, a streamed copy where
+   there is no native <webview>, or an empty placeholder where the desktop app's <webview> lands. */
 export function BrowserFallback({ id, className }: { id: string; className?: string }) {
-    const saved = useNodeHost(id)?.url ?? DEFAULT_URL;
+    const saved = useNodeHost(id)?.url ?? '';
+    if (saved === '') {
+        return <BrowserSplash id={id} className={className} />;
+    }
     if (!isDesktop()) {
         return <BrowserStream id={id} initialUrl={saved} className={className} />;
     }

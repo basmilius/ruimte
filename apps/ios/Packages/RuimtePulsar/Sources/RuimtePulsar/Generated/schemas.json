@@ -6087,6 +6087,55 @@
     "type": "object",
     "properties": {}
   },
+  "request.browser.devServers.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "ports": {
+        "minItems": 1,
+        "maxItems": 32,
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      }
+    },
+    "required": [
+      "ports"
+    ]
+  },
+  "request.browser.devServers.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "servers": {
+        "maxItems": 32,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "port"
+          ]
+        }
+      }
+    },
+    "required": [
+      "servers"
+    ]
+  },
   "request.device.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

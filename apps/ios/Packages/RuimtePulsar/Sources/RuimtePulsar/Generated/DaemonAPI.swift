@@ -21,6 +21,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `browserCommand` = "browser.command"
     case `browserResize` = "browser.resize"
     case `browserInput` = "browser.input"
+    case `browserDevServers` = "browser.devServers"
     case `deviceList` = "device.list"
     case `deviceBoot` = "device.boot"
     case `deviceShutdown` = "device.shutdown"

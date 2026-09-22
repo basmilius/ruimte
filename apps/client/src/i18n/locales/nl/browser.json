@@ -62,6 +62,12 @@
     "stopped": "De browserstream is gestopt",
     "failed": "De browser op afstand gaf een fout"
   },
+  "splash": {
+    "title": "Open hier een pagina",
+    "hint": "Kies een dev server, of typ een adres in de balk hierboven.",
+    "running": "Draait nu",
+    "common": "Veelgebruikte poorten"
+  },
   "node": {
     "fallbackTitle": "Browser"
   }

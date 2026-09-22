@@ -67,6 +67,19 @@ export const BrowserInputPayloadSchema = BrowserTargetPayloadSchema.extend({
     input: z.discriminatedUnion('kind', [PointerInputSchema, WheelInputSchema, KeyInputSchema, TextInputSchema])
 });
 
+const DevServerPortSchema = z.number().int().min(1).max(65535);
+
+/* The ports a splash asks about at once, which is the table in `apps/client/src/browser/dev-servers.ts`. */
+export const BrowserDevServersPayloadSchema = z.object({ ports: z.array(DevServerPortSchema).min(1).max(32) });
+
+export const DevServerSchema = z.object({
+    port: DevServerPortSchema,
+    /* What the page at the root of that port calls itself, where it answered with a name. */
+    title: z.string().max(200).optional()
+});
+
+export const BrowserDevServersResultSchema = z.object({ servers: z.array(DevServerSchema).max(32) });
+
 export const BrowserInfoSchema = z.object({
     browserId: BrowserIdSchema,
     url: z.string(),
@@ -95,3 +108,4 @@ export const BrowserFrameSchema = z.object({
 export type BrowserInfo = z.infer<typeof BrowserInfoSchema>;
 export type BrowserFrame = z.infer<typeof BrowserFrameSchema>;
 export type BrowserInput = z.infer<typeof BrowserInputPayloadSchema>['input'];
+export type DevServer = z.infer<typeof DevServerSchema>;

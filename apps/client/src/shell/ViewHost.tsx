@@ -81,10 +81,11 @@ function StandaloneView({ view }: { view: ProjectView }) {
     );
 }
 
-/* The page of a browser view is the parked element, placed over this whole column by the layer. */
+/* The page of a browser view is the parked element, placed over this whole column by the layer. A
+   view without an address has no page yet, so what is left under it is the splash. */
 function BrowserViewSurface({ id }: { id: string }) {
-    const { available } = usePage(id);
-    return available ? <div className="h-full bg-surface-sunken" /> : <BrowserFallback id={id} />;
+    usePage(id);
+    return <BrowserFallback id={id} className="h-full" />;
 }
 
 /*

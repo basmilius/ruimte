@@ -1,4 +1,5 @@
 import type { BrowserManager } from '../browser/manager.ts';
+import { probeDevServers } from '../browser/dev-servers.ts';
 import { translate, type Dispatcher } from '../dispatcher.ts';
 import { streamingGate } from './streaming.ts';
 
@@ -42,4 +43,6 @@ export const registerBrowserHandlers = (dispatcher: Dispatcher, browsers: Browse
             return {};
         });
     });
+    // Outside the gate: it opens no browser and only reports which local ports answer.
+    dispatcher.register('browser.devServers', async (payload) => ({ servers: await probeDevServers(payload.ports) }));
 };

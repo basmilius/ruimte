@@ -113,6 +113,7 @@
     "browser.command",
     "browser.resize",
     "browser.input",
+    "browser.devServers",
     "device.list",
     "device.boot",
     "device.shutdown",

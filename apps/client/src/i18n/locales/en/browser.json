@@ -62,6 +62,12 @@
     "stopped": "The browser stream stopped",
     "failed": "The remote browser failed"
   },
+  "splash": {
+    "title": "Open a page here",
+    "hint": "Pick a dev server, or type an address in the bar above.",
+    "running": "Running now",
+    "common": "Common ports"
+  },
   "node": {
     "fallbackTitle": "Browser"
   }
