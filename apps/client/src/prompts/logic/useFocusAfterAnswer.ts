@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react';
+import { focusPromptStart } from '@/prompts/logic/focus';
 
 export interface FocusAfterAnswer {
     /* Called before the front card changes, to remember whether the keyboard is in it, since the card is gone by the time the next one shows. */
@@ -8,7 +9,7 @@ export interface FocusAfterAnswer {
 }
 
 /*
- * The keyboard stays with the prompts it was answering: on the heading of the card that comes next, or
+ * The keyboard stays with the prompts it was answering: on where the card that comes next is answered, or
  * wherever `onEmpty` puts it once none is left. A card answered with the keyboard elsewhere takes nothing.
  */
 export function useFocusAfterAnswer(activeId: string | null, container: RefObject<HTMLElement | null>, onEmpty: () => void): FocusAfterAnswer {
@@ -19,10 +20,7 @@ export function useFocusAfterAnswer(activeId: string | null, container: RefObjec
             return;
         }
         pending.current = false;
-        const heading = container.current?.querySelector<HTMLElement>('.prompt-heading');
-        if (heading) {
-            heading.focus({ preventScroll: true });
-        } else {
+        if (!focusPromptStart(container.current)) {
             onEmpty();
         }
         // Only a change of the front card is news; a new `onEmpty` each render is not.

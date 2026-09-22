@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowDown, Hand, MessageCircleQuestionMark } from 'lucide-react';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { chatClient } from '@/chat';
+import { focusPromptStart } from '@/prompts/logic/focus';
 import { nextPrompt, type PendingPrompt } from '@/prompts/logic/prompts';
 import { answerPrompt, type PromptSubject } from '@/prompts/logic/subjects';
 import { useFocusAfterAnswer } from '@/prompts/logic/useFocusAfterAnswer';
@@ -45,7 +46,7 @@ export function PromptComposer({
 
     useEffect(() => {
         if (focused && expanded && !elsewhere && !ref.current?.querySelector('.prompt-card')?.contains(document.activeElement)) {
-            ref.current?.querySelector<HTMLElement>('.prompt-heading')?.focus({ preventScroll: true });
+            focusPromptStart(ref.current);
         }
     }, [activeKey, expanded, focused, elsewhere]);
 
