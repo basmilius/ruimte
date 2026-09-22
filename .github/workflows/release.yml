@@ -18,9 +18,10 @@ jobs:
   draft:
     runs-on: ubuntu-latest
     steps:
+      # Checkout writes a tag ref as a lightweight tag on the commit, and fetch-tags beside it
+      # fails the fetch outright, so the annotated tag is fetched over it on its own.
       - uses: actions/checkout@v5
-        with:
-          fetch-tags: true
+      - run: git fetch --force --depth=1 origin "+refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
       - name: The draft release, before anything uploads
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
