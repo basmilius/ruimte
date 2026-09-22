@@ -1,4 +1,5 @@
 import type { GitFile, GitStatus } from '@ruimte/contracts';
+import { operationOf } from './conflict.ts';
 import { parseNumstat, type Numstat } from './diff.ts';
 import { git, runGit } from './run.ts';
 
@@ -214,10 +215,11 @@ export const readStatus = async (cwd: string): Promise<GitStatus> => {
     }
     const parsed = parsePorcelain(porcelain);
     const entries = parsed.entries.slice(0, MAX_FILES);
-    const [staged, unstaged, base] = await Promise.all([
+    const [staged, unstaged, base, operation] = await Promise.all([
         git(['diff', '--cached', '--numstat', '-z'], root).then(byPath),
         git(['diff', '--numstat', '-z'], root).then(byPath),
-        resolveBase(root)
+        resolveBase(root),
+        operationOf(root)
     ]);
     const untracked = await untrackedCounts(
         root,
@@ -245,6 +247,7 @@ export const readStatus = async (cwd: string): Promise<GitStatus> => {
 
     return {
         repo: true,
+        ...(operation === null ? {} : { operation }),
         root,
         branch: parsed.branch,
         detached: parsed.detached,

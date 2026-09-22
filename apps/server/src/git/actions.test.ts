@@ -183,6 +183,24 @@ describe('the remote', () => {
         expect(await run(['rev-parse', 'HEAD'])).toBe(await run(['rev-parse', 'main'], remote));
     });
 
+    test('a branch that moved on both sides asks how it comes together, and merges when told', async () => {
+        await act({ kind: 'publish' });
+        const other = join(root, 'other');
+        await run(['clone', '--quiet', remote, other], root);
+        await writeFile(join(other, 'one.txt'), 'from elsewhere\n');
+        await run(['commit', '--quiet', '--all', '--message', 'from elsewhere'], other);
+        await run(['push', '--quiet'], other);
+        await write('one.txt', 'from here\n');
+        await act({ kind: 'commit', subject: 'from here', stageAll: true });
+
+        // Without a strategy the pull only fast-forwards, and says the two sides went their own way.
+        await expect(act({ kind: 'pull' })).rejects.toThrow(/moved on/);
+
+        const merged = await act({ kind: 'pull', strategy: 'merge' });
+        expect(merged.conflicts).toEqual(['one.txt']);
+        expect((await readStatus(repo)).operation).toBe('merge');
+    });
+
     test('a failure carries what git wrote', async () => {
         const progress: Progress = { phases: [], lines: [] };
         await expect(act({ kind: 'merge', ref: 'nope' }, progress)).rejects.toThrow(/nope/);

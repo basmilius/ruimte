@@ -103,9 +103,15 @@ export const GitFileSchema = z.object({
 });
 export type GitFile = z.infer<typeof GitFileSchema>;
 
+// A git operation that stopped halfway and waits in the checkout, by git's own word for it.
+export const GitOperationSchema = z.enum(['merge', 'rebase', 'cherry-pick', 'revert']);
+export type GitOperation = z.infer<typeof GitOperationSchema>;
+
 export const GitStatusSchema = z.object({
     // False when the folder is not inside a repository; everything below is then empty.
     repo: z.boolean(),
+    // Set while the checkout is in the middle of one, whether or not anything conflicts.
+    operation: GitOperationSchema.optional(),
     root: z.string().nullable(),
     // Null on a detached HEAD, which `detached` says apart from a repository without commits.
     branch: z.string().nullable(),
@@ -340,7 +346,10 @@ export const GitActionPayloadSchema = z.object({
     // Checkout: park the dirty working tree in a stash first, so the switch is not refused.
     stash: z.boolean().optional(),
     // Delete a branch git has not merged yet, which it otherwise refuses.
-    force: z.boolean().optional()
+    force: z.boolean().optional(),
+    // Pull and sync: how a branch that has moved on both sides comes together. Without it the pull
+    // only fast-forwards, which is what a machine from before this field does as well.
+    strategy: z.enum(['merge', 'rebase']).optional()
 });
 export type GitActionPayload = z.infer<typeof GitActionPayloadSchema>;
 
@@ -352,7 +361,10 @@ export const GitActionResultSchema = z.object({
     output: z.string(),
     commit: z.object({ hash: z.string(), subject: z.string() }).optional(),
     // The pull request a `create-pr` opened, for the button that opens it.
-    url: z.string().optional()
+    url: z.string().optional(),
+    // Files git left unmerged. A pull or a merge that ends here did not fail: it waits for a person,
+    // and the checkout holds the operation until it is finished or taken back.
+    conflicts: z.array(z.string()).optional()
 });
 export type GitActionResult = z.infer<typeof GitActionResultSchema>;
 
@@ -396,6 +408,112 @@ export const GitSuggestMessageResultSchema = z.object({
     body: z.string()
 });
 export type GitSuggestMessageResult = z.infer<typeof GitSuggestMessageResultSchema>;
+
+/*
+ * What kind of thing a person has to decide for one unmerged file. Only `text` has two versions to
+ * weigh line by line; the rest is a choice between whole files, or between a file and its absence.
+ */
+export const GitConflictKindSchema = z.enum(['text', 'binary', 'deleted-by-us', 'deleted-by-them', 'submodule']);
+export type GitConflictKind = z.infer<typeof GitConflictKindSchema>;
+
+export const GitConflictFileSchema = z.object({
+    path: z.string(),
+    kind: GitConflictKindSchema
+});
+export type GitConflictFile = z.infer<typeof GitConflictFileSchema>;
+
+/*
+ * Everything a checkout waiting halfway holds, in one answer: which operation stopped, what to call
+ * the two sides, and every file it left unmerged. The names matter more than they look: in a rebase
+ * "ours" is the branch being replayed onto and "theirs" is the person's own commit, which is the
+ * other way around from a merge.
+ */
+export const GitConflictsResultSchema = z.object({
+    operation: GitOperationSchema.nullable(),
+    // What a person reads above each side: a branch name, a commit subject, or a plain word.
+    ours: z.string(),
+    theirs: z.string(),
+    files: z.array(GitConflictFileSchema)
+});
+export type GitConflictsResult = z.infer<typeof GitConflictsResultSchema>;
+
+export const GitConflictPayloadSchema = z.object({
+    cwd: z.string().min(1),
+    // Relative to the repository root, as `git.status` names it.
+    path: z.string().min(1)
+});
+export type GitConflictPayload = z.infer<typeof GitConflictPayloadSchema>;
+
+export const GitConflictResultSchema = z.object({
+    path: z.string(),
+    kind: GitConflictKindSchema,
+    // The three versions git holds in its index. A side that added the file has no base, and a side
+    // that deleted it has nothing at all.
+    base: z.string().nullable(),
+    ours: z.string().nullable(),
+    theirs: z.string().nullable(),
+    // What stands on disk right now, conflict markers and all, and the digest a resolution is held
+    // against so a write never lands on a file that moved since it was read.
+    hash: z.string(),
+    // Set when a side is too large or not text to read; the file is then a choice between whole sides.
+    omitted: z.enum(['binary', 'too-large']).optional()
+});
+export type GitConflictResult = z.infer<typeof GitConflictResultSchema>;
+
+export const GitResolvePayloadSchema = z.object({
+    cwd: z.string().min(1),
+    path: z.string().min(1),
+    // The merged file, written as it stands and staged. Needs `hash` to say what it was written over.
+    content: z.string().optional(),
+    // One side whole, for the file nobody merges line by line. `delete` takes the file out.
+    take: z.enum(['ours', 'theirs', 'delete']).optional(),
+    hash: z.string().optional()
+});
+export type GitResolvePayload = z.infer<typeof GitResolvePayloadSchema>;
+
+export const GitResolveResultSchema = z.object({
+    // Files git still holds unmerged in this checkout, so a client knows what is left without asking.
+    remaining: z.number().int().nonnegative()
+});
+export type GitResolveResult = z.infer<typeof GitResolveResultSchema>;
+
+/*
+ * Finishing or taking back the operation that waits in a checkout. `continue` commits what was
+ * resolved and carries a rebase on to its next commit; `abort` puts the checkout back as it was.
+ */
+export const GitOperationPayloadSchema = z.object({
+    cwd: z.string().min(1),
+    actionId: z.string().min(1),
+    action: z.enum(['continue', 'abort'])
+});
+export type GitOperationPayload = z.infer<typeof GitOperationPayloadSchema>;
+
+/* One stretch of a conflicted file as a CLI would have it, by where it sits in the file's blocks. */
+export const GitResolveBlockSchema = z.object({
+    index: z.number().int().nonnegative(),
+    // The digest of the two sides of that block, so a client whose split reads differently from the
+    // daemon's drops the answer instead of writing it into the wrong stretch.
+    fingerprint: z.string(),
+    lines: z.array(z.string())
+});
+export type GitResolveBlock = z.infer<typeof GitResolveBlockSchema>;
+
+export const GitResolveAiPayloadSchema = z.object({
+    cwd: z.string().min(1),
+    path: z.string().min(1),
+    // Names the run, so `git.cancel` can stop it.
+    actionId: z.string().min(1),
+    // Which CLI to ask; without one the daemon takes the first installed provider that can chat.
+    provider: AgentKindSchema.optional()
+});
+export type GitResolveAiPayload = z.infer<typeof GitResolveAiPayloadSchema>;
+
+export const GitResolveAiResultSchema = z.object({
+    blocks: z.array(GitResolveBlockSchema),
+    // What the CLI could not answer for, in its own words, for the blocks it left alone.
+    note: z.string().optional()
+});
+export type GitResolveAiResult = z.infer<typeof GitResolveAiResultSchema>;
 
 // How a worktree's branch lands on the branch it was made from.
 export const WorktreeMergeStrategySchema = z.enum(['merge', 'squash', 'rebase']);

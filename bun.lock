@@ -31,6 +31,7 @@
         "@ruimte/desktop-bridge": "workspace:*",
         "@ruimte/diagram": "workspace:*",
         "@ruimte/drawing": "workspace:*",
+        "@ruimte/merge": "workspace:*",
         "@ruimte/plan": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@tanstack/react-virtual": "^3.14.11",
@@ -122,6 +123,7 @@
         "@ruimte/csp": "workspace:*",
         "@ruimte/diagram": "workspace:*",
         "@ruimte/drawing": "workspace:*",
+        "@ruimte/merge": "workspace:*",
         "@ruimte/plan": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/service": "workspace:*",
@@ -213,6 +215,14 @@
         "perfect-freehand": "^1.2.3",
         "roughjs": "^4.6.6",
       },
+      "devDependencies": {
+        "@types/bun": "^1.4.0",
+        "typescript": "~6.0.2",
+      },
+    },
+    "packages/merge": {
+      "name": "@ruimte/merge",
+      "version": "0.0.0",
       "devDependencies": {
         "@types/bun": "^1.4.0",
         "typescript": "~6.0.2",
@@ -635,6 +645,8 @@
     "@ruimte/diagram": ["@ruimte/diagram@workspace:packages/diagram"],
 
     "@ruimte/drawing": ["@ruimte/drawing@workspace:packages/drawing"],
+
+    "@ruimte/merge": ["@ruimte/merge@workspace:packages/merge"],
 
     "@ruimte/npm": ["@ruimte/npm@workspace:packages/npm"],
 

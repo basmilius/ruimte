@@ -1,4 +1,5 @@
 import type { GitActionPayload, GitActionPhase, GitActionResult } from '@ruimte/contracts';
+import { conflictedFiles } from './conflict.ts';
 import { git, runGit, streamCommand, toplevel, GitError } from './run.ts';
 
 // A push over a slow link is allowed to take this long before the daemon gives up on it.
@@ -35,6 +36,16 @@ interface StepOptions {
 }
 
 type Step = (phase: GitActionPhase, args: string[], options?: StepOptions) => Promise<string>;
+
+/* A step whose failure is an outcome rather than the end of the action, such as a merge that conflicts. */
+type Attempt = (phase: GitActionPhase, args: string[], options?: StepOptions) => Promise<{ code: number; text: string }>;
+
+interface Steps {
+    step: Step;
+    attempt: Attempt;
+    joining(phase: GitActionPhase, args: string[], clean: (text: string) => string, options?: StepOptions): Promise<GitActionResult>;
+    done(summary: string, extra?: Partial<GitActionResult>): GitActionResult;
+}
 
 /* What git wrote, trimmed: the message of a failure and the body of a copy. */
 const textOf = (stdout: string, stderr: string): string => `${stdout}${stderr}`.trim();
@@ -88,7 +99,7 @@ export class GitActions {
         const output: string[] = [];
 
         /* One call: its lines go out as progress and are kept for the result at the same time. */
-        const step: Step = async (phase, args, options = {}) => {
+        const attempt: Attempt = async (phase, args, options = {}) => {
             if (job.canceled) {
                 throw new GitError('git-failed', 'The action was canceled.');
             }
@@ -102,11 +113,7 @@ export class GitActions {
                 });
                 const text = textOf(result.stdout, result.stderr);
                 output.push(text);
-                if (result.code !== 0) {
-                    sink('failed', text);
-                    throw new GitError('git-failed', job.canceled ? 'The action was canceled.' : text || `${options.command ?? 'git'} ${args[0]} failed`);
-                }
-                return text;
+                return { code: result.code, text };
             } finally {
                 if (timer !== null) {
                     clearTimeout(timer);
@@ -114,10 +121,38 @@ export class GitActions {
             }
         };
 
+        const step: Step = async (phase, args, options = {}) => {
+            const { code, text } = await attempt(phase, args, options);
+            if (code !== 0) {
+                sink('failed', text);
+                throw new GitError('git-failed', job.canceled ? 'The action was canceled.' : text || `${options.command ?? 'git'} ${args[0]} failed`);
+            }
+            return text;
+        };
+
         const done = (summary: string, extra: Partial<GitActionResult> = {}): GitActionResult => {
             sink('done', summary);
             return { actionId: payload.actionId, summary, output: output.join('\n').trim(), ...extra };
         };
+
+        /*
+         * A step that brings two histories together. Git refusing halfway is not a failure here: the
+         * files it left unmerged are the outcome, and the checkout keeps the operation until a person
+         * finishes it or takes it back.
+         */
+        const joining = async (phase: GitActionPhase, args: string[], clean: (text: string) => string, options?: StepOptions): Promise<GitActionResult> => {
+            const { code, text } = await attempt(phase, args, options);
+            if (code === 0) {
+                return done(clean(text));
+            }
+            const conflicts = await conflictedFiles(top);
+            if (conflicts.length === 0) {
+                sink('failed', text);
+                throw new GitError('git-failed', job.canceled ? 'The action was canceled.' : text || `git ${args[0]} failed`);
+            }
+            return done(conflicts.length === 1 ? '1 file conflicts.' : `${conflicts.length} files conflict.`, { conflicts });
+        };
+        const steps: Steps = { step, attempt, joining, done };
 
         const branch = (await git(['rev-parse', '--abbrev-ref', 'HEAD'], top))?.trim() ?? '';
         const upstream = (await git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}'], top))?.trim() || null;
@@ -128,8 +163,7 @@ export class GitActions {
                 return done(text === '' ? 'Nothing new to fetch.' : 'Fetched from the remote.');
             }
             case 'pull': {
-                const text = await step('pull', ['pull', '--ff-only', '--progress'], { timeout: NETWORK_TIMEOUT_MS });
-                return done(text.includes('Already up to date') ? 'Already up to date.' : `Pulled into ${branch}.`);
+                return await this.pull(payload, steps, branch, top);
             }
             case 'push':
             case 'publish':
@@ -138,7 +172,11 @@ export class GitActions {
             }
             case 'sync': {
                 if (upstream !== null) {
-                    await step('pull', ['pull', '--ff-only', '--progress'], { timeout: NETWORK_TIMEOUT_MS });
+                    const pulled = await this.pull(payload, steps, branch, top);
+                    // Nothing is pushed over a checkout that waits on a person.
+                    if (pulled.conflicts !== undefined) {
+                        return pulled;
+                    }
                 }
                 await this.push(payload, step, branch, upstream);
                 return done(`Synced ${branch}.`);
@@ -168,13 +206,11 @@ export class GitActions {
             }
             case 'merge': {
                 const ref = required(payload.ref, 'a branch to merge');
-                const text = await step('merge', ['merge', '--no-edit', ref]);
-                return done(summaryOf(text, `Merged ${ref} into ${branch}.`));
+                return await joining('merge', ['merge', '--no-edit', ref], (text) => summaryOf(text, `Merged ${ref} into ${branch}.`));
             }
             case 'rebase': {
                 const ref = required(payload.ref, 'a branch to rebase onto');
-                const text = await step('rebase', ['rebase', ref]);
-                return done(summaryOf(text, `Rebased ${branch} onto ${ref}.`));
+                return await joining('rebase', ['rebase', ref], (text) => summaryOf(text, `Rebased ${branch} onto ${ref}.`));
             }
             case 'stash': {
                 const args = ['stash', 'push', '--include-untracked'];
@@ -185,8 +221,7 @@ export class GitActions {
                 return done(text.includes('No local changes') ? 'There was nothing to stash.' : 'Changes are in a stash.');
             }
             case 'stash-pop': {
-                await step('stash', ['stash', 'pop', ...(payload.ref ? [payload.ref] : [])]);
-                return done(`Took ${payload.ref ?? 'the newest stash'} back.`);
+                return await joining('stash', ['stash', 'pop', ...(payload.ref ? [payload.ref] : [])], () => `Took ${payload.ref ?? 'the newest stash'} back.`);
             }
             case 'commit': {
                 const commit = await this.commit(payload, step, top);
@@ -210,6 +245,28 @@ export class GitActions {
                 return done(url === null ? 'The pull request is open.' : `Pull request ready: ${url}`, url === null ? {} : { url });
             }
         }
+    }
+
+    /*
+     * A pull only fast-forwards until a person says how a branch that moved on both sides comes
+     * together. Git's refusal is a question rather than a failure, so it comes back as one the panel
+     * can ask; with an answer the pull merges or rebases, and the files it leaves unmerged are the
+     * outcome of the action.
+     */
+    private async pull(payload: GitActionPayload, steps: Steps, branch: string, top: string): Promise<GitActionResult> {
+        const summary = (text: string): string => (text.includes('Already up to date') ? 'Already up to date.' : `Pulled into ${branch}.`);
+        if (payload.strategy === undefined) {
+            const { code, text } = await steps.attempt('pull', ['pull', '--ff-only', '--progress'], { timeout: NETWORK_TIMEOUT_MS });
+            if (code === 0) {
+                return steps.done(summary(text));
+            }
+            if (await diverged(top)) {
+                throw new GitError('diverged', `${branch} and the remote have both moved on.`);
+            }
+            throw new GitError('git-failed', text || 'git pull failed');
+        }
+        const args = ['pull', payload.strategy === 'rebase' ? '--rebase' : '--no-rebase', '--no-edit', '--progress'];
+        return await steps.joining('pull', args, summary, { timeout: NETWORK_TIMEOUT_MS });
     }
 
     /* The one push there is: with an upstream, without one, or over what the remote holds. */
@@ -266,6 +323,12 @@ export const checkoutArgs = async (top: string, ref: string): Promise<string[]> 
         return existing ? ['checkout', short] : ['checkout', '--track', ref];
     }
     return ['checkout', ref];
+};
+
+/* Whether the branch and its upstream have each gained commits the other lacks. */
+const diverged = async (cwd: string): Promise<boolean> => {
+    const counts = (await git(['rev-list', '--left-right', '--count', '@{upstream}...HEAD'], cwd))?.trim().split(/\s+/);
+    return Number.parseInt(counts?.[0] ?? '', 10) > 0 && Number.parseInt(counts?.[1] ?? '', 10) > 0;
 };
 
 /* Whether the working tree holds anything a checkout would have to carry over or lose. */

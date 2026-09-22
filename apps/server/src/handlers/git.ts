@@ -1,6 +1,8 @@
 import { RequestError, sendEvent, translate, type Dispatcher } from '../dispatcher.ts';
 import { GitActions } from '../git/actions.ts';
 import { readCapabilities } from '../git/capabilities.ts';
+import { readConflict, readConflicts, resolveConflict, runOperation } from '../git/conflict.ts';
+import { resolveWithAgent } from '../git/resolve-ai.ts';
 import { diffCheckout, diffCommit, diffFile } from '../git/diff.ts';
 import { readLog } from '../git/log.ts';
 import { suggestMessage } from '../git/message.ts';
@@ -123,6 +125,36 @@ export const registerGitHandlers = (
         merges.cancel(payload.actionId);
         return {};
     });
+
+    dispatcher.register('git.conflicts', (payload) => translate(() => readConflicts(payload.cwd)));
+
+    dispatcher.register('git.conflict', (payload) => translate(() => readConflict(payload.cwd, payload.path)));
+
+    dispatcher.register('git.resolve', (payload) => translate(async () => ({ remaining: await resolveConflict(payload) })));
+
+    /* Finishing or taking back a merge streams its progress the way every other action does. */
+    dispatcher.register('git.operation', (payload, client) =>
+        translate(() =>
+            runOperation(payload.cwd, payload.action, payload.actionId, (phase, line) => {
+                sendEvent(client, 'git.progress', { cwd: payload.cwd, actionId: payload.actionId, phase, line });
+            })
+        )
+    );
+
+    dispatcher.register('git.resolveAi', (payload) =>
+        translate(async () => {
+            const job = actions.claim(payload.actionId);
+            try {
+                const sides = await readConflicts(payload.cwd);
+                return await resolveWithAgent(payload.cwd, payload.path, sides, providers, {
+                    ...(payload.provider ? { provider: payload.provider } : {}),
+                    onSpawn: (kill) => job.hold(kill)
+                });
+            } finally {
+                job.release();
+            }
+        })
+    );
 
     dispatcher.register('git.suggestMessage', (payload) =>
         translate(async () => {

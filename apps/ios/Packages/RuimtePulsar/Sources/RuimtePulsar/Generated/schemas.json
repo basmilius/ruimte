@@ -25552,17 +25552,17 @@
       "url": {
         "type": "string"
       },
-      "cwd": {
-        "type": "string"
-      },
-      "into": {
-        "type": "string"
-      },
       "conflicts": {
         "type": "array",
         "items": {
           "type": "string"
         }
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "into": {
+        "type": "string"
       },
       "removed": {
         "type": "boolean"
@@ -25617,6 +25617,15 @@
     "properties": {
       "repo": {
         "type": "boolean"
+      },
+      "operation": {
+        "type": "string",
+        "enum": [
+          "merge",
+          "rebase",
+          "cherry-pick",
+          "revert"
+        ]
       },
       "root": {
         "type": [
@@ -26265,6 +26274,13 @@
       },
       "force": {
         "type": "boolean"
+      },
+      "strategy": {
+        "type": "string",
+        "enum": [
+          "merge",
+          "rebase"
+        ]
       }
     },
     "required": [
@@ -26303,6 +26319,12 @@
       },
       "url": {
         "type": "string"
+      },
+      "conflicts": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     },
     "required": [
@@ -26328,6 +26350,338 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "request.git.conflicts.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "cwd"
+    ]
+  },
+  "request.git.conflicts.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "operation": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "merge",
+              "rebase",
+              "cherry-pick",
+              "revert"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "ours": {
+        "type": "string"
+      },
+      "theirs": {
+        "type": "string"
+      },
+      "files": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "text",
+                "binary",
+                "deleted-by-us",
+                "deleted-by-them",
+                "submodule"
+              ]
+            }
+          },
+          "required": [
+            "path",
+            "kind"
+          ]
+        }
+      }
+    },
+    "required": [
+      "operation",
+      "ours",
+      "theirs",
+      "files"
+    ]
+  },
+  "request.git.conflict.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "cwd",
+      "path"
+    ]
+  },
+  "request.git.conflict.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "text",
+          "binary",
+          "deleted-by-us",
+          "deleted-by-them",
+          "submodule"
+        ]
+      },
+      "base": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "ours": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "theirs": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "hash": {
+        "type": "string"
+      },
+      "omitted": {
+        "type": "string",
+        "enum": [
+          "binary",
+          "too-large"
+        ]
+      }
+    },
+    "required": [
+      "path",
+      "kind",
+      "base",
+      "ours",
+      "theirs",
+      "hash"
+    ]
+  },
+  "request.git.resolve.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "content": {
+        "type": "string"
+      },
+      "take": {
+        "type": "string",
+        "enum": [
+          "ours",
+          "theirs",
+          "delete"
+        ]
+      },
+      "hash": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "cwd",
+      "path"
+    ]
+  },
+  "request.git.resolve.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "remaining": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "remaining"
+    ]
+  },
+  "request.git.resolveAi.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "actionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "provider": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "gemini",
+          "copilot"
+        ]
+      }
+    },
+    "required": [
+      "cwd",
+      "path",
+      "actionId"
+    ]
+  },
+  "request.git.resolveAi.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "blocks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "fingerprint": {
+              "type": "string"
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "index",
+            "fingerprint",
+            "lines"
+          ]
+        }
+      },
+      "note": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "blocks"
+    ]
+  },
+  "request.git.operation.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      },
+      "actionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "action": {
+        "type": "string",
+        "enum": [
+          "continue",
+          "abort"
+        ]
+      }
+    },
+    "required": [
+      "cwd",
+      "actionId",
+      "action"
+    ]
+  },
+  "request.git.operation.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "actionId": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "output": {
+        "type": "string"
+      },
+      "commit": {
+        "type": "object",
+        "properties": {
+          "hash": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hash",
+          "subject"
+        ]
+      },
+      "url": {
+        "type": "string"
+      },
+      "conflicts": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "actionId",
+      "summary",
+      "output"
+    ]
   },
   "request.git.capabilities.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -36627,6 +36981,15 @@
         "properties": {
           "repo": {
             "type": "boolean"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "merge",
+              "rebase",
+              "cherry-pick",
+              "revert"
+            ]
           },
           "root": {
             "type": [

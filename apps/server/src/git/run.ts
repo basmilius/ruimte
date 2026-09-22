@@ -24,7 +24,9 @@ export type GitErrorCode =
     | 'target-busy'
     | 'target-dirty'
     | 'agent-working'
-    | 'merge-conflict';
+    | 'merge-conflict'
+    // A pull that can only fast-forward while both sides have moved on: the person picks how they come together.
+    | 'diverged';
 
 export class GitError extends CodedError<GitErrorCode> {}
 

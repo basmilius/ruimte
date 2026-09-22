@@ -1,7 +1,6 @@
-import { rm, stat } from 'node:fs/promises';
-import { isAbsolute, join } from 'node:path';
 import type { GitActionPhase, WorktreeMergePayload, WorktreeMergeResult } from '@ruimte/contracts';
 import type { ProgressSink } from './actions.ts';
+import { abortOperation, conflictedFiles, gitPathExists } from './conflict.ts';
 import { resolveBase } from './status.ts';
 import { GitError, git, runGit, streamGit } from './run.ts';
 import type { Worktrees } from './worktrees.ts';
@@ -51,27 +50,9 @@ export interface MergeLimits {
     abortOnConflict?: boolean;
 }
 
-const exists = (path: string): Promise<boolean> =>
-    stat(path).then(
-        () => true,
-        () => false
-    );
-
 class Job {
     canceled = false;
 }
-
-/* The files git left unmerged in a checkout, one per path. */
-export const conflictedFiles = async (cwd: string): Promise<string[]> => {
-    const output = await git(['diff', '--name-only', '--diff-filter=U', '-z'], cwd);
-    return output === null ? [] : [...new Set(output.split('\0').filter((path) => path !== ''))];
-};
-
-/* Whether git has a file of its own in a checkout's git dir, such as MERGE_HEAD. */
-const gitPathExists = async (cwd: string, name: string): Promise<boolean> => {
-    const found = (await git(['rev-parse', '--git-path', name], cwd))?.trim();
-    return found !== undefined && found !== '' && (await exists(isAbsolute(found) ? found : join(cwd, found)));
-};
 
 const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;
 
@@ -111,31 +92,11 @@ export class WorktreeMerge {
     }
 
     /*
-     * Takes back a merge or squash that stopped on a conflict. `merge --abort` needs the MERGE_HEAD a
-     * squash never writes, so a squash goes back with `reset --merge`, which keeps what the person
-     * had changed and not added.
+     * Takes back a merge or squash that stopped on a conflict, the same way the conflict overlay
+     * does, so a person can leave one halfway merge behind from either side of the app.
      */
     async abort(cwd: string): Promise<void> {
-        if (await gitPathExists(cwd, 'MERGE_HEAD')) {
-            const aborted = await runGit(['merge', '--abort'], cwd);
-            if (aborted.code !== 0) {
-                throw new GitError('git-failed', aborted.stderr.trim() || 'git merge --abort failed');
-            }
-            return;
-        }
-        if ((await gitPathExists(cwd, 'SQUASH_MSG')) && (await conflictedFiles(cwd)).length > 0) {
-            const reset = await runGit(['reset', '--merge'], cwd);
-            if (reset.code !== 0) {
-                throw new GitError('git-failed', reset.stderr.trim() || 'git reset --merge failed');
-            }
-            // Left behind, the message would open as the draft of the person's next commit.
-            const message = (await git(['rev-parse', '--git-path', 'SQUASH_MSG'], cwd))?.trim();
-            if (message) {
-                await rm(isAbsolute(message) ? message : join(cwd, message), { force: true });
-            }
-            return;
-        }
-        throw new GitError('git-failed', 'No merge waits halfway in this checkout.');
+        await abortOperation(cwd);
     }
 
     private async perform(main: string, payload: WorktreeMergePayload, sink: ProgressSink, job: Job, limits: MergeLimits): Promise<WorktreeMergeResult> {
