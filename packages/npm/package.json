@@ -9,7 +9,7 @@
     "publish-packages": "bun scripts/publish.ts"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.0",
-    "typescript": "~6.0.2"
+    "@types/bun": "^1.4.2",
+    "typescript": "~6.0.3"
   }
 }

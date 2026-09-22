@@ -23,9 +23,9 @@
     "dist": "bun run --cwd apps/client build && bun run --cwd apps/server compile && bun run --cwd apps/desktop pack"
   },
   "devDependencies": {
-    "oxfmt": "^0.68.0",
-    "oxlint": "^1.79.0",
-    "typescript": "~6.0.2"
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "typescript": "~6.0.3"
   },
   "trustedDependencies": [
     "electron"

@@ -26,14 +26,14 @@
         "@ruimte/desktop-bridge": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/service": "workspace:*",
-        "zod": "^4.5.4"
+        "zod": "^4.6.5"
     },
     "devDependencies": {
-        "@types/bun": "^1.4.0",
-        "@types/node": "^24.13.3",
-        "electron": "^44.3.0",
+        "@types/bun": "^1.4.2",
+        "@types/node": "^24.13.6",
+        "electron": "^44.4.4",
         "electron-builder": "^26.15.3",
-        "electron-updater": "^6.6.2",
-        "typescript": "~6.0.2"
+        "electron-updater": "^6.8.9",
+        "typescript": "~6.0.3"
     }
 }
