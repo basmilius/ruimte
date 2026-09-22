@@ -11,7 +11,8 @@ import {
     mergeExpanded,
     newlyExpanded,
     treeGitStatus,
-    treePathOf
+    treePathOf,
+    withoutClosedBranches
 } from './files-tree.ts';
 
 const ROOT = '/repo';
@@ -78,6 +79,19 @@ describe('newlyExpanded', () => {
     test('names only the directories that opened since the last look', () => {
         expect(newlyExpanded(new Set(['src/']), new Set(['src/', 'docs/']))).toEqual(['docs/']);
         expect(newlyExpanded(new Set(['src/']), new Set())).toEqual([]);
+    });
+});
+
+describe('withoutClosedBranches', () => {
+    test('a directory that was closed takes what hangs under it along', () => {
+        const known = new Set(['src/', 'src/state/', 'docs/']);
+        expect([...withoutClosedBranches(new Set(['src/state/', 'docs/']), known)]).toEqual(['docs/']);
+    });
+
+    test('an open branch is left whole, and so is one the tree has not heard of', () => {
+        const known = new Set(['src/', 'src/state/']);
+        expect([...withoutClosedBranches(new Set(['src/', 'src/state/']), known)]).toEqual(['src/', 'src/state/']);
+        expect([...withoutClosedBranches(new Set(['docs/deep/']), known)]).toEqual(['docs/deep/']);
     });
 });
 

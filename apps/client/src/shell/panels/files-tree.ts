@@ -87,6 +87,16 @@ export const buildTreeInput = (root: string, cache: EntryCache, showHidden: bool
     return { paths, ignored };
 };
 
+/*
+ * The open set without a branch that hangs under a closed directory. The tree keeps a child of a
+ * directory it closed expanded, and `initialExpandedPaths` opens every directory on the way to a
+ * path it is handed, so such a child would open its parent again at the next reset: close one
+ * folder, open another, and the first stands open. A path whose directories the tree has not heard
+ * of yet stays, since nothing closed those.
+ */
+export const withoutClosedBranches = (open: ReadonlySet<string>, known: ReadonlySet<string>): Set<string> =>
+    new Set([...open].filter((path) => ancestorDirsOf(path).every((dir) => open.has(dir) || !known.has(dir))));
+
 /* The directories that opened since the last snapshot. The tree has no expand event, so the panel
    diffs what it knows against what the model says and loads the difference. */
 export const newlyExpanded = (before: ReadonlySet<string>, after: ReadonlySet<string>): string[] => [...after].filter((path) => !before.has(path));

@@ -47,6 +47,7 @@ import {
     newlyExpanded,
     relativeTo,
     treePathOf,
+    withoutClosedBranches,
     type EntryCache
 } from '@/shell/panels/files-tree';
 import { directoryHandle, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
@@ -271,7 +272,7 @@ export function FilesPanel() {
                     reported.add(dir);
                 }
             }
-            const open = mergeExpanded(expandedRef.current, reported, directoriesRef.current);
+            const open = withoutClosedBranches(mergeExpanded(expandedRef.current, reported, directoriesRef.current), directoriesRef.current);
             const opened = newlyExpanded(expandedRef.current, open);
             expandedRef.current = open;
             useFiles.getState().setExpandedDirs([...open]);
