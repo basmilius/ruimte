@@ -22,7 +22,7 @@ describe('ModelCatalog', () => {
 
     test('normalize resolves aliases, fills defaults and drops unknown options', () => {
         expect(catalog.normalize({ model: 'opus', options: { effort: 'max', bogus: 'x' } })).toEqual({
-            model: 'claude-opus-5',
+            model: 'claude-opus-5-5',
             options: { effort: 'max', contextWindow: '1m', fastMode: false }
         });
         expect(catalog.normalize({ model: 'nope' }).model).toBe('claude-sonnet-5');

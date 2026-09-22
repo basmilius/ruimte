@@ -101,8 +101,9 @@
     }
   },
   "models": [
-    { "slug": "claude-fable-5-1", "name": "Claude Fable 5.1", "badge": "new", "profile": "frontier", "aliases": ["fable"] },
-    { "slug": "claude-opus-5", "name": "Claude Opus 5", "profile": "opus", "aliases": ["opus"] },
+    { "slug": "claude-fable-5-1", "name": "Claude Fable 5.1", "profile": "frontier", "aliases": ["fable"] },
+    { "slug": "claude-opus-5-5", "name": "Claude Opus 5.5", "badge": "new", "profile": "opus", "aliases": ["opus"] },
+    { "slug": "claude-opus-5", "name": "Claude Opus 5", "profile": "opus" },
     { "slug": "claude-sonnet-5", "name": "Claude Sonnet 5", "profile": "sonnet", "aliases": ["sonnet"] },
     { "slug": "claude-haiku-4-5", "name": "Claude Haiku 4.5", "profile": "haiku", "aliases": ["haiku"] },
     { "slug": "claude-opus-4-6", "name": "Claude Opus 4.6", "profile": "frontier", "legacy": true },

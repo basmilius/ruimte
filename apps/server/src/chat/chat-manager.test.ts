@@ -240,7 +240,7 @@ describe('ChatManager', () => {
             runtimeMode: 'supervised'
         });
         expect(info).toMatchObject({
-            selection: { model: 'claude-opus-5', options: { effort: 'max', contextWindow: '1m' } },
+            selection: { model: 'claude-opus-5-5', options: { effort: 'max', contextWindow: '1m' } },
             runtimeMode: 'supervised',
             usage: { contextWindow: 1000000 }
         });
@@ -255,7 +255,7 @@ describe('ChatManager', () => {
         const argv = claude.started[1]!.argv;
         expect(argv[argv.indexOf('--resume') + 1]).toBe(sessionId!);
         // The fake reports the `--model` it was started with, so this proves the restart carried the new flags.
-        expect(recorder.info?.model).toBe('claude-opus-5[1m]');
+        expect(recorder.info?.model).toBe('claude-opus-5-5[1m]');
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: first', 'echo: argv?']);
     });
 
@@ -266,7 +266,7 @@ describe('ChatManager', () => {
         await recorder.until(idle);
         // The CLI reports 1M whatever it was started on, and the turn it ends must not put that on the meter.
         const argv = claude.started[0]!.argv;
-        expect(argv[argv.indexOf('--model') + 1]).toBe('claude-opus-5');
+        expect(argv[argv.indexOf('--model') + 1]).toBe('claude-opus-5-5');
         expect(recorder.info?.usage.contextWindow).toBe(200_000);
 
         expect(manager.configure({ chatId: 'chat-w', selection: { model: 'opus', options: { contextWindow: '1m' } } })).toMatchObject({
@@ -275,7 +275,7 @@ describe('ChatManager', () => {
         const turns = recorder.info!.usage.turns;
         await manager.send('chat-w', 'after');
         await recorder.until(() => recorder.info?.usage.turns === turns + 1 && idle());
-        expect(recorder.info?.model).toBe('claude-opus-5[1m]');
+        expect(recorder.info?.model).toBe('claude-opus-5-5[1m]');
         expect(recorder.info?.usage.contextWindow).toBe(1_000_000);
     });
 
