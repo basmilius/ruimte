@@ -12,6 +12,8 @@ beforeEach(async () => {
     await mkdir(join(root, 'apps'));
     await mkdir(join(root, 'assets'));
     await mkdir(join(root, '.git'));
+    await mkdir(join(root, '.config'));
+    await mkdir(join(root, 'node_modules'));
     await mkdir(join(root, 'apps', 'server', '.ruimte'), { recursive: true });
     await writeFile(join(root, 'apps', 'server', '.ruimte', 'project.json'), '{}');
     await writeFile(join(root, 'README.md'), '');
@@ -43,7 +45,7 @@ describe('browseDirectories', () => {
 
     test('a trailing segment filters its parent by prefix, and a dot prefix shows hidden folders', async () => {
         expect((await browseDirectories(`${root}/as`, undefined)).entries.map((entry) => entry.name)).toEqual(['assets']);
-        expect((await browseDirectories(`${root}/.g`, undefined)).entries.map((entry) => entry.name)).toEqual(['.git']);
+        expect((await browseDirectories(`${root}/.c`, undefined)).entries.map((entry) => entry.name)).toEqual(['.config']);
         expect((await browseDirectories(`${root}/zzz`, undefined)).entries).toEqual([]);
     });
 
@@ -70,8 +72,18 @@ describe('browseDirectories', () => {
     });
 
     test('the hidden flag shows dot-folders without a dot having been typed', async () => {
-        expect((await browseDirectories(`${root}/`, undefined, { hidden: true })).entries.map((entry) => entry.name)).toEqual(['.git', 'apps', 'assets']);
+        expect((await browseDirectories(`${root}/`, undefined, { hidden: true })).entries.map((entry) => entry.name)).toEqual([
+            '.config',
+            'apps',
+            'assets',
+            'node_modules'
+        ]);
         expect((await browseDirectories(`${root}/`, undefined, { hidden: false })).entries.map((entry) => entry.name)).toEqual(['apps', 'assets']);
+    });
+
+    test("a checkout's own directory is never offered, however it is typed", async () => {
+        expect((await browseDirectories(`${root}/.g`, undefined)).entries).toEqual([]);
+        expect((await browseDirectories(`${root}/`, undefined, { hidden: true })).entries.map((entry) => entry.name)).not.toContain('.git');
     });
 });
 

@@ -138,10 +138,10 @@
     "empty": "Deze map is leeg.",
     "filter": "Bestanden filteren",
     "noMatch": "Geen bestanden die aan het filter voldoen.",
-    "onlyHidden": "In deze map staan alleen verborgen bestanden. Zet Verborgen bestanden tonen aan in het menu Meer.",
+    "onlyHidden": "Alles in deze map is verborgen of genegeerd. Zet Verborgen en genegeerde bestanden tonen aan in het menu Meer.",
     "reading": "{{name}} lezen.",
     "remoteMachine": "Machine op afstand",
-    "showHidden": "Verborgen bestanden tonen"
+    "showHidden": "Verborgen en genegeerde bestanden tonen"
   },
   "git": {
     "action": {

@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import type { FsBrowseResult } from '@ruimte/contracts';
 import { PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
+import { classifyEntry } from './visibility.ts';
 import { CodedError } from '../coded-error.ts';
 
 type BrowseErrorCode = 'cwd-required' | 'windows-path';
@@ -15,6 +16,12 @@ interface BrowseOptions {
     /* Whether dot-folders come along even when the typed prefix does not start with a dot. */
     hidden?: boolean;
 }
+
+/* Without a repository to ask, a name is all there is to go on, which is what `browse` has. */
+const visible = (name: string, showHidden: boolean): boolean => {
+    const visibility = classifyEntry(name);
+    return visibility !== 'never' && (showHidden || visibility === 'always');
+};
 
 const endsWithSeparator = (path: string): boolean => path.endsWith('/') || path.endsWith('\\');
 
@@ -42,9 +49,11 @@ export const resolveBrowsePath = (partialPath: string, cwd: string | undefined, 
 
 /*
  * Directories that complete what was typed. A path ending in a separator lists that directory;
- * otherwise the last segment filters its parent by prefix. Dot-folders stay hidden unless the
- * prefix itself starts with a dot or the caller asks for them. A directory that cannot be read
- * lists as empty, not as an error, and `exists` is what tells that apart from one that is not there.
+ * otherwise the last segment filters its parent by prefix. Dot-folders and build output stay
+ * hidden unless the prefix itself starts with a dot or the caller asks for them, and OS rubbish
+ * stays out either way; git is never asked here, since this answers a keystroke. A directory that
+ * cannot be read lists as empty, not as an error, and `exists` is what tells that apart from one
+ * that is not there.
  */
 export const browseDirectories = async (partialPath: string, cwd: string | undefined, options: BrowseOptions = {}): Promise<FsBrowseResult> => {
     const trimmed = partialPath.trim();
@@ -60,7 +69,7 @@ export const browseDirectories = async (partialPath: string, cwd: string | undef
     }
     const showHidden = options.hidden === true || prefix.startsWith('.');
     const matches = names
-        .filter((entry) => entry.isDirectory && entry.name.toLowerCase().startsWith(prefix) && (showHidden || !entry.name.startsWith('.')))
+        .filter((entry) => entry.isDirectory && entry.name.toLowerCase().startsWith(prefix) && visible(entry.name, showHidden))
         .sort((a, b) => a.name.localeCompare(b.name));
     const entries = await Promise.all(
         matches.map(async (entry) => {

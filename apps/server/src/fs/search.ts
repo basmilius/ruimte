@@ -1,11 +1,11 @@
 import { readdir } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { FS_SEARCH_MAX_RESULTS, type FsSearchResult } from '@ruimte/contracts';
+import { classifyEntry } from './visibility.ts';
 
 // A walk outside a git repo cannot read .gitignore cheaply; it stops here and skips the usual weight.
 const WALK_MAX_FILES = 20000;
 const WALK_MAX_DEPTH = 12;
-const WALK_SKIP = new Set(['node_modules', '.git', 'dist', 'build', 'target', 'vendor', '.cache', '__pycache__', '.venv', 'venv']);
 
 // Every keystroke searches again; the file list is the expensive part, the ranking is not.
 const CACHE_TTL_MS = 10000;
@@ -100,7 +100,7 @@ const walk = async (root: string): Promise<{ files: string[]; truncated: boolean
             continue;
         }
         for (const entry of entries) {
-            if (entry.name.startsWith('.') || WALK_SKIP.has(entry.name)) {
+            if (classifyEntry(entry.name) !== 'always') {
                 continue;
             }
             const full = join(dir, entry.name);

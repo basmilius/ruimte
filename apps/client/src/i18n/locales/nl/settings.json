@@ -144,8 +144,8 @@
                 "description": "Boven dit aantal sluit het oudste tabblad dat niet is vastgezet. Dubbelklik op een tabblad om het vast te zetten."
             },
             "hidden": {
-                "label": "Verborgen bestanden tonen",
-                "description": "Dotfiles en mappen die met een punt beginnen."
+                "label": "Verborgen en genegeerde bestanden tonen",
+                "description": "Wat git negeert, bouwoutput zoals node_modules, en dotfiles in een map zonder repository. Bestanden die het besturingssysteem voor zichzelf houdt blijven altijd verborgen."
             },
             "browseStart": {
                 "label": "Bladeren beginnen in",

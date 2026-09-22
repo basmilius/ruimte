@@ -110,7 +110,9 @@ export const FsEntrySchema = z.object({
     // Null for anything that is not a file.
     size: z.number().nullable(),
     mtime: z.number(),
-    // A leading dot today; the Windows attribute joins later.
+    /* Whether this is out of the way until a person asks for everything: what git ignores, build
+       output by name, and a leading dot in a folder without a repository. OS rubbish and Ruimte's
+       own state are never listed at all, whatever the caller asks. */
     hidden: z.boolean(),
     // What `git check-ignore` says, plus `.git` itself; false everywhere outside a repository.
     ignored: z.boolean()
@@ -121,7 +123,7 @@ export type FsEntry = z.infer<typeof FsEntrySchema>;
 export const FsListPayloadSchema = z.object({
     path: z.string().min(1),
     depth: z.number().int().positive().max(FS_LIST_MAX_DEPTH).optional(),
-    // Whether entries with a leading dot come along; they stay out by default.
+    // Whether hidden and ignored entries come along; they stay out by default.
     hidden: z.boolean().optional()
 });
 export type FsListPayload = z.infer<typeof FsListPayloadSchema>;

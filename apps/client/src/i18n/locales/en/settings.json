@@ -144,8 +144,8 @@
                 "description": "Past this number, the oldest unpinned tab closes. Double-click a tab to pin it."
             },
             "hidden": {
-                "label": "Show hidden files",
-                "description": "Dotfiles and dot folders."
+                "label": "Show hidden and ignored files",
+                "description": "What git ignores, build output such as node_modules, and dotfiles in a folder without a repository. Files the operating system keeps to itself stay hidden either way."
             },
             "browseStart": {
                 "label": "Start browsing in",

@@ -64,7 +64,7 @@ struct MachineFilesPage: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Toggle("Show hidden files", isOn: $hidden)
+                    Toggle("Show hidden and ignored files", isOn: $hidden)
                 } label: {
                     Label("File options", lucideIcon: "ellipsis")
                 }
