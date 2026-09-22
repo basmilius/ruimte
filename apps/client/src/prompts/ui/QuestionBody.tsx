@@ -142,6 +142,7 @@ export function QuestionBody({
                             tabIndex={tabStop === question.choices.length ? 0 : -1}
                             data-prompt-entry={tabStop === question.choices.length ? '' : undefined}
                             className="max-h-40 min-w-0 flex-1 resize-none field-sizing-content bg-transparent outline-none placeholder:text-text-muted"
+                            buttonClassName="-my-1 -mr-1.5"
                             aria-label={t('question.answerLabel')}
                             placeholder={t('question.somethingElse')}
                             value={answer.text}
