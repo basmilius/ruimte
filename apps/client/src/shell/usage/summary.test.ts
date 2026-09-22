@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { UsageBucket, UsageSummaryResult, UsageTotals } from '@ruimte/contracts';
-import { displayModel, formatTokens, formatUsd, moneyFormat, shortPath } from './format.ts';
+import { formatTokens, formatUsd, moneyFormat, shortPath } from './format.ts';
 import { deriveDays, deriveUsage, enumerateSlots, labelEveryFor } from './summary.ts';
 
 const totals = (patch: Partial<UsageTotals> = {}): UsageTotals => ({
@@ -162,16 +162,6 @@ describe('the formatters', () => {
         const money = moneyFormat('EUR', null);
         expect(money(10)).toMatch(/10[.,]00/);
         expect(money(10)).not.toContain('€');
-    });
-});
-
-describe('a model name', () => {
-    test('drops the vendor and the date and puts the version back together', () => {
-        expect(displayModel('claude-opus-4-5')).toBe('Claude Opus 4.5');
-        expect(displayModel('anthropic/claude-fable-5-1')).toBe('Claude Fable 5.1');
-        expect(displayModel('claude-haiku-4-5-20251001')).toBe('Claude Haiku 4.5');
-        expect(displayModel('gpt-5.6-sol')).toBe('GPT 5.6 Sol');
-        expect(displayModel('claude-opus-5')).toBe('Claude Opus 5');
     });
 });
 

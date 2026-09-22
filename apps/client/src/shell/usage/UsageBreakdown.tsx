@@ -13,7 +13,8 @@ import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 import { ProviderLogo } from '@/ui/ProviderLogo';
 import { USAGE_PROVIDERS, totalTokensOf } from '@ruimte/contracts';
-import { displayModel, formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS, shortPath, slotLabel } from '@/shell/usage/format';
+import { modelNameFromSlug } from '@/agents/model-name';
+import { formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS, shortPath, slotLabel } from '@/shell/usage/format';
 import { useMoney } from '@/shell/usage/money';
 import { deriveDays } from '@/shell/usage/summary';
 
@@ -64,11 +65,9 @@ function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; m
             {sorted.map((model) => (
                 <div key={`${model.provider} ${model.model}`} className={ROW}>
                     <ProviderMark provider={model.provider} />
-                    <Tooltip label={model.model}>
-                        <span className="truncate">{displayModel(model.model)}</span>
-                    </Tooltip>
+                    <span className="truncate">{modelNameFromSlug(model.model)}</span>
                     {model.priceBasis === 'family' && model.pricedAs !== null && (
-                        <Tooltip label={t('breakdown.models.pricedAs', { model: model.pricedAs })}>
+                        <Tooltip label={t('breakdown.models.pricedAs', { model: modelNameFromSlug(model.pricedAs) })}>
                             <span className="text-text-faint">
                                 <Icon icon={Info} size={12} />
                             </span>

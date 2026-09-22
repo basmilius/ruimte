@@ -84,7 +84,7 @@ struct MachineUsagePage: View {
                         let model = item.element
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
-                                Text(model.text("model")).font(.headline)
+                                Text(ModelName.fromSlug(model.text("model"))).font(.headline)
                                 Spacer()
                                 Text(
                                     model["costUsd"]?.numberValue.map { money.string(usd: $0) }

@@ -14,6 +14,8 @@ export interface BackendLaunch {
     cwd: string;
     env: Record<string, string>;
     selection: ModelSelection;
+    // The selected model as a person reads it, for the errors a backend puts in the thread.
+    modelName: string;
     runtimeMode: RuntimeMode;
     // The CLI's own session or thread id to continue, if the chat has one.
     resume: string | null;

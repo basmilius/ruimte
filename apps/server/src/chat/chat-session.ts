@@ -873,6 +873,7 @@ export class ChatSession {
             cwd: info.cwd,
             env: this.options.env,
             selection: info.selection,
+            modelName: this.options.provider.catalog.nameOf(info.selection.model),
             runtimeMode: info.runtimeMode,
             resume: info.agentSessionId,
             generation,

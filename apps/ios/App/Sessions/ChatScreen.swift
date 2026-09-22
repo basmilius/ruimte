@@ -561,11 +561,17 @@ struct ChatScreen: View {
         }
     }
 
+    /// The chosen model as its CLI's catalog names it; a chat that has not picked one yet says so.
+    private var modelLabel: String {
+        let slug = model.info["selection"]?.text("model") ?? ""
+        return slug.isEmpty ? "Model" : ModelName.of(slug, in: model.models)
+    }
+
     private var modelMenu: some View {
         Menu {
             Section("Model") {
                 ForEach(Array(model.models.enumerated()), id: \.offset) { _, option in
-                    Button(option["name"]?.stringValue ?? "Model") {
+                    Button(option.text("name", fallback: ModelName.fromSlug(option.text("slug")))) {
                         configureSelection(.object(["model": option["slug"] ?? .null, "options": .object([:])]))
                     }
                 }
@@ -600,7 +606,7 @@ struct ChatScreen: View {
             }
         } label: {
             HStack(spacing: 4) {
-                Text(model.info["selection"]?["model"]?.stringValue ?? "Model").lineLimit(1)
+                Text(modelLabel).lineLimit(1)
                 Image(lucide: "chevron-down", size: 12)
             }.font(.caption.weight(.medium)).foregroundStyle(MobileStyle.muted).frame(minHeight: 44)
                 .accessibilityValue(model.info["runtimeMode"]?.stringValue ?? "Permissions")

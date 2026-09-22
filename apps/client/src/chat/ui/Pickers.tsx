@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { Bookmark, Check, ChevronDown, ChevronRight, Search, Shield, SlidersHorizontal, Trash2 } from 'lucide-react';
 import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
+import { modelName } from '@/agents/model-name';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { forgetStashed, STASH_SHORTCUT, useStash, type StashedPrompt } from '@/chat/stash';
 import { MENU_LABEL, MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
@@ -78,7 +79,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
     const listRef = useRef<HTMLDivElement>(null);
 
     const owner = providers.find((entry) => entry.kind === provider);
-    const current = owner?.models.find((model) => model.slug === selection.model);
+    const current = modelName(selection.model, owner?.models);
     const grouped = providers.length > 1;
     const trimmed = query.trim().toLowerCase();
 
@@ -138,10 +139,10 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
 
     return (
         <Popover.Root open={open} onOpenChange={setOpen}>
-            <Tooltip label={owner ? `${owner.name} · ${current?.name ?? selection.model}` : t('pickers.model.choose')} kbd="/model">
+            <Tooltip label={owner ? `${owner.name} · ${current}` : t('pickers.model.choose')} kbd="/model">
                 <Popover.Trigger className={triggerClass}>
                     <AgentIcon kind={provider} size={12} />
-                    <span className="max-w-40 truncate">{current?.name ?? selection.model}</span>
+                    <span className="max-w-40 truncate">{current}</span>
                     <Icon icon={ChevronDown} size={12} className="text-text-faint" />
                 </Popover.Trigger>
             </Tooltip>

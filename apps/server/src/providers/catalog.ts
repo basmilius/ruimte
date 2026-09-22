@@ -42,6 +42,11 @@ export class ModelCatalog {
         }));
     }
 
+    /* What a person reads for a model, so an error in a thread names it the way the picker does. */
+    nameOf(slug: string): string {
+        return this.models.find((entry) => entry.slug === slug)?.name ?? slug;
+    }
+
     /* Accepts a slug or an alias; unknown models answer null so the caller can decide what to do. */
     resolveModel(name: string): string | null {
         const model = this.models.find((entry) => entry.slug === name || entry.aliases?.includes(name));

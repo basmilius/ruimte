@@ -119,7 +119,7 @@ export class CodexBackend implements ChatBackend {
     sendTurn(input: TurnInput): void {
         const images = input.attachments.filter((attachment) => attachmentImageMime(attachment) !== null);
         if (images.length > 0 && this.imageInputSupported === false) {
-            throw new Error(`${this.launch.selection.model} does not support image input. Choose a model that accepts images.`);
+            throw new Error(`${this.launch.modelName} does not support image input. Choose a model that accepts images.`);
         }
         for (const attachment of images) {
             try {

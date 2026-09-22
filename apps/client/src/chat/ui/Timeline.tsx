@@ -20,6 +20,7 @@ import { endpointKey, useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
 import { FileLinkContext } from '@/shell/panels/file-links';
 import { AgentIcon } from '@/agents/AgentIcon';
+import { useModelName } from '@/agents/model-name';
 import { useContextSources } from '@/context/sources';
 import { SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
@@ -34,12 +35,13 @@ const ESTIMATED_ROW_PX = 56;
 function EmptyThread({ chatId }: { chatId: string }) {
     const { t } = useTranslation('chat');
     const info = useChatRow(chatId, (row) => row?.info ?? null);
+    const model = useModelName(info?.provider, info?.selection.model ?? '');
     const sources = useContextSources(chatId);
     return (
         <div className="flex grow items-center justify-center">
             <div className="flex max-w-sm flex-col items-center gap-3 px-6 py-8 text-center">
                 <EmptyState icon={info ? <AgentIcon kind={info.provider} /> : undefined} className="p-0">
-                    {info ? t('timeline.empty.ready', { model: info.selection.model }) : t('timeline.empty.ask')}
+                    {info ? t('timeline.empty.ready', { model }) : t('timeline.empty.ask')}
                 </EmptyState>
                 {sources.length > 0 && (
                     <div className="flex max-w-full flex-col items-center gap-1">

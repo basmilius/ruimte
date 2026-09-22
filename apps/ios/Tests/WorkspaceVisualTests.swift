@@ -12,7 +12,7 @@ final class WorkspaceVisualTests: XCTestCase {
             let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
             let machine = Machine(
                 id: "project-long-name-\(UUID().uuidString)", name: "MacBook Pro",
-                icon: MachineIcon(kind: .lucide, value: "laptop"),
+                icon: MachineIcon(kind: "lucide", value: "laptop"),
                 publicKey: DeviceKey().publicKey, brokerUrl: nil, lastSeenAt: nil)
             let session = runtime.session(for: machine)
             let host = UIHostingController(
