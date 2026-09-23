@@ -4,4 +4,6 @@ import type { LiveVoice, VoiceLanguage } from '@ruimte/contracts';
 export interface OpenAiLivePreferences {
     language: VoiceLanguage;
     voice: LiveVoice;
+    /* The action domains whose tools the session gets; absent from a page before this field, which gets them all. */
+    domains?: string[];
 }

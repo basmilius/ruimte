@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { createOpenAiLiveSession, parseOpenAiLivePreferences } from './openai-live';
+import { VOICE_TOOL_DEFINITIONS } from '@ruimte/actions';
+import { createOpenAiLiveSession, liveTools, parseOpenAiLivePreferences } from './openai-live';
 
 describe('createOpenAiLiveSession', () => {
     test('exchanges an SDP offer without returning the API key', async () => {
@@ -58,5 +59,21 @@ describe('parseOpenAiLivePreferences', () => {
         expect(parseOpenAiLivePreferences({ language: 'klingon', voice: 'marin' })).toBeNull();
         expect(parseOpenAiLivePreferences({ language: 'nl', voice: 'robot' })).toBeNull();
         expect(parseOpenAiLivePreferences({ language: 'nl', voice: 'willow' })).toBeNull();
+    });
+
+    test('keeps the domains a page names, drops one this shell does not know, and refuses a list that is no list', () => {
+        expect(parseOpenAiLivePreferences({ language: 'nl', voice: 'marin', domains: ['workspace', 'future', 'developer'] })).toEqual({
+            language: 'nl',
+            voice: 'marin',
+            domains: ['workspace', 'developer']
+        });
+        expect(parseOpenAiLivePreferences({ language: 'nl', voice: 'marin', domains: 'developer' })).toBeNull();
+    });
+});
+
+describe('liveTools', () => {
+    test('sends the tools of the named domains, and every tool to a page that named none', () => {
+        expect(liveTools({ language: 'nl', voice: 'marin', domains: ['workspace'] }).map((tool) => tool.name)).toEqual(['inspect_workspace', 'control_action']);
+        expect(liveTools({ language: 'nl', voice: 'marin' })).toEqual([...VOICE_TOOL_DEFINITIONS]);
     });
 });

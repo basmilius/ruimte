@@ -18,7 +18,8 @@ import { MicrophoneMonitor, WaveformMonitor, WAVEFORM_BAND_COUNT } from '@/audio
 import { ResponseToolLoop } from '@/voice/response-tool-loop';
 import { chatCompletion, type VoiceChatFollowUp } from '@/voice/chat-follow-up';
 import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction, type VoiceActionKind } from '@/voice/state';
-import { executeVoiceTool } from '@/voice/tools';
+import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
+import { currentVoiceDomains } from '@/voice/domains';
 
 let session: LiveSession | null = null;
 let releaseMicrophone: (() => void) | null = null;
@@ -242,25 +243,26 @@ export async function startVoice(): Promise<void> {
     completionDelivery = new VoiceCompletionDelivery((event) => next.send(event));
     const queue = new VoiceToolQueue(voiceWorkspaceRevision);
     toolQueue = queue;
+    const execute = async (name: string, args: string): Promise<Record<string, unknown>> => {
+        const execution = await executeVoiceTool(name, args);
+        if (session !== next) {
+            return { ok: false, message: 'The voice session ended.' };
+        }
+        if (execution.action) {
+            addAction(execution.action.kind, execution.action.label, execution.action.detail, execution.action.undo);
+        }
+        if (execution.clearedChatKey) {
+            cancelChatFollowUps(execution.clearedChatKey);
+        }
+        if (execution.followUp) {
+            trackChatFollowUp(execution.followUp);
+        }
+        return execution.output;
+    };
     toolLoop = new ResponseToolLoop(
         (event) => next.send(event),
-        (name, args) =>
-            queue.run(async () => {
-                const execution = await executeVoiceTool(name, args);
-                if (session !== next) {
-                    return { ok: false, message: 'The voice session ended.' };
-                }
-                if (execution.action) {
-                    addAction(execution.action.kind, execution.action.label, execution.action.detail, execution.action.undo);
-                }
-                if (execution.clearedChatKey) {
-                    cancelChatFollowUps(execution.clearedChatKey);
-                }
-                if (execution.followUp) {
-                    trackChatFollowUp(execution.followUp);
-                }
-                return execution.output;
-            })
+        // A cancel is for the run the queue is waiting on, so it cannot wait its turn behind it.
+        (name, args) => (bypassesQueue(name, args) ? execute(name, args) : queue.run(() => execute(name, args)))
     );
     session = next;
     try {
@@ -270,7 +272,7 @@ export async function startVoice(): Promise<void> {
             return;
         }
         const { voiceLanguage, liveVoice } = useSettings.getState();
-        await next.start(stream, { language: voiceLanguage, voice: liveVoice });
+        await next.start(stream, { language: voiceLanguage, voice: liveVoice, domains: await currentVoiceDomains() });
         if (session !== next) {
             next.close();
             return;
