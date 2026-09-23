@@ -55,17 +55,22 @@ larger ones becomes a GitHub issue when it starts.
    the conflict overlay, the worktree dialogs, the chat composer, the prompt cards, the fork dialog,
    the plan panel, the processes panel, the files panel and the file menus, find in files, a
    drawing's keys, menu and dock, a diagram's dock and editors, a browser page's bar and menu, the
-   voice tools (generated from the catalog) and every `ruimte-context` verb but `help`, `list` and
-   `read` (the daemon's handlers in `apps/server/src/actions`). Which actor may run what is decided
-   per action; the report's "Wie mag wat" has the tables, and what stays outside it on purpose
-   (pairing, machines, accounts, updates, secrets, local chrome, gestures and plumbing). Voice gets
+   voice tools (generated from the catalog) and every `ruimte-context` verb but `help` (the daemon's
+   handlers in `apps/server/src/actions`; `list` and `read` are `context.list` and `context.read`
+   behind `GET /context`). Which actor may run what is decided per action; the report's "Wie mag
+   wat" has the tables, and what stays outside it on purpose (pairing, machines, accounts, updates,
+   secrets, local chrome and settings, gestures and plumbing). Voice gets
    only the domains a project needs, fixed per session (`apps/client/src/voice/domains.ts`).
    `agent.start` and `team.start` answer `running` with an operation id that `operation.get`
    follows and `operation.cancel` stops; a git run of this window is cancelled as `git:<run>`.
-   Left: `expectedRevision`, a person's agent start on the registry, the app settings and devices
-   in "Wie mag wat", Restart and Resume under an ended shell (they rebuild the node's xterm), a
-   note's color, and measuring tool choice, target errors and latency. The binding table in 10
-   hangs on it.
+   A write may name the revision it was decided on (`expectedRevision`) and refuses with
+   `rev-conflict` once the document moved on: the project file's `rev` on the daemon (`--revision N`
+   on every verb that writes it, a `revision` row under `view list`, `node list` and `link list`),
+   and in the client the rev the project, drawing or diagram store saved or read. No person path
+   starts an agent with a prompt, a task or a worktree of its own in one click, so a person's start
+   stays `node.create` and `agent.start` stays an agent's. Restart and Resume under an ended shell
+   are `terminal.restart` and `terminal.resumeAgent`, and a note's color is `note.setColor`. Left:
+   measuring tool choice, target errors and latency. The binding table in 10 hangs on it.
 10. **Settings and keyboard**: one binding table with `when` contexts, read by the handlers and the
     Keyboard pane (which lists them read-only today), then overrides with press-to-record, conflict
     labels and reset. A "restore defaults" action, a canvas font size for chat and text elements,
