@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronRight, Copy, Trash2 } from 'lucide-react';
 import { useFormatLocale } from '@/format/locale';
+import { formatLatency } from '@/format/duration';
 import { formatBytes, formatDecimal, formatNumber, formatPercent } from '@/format/number';
 import { Button } from '@/ui/Button';
 import { copyText } from '@/ui/clipboard';
@@ -15,7 +16,6 @@ const COPIED_MS = 1_500;
 const MOST_USED = 5;
 
 /* Latency sits well below a second, where the whole seconds of `formatDuration` would read as nothing. */
-const formatLatency = (ms: number): string => (ms < 1000 ? `${formatNumber(ms)} ms` : `${formatDecimal(ms / 1000)} s`);
 
 const share = (value: number | null): string => formatPercent((value ?? 0) * 100);
 
