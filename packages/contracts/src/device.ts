@@ -24,6 +24,7 @@ export const DeviceToolSchema = z.enum([
     'showBorders',
     'voiceOver',
     'location',
+    'clearLocation',
     'permissions',
     'push'
 ]);
