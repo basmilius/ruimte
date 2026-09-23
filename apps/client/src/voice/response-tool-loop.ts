@@ -1,14 +1,14 @@
-import { VOICE_TOOL_DEFINITIONS, type VoiceToolName } from '@ruimte/contracts';
+import { VOICE_TOOL_DEFINITIONS } from '@ruimte/actions';
 import type { LiveEvent } from '@/voice/live-session';
 
 interface FunctionCall {
     callId: string;
-    name: VoiceToolName;
+    name: string;
     arguments: string;
 }
 
 type Send = (event: LiveEvent) => void;
-type Execute = (name: VoiceToolName, args: string) => Promise<Record<string, unknown>>;
+type Execute = (name: string, args: string) => Promise<Record<string, unknown>>;
 
 const toolNames = new Set<string>(VOICE_TOOL_DEFINITIONS.map((tool) => tool.name));
 
@@ -30,7 +30,7 @@ const functionCallOf = (event: LiveEvent): FunctionCall | null => {
     ) {
         return null;
     }
-    return { callId: item.call_id, name: item.name as VoiceToolName, arguments: item.arguments };
+    return { callId: item.call_id, name: item.name, arguments: item.arguments };
 };
 
 const completedDelegationOf = (event: LiveEvent): string | null => {

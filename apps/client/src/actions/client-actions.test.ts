@@ -164,6 +164,7 @@ describe('client actions', () => {
             'projects.list-open',
             'project.switch',
             'workspace.inspect',
+            'target.resolve',
             'view.focus',
             'view.rename',
             'view.create',

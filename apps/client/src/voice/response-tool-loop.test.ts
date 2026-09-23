@@ -25,7 +25,7 @@ describe('ResponseToolLoop', () => {
                     type: 'function_call',
                     call_id: 'call-1',
                     name: 'manage_views',
-                    arguments: '{"action":"focus","view":"Chat Test","kind":null,"name":null,"url":null,"command":null}'
+                    arguments: '{"action":"view.focus","viewId":"chat-test"}'
                 }
             }
         });
@@ -39,7 +39,7 @@ describe('ResponseToolLoop', () => {
         expect(calls).toEqual([
             {
                 name: 'manage_views',
-                args: '{"action":"focus","view":"Chat Test","kind":null,"name":null,"url":null,"command":null}'
+                args: '{"action":"view.focus","viewId":"chat-test"}'
             }
         ]);
         expect(sent[0]).toMatchObject({

@@ -74,6 +74,7 @@
       "name": "@ruimte/desktop",
       "version": "0.0.0",
       "dependencies": {
+        "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
         "@ruimte/desktop-bridge": "workspace:*",
         "@ruimte/pulsar": "workspace:*",

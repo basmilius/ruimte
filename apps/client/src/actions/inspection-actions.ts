@@ -19,7 +19,7 @@ export function projectAgents(document: StoreApi<DocumentState>) {
     const canvas = active && isCanvasView(active) ? focusedCanvas().getState() : null;
     return state.views.flatMap((view) => {
         if (view.kind === 'chat' || view.kind === 'terminal') {
-            return [{ id: view.id, name: view.name, kind: view.kind, view: view.name, selected: active?.id === view.id }];
+            return [{ id: view.id, name: view.name, kind: view.kind, viewId: view.id, view: view.name, selected: active?.id === view.id }];
         }
         if (!isCanvasView(view)) {
             return [];
@@ -31,6 +31,7 @@ export function projectAgents(document: StoreApi<DocumentState>) {
                 id: node.id,
                 name: node.title,
                 kind: node.kind as 'chat' | 'terminal',
+                viewId: view.id,
                 view: view.name,
                 selected: view.id === active?.id && canvas?.selection.includes(node.id) === true
             }));

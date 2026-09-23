@@ -4,6 +4,10 @@ import { z } from 'zod';
 export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
 export const ActionActorKindSchema = z.enum(ACTION_ACTOR_KINDS);
 
+/* What an action is about. Voice gets one tool per domain, so this is also how its tools are cut. */
+export const ACTION_DOMAINS = ['workspace', 'views', 'canvas', 'layout', 'communicate', 'agents', 'projects'] as const;
+export type ActionDomain = (typeof ACTION_DOMAINS)[number];
+
 /* Every kind a project knows, plus the one a newer Ruimte made. An action may name a view this version cannot open. */
 export const ActionViewKindSchema = z.enum([...PROJECT_VIEW_KINDS, UNKNOWN_KIND]);
 export const VIEW_KINDS = ActionViewKindSchema.options;
@@ -25,11 +29,23 @@ const worldPoint = z.object({ x: z.number(), y: z.number() });
 const LOCK_GESTURES = ['pan', 'zoom', 'move', 'resize'] as const;
 const PERSON_AND_VOICE: readonly ActionActorKind[] = ['person', 'voice'];
 
+export const TARGET_KINDS = ['view', 'node', 'chat', 'agent', 'project'] as const;
+const resolvedTarget = z.object({
+    id: z.string(),
+    name: z.string(),
+    kind: z.string(),
+    viewId: z.string().nullable(),
+    view: z.string().nullable(),
+    endpointId: z.string().nullable(),
+    machine: z.string().nullable()
+});
+
 export const ACTION_DEFINITIONS = {
     'agents.inspect': {
         title: 'Inspect agents',
         description: 'Reads current agent statuses in this project from the daemon.',
         effect: 'read',
+        domain: 'agents',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({}),
         output: z.object({
@@ -55,6 +71,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Read agent activity',
         description: 'Reads bounded structured tool activity, never internal reasoning.',
         effect: 'read',
+        domain: 'agents',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ agentId: z.string().min(1), limit: z.number().int().min(1).max(20), toolId: z.string().nullable() }),
         output: z.object({
@@ -80,6 +97,7 @@ export const ACTION_DEFINITIONS = {
         title: 'List open projects',
         description: 'Lists projects in use in the project navigation, excluding Recent.',
         effect: 'read',
+        domain: 'projects',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({}),
         output: z.object({
@@ -99,6 +117,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Switch open project',
         description: 'Switches this window to an existing open project.',
         effect: 'local',
+        domain: 'projects',
         actors: ['person', 'voice'] as readonly ActionActorKind[],
         input: z.object({ endpointId: z.string().min(1), projectId: z.string().min(1) }),
         output: z.object({ project: z.string(), endpointId: z.string(), projectId: z.string() })
@@ -107,6 +126,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Inspect workspace',
         description: 'Reads the current project, active view, openable views, active canvas nodes and selection.',
         effect: 'read',
+        domain: 'workspace',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({}),
         output: z.object({
@@ -147,10 +167,32 @@ export const ACTION_DEFINITIONS = {
                 .nullable()
         })
     },
+    'target.resolve': {
+        title: 'Resolve names',
+        description:
+            'Turns spoken or typed names of views, nodes on the active canvas, AI Chats, agents or open projects into ids. A name that fits more than one comes back under ambiguous with every candidate, never as the first of them. Without names it returns the current ones: the active view, the nodes in scope (the selection unless a scope is given), the active or selected AI Chat, the selected agent or the active project. Scope and nodeKind narrow nodes, machine narrows projects.',
+        effect: 'read',
+        domain: 'workspace',
+        actors: ['person', 'voice', 'agent'] as readonly ActionActorKind[],
+        input: z.object({
+            target: z.enum(TARGET_KINDS),
+            names: z.array(z.string().trim().min(1)).min(1).nullable(),
+            nodeKind: ActionCanvasNodeKindSchema.nullable(),
+            scope: z.enum(['selected', 'visible', 'all']).nullable(),
+            machine: z.string().trim().min(1).nullable()
+        }),
+        output: z.object({
+            target: z.enum(TARGET_KINDS),
+            found: z.array(resolvedTarget),
+            ambiguous: z.array(z.object({ name: z.string(), candidates: z.array(resolvedTarget) })),
+            missing: z.array(z.string())
+        })
+    },
     'view.focus': {
         title: 'Focus view',
         description: 'Shows an existing view in the client that initiated the action.',
         effect: 'local',
+        domain: 'views',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId }),
         output: z.object({
@@ -165,6 +207,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Rename view',
         description: 'Changes the shared visible name of an existing view without changing its identity.',
         effect: 'shared',
+        domain: 'views',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId, name: viewName }),
         output: z.object({
@@ -180,6 +223,7 @@ export const ACTION_DEFINITIONS = {
         description:
             'Creates and focuses a new canvas, drawing, diagram, terminal, browser, AI Chat or file view, or adds a separator or subheader to the view list. A chat or terminal can run a specific agent CLI; a file view shows the file at a path, relative to the project folder or absolute.',
         effect: 'shared',
+        domain: 'views',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({
             kind: ActionCreatableViewKindSchema,
@@ -199,6 +243,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Delete view',
         description: 'Deletes a view and everything it contains after confirmation, saving the files it shows with unsaved changes first.',
         effect: 'shared',
+        domain: 'views',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId }),
         output: z.object({
@@ -211,6 +256,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Focus canvas node',
         description: 'Selects and brings a node on the active canvas into view.',
         effect: 'local',
+        domain: 'canvas',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId, nodeId: z.string().min(1) }),
         output: z.object({
@@ -225,6 +271,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Rename canvas node',
         description: 'Changes the shared visible title of a node on the active canvas.',
         effect: 'shared',
+        domain: 'canvas',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId, nodeId: z.string().min(1), name: viewName }),
         output: z.object({
@@ -241,6 +288,7 @@ export const ACTION_DEFINITIONS = {
         description:
             'Creates a node on the active canvas, centered on a world position or in free space near the middle of the screen. A chat or terminal can run a specific agent CLI; a file node shows the file at a path, relative to the project folder or absolute, read-only.',
         effect: 'shared',
+        domain: 'canvas',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({
             viewId,
@@ -265,6 +313,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Duplicate canvas node',
         description: 'Duplicates one node on the active canvas and selects the copy.',
         effect: 'shared',
+        domain: 'canvas',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId, nodeId: z.string().min(1) }),
         output: z.object({
@@ -280,6 +329,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Select canvas nodes',
         description: 'Replaces the active canvas selection with specific nodes.',
         effect: 'local',
+        domain: 'canvas',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId, nodeIds: z.array(z.string().min(1)).min(1) }),
         output: z.object({
@@ -293,6 +343,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Delete canvas nodes',
         description: 'Deletes one or more nodes from the active canvas after confirmation.',
         effect: 'shared',
+        domain: 'canvas',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId, nodeIds: z.array(z.string().min(1)).min(1) }),
         output: z.object({
@@ -306,6 +357,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Group canvas nodes',
         description: 'Creates a group frame around one or more nodes on the active canvas.',
         effect: 'shared',
+        domain: 'canvas',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId, nodeIds: z.array(z.string().min(1)).min(1) }),
         output: z.object({
@@ -319,6 +371,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Zoom to fit',
         description: 'Fits all content of the active canvas, drawing or diagram in the viewport.',
         effect: 'local',
+        domain: 'canvas',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId }),
         output: z.object({ viewId, view: viewName })
@@ -327,6 +380,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Undo change',
         description: 'Undoes the latest change in the active canvas, drawing or diagram.',
         effect: 'shared',
+        domain: 'canvas',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId }),
         output: z.object({ viewId, view: viewName, changed: z.boolean() })
@@ -335,6 +389,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Redo change',
         description: 'Redoes the next change in the active canvas, drawing or diagram.',
         effect: 'shared',
+        domain: 'canvas',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId }),
         output: z.object({ viewId, view: viewName, changed: z.boolean() })
@@ -343,6 +398,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Add canvas text',
         description: 'Adds a text element to the active canvas at a world position or near the middle of the screen. Without text it opens for typing.',
         effect: 'shared',
+        domain: 'canvas',
         actors: PERSON_AND_VOICE,
         input: z.object({ viewId, text: z.string().trim().min(1).nullable(), at: worldPoint.nullable() }),
         output: z.object({ viewId, view: viewName, textId: z.string().min(1) })
@@ -352,6 +408,7 @@ export const ACTION_DEFINITIONS = {
         description:
             'Lifts a chat, terminal, browser or device node off the active canvas into a view of its own, keeping its session. Lines drawn to it are removed, after confirmation.',
         effect: 'shared',
+        domain: 'canvas',
         actors: PERSON_AND_VOICE,
         input: z.object({ viewId, nodeId: z.string().min(1) }),
         output: z.object({ viewId, nodeId: z.string().min(1), view: z.string(), kind: ActionViewKindSchema })
@@ -361,6 +418,7 @@ export const ACTION_DEFINITIONS = {
         description:
             'Moves one node from the active canvas to another canvas view, keeping its id and session. Lines drawn to it are removed, after confirmation.',
         effect: 'shared',
+        domain: 'canvas',
         actors: PERSON_AND_VOICE,
         input: z.object({ viewId, nodeId: z.string().min(1), targetViewId: viewId }),
         output: z.object({ viewId, nodeId: z.string().min(1), node: z.string(), targetViewId: viewId, target: viewName })
@@ -369,6 +427,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Duplicate view',
         description: 'Copies a canvas, drawing or diagram view with everything it holds. The copy goes right under it and is not opened.',
         effect: 'shared',
+        domain: 'views',
         actors: PERSON_AND_VOICE,
         input: z.object({ viewId }),
         output: z.object({ sourceViewId: viewId, viewId, view: viewName, kind: ActionViewKindSchema })
@@ -377,6 +436,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Place view on canvas',
         description: 'Turns a chat, terminal, browser or device view into a node on the canvas that was open last, keeping its session, and shows that canvas.',
         effect: 'shared',
+        domain: 'views',
         actors: PERSON_AND_VOICE,
         input: z.object({ viewId }),
         output: z.object({ viewId, view: z.string(), canvasViewId: viewId, canvas: viewName })
@@ -385,6 +445,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Show view on canvas',
         description: 'Puts a live mirror of a drawing or diagram view on the canvas that was open last and shows it there. The view itself stays.',
         effect: 'shared',
+        domain: 'views',
         actors: PERSON_AND_VOICE,
         input: z.object({ viewId }),
         output: z.object({ viewId, view: viewName, canvasViewId: viewId, canvas: viewName, nodeId: z.string().min(1) })
@@ -393,6 +454,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Share view',
         description: "Moves a view into the project file a team commits, or back into this person's private file.",
         effect: 'shared',
+        domain: 'views',
         // Nothing is shared until a person names it, so neither Voice nor an agent may move a view between the files.
         actors: ['person'] as readonly ActionActorKind[],
         input: z.object({ viewId, shared: z.boolean() }),
@@ -402,6 +464,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Save canvas layout',
         description: 'Saves where the nodes and text of the active canvas are under a name. A saved layout with the same name is replaced, after confirmation.',
         effect: 'shared',
+        domain: 'layout',
         actors: PERSON_AND_VOICE,
         input: z.object({ viewId, name: viewName }),
         output: z.object({ viewId, view: viewName, name: viewName, replaced: z.boolean() })
@@ -410,6 +473,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Apply canvas layout',
         description: 'Moves the nodes and text of the active canvas to where a saved layout has them. Nothing is added or removed.',
         effect: 'shared',
+        domain: 'layout',
         actors: PERSON_AND_VOICE,
         input: z.object({ viewId, name: viewName }),
         output: z.object({ viewId, view: viewName, name: viewName })
@@ -418,6 +482,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Delete canvas layout',
         description: 'Deletes a saved layout of the active canvas, after confirmation. The nodes stay where they are.',
         effect: 'shared',
+        domain: 'layout',
         actors: PERSON_AND_VOICE,
         input: z.object({ viewId, name: viewName }),
         output: z.object({ viewId, view: viewName, name: viewName })
@@ -426,6 +491,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Lock canvas gestures',
         description: 'Locks or unlocks panning, zooming, moving and resizing on the active canvas in this client. Without gestures it sets all four.',
         effect: 'local',
+        domain: 'canvas',
         actors: PERSON_AND_VOICE,
         input: z.object({ viewId, locked: z.boolean(), gestures: z.array(z.enum(LOCK_GESTURES)).min(1).nullable() }),
         output: z.object({
@@ -438,6 +504,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Split view',
         description: 'Opens a view in a new cell to the right of or below the focused one. Without a view it takes the first one that is not on screen yet.',
         effect: 'local',
+        domain: 'layout',
         actors: PERSON_AND_VOICE,
         input: z.object({ direction: z.enum(['right', 'down']), viewId: viewId.nullable() }),
         output: z.object({ viewId, view: z.string(), direction: z.enum(['right', 'down']) })
@@ -446,6 +513,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Close split cell',
         description: 'Closes the cell a view stands in, or the focused cell, while more than one is open. The view stays in the project.',
         effect: 'local',
+        domain: 'layout',
         actors: PERSON_AND_VOICE,
         input: z.object({ viewId: viewId.nullable() }),
         output: z.object({ viewId, view: z.string() })
@@ -454,6 +522,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Focus neighboring cell',
         description: 'Moves the focus to the cell left of, right of, above or below the focused one.',
         effect: 'local',
+        domain: 'layout',
         actors: PERSON_AND_VOICE,
         input: z.object({ direction: z.enum(['left', 'right', 'up', 'down']) }),
         output: z.object({ viewId, view: z.string(), changed: z.boolean() })
@@ -462,6 +531,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Clear terminal',
         description: 'Clears the screen and scrollback of a terminal view or node, after confirmation. The process in it keeps running.',
         effect: 'external',
+        domain: 'communicate',
         // An agent never types into or clears the session of another node.
         actors: PERSON_AND_VOICE,
         input: z.object({ terminalId: z.string().min(1) }),
@@ -471,6 +541,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Send AI Chat prompt',
         description: 'Submits a direct prompt to an existing AI Chat view or node.',
         effect: 'external',
+        domain: 'communicate',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({
             chatId: z.string().min(1),
@@ -487,6 +558,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Clear AI Chat',
         description: 'Clears conversation history, attachments and plans, and stops the current turn after confirmation. Keeps the chat node or view.',
         effect: 'external',
+        domain: 'communicate',
         actors: ['person', 'voice'] as readonly ActionActorKind[],
         input: z.object({ chatId: z.string().min(1) }),
         output: z.object({ chatId: z.string().min(1), chat: z.string() })
@@ -495,6 +567,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Read recent AI Chat messages',
         description: 'Reads a limited recent excerpt of a loaded AI Chat without including reasoning or tool output.',
         effect: 'read',
+        domain: 'communicate',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ chatId: z.string().min(1), limit: z.number().int().min(1).max(20) }),
         output: z.object({

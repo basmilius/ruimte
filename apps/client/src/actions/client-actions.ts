@@ -1,4 +1,5 @@
 import { inspectionActions } from '@/actions/inspection-actions';
+import { resolveTarget } from '@/actions/resolve-target';
 import { ActionRefusal, ActionRegistry, type ActionCall, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
 import {
     canShareView,
@@ -260,6 +261,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
     const { clearChat, clearTerminal, providers, copyViewContent, viewDeletion } = { ...LIVE_MACHINE, ...machine };
     return new ActionRegistry<void>({
         ...inspectionActions(document),
+        'target.resolve': (input) => ({ output: resolveTarget(document, input) }),
         'workspace.inspect': () => {
             const state = document.getState();
             const active = activeViewOf(state);
@@ -599,7 +601,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 throw new ActionRefusal('group-create-failed', 'Select one or more non-group nodes before grouping them.');
             }
             return {
-                output: { viewId, view: view.name, groupId, members: nodeIds },
+                output: { viewId, view: view.name, groupId, members: nodeIds.filter((id) => canvas.nodes[id]?.kind !== 'group') },
                 undo: historyUndo(viewId, depth + 1, hasNode(groupId))
             };
         },
