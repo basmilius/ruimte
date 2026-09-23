@@ -314,7 +314,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 throw new ActionRefusal('unknown-view', `No view with id “${viewId}” exists in this project.`);
             }
             if (!isOpenableView(view)) {
-                throw new ActionRefusal('view-not-openable', `“${view.name}” is a ${view.kind} and cannot be focused.`);
+                throw new ActionRefusal('never-opens', `“${view.name}” is a ${view.kind} and cannot be focused.`);
             }
             const previousViewId = state.activeViewId;
             const shown = state.showView(viewId);
