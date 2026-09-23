@@ -24,7 +24,14 @@ describe('IosSimulatorBackend', () => {
                 name: 'iPhone 18 Pro',
                 runtime: 'iOS 27.0',
                 state: 'shutdown',
-                capabilities: { boot: true, shutdown: true, stream: false, input: false, screenshot: true }
+                capabilities: expect.objectContaining({
+                    boot: true,
+                    shutdown: true,
+                    stream: false,
+                    input: false,
+                    screenshot: true,
+                    buttons: ['home', 'swipeHome', 'appSwitcher', 'lock', 'siri']
+                })
             }
         ]);
     });

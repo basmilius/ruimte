@@ -72,7 +72,7 @@ describe('DeviceManager', () => {
         const manager = new DeviceManager([new FakeBackend()]);
 
         await expect(manager.boot('missing', 'android', 'pixel-1')).rejects.toEqual(
-            new DeviceError('platform-unavailable', 'Android simulators are not available on this machine')
+            new DeviceError('platform-unavailable', 'Android devices are not available on this machine')
         );
     });
 
@@ -85,9 +85,22 @@ describe('DeviceManager', () => {
         const manager = new DeviceManager([new FakeBackend(), unavailable]);
 
         expect(await manager.list()).toEqual([phone]);
+        expect((await manager.survey()).unavailable).toEqual([{ platform: 'ios', code: 'devicectl-unavailable', message: 'CoreDevice is unavailable' }]);
         await expect(manager.boot('coredevice', 'ios', 'physical-1')).rejects.toEqual(
             new DeviceError('device-action-unavailable', 'This device cannot be started by Ruimte')
         );
+    });
+
+    test('refuses a stream to a client that cannot draw its format', async () => {
+        const backend = new FakeBackend();
+        backend.info = { ...phone, state: 'booted' };
+        Object.assign(backend.source, { format: 'h264' });
+        const manager = new DeviceManager([backend]);
+        const unsupported = new DeviceError('device-format-unsupported', 'Update Ruimte on this client to show this device');
+
+        await expect(manager.open('simctl', 'ios', 'phone-1', 'client-old')).rejects.toEqual(unsupported);
+        expect(await manager.open('simctl', 'ios', 'phone-1', 'client-new', 'http', ['jpeg', 'hevc', 'h264'])).toMatchObject({ deviceId: 'phone-1' });
+        await expect(manager.open('simctl', 'ios', 'phone-1', 'client-old')).rejects.toEqual(unsupported);
     });
 
     test('shares one capture between event viewers and stops after the last detach', async () => {

@@ -1,5 +1,6 @@
 export const LIVE_STREAM_CONTENT_TYPE = 'application/x-ruimte-jpeg-stream; version=1';
 export const HEVC_STREAM_CONTENT_TYPE = 'application/x-ruimte-hevc-stream; version=1';
+export const H264_STREAM_CONTENT_TYPE = 'application/x-ruimte-h264-stream; version=1';
 export const LIVE_STREAM_MAGIC = new Uint8Array([0x52, 0x53, 0x54, 0x4d, 0x01, 0x00, 0x00, 0x00]);
 export const LIVE_STREAM_FRAME_HEADER_BYTES = 12;
 export const LIVE_STREAM_MAX_FRAME_BYTES = 8 * 1024 * 1024;
@@ -9,8 +10,25 @@ export interface LiveStreamFrame {
     width: number;
     height: number;
     data: Uint8Array;
-    format?: 'jpeg' | 'hevc';
+    format?: LiveStreamFormat;
 }
+
+export type LiveStreamFormat = 'jpeg' | 'hevc' | 'h264';
+
+const CONTENT_TYPES: Record<LiveStreamFormat, string> = {
+    jpeg: LIVE_STREAM_CONTENT_TYPE,
+    hevc: HEVC_STREAM_CONTENT_TYPE,
+    h264: H264_STREAM_CONTENT_TYPE
+};
+
+export const liveStreamContentType = (format: LiveStreamFormat): string => CONTENT_TYPES[format];
+
+/* The format a live stream response carries, or null for one this version cannot read. */
+export const liveStreamFormatOf = (contentType: string): LiveStreamFormat | null => {
+    const mediaType = contentType.split(';')[0]!.trim();
+    const match = (Object.entries(CONTENT_TYPES) as Array<[LiveStreamFormat, string]>).find(([, type]) => type.split(';')[0] === mediaType);
+    return match ? match[0] : null;
+};
 
 export const encodeLiveStreamFrame = (frame: LiveStreamFrame): Uint8Array => {
     if (frame.data.byteLength > LIVE_STREAM_MAX_FRAME_BYTES) {

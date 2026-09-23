@@ -1,7 +1,7 @@
-import type { LiveStreamFrame } from '@ruimte/contracts';
+import type { LiveStreamFormat, LiveStreamFrame } from '@ruimte/contracts';
 
 export interface LiveFrameSource {
-    readonly format?: 'jpeg' | 'hevc';
+    readonly format?: LiveStreamFormat;
     start(publish: (frame: LiveStreamFrame) => void): Promise<void>;
     stop(): Promise<void>;
 }
@@ -36,7 +36,7 @@ export class LiveStreamHub {
         return this.entries.has(id);
     }
 
-    format(id: string): 'jpeg' | 'hevc' | null {
+    format(id: string): LiveStreamFormat | null {
         const entry = this.entries.get(id);
         return entry ? (entry.source.format ?? 'jpeg') : null;
     }

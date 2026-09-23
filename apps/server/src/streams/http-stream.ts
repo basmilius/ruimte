@@ -1,4 +1,4 @@
-import { HEVC_STREAM_CONTENT_TYPE, LIVE_STREAM_CONTENT_TYPE, LIVE_STREAM_MAGIC, encodeLiveStreamFrame } from '@ruimte/contracts';
+import { LIVE_STREAM_MAGIC, encodeLiveStreamFrame, liveStreamContentType } from '@ruimte/contracts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { decideAccess, originAllowed, type AccessOptions } from '../auth/access.ts';
 import { STREAMING_DISABLED_MESSAGE } from '../handlers/streaming.ts';
@@ -102,7 +102,7 @@ export const handleLiveStreamRequest = async (
     return new Response(stream, {
         headers: {
             ...headers,
-            'content-type': format === 'hevc' ? HEVC_STREAM_CONTENT_TYPE : LIVE_STREAM_CONTENT_TYPE,
+            'content-type': liveStreamContentType(format ?? 'jpeg'),
             'cache-control': 'no-store',
             'x-content-type-options': 'nosniff'
         }

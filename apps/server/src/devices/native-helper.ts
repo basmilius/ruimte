@@ -34,7 +34,8 @@ const CODEC_MJPEG = 0;
 const NATIVE_EDGE_BOTTOM = 3;
 const ORIENTATION_LANDSCAPE_RIGHT = 3;
 const ORIENTATION_LANDSCAPE_LEFT = 4;
-const NATIVE_BUTTONS: Record<Extract<DeviceInput, { kind: 'button' }>['button'], string> = {
+/* An iPhone has no Back button, and a simulator does not announce one. */
+const NATIVE_BUTTONS: Partial<Record<Extract<DeviceInput, { kind: 'button' }>['button'], string>> = {
     home: 'home',
     swipeHome: 'swipe_home',
     appSwitcher: 'app_switcher',
@@ -140,7 +141,10 @@ const applyDeviceInput = async (hid: NativeHidHandle, input: DeviceInput, width:
     } else if (input.kind === 'scroll') {
         void hid.scroll(input.deltaX, input.deltaY, input.x, input.y, width, height).catch(() => undefined);
     } else if (input.kind === 'button') {
-        await hid.button(NATIVE_BUTTONS[input.button]);
+        const button = NATIVE_BUTTONS[input.button];
+        if (button !== undefined) {
+            await hid.button(button);
+        }
     } else {
         await hid.orientation(input.direction === 'left' ? ORIENTATION_LANDSCAPE_LEFT : ORIENTATION_LANDSCAPE_RIGHT);
     }

@@ -8,12 +8,43 @@ export const DevicePlatformSchema = z.enum(['ios', 'android']);
 export const DeviceKindSchema = z.enum(['simulator', 'physical']);
 export const DeviceStateSchema = z.enum(['booted', 'shutdown', 'transitioning']);
 
+export const DeviceVideoFormatSchema = z.enum(['jpeg', 'hevc', 'h264']);
+export const DeviceButtonSchema = z.enum(['home', 'back', 'swipeHome', 'appSwitcher', 'lock', 'siri']);
+export const DeviceToolSchema = z.enum([
+    'openUrl',
+    'launchApp',
+    'terminateApp',
+    'appearance',
+    'textSize',
+    'liquidGlass',
+    'colorFilter',
+    'reduceMotion',
+    'increaseContrast',
+    'reduceTransparency',
+    'showBorders',
+    'voiceOver',
+    'location',
+    'permissions',
+    'push'
+]);
+
+/*
+ * The lists a device announces are plain strings on the wire, so a daemon that learns a new button
+ * or tool does not make an older client refuse the whole device list; a client keeps what it knows.
+ */
+const AnnouncedListSchema = z.array(z.string().min(1).max(64)).max(64);
+
 export const DeviceCapabilitiesSchema = z.object({
     boot: z.boolean(),
     shutdown: z.boolean(),
     stream: z.boolean(),
     input: z.boolean(),
-    screenshot: z.boolean()
+    screenshot: z.boolean(),
+    /* Absent from a daemon that predates it, which only had the buttons of an iPhone. */
+    buttons: AnnouncedListSchema.optional(),
+    /* Absent from a daemon that predates it, which offered every tool on an iOS simulator and none elsewhere. */
+    tools: AnnouncedListSchema.optional(),
+    permissions: AnnouncedListSchema.optional()
 });
 
 export const DeviceReferenceSchema = z.object({
@@ -31,10 +62,22 @@ export const DeviceInfoSchema = z.object({
     name: z.string().min(1).max(256),
     runtime: z.string().min(1).max(256),
     state: DeviceStateSchema,
+    /* Why a device is in its state when that takes the person to act, such as `unauthorized` for a phone that has not allowed debugging yet. */
+    reason: z.string().min(1).max(64).optional(),
     capabilities: DeviceCapabilitiesSchema
 });
 
-export const DeviceListResultSchema = z.object({ devices: z.array(DeviceInfoSchema) });
+export const DeviceUnavailableSchema = z.object({
+    platform: DevicePlatformSchema,
+    code: z.string().min(1).max(64),
+    message: z.string().max(1024)
+});
+
+export const DeviceListResultSchema = z.object({
+    devices: z.array(DeviceInfoSchema),
+    /* The kinds of device this machine could not look for, next to the ones it found. */
+    unavailable: z.array(DeviceUnavailableSchema).max(16).optional()
+});
 
 /*
  * Whether a device is the one a reference points at. A reference names a device the way a person
@@ -51,7 +94,9 @@ export const DeviceTargetPayloadSchema = z.object({
 });
 
 export const DeviceOpenPayloadSchema = DeviceTargetPayloadSchema.extend({
-    stream: z.enum(['http', 'events']).optional()
+    stream: z.enum(['http', 'events']).optional(),
+    /* What the client can draw. Absent means a client from before H.264, which draws JPEG and HEVC. */
+    formats: z.array(DeviceVideoFormatSchema).max(8).optional()
 });
 
 export const DeviceOpenResultSchema = DeviceInfoSchema.extend({
@@ -144,7 +189,7 @@ const DeviceScrollInputSchema = z.object({
 
 const DeviceButtonInputSchema = z.object({
     kind: z.literal('button'),
-    button: z.enum(['home', 'swipeHome', 'appSwitcher', 'lock', 'siri'])
+    button: DeviceButtonSchema
 });
 
 const DeviceRotateInputSchema = z.object({
@@ -169,11 +214,35 @@ export const DeviceFrameSchema = z.object({
     sequence: z.number().int().min(0).max(0xffffffff),
     width: DeviceFrameSizeSchema,
     height: DeviceFrameSizeSchema,
-    format: z.enum(['jpeg', 'hevc']).optional(),
+    format: DeviceVideoFormatSchema.optional(),
     data: z.string().max(11 * 1024 * 1024)
 });
 
+/* The announced entries this version knows, in the order they were announced. */
+const known = <Value extends string>(schema: z.ZodEnum<Record<Value, Value>>, announced: readonly string[]): Value[] =>
+    announced.filter((entry): entry is Value => schema.safeParse(entry).success);
+
+const IOS_BUTTONS: readonly DeviceButton[] = ['home', 'swipeHome', 'appSwitcher', 'lock', 'siri'];
+const IOS_SIMULATOR_TOOLS: readonly DeviceTool[] = DeviceToolSchema.options;
+
+export const deviceButtons = (device: Pick<DeviceInfo, 'capabilities'>): DeviceButton[] =>
+    device.capabilities.buttons ? known(DeviceButtonSchema, device.capabilities.buttons) : [...IOS_BUTTONS];
+
+export const deviceTools = (device: Pick<DeviceInfo, 'capabilities' | 'kind' | 'platform'>): DeviceTool[] => {
+    if (device.capabilities.tools) {
+        return known(DeviceToolSchema, device.capabilities.tools);
+    }
+    return device.platform === 'ios' && device.kind === 'simulator' ? [...IOS_SIMULATOR_TOOLS] : [];
+};
+
+export const devicePermissions = (device: Pick<DeviceInfo, 'capabilities'>): DevicePermission[] =>
+    device.capabilities.permissions ? known(DevicePermissionSchema, device.capabilities.permissions) : [...DevicePermissionSchema.options];
+
 export type DeviceInfo = z.infer<typeof DeviceInfoSchema>;
+export type DeviceButton = z.infer<typeof DeviceButtonSchema>;
+export type DeviceTool = z.infer<typeof DeviceToolSchema>;
+export type DeviceUnavailable = z.infer<typeof DeviceUnavailableSchema>;
+export type DeviceVideoFormat = z.infer<typeof DeviceVideoFormatSchema>;
 export type DeviceCapabilities = z.infer<typeof DeviceCapabilitiesSchema>;
 export type DeviceAction = z.infer<typeof DeviceActionPayloadSchema>;
 export type DeviceAppearance = z.infer<typeof DeviceAppearanceSchema>;

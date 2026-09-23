@@ -1,6 +1,17 @@
 import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
-import type { DeviceAction, DeviceFrame, DeviceInfo, DeviceInput, DeviceOpenResult, DevicePlatform, DeviceSettings, LiveStreamFrame } from '@ruimte/contracts';
+import type {
+    DeviceAction,
+    DeviceFrame,
+    DeviceInfo,
+    DeviceInput,
+    DeviceOpenResult,
+    DevicePlatform,
+    DeviceSettings,
+    DeviceUnavailable,
+    DeviceVideoFormat,
+    LiveStreamFrame
+} from '@ruimte/contracts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
 import { CodedError } from '../coded-error.ts';
@@ -53,7 +64,16 @@ const DEVICE_ERROR_CODES = [
     'device-helper-protocol',
     'device-helper-running',
     'device-helper-unavailable',
-    'device-not-streaming'
+    'device-not-streaming',
+    'device-format-unsupported',
+    'adb-unavailable',
+    'adb-failed',
+    'invalid-adb-output',
+    'emulator-unavailable',
+    'emulator-failed',
+    'scrcpy-unavailable',
+    'scrcpy-failed',
+    'scrcpy-protocol'
 ] as const;
 
 export type DeviceErrorCode = (typeof DEVICE_ERROR_CODES)[number];
@@ -61,6 +81,9 @@ export type DeviceErrorCode = (typeof DEVICE_ERROR_CODES)[number];
 const isDeviceErrorCode = (code: string): code is DeviceErrorCode => (DEVICE_ERROR_CODES as readonly string[]).includes(code);
 
 export class DeviceError extends CodedError<DeviceErrorCode> {}
+
+/* What a client that names no formats draws, since it predates H.264. */
+const FORMATS_BEFORE_H264: readonly DeviceVideoFormat[] = ['jpeg', 'hevc'];
 
 export class DeviceManager {
     readonly streams: LiveStreamHub;
@@ -80,13 +103,29 @@ export class DeviceManager {
     }
 
     async list(): Promise<DeviceInfo[]> {
-        const results = await Promise.allSettled([...this.backends.values()].map((backend) => backend.list()));
+        return (await this.survey()).devices;
+    }
+
+    /* Every device the backends found, and why the others found nothing. */
+    async survey(): Promise<{ devices: DeviceInfo[]; unavailable: DeviceUnavailable[] }> {
+        const backends = [...this.backends.values()];
+        const results = await Promise.allSettled(backends.map((backend) => backend.list()));
         const devices = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
         const failure = results.find((result) => result.status === 'rejected');
         if (devices.length === 0 && results.length > 0 && results.every((result) => result.status === 'rejected') && failure?.status === 'rejected') {
             throw failure.reason;
         }
-        return devices.sort((left, right) => left.name.localeCompare(right.name) || left.runtime.localeCompare(right.runtime));
+        const unavailable = results.flatMap((result, index): DeviceUnavailable[] => {
+            if (result.status === 'fulfilled') {
+                return [];
+            }
+            const error = this.sourceError(result.reason);
+            return [{ platform: backends[index]!.platform, code: error.code, message: error.message }];
+        });
+        return {
+            devices: devices.sort((left, right) => left.name.localeCompare(right.name) || left.runtime.localeCompare(right.runtime)),
+            unavailable
+        };
     }
 
     async boot(backendId: string, platform: DevicePlatform, deviceId: string): Promise<DeviceInfo> {
@@ -109,7 +148,7 @@ export class DeviceManager {
     async detail(backendId: string, platform: DevicePlatform, deviceId: string): Promise<DeviceSettings> {
         const backend = this.backend(backendId, platform);
         if (!backend.detail) {
-            throw new DeviceError('device-tools-unavailable', 'This device does not expose simulator tools');
+            throw new DeviceError('device-tools-unavailable', 'This device has no tools in Ruimte');
         }
         return backend.detail(deviceId);
     }
@@ -117,15 +156,24 @@ export class DeviceManager {
     async action(action: DeviceAction): Promise<DeviceSettings> {
         const backend = this.backend(action.backendId, action.platform);
         if (!backend.action) {
-            throw new DeviceError('device-tools-unavailable', 'This device does not expose simulator tools');
+            throw new DeviceError('device-tools-unavailable', 'This device has no tools in Ruimte');
         }
         return backend.action(action.deviceId, action);
     }
 
-    async open(backendId: string, platform: DevicePlatform, deviceId: string, clientId: string, stream: 'http' | 'events' = 'http'): Promise<DeviceOpenResult> {
+    async open(
+        backendId: string,
+        platform: DevicePlatform,
+        deviceId: string,
+        clientId: string,
+        stream: 'http' | 'events' = 'http',
+        formats: readonly DeviceVideoFormat[] = FORMATS_BEFORE_H264
+    ): Promise<DeviceOpenResult> {
         const key = sessionKey(backendId, deviceId);
         let session = this.sessions.get(key);
-        if (!session) {
+        if (session) {
+            requireFormat(session.source, formats);
+        } else {
             const backend = this.backend(backendId, platform);
             if (!backend.createSource) {
                 throw new DeviceError('device-capture-unavailable', 'Device capture is not installed on this machine');
@@ -135,7 +183,7 @@ export class DeviceManager {
                 throw new DeviceError('device-not-found', 'The device is no longer available');
             }
             if (device.state !== 'booted') {
-                throw new DeviceError('device-not-booted', 'Start the simulator before opening it');
+                throw new DeviceError('device-not-booted', 'Start the device before opening it');
             }
             let source: DeviceSource;
             try {
@@ -143,6 +191,7 @@ export class DeviceManager {
             } catch (error) {
                 throw this.sourceError(error);
             }
+            requireFormat(source, formats);
             const streamId = `device:${randomUUID()}`;
             session = { clients: new Set(), info: device, source, streamId, unregister: () => undefined };
             session.unregister = this.streams.register(streamId, source);
@@ -200,7 +249,7 @@ export class DeviceManager {
     private backend(backendId: string, platform: DevicePlatform): DeviceBackend {
         const backend = this.backends.get(backendId);
         if (!backend || backend.platform !== platform) {
-            throw new DeviceError('platform-unavailable', `${platform === 'ios' ? 'iOS' : 'Android'} simulators are not available on this machine`);
+            throw new DeviceError('platform-unavailable', `${platform === 'ios' ? 'iOS' : 'Android'} devices are not available on this machine`);
         }
         return backend;
     }
@@ -238,6 +287,12 @@ export class DeviceManager {
 }
 
 const sessionKey = (backendId: string, deviceId: string): string => streamKeyOf(backendId, deviceId);
+
+const requireFormat = (source: DeviceSource, formats: readonly DeviceVideoFormat[]): void => {
+    if (!formats.includes(source.format ?? 'jpeg')) {
+        throw new DeviceError('device-format-unsupported', 'Update Ruimte on this client to show this device');
+    }
+};
 
 const eventFrame = (device: DeviceInfo, frame: LiveStreamFrame): DeviceFrame => ({
     deviceId: device.deviceId,

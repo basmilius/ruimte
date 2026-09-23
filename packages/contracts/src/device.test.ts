@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { EVENT_SCHEMAS, REQUEST_SCHEMAS } from './index.ts';
-import { DeviceInfoSchema, DeviceTargetPayloadSchema } from './device.ts';
+import { DeviceInfoSchema, DeviceTargetPayloadSchema, deviceButtons, devicePermissions, deviceTools, type DeviceInfo } from './device.ts';
+import { liveStreamContentType, liveStreamFormatOf } from './live-stream.ts';
 
 describe('device contracts', () => {
     test('accepts a simulator identity and lifecycle state', () => {
@@ -124,5 +125,55 @@ describe('device contracts', () => {
                 decision: 'grant'
             }).success
         ).toBe(true);
+    });
+
+    test('reads what a device announces and keeps only what this version knows', () => {
+        const emulator: DeviceInfo = DeviceInfoSchema.parse({
+            deviceId: 'Pixel_9_Pro_API_35',
+            backendId: 'android',
+            platform: 'android',
+            kind: 'simulator',
+            name: 'Pixel 9 Pro API 35',
+            runtime: 'API 35',
+            state: 'booted',
+            capabilities: {
+                boot: true,
+                shutdown: true,
+                stream: true,
+                input: true,
+                screenshot: false,
+                buttons: ['back', 'home', 'crown'],
+                tools: ['appearance', 'hologram'],
+                permissions: ['camera', 'telepathy']
+            }
+        });
+        expect(deviceButtons(emulator)).toEqual(['back', 'home']);
+        expect(deviceTools(emulator)).toEqual(['appearance']);
+        expect(devicePermissions(emulator)).toEqual(['camera']);
+    });
+
+    test('gives a device from an older daemon the buttons and tools that daemon had', () => {
+        const capabilities = { boot: true, shutdown: true, stream: true, input: true, screenshot: true };
+        expect(deviceButtons({ capabilities })).toEqual(['home', 'swipeHome', 'appSwitcher', 'lock', 'siri']);
+        expect(deviceTools({ capabilities, platform: 'ios', kind: 'simulator' })).toContain('push');
+        expect(deviceTools({ capabilities, platform: 'ios', kind: 'physical' })).toEqual([]);
+    });
+
+    test('names H.264 frames and their stream', () => {
+        expect(
+            EVENT_SCHEMAS['device.frame'].safeParse({
+                deviceId: 'emulator-5554',
+                backendId: 'android',
+                platform: 'android',
+                sequence: 1,
+                width: 916,
+                height: 2048,
+                format: 'h264',
+                data: ''
+            }).success
+        ).toBe(true);
+        expect(liveStreamFormatOf(liveStreamContentType('h264'))).toBe('h264');
+        expect(liveStreamFormatOf('application/x-ruimte-jpeg-stream')).toBe('jpeg');
+        expect(liveStreamFormatOf('video/mp4')).toBeNull();
     });
 });

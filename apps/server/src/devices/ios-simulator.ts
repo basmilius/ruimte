@@ -1,7 +1,17 @@
 import { z } from 'zod';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { DeviceAction, DeviceInfo, DevicePermission, DeviceSettings, DeviceTextSize, DeviceToggleSetting } from '@ruimte/contracts';
+import {
+    DevicePermissionSchema,
+    DeviceToolSchema,
+    type DeviceAction,
+    type DeviceButton,
+    type DeviceInfo,
+    type DevicePermission,
+    type DeviceSettings,
+    type DeviceTextSize,
+    type DeviceToggleSetting
+} from '@ruimte/contracts';
 import { DeviceHelperSource, type DeviceHelperLauncher } from './helper-source.ts';
 import { DeviceError, type DeviceBackend } from './manager.ts';
 
@@ -44,6 +54,8 @@ const defaultRunner: SimctlRunner = async (arguments_, stdin) => {
     const [exitCode, stdout, stderr] = await Promise.all([process.exited, new Response(process.stdout).text(), new Response(process.stderr).text()]);
     return { exitCode, stdout, stderr };
 };
+
+const IOS_BUTTONS: DeviceButton[] = ['home', 'swipeHome', 'appSwitcher', 'lock', 'siri'];
 
 const IOS_TEXT_SIZES: Record<DeviceTextSize, string> = {
     small: 'small',
@@ -134,7 +146,16 @@ export class IosSimulatorBackend implements DeviceBackend {
                     name: device.name,
                     runtime: runtimeName(runtime),
                     state: stateOf(device.state),
-                    capabilities: { boot: true, shutdown: true, stream: this.launch !== null, input: this.launch !== null, screenshot: true }
+                    capabilities: {
+                        boot: true,
+                        shutdown: true,
+                        stream: this.launch !== null,
+                        input: this.launch !== null,
+                        screenshot: true,
+                        buttons: IOS_BUTTONS,
+                        tools: [...DeviceToolSchema.options],
+                        permissions: [...DevicePermissionSchema.options]
+                    }
                 }))
         );
     }

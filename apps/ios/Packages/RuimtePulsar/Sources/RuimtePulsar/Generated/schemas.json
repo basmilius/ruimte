@@ -6346,6 +6346,11 @@
                 "transitioning"
               ]
             },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
             "capabilities": {
               "type": "object",
               "properties": {
@@ -6363,6 +6368,33 @@
                 },
                 "screenshot": {
                   "type": "boolean"
+                },
+                "buttons": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "tools": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "permissions": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
                 }
               },
               "required": [
@@ -6383,6 +6415,36 @@
             "runtime",
             "state",
             "capabilities"
+          ]
+        }
+      },
+      "unavailable": {
+        "maxItems": 16,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "platform": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android"
+              ]
+            },
+            "code": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 1024
+            }
+          },
+          "required": [
+            "platform",
+            "code",
+            "message"
           ]
         }
       }
@@ -6465,6 +6527,11 @@
           "transitioning"
         ]
       },
+      "reason": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
       "capabilities": {
         "type": "object",
         "properties": {
@@ -6482,6 +6549,33 @@
           },
           "screenshot": {
             "type": "boolean"
+          },
+          "buttons": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "tools": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "permissions": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
           }
         },
         "required": [
@@ -6578,6 +6672,11 @@
           "transitioning"
         ]
       },
+      "reason": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
       "capabilities": {
         "type": "object",
         "properties": {
@@ -6595,6 +6694,33 @@
           },
           "screenshot": {
             "type": "boolean"
+          },
+          "buttons": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "tools": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "permissions": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
           }
         },
         "required": [
@@ -6644,6 +6770,18 @@
           "http",
           "events"
         ]
+      },
+      "formats": {
+        "maxItems": 8,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "jpeg",
+            "hevc",
+            "h264"
+          ]
+        }
       }
     },
     "required": [
@@ -6698,6 +6836,11 @@
           "transitioning"
         ]
       },
+      "reason": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
       "capabilities": {
         "type": "object",
         "properties": {
@@ -6715,6 +6858,33 @@
           },
           "screenshot": {
             "type": "boolean"
+          },
+          "buttons": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "tools": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "permissions": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
           }
         },
         "required": [
@@ -6946,6 +7116,7 @@
                 "type": "string",
                 "enum": [
                   "home",
+                  "back",
                   "swipeHome",
                   "appSwitcher",
                   "lock",
@@ -31187,7 +31358,8 @@
         "type": "string",
         "enum": [
           "jpeg",
-          "hevc"
+          "hevc",
+          "h264"
         ]
       },
       "data": {
