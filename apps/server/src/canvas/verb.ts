@@ -377,8 +377,7 @@ export const canvasLines = (content: ProjectContent): string[] =>
     );
 
 /* What `node new`, `agent` and `team` say when the caller is on no canvas: where the node goes is not all that changes. */
-export const OPENING_OFF_CANVAS =
-    'You are not a node on a canvas; name the canvas with --view, and what you open lands there without an edge from you, so the edge column shows -';
+export const OPENING_OFF_CANVAS = 'Name the canvas with --view; what you open lands there without an edge from you, so the edge column shows -';
 
 /*
  * The canvas a verb works on: the one `--view` names, else the one the caller is a node on. Ids

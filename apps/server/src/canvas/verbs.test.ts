@@ -1603,7 +1603,7 @@ describe('team', () => {
         ]) {
             const refused = await post(verb[0]!, verb.slice(1), 'chat');
             expect(refused.lines[0]).toBe(
-                'refused\tview-required\tYou are not a node on a canvas; name the canvas with --view, and what you open lands there without an edge from you, so the edge column shows -'
+                'refused\tview-required\tName the canvas with --view; what you open lands there without an edge from you, so the edge column shows -'
             );
         }
         const { lines } = await post('team', [...args(THREE), '--view', 'board'], 'chat');
@@ -2688,7 +2688,7 @@ describe('notify', () => {
     test('a caller that is a view of its own has no line to travel', async () => {
         const { status, lines } = await post('notify', ['term-1', '--text', 'hi'], 'chat');
         expect(status).toBe(422);
-        expect(lines[0]).toBe('refused\tnot-on-a-canvas\tYou are a view of your own, not a node on a canvas, so no line runs from you into anything');
+        expect(lines[0]).toBe('refused\tnot-on-a-canvas\tA message travels along a line from you into a node, and no line runs from you');
     });
 
     test('a chat that is a view of its own cannot be notified, and the refusal says why in one sentence', async () => {
