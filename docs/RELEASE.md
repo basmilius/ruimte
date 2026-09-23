@@ -9,8 +9,9 @@ for x64 and arm64 on Ubuntu 22.04 runners, as AppImage, deb and rpm; see `docs/L
 ## npm
 
 Publishing a release also publishes `ruimte` on npm, Ruimte for a machine without the app, with the
-same version. `.github/workflows/npm.yml` runs on `release: published` and by hand
-(`gh workflow run npm.yml -f version=0.2.0`, for a tag that exists). It compiles the daemon for
+same version. `.github/workflows/npm.yml` runs on `release: published`, on the dispatch the
+`publish` job of `release.yml` sends (a release that job publishes starts no workflow by itself) and
+by hand (`gh workflow run npm.yml -f version=0.2.0`, for a tag that exists). It compiles the daemon for
 `darwin-arm64` on macOS (Apple silicon only, no Intel build) and for `linux-x64` and `linux-arm64`
 on Ubuntu, lays out the packages with `packages/npm/scripts/build.ts` and publishes them with
 `packages/npm/scripts/publish.ts`: the three `@ruimte/<os>-<cpu>` packages first and `ruimte` last,
@@ -122,8 +123,8 @@ update from the moment the release is published, so a release published with emp
 stays out of the app, but not out of the feed: a pushed tag whose release is still a draft already
 appears in `releases.atom`.
 
-The draft is published as soon as the run succeeds; the build is not downloaded to try the daemon in
-it first. If a release does turn out broken on start, that is where to look: start
+The `publish` job publishes the draft once `verify` and every build succeed, as Latest, or as a
+prerelease for a tag with a `-` in it; the build is not downloaded to try the daemon in it first. If a release does turn out broken on start, that is where to look: start
 `Contents/Resources/bin/ruimte` from the arm64 zip with a temporary `RUIMTE_HOME` and another port,
 wait for `/health`, then open a socket with `?protocol=N&token=<local.key>` and check that
 `endpoint.info` carries `protocol`. v0.0.12 shipped a daemon that crashed on start (tsyringe loaded

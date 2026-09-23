@@ -2,7 +2,8 @@ name: Release
 
 # A tag `v1.2.3` builds the desktop app for macOS and Linux and uploads it to a draft GitHub release
 # with the files electron-updater reads (`latest-mac.yml`, `latest-linux.yml`,
-# `latest-linux-arm64.yml`). The notes come off the annotated tag. Publish the draft to ship.
+# `latest-linux-arm64.yml`). The notes come off the annotated tag. Once every build and the checks
+# pass, the draft is published, which ships it.
 on:
   push:
     tags:
@@ -157,3 +158,27 @@ jobs:
           bun run build:main
           bun x electron-builder --linux --${{ matrix.arch }} --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION"
+
+  publish:
+    needs: [verify, build, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Publish the draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          case "$GITHUB_REF_NAME" in
+            *-*) gh release edit "$GITHUB_REF_NAME" --draft=false --prerelease --latest=false ;;
+            *) gh release edit "$GITHUB_REF_NAME" --draft=false --latest ;;
+          esac
+      # A release published with GITHUB_TOKEN starts no workflow, so `release: published` never
+      # reaches npm.yml from here; a dispatch is the one event that token may start.
+      - name: Start the npm publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run npm.yml --ref main -f version="${GITHUB_REF_NAME#v}"
