@@ -11,8 +11,30 @@ export interface DeviceListState {
 
 export const EMPTY_DEVICE_LIST: DeviceListState = { devices: [], unavailable: [], loaded: false, loading: false, error: null };
 
+const COLLAPSED_STORAGE_KEY = 'ruimte.devices.collapsed';
+
+const readCollapsedGroups = (): readonly string[] => {
+    try {
+        const stored: unknown = JSON.parse(localStorage.getItem(COLLAPSED_STORAGE_KEY) ?? '[]');
+        return Array.isArray(stored) ? stored.filter((key): key is string => typeof key === 'string') : [];
+    } catch {
+        return [];
+    }
+};
+
+const persistCollapsedGroups = (keys: readonly string[]): void => {
+    try {
+        localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify(keys));
+    } catch {
+        // Storage that refuses keeps the choice for this session only.
+    }
+};
+
 interface DevicesState {
     byEndpoint: Record<string, DeviceListState>;
+    /* The groups of the devices panel a person folded away, on every machine alike. */
+    collapsedGroups: readonly string[];
+    collapseGroup(key: string, collapsed: boolean): void;
     setLoading(endpointId: string): void;
     receive(endpointId: string, devices: DeviceInfo[], unavailable: DeviceUnavailable[]): void;
     fail(endpointId: string, error: string): void;
@@ -22,6 +44,13 @@ interface DevicesState {
 
 export const useDevices = create<DevicesState>((set, get) => ({
     byEndpoint: {},
+    collapsedGroups: readCollapsedGroups(),
+    collapseGroup(key, collapsed) {
+        const others = get().collapsedGroups.filter((candidate) => candidate !== key);
+        const collapsedGroups = collapsed ? [...others, key] : others;
+        persistCollapsedGroups(collapsedGroups);
+        set({ collapsedGroups });
+    },
     setLoading(endpointId) {
         const current = get().byEndpoint[endpointId] ?? EMPTY_DEVICE_LIST;
         set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, loading: true, error: null } } });

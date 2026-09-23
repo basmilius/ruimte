@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import { deviceTools, isCanvasView, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
 import { createViewAction, placeViewOnCanvasAction } from '@/actions/client-actions';
+import { AndroidMark } from '@/devices/AndroidMark';
 import { DeviceControls, DeviceSurface } from '@/devices/DeviceBody';
 import { DeviceToolsPanel } from '@/devices/DeviceToolsPanel';
 import { deviceStateText, unavailableNotes } from '@/devices/device-text';
@@ -38,7 +40,12 @@ import { Tooltip } from '@/ui/Tooltip';
 import { PanelEmpty } from '@/ui/PanelEmpty';
 import { MenuPopup } from '@/ui/MenuPopup';
 
-const referenceOf = (device: DeviceInfo): DeviceReference => ({ platform: device.platform, kind: device.kind, name: device.name, runtime: device.runtime });
+const referenceOf = (device: DeviceInfo): DeviceReference => ({
+    platform: device.platform,
+    kind: device.kind,
+    name: device.name,
+    runtime: device.runtime
+});
 
 const sameReference = (left: DeviceReference, right: DeviceReference): boolean =>
     left.platform === right.platform && left.kind === right.kind && left.name === right.name && left.runtime === right.runtime;
@@ -100,7 +107,9 @@ const addDeviceToCanvas = async (device: DeviceInfo): Promise<void> => {
     if (!useDocument.getState().views.some(isCanvasView)) {
         return;
     }
-    const id = await createViewAction('device', { device: referenceOf(device) });
+    const id = await createViewAction('device', {
+        device: referenceOf(device)
+    });
     if (id !== null) {
         placeViewOnCanvasAction(id);
     }
@@ -225,27 +234,71 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
     );
 }
 
-function DeviceSection({ group, onOpen }: { group: DeviceGroup; onOpen: (device: DeviceInfo) => void }) {
+function DeviceSection({
+    group,
+    collapsed,
+    onCollapse,
+    onOpen
+}: {
+    group: DeviceGroup;
+    collapsed: boolean;
+    onCollapse: (collapsed: boolean) => void;
+    onOpen: (device: DeviceInfo) => void;
+}) {
     return (
         <section>
-            <h2 className="mb-2 flex items-center gap-2 px-1 text-xs font-medium text-text-muted">
-                {group.platform === 'ios' ? <SignInMark provider="apple" size={15} /> : <Icon icon={Smartphone} size={15} />}
-                {group.title}
+            <h2 className={clsx('-mx-1 flex', !collapsed && 'mb-1')}>
+                <button
+                    type="button"
+                    aria-expanded={!collapsed}
+                    onClick={() => onCollapse(!collapsed)}
+                    className="group flex h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-accent"
+                >
+                    <span className="grid size-4 shrink-0 place-items-center">
+                        <span className="col-start-1 row-start-1 grid place-items-center group-hover:hidden group-focus-visible:hidden">
+                            {group.platform === 'ios' ? <SignInMark provider="apple" size={15} /> : <AndroidMark size={15} />}
+                        </span>
+                        <Icon
+                            icon={ChevronRight}
+                            size={14}
+                            className={clsx('col-start-1 row-start-1 hidden group-hover:block group-focus-visible:block', !collapsed && 'rotate-90')}
+                        />
+                    </span>
+                    <span className="truncate">{group.title}</span>
+                </button>
             </h2>
-            <div className="min-w-0 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
-                {group.devices.map((device) => (
-                    <DeviceRow key={`${device.backendId}:${device.deviceId}`} device={device} onOpen={onOpen} />
-                ))}
-            </div>
+            {!collapsed && (
+                <div className="min-w-0 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+                    {group.devices.map((device) => (
+                        <DeviceRow key={`${device.backendId}:${device.deviceId}`} device={device} onOpen={onOpen} />
+                    ))}
+                </div>
+            )}
         </section>
     );
 }
 
-function DeviceList({ devices, onOpen }: { devices: DeviceInfo[]; onOpen: (device: DeviceInfo) => void }) {
+function DeviceList({
+    devices,
+    collapsed,
+    onCollapse,
+    onOpen
+}: {
+    devices: DeviceInfo[];
+    collapsed: readonly string[];
+    onCollapse: (key: string, collapsed: boolean) => void;
+    onOpen: (device: DeviceInfo) => void;
+}) {
     return (
         <div className="flex flex-col gap-5">
             {groupDevices(devices).map((group) => (
-                <DeviceSection key={group.key} group={group} onOpen={onOpen} />
+                <DeviceSection
+                    key={group.key}
+                    group={group}
+                    collapsed={collapsed.includes(group.key)}
+                    onCollapse={(next) => onCollapse(group.key, next)}
+                    onOpen={onOpen}
+                />
             ))}
         </div>
     );
@@ -351,7 +404,11 @@ export function DevicesPanel() {
     const streamingAllowed = useServer((state) => state.streamingAllowed);
     const machineName = useEndpoints((state) => state.endpoints.find((entry) => entry.id === endpointId)?.label ?? t('devices.thisMachine'));
     const row = useDevices((state) => state.byEndpoint[endpointId] ?? EMPTY_DEVICE_LIST);
-    const [selection, setSelection] = useState<{ endpointId: string; device: DeviceReference } | null>(null);
+    const [selection, setSelection] = useState<{
+        endpointId: string;
+        device: DeviceReference;
+    } | null>(null);
+    const collapsedGroups = useDevices((state) => state.collapsedGroups);
     const selectedDevice =
         selection?.endpointId === endpointId ? (row.devices.find((device) => sameReference(referenceOf(device), selection.device)) ?? null) : null;
     useEffect(() => {
@@ -443,8 +500,13 @@ export function DevicesPanel() {
             <div className="min-h-0 grow overflow-y-auto p-3">
                 <DeviceList
                     devices={row.devices}
+                    collapsed={collapsedGroups}
+                    onCollapse={(key, collapsed) => useDevices.getState().collapseGroup(key, collapsed)}
                     onOpen={(device) => {
-                        setSelection({ endpointId, device: referenceOf(device) });
+                        setSelection({
+                            endpointId,
+                            device: referenceOf(device)
+                        });
                     }}
                 />
                 {row.unavailable.length > 0 && (
