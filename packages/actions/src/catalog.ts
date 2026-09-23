@@ -565,11 +565,11 @@ export const ACTION_DEFINITIONS = {
     },
     'chat.read': {
         title: 'Read recent AI Chat messages',
-        description: 'Reads a limited recent excerpt of a loaded AI Chat without including reasoning or tool output.',
+        description: 'Reads a limited recent excerpt of a loaded AI Chat without including reasoning or tool output. A null limit reads the last 20 messages.',
         effect: 'read',
         domain: 'communicate',
         actors: ACTION_ACTOR_KINDS,
-        input: z.object({ chatId: z.string().min(1), limit: z.number().int().min(1).max(20) }),
+        input: z.object({ chatId: z.string().min(1), limit: z.number().int().min(1).max(20).nullable() }),
         output: z.object({
             chatId: z.string().min(1),
             chat: z.string(),

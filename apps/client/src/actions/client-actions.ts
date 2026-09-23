@@ -996,7 +996,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             if (!state) {
                 throw new ActionRefusal('chat-not-loaded', `Open “${chat}” before asking Voice to read it.`);
             }
-            return { output: { chatId, chat, ...recentChatMessages(state.items, state.order, limit) } };
+            return { output: { chatId, chat, ...recentChatMessages(state.items, state.order, limit ?? 20) } };
         }
     });
 };
