@@ -6,11 +6,14 @@ import {
     PlanChecksSchema,
     PlanKindSchema,
     PlanSchema,
+    PLAN_LIMITS,
     PlanStepStateSchema,
+    RuntimeModeSchema,
     TaskSchema,
     UNKNOWN_KIND
 } from '@ruimte/contracts';
 import { z } from 'zod';
+import { MAX_NOTICE_LENGTH, MAX_OPENED_PER_CALLER, MAX_PROMPT_LENGTH, MAX_TITLE_LENGTH } from './limits.ts';
 
 export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
 export const ActionActorKindSchema = z.enum(ACTION_ACTOR_KINDS);
@@ -36,6 +39,8 @@ export const ActionCreatableCanvasNodeKindSchema = z.enum(CREATABLE_CANVAS_NODE_
 const viewId = z.string().min(1);
 const viewName = z.string().trim().min(1);
 const nodeId = z.string().min(1);
+/* A name on the canvas an agent gives: a title, a group label, the word on a line. */
+const nodeTitle = z.string().trim().min(1).max(MAX_TITLE_LENGTH);
 
 /*
  * A field only these actors may fill: what one executor honors and another would drop. Voice's tools
@@ -95,6 +100,20 @@ const browserOutcome = z.object({
     page: z.object({ url: z.string(), title: z.string(), loading: z.boolean(), canGoBack: z.boolean(), canGoForward: z.boolean() }).nullable(),
     error: z.string().nullable()
 });
+
+/* Where an operation stands: queued and running go on, the other three are how it ended. */
+export const OPERATION_STATUSES = ['queued', 'running', 'completed', 'failed', 'cancelled'] as const;
+export const OperationStatusSchema = z.enum(OPERATION_STATUSES);
+export type OperationStatus = z.infer<typeof OperationStatusSchema>;
+
+/* The actions that answer with an operation id, which `operation.get` follows. */
+export const OPERATION_ACTIONS = ['agent.start', 'team.start'] as const;
+
+const agentNodeKind = z.enum(['chat', 'terminal']);
+const agentReads = z.array(nodeId).nullable().describe('Nodes the new agent can read from its first turn: a line is drawn from each of them into it');
+// A dry run draws nothing, so its lines have no id yet.
+const drawnLine = z.object({ edgeId: z.string().nullable(), from: nodeId, to: nodeId });
+const worktreeBranch = z.string().min(1).describe('The branch of the worktree');
 
 export const TARGET_KINDS = ['view', 'node', 'chat', 'agent', 'project'] as const;
 const resolvedTarget = z.object({
@@ -461,7 +480,7 @@ export const ACTION_DEFINITIONS = {
         input: z.object({
             viewId,
             nodeIds: z.array(z.string().min(1)).min(1),
-            label: agentField(viewName).describe('The name of the group'),
+            label: agentField(nodeTitle).describe('The name of the group'),
             color: agentField(z.string().min(1)).describe("The color of the frame; without one it is drawn in the faint gray a person's own grouping gives it")
         }),
         output: z.object({
@@ -800,7 +819,7 @@ export const ACTION_DEFINITIONS = {
             viewId,
             from: nodeId.nullable().describe('Where the line starts; without it, you'),
             to: z.array(nodeId).min(1).describe('The nodes the line runs into'),
-            label: viewName.nullable().describe('What the line is called on the canvas'),
+            label: nodeTitle.nullable().describe('What the line is called on the canvas'),
             role: z.string().min(1).nullable().describe('What the line is for')
         }),
         output: z.object({
@@ -833,7 +852,7 @@ export const ACTION_DEFINITIONS = {
         effect: 'external',
         domain: 'communicate',
         actors: AGENT,
-        input: z.object({ nodeId: nodeId.describe('The node to notify, by id'), text: z.string().min(1).describe('The message') }),
+        input: z.object({ nodeId: nodeId.describe('The node to notify, by id'), text: z.string().min(1).max(MAX_NOTICE_LENGTH).describe('The message') }),
         output: z.object({
             nodeId,
             // Now when it was acted on as it arrived, waiting when it is held for the next turn of that node.
@@ -867,7 +886,7 @@ export const ACTION_DEFINITIONS = {
             nodeId: nodeId.describe('The agent to give the task to, by id; only a chat you opened yourself'),
             prompt: z.string().nullable().describe('What the task asks'),
             promptFile: agentField(z.string().min(1)).describe('The same assignment out of a file, for one with exact bytes'),
-            title: z.string().trim().min(1).nullable().describe('The title of the task; without one the first line of the prompt')
+            title: nodeTitle.nullable().describe('The title of the task; without one the first line of the prompt')
         }),
         output: z.object({
             taskId: z.string(),
@@ -920,7 +939,7 @@ export const ACTION_DEFINITIONS = {
         input: z.object({
             document: z.string().nullable().describe('The plan as one JSON object, { meta, items }'),
             markdown: z.string().nullable().describe('A GFM task list instead of JSON'),
-            title: z.string().min(1).nullable().describe('The title, over the one in the document'),
+            title: z.string().min(1).max(PLAN_LIMITS.title).nullable().describe('The title, over the one in the document'),
             kind: PlanKindSchema.nullable(),
             checks: PlanChecksSchema.nullable()
         }),
@@ -1104,6 +1123,169 @@ export const ACTION_DEFINITIONS = {
             // On this machine, outside the project folder; null when nobody has the page open.
             path: z.string().nullable()
         })
+    },
+    'agent.start': {
+        title: 'Start an agent',
+        description: 'Opens an agent node that starts working, with an edge from you into it when you are a node on that canvas, so it can read what you have',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            provider: AgentKindSchema.describe('The CLI the agent runs'),
+            terminal: z.boolean().describe('Makes a terminal node instead of a chat node'),
+            prompt: z.string().nullable().describe('What the agent starts working on'),
+            promptFile: z.string().min(1).nullable().describe('The same prompt out of a file, for one with exact bytes'),
+            cwd: z.string().min(1).nullable().describe('The directory the agent starts in'),
+            reads: agentReads,
+            viewId: viewId.nullable().describe('The canvas to add to, by view id'),
+            beside: nodeId.nullable().describe('Puts the node directly right of this node, top edges level'),
+            group: nodeId.nullable().describe('Puts the node inside this group node of that canvas'),
+            title: nodeTitle.nullable().describe('The title; without one the node is called after the CLI, and the session may rename it'),
+            task: nodeTitle.nullable().describe('Gives the new agent a task with this title, which the prompt describes and whose result wakes you'),
+            model: z.string().trim().min(1).nullable().describe("The model id for a chat agent, with that model's default options"),
+            mode: RuntimeModeSchema.nullable().describe(
+                'The permission mode the agent runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own'
+            ),
+            worktree: z.boolean().describe('Starts the agent in a git worktree of its own on a new branch'),
+            branch: z.string().min(1).nullable().describe('The branch of that worktree instead of one named after the task or the title')
+        }),
+        output: z.object({
+            nodeId,
+            kind: agentNodeKind,
+            viewId,
+            provider: AgentKindSchema,
+            // The line from you into the agent; null when you are no node on that canvas.
+            edge: drawnLine.nullable(),
+            reads: z.array(drawnLine),
+            // Null without a task, and in a dry run, which gives none.
+            taskId: z.string().nullable()
+        })
+    },
+    'team.start': {
+        title: 'Start a team',
+        description: `Opens up to ${MAX_OPENED_PER_CALLER} agents at once in a group, each with an edge from you into it when you are a node on that canvas`,
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            label: nodeTitle.describe('The name of the group the agents land in'),
+            roles: z
+                .array(
+                    z.object({
+                        title: nodeTitle.describe('The title of the node; the session never renames over it'),
+                        prompt: z.string().trim().min(1).max(MAX_PROMPT_LENGTH).describe('What that agent starts working on'),
+                        provider: AgentKindSchema,
+                        model: z.string().trim().min(1).nullable().describe("The model id for a chat role, with that model's default options"),
+                        terminal: z.boolean().describe('Opens a terminal node instead of a chat node')
+                    })
+                )
+                .min(1)
+                .max(MAX_OPENED_PER_CALLER),
+            cwd: z.string().min(1).nullable().describe('The directory every agent starts in'),
+            reads: agentReads,
+            viewId: viewId.nullable().describe('The canvas to add to, by view id'),
+            mode: RuntimeModeSchema.nullable().describe(
+                'The permission mode every role runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own'
+            ),
+            worktree: z.boolean().describe('Starts every role in a git worktree of its own, on a new branch named after the role'),
+            task: z
+                .boolean()
+                .describe(
+                    'Gives every role a task titled after the role, which its prompt describes; you are woken once, with the results of all roles, when the last of them settles'
+                )
+        }),
+        output: z.object({
+            group: z.object({ nodeId, title: z.string(), viewId }),
+            agents: z.array(
+                z.object({
+                    nodeId,
+                    kind: agentNodeKind,
+                    title: z.string(),
+                    provider: AgentKindSchema,
+                    edge: drawnLine.nullable(),
+                    taskId: z.string().nullable()
+                })
+            ),
+            reads: z.array(drawnLine)
+        })
+    },
+    'operation.get': {
+        title: 'Follow an operation',
+        description: 'Reads where an operation an action answered with stands: queued, running, completed, failed or cancelled, per agent it started.',
+        effect: 'read',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({ operationId: z.string().min(1).describe('The id the action answered with') }),
+        output: z.object({
+            operationId: z.string(),
+            action: z.enum(OPERATION_ACTIONS),
+            status: OperationStatusSchema,
+            agents: z.array(z.object({ nodeId, status: OperationStatusSchema, taskId: z.string().nullable(), detail: z.string() }))
+        })
+    },
+    'worktree.list': {
+        title: 'List worktrees',
+        description: 'Lists the worktrees of the repository: branch, path, nodes, from, changed, new, commits',
+        effect: 'read',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({
+            worktrees: z.array(
+                z.object({
+                    branch: z.string(),
+                    // Null when the folder is gone.
+                    path: z.string().nullable(),
+                    nodes: z.array(nodeId),
+                    // The branch it was made from; null for one made outside Ruimte.
+                    from: z.string().nullable(),
+                    changed: z.number().int(),
+                    untracked: z.number().int(),
+                    ahead: z.number().int()
+                })
+            )
+        })
+    },
+    'worktree.diff': {
+        title: 'Read what a worktree changed',
+        description: 'Reads what a worktree changed since the branch it was made from, uncommitted and new files included',
+        agentDescription: 'Prints what a worktree changed since the branch it was made from, uncommitted and new files included',
+        effect: 'read',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({ branch: worktreeBranch }),
+        output: z.object({
+            branch: z.string(),
+            from: z.string().nullable(),
+            files: z.array(
+                z.object({
+                    path: z.string(),
+                    added: z.number().int(),
+                    deleted: z.number().int(),
+                    // Empty when omitted says why there is none.
+                    diff: z.string(),
+                    omitted: z.enum(['binary', 'too-large']).nullable()
+                })
+            )
+        })
+    },
+    'worktree.merge': {
+        title: 'Merge a worktree',
+        description: 'Merges the worktree of an agent you opened into the branch it was made from; the worktree and its branch stay',
+        effect: 'shared',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            branch: worktreeBranch,
+            strategy: z.enum(['merge', 'squash', 'rebase']).describe('A merge commit, one squashed commit, or the commits put on top of the target'),
+            message: z
+                .string()
+                .trim()
+                .min(1)
+                .nullable()
+                .describe('The message of the commit made of uncommitted files, and of a squash; without it the title of the node')
+        }),
+        output: z.object({ branch: z.string(), into: z.string().nullable(), strategy: z.enum(['merge', 'squash', 'rebase']), summary: z.string() })
     }
 } as const;
 

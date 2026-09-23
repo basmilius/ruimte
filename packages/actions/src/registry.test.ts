@@ -17,6 +17,26 @@ describe('ActionRegistry', () => {
         expect(registry.catalog(call())[0]?.input).toMatchObject({ type: 'object' });
     });
 
+    test('answers work that goes on after it with its status and an operation id, and a dry run as completed', async () => {
+        const registry = new ActionRegistry<Context>(
+            {
+                'view.focus': ({ viewId }, { context }) => ({
+                    output: { viewId, view: context.name, kind: 'canvas', changed: true },
+                    operation: { id: `focus:${viewId}`, status: 'running' }
+                })
+            },
+            { previews: ['view.focus'] }
+        );
+
+        expect(await registry.execute('view.focus', { viewId: 'board' }, call())).toEqual({
+            status: 'running',
+            action: 'view.focus',
+            output: { viewId: 'board', view: 'Board', kind: 'canvas', changed: true },
+            operationId: 'focus:board'
+        });
+        expect(await registry.execute('view.focus', { viewId: 'board' }, { ...call(), dryRun: true })).toMatchObject({ status: 'completed', dryRun: true });
+    });
+
     test('validates input and normalizes domain refusals', async () => {
         const registry = new ActionRegistry<Context>({
             'view.rename': () => {

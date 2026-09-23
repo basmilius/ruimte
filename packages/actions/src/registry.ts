@@ -35,6 +35,17 @@ export type ActionCompleted<Name extends ActionName> = {
     dryRun?: true;
 };
 
+/*
+ * Work that goes on after the answer. The output is what exists at once, such as the node an agent
+ * runs in; starting is not succeeding, so how it goes from here is `operation.get` under this id.
+ */
+export type ActionStarted<Name extends ActionName> = {
+    status: 'queued' | 'running';
+    action: Name;
+    output: ActionOutput<Name>;
+    operationId: string;
+};
+
 export interface ActionFailed {
     status: 'failed';
     action: ActionName | null;
@@ -52,7 +63,7 @@ export interface ActionNeedsConfirmation {
     confirmation: ActionConfirmation;
 }
 
-export type ActionResult<Name extends ActionName = ActionName> = ActionCompleted<Name> | ActionFailed | ActionNeedsConfirmation;
+export type ActionResult<Name extends ActionName = ActionName> = ActionCompleted<Name> | ActionStarted<Name> | ActionFailed | ActionNeedsConfirmation;
 
 export type ActionControlResult = { status: 'completed'; action: ActionName } | ActionFailed;
 
@@ -73,6 +84,8 @@ type MaybePromise<Value> = Value | Promise<Value>;
 interface HandledAction<Name extends ActionName, Context> {
     output: ActionOutput<Name>;
     undo?: (call: ActionCall<Context>) => MaybePromise<void>;
+    /* Set when the work goes on after this answer; a dry run leaves it out, since it started nothing. */
+    operation?: { id: string; status: ActionStarted<Name>['status'] };
 }
 
 interface ConfirmedAction {
@@ -258,6 +271,9 @@ export class ActionRegistry<Context> {
             }
             if (call.dryRun === true) {
                 return { status: 'completed', action: name, output: output.data as ActionOutput<Name>, dryRun: true };
+            }
+            if (handled.operation) {
+                return { status: handled.operation.status, action: name, output: output.data as ActionOutput<Name>, operationId: handled.operation.id };
             }
             const undoToken = handled.undo ? crypto.randomUUID() : undefined;
             if (undoToken && handled.undo) {
