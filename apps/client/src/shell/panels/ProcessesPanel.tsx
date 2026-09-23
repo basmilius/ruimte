@@ -32,6 +32,7 @@ import {
     groupTitle,
     type AlertAction
 } from '@/processes/format';
+import { performAsPerson } from '@/actions/client-actions';
 import { messageOf } from '@/pulsar/account';
 import { projectNodes, revealNode } from '@/project/views';
 import { Segmented } from '@/shell/settings/controls';
@@ -288,13 +289,13 @@ export function ProcessesPanel() {
             return;
         }
         if (action === 'resume' && alert.nodeId !== null) {
-            transport.request('agent.resume', { sessionId: alert.nodeId }).catch((e: unknown) => fail(t('processes.resumeFailed'), e));
+            performAsPerson('terminal.resumeAgent', { terminalId: alert.nodeId }).catch((e: unknown) => fail(t('processes.resumeFailed'), e));
             return;
         }
         const chat = alert.nodeId !== null && groups.some((group) => group.kind === 'chat' && group.nodeId === alert.nodeId);
         if (action === 'interrupt' && chat) {
             // A chat has a turn to cancel, which is the interrupt its CLI understands.
-            transport.request('chat.cancel', { chatId: alert.nodeId! }).catch((e: unknown) => fail(t('processes.interruptFailed'), e));
+            performAsPerson('chat.stopTurn', { chatId: alert.nodeId!, subagents: false }).catch((e: unknown) => fail(t('processes.interruptFailed'), e));
             return;
         }
         if (target !== null) {

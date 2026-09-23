@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { GitFork, MessageSquareShare, Undo2 } from 'lucide-react';
+import { performAsPerson } from '@/actions/client-actions';
 import { forkRefusal, lastSettledTurn, summaryRefusal } from '@/chat/logic/fork';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
 import { useChatRow } from '@/state/chats';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useTransport } from '@/transport/context';
 import { DisabledReason } from '@/ui/DisabledReason';
 import { Icon } from '@/ui/Icon';
 
@@ -47,13 +47,12 @@ export function ForkMenuItem({ chatId }: { chatId: string }) {
 
 function ForkBackItems({ chatId }: { chatId: string }) {
     const { t } = useTranslation('chat');
-    const transport = useTransport();
     const originalId = useChatRow(chatId, (row) => row?.info.forkOf?.chatId ?? '');
     const busy = useChatRow(chatId, (row) => row?.info.activeTurnId !== null && row?.info.activeTurnId !== undefined);
     const original = useChatPlace(originalId);
     const refusal = summaryRefusal({ busy, originalPresent: original.title !== null });
     const summarize = (): void => {
-        transport.request('chat.summarize', { chatId }).catch((e: unknown) => {
+        performAsPerson('chat.summarize', { chatId }).catch((e: unknown) => {
             useToasts.getState().show({ title: t('fork.menu.summaryFailed'), description: e instanceof Error ? e.message : String(e), kind: 'error' });
         });
     };

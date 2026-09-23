@@ -3,13 +3,12 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Activity, Bot, Square, SquareTerminal } from 'lucide-react';
 import type { ChatBackgroundTask } from '@ruimte/contracts';
+import { performAsPerson } from '@/actions/client-actions';
 import { backgroundCounts, runningOwnSubagents } from '@/chat/activity';
 import { toggleList, useOpenableSubagents, useSubagentTrail } from '@/chat/subagent-view';
 import { formatElapsedShort } from '@/format/duration';
 import { useChatRow } from '@/state/chats';
-import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
-import { machineTransport } from '@/transport';
 import { FLOAT } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -72,16 +71,13 @@ export function ChatActivity({ chatId }: { chatId: string }) {
 /* Only drawn while the popup is open, so the clock ticks for nobody otherwise. */
 function BackgroundTaskRows({ chatId, tasks }: { chatId: string; tasks: readonly ChatBackgroundTask[] }) {
     const { t } = useTranslation('chat');
-    const endpointId = useEndpointId();
     const now = useNow(1000);
 
     function stop(taskId: string): void {
-        void machineTransport(endpointId)
-            .request('chat.stopTask', { chatId, taskId })
-            .catch((e: unknown) => {
-                const description = e instanceof Error ? e.message : t('subagents.noAnswer');
-                useToasts.getState().show({ kind: 'error', title: t('activity.stopFailed'), description });
-            });
+        void performAsPerson('chat.stopTask', { chatId, taskId }).catch((e: unknown) => {
+            const description = e instanceof Error ? e.message : t('subagents.noAnswer');
+            useToasts.getState().show({ kind: 'error', title: t('activity.stopFailed'), description });
+        });
     }
 
     return tasks.map((task) => (

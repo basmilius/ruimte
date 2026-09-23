@@ -2,13 +2,12 @@ import { useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { focusNodeAction } from '@/actions/client-actions';
+import { focusNodeAction, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { isTypingTarget } from '@/canvas/canvas-shortcuts';
 import { leavePromptStack, PROMPT_STACK_ATTRIBUTE, usePromptFront } from '@/canvas/prompt-stack';
 import { stackFront, type CanvasPrompt } from '@/canvas/prompts';
 import { useCanvasPrompts } from '@/canvas/use-canvas-prompts';
-import { chatClientFor, sessionClientFor } from '@/transport/connections';
 import { agentName } from '@/processes/format';
 import { isApplePlatform } from '@/desktop/bridge';
 import { pageKey } from '@/prompts/logic/keys';
@@ -20,7 +19,6 @@ import { PromptView } from '@/prompts/ui/PromptView';
 import { formatClock } from '@/shell/usage/format';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
-import { useEndpointId } from '@/state/keys';
 import { useProviders } from '@/state/providers';
 import { useTransportStatus } from '@/transport/status';
 import { BTN_GROUP } from '@/ui/classes';
@@ -89,7 +87,6 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
     const { t } = useTranslation('canvas');
     const prompts = useCanvasPrompts();
     const canvasStore = useCanvasStore();
-    const endpointId = useEndpointId();
     const disabled = useTransportStatus() !== 'open';
     const providers = useProviders((row) => row.providers);
     const session = usePromptSession({
@@ -176,9 +173,7 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
                             onAction={(action) => {
                                 refocus.hold();
                                 void session
-                                    .act(active, () =>
-                                        answerPrompt(active.subject, action, { chat: chatClientFor(endpointId), sessions: sessionClientFor(endpointId) })
-                                    )
+                                    .act(active, () => answerPrompt(active.subject, action, PERSON_PROMPT_CLIENTS))
                                     .then((result) => {
                                         if (result === 'failed') {
                                             refocus.release();

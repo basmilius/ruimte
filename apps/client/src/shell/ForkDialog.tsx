@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { GitFork } from 'lucide-react';
 import { CHAT_FORK_TITLE_MAX, type ChatForkInfoResult } from '@ruimte/contracts';
+import { performAsPerson } from '@/actions/client-actions';
 import {
     branchRefusal,
     FORKABLE_PROVIDERS,
@@ -19,8 +20,7 @@ import { readChatPreferences, selectionFor } from '@/chat/preferences';
 import { ModelPicker } from '@/chat/ui/Pickers';
 import { useProviders } from '@/state/providers';
 import { Toggle } from '@/shell/settings/controls';
-import { showViewWhenItLands } from '@/project/views';
-import { canvasOfNode, revealWhenItLands } from '@/state/canvas';
+import { canvasOfNode } from '@/state/canvas';
 import { useChatRow } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
@@ -124,22 +124,24 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
         setBusy(true);
         setFailure(null);
         try {
-            const result = await transport.request(
-                'chat.fork',
-                forkPayload({
-                    chatId,
-                    turnId,
-                    title: title.trim(),
-                    shape,
-                    worktree: worktree ? { branch: branchName.trim(), filesAfterTurn: filesAfterTurn && folder.filesAfterTurn } : null,
-                    ...(originalCli && chosenCli ? { cli: { original: originalCli, chosen: chosenCli } } : {})
-                })
-            );
-            if (shape === 'view') {
-                showViewWhenItLands(result.viewId);
-            } else {
-                revealWhenItLands(result.viewId, result.nodeId);
-            }
+            const payload = forkPayload({
+                chatId,
+                turnId,
+                title: title.trim(),
+                shape,
+                worktree: worktree ? { branch: branchName.trim(), filesAfterTurn: filesAfterTurn && folder.filesAfterTurn } : null,
+                ...(originalCli && chosenCli ? { cli: { original: originalCli, chosen: chosenCli } } : {})
+            });
+            await performAsPerson('chat.fork', {
+                chatId,
+                turnId,
+                title: payload.title ?? null,
+                branch: payload.worktree?.branch ?? null,
+                asView: payload.asView ?? null,
+                filesAfterTurn: payload.filesAfterTurn ?? null,
+                provider: payload.provider ?? null,
+                selection: payload.selection ?? null
+            });
             onDone();
         } catch (e) {
             setFailure(e instanceof Error ? e.message : t('fork.failed'));

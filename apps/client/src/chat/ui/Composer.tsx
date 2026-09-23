@@ -8,7 +8,9 @@ import type { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import clsx from 'clsx';
 import { ArrowUp, ChevronDown, Clock, Copy, FastForward, Paperclip, Plus, Square, SquareSlash, X, Zap } from 'lucide-react';
+import { ActionRefusal } from '@ruimte/actions';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatItem, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import { performAsPerson } from '@/actions/client-actions';
 import { askBeforeStoppingSubagents } from '@/agents/end-children';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, uploadBytes } from '@/chat/attachments';
@@ -47,7 +49,7 @@ import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useProviders } from '@/state/providers';
 import { isShellShortcut } from '@/terminal/keymap';
-import { TransportError, transportFor } from '@/transport';
+import { transportFor } from '@/transport';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, FLOAT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
@@ -324,7 +326,13 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
         if (patch.runtimeMode) {
             rememberChatPreferences({ runtimeMode: patch.runtimeMode });
         }
-        void chatClient.configure({ chatId, ...patch }).catch(() => undefined);
+        void performAsPerson('chat.configure', {
+            chatId,
+            model: null,
+            option: null,
+            selection: patch.selection ?? null,
+            runtimeMode: patch.runtimeMode ?? null
+        }).catch(() => undefined);
     };
 
     /* A model of another CLI re-points the whole chat; one of this CLI's own is a configure. */
@@ -340,19 +348,23 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
 
     const stop = (shiftKey: boolean): void => {
         if (composerStopOf(shiftKey) === 'turn') {
-            void chatClient.cancel(chatId).catch(() => undefined);
+            void performAsPerson('chat.stopTurn', { chatId, subagents: false }).catch(() => undefined);
             return;
         }
-        void askBeforeStoppingSubagents(transportFor(endpointId), chatId, () => void chatClient.cancel(chatId, true).catch(() => undefined));
+        void askBeforeStoppingSubagents(
+            transportFor(endpointId),
+            chatId,
+            () => void performAsPerson('chat.stopTurn', { chatId, subagents: true }).catch(() => undefined)
+        );
     };
 
     /* The daemon decides whether a turn is in the way; only its refusal asks the person first. */
     const clearThread = async (force: boolean): Promise<void> => {
         setConfirmClear(false);
         try {
-            await chatClient.clear(chatId, force);
+            await performAsPerson('chat.clear', { chatId, force });
         } catch (e) {
-            if (!force && e instanceof TransportError && e.code === 'chat-busy') {
+            if (!force && e instanceof ActionRefusal && e.code === 'chat-busy') {
                 setConfirmClear(true);
                 return;
             }
@@ -361,7 +373,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     };
 
     const compact = (): void => {
-        void chatClient.compact(chatId).catch(() => setNotice(t('composer.notice.compactFailed')));
+        void performAsPerson('chat.compact', { chatId }).catch(() => setNotice(t('composer.notice.compactFailed')));
     };
 
     const runCommand = (name: string): boolean => {
@@ -370,7 +382,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                 setModelPickerOpen(true);
                 return true;
             case 'compact':
-                void chatClient.compact(chatId).catch(() => undefined);
+                void performAsPerson('chat.compact', { chatId }).catch(() => undefined);
                 return true;
             case 'clear':
                 void clearThread(false);
@@ -865,8 +877,8 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                     {queue.length > 0 && (
                         <div className="flex flex-col gap-1 border-b border-border px-2 py-1.5">
                             {queue.map((message) => {
-                                const sendNow = (): void => void chatClient.sendNow(chatId, message.id).catch(() => undefined);
-                                const unqueue = (): void => void chatClient.unqueue(chatId, message.id).catch(() => undefined);
+                                const sendNow = (): void => void performAsPerson('chat.sendNow', { chatId, messageId: message.id }).catch(() => undefined);
+                                const unqueue = (): void => void performAsPerson('chat.unqueue', { chatId, messageId: message.id }).catch(() => undefined);
                                 return (
                                     <ContextMenu.Root key={message.id}>
                                         <ContextMenu.Trigger className="group/queued flex items-center gap-2 rounded-md px-1.5 py-1 text-xs text-text-muted">

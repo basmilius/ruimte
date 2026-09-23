@@ -1,8 +1,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, Hand, MessageCircleQuestionMark } from 'lucide-react';
+import { PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
-import { chatClient } from '@/chat';
 import { focusPromptStart } from '@/prompts/logic/focus';
 import { nextPrompt, type PendingPrompt } from '@/prompts/logic/prompts';
 import { answerPrompt, type PromptSubject } from '@/prompts/logic/subjects';
@@ -73,7 +73,7 @@ export function PromptComposer({
                         onAction={(action) => {
                             refocus.hold();
                             void session
-                                .act(active, () => answerPrompt(subject, action, { chat: chatClient, sessions: null }))
+                                .act(active, () => answerPrompt(subject, action, { ...PERSON_PROMPT_CLIENTS, sessions: null }))
                                 .then((result) => {
                                     if (result === 'failed') {
                                         refocus.release();

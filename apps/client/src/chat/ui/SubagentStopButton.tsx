@@ -2,12 +2,13 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Square } from 'lucide-react';
 import type { ChatSubagentItem } from '@ruimte/contracts';
+import { performAsPerson } from '@/actions/client-actions';
 import { askBeforeStoppingTask } from '@/agents/end-children';
 import { stopLabel, stopOf, subagentTitle } from '@/chat/subagent-list';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
-import { machineTransport, transportFor } from '@/transport';
+import { transportFor } from '@/transport';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -21,12 +22,10 @@ export function SubagentStopButton({ chatId, item, className }: { chatId: string
         return null;
     }
     const send = (): void => {
-        void machineTransport(endpointId)
-            .request('chat.stopSubagent', { chatId, toolUseId: item.toolUseId })
-            .catch((e: unknown) => {
-                const description = e instanceof Error ? e.message : t('subagents.noAnswer');
-                useToasts.getState().show({ kind: 'error', title: t('subagents.stopFailed'), description });
-            });
+        void performAsPerson('chat.stopSubagent', { chatId, toolUseId: item.toolUseId }).catch((e: unknown) => {
+            const description = e instanceof Error ? e.message : t('subagents.noAnswer');
+            useToasts.getState().show({ kind: 'error', title: t('subagents.stopFailed'), description });
+        });
     };
     const run = (): void => {
         if (stop === 'task' && item.childId !== undefined) {

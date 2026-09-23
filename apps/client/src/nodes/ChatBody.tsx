@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
+import { performAsPerson } from '@/actions/client-actions';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { defaultProvider, readChatPreferences, selectionFor } from '@/chat/preferences';
 import { showsComposer, useSubagentTrail } from '@/chat/subagent-view';
@@ -15,7 +16,7 @@ import { useChatRow } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
-import { readNodeHost, renameHost, updateHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
+import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 
 // The worker pool and its highlighter load with the first chat node, not with the app.
@@ -59,10 +60,10 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
         };
     }, [id, generation]);
 
-    /* The chat remembers the new CLI, so a reload opens it on the same one. */
     const retarget = (provider: AgentKind, selection: ModelSelection): void => {
-        updateHost(id, { provider });
-        chatClient.retarget(id, provider, selection).catch((e: unknown) => setFailure(e instanceof Error ? e.message : t('chat.retargetFailed')));
+        performAsPerson('chat.setProvider', { chatId: id, provider, model: null, selection }).catch((e: unknown) =>
+            setFailure(e instanceof Error ? e.message : t('chat.retargetFailed'))
+        );
     };
 
     const send = (text: string, extras: ChatSendExtras): void => {
@@ -73,7 +74,9 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
         if (host && !host.titleSource && title) {
             renameHost(id, title, 'auto');
         }
-        chatClient.send(id, text, extras).catch((e: unknown) => setFailure(e instanceof Error ? e.message : t('chat.sendFailed')));
+        performAsPerson('chat.send', { chatId: id, prompt: text, ...extras }).catch((e: unknown) =>
+            setFailure(e instanceof Error ? e.message : t('chat.sendFailed'))
+        );
     };
 
     return (

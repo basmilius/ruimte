@@ -4,7 +4,7 @@ import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, FileDiff, GitFork, X } from 'lucide-react';
 import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatInfo, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
-import { chatClient } from '@/chat';
+import { performAsPerson } from '@/actions/client-actions';
 import { forksAfter } from '@/chat/logic/fork';
 import { useChats, type ChatsById } from '@/state/chats';
 import { splitKey, useEndpointId } from '@/state/keys';
@@ -261,11 +261,10 @@ export function ChangedFilesRow({
             return;
         }
         let alive = true;
-        void chatClient
-            .turnDiff(chatId, turnId)
+        void performAsPerson('chat.turnDiff', { chatId, turnId })
             .then((answer) => {
                 if (alive) {
-                    setFetched(answer);
+                    setFetched(answer.diff);
                 }
             })
             .catch(() => undefined);
