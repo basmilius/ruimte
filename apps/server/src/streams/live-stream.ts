@@ -4,6 +4,8 @@ export interface LiveFrameSource {
     readonly format?: LiveStreamFormat;
     start(publish: (frame: LiveStreamFrame) => void): Promise<void>;
     stop(): Promise<void>;
+    /* For a video source, whose frames after a gap only decode again from a key frame. */
+    requestKeyFrame?(): void;
 }
 
 interface Entry {
@@ -36,6 +38,10 @@ export class LiveStreamHub {
         return this.entries.has(id);
     }
 
+    requestKeyFrame(id: string): void {
+        this.entries.get(id)?.source.requestKeyFrame?.();
+    }
+
     format(id: string): LiveStreamFormat | null {
         const entry = this.entries.get(id);
         return entry ? (entry.source.format ?? 'jpeg') : null;
@@ -46,12 +52,17 @@ export class LiveStreamHub {
         if (!entry) {
             throw new Error('Live stream does not exist');
         }
+        const running = entry.started;
         entry.viewers.add(viewer);
         try {
             await this.reconcile(entry);
         } catch (error) {
             entry.viewers.delete(viewer);
             throw error;
+        }
+        // A viewer joining a running video would otherwise wait for the encoder's next key frame.
+        if (running) {
+            entry.source.requestKeyFrame?.();
         }
 
         let subscribed = true;

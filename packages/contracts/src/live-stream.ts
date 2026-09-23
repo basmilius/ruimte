@@ -11,6 +11,8 @@ export interface LiveStreamFrame {
     height: number;
     data: Uint8Array;
     format?: LiveStreamFormat;
+    /* Set by a video source only, and never on the wire: what a stream that has to drop a frame waits for. */
+    keyFrame?: boolean;
 }
 
 export type LiveStreamFormat = 'jpeg' | 'hevc' | 'h264';

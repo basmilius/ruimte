@@ -15,3 +15,6 @@ apps/ios/**/.build/
 apps/ios/**/.swiftpm/
 apps/ios/DerivedData/
 apps/ios/Signing.xcconfig
+
+# The pinned Android screen server a development daemon fetches on first use.
+apps/server/.native/

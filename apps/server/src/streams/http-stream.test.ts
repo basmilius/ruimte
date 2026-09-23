@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { HEVC_STREAM_CONTENT_TYPE, LiveStreamDecoder } from '@ruimte/contracts';
+import { H264_STREAM_CONTENT_TYPE, HEVC_STREAM_CONTENT_TYPE, LiveStreamDecoder } from '@ruimte/contracts';
 import { AuthStore } from '../auth/auth-store.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from './http-stream.ts';
 import { LiveStreamHub } from './live-stream.ts';
@@ -70,6 +70,47 @@ describe('the live stream route', () => {
 
         expect(response.headers.get('content-type')).toBe(HEVC_STREAM_CONTENT_TYPE);
         await response.body?.cancel();
+    });
+
+    test('skips a slow reader of a video to the next key frame instead of dropping one frame', async () => {
+        const hub = new LiveStreamHub();
+        let publish: ((frame: { sequence: number; width: number; height: number; data: Uint8Array; keyFrame: boolean }) => void) | null = null;
+        let requests = 0;
+        hub.register('device:pixel', {
+            format: 'h264',
+            async start(next) {
+                publish = next;
+            },
+            async stop() {},
+            requestKeyFrame() {
+                requests += 1;
+            }
+        });
+        const url = new URL(`http://127.0.0.1:4210${LIVE_STREAM_PATH}/device%3Apixel`);
+        const request = new Request(url, { headers: { authorization: `Bearer ${LOCAL_SECRET}` } });
+        const response = await handleLiveStreamRequest(request, url, '127.0.0.1', auth, OPTIONS, hub);
+        const reader = response.body!.getReader();
+        const decoder = new LiveStreamDecoder();
+        const read = async (): Promise<number[]> => decoder.push((await reader.read()).value!).map((frame) => frame.sequence);
+
+        expect(response.headers.get('content-type')).toBe(H264_STREAM_CONTENT_TYPE);
+        expect(await read()).toEqual([]);
+        for (const [sequence, keyFrame] of [
+            [1, true],
+            [2, false],
+            [3, false],
+            [4, false],
+            [5, true]
+        ] as const) {
+            publish!({ sequence, width: 2, height: 2, data: new Uint8Array([sequence]), keyFrame });
+        }
+        expect(await read()).toEqual([1]);
+        expect(await read()).toEqual([2]);
+        publish!({ sequence: 6, width: 2, height: 2, data: new Uint8Array([6]), keyFrame: false });
+        publish!({ sequence: 7, width: 2, height: 2, data: new Uint8Array([7]), keyFrame: true });
+        expect(await read()).toEqual([7]);
+        expect(requests).toBe(2);
+        await reader.cancel();
     });
 
     test('refuses an authenticated stream when the machine disabled streaming', async () => {

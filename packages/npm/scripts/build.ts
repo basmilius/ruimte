@@ -52,6 +52,13 @@ for (const target of targets) {
         }
         await copyFile(join(source, name), join(dir, 'bin', name));
     }
+    // The Android screen server and its license, which the daemon pushes onto a device from `bin/native`.
+    for (const name of ['scrcpy-server', 'scrcpy-server.LICENSE']) {
+        if (existsSync(join(source, 'native', name))) {
+            await mkdir(join(dir, 'bin', 'native'), { recursive: true });
+            await copyFile(join(source, 'native', name), join(dir, 'bin', 'native', name));
+        }
+    }
     // An artifact download drops the mode, and npm packs the mode it finds.
     await chmod(join(dir, 'bin', 'ruimte'), 0o755);
     await chmod(join(dir, 'bin', 'ruimte-context'), 0o755);

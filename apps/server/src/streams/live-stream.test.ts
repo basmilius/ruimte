@@ -13,6 +13,24 @@ describe('LiveStreamHub', () => {
         expect(hub.format('missing')).toBeNull();
     });
 
+    test('asks a running video for a key frame when another viewer joins', async () => {
+        let requests = 0;
+        const hub = new LiveStreamHub();
+        hub.register('device:pixel', {
+            format: 'h264',
+            async start() {},
+            async stop() {},
+            requestKeyFrame() {
+                requests += 1;
+            }
+        });
+
+        await hub.subscribe('device:pixel', () => undefined);
+        expect(requests).toBe(0);
+        await hub.subscribe('device:pixel', () => undefined);
+        expect(requests).toBe(1);
+    });
+
     test('starts on the first viewer and stops after the last one', async () => {
         let publish: ((next: LiveStreamFrame) => void) | null = null;
         let starts = 0;

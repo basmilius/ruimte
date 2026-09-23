@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { downloadScrcpyServer } from '../src/devices/scrcpy-server.ts';
 
 /*
  * Compiles the daemon into one executable per platform, with the `ruimte-context` script next
@@ -102,6 +103,11 @@ if (values.os === 'mac') {
     const speechHelper = join(nativeDir, 'speech-bridge');
     await copyFile(join(speechRoot, 'target', rustTarget, 'release', 'speech-bridge'), speechHelper);
     await chmod(speechHelper, 0o755);
+}
+
+if (values.os === 'mac' || values.os === 'linux') {
+    // Android devices work the same on both, through the screen server pushed onto them.
+    await downloadScrcpyServer(join(outDir, 'native'));
 }
 
 await copyFile(join(root, 'bin', 'ruimte-context'), join(outDir, 'ruimte-context'));

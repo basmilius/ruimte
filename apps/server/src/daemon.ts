@@ -119,6 +119,9 @@ import { IosPhysicalBackend } from './devices/ios-physical.ts';
 import { IosSimulatorBackend } from './devices/ios-simulator.ts';
 import { createDeviceHelperLauncher } from './devices/helper-source.ts';
 import { createPhysicalStreamSourceFactory, physicalStreamHelperPath } from './devices/physical-stream-source.ts';
+import { AndroidBackend } from './devices/android.ts';
+import { ScrcpyServerFile, scrcpyServerDirectory } from './devices/scrcpy-server.ts';
+import { adbScrcpyHost, ScrcpySource } from './devices/scrcpy-source.ts';
 import { registerDeviceHandlers } from './handlers/device.ts';
 import { LiveStreamHub } from './streams/live-stream.ts';
 
@@ -281,13 +284,21 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const browserPages = new BrowserPages();
     const deviceHelperCommand = compiled ? [process.execPath, 'device-helper'] : [process.execPath, resolve(import.meta.dir, 'main.ts'), 'device-helper'];
     const physicalStreamSource = createPhysicalStreamSourceFactory(physicalStreamHelperPath(compiled, process.execPath, resolve(import.meta.dir, '../..')));
+    // A development checkout fetches the pinned screen server on first use; a build carries it.
+    const scrcpyServer = new ScrcpyServerFile(scrcpyServerDirectory(compiled, process.execPath, resolve(import.meta.dir, '..')), !compiled);
+    const android = new AndroidBackend({
+        createSource: scrcpyServer.available ? (adb, serial) => new ScrcpySource(adbScrcpyHost(adb, serial), () => scrcpyServer.path()) : null
+    });
     const devices = new DeviceManager(
         process.platform === 'darwin'
             ? [
                   new IosSimulatorBackend(undefined, createDeviceHelperLauncher(deviceHelperCommand)),
-                  new IosPhysicalBackend(undefined, undefined, physicalStreamSource)
+                  new IosPhysicalBackend(undefined, undefined, physicalStreamSource),
+                  android
               ]
-            : [],
+            : process.platform === 'linux'
+              ? [android]
+              : [],
         liveStreams
     );
     const statuses = new GitStatusWatcher();

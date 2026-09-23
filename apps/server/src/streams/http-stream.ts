@@ -55,17 +55,28 @@ export const handleLiveStreamRequest = async (
 
     let unsubscribe: (() => void) | null = null;
     let pending: Uint8Array | null = null;
+    let awaitingKeyFrame = false;
     let cancelled = false;
     const stream = new ReadableStream<Uint8Array>({
         async start(controller) {
             controller.enqueue(LIVE_STREAM_MAGIC.slice());
             try {
                 unsubscribe = await hub.subscribe(sourceId, (frame) => {
+                    if (awaitingKeyFrame) {
+                        if (frame.keyFrame !== true) {
+                            return;
+                        }
+                        awaitingKeyFrame = false;
+                    }
                     const bytes = encodeLiveStreamFrame(frame);
                     if ((controller.desiredSize ?? 0) > 0) {
                         controller.enqueue(bytes);
-                    } else {
+                    } else if (pending === null || frame.keyFrame === undefined) {
                         pending = bytes;
+                    } else {
+                        // A picture can stand in for the one before it; a video frame cannot, so the stream skips to a key frame.
+                        awaitingKeyFrame = true;
+                        hub.requestKeyFrame(sourceId);
                     }
                 });
                 if (cancelled) {
