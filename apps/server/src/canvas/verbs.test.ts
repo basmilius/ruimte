@@ -3285,10 +3285,29 @@ describe('browser', () => {
         expect(status).toBe(422);
         expect(lines[0]).toBe(`refused\tnot-linked\tNo line runs between you and ${stranger}, and that line is what lets you drive its page`);
         expect(lines.some((line) => line.startsWith(`browser\t${mine}\t`))).toBe(true);
-        expect(driven).toEqual([]);
+        // Where a page stands is read for the hint, and nothing is driven anywhere.
+        expect(driven.filter((call) => call.action.kind !== 'state')).toEqual([]);
+    });
+
+    test('a refusal names the address a page is at, and the stored one only when nobody holds it', async () => {
+        const mine = await ownPage();
+        const far = (await post('node', ['new', 'browser', '--url', 'https://example.com/far', '--view', 'board'])).lines[0]!.split('\t')[0]!;
+        const open = (await post('browser', ['state', far])).lines;
+        expect(open).toContain(
+            'see\truimte-context node new browser --url https://example.com/two\topens a page of your own on your canvas, with the line to it drawn'
+        );
+        expect(open.find((line) => line.startsWith(`browser\t${mine}\t`))?.split('\t')[3]).toBe('https://example.com/two');
+
+        pageOpen = false;
+        const closed = (await post('browser', ['state', far])).lines;
+        expect(closed).toContain(
+            'see\truimte-context node new browser --url https://example.com/far\topens a page of your own on your canvas, with the line to it drawn'
+        );
+        expect(closed.find((line) => line.startsWith(`browser\t${mine}\t`))?.split('\t')[3]).toBe('https://example.com/');
     });
 
     test('a line is the hint only for a page on the canvas of the caller', async () => {
+        pageOpen = false;
         const near = (
             await post('node', ['new', 'browser', '--url', 'https://example.com/near', '--view', 'main', '--beside', 'note-1'], 'chat')
         ).lines[0]!.split('\t')[0]!;

@@ -9,13 +9,23 @@ import {
 } from '@ruimte/contracts';
 import type { DriveOutcome } from '../browser/drive.ts';
 import { checkUrl } from '../canvas/nodes.ts';
-import { VerbRefusal, field, orNote, type BrowserDriveHost } from '../canvas/verb.ts';
+import { VerbRefusal, field, orNote, type BrowserDriveHost, type CanvasHost } from '../canvas/verb.ts';
 import type { ServerActionContext } from './context.ts';
 
+/* Where a page is now when somebody holds it, else the address stored on its node. Reading it wakes nobody. */
+const addressOf = async (host: CanvasHost, id: string, stored: string | undefined): Promise<string | undefined> => {
+    const outcome = await host.browsers?.drive(id, { kind: 'state' });
+    return outcome?.state?.url ? outcome.state.url : stored;
+};
+
 /* Every browser node this caller may drive, for a refusal that offers what the next call takes. */
-const browserLines = (sources: readonly ContextSource[], callerCanvas: string | null): string[] =>
+const browserLines = async (host: CanvasHost, sources: readonly ContextSource[], callerCanvas: string | null): Promise<string[]> =>
     orNote(
-        sources.filter((source) => source.kind === 'browser').map((source) => `browser\t${source.id}\t${field(source.title)}\t${field(source.text ?? '')}`),
+        await Promise.all(
+            sources
+                .filter((source) => source.kind === 'browser')
+                .map(async (source) => `browser\t${source.id}\t${field(source.title)}\t${field((await addressOf(host, source.id, source.text)) ?? '')}`)
+        ),
         callerCanvas === null
             ? 'No browser node is linked to you, and none can be: you are a view of your own, and a line only runs between two nodes of one canvas'
             : 'No browser node is linked to you; ruimte-context link new --to <id> draws the line to one on your canvas'
@@ -51,19 +61,19 @@ const targetOf = async ({ host, place }: ServerActionContext, caller: string, id
     const canvas = content.views.filter(isCanvasView).find((view) => view.nodes.some((candidate) => candidate.id === id));
     const node = canvas?.nodes.find((candidate) => candidate.id === id);
     if (!canvas || !node) {
-        throw new VerbRefusal('unknown-node', `${id} is not a node of this project`, browserLines(sources, place.canvasId));
+        throw new VerbRefusal('unknown-node', `${id} is not a node of this project`, await browserLines(host, sources, place.canvasId));
     }
     if (node.kind !== 'browser') {
         throw new VerbRefusal(
             'not-a-browser',
             `${id} is a ${node.kind} node, and only a browser node has a page to drive`,
-            browserLines(sources, place.canvasId)
+            await browserLines(host, sources, place.canvasId)
         );
     }
     if (!linked) {
         throw new VerbRefusal('not-linked', `No line runs between you and ${id}, and that line is what lets you drive its page`, [
-            ...lineLines(id, node.url, place.canvasId, canvas.id),
-            ...browserLines(sources, place.canvasId)
+            ...lineLines(id, await addressOf(host, id, node.url), place.canvasId, canvas.id),
+            ...(await browserLines(host, sources, place.canvasId))
         ]);
     }
     return node;
