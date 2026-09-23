@@ -127,6 +127,7 @@ export class ProjectClient {
     private saveTimer: ReturnType<typeof setTimeout> | null = null;
     private localTimer: ReturnType<typeof setTimeout> | null = null;
     private saving: Promise<void> | null = null;
+    private resuming: Promise<void> | null = null;
     /*
      * Its own project reached the stores. Until then the stores may still hold the project this client
      * replaces, and an edit there is not this client's to save on its machine.
@@ -330,6 +331,11 @@ export class ProjectClient {
     }
 
     /* Lets go of the machine. No more events, and no timer that would write to a daemon the client left. */
+    /* Settles once the project is open on the daemon again after the link came back, at once when no reopen is on its way. */
+    whenOpen(): Promise<void> {
+        return this.resuming ?? Promise.resolve();
+    }
+
     dispose(): void {
         for (const off of this.unsubscribe) {
             off();
@@ -568,7 +574,12 @@ export class ProjectClient {
 
     private onStatus(status: TransportStatus): void {
         if (status === 'open' && this.opened && this.sink.getState().current) {
-            void this.resume();
+            const resuming = this.resume().finally(() => {
+                if (this.resuming === resuming) {
+                    this.resuming = null;
+                }
+            });
+            this.resuming = resuming;
         }
     }
 

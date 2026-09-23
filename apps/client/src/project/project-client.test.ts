@@ -774,6 +774,23 @@ describe('a project with a drawing view', () => {
         dispose();
     });
 
+    test('says when the project is open again after the link came back', async () => {
+        const { client, transport, dispose } = setup();
+        await tick();
+        let settled = false;
+        await client.whenOpen();
+
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        const open = client.whenOpen().then(() => {
+            settled = true;
+        });
+        expect(settled).toBe(false);
+        await open;
+        expect(transport.of('project.open')).toHaveLength(2);
+        dispose();
+    });
+
     test('an edit made while the link is down waits for it, and goes out against the loaded rev once it is back', async () => {
         const { transport, state, dispose } = setup();
         await tick();
