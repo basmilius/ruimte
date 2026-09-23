@@ -21,7 +21,7 @@ import {
     Trash
 } from 'lucide-react';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { createNodeAction, duplicateNodeAction, focusNodeAction, linkNodesAction } from '@/actions/client-actions';
+import { colorNoteAction, createNodeAction, duplicateNodeAction, focusNodeAction, linkNodesAction } from '@/actions/client-actions';
 import { ChatAgentSubmenu } from '@/agents/AgentMenus';
 import { askOpenAsView, canOpenAsView } from '@/project/views';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
@@ -249,11 +249,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                     <ContextMenu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
                                         <ContextMenu.Popup className="menu-popup min-w-40">
                                             {NOTE_COLORS.map((color) => (
-                                                <ContextMenu.Item
-                                                    key={color.id}
-                                                    className="menu-item"
-                                                    onClick={() => canvasStore.getState().updateNode(id, { color: color.id })}
-                                                >
+                                                <ContextMenu.Item key={color.id} className="menu-item" onClick={() => colorNoteAction(viewId, id, color.id)}>
                                                     <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} />{' '}
                                                     {t(`noteColors.${color.id}`)}
                                                     {(node.color ?? DEFAULT_NOTE_COLOR) === color.id && <Icon icon={Check} size={14} className="ml-auto" />}

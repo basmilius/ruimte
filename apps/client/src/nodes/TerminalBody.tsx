@@ -1,5 +1,5 @@
 import { TerminalDictation } from '@/dictation/TerminalDictation';
-import { clearTerminalAction } from '@/actions/client-actions';
+import { clearTerminalAction, restartTerminalAction, resumeTerminalAgentAction } from '@/actions/client-actions';
 import { useEffect, useRef, useState } from 'react';
 import i18next from 'i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
@@ -10,7 +10,7 @@ import { Terminal } from '@xterm/xterm';
 import { ClipboardPaste, Copy, Play, RotateCw, Scan } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useEndpointId } from '@/state/keys';
-import { useSessionRow } from '@/state/sessions';
+import { useSessionRestarts, useSessionRow } from '@/state/sessions';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
@@ -22,7 +22,7 @@ import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { webglBudget } from '@/terminal/webgl-budget';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
-import { closeHost, readNodeHost, updateHost, useSuggestedTitle } from '@/nodes/node-host';
+import { closeHost, readNodeHost, useSuggestedTitle } from '@/nodes/node-host';
 import { Button } from '@/ui/Button';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText, readClipboardText } from '@/ui/clipboard';
@@ -87,8 +87,10 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const dictationRoot = useRef<HTMLDivElement>(null);
     const termRef = useRef<Terminal | null>(null);
     const fitRef = useRef<FitAddon | null>(null);
-    /* Bumped by Restart: the whole terminal is rebuilt around a fresh session. */
+    /* Bumped by a retry after a failure; a restart through the actions counts in the sessions store. */
     const [generation, setGeneration] = useState(0);
+    // Either one rebuilds the whole terminal around a fresh session, and both only ever go up.
+    const builds = generation + useSessionRestarts(id);
     const [failure, setFailure] = useState<string | null>(null);
     // Whether the terminal had a selection when its menu opened, which is what Copy goes on.
     const [selected, setSelected] = useState(false);
@@ -237,7 +239,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             termRef.current = null;
             fitRef.current = null;
         };
-    }, [endpointId, id, generation]);
+    }, [endpointId, id, builds]);
 
     useEffect(() => {
         const term = termRef.current;
@@ -251,7 +253,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             term.blur();
             webglBudget.blur(id);
         }
-    }, [id, focused, generation]);
+    }, [id, focused, builds]);
 
     useEffect(() => {
         const term = termRef.current;
@@ -269,7 +271,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         if (term.cols !== cols || term.rows !== rows) {
             sessionClient.resize(id, term.cols, term.rows);
         }
-    }, [id, resolvedTheme, settingsVersion, generation]);
+    }, [id, resolvedTheme, settingsVersion, builds]);
 
     const rebuild = (): void => {
         setFailure(null);
@@ -280,27 +282,6 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const resumable = exited !== undefined && agentRecord?.status === 'exited';
 
     const close = (): void => closeHost(id);
-
-    const restart = async (): Promise<void> => {
-        try {
-            await sessionClient.kill(id);
-        } catch {
-            // Already gone on the daemon; creating it again is all that matters.
-        }
-        rebuild();
-    };
-
-    /*
-     * The CLI went down with the shell without its hooks reporting an end. Its session id is the one
-     * thing worth keeping: on the node it survives a reload, and the daemon turns it into the CLI's
-     * own resume line when the fresh shell starts.
-     */
-    const resume = async (): Promise<void> => {
-        if (agentRecord) {
-            updateHost(id, { resume: agentRecord.agentSessionId });
-        }
-        await restart();
-    };
 
     const paste = async (): Promise<void> => {
         const text = await readClipboardText();
@@ -330,11 +311,11 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                                     <span className={clsx('grow', exited !== 0 && 'text-status-error')}>{t('terminal.exited', { code: exited })}</span>
                                 )}
                                 {resumable && (
-                                    <Button size="sm" onClick={() => void resume()}>
+                                    <Button size="sm" onClick={() => resumeTerminalAgentAction(id)}>
                                         <Icon icon={Play} size={12} /> {t('terminal.resume')}
                                     </Button>
                                 )}
-                                <Button size="sm" variant="secondary" onClick={() => void restart()}>
+                                <Button size="sm" variant="secondary" onClick={() => restartTerminalAction(id)}>
                                     <Icon icon={RotateCw} size={12} /> {t('terminal.restart')}
                                 </Button>
                                 <Button size="sm" onClick={close}>
@@ -345,7 +326,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                     </div>
                     <TerminalDictation
                         terminalId={id}
-                        key={generation}
+                        key={builds}
                         targetRef={dictationRoot}
                         disabled={status !== 'open' || exited !== undefined || failure !== null}
                         paste={(text) => {
