@@ -7,7 +7,7 @@ import { providerFor } from '../providers/registry.ts';
 import { DEPTH_LIMIT_LINES, depthForOpening } from './depth.ts';
 import { MODE_LINES, modeFlag, modeForOpening, narrowerMode } from './mode.ts';
 import { readsFlag, readsIds, readsLines } from './link-verb.ts';
-import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines, nodesNamed } from './node-verb.ts';
+import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines, nodesNamed } from './nodes.ts';
 import { refuseMissingNodes } from './own-view.ts';
 import { groupMembers, placeBeside, placeFree, placeInGroup, type Rect } from './placement.ts';
 import { checkCwd, readPromptFile } from './project-paths.ts';

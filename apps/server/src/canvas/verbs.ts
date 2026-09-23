@@ -1,6 +1,8 @@
 import { ChatSubagentSourceSchema, ContextSourceSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
+// First: verbs join the --dry-run list as they are defined, and node new has always led it.
+import { nodeDeleteAction, nodeListAction, nodeNewAction } from './node-verb.ts';
 import { agentVerb } from './agent-verb.ts';
 import { arrangeAction } from './arrange-verb.ts';
 import { BROWSER_ACTIONS, BROWSER_DETAIL, BROWSER_SUMMARY } from './browser-verb.ts';
@@ -8,7 +10,6 @@ import { diagramAction } from './diagram-verb.ts';
 import { nodeEditAction } from './edit-verb.ts';
 import { groupAction } from './group-verb.ts';
 import { linkDeleteAction, linkListAction, linkNewAction } from './link-verb.ts';
-import { nodeDeleteAction, nodeListAction, nodeNewAction } from './node-verb.ts';
 import { notifyVerb } from './notify-verb.ts';
 import { openAction } from './open-verb.ts';
 import { planVerb } from './plan-verb.ts';

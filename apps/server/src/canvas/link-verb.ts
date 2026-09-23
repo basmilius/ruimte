@@ -1,11 +1,11 @@
-import { EDGE_ROLES, isAgentKind, type ProjectCanvasView, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
+import { EDGE_ROLES } from '@ruimte/contracts';
 import { z } from 'zod';
-import { idList, newId, nodeLines } from './node-verb.ts';
-import { refuseMissingNodes } from './own-view.ts';
-import { MAX_TITLE_LENGTH, SCOPE_LINE, VerbRefusal, canvasFor, defineAction, field, orNote, placeOf, titleField, type VerbCall } from './verb.ts';
+import { canvasIdFor, defineActionVerb, runAction } from './action-verb.ts';
+import { MAX_LINKS } from './links.ts';
+import { idList } from './nodes.ts';
+import { MAX_TITLE_LENGTH, SCOPE_LINE, VerbRefusal, field, placeOf, titleField } from './verb.ts';
 
-// Lines drawn per call. Past this it is not linking any more, it is an agent in a loop.
-export const MAX_LINKS = 20;
+export { MAX_LINKS } from './links.ts';
 
 /* The flag `agent` and `team` take for the nodes their new agent has to be able to read at once. */
 export const readsFlag = z.string().min(1, '--reads needs one or more node ids, separated by commas').optional();
@@ -36,20 +36,7 @@ export const readsLines = (head: string): readonly string[] => [
     `limit\tAt most ${MAX_LINKS} ids in --reads`
 ];
 
-/* What each role is for, offered whenever a call names one this version does not have. */
-const ROLE_LINES: readonly string[] = [
-    `roles\t${EDGE_ROLES.join('\t')}`,
-    'role\tcontext\tThe head reads the tail with ruimte-context read and may notify along the line; this is what a line without a role already is',
-    'role\ttarget\tFrom an agent into something it can drive, such as a device or a page',
-    'role\torigin\tOne node opened the other; it says where a node came from and nothing more'
-];
-
 const LINK_DETAIL: readonly string[] = [
-    'flag\t--to A,B\trequired\tThe nodes the line runs into, by id, separated by commas',
-    'flag\t--from N\toptional\tWhere the line starts; without it, you',
-    `flag\t--label L\toptional\tWhat the line is called on the canvas, at most ${MAX_TITLE_LENGTH} characters; a line into an agent is called "context" without one`,
-    `flag\t--role R\toptional\tWhat the line is for: ${EDGE_ROLES.join(', ')}; without it a line into a terminal or a chat is context and any other line is only a line`,
-    'flag\t--view V\toptional\tThe canvas both ends are on, by view id; without it the one you are on',
     'prints\tid\tfrom\tto\tstate\tway\tone line per edge, where state is new for one that was drawn, updated for one that was there and took the --role you named, and existing for one nothing happened to',
     'way\tout for the line you asked for, back for the one this verb drew the other way by itself, so two rows for one --to is not a mistake',
     'context\tAn edge into a terminal or a chat node is what lets that agent read the other end with ruimte-context read; a line between two other nodes is only a line',
@@ -65,12 +52,27 @@ const LINK_DETAIL: readonly string[] = [
     'see\truimte-context notify\tleaving a message for the agent at the other end, which takes a line running that way'
 ];
 
-const pickId = (edge: ProjectEdge): string => edge.id;
-
-export const linkNewAction = defineAction('link', {
+export const linkNewAction = defineActionVerb('link', {
     name: 'new',
+    action: 'link.create',
     usage: '--to A,B [--from N] [--label L] [--role R] [--view V]',
-    summary: 'Draws a context line between nodes of one canvas; between two agents it draws both ways, which is two rows',
+    params: [
+        { syntax: '--to A,B', need: 'required', field: 'to', text: 'The nodes the line runs into, by id, separated by commas' },
+        { syntax: '--from N', need: 'optional', field: 'from' },
+        {
+            syntax: '--label L',
+            need: 'optional',
+            field: 'label',
+            more: `at most ${MAX_TITLE_LENGTH} characters; a line into an agent is called "context" without one`
+        },
+        {
+            syntax: '--role R',
+            need: 'optional',
+            field: 'role',
+            more: `one of ${EDGE_ROLES.join(', ')}; without it a line into a terminal or a chat is context and any other line is only a line`
+        },
+        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas both ends are on, by view id; without it the one you are on' }
+    ],
     detail: LINK_DETAIL,
     positionals: z.tuple([], { error: 'link new takes no arguments, only flags; the nodes go in --to' }),
     flags: z.object({
@@ -84,117 +86,19 @@ export const linkNewAction = defineAction('link', {
         view: z.string().min(1, '--view needs the id of a canvas').optional()
     }),
     async run({ flags }, call) {
-        const place = placeOf(call);
-        const targets = [...new Set(flags.to.split(',').map((id) => id.trim()))];
-        if (targets.some((id) => id === '')) {
-            throw new VerbRefusal('bad-arguments', '--to has an empty id in it; write the ids separated by commas, as a,b,c');
-        }
-        if (targets.length > MAX_LINKS) {
-            throw new VerbRefusal('too-many-links', `--to names ${targets.length} nodes and at most ${MAX_LINKS} may be linked at once`);
-        }
-        const role = flags.role;
-        if (role !== undefined && !(EDGE_ROLES as readonly string[]).includes(role)) {
-            throw new VerbRefusal('unknown-role', `${role} is not one of the ${EDGE_ROLES.length} things a line can be for`, [...ROLE_LINES]);
-        }
-        /* A line that reads: the role says so, or nothing was said and a line into an agent has read
-           the other end since before the field existed. The only kind drawn back, and the only one
-           this verb calls "context" by itself. */
-        const reads = role === undefined || role === 'context';
-
-        return call.host.mutate(place.projectId, (content) => {
-            const canvas = canvasFor(content, place, flags.view);
-            const from = flags.from ?? call.caller;
-            const source = canvas.nodes.find((node) => node.id === from);
-            if (!source) {
-                if (flags.from === undefined) {
-                    throw new VerbRefusal(
-                        'unknown-node',
-                        `You are not a node on ${canvas.id}, so a line has nowhere to start; name one with --from`,
-                        nodeLines(canvas)
-                    );
-                }
-                throw refuseMissingNodes(content, [from], canvas.id, 'a line has nowhere to start there', nodeLines(canvas));
-            }
-            const missing = targets.filter((id) => !canvas.nodes.some((node) => node.id === id));
-            if (missing.length > 0) {
-                throw refuseMissingNodes(
-                    content,
-                    missing,
-                    canvas.id,
-                    'no line can be drawn into it',
-                    // Never the node the line starts from: a line into itself is refused a moment later.
-                    nodeLines(canvas, {
-                        takes: (node) => node.id !== from,
-                        empty: `${canvas.id} holds no other node for a line to run into`
-                    })
-                );
-            }
-            if (targets.includes(from)) {
-                throw new VerbRefusal('self-link', `${from} is both ends of the line; a node reads itself without one`);
-            }
-
-            const made: ProjectEdge[] = [];
-            const reroled = new Map<string, ProjectEdge>();
-            const lines: string[] = [];
-            /* `way` is what tells the two rows of one --to apart: the line that was asked for, and
-               the one this verb draws back by itself between two agents. */
-            const draw = (start: string, end: ProjectNode, way: 'out' | 'back'): void => {
-                const already = [...canvas.edges, ...made].find((edge) => edge.from === start && edge.to === end.id);
-                if (already) {
-                    /* A --role that is not the one on the line is a different line asked for, not the
-                       same call run twice, so it is written rather than dropped without a word. */
-                    if (role !== undefined && already.role !== role) {
-                        reroled.set(already.id, { ...already, role });
-                        lines.push([already.id, start, end.id, 'updated', way].join('\t'));
-                        return;
-                    }
-                    lines.push([already.id, start, end.id, 'existing', way].join('\t'));
-                    return;
-                }
-                // The label a person's own drag gives it: named only where the line means something.
-                const label = flags.label ?? (reads && isAgentKind(end.kind) ? 'context' : undefined);
-                const edge: ProjectEdge = {
-                    id: newId('edge', content, made.map(pickId)),
-                    from: start,
-                    to: end.id,
-                    ...(label === undefined ? {} : { label }),
-                    ...(role === undefined ? {} : { role })
-                };
-                made.push(edge);
-                lines.push([edge.id, start, end.id, 'new', way].join('\t'));
-            };
-
-            for (const id of targets) {
-                const target = canvas.nodes.find((node) => node.id === id)!;
-                draw(from, target, 'out');
-                /* Both ways between two agents: each of them is then something the other can read.
-                   Only for a line that reads; a target or an origin means something in one direction
-                   only, so the copy back would be a line that says something nobody meant. */
-                if (reads && isAgentKind(source.kind) && isAgentKind(target.kind)) {
-                    draw(id, source, 'back');
-                }
-            }
-            if (made.length === 0 && reroled.size === 0) {
-                return { content: null, result: lines };
-            }
-            const edges = [...canvas.edges.map((edge) => reroled.get(edge.id) ?? edge), ...made];
-            return {
-                content: {
-                    ...content,
-                    views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, edges } : view))
-                },
-                result: lines
-            };
-        });
+        const to = idList(flags.to, '--to');
+        const viewId = await canvasIdFor(call, placeOf(call), flags.view);
+        const linked = await runAction(call, 'link.create', { viewId, from: flags.from ?? null, to, label: flags.label ?? null, role: flags.role ?? null });
+        return linked.edges.map((edge) => [edge.edgeId, edge.from, edge.to, edge.state, edge.way].join('\t'));
     }
 });
 
-export const linkListAction = defineAction('link', {
+export const linkListAction = defineActionVerb('link', {
     name: 'list',
+    action: 'link.list',
     usage: '[--view V]',
-    summary: 'Lists the lines of a canvas: id, from, to, label',
+    params: [{ syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas to list, by view id', more: 'ruimte-context view list lists them' }],
     detail: [
-        'flag\t--view V\toptional\tThe canvas to list, by view id; ruimte-context view list lists them',
         'prints\tid\tfrom\tto\tlabel\tone line per line on the canvas, the label empty where it has none',
         'direction\tA line runs from the first id into the second; into an agent node that is what makes the first readable to it, and never the other way round',
         'both ways\tTwo agents that read each other are two lines, one each way; ruimte-context link new draws the second',
@@ -205,43 +109,20 @@ export const linkListAction = defineAction('link', {
     positionals: z.tuple([], { error: 'link list takes no arguments, only flags' }),
     flags: z.object({ view: z.string().min(1, '--view needs the id of a canvas').optional() }),
     async run({ flags }, call) {
-        const place = placeOf(call);
-        const canvas = canvasFor(await call.host.read(place.projectId), place, flags.view);
-        return canvas.edges.map((edge) => [edge.id, edge.from, edge.to, field(edge.label ?? '')].join('\t'));
+        const listed = await runAction(call, 'link.list', { viewId: await canvasIdFor(call, placeOf(call), flags.view) });
+        return listed.edges.map((edge) => [edge.edgeId, edge.from, edge.to, field(edge.label ?? '')].join('\t'));
     }
 });
 
-// The same ceiling as a list of nodes in a refusal: past it the refusal drowns in lines.
-const EDGE_LINES_MAX = 20;
-
-/* What a refusal about a line may offer: only the lines this same call would remove. */
-const edgeLines = (canvas: ProjectCanvasView, takes: (edge: ProjectEdge) => boolean): string[] => {
-    const edges = canvas.edges.filter(takes);
-    if (edges.length > EDGE_LINES_MAX) {
-        return [`detail\truimte-context link list --view ${canvas.id}\tthe ${canvas.edges.length} lines of ${canvas.id}`];
-    }
-    return orNote(
-        edges.map((edge) => ['edge', edge.id, edge.from, edge.to, field(edge.label ?? '')].join('\t')),
-        canvas.edges.length === 0
-            ? `${canvas.id} has no lines on it`
-            : `You have no line on ${canvas.id} to remove; link delete takes a line whose ends are both yours`
-    );
-};
-
-/*
- * Who drew a line is written down nowhere, so it is read off its ends, the rule `node delete` follows
- * for a node: an end is yours when it is you or a node you made. Both ends have to be, since a line a
- * person drew into an agent is the context that person gave it.
- */
-export const ownEnd = (id: string, call: VerbCall): boolean => id === call.caller || call.host.madeBy(id) === call.caller;
-
-export const linkDeleteAction = defineAction('link', {
+export const linkDeleteAction = defineActionVerb('link', {
     name: 'delete',
+    action: 'link.delete',
     usage: '<edgeId> [--view V]',
-    summary: 'Removes one line whose ends are both yours and prints the line that went',
+    params: [
+        { syntax: '<edgeId>', need: 'required', field: 'edgeId', text: 'The line to remove, by id', more: 'ruimte-context link list lists them' },
+        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the line is on, by view id; without it the one you are on' }
+    ],
     detail: [
-        'argument\t<edgeId>\trequired\tThe line to remove, by id; ruimte-context link list lists them',
-        'flag\t--view V\toptional\tThe canvas the line is on, by view id; without it the one you are on',
         'prints\tdeleted\tid\tfrom\tto\tlabel\tthe line that went, the label empty where it had none',
         'rule\tOnly a line whose ends are both yours: you, or a node you made with node new, node group, agent or team',
         'rule\tA line that touches a node a person made stays, and so does a line a person drew into you, since that is the context they gave you',
@@ -255,33 +136,8 @@ export const linkDeleteAction = defineAction('link', {
     }),
     flags: z.object({ view: z.string().min(1, '--view needs the id of a canvas').optional() }),
     async run({ positionals: [id], flags }, call) {
-        const place = placeOf(call);
-        const anyLine = call.host.agentsDeleteAnyView();
-        const deletable = (edge: ProjectEdge): boolean => anyLine || (ownEnd(edge.from, call) && ownEnd(edge.to, call));
-        return call.host.mutate(place.projectId, (content) => {
-            const canvas = canvasFor(content, place, flags.view);
-            const edge = canvas.edges.find((candidate) => candidate.id === id);
-            if (!edge) {
-                throw new VerbRefusal('unknown-edge', `${id} is not a line on ${canvas.id}`, edgeLines(canvas, deletable));
-            }
-            if (!deletable(edge)) {
-                const foreign = ownEnd(edge.from, call) ? edge.to : edge.from;
-                const maker = call.host.madeBy(foreign) ?? 'a person';
-                throw new VerbRefusal(
-                    'not-yours',
-                    `${id} runs ${foreign === edge.from ? 'from' : 'into'} ${foreign}, which ${maker} made, and link delete only removes a line whose ends are both yours`,
-                    [
-                        `made by\t${foreign}\t${maker}`,
-                        `you\t${call.caller}`,
-                        "setting\tagentsDeleteAnyView in this machine's endpoint.json frees every node, view and line; a person turns it on from the Machines pane"
-                    ]
-                );
-            }
-            const edges = canvas.edges.filter((candidate) => candidate.id !== id);
-            return {
-                content: { ...content, views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, edges } : view)) },
-                result: [['deleted', edge.id, edge.from, edge.to, field(edge.label ?? '')].join('\t')]
-            };
-        });
+        const viewId = await canvasIdFor(call, placeOf(call), flags.view);
+        const deleted = await runAction(call, 'link.delete', { viewId, edgeId: id });
+        return [['deleted', deleted.edgeId, deleted.from, deleted.to, field(deleted.label ?? '')].join('\t')];
     }
 });

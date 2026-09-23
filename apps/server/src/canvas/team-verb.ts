@@ -8,7 +8,7 @@ import { AGENT_KINDS, agentNode, chatKinds, nameOf, terminalMode } from './agent
 import { DEPTH_LIMIT_LINES, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH, depthForOpening } from './depth.ts';
 import { MODE_LINES, modeFlag, modeForOpening } from './mode.ts';
 import { readsFlag, readsIds, readsLines } from './link-verb.ts';
-import { MAX_CANVAS_NODES, canvasFull, newId, nodesNamed } from './node-verb.ts';
+import { MAX_CANVAS_NODES, canvasFull, newId, nodesNamed } from './nodes.ts';
 import { placeFree, placeTeam, TEAM_COLUMNS } from './placement.ts';
 import { checkCwd } from './project-paths.ts';
 import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, nextLine, requireChatParent, taskBrief } from './task-verbs.ts';

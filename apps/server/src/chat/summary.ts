@@ -1,5 +1,5 @@
 import { isCanvasView, type ChatInfo, type ChatItem, type ChatSummarizeResult, type ChatTurnItem, type ProjectEdge } from '@ruimte/contracts';
-import { newId } from '../canvas/node-verb.ts';
+import { newId } from '../canvas/nodes.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import { errorText } from '../error-text.ts';
 import type { DeliverSummaryEntry, OutboxEntry, OutboxWork } from '../outbox/outbox.ts';

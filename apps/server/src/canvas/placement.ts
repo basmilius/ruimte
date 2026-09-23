@@ -1,3 +1,4 @@
+import { ARRANGE_LAYOUTS } from '@ruimte/actions';
 import { GROUP_HEADER, GROUP_PADDING, groupMemberIds, groupRect, type ProjectNode } from '@ruimte/contracts';
 
 export interface Rect {
@@ -46,7 +47,8 @@ export const placeFree = (existing: readonly Rect[], size: { w: number; h: numbe
     };
 };
 
-export const ARRANGE_LAYOUTS = ['grid', 'row', 'column'] as const;
+// The layouts are the catalog's, since `node.arrange` takes one as input.
+export { ARRANGE_LAYOUTS };
 export type ArrangeLayout = (typeof ARRANGE_LAYOUTS)[number];
 
 /* How many columns a grid takes without being told: as square as the count allows. */

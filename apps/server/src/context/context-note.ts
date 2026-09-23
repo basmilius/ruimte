@@ -1,6 +1,6 @@
 import { AgentKindSchema, type ContextSource } from '@ruimte/contracts';
 import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
-import { NODE_VERB_KINDS } from '../canvas/node-verb.ts';
+import { NODE_VERB_KINDS } from '../canvas/node-kinds.ts';
 
 /* Asked for a CLI by name, a model that has not read the names goes looking through its own tools
    for one and reports back that this machine has none, so the verb names them where it is offered. */

@@ -380,6 +380,15 @@ export const canvasLines = (content: ProjectContent): string[] =>
 export const OPENING_OFF_CANVAS =
     'A node opens on a canvas; name which one with --view (ruimte-context view list lists them). A line only joins two nodes of one canvas, so the edge column shows -';
 
+/* The canvas an id names, refused with the canvases there are when it names none. */
+export const canvasNamed = (content: ProjectContent, viewId: string): ProjectCanvasView => {
+    const named = content.views.find((candidate) => candidate.id === viewId);
+    if (!named || !isCanvasView(named)) {
+        throw new VerbRefusal('not-a-canvas', `${viewId} is not a canvas of this project`, canvasLines(content));
+    }
+    return named;
+};
+
 /*
  * The canvas a verb works on: the one `--view` names, else the one the caller is a node on. Ids
  * only, never names, so an agent cannot aim at a canvas by naming something else after it.
@@ -391,11 +400,7 @@ export const canvasFor = (
     offCanvas = 'This session is not on a canvas; name one with --view'
 ): ProjectCanvasView => {
     if (view !== undefined) {
-        const named = content.views.find((candidate) => candidate.id === view);
-        if (!named || !isCanvasView(named)) {
-            throw new VerbRefusal('not-a-canvas', `${view} is not a canvas of this project`, canvasLines(content));
-        }
-        return named;
+        return canvasNamed(content, view);
     }
     const own = place.canvasId === null ? undefined : content.views.find((candidate) => candidate.id === place.canvasId);
     if (!own || !isCanvasView(own)) {

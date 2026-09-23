@@ -1,7 +1,7 @@
 import { deriveProjectContextSources, isCanvasView, type BrowserDriveAction, type ContextSource, type ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
 import type { DriveOutcome } from '../browser/drive.ts';
-import { checkUrl } from './node-verb.ts';
+import { checkUrl } from './nodes.ts';
 import { defineAction, field, orNote, placeOf, SCOPE_LINE, VerbRefusal, type BrowserDriveHost, type VerbCall } from './verb.ts';
 
 /* What every action of this noun prints under its first line, so an agent reads one shape whatever it asked. */

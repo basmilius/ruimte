@@ -2,7 +2,7 @@ import { DiagramEdgeSchema, DiagramGroupSchema, DiagramMetaSchema, DiagramNodeSc
 import { DEFAULT_EDGE_TONE, DEFAULT_GROUP_TONE, DEFAULT_NODE_TONE } from '@ruimte/diagram';
 import { z } from 'zod';
 import { DiagramError } from '../projects/diagram-store.ts';
-import { viewLines } from './view-verb.ts';
+import { viewLines } from './views.ts';
 import { VerbRefusal, defineAction, orNote, placeOf } from './verb.ts';
 
 /*
