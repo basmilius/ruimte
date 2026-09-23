@@ -197,11 +197,14 @@ const serializeView = (view: unknown, indent: string): string => {
         return `${indent}${JSON.stringify(view)}`;
     }
     const inner = `${indent}${INDENT}`;
-    const fields = Object.entries(view).map(([key, value]) =>
-        LINE_PER_ITEM.has(key) && Array.isArray(value)
-            ? `${inner}${JSON.stringify(key)}: ${itemsOnLines(value, inner)}`
-            : `${inner}${JSON.stringify(key)}: ${JSON.stringify(value)}`
-    );
+    // A field set to undefined is a field taken away, which is how JSON.stringify writes it too.
+    const fields = Object.entries(view)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) =>
+            LINE_PER_ITEM.has(key) && Array.isArray(value)
+                ? `${inner}${JSON.stringify(key)}: ${itemsOnLines(value, inner)}`
+                : `${inner}${JSON.stringify(key)}: ${JSON.stringify(value)}`
+        );
     return `${indent}{\n${fields.join(',\n')}\n${indent}}`;
 };
 

@@ -82,26 +82,34 @@ const renameSub = defineActionVerb('view', {
     }
 });
 
+/* The word that takes a mark away, the way the action's own `null` does. */
+const NO_ICON = 'null';
+
 const iconSub = defineActionVerb('view', {
     name: 'icon',
     action: 'view.setIcon',
-    usage: '<viewId> <lucide-name>',
+    usage: `<viewId> <lucide-name|${NO_ICON}>`,
     params: [
         { syntax: '<viewId>', need: 'required', field: 'viewId', text: 'The view to mark, by id', more: LISTED },
-        { syntax: '<mark>', need: 'required', field: 'icon' }
+        { syntax: '<mark>', need: 'required', field: 'icon', more: `${NO_ICON} takes the mark away` }
     ],
     detail: [
         'prints\tid\tkind\tlucide\tthe mark the view now wears',
+        `prints\tid\tkind\t${NO_ICON}\tafter ${NO_ICON}: the view wears no mark of its own`,
         `names\t${PROJECT_ICON_NAMES.length} Lucide names; a refusal prints all of them`,
         'note\tA separator and a subheader divide the sidebar and have no room for a mark'
     ],
-    positionals: z.tuple([z.string().min(1, 'view icon needs the id of a view'), z.string().min(1, 'view icon needs a Lucide name')], {
-        error: (issue) => (issue.code === 'too_big' ? 'view icon takes a view id and one mark' : 'view icon needs the id of a view and a Lucide name')
-    }),
+    positionals: z.tuple(
+        [z.string().min(1, 'view icon needs the id of a view'), z.string().min(1, `view icon needs a Lucide name, or ${NO_ICON} to take the mark away`)],
+        {
+            error: (issue) =>
+                issue.code === 'too_big' ? 'view icon takes a view id and one mark' : `view icon needs the id of a view and a Lucide name, or ${NO_ICON}`
+        }
+    ),
     flags: z.object({}),
     async run({ positionals: [id, value] }, call) {
-        const marked = await runAction(call, 'view.setIcon', { viewId: id, icon: value });
-        return [`${id}\t${marked.kind}\tlucide\t${field(marked.icon?.value ?? value)}`];
+        const marked = await runAction(call, 'view.setIcon', { viewId: id, icon: value === NO_ICON ? null : value });
+        return [marked.icon === null ? `${id}\t${marked.kind}\t${NO_ICON}` : `${id}\t${marked.kind}\tlucide\t${field(marked.icon.value)}`];
     }
 });
 

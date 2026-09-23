@@ -2092,6 +2092,13 @@ describe('view icon', () => {
         expect(await viewOnDisk('board')).toMatchObject({ icon: { kind: 'lucide', value: 'rocket' } });
     });
 
+    test('null takes a mark away again', async () => {
+        await post('view', ['icon', 'board', 'rocket']);
+        expect((await post('view', ['icon', 'board', 'null'])).lines).toEqual(['board\tcanvas\tnull']);
+        expect(await viewOnDisk('board')).not.toHaveProperty('icon');
+        expect((await post('view', ['icon', 'board', 'null'])).lines).toEqual(['board\tcanvas\tnull']);
+    });
+
     test('a mark a person typed is refused with the set, and so is a typo', async () => {
         expect((await post('view', ['icon', 'board', '\u{1f680}'])).lines[0]).toBe(
             `refused\tunknown-icon\t\u{1f680} is not one of the ${PROJECT_ICON_NAMES.length} Lucide names a view picks from`
