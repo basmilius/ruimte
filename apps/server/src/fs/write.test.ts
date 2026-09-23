@@ -140,6 +140,20 @@ describe('fs.write', () => {
         expect(await codeOf(writeTextFile('src/main.ts', 'x\n', 0, boundary()))).toBe('bad-path');
     });
 
+    test('refuses the state Ruimte keeps in a project, however the path reaches it', async () => {
+        await mkdir(join(project, '.ruimte', 'private'), { recursive: true });
+        const shared = await put(join(project, '.ruimte', 'project.json'), '{}\n');
+        const personal = await put(join(project, '.ruimte', 'private', 'project.json'), '{}\n');
+        await symlink(join(project, '.ruimte'), join(project, 'state'));
+
+        expect(await codeOf(writeTextFile(shared.path, '[]\n', shared.mtime, boundary()))).toBe('ruimte-state');
+        expect(await codeOf(writeTextFile(personal.path, '[]\n', personal.mtime, boundary()))).toBe('ruimte-state');
+        expect(await codeOf(writeTextFile(join(project, 'src', '..', '.ruimte', 'project.json'), '[]\n', shared.mtime, boundary()))).toBe('ruimte-state');
+        expect(await codeOf(writeTextFile(join(project, 'state', 'private', 'project.json'), '[]\n', personal.mtime, boundary()))).toBe('ruimte-state');
+        expect(await readFile(shared.path, 'utf8')).toBe('{}\n');
+        expect(await readFile(personal.path, 'utf8')).toBe('{}\n');
+    });
+
     test('lets nobody write when the client holds no project', async () => {
         const { path, mtime } = await put(join(project, 'a.txt'), 'one\n');
 

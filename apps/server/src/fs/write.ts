@@ -6,7 +6,7 @@ import { isInside } from '../canvas/project-paths.ts';
 import { CodedError } from '../coded-error.ts';
 import { ReadError, inspect } from './read.ts';
 
-type WriteErrorCode = 'stale' | 'too-large' | 'not-text' | 'outside-project' | 'not-writable';
+type WriteErrorCode = 'stale' | 'too-large' | 'not-text' | 'outside-project' | 'ruimte-state' | 'not-writable';
 
 export class WriteError extends CodedError<WriteErrorCode> {}
 
@@ -65,6 +65,10 @@ export const writeTextFile = async (path: string, text: string, expectedMtime: n
     const roots = await realRoots(boundary);
     if (!roots.some((root) => isInside(root, real))) {
         throw new WriteError('outside-project', `${file.path} is outside the projects open here and their worktrees`);
+    }
+    // The project files move only through `project.save` and its rev; a write here would slip past both.
+    if (roots.some((root) => isInside(join(root, '.ruimte'), real))) {
+        throw new WriteError('ruimte-state', `${file.path} is Ruimte's own state and is not written from here`);
     }
     if (mime) {
         throw new WriteError('not-text', 'That file is not text. Ruimte does not write over it.');
