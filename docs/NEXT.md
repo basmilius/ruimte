@@ -69,8 +69,10 @@ larger ones becomes a GitHub issue when it starts.
    and in the client the rev the project, drawing or diagram store saved or read. No person path
    starts an agent with a prompt, a task or a worktree of its own in one click, so a person's start
    stays `node.create` and `agent.start` stays an agent's. Restart and Resume under an ended shell
-   are `terminal.restart` and `terminal.resumeAgent`, and a note's color is `note.setColor`. Left:
-   measuring tool choice, target errors and latency. The binding table in 10 hangs on it.
+   are `terminal.restart` and `terminal.resumeAgent`, and a note's color is `note.setColor`. Voice
+   measures its tool choice, codes, target errors and latency on this machine only, under
+   "Diagnostics" in the Voice panel (`apps/client/src/voice/diagnostics.ts`). The binding table in 10
+   hangs on it.
 10. **Settings and keyboard**: one binding table with `when` contexts, read by the handlers and the
     Keyboard pane (which lists them read-only today), then overrides with press-to-record, conflict
     labels and reset. A "restore defaults" action, a canvas font size for chat and text elements,
