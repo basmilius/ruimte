@@ -1,6 +1,7 @@
 import { shikiToMonaco, textmateThemeToMonacoTheme } from '@shikijs/monaco';
 import type { editor, IDisposable, languages } from 'monaco-editor/editor';
 import type { Highlighter } from 'shiki';
+import { type MonacoLanguage, monacoLanguageOf } from './languages.ts';
 
 // A theme id the highlighter has loaded.
 export type ShikiTheme = string;
@@ -20,6 +21,8 @@ export const monacoTheme = (highlighter: Highlighter, theme: ShikiTheme): editor
     textmateThemeToMonacoTheme(highlighter.getTheme(theme)) as editor.IStandaloneThemeData;
 
 interface Grammar {
+    /* The Shiki grammar the Monaco language is drawn with. */
+    readonly name: string;
     registration: IDisposable;
 }
 
@@ -32,6 +35,7 @@ interface Grammar {
 export class ShikiBridge {
     private readonly highlighter: Highlighter;
     private readonly languages: MonacoLanguages;
+    /* Per Monaco language id. */
     private readonly grammars = new Map<string, Grammar>();
     private readonly loading = new Map<string, Promise<string>>();
     private theme: ShikiTheme;
@@ -42,15 +46,16 @@ export class ShikiBridge {
         this.theme = theme;
     }
 
-    /* The Monaco language id for a Shiki id, once its grammar is loaded; plain text for one Shiki does not know. */
+    /* The Monaco language id for a Shiki id (`languages.ts`), once its grammar is loaded; plain text for one Shiki does not know. */
     language(id: string | undefined): Promise<string> {
         if (id === undefined || id === '') {
             return Promise.resolve(PLAIN_TEXT);
         }
-        let loaded = this.loading.get(id);
+        const target = monacoLanguageOf(id);
+        let loaded = this.loading.get(target.id);
         if (!loaded) {
-            loaded = this.load(id);
-            this.loading.set(id, loaded);
+            loaded = this.load(target);
+            this.loading.set(target.id, loaded);
         }
         return loaded;
     }
@@ -58,7 +63,9 @@ export class ShikiBridge {
     /*
      * A tokenizer turns Shiki's colors back into scopes of the one theme it was built for, so every
      * grammar gets a tokenizer of the new theme. Registering a provider again is also what makes Monaco
-     * tokenize the open files anew instead of keeping the scopes of the previous theme.
+     * tokenize the open files anew instead of keeping the scopes of the previous theme. The new one goes
+     * in before the old one goes, so the language is never without a Shiki provider, which is when
+     * Monaco would reach for the Monarch tokenizer of a language definition.
      */
     setTheme(theme: ShikiTheme): void {
         if (theme === this.theme) {
@@ -66,35 +73,36 @@ export class ShikiBridge {
         }
         this.theme = theme;
         for (const [id, grammar] of this.grammars) {
-            const provider = this.tokenizer(id);
+            const provider = this.tokenizer(grammar.name);
             if (provider !== null) {
-                grammar.registration.dispose();
+                const previous = grammar.registration;
                 grammar.registration = this.languages.setTokensProvider(id, provider);
+                previous.dispose();
             }
         }
     }
 
-    private async load(id: string): Promise<string> {
+    private async load({ id, grammar }: MonacoLanguage): Promise<string> {
         try {
-            await this.highlighter.loadLanguage(id as Parameters<Highlighter['loadLanguage']>[0]);
+            await this.highlighter.loadLanguage(grammar as Parameters<Highlighter['loadLanguage']>[0]);
         } catch {
             return PLAIN_TEXT;
         }
         // Shiki's own plain text ids load without a grammar.
-        if (!this.highlighter.getLoadedLanguages().includes(id)) {
+        if (!this.highlighter.getLoadedLanguages().includes(grammar)) {
             return PLAIN_TEXT;
         }
-        const provider = this.tokenizer(id);
+        const provider = this.tokenizer(grammar);
         if (provider === null) {
             return PLAIN_TEXT;
         }
         this.languages.register({ id });
-        this.grammars.set(id, { registration: this.languages.setTokensProvider(id, provider) });
+        this.grammars.set(id, { name: grammar, registration: this.languages.setTokensProvider(id, provider) });
         return id;
     }
 
     /* Also sets the highlighter to the current theme, which is what fills the tokenizer's colors. */
-    private tokenizer(id: string): TokensProvider | null {
+    private tokenizer(grammar: string): TokensProvider | null {
         let provider: TokensProvider | null = null;
         const standIn = {
             editor: {
@@ -103,13 +111,13 @@ export class ShikiBridge {
                 create: () => {}
             },
             languages: {
-                getLanguages: () => [{ id }],
+                getLanguages: () => [{ id: grammar }],
                 setTokensProvider: (_id: string, tokens: TokensProvider) => {
                     provider = tokens;
                 }
             }
         };
-        shikiToMonaco({ ...this.highlighter, getLoadedLanguages: () => [id], getLoadedThemes: () => [this.theme] }, standIn);
+        shikiToMonaco({ ...this.highlighter, getLoadedLanguages: () => [grammar], getLoadedThemes: () => [this.theme] }, standIn);
         return provider;
     }
 }

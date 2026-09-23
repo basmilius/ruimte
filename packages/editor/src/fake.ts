@@ -5,11 +5,13 @@ import { emit, type Listener, subscribe } from './listeners.ts';
 export class FakeEditor implements Editor {
     readonly element: HTMLElement;
     readonly language: string | undefined;
+    readonly path: string | undefined;
     readonly column: number | null;
     readonly scrollTop: number | null;
     wrap: boolean;
     theme: EditorTheme;
     readOnly: boolean;
+    readOnlyReason: string | undefined;
     revealedLine: number | null;
     focused = false;
     disposed = false;
@@ -22,9 +24,11 @@ export class FakeEditor implements Editor {
         this.element = element;
         this.text = options.text;
         this.language = options.language;
+        this.path = options.path;
         this.wrap = options.wrap ?? false;
         this.theme = options.theme;
         this.readOnly = options.readOnly ?? false;
+        this.readOnlyReason = options.readOnlyReason;
         this.revealedLine = options.line ?? null;
         this.column = options.column ?? null;
         this.scrollTop = options.scrollTop ?? null;
@@ -86,8 +90,9 @@ export class FakeEditor implements Editor {
         this.theme = theme;
     }
 
-    setReadOnly(readOnly: boolean): void {
+    setReadOnly(readOnly: boolean, reason?: string): void {
         this.readOnly = readOnly;
+        this.readOnlyReason = reason;
     }
 
     focus(): void {

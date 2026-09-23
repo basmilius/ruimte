@@ -1,2 +1,2 @@
-/* Monaco's base worker, for word suggestions, links and diffs. No language service runs here: Shiki colors the text. */
+/* Monaco's base worker, which finds the word suggestions. A language service runs in a worker of its own. */
 import 'monaco-editor/editor/editor.worker';

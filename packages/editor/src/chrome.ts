@@ -1,7 +1,8 @@
 /*
  * What Monaco draws around the tokens, from the semantic tokens of the client's `styles.css`, so the
- * editor sits on the same ground as the file viewer (`.file-code`) and the terminal. Shiki's theme
- * keeps whatever is not listed here, its find and bracket colors among them.
+ * editor sits on the same ground as the file viewer (`.file-code`) and the terminal, and its widgets
+ * (suggestions, hovers, parameter hints) read as the app's own popups. Shiki's theme keeps whatever is
+ * not listed here, its find and bracket colors among them.
  */
 const CHROME_TOKENS: Readonly<Record<string, string>> = {
     'editor.background': '--term-bg',
@@ -11,7 +12,31 @@ const CHROME_TOKENS: Readonly<Record<string, string>> = {
     'editorLineNumber.activeForeground': '--text-muted',
     'editorCursor.foreground': '--term-cursor',
     'editor.selectionBackground': '--selection',
-    'editor.lineHighlightBackground': '--surface-hover'
+    'editor.lineHighlightBackground': '--surface-hover',
+    'editorError.foreground': '--status-error',
+    'editorWarning.foreground': '--status-needs-you',
+    'editorWidget.background': '--surface-raised',
+    'editorWidget.foreground': '--text',
+    'editorWidget.border': '--border',
+    'widget.shadow': '--border',
+    'editorSuggestWidget.background': '--surface-raised',
+    'editorSuggestWidget.foreground': '--text',
+    'editorSuggestWidget.border': '--border',
+    'editorSuggestWidget.selectedBackground': '--surface-active',
+    'editorSuggestWidget.selectedForeground': '--text',
+    'editorSuggestWidget.selectedIconForeground': '--text',
+    'editorSuggestWidget.highlightForeground': '--accent',
+    'editorSuggestWidget.focusHighlightForeground': '--accent',
+    'editorHoverWidget.background': '--surface-raised',
+    'editorHoverWidget.foreground': '--text',
+    'editorHoverWidget.border': '--border',
+    'editorHoverWidget.highlightForeground': '--accent',
+    'editorHoverWidget.statusBarBackground': '--surface-sunken',
+    'list.hoverBackground': '--surface-hover',
+    descriptionForeground: '--text-muted',
+    'textLink.foreground': '--accent',
+    'textLink.activeForeground': '--accent',
+    'textCodeBlock.background': '--surface-sunken'
 };
 
 /* The current line is a fill; Monaco's base theme would also draw a box around it. */

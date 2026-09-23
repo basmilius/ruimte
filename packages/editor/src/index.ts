@@ -1,4 +1,7 @@
 import type { Highlighter } from 'shiki';
+import type { KeyChord } from './keys.ts';
+
+export type { KeyChord } from './keys.ts';
 
 /* A Shiki theme id, the one the viewer draws the same file in. */
 export type EditorTheme = string;
@@ -7,8 +10,12 @@ export interface EditorOptions {
     readonly text: string;
     /* The Shiki id `fs.read` answers with. Without one, or with one Shiki does not know, it is plain text. */
     readonly language?: string;
+    /* The file's path, absolute or only a name. A language service reads the dialect off its extension, a `.tsx` from a `.ts`. */
+    readonly path?: string;
     readonly theme: EditorTheme;
     readonly readOnly?: boolean;
+    /* What a person is told on typing into a read-only editor. */
+    readonly readOnlyReason?: string;
     readonly wrap?: boolean;
     /* One-based, the line the cursor opens on. */
     readonly line?: number;
@@ -31,7 +38,7 @@ export interface Editor {
     revealLine(line: number): void;
     setWrap(wrap: boolean): void;
     setTheme(theme: EditorTheme): void;
-    setReadOnly(readOnly: boolean): void;
+    setReadOnly(readOnly: boolean, reason?: string): void;
     focus(): void;
     dispose(): void;
 }
@@ -41,17 +48,25 @@ export interface EditorEngine {
     mount(element: HTMLElement, options: EditorOptions): Editor;
 }
 
+export interface MonacoEngineOptions {
+    /* The viewer's highlighter, so a grammar loads once for both. */
+    readonly highlighter: () => Promise<Highlighter>;
+    /* The app's shortcuts that work from anywhere, a text field included. Monaco lets them through even where it binds the key itself. */
+    readonly handBack?: readonly KeyChord[];
+    /* Whether the physical Ctrl and Meta of a shortcut are macOS's. */
+    readonly apple?: boolean;
+}
+
 let monacoEngine: Promise<EditorEngine> | null = null;
 
 /*
- * The only door to Monaco, which weighs several megabytes and so loads on the first edit and never
- * with the app. Monaco's themes and languages are global to the page, so there is one engine and a
- * second call gets the first; one that failed to load is tried again. The highlighter is the viewer's,
- * so a grammar loads once for both.
+ * The only door to Monaco, which weighs several megabytes and so loads with the first file opened and
+ * never with the app. Monaco's themes, languages and keybindings are global to the page, so there is
+ * one engine and a second call gets the first; one that failed to load is tried again.
  */
-export const loadMonacoEngine = (highlighter: () => Promise<Highlighter>): Promise<EditorEngine> => {
+export const loadMonacoEngine = (options: MonacoEngineOptions): Promise<EditorEngine> => {
     monacoEngine ??= import('./monaco.ts')
-        .then(({ createMonacoEngine }) => createMonacoEngine(highlighter))
+        .then(({ createMonacoEngine }) => createMonacoEngine(options))
         .catch((error: unknown) => {
             monacoEngine = null;
             throw error;

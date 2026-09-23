@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { languages } from 'monaco-editor/editor';
-import { type BundledTheme, getSingletonHighlighter } from 'shiki';
+import { type BundledLanguage, type BundledTheme, getSingletonHighlighter } from 'shiki';
 import { type MonacoLanguages, monacoTheme, PLAIN_TEXT, ShikiBridge, type ShikiTheme } from './shiki-bridge.ts';
 
 type Provider = languages.TokensProvider;
@@ -11,21 +11,28 @@ interface Registration {
     disposed: boolean;
 }
 
-const fakeLanguages = (): MonacoLanguages & { registered: string[]; providers: Registration[] } => {
+/* Monaco's registry keeps one provider per language, and a disposal takes it out only while it is still the one in place. */
+const fakeLanguages = (): MonacoLanguages & { registered: string[]; providers: Registration[]; current: Map<string, Registration> } => {
     const registered: string[] = [];
     const providers: Registration[] = [];
+    const current = new Map<string, Registration>();
     return {
         registered,
         providers,
+        current,
         register: ({ id }) => {
             registered.push(id);
         },
         setTokensProvider: (id, provider) => {
             const registration = { id, provider: provider as Provider, disposed: false };
             providers.push(registration);
+            current.set(id, registration);
             return {
                 dispose: () => {
                     registration.disposed = true;
+                    if (current.get(id) === registration) {
+                        current.delete(id);
+                    }
                 }
             };
         }
@@ -60,8 +67,8 @@ const monacoColors = (provider: Provider, theme: ShikiTheme): string[] => {
 };
 
 /* The color the file viewer paints each character in: Shiki's own tokens, under the same theme. */
-const viewerColors = (theme: ShikiTheme): string[] => {
-    const [line = []] = highlighter.codeToTokensBase(LINE, { lang: 'typescript', theme: theme as BundledTheme });
+const viewerColors = (theme: ShikiTheme, lang: BundledLanguage = 'typescript'): string[] => {
+    const [line = []] = highlighter.codeToTokensBase(LINE, { lang, theme: theme as BundledTheme });
     return line.flatMap((token) => [...token.content].map(() => opaque(token.color ?? '')));
 };
 
@@ -83,6 +90,17 @@ describe('ShikiBridge', () => {
         expect(light).not.toEqual(dark);
     });
 
+    test('keeps a Shiki provider in place for every language through a theme change', async () => {
+        const monaco = fakeLanguages();
+        const bridge = new ShikiBridge(highlighter, monaco, 'github-dark');
+        await bridge.language('typescript');
+        await bridge.language('tsx');
+
+        bridge.setTheme('github-light');
+        expect([...monaco.current.keys()].sort()).toEqual(['javascript', 'typescript']);
+        expect(monaco.providers.filter((registration) => !registration.disposed)).toHaveLength(2);
+    });
+
     test('colors in a theme that was not loaded when the grammar was', async () => {
         const monaco = fakeLanguages();
         const bridge = new ShikiBridge(highlighter, monaco, 'github-light');
@@ -102,6 +120,24 @@ describe('ShikiBridge', () => {
         expect([first, second]).toEqual(['rust', 'rust']);
         expect(monaco.registered).toEqual(['rust']);
         expect(monaco.providers).toHaveLength(1);
+    });
+
+    test('draws TSX, JSX and JavaScript as one Monaco language in the TSX grammar, apart from TypeScript', async () => {
+        const monaco = fakeLanguages();
+        const bridge = new ShikiBridge(highlighter, monaco, 'github-dark');
+        const ids = await Promise.all(['tsx', 'jsx', 'javascript', 'typescript'].map((id) => bridge.language(id)));
+        expect(ids).toEqual(['javascript', 'javascript', 'javascript', 'typescript']);
+        expect(monaco.registered).toEqual(['javascript', 'typescript']);
+        expect(monacoColors(monaco.current.get('javascript')!.provider, 'github-dark')).toEqual(viewerColors('github-dark', 'tsx'));
+    });
+
+    test('keeps a generic arrow function in a TypeScript file from reading as a tag', async () => {
+        const monaco = fakeLanguages();
+        await new ShikiBridge(highlighter, monaco, 'github-dark').language('typescript');
+        const provider = monaco.current.get('typescript')!.provider;
+        const next = "const after = 'text';";
+        const generic = provider.tokenize('const pick = <T>(items: T[]): T => items[0];', provider.getInitialState());
+        expect(provider.tokenize(next, generic.endState).tokens).toEqual(provider.tokenize(next, provider.getInitialState()).tokens);
     });
 
     test('keeps an alias as the id the file asked for', async () => {

@@ -6,10 +6,19 @@ const element = {} as HTMLElement;
 describe('FakeEditorEngine', () => {
     test('mounts an editor with the options it was given', () => {
         const engine = new FakeEditorEngine();
-        const editor = engine.mount(element, { text: 'a\nb', language: 'typescript', theme: 'dark', line: 2, column: 3, scrollTop: 40 });
+        const editor = engine.mount(element, {
+            text: 'a\nb',
+            language: 'typescript',
+            path: '/repo/src/a.tsx',
+            theme: 'dark',
+            line: 2,
+            column: 3,
+            scrollTop: 40
+        });
         expect(engine.last).toBe(editor);
         expect(editor.getText()).toBe('a\nb');
         expect(editor.language).toBe('typescript');
+        expect(editor.path).toBe('/repo/src/a.tsx');
         expect(editor.theme).toBe('dark');
         expect(editor.revealedLine).toBe(2);
         expect(editor.column).toBe(3);
@@ -37,13 +46,15 @@ describe('FakeEditorEngine', () => {
     });
 
     test('refuses typing while read-only', () => {
-        const editor = new FakeEditorEngine().mount(element, { text: 'a', theme: 'light', readOnly: true });
+        const editor = new FakeEditorEngine().mount(element, { text: 'a', theme: 'light', readOnly: true, readOnlyReason: 'Zoom in to edit' });
+        expect(editor.readOnlyReason).toBe('Zoom in to edit');
         let changes = 0;
         editor.onChange(() => {
             changes += 1;
         });
         editor.type('b');
         editor.setReadOnly(false);
+        expect(editor.readOnlyReason).toBeUndefined();
         editor.type('c');
         expect(changes).toBe(1);
         expect(editor.getText()).toBe('c');

@@ -1,16 +1,37 @@
 import * as monaco from 'monaco-editor/editor';
-// The editing a person expects of any text box, and the icon font the find bar draws with; nothing here needs a language service.
-import 'monaco-editor/features/codicon/register';
-import 'monaco-editor/features/find/register';
-import 'monaco-editor/features/linesOperations/register';
-import 'monaco-editor/features/multicursor/register';
-import 'monaco-editor/features/wordOperations/register';
+/*
+ * Every editor feature, and not a few picked ones: the language services load all of them with their
+ * workers anyway, and an editor only takes the features registered before it was made, so a pick would
+ * leave the editors opened before the first service with less than those after it. What does not fit
+ * the app is turned off in the options below.
+ */
+import 'monaco-editor/features/register.all';
 import type { Highlighter } from 'shiki';
 import { readChromeColors, readEditorFont } from './chrome.ts';
-import type { Editor, EditorEngine, EditorOptions, EditorTheme } from './index.ts';
+import type { Editor, EditorEngine, EditorOptions, EditorTheme, MonacoEngineOptions } from './index.ts';
+import { monacoKeyOf } from './keys.ts';
+import { modelPath, type WorkerKind, workerFor } from './languages.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
+import { configureLanguageServices } from './services.ts';
 import { monacoTheme, PLAIN_TEXT, ShikiBridge } from './shiki-bridge.ts';
 import { changedSpan } from './text-span.ts';
+
+// Each a literal `new Worker(new URL(...))`, which is the form a bundler follows into a worker of its own.
+const WORKERS: Readonly<Record<WorkerKind, () => Worker>> = {
+    editor: () => new Worker(new URL('./editor.worker.ts', import.meta.url), { type: 'module', name: 'monaco-editor' }),
+    typescript: () => new Worker(new URL('./ts.worker.ts', import.meta.url), { type: 'module', name: 'monaco-typescript' }),
+    css: () => new Worker(new URL('./css.worker.ts', import.meta.url), { type: 'module', name: 'monaco-css' }),
+    json: () => new Worker(new URL('./json.worker.ts', import.meta.url), { type: 'module', name: 'monaco-json' }),
+    html: () => new Worker(new URL('./html.worker.ts', import.meta.url), { type: 'module', name: 'monaco-html' })
+};
+
+let models = 0;
+
+/* Without a reason Monaco answers typing in a read-only editor with a sentence of its own, in English. */
+const readOnlyOptions = (readOnly: boolean, reason: string | undefined): monaco.editor.IEditorOptions => ({
+    readOnly,
+    ...(reason === undefined ? {} : { readOnlyMessage: { value: reason } })
+});
 
 class MonacoEngine implements EditorEngine {
     private readonly highlighter: Highlighter;
@@ -72,23 +93,32 @@ class MonacoEditor implements Editor {
     constructor(engine: MonacoEngine, element: HTMLElement, options: EditorOptions) {
         this.engine = engine;
         this.element = element;
-        this.model = monaco.editor.createModel(options.text, PLAIN_TEXT);
+        models += 1;
+        this.model = monaco.editor.createModel(options.text, PLAIN_TEXT, monaco.Uri.from({ scheme: 'inmemory', path: modelPath(models, options.path) }));
         engine.applyTheme(element, options.theme);
         this.editor = monaco.editor.create(element, {
             model: this.model,
-            readOnly: options.readOnly ?? false,
+            ...readOnlyOptions(options.readOnly ?? false, options.readOnlyReason),
             wordWrap: options.wrap === true ? 'on' : 'off',
             automaticLayout: true,
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
             ...readEditorFont(element),
-            // The folding feature is not loaded, and the gutter would keep its room anyway.
+            // The gutter would keep room for it, so the text would no longer start where the viewer's does.
             folding: false,
+            // The node or the panel around the editor owns the right-click.
+            contextmenu: false,
+            // Monaco would open a link in a window of its own.
+            links: false,
+            // It would lay a header of its own over the first lines, which the viewer never draws.
+            stickyScroll: { enabled: false },
             // So the text starts about where the viewer's does, after 48px of line numbers and 16px beside them.
             lineNumbersMinChars: 6,
             lineDecorationsWidth: 16,
             // The client tells typing from a shortcut by a textarea or contenteditable target; an EditContext host is neither.
-            editContext: false
+            editContext: false,
+            quickSuggestions: { other: 'on', comments: 'off', strings: 'off' },
+            wordBasedSuggestions: 'matchingDocuments'
         });
         this.editor.onDidChangeModelContent(() => {
             if (!this.settingText) {
@@ -172,8 +202,8 @@ class MonacoEditor implements Editor {
         this.engine.applyTheme(this.element, theme);
     }
 
-    setReadOnly(readOnly: boolean): void {
-        this.editor.updateOptions({ readOnly });
+    setReadOnly(readOnly: boolean, reason?: string): void {
+        this.editor.updateOptions(readOnlyOptions(readOnly, reason));
     }
 
     focus(): void {
@@ -197,11 +227,24 @@ class MonacoEditor implements Editor {
     }
 }
 
-export const createMonacoEngine = async (source: () => Promise<Highlighter>): Promise<EditorEngine> => {
-    const highlighter = await source();
-    // Monaco would otherwise resolve its worker by a path of its own, which no bundler follows.
-    globalThis.MonacoEnvironment = {
-        getWorker: () => new Worker(new URL('./editor.worker.ts', import.meta.url), { type: 'module', name: 'monaco-editor' })
-    };
+/* A rule without a command makes Monaco pass the key on, where the window's own listeners hear it. */
+const handBackKeys = ({ handBack = [], apple = false }: MonacoEngineOptions): void => {
+    monaco.editor.addKeybindingRules(
+        handBack.flatMap((chord) => {
+            const key = monacoKeyOf(chord, apple);
+            if (key === null) {
+                return [];
+            }
+            return [{ keybinding: key.modifiers.reduce((sum, modifier) => sum | monaco.KeyMod[modifier], monaco.KeyCode[key.code]), command: null }];
+        })
+    );
+};
+
+export const createMonacoEngine = async (options: MonacoEngineOptions): Promise<EditorEngine> => {
+    const highlighter = await options.highlighter();
+    // Monaco would otherwise resolve its workers by paths of its own, which no bundler follows.
+    globalThis.MonacoEnvironment = { getWorker: (_workerId: string, label: string) => WORKERS[workerFor(label)]() };
+    configureLanguageServices();
+    handBackKeys(options);
     return new MonacoEngine(highlighter);
 };

@@ -56,16 +56,17 @@ export const isAppShortcut = (event: KeyLike, apple: boolean): boolean =>
     TERMINAL_HANDED_BACK.some((candidate) => (apple || !PTY_CONTROL_SHORTCUTS.includes(candidate)) && matchesShortcut(candidate, event, apple));
 
 /*
- * What a text field that stops its own keys (the chat composer) hands back, everything a terminal
- * does, the Ctrl shortcuts a terminal keeps off macOS (a text field has no program behind it), and the
- * palette and find in files. Ctrl+B stays out of it off macOS, as it always has.
+ * What a text field that stops its own keys (the chat composer, the file editor) hands back, everything
+ * a terminal does, the Ctrl shortcuts a terminal keeps off macOS (a text field has no program behind
+ * it), and the palette and find in files. Ctrl+B stays out of it off macOS, as it always has.
  */
-export const isShellShortcut = (event: KeyLike, apple: boolean): boolean =>
-    matchesAny(
-        TERMINAL_HANDED_BACK.filter((candidate) => apple || candidate !== APP_SHORTCUTS.sidebar),
-        event,
-        apple
-    ) || matchesAny([APP_SHORTCUTS.palette, APP_SHORTCUTS.findInFiles], event, apple);
+export const shellShortcuts = (apple: boolean): readonly Shortcut[] => [
+    ...TERMINAL_HANDED_BACK.filter((candidate) => apple || candidate !== APP_SHORTCUTS.sidebar),
+    APP_SHORTCUTS.palette,
+    APP_SHORTCUTS.findInFiles
+];
+
+export const isShellShortcut = (event: KeyLike, apple: boolean): boolean => matchesAny(shellShortcuts(apple), event, apple);
 
 /* Home and End in both forms the application cursor keys mode (DECCKM) asks for. */
 const HOME_NORMAL = '\x1b[H';
