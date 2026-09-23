@@ -1,8 +1,9 @@
-import type { ReactElement, ReactNode } from 'react';
+import { useCallback, type ReactElement, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Tooltip as BaseTooltip } from '@base-ui-components/react/tooltip';
 import { isApplePlatform } from '@/desktop/bridge';
 import { formatShortcut, type Shortcut } from '@/ui/shortcut';
+import { registerShortcutHint } from '@/ui/shortcut-hints';
 import { TOOLTIP_KBD } from '@/ui/classes';
 
 type Side = 'top' | 'bottom' | 'left' | 'right';
@@ -30,9 +31,20 @@ interface TooltipProps {
 }
 
 export function Tooltip({ label, kbd, side = 'top', sideOffset = 6, name = false, children }: TooltipProps) {
+    // Held Cmd (Ctrl off macOS) prints this shortcut under the trigger (`ShortcutHints`).
+    const hintRef = useCallback(
+        (element: HTMLElement | null) => {
+            if (element === null || kbd === undefined || typeof kbd === 'string') {
+                return undefined;
+            }
+            return registerShortcutHint(element, kbd);
+        },
+        [kbd]
+    );
+
     return (
         <BaseTooltip.Root>
-            <BaseTooltip.Trigger render={children} aria-label={name && typeof label === 'string' ? label : undefined} />
+            <BaseTooltip.Trigger ref={hintRef} render={children} aria-label={name && typeof label === 'string' ? label : undefined} />
             <BaseTooltip.Portal>
                 <BaseTooltip.Positioner side={side} sideOffset={sideOffset} className="tooltip-positioner">
                     <BaseTooltip.Popup className="tooltip-popup">

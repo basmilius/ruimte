@@ -44,6 +44,7 @@ import { useWindow } from '@/state/window';
 import type { Workspace } from '@/transport/connections';
 import { ConnectionProvider } from '@/transport/context';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { ShortcutHints } from '@/ui/ShortcutHints';
 import { TooltipProvider } from '@/ui/Tooltip';
 import { VoiceOverlay } from '@/voice/VoiceOverlay';
 import { VoicePanel } from '@/voice/VoicePanel';
@@ -165,6 +166,7 @@ export function App() {
                 <ReleaseNotesDialog />
                 <MachineUpdateDialog />
                 <LinkRequestDialog />
+                <ShortcutHints />
             </ErrorBoundary>
         </TooltipProvider>
     );

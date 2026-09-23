@@ -297,6 +297,7 @@
     --z-dialog: 90;
     --z-popup: 100;
     --z-tooltip: 110;
+    --z-shortcut-hints: 120;
 }
 
 /* One type scale for the whole client, in rem against the interface font size (15px by default,
