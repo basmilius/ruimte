@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { ActionRefusal, ActionRegistry, type ActionCall } from './index.ts';
+import type { z } from 'zod';
+import { ACTION_DEFINITIONS, ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionCall, type ActionName } from './index.ts';
 
 interface Context {
     name: string;
@@ -160,5 +161,26 @@ describe('ActionRegistry', () => {
             status: 'failed',
             error: { code: 'rev-conflict', message: 'The project moved on.', details: ['line'] }
         });
+    });
+});
+
+describe('the catalog', () => {
+    test('holds every name a caller gives to the title limit', () => {
+        const names: [ActionName, string][] = [
+            ['view.create', 'name'],
+            ['view.rename', 'name'],
+            ['node.create', 'title'],
+            ['node.rename', 'name'],
+            ['layout.save', 'name'],
+            ['group.create', 'label'],
+            ['link.create', 'label'],
+            ['task.create', 'title'],
+            ['agent.start', 'title']
+        ];
+        for (const [action, field] of names) {
+            const schema = (ACTION_DEFINITIONS[action].input.shape as Record<string, z.ZodType>)[field]!;
+            expect(schema.safeParse('x'.repeat(MAX_TITLE_LENGTH)).success).toBe(true);
+            expect(schema.safeParse('x'.repeat(MAX_TITLE_LENGTH + 1)).success).toBe(false);
+        }
     });
 });

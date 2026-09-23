@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { ActionInput, ActionRegistry } from '@ruimte/actions';
+import { MAX_TITLE_LENGTH, type ActionInput, type ActionRegistry } from '@ruimte/actions';
 import type { ProjectCanvasView, ProjectDocument, ProviderInfo } from '@ruimte/contracts';
 import { clientActions, createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import { defaultCanvases } from '@/state/canvas';
@@ -473,6 +473,21 @@ describe('client actions', () => {
             expect(await createView(registry(), { kind: 'terminal', provider: 'claude', command: 'ls' })).toMatchObject({
                 error: { code: 'invalid-provider' }
             });
+        });
+
+        test('a name longer than a title is refused before anything is made, and one at the limit is not', async () => {
+            const long = 'x'.repeat(MAX_TITLE_LENGTH + 1);
+            expect(await createView(registry(), { kind: 'canvas', name: long })).toMatchObject({ error: { code: 'invalid-input' } });
+            expect(await clientActions.execute('view.rename', { viewId: 'release', name: long }, VOICE_ACTION_CALL)).toMatchObject({
+                error: { code: 'invalid-input' }
+            });
+            expect(await createNode(registry(), { kind: 'note', title: long })).toMatchObject({ error: { code: 'invalid-input' } });
+            expect(useDocument.getState().views).toHaveLength(2);
+            expect(await createView(registry(), { kind: 'canvas', name: long.slice(1) })).toMatchObject({ status: 'completed' });
+        });
+
+        test('a browser is named after its address when nobody names it', async () => {
+            expect(await createView(registry(), { kind: 'browser', url: 'localhost:5173' })).toMatchObject({ output: { view: 'localhost:5173' } });
         });
 
         test('a duplicate lands under its source unopened, and undo takes back only a copy nobody opened', async () => {

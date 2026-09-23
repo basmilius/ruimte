@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
 import { edgeLines, fixedSides, selectedLine, textRect } from '@/canvas/edge-lines';
 import { edgeLook, lineMeaning } from '@/canvas/edge-look';
@@ -28,6 +29,7 @@ function EdgeLabel({
                 <input
                     autoFocus
                     defaultValue={label ?? ''}
+                    maxLength={MAX_TITLE_LENGTH}
                     className="h-7 w-full rounded-full border border-accent bg-surface-raised px-2 text-center text-xs text-text outline-none"
                     onPointerDown={(e) => e.stopPropagation()}
                     onBlur={(e) => {

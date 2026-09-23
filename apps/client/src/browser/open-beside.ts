@@ -16,7 +16,7 @@ export const openLinkBeside = (url: string, webContentsId: number): void => {
     const sourceKey = browserRegistry.keyOfContents(webContentsId);
     const source = sourceKey === null ? undefined : focusedCanvas().getState().nodes[splitKey(sourceKey).id];
     if (!source) {
-        void createViewAction('browser', { name: url, url });
+        void createViewAction('browser', { url });
         return;
     }
     const size = NODE_SIZE.browser;

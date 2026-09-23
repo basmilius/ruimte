@@ -106,6 +106,17 @@ export const freeName = (views: readonly ProjectView[], base: string): string =>
     return `${base} ${counter}`;
 };
 
+/* What a view is called when nobody named it: what it shows, else what it is. */
+const derivedViewName = (state: DocumentState, kind: CreatableViewKind, { url, path }: { url: string | null; path: string | null }): string => {
+    if (kind === 'file' && path !== null) {
+        return basenameOf(path);
+    }
+    if (kind === 'browser' && url !== null) {
+        return url;
+    }
+    return freeName(state.views, VIEW_BASE_NAMES[kind]);
+};
+
 const centerWorld = (canvas: CanvasState) =>
     toWorld(canvas.camera, {
         x: canvas.viewport.w / 2,
@@ -392,10 +403,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
         'view.create': ({ kind, name, url, command, path, provider }) => {
             const agent = agentFor(providers(), kind, provider, command);
             const state = document.getState();
-            const title =
-                kind === 'separator'
-                    ? VIEW_BASE_NAMES.separator
-                    : (name ?? agent?.info.name ?? (kind === 'file' && path !== null ? basenameOf(path) : freeName(state.views, VIEW_BASE_NAMES[kind])));
+            const title = kind === 'separator' ? VIEW_BASE_NAMES.separator : (name ?? agent?.info.name ?? derivedViewName(state, kind, { url, path }));
             const viewId = agent === null ? addViewOf(state, kind, title, { url, command, path }) : addAgentView(agent.target, agent.info, title);
             if (!viewId) {
                 throw new ActionRefusal('view-create-failed', `Ruimte could not create the ${kind} view.`);

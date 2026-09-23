@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isCanvasView, isSessionView, type AgentKind, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { renameNodeAction, renameViewAction } from '@/actions/client-actions';
@@ -159,6 +160,7 @@ function RenameField({ value, onDone }: { value: string; onDone(next: string | n
         <input
             autoFocus
             defaultValue={value}
+            maxLength={MAX_TITLE_LENGTH}
             className="min-w-0 grow rounded bg-surface-sunken px-1.5 py-0.5 text-sm text-text outline-none ring-1 ring-accent"
             onFocus={(e) => e.currentTarget.select()}
             onBlur={(e) => onDone(e.currentTarget.value.trim() || null)}

@@ -23,6 +23,7 @@ interface PromptDialogProps {
         placeholder?: string;
         /* A branch, a path or anything else git reads back letter by letter. */
         mono?: boolean;
+        maxLength?: number;
     };
     /* A second, taller field under it, for the body of a pull request. */
     area?: { label: string; initial?: string; placeholder?: string };
@@ -119,6 +120,7 @@ export function PromptDialog({
                                 aria-label={field.ariaLabel}
                                 spellCheck={false}
                                 placeholder={field.placeholder}
+                                maxLength={field.maxLength}
                                 value={value}
                                 onChange={(event) => setValue(event.target.value)}
                                 onKeyDown={(event) => {

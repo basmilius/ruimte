@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { saveLayoutAction } from '@/actions/client-actions';
 import { useUi } from '@/state/ui';
 import { PromptDialog } from '@/ui/PromptDialog';
@@ -13,7 +14,7 @@ export function LayoutDialog() {
             open={open}
             title={t('layoutDialog.title')}
             description={t('layoutDialog.description')}
-            field={{ ariaLabel: t('layoutDialog.nameLabel'), placeholder: t('layoutDialog.namePlaceholder') }}
+            field={{ ariaLabel: t('layoutDialog.nameLabel'), placeholder: t('layoutDialog.namePlaceholder'), maxLength: MAX_TITLE_LENGTH }}
             confirmLabel={t('common:action.save')}
             onConfirm={(name) => {
                 saveLayoutAction(name);

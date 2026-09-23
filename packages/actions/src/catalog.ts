@@ -39,8 +39,11 @@ export const ActionCreatableCanvasNodeKindSchema = z.enum(CREATABLE_CANVAS_NODE_
 const viewId = z.string().min(1);
 const viewName = z.string().trim().min(1);
 const nodeId = z.string().min(1);
-/* A name on the canvas an agent gives: a title, a group label, the word on a line. */
-const nodeTitle = z.string().trim().min(1).max(MAX_TITLE_LENGTH);
+/*
+ * A name a caller gives: a title, the name of a view or a layout, a group label, the word on a line.
+ * Every input a person types one in holds the same limit, so a name never fails only once it is sent.
+ */
+const givenName = z.string().trim().min(1).max(MAX_TITLE_LENGTH);
 
 /*
  * A field only these actors may fill: what one executor honors and another would drop. Voice's tools
@@ -297,7 +300,7 @@ export const ACTION_DEFINITIONS = {
         effect: 'shared',
         domain: 'views',
         actors: ACTION_ACTOR_KINDS,
-        input: z.object({ viewId, name: viewName }),
+        input: z.object({ viewId, name: givenName }),
         output: z.object({
             viewId,
             kind: ActionViewKindSchema,
@@ -316,7 +319,7 @@ export const ACTION_DEFINITIONS = {
         actors: ACTION_ACTOR_KINDS,
         input: z.object({
             kind: ActionCreatableViewKindSchema,
-            name: z.string().trim().min(1).nullable(),
+            name: givenName.nullable(),
             url: z.string().trim().min(1).nullable().describe('An http or https address'),
             command: z.string().trim().min(1).nullable(),
             path: z.string().trim().min(1).nullable().describe('The file the view shows, relative to the project folder or absolute'),
@@ -368,7 +371,7 @@ export const ACTION_DEFINITIONS = {
         effect: 'shared',
         domain: 'canvas',
         actors: ACTION_ACTOR_KINDS,
-        input: z.object({ viewId, nodeId: z.string().min(1), name: viewName }),
+        input: z.object({ viewId, nodeId: z.string().min(1), name: givenName }),
         output: z.object({
             viewId,
             nodeId: z.string().min(1),
@@ -389,7 +392,7 @@ export const ACTION_DEFINITIONS = {
         input: z.object({
             viewId,
             kind: z.union([ActionCreatableCanvasNodeKindSchema, z.enum(AGENT_NODE_KINDS).meta({ actors: [...AGENT] })]),
-            title: z.string().trim().min(1).nullable(),
+            title: givenName.nullable(),
             content: z.string().nullable().describe('The body of a note'),
             url: z.string().trim().min(1).nullable().describe('An http or https address'),
             command: z.string().trim().min(1).nullable(),
@@ -480,7 +483,7 @@ export const ACTION_DEFINITIONS = {
         input: z.object({
             viewId,
             nodeIds: z.array(z.string().min(1)).min(1),
-            label: agentField(nodeTitle).describe('The name of the group'),
+            label: agentField(givenName).describe('The name of the group'),
             color: agentField(z.string().min(1)).describe("The color of the frame; without one it is drawn in the faint gray a person's own grouping gives it")
         }),
         output: z.object({
@@ -594,7 +597,7 @@ export const ACTION_DEFINITIONS = {
         effect: 'shared',
         domain: 'layout',
         actors: PERSON_AND_VOICE,
-        input: z.object({ viewId, name: viewName }),
+        input: z.object({ viewId, name: givenName }),
         output: z.object({ viewId, view: viewName, name: viewName, replaced: z.boolean() })
     },
     'layout.apply': {
@@ -819,7 +822,7 @@ export const ACTION_DEFINITIONS = {
             viewId,
             from: nodeId.nullable().describe('Where the line starts; without it, you'),
             to: z.array(nodeId).min(1).describe('The nodes the line runs into'),
-            label: nodeTitle.nullable().describe('What the line is called on the canvas'),
+            label: givenName.nullable().describe('What the line is called on the canvas'),
             role: z.string().min(1).nullable().describe('What the line is for')
         }),
         output: z.object({
@@ -886,7 +889,7 @@ export const ACTION_DEFINITIONS = {
             nodeId: nodeId.describe('The agent to give the task to, by id; only a chat you opened yourself'),
             prompt: z.string().nullable().describe('What the task asks'),
             promptFile: agentField(z.string().min(1)).describe('The same assignment out of a file, for one with exact bytes'),
-            title: nodeTitle.nullable().describe('The title of the task; without one the first line of the prompt')
+            title: givenName.nullable().describe('The title of the task; without one the first line of the prompt')
         }),
         output: z.object({
             taskId: z.string(),
@@ -1140,8 +1143,8 @@ export const ACTION_DEFINITIONS = {
             viewId: viewId.nullable().describe('The canvas to add to, by view id'),
             beside: nodeId.nullable().describe('Puts the node directly right of this node, top edges level'),
             group: nodeId.nullable().describe('Puts the node inside this group node of that canvas'),
-            title: nodeTitle.nullable().describe('The title; without one the node is called after the CLI, and the session may rename it'),
-            task: nodeTitle.nullable().describe('Gives the new agent a task with this title, which the prompt describes and whose result wakes you'),
+            title: givenName.nullable().describe('The title; without one the node is called after the CLI, and the session may rename it'),
+            task: givenName.nullable().describe('Gives the new agent a task with this title, which the prompt describes and whose result wakes you'),
             model: z.string().trim().min(1).nullable().describe("The model id for a chat agent, with that model's default options"),
             mode: RuntimeModeSchema.nullable().describe(
                 'The permission mode the agent runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own'
@@ -1168,11 +1171,11 @@ export const ACTION_DEFINITIONS = {
         domain: 'agents',
         actors: AGENT,
         input: z.object({
-            label: nodeTitle.describe('The name of the group the agents land in'),
+            label: givenName.describe('The name of the group the agents land in'),
             roles: z
                 .array(
                     z.object({
-                        title: nodeTitle.describe('The title of the node; the session never renames over it'),
+                        title: givenName.describe('The title of the node; the session never renames over it'),
                         prompt: z.string().trim().min(1).max(MAX_PROMPT_LENGTH).describe('What that agent starts working on'),
                         provider: AgentKindSchema,
                         model: z.string().trim().min(1).nullable().describe("The model id for a chat role, with that model's default options"),

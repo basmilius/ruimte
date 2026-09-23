@@ -1,3 +1,4 @@
+import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import type { CanvasNodeKind } from '@ruimte/contracts';
 import { memo, useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
@@ -130,6 +131,7 @@ function Title({ id, title, editing, muted, onDone }: { id: string; title: strin
         <input
             autoFocus
             defaultValue={title}
+            maxLength={MAX_TITLE_LENGTH}
             className="min-w-0 grow rounded-md bg-surface-sunken px-1.5 py-0.5 text-xs font-medium text-text outline-none ring-1 ring-accent"
             onPointerDown={(e) => e.stopPropagation()}
             onFocus={(e) => e.currentTarget.select()}

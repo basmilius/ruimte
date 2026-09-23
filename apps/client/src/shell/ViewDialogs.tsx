@@ -31,7 +31,7 @@ export function ViewDialogs() {
                 field={{ ariaLabel: t('viewDialogs.newBrowser.label'), placeholder: 'localhost:5173' }}
                 confirmLabel={t('common:action.open')}
                 onConfirm={(url) => {
-                    void createViewAction('browser', { name: url, url });
+                    void createViewAction('browser', { url });
                     close();
                 }}
                 onClose={close}

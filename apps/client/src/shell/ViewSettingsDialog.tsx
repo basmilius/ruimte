@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { RotateCcw } from 'lucide-react';
+import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { type ProjectIconChoice, type ProjectView, viewIconOf } from '@ruimte/contracts';
 import { renameViewAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
@@ -48,6 +49,7 @@ export function ViewSettingsDialog({ view, onClose }: { view: ProjectView; onClo
                 autoFocus
                 className="field"
                 aria-label={t('viewSettings.nameLabel')}
+                maxLength={MAX_TITLE_LENGTH}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 onKeyDown={(event) => {
