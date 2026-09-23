@@ -51,11 +51,11 @@ larger ones becomes a GitHub issue when it starts.
 9. **The action registry** (`packages/actions`): one typed layer under everything a person can do,
    so voice, the UI, shortcuts, the palette and `ruimte-context` become adapters on the same
    execution. The registry and its catalog stand, with the palette, the menus, the shortcuts, the
-   sidebar, the view dialogs, the voice tools (generated from the catalog) and the `view`, `node` and
-   `link` verbs on it (the daemon's handlers in `apps/server/src/actions`). The other verbs (agent,
-   team, worktree, notify, task, plan, diagram, browser) still carry their own path; moving them over
-   is the rest of it, after operation statuses for long-running work, and the binding table in 10
-   hangs on it.
+   sidebar, the view dialogs, the voice tools (generated from the catalog) and the `view`, `node`,
+   `link`, `notify`, `task`, `done`, `plan` and `browser` verbs on it (the daemon's handlers in
+   `apps/server/src/actions`). `agent`, `team` and `worktree` still carry their own path; moving
+   them over is the rest of it, after operation statuses for long-running work, and the binding
+   table in 10 hangs on it.
 10. **Settings and keyboard**: one binding table with `when` contexts, read by the handlers and the
     Keyboard pane (which lists them read-only today), then overrides with press-to-record, conflict
     labels and reset. A "restore defaults" action, a canvas font size for chat and text elements,
