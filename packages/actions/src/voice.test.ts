@@ -41,12 +41,16 @@ describe('Voice tools', () => {
 
     test('leave out what only an agent may give', () => {
         const canvas = VOICE_TOOL_DEFINITIONS.find((tool) => tool.name === 'manage_canvas')!;
-        for (const field of ['source', 'cwd', 'beside', 'label', 'color']) {
+        for (const field of ['source', 'cwd', 'beside', 'label', 'color', 'resume']) {
             expect(canvas.parameters.properties).not.toHaveProperty(field);
         }
         expect(canvas.parameters.properties.kind?.enum).not.toContain('drawing');
         const views = VOICE_TOOL_DEFINITIONS.find((tool) => tool.name === 'manage_views')!;
-        expect(views.parameters.properties).not.toHaveProperty('after');
+        for (const field of ['after', 'device', 'resume', 'cwd']) {
+            expect(views.parameters.properties).not.toHaveProperty(field);
+        }
+        expect(views.parameters.properties.kind?.enum).not.toContain('device');
+        expect(views.parameters.properties.action?.enum).not.toContain('view.move');
         expect(JSON.stringify(VOICE_TOOL_DEFINITIONS)).not.toContain('"actors"');
     });
 });

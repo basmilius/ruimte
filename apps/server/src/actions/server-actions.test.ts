@@ -181,6 +181,39 @@ describe('the daemon actions', () => {
         expect(nodesOnMain()).toEqual(['term-1', 'term-2']);
     });
 
+    test('what only a person gives is refused from an agent before the daemon reads it', async () => {
+        const view = { name: 'Phone', url: null, command: null, path: null, provider: null };
+        expect(
+            await serverActions.execute(
+                'view.create',
+                { ...view, kind: 'device', device: { platform: 'ios', kind: 'simulator', name: 'iPhone 17', runtime: 'iOS 27.0' } },
+                agent()
+            )
+        ).toMatchObject({ status: 'failed', error: { code: 'forbidden-field' } });
+        expect(await serverActions.execute('view.create', { ...view, kind: 'terminal', resume: 'sess-1' }, agent())).toMatchObject({
+            status: 'failed',
+            error: { code: 'forbidden-field' }
+        });
+        expect(await serverActions.execute('node.create', note({ resume: 'sess-1' }), agent())).toMatchObject({
+            status: 'failed',
+            error: { code: 'forbidden-field' }
+        });
+        expect(nodesOnMain()).toEqual(['term-1', 'term-2']);
+    });
+
+    test('a line given no label or role reads, so between two agents it is drawn both ways', async () => {
+        const drawn = await serverActions.execute('link.create', { viewId: 'main', from: null, to: ['term-2'] }, agent());
+        expect(drawn).toMatchObject({
+            status: 'completed',
+            output: {
+                edges: [
+                    { from: 'term-1', to: 'term-2', state: 'new', way: 'out' },
+                    { from: 'term-2', to: 'term-1', state: 'new', way: 'back' }
+                ]
+            }
+        });
+    });
+
     test('node.delete removes only what the caller made, and ends the session it held', async () => {
         const refused = await serverActions.execute('node.delete', { viewId: 'main', nodeIds: ['term-2'] }, agent());
         expect(refused).toMatchObject({ status: 'failed', error: { code: 'not-yours' } });

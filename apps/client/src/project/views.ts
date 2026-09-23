@@ -7,6 +7,8 @@ import {
     deleteViewAction,
     focusNodeAction,
     focusViewAction,
+    linkNodesAction,
+    moveViewAction,
     promoteNodeAction,
     shareViewAction,
     showViewOnCanvasAction
@@ -80,16 +82,19 @@ export const askAgentAboutDiagram = async (viewId: string): Promise<string | nul
     if (!view || mirror === null) {
         return null;
     }
-    const canvas = focusedCanvas().getState();
-    const box = canvas.nodes[mirror]!;
+    const { viewId: canvasViewId, nodes } = focusedCanvas().getState();
+    const box = nodes[mirror];
+    if (canvasViewId === null || !box) {
+        return null;
+    }
     const at = { x: box.x - GRID * 4 - NODE_SIZE.chat.w / 2, y: box.y + box.h / 2 };
-    const chat = canvas.addNode('chat', at);
+    const chat = await createNodeAction('chat', { viewId: canvasViewId, at });
     if (chat === null) {
         return null;
     }
-    canvas.addEdge(mirror, chat);
+    await linkNodesAction(canvasViewId, mirror, chat);
     offerDraft(chat, i18next.t('project:diagram.draft', { name: view.name ?? viewId, viewId }));
-    canvas.goToNode(chat);
+    focusNodeAction(canvasViewId, chat);
     return chat;
 };
 
@@ -128,6 +133,19 @@ export const showFileOnCanvas = async (path: string, at?: Point): Promise<string
 /* A file as a view of its own, a column beside the canvas rather than a frame on it. */
 export const newFileView = (path: string, opens = true): string | null => useDocument.getState().addFileView(basenameOf(path), storedFilePath(path), opens);
 
+/* Files as views of their own, in the list in the order given, the first right under `after` (null for the top). */
+export const newFileViewsAfter = async (paths: readonly string[], after: string | null): Promise<void> => {
+    let previous = after;
+    for (const path of paths) {
+        const id = await createViewAction('file', { path });
+        if (id === null) {
+            continue;
+        }
+        await moveViewAction(id, previous);
+        previous = id;
+    }
+};
+
 /*
  * Puts a view in the shared file, or takes it back out, and says what happened with a way back. No
  * dialog. Nothing reaches anyone until the person commits, so there is nothing here to confirm. The
@@ -159,20 +177,16 @@ export interface SessionHandoff {
  * session, and the daemon owns the resume. It lands right under the view it came from, the way a
  * fork does, since a list is where a person looks for what they just opened.
  */
-export const openSessionInKind = (viewId: string, kind: 'chat' | 'terminal', handoff: SessionHandoff): string | null => {
-    const { views, addStandaloneView } = useDocument.getState();
-    const source = views.find((view) => view.id === viewId);
-    const at = views.findIndex((view) => view.id === viewId);
-    if (!source || at === -1) {
+export const openSessionInKind = async (viewId: string, kind: 'chat' | 'terminal', handoff: SessionHandoff): Promise<string | null> => {
+    const source = useDocument.getState().views.find((view) => view.id === viewId);
+    if (!source) {
         return null;
     }
-    const id = addStandaloneView({
-        kind,
-        name: source.name ?? i18next.t('project:view.fallbackName'),
-        // A chat that goes on with a terminal's session is that CLI; another one cannot pick it up.
-        node: kind === 'chat' ? { ...handoff, providerFixed: true } : handoff
-    });
-    useDocument.getState().moveView(id, at + 1);
+    // A chat that goes on with a terminal's session is fixed to that CLI, which the action gives every agent chat.
+    const id = await createViewAction(kind, { name: source.name ?? i18next.t('project:view.fallbackName'), ...handoff });
+    if (id !== null) {
+        await moveViewAction(id, viewId);
+    }
     return id;
 };
 

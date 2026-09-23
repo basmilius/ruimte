@@ -19,6 +19,7 @@ import {
     Smartphone
 } from 'lucide-react';
 import { deviceTools, isCanvasView, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
+import { createViewAction, placeViewOnCanvasAction } from '@/actions/client-actions';
 import { DeviceControls, DeviceSurface } from '@/devices/DeviceBody';
 import { DeviceToolsPanel } from '@/devices/DeviceToolsPanel';
 import { deviceStateText, unavailableNotes } from '@/devices/device-text';
@@ -91,17 +92,18 @@ const openDeviceView = (device: DeviceInfo): void => {
         document.setActiveView(existing.id);
         return;
     }
-    document.addStandaloneView({ kind: 'device', name: device.name, device: reference });
+    void createViewAction('device', { device: reference });
 };
 
-const addDeviceToCanvas = (device: DeviceInfo): void => {
-    const document = useDocument.getState();
-    const target = document.views.find((view) => view.id === document.lastCanvasViewId && isCanvasView(view)) ?? document.views.find(isCanvasView);
-    if (!target) {
+const addDeviceToCanvas = async (device: DeviceInfo): Promise<void> => {
+    // Without a canvas the view would be made and then have nowhere to go.
+    if (!useDocument.getState().views.some(isCanvasView)) {
         return;
     }
-    const id = document.addStandaloneView({ kind: 'device', name: device.name, device: referenceOf(device) });
-    document.putOnCanvas(id, target.id);
+    const id = await createViewAction('device', { device: referenceOf(device) });
+    if (id !== null) {
+        placeViewOnCanvasAction(id);
+    }
 };
 
 /*
@@ -127,7 +129,7 @@ function DeviceMenuItems({ device, onOpen }: { device: DeviceInfo; onOpen?: (dev
             <Menu.Item className="menu-item" onClick={() => openDeviceView(device)}>
                 <Icon icon={ExternalLink} size={14} /> {t('devices.openAsView')}
             </Menu.Item>
-            <Menu.Item className="menu-item" onClick={() => addDeviceToCanvas(device)}>
+            <Menu.Item className="menu-item" onClick={() => void addDeviceToCanvas(device)}>
                 <Icon icon={Frame} size={14} /> {t('devices.addToCanvas')}
             </Menu.Item>
             {device.state === 'shutdown' && device.capabilities.boot && (

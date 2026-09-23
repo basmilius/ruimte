@@ -21,9 +21,8 @@ import {
     Trash
 } from 'lucide-react';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { duplicateNodeAction, focusNodeAction } from '@/actions/client-actions';
+import { createNodeAction, duplicateNodeAction, focusNodeAction, linkNodesAction } from '@/actions/client-actions';
 import { ChatAgentSubmenu } from '@/agents/AgentMenus';
-import { addAgentNode } from '@/agents/nodes';
 import { askOpenAsView, canOpenAsView } from '@/project/views';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
@@ -81,17 +80,16 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     const beside = { x: node.x + node.w + 40 + 260, y: node.y + node.h / 2 };
     // Any CLI the daemon has a chat backend for can go on in a chat node.
     const canOpenInChat = agent ? providers.some((entry) => entry.kind === agent.kind && entry.capabilities.chat) : false;
+    const viewId = canvasStore.getState().viewId;
     const openInChat = (): void => {
         if (agent) {
-            canvasStore
-                .getState()
-                .addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId, provider: agent.kind, providerFixed: true });
+            void createNodeAction('chat', { viewId, title: node.title, cwd: node.cwd, resume: agent.agentSessionId, provider: agent.kind, at: beside });
         }
     };
     const openInTerminal = (): void => {
         // The daemon owns the resume line: the node only says which CLI and which session.
         if (chatSession && chatProvider) {
-            canvasStore.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, provider: chatProvider, resume: chatSession });
+            void createNodeAction('terminal', { viewId, title: node.title, cwd: chatCwd, provider: chatProvider, resume: chatSession, at: beside });
         }
     };
     /*
@@ -99,16 +97,16 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
      * the person reads it once more and presses Enter. The edge keeps the note readable to the agent
      * through `ruimte-context`, so a note edited later still reaches it.
      */
-    const startAgentFromNote = (provider: ProviderInfo): void => {
-        const chatId = addAgentNode('chat', provider, beside);
-        if (chatId === null) {
+    const startAgentFromNote = async (provider: ProviderInfo): Promise<void> => {
+        const chatId = await createNodeAction('chat', { viewId, provider: provider.kind, at: beside });
+        if (chatId === null || viewId === null) {
             return;
         }
         const body = node.body?.trim();
         if (body) {
             writeDraft(chatId, { ...EMPTY_DRAFT, text: body });
         }
-        canvasStore.getState().addEdge(id, chatId);
+        await linkNodesAction(viewId, id, chatId);
     };
     // The folder the node works in: its own, or the project's when it has none.
     const workingFolder = node.kind === 'terminal' || node.kind === 'chat' ? (node.cwd ?? chatCwd ?? projectFolder) : (node.worktree?.path ?? null);
@@ -237,7 +235,11 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     )}
                     {node.kind === 'note' && (
                         <>
-                            <ChatAgentSubmenu label={t('menu.startAgentFromNote')} icon={<Icon icon={Sparkles} size={14} />} onPick={startAgentFromNote} />
+                            <ChatAgentSubmenu
+                                label={t('menu.startAgentFromNote')}
+                                icon={<Icon icon={Sparkles} size={14} />}
+                                onPick={(provider) => void startAgentFromNote(provider)}
+                            />
                             <ContextMenu.SubmenuRoot>
                                 <ContextMenu.SubmenuTrigger className="menu-item">
                                     <Icon icon={Palette} size={14} /> {t('menu.noteColor')}

@@ -157,7 +157,10 @@ describe('client actions', () => {
     });
 
     test('publishes only actions with working client executors, and sharing to a person alone', () => {
-        expect(clientActions.catalog(PERSON_ACTION_CALL).map((entry) => entry.name)).toContain('view.share');
+        const personal = clientActions.catalog(PERSON_ACTION_CALL).map((entry) => entry.name);
+        expect(personal).toContain('view.share');
+        expect(personal).toContain('view.move');
+        expect(personal).toContain('link.create');
         expect(clientActions.catalog(VOICE_ACTION_CALL).map((entry) => entry.name)).toEqual([
             'agents.inspect',
             'agent.activity',
@@ -481,13 +484,76 @@ describe('client actions', () => {
             expect(await clientActions.execute('view.rename', { viewId: 'release', name: long }, VOICE_ACTION_CALL)).toMatchObject({
                 error: { code: 'invalid-input' }
             });
-            expect(await createNode(registry(), { kind: 'note', title: long })).toMatchObject({ error: { code: 'invalid-input' } });
             expect(useDocument.getState().views).toHaveLength(2);
             expect(await createView(registry(), { kind: 'canvas', name: long.slice(1) })).toMatchObject({ status: 'completed' });
         });
 
-        test('a browser is named after its address when nobody names it', async () => {
+        test('a browser is named after its address and a device after itself when nobody names them', async () => {
             expect(await createView(registry(), { kind: 'browser', url: 'localhost:5173' })).toMatchObject({ output: { view: 'localhost:5173' } });
+            const device = await registry().execute(
+                'view.create',
+                {
+                    kind: 'device',
+                    name: null,
+                    url: null,
+                    command: null,
+                    path: null,
+                    provider: null,
+                    device: { platform: 'ios', kind: 'simulator', name: 'iPhone 17', runtime: 'iOS 27.0' }
+                },
+                PERSON_ACTION_CALL
+            );
+            if (device.status !== 'completed') {
+                throw new Error('Expected a device view');
+            }
+            expect(useDocument.getState().views.find((view) => view.id === device.output.viewId)).toMatchObject({
+                kind: 'device',
+                name: 'iPhone 17',
+                device: { platform: 'ios', name: 'iPhone 17' }
+            });
+            expect(await createView(registry(), { kind: 'device' })).toMatchObject({ error: { code: 'missing-device' } });
+            expect(
+                await registry().execute('view.create', { kind: 'device', name: null, url: null, command: null, path: null, provider: null }, VOICE_ACTION_CALL)
+            ).toMatchObject({ error: { code: 'forbidden-field' } });
+        });
+
+        test('a session handed on goes on in the CLI it ran in, where it worked, and only a person hands one on', async () => {
+            const terminal = await createView(registry(), { kind: 'terminal', provider: 'claude', resume: 'sess-1', cwd: '/work' });
+            if (terminal.status !== 'completed') {
+                throw new Error('Expected a terminal');
+            }
+            const made = useDocument.getState().views.find((view) => view.id === terminal.output.viewId);
+            expect(made).toMatchObject({ kind: 'terminal', node: { provider: 'claude', resume: 'sess-1', cwd: '/work' } });
+            expect(made?.kind === 'terminal' ? made.node.runtimeMode : 'not a terminal').toBeUndefined();
+            expect(await createView(registry(), { kind: 'chat', resume: 'sess-1' })).toMatchObject({ error: { code: 'missing-provider' } });
+            expect(
+                await registry().execute(
+                    'view.create',
+                    { kind: 'chat', name: null, url: null, command: null, path: null, provider: 'claude', resume: 'sess-1' },
+                    VOICE_ACTION_CALL
+                )
+            ).toMatchObject({ error: { code: 'forbidden-field' } });
+        });
+
+        test('a view moves right under another or to the top, and undo puts it back', async () => {
+            const sketch = useDocument.getState().addDrawingView('Sketch');
+            const ids = () => useDocument.getState().views.map((view) => view.id);
+            const moved = await clientActions.execute('view.move', { viewId: sketch, afterViewId: 'main' }, PERSON_ACTION_CALL);
+            if (moved.status !== 'completed' || !moved.undoToken) {
+                throw new Error('Expected a move');
+            }
+            expect(moved.output).toMatchObject({ index: 1, kind: 'drawing' });
+            expect(ids()).toEqual(['main', sketch, 'release']);
+            expect(await clientActions.undo(moved.undoToken, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed' });
+            expect(ids()).toEqual(['main', 'release', sketch]);
+            expect(await clientActions.execute('view.move', { viewId: sketch, afterViewId: null }, PERSON_ACTION_CALL)).toMatchObject({ output: { index: 0 } });
+            expect(ids()).toEqual([sketch, 'main', 'release']);
+            expect(await clientActions.execute('view.move', { viewId: sketch, afterViewId: sketch }, PERSON_ACTION_CALL)).toMatchObject({
+                error: { code: 'two-places' }
+            });
+            expect(await clientActions.execute('view.move', { viewId: sketch, afterViewId: 'main' }, VOICE_ACTION_CALL)).toMatchObject({
+                error: { code: 'forbidden-action' }
+            });
         });
 
         test('a duplicate lands under its source unopened, and undo takes back only a copy nobody opened', async () => {
@@ -587,6 +653,71 @@ describe('client actions', () => {
             expect(canvas().nodes[file.output.nodeId]).toMatchObject({ kind: 'file', title: 'main.ts', path: 'src/main.ts' });
             expect(await createNode(registry(), { kind: 'file' })).toMatchObject({ error: { code: 'missing-path' } });
             expect(await createNode(registry(), { kind: 'note', provider: 'claude' })).toMatchObject({ error: { code: 'invalid-provider' } });
+        });
+
+        test('a session goes on in a node beside it, where it worked and in the mode it has', async () => {
+            const chat = await registry().execute(
+                'node.create',
+                {
+                    viewId: 'main',
+                    kind: 'chat',
+                    title: 'Release notes',
+                    content: null,
+                    url: null,
+                    command: null,
+                    path: null,
+                    provider: 'claude',
+                    at: null,
+                    resume: 'sess-9',
+                    cwd: '/work'
+                },
+                PERSON_ACTION_CALL
+            );
+            if (chat.status !== 'completed') {
+                throw new Error('Expected a chat');
+            }
+            expect(canvas().nodes[chat.output.nodeId]).toMatchObject({
+                kind: 'chat',
+                title: 'Release notes',
+                provider: 'claude',
+                providerFixed: true,
+                resume: 'sess-9',
+                cwd: '/work'
+            });
+            expect(await createNode(registry(), { kind: 'terminal', provider: 'claude', resume: 'sess-9' })).toMatchObject({
+                error: { code: 'forbidden-field' }
+            });
+            expect(await createNode(registry(), { kind: 'note', title: 'x'.repeat(MAX_TITLE_LENGTH + 1) })).toMatchObject({ error: { code: 'invalid-input' } });
+        });
+
+        test('a person draws a line from one node into another, once, and undo takes it away', async () => {
+            const note = await createNode(registry(), { kind: 'note', content: 'Draft the notes' });
+            const chat = await createNode(registry(), { kind: 'chat' });
+            if (note.status !== 'completed' || chat.status !== 'completed') {
+                throw new Error('Expected two nodes');
+            }
+            const from = note.output.nodeId;
+            const to = chat.output.nodeId;
+            const link = (input: Partial<ActionInput<'link.create'>>) =>
+                clientActions.execute('link.create', { viewId: 'main', from, to: [to], ...input }, PERSON_ACTION_CALL);
+            const drawn = await link({});
+            if (drawn.status !== 'completed' || !drawn.undoToken) {
+                throw new Error('Expected a line');
+            }
+            expect(drawn.output.edges).toEqual([expect.objectContaining({ from, to, state: 'new', way: 'out' })]);
+            expect(canvas().edges).toEqual([expect.objectContaining({ from, to, label: 'context' })]);
+            expect(await link({})).toMatchObject({ output: { edges: [expect.objectContaining({ state: 'existing' })] } });
+            expect(canvas().edges).toHaveLength(1);
+            expect(await clientActions.undo(drawn.undoToken, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed' });
+            expect(canvas().edges).toEqual([]);
+
+            expect(await link({ from: null })).toMatchObject({ error: { code: 'missing-from' } });
+            expect(await link({ to: [from] })).toMatchObject({ error: { code: 'self-link' } });
+            expect(await link({ to: ['gone'] })).toMatchObject({ error: { code: 'unknown-node' } });
+            expect(await link({ label: 'reads' })).toMatchObject({ error: { code: 'forbidden-field' } });
+            expect(await clientActions.execute('link.create', { viewId: 'main', from, to: [to] }, VOICE_ACTION_CALL)).toMatchObject({
+                error: { code: 'forbidden-action' }
+            });
         });
 
         test('text is written where it was asked and goes again on undo', async () => {

@@ -55,6 +55,10 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
         if (name === null) {
             throw new VerbRefusal('bad-arguments', 'view new needs a name');
         }
+        // The registry keeps a device view to a person, and no person reaches the daemon's executor.
+        if (kind === 'device') {
+            throw new VerbRefusal('bad-arguments', 'view new makes no device view; a person opens one from the devices panel');
+        }
         const given = { path, url };
         for (const flag of ['path', 'url'] as const) {
             if (given[flag] !== null && VIEW_KIND_FLAGS[kind] !== flag) {

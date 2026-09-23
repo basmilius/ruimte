@@ -26,10 +26,10 @@ export const linkActions: ActionHandlers<ServerActionContext> = {
         if (targets.length > MAX_LINKS) {
             throw new VerbRefusal('too-many-links', `--to names ${targets.length} nodes and at most ${MAX_LINKS} may be linked at once`);
         }
-        if (role !== null && !(EDGE_ROLES as readonly string[]).includes(role)) {
+        if (role != null && !(EDGE_ROLES as readonly string[]).includes(role)) {
             throw new VerbRefusal('unknown-role', `${role} is not one of the ${EDGE_ROLES.length} things a line can be for`, [...ROLE_LINES]);
         }
-        const edgeRole = role === null ? undefined : (role as EdgeRole);
+        const edgeRole = role == null ? undefined : (role as EdgeRole);
         /* A line that reads: the role says so, or nothing was said and a line into an agent has read
            the other end since before the field existed. The only kind drawn back, and the only one
            this action calls "context" by itself. */

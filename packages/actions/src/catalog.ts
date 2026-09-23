@@ -1,6 +1,7 @@
 import {
     AgentKindSchema,
     AgentStatusSchema,
+    DeviceReferenceSchema,
     NodeKindSchema,
     PROJECT_VIEW_KINDS,
     PlanChecksSchema,
@@ -75,6 +76,9 @@ export const ARRANGE_LAYOUTS = ['grid', 'row', 'column'] as const;
 /* Kinds a node can only be made as by an agent: each mirrors a view the daemon names with `source`. */
 const AGENT_NODE_KINDS = ['drawing', 'diagram'] as const;
 
+/* A view only a person makes: a device is picked from a panel of what this machine has attached. */
+const PERSON_VIEW_KINDS = ['device'] as const;
+
 /* In world units, the canvas's own coordinates, so a camera move does not change where it lands. */
 const worldPoint = z.object({ x: z.number(), y: z.number() });
 const LOCK_GESTURES = ['pan', 'zoom', 'move', 'resize'] as const;
@@ -82,6 +86,12 @@ const PERSON_AND_VOICE: readonly ActionActorKind[] = ['person', 'voice'];
 /* What only a client runs: no agent reaches a client, so an agent is left out. */
 const CLIENT_ACTORS: readonly ActionActorKind[] = ['person', 'voice', 'automation'];
 const AGENT: readonly ActionActorKind[] = ['agent'];
+const PERSON: readonly ActionActorKind[] = ['person'];
+/* What a person's gesture and an agent's verb both do, and Voice has no words for yet. */
+const PERSON_AND_AGENT: readonly ActionActorKind[] = ['person', 'agent'];
+
+/* Only a person hands a CLI session on, from a chat or terminal that runs it; anyone else naming one would take over a session that is not theirs. */
+const resumedSession = forActors(PERSON, z.string().min(1)).describe('The CLI session the chat or terminal goes on with');
 
 /*
  * Plan ids stay plain strings here: the plan store checks them and refuses under its own codes, which
@@ -318,18 +328,21 @@ export const ACTION_DEFINITIONS = {
         domain: 'views',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({
-            kind: ActionCreatableViewKindSchema,
+            kind: z.union([ActionCreatableViewKindSchema, z.enum(PERSON_VIEW_KINDS).meta({ actors: [...PERSON] })]),
             name: givenName.nullable(),
             url: z.string().trim().min(1).nullable().describe('An http or https address'),
             command: z.string().trim().min(1).nullable(),
             path: z.string().trim().min(1).nullable().describe('The file the view shows, relative to the project folder or absolute'),
             provider: AgentKindSchema.nullable(),
-            after: agentField(viewId).describe('Puts the row right under this view; without it the row goes last')
+            after: agentField(viewId).describe('Puts the row right under this view; without it the row goes last'),
+            device: forActors(PERSON, DeviceReferenceSchema).describe('The simulator or device a device view shows'),
+            resume: resumedSession,
+            cwd: forActors(PERSON, z.string().min(1)).describe('The directory the chat or terminal works in')
         }),
         output: z.object({
             viewId,
             view: viewName,
-            kind: ActionCreatableViewKindSchema
+            kind: z.enum([...CREATABLE_VIEW_KINDS, ...PERSON_VIEW_KINDS])
         })
     },
     'view.delete': {
@@ -402,8 +415,9 @@ export const ACTION_DEFINITIONS = {
             source: agentField(viewId).describe(
                 'The id of a view of this project of the same kind as the node, a drawing for a drawing and a diagram for a diagram'
             ),
-            cwd: agentField(z.string().min(1)).describe('The directory the shell starts in'),
-            beside: agentField(nodeId).describe('Puts the node directly right of this node, top edges level, whatever is there already')
+            cwd: forActors(PERSON_AND_AGENT, z.string().min(1)).describe('The directory the shell starts in'),
+            beside: agentField(nodeId).describe('Puts the node directly right of this node, top edges level, whatever is there already'),
+            resume: resumedSession
         }),
         output: z.object({
             viewId,
@@ -741,7 +755,7 @@ export const ACTION_DEFINITIONS = {
         description: 'Moves a view to another place in the sidebar.',
         effect: 'shared',
         domain: 'views',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ viewId, afterViewId: viewId.nullable().describe('The view it goes right under; without one it goes to the top') }),
         output: z.object({ viewId, kind: ActionViewKindSchema, index: z.number().int() })
     },
@@ -817,13 +831,13 @@ export const ACTION_DEFINITIONS = {
         description: 'Draws a context line between nodes of one canvas; between two agents it draws both ways.',
         effect: 'shared',
         domain: 'canvas',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             viewId,
             from: nodeId.nullable().describe('Where the line starts; without it, you'),
             to: z.array(nodeId).min(1).describe('The nodes the line runs into'),
-            label: givenName.nullable().describe('What the line is called on the canvas'),
-            role: z.string().min(1).nullable().describe('What the line is for')
+            label: agentField(givenName).describe('What the line is called on the canvas'),
+            role: agentField(z.string().min(1)).describe('What the line is for')
         }),
         output: z.object({
             viewId,

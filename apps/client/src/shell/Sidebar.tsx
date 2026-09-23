@@ -32,7 +32,7 @@ import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
-import { askDeleteView, askViewSettings, newFileView, revealNode, showView } from '@/project/views';
+import { askDeleteView, askViewSettings, newFileViewsAfter, revealNode, showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
@@ -819,12 +819,9 @@ export function Sidebar() {
         if (paths.length === 0) {
             return;
         }
-        for (const [at, path] of paths.entries()) {
-            const id = newFileView(path);
-            if (id !== null) {
-                useDocument.getState().moveView(id, index + at);
-            }
-        }
+        const { views } = useDocument.getState();
+        const after = index === 0 ? null : (views[Math.min(index, views.length) - 1]?.id ?? null);
+        void newFileViewsAfter(paths, after);
     };
 
     const moveFocus = (delta: -1 | 1): void => {

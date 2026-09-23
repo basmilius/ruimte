@@ -66,12 +66,12 @@ const MENU_ACTIONS: Record<MenuActionId, () => void> = {
     }),
     'view-open-in-chat': withActiveView(({ view, asChat }) => {
         if (asChat !== null) {
-            openSessionInKind(view.id, 'chat', asChat);
+            void openSessionInKind(view.id, 'chat', asChat);
         }
     }),
     'view-open-in-terminal': withActiveView(({ view, asTerminal }) => {
         if (asTerminal !== null) {
-            openSessionInKind(view.id, 'terminal', asTerminal);
+            void openSessionInKind(view.id, 'terminal', asTerminal);
         }
     }),
     'view-duplicate': withActiveView(({ view }) => duplicateViewAction(view.id)),

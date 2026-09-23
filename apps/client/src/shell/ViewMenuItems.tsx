@@ -96,12 +96,12 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
                 </Menu.Item>
             )}
             {asChat !== null && (
-                <Menu.Item className="menu-item" onClick={() => openSessionInKind(viewId, 'chat', asChat)}>
+                <Menu.Item className="menu-item" onClick={() => void openSessionInKind(viewId, 'chat', asChat)}>
                     <Icon icon={MessageSquare} size={14} /> {t('viewMenu.openInChat')}
                 </Menu.Item>
             )}
             {asTerminal !== null && (
-                <Menu.Item className="menu-item" onClick={() => openSessionInKind(viewId, 'terminal', asTerminal)}>
+                <Menu.Item className="menu-item" onClick={() => void openSessionInKind(viewId, 'terminal', asTerminal)}>
                     <Icon icon={Terminal} size={14} /> {t('viewMenu.openInTerminal')}
                 </Menu.Item>
             )}

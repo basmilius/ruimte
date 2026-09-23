@@ -1,6 +1,6 @@
 import { inspectionActions } from '@/actions/inspection-actions';
 import { resolveTarget } from '@/actions/resolve-target';
-import { ActionRefusal, ActionRegistry, type ActionCall, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
+import { ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionCall, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
 import {
     canShareView,
     isCanvasView,
@@ -12,13 +12,14 @@ import {
     isUnknownView,
     MAIN_VIEW_NAME,
     type AgentKind,
+    type DeviceReference,
     type NodeTitleSource,
     type ProjectNode,
     type ProjectView,
     type ProviderInfo
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { addAgentView, agentNodeOptions, type AgentTarget } from '@/agents/nodes';
+import { addAgentView, agentNodeOptions, type AgentSession, type AgentTarget } from '@/agents/nodes';
 import { LOCK_KEYS } from '@/canvas/locks';
 import { toWorld, type Point } from '@/canvas/math';
 import { nearestFreeNodeRect } from '@/canvas/place-node';
@@ -90,7 +91,8 @@ const VIEW_BASE_NAMES: Record<CreatableViewKind, string> = {
     chat: 'AI Chat',
     file: 'File',
     separator: 'Separator',
-    subheader: 'Section'
+    subheader: 'Section',
+    device: 'Device'
 };
 
 /* A new view is named after what it is, "Canvas", then "Canvas 2", until someone renames it. */
@@ -107,12 +109,19 @@ export const freeName = (views: readonly ProjectView[], base: string): string =>
 };
 
 /* What a view is called when nobody named it: what it shows, else what it is. */
-const derivedViewName = (state: DocumentState, kind: CreatableViewKind, { url, path }: { url: string | null; path: string | null }): string => {
+const derivedViewName = (
+    state: DocumentState,
+    kind: CreatableViewKind,
+    { url, path, device }: { url: string | null; path: string | null; device: DeviceReference | null | undefined }
+): string => {
     if (kind === 'file' && path !== null) {
         return basenameOf(path);
     }
     if (kind === 'browser' && url !== null) {
         return url;
+    }
+    if (kind === 'device' && device != null) {
+        return device.name;
     }
     return freeName(state.views, VIEW_BASE_NAMES[kind]);
 };
@@ -152,13 +161,17 @@ const hasNode =
     (canvas: CanvasState): boolean =>
         canvas.nodes[id] !== undefined;
 
-const historyUndo = (viewId: string, expectedDepth: number, stillThere?: (canvas: CanvasState) => boolean) => () => {
-    const current = canvasNow(useDocument, viewId);
-    if (current.past.length !== expectedDepth || (stillThere && !stillThere(current))) {
-        throw new ActionRefusal('stale-undo', 'The canvas changed after this action, so it cannot be safely undone here.');
-    }
-    current.undo();
-};
+const historyUndo =
+    (viewId: string, expectedDepth: number, stillThere?: (canvas: CanvasState) => boolean, steps = 1) =>
+    () => {
+        const current = canvasNow(useDocument, viewId);
+        if (current.past.length !== expectedDepth || (stillThere && !stillThere(current))) {
+            throw new ActionRefusal('stale-undo', 'The canvas changed after this action, so it cannot be safely undone here.');
+        }
+        for (let i = 0; i < steps; i++) {
+            current.undo();
+        }
+    };
 
 /* Read from the exported views, so a node on any canvas on screen counts with what its editor holds. */
 const sessionTitle = (document: StoreApi<DocumentState>, id: string, kind: 'chat' | 'terminal'): string | null => {
@@ -249,8 +262,9 @@ const addViewOf = (
     state: DocumentState,
     kind: CreatableViewKind,
     title: string,
-    { url, command, path }: { url: string | null; command: string | null; path: string | null }
+    { url, command, path, device, cwd }: { url: string | null; command: string | null; path: string | null; device: DeviceReference | null; cwd: string | null }
 ): string => {
+    const folder = cwd === null ? {} : { cwd };
     switch (kind) {
         case 'canvas':
             return state.addCanvasView(title);
@@ -270,9 +284,26 @@ const addViewOf = (
         case 'browser':
             return state.addStandaloneView({ kind, name: title, url: url ?? 'https://www.google.com' });
         case 'chat':
-            return state.addStandaloneView({ kind, name: title, node: {} });
+            return state.addStandaloneView({ kind, name: title, node: folder });
         case 'terminal':
-            return state.addStandaloneView({ kind, name: title, node: command ? { command } : {} });
+            return state.addStandaloneView({ kind, name: title, node: command ? { command, ...folder } : folder });
+        case 'device':
+            if (device === null) {
+                throw new ActionRefusal('missing-device', 'Name the device a device view shows.');
+            }
+            return state.addStandaloneView({ kind, name: title, device });
+    }
+};
+
+const sessionOf = (resume: string | null | undefined, cwd: string | null | undefined): AgentSession => ({
+    ...(resume == null ? {} : { resume }),
+    ...(cwd == null ? {} : { cwd })
+});
+
+/* A session goes on only in the CLI that started it, so a resume without one names nothing to run. */
+const refuseResumeWithout = (resume: string | null | undefined, provider: AgentKind | null): void => {
+    if (resume != null && provider === null) {
+        throw new ActionRefusal('missing-provider', 'Name the CLI whose session goes on.');
     }
 };
 
@@ -400,11 +431,15 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                     : {})
             };
         },
-        'view.create': ({ kind, name, url, command, path, provider }) => {
+        'view.create': ({ kind, name, url, command, path, provider, device, resume, cwd }) => {
+            refuseResumeWithout(resume, provider);
             const agent = agentFor(providers(), kind, provider, command);
             const state = document.getState();
-            const title = kind === 'separator' ? VIEW_BASE_NAMES.separator : (name ?? agent?.info.name ?? derivedViewName(state, kind, { url, path }));
-            const viewId = agent === null ? addViewOf(state, kind, title, { url, command, path }) : addAgentView(agent.target, agent.info, title);
+            const title = kind === 'separator' ? VIEW_BASE_NAMES.separator : (name ?? agent?.info.name ?? derivedViewName(state, kind, { url, path, device }));
+            const viewId =
+                agent === null
+                    ? addViewOf(state, kind, title, { url, command, path, device: device ?? null, cwd: cwd ?? null })
+                    : addAgentView(agent.target, agent.info, title, sessionOf(resume, cwd));
             if (!viewId) {
                 throw new ActionRefusal('view-create-failed', `Ruimte could not create the ${kind} view.`);
             }
@@ -504,15 +539,17 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                     : {})
             };
         },
-        'node.create': ({ viewId, kind, title, content, url, command, path, provider, at }) => {
+        'node.create': ({ viewId, kind, title, content, url, command, path, provider, at, cwd, resume }) => {
             const { view, canvas } = canvasOnScreen(document, viewId);
+            refuseResumeWithout(resume, provider);
             const agent = agentFor(providers(), kind, provider, command);
             if (kind === 'file' && path === null) {
                 throw new ActionRefusal('missing-path', 'Name the file a file node shows.');
             }
             const depth = canvas.past.length;
             const options: AddNodeOptions = {
-                ...(agent === null ? {} : agentNodeOptions(agent.target, agent.info)),
+                ...(agent === null ? {} : agentNodeOptions(agent.target, agent.info, sessionOf(resume, cwd))),
+                ...(agent === null && cwd != null && (kind === 'chat' || kind === 'terminal') ? { cwd } : {}),
                 ...(title
                     ? { title }
                     : kind === 'note' && content
@@ -636,6 +673,42 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             return {
                 output: { viewId, view: view.name, groupId, members: nodeIds.filter((id) => canvas.nodes[id]?.kind !== 'group') },
                 undo: historyUndo(viewId, depth + 1, hasNode(groupId))
+            };
+        },
+        'link.create': ({ viewId, from, to }) => {
+            if (from === null) {
+                throw new ActionRefusal('missing-from', 'Name the node the line starts from.');
+            }
+            const { canvas } = canvasOnScreen(document, viewId);
+            const targets = [...new Set(to)];
+            const missing = [from, ...targets].find((id) => !canvas.nodes[id]);
+            if (missing) {
+                throw new ActionRefusal('unknown-node', `No node with id “${missing}” exists on this canvas.`);
+            }
+            if (targets.includes(from)) {
+                throw new ActionRefusal('self-link', 'A line runs between two nodes, and this one names the same node at both ends.');
+            }
+            const depth = canvas.past.length;
+            const before = new Set(canvas.edges.map((edge) => edge.id));
+            for (const target of targets) {
+                canvasNow(document, viewId).addEdge(from, target);
+            }
+            const after = canvasNow(document, viewId);
+            const lineOf = (tail: string, head: string) => after.edges.find((edge) => edge.from === tail && edge.to === head);
+            const edges = targets.flatMap((target) => {
+                const out = lineOf(from, target)!;
+                const back = lineOf(target, from);
+                return [
+                    { edgeId: out.id, from, to: target, state: before.has(out.id) ? ('existing' as const) : ('new' as const), way: 'out' as const },
+                    ...(back === undefined || before.has(back.id)
+                        ? []
+                        : [{ edgeId: back.id, from: target, to: from, state: 'new' as const, way: 'back' as const }])
+                ];
+            });
+            const steps = after.past.length - depth;
+            return {
+                output: { viewId, edges },
+                ...(steps === 0 ? {} : { undo: historyUndo(viewId, depth + steps, undefined, steps) })
             };
         },
         'canvas.fit': ({ viewId }) => {
@@ -857,6 +930,42 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                     : {})
             };
         },
+        'view.move': ({ viewId, afterViewId }) => {
+            const state = document.getState();
+            const view = state.views.find((candidate) => candidate.id === viewId);
+            if (!view) {
+                throw unknownView(viewId);
+            }
+            let toIndex = 0;
+            if (afterViewId !== null) {
+                if (afterViewId === viewId) {
+                    throw new ActionRefusal('two-places', 'A view cannot go right under itself.');
+                }
+                // Read off the list without the view, since that is where it is put back.
+                const after = state.views.filter((candidate) => candidate.id !== viewId).findIndex((candidate) => candidate.id === afterViewId);
+                if (after === -1) {
+                    throw unknownView(afterViewId);
+                }
+                toIndex = after + 1;
+            }
+            const from = state.views.findIndex((candidate) => candidate.id === viewId);
+            state.moveView(viewId, toIndex);
+            const index = document.getState().views.findIndex((candidate) => candidate.id === viewId);
+            return {
+                output: { viewId, kind: kindOf(view), index },
+                ...(index === from
+                    ? {}
+                    : {
+                          undo: () => {
+                              const current = document.getState();
+                              if (current.views.findIndex((candidate) => candidate.id === viewId) !== index) {
+                                  throw new ActionRefusal('stale-undo', `“${view.name ?? viewId}” moved again since.`);
+                              }
+                              current.moveView(viewId, from);
+                          }
+                      })
+            };
+        },
         'layout.save': ({ viewId, name }, { confirmed }) => {
             const { view, canvas } = canvasOnScreen(document, viewId);
             const previous = canvas.layouts.find((layout) => layout.name === name) ?? null;
@@ -1070,24 +1179,36 @@ export const renameViewAction = (viewId: string, name: string): void => {
     void runAsPerson('view.rename', { viewId, name });
 };
 
-export interface CreateViewOptions {
+/* A name carried over from something that already has one may predate the limit; it is cut, never refused. */
+const carriedName = (name: string | undefined): string | null => (name === undefined ? null : name.trim().slice(0, MAX_TITLE_LENGTH) || null);
+
+export interface CreateViewOptions extends AgentSession {
     name?: string;
     url?: string;
     path?: string;
     provider?: AgentKind;
+    device?: DeviceReference;
 }
 
 /* Resolves the id of the new view, or null when there is none. */
 export const createViewAction = async (kind: CreatableViewKind, options: CreateViewOptions = {}): Promise<string | null> => {
     const created = await runAsPerson('view.create', {
         kind,
-        name: options.name ?? null,
+        name: carriedName(options.name),
         url: options.url ?? null,
         command: null,
         path: options.path ?? null,
-        provider: options.provider ?? null
+        provider: options.provider ?? null,
+        device: options.device ?? null,
+        resume: options.resume ?? null,
+        cwd: options.cwd ?? null
     });
     return created?.viewId ?? null;
+};
+
+/* Null puts the view at the top of the list. */
+export const moveViewAction = async (viewId: string, afterViewId: string | null): Promise<void> => {
+    await runAsPerson('view.move', { viewId, afterViewId });
 };
 
 export const deleteViewAction = (viewId: string): void => {
@@ -1175,7 +1296,10 @@ export const fitAction = (viewId: string | null = activeViewId()): void => {
     }
 };
 
-export interface CreateNodeOptions {
+export interface CreateNodeOptions extends AgentSession {
+    /* The canvas it goes on, when that is not the one in the focused cell. */
+    viewId?: string | null;
+    title?: string;
     url?: string;
     provider?: AgentKind;
     path?: string;
@@ -1185,22 +1309,28 @@ export interface CreateNodeOptions {
 
 /* On the canvas on screen, at `at` or in free space near the middle of what it shows. Resolves the new node's id. */
 export const createNodeAction = async (kind: CreatableNodeKind, options: CreateNodeOptions = {}): Promise<string | null> => {
-    const viewId = activeViewId();
+    const viewId = options.viewId ?? activeViewId();
     if (viewId === null) {
         return null;
     }
     const created = await runAsPerson('node.create', {
         viewId,
         kind,
-        title: null,
+        title: carriedName(options.title),
         content: null,
         url: options.url ?? null,
         command: null,
         path: options.path ?? null,
         provider: options.provider ?? null,
-        at: options.at ?? null
+        at: options.at ?? null,
+        resume: options.resume ?? null,
+        cwd: options.cwd ?? null
     });
     return created?.nodeId ?? null;
+};
+
+export const linkNodesAction = async (viewId: string, from: string, to: string): Promise<void> => {
+    await runAsPerson('link.create', { viewId, from, to: [to] });
 };
 
 /* Empty and open for typing, the way a double-click on the canvas starts one. */
