@@ -26,7 +26,7 @@ import { useTranslation } from 'react-i18next';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isCanvasView, isSessionView, type AgentKind, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
-import { renameNodeAction, renameViewAction } from '@/actions/client-actions';
+import { moveViewAction, renameNodeAction, renameViewAction } from '@/actions/client-actions';
 import { useDrafts } from '@/chat/drafts';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
@@ -807,7 +807,8 @@ export function Sidebar() {
         }
         const to = index > from ? index - 1 : index;
         if (to !== from) {
-            useDocument.getState().moveView(id, to);
+            const others = useDocument.getState().views.filter((view) => view.id !== id);
+            void moveViewAction(id, to === 0 ? null : others[to - 1]!.id);
         }
     };
 
