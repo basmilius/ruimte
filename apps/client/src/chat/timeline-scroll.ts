@@ -1,14 +1,26 @@
 // A page is a screen minus a little, so the line you were reading is still on it after the jump.
 const PAGE_OVERLAP = 0.9;
 
-const scrollers = new Map<string, { element: HTMLElement; follow: (enabled: boolean) => void }>();
+type Scroller = {
+    element: HTMLElement;
+    follow: (enabled: boolean) => void;
+    // The height of the composer standing over the end of the scroller, which a page does not count.
+    coveredHeight: () => number;
+};
+
+const scrollers = new Map<string, Scroller>();
 
 /* The timeline hands its scroller over so the composer, which never sees it, can page through it. */
-export const registerTimeline = (chatId: string, element: HTMLElement | null, follow: (enabled: boolean) => void): (() => void) => {
+export const registerTimeline = (
+    chatId: string,
+    element: HTMLElement | null,
+    follow: Scroller['follow'],
+    coveredHeight: Scroller['coveredHeight']
+): (() => void) => {
     if (element === null) {
         return () => undefined;
     }
-    scrollers.set(chatId, { element, follow });
+    scrollers.set(chatId, { element, follow, coveredHeight });
     return () => {
         if (scrollers.get(chatId)?.element === element) {
             scrollers.delete(chatId);
@@ -57,8 +69,7 @@ export const pageTimeline = (chatId: string, direction: -1 | 1): boolean => {
     }
     scroller.follow(false);
     const { element } = scroller;
-    const coveredHeight = Number.parseFloat(getComputedStyle(element).scrollPaddingBottom) || 0;
-    element.scrollBy({ top: direction * Math.max(0, element.clientHeight - coveredHeight) * PAGE_OVERLAP, behavior: 'smooth' });
+    element.scrollBy({ top: direction * Math.max(0, element.clientHeight - scroller.coveredHeight()) * PAGE_OVERLAP, behavior: 'smooth' });
     return true;
 };
 

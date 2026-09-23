@@ -134,13 +134,20 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     // Oversized prompts scroll in full instead of sticking with their top outside the viewport.
     const stickyComposer = composerHeight < frame.height - FOLLOW_THRESHOLD_PX;
     const coveredHeight = stickyComposer ? composerHeight : 0;
+    const coveredHeightRef = useRef(coveredHeight);
+    coveredHeightRef.current = coveredHeight;
 
     // The composer pages through the thread with PageUp and PageDown; this is the element it moves.
     useEffect(
         () =>
-            registerTimeline(chatId, scrollRef.current, (enabled) => {
-                followRef.current = enabled;
-            }),
+            registerTimeline(
+                chatId,
+                scrollRef.current,
+                (enabled) => {
+                    followRef.current = enabled;
+                },
+                () => coveredHeightRef.current
+            ),
         [chatId]
     );
 
@@ -261,8 +268,9 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                 <ContextMenu.Root>
                     <div
                         ref={scrollRef}
+                        // No CSS scroll-padding here: Chromium counts the sticky composer's caret as hidden behind
+                        // it and scrolls the thread toward the end on every keystroke.
                         className="chat-scroll min-h-0 grow overflow-auto"
-                        style={{ scrollPaddingBottom: coveredHeight }}
                         onScrollCapture={(e) => {
                             const el = e.currentTarget;
                             // Capture the reader's movement before virtualization remeasures rows and shifts the scroll offset.
