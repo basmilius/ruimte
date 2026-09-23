@@ -229,7 +229,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   <p class="eyebrow">Ruimte / Ontwerp / 23 september 2026</p>
   <h1>Modellen vergelijken: intelligentie tegen kosten</h1>
   <p class="intro">Ruimte laat een persoon kiezen uit vijftien modellen en tot zes denkniveaus per model, maar zegt nergens wat die keuze oplevert of kost. Dit rapport ontwerpt een overlay die dat laat zien: de Intelligence Index van Artificial Analysis tegen de kosten per taak, per model en per denkniveau. De cijfers komen van een dienst op pulsar.ruimte.app die elk uur ververst. De overlay opent alleen vanuit de menubalk.</p>
-  <p class="status">Besloten op 23 september 2026, nog niets gebouwd. Een startprompt voor de agent die het bouwt staat onderaan.</p>
+  <p class="status">Besloten op 23 september 2026 en dezelfde dag nagelopen bij <code>48f86d80</code>. De Worker, de overlay en het menu-item worden gebouwd; welke meting bij welk model hoort, wacht op de sleutel.</p>
   <p class="caption">Gelezen op <code>main</code> bij <code>0173ea89</code>. Bereik: <code>apps/server/src/providers/{claude,codex}-models.json</code>, <code>catalog.ts</code>, <code>terminal-providers.ts</code>, <code>apps/server/src/usage/pricing.ts</code> met <code>prices-snapshot.json</code>, <code>apps/client/src/shell/usage</code>, <code>state/ui.ts</code>, <code>App.tsx</code>, <code>conflicts/ConflictOverlay.tsx</code>, <code>desktop/bridge.ts</code> en <code>appMenu()</code> in <code>apps/desktop/src/main.ts</code>, <code>apps/pulsar-worker</code> (<code>index.ts</code>, <code>http.ts</code>, <code>wrangler.jsonc</code>, README), <code>packages/pulsar/src/address-book{,-client}.ts</code>, <code>packages/csp</code> en het menubalk-rapport van dezelfde dag. Voorbeeld: <a href="https://fc4rgpnygo9f.postplan.dev/">fc4rgpnygo9f.postplan.dev</a>, met data van Artificial Analysis van 22 september 2026.</p>
   <nav aria-label="Inhoud">
     <a href="#kern">Het besluit</a>
@@ -255,7 +255,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
       <li>Epoch AI blijft de terugval, mocht Artificial Analysis de dienst toch afkeuren (<a href="#bronnen">Alternatieven</a>).</li>
     </ul>
     <div class="stats">
-      <div><strong>24</strong><span>verzoeken per dag, van de 100 die de gratis tier toestaat</span></div>
+      <div><strong>48</strong><span>verzoeken per dag, van de 100 die de gratis tier toestaat</span></div>
       <div><strong>2</strong><span>getallen per punt: index en kosten per taak</span></div>
       <div><strong>15</strong><span>modellen in de catalogus, 8 actueel en 7 legacy</span></div>
       <div><strong>0</strong><span>wijzigingen in <code>packages/contracts</code></span></div>
@@ -363,7 +363,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 
   <section id="bron">
     <h2>De databron</h2>
-    <p class="note">Bijgewerkt op 23 september 2026. Deze sectie las eerst alleen de oude documentatiepagina. De <a href="https://artificialanalysis.ai/data-api/docs">Data API-documentatie</a> beschrijft een nieuwer endpoint voor de gratis tier, <code>/api/v2/language/models/free</code>. Dat levert de Intelligence, Coding en Agentic Index, <code>artificial_analysis_intelligence_index_cost.cost_per_task.total_cost</code>, de prijs per miljoen input- en outputtokens en de mediane snelheid, tijd tot het eerste token en totale responstijd. De limiet is daar 100 verzoeken per vast venster van 24 uur. Pro voegt onder meer de blended prijs, het contextvenster, scores per benchmark en tokens per evaluatie toe. Hoe denkniveaus in de API staan, is nog niet bevestigd; op de site zijn het aparte modellen. Wat hieronder over ontbrekende kosten staat, is daarmee achterhaald.</p>
+    <p class="note">Bijgewerkt op 23 september 2026. Deze sectie las eerst alleen de oude documentatiepagina. De <a href="https://artificialanalysis.ai/data-api/docs">Data API-documentatie</a> beschrijft een nieuwer endpoint voor de gratis tier, <code>/api/v2/language/models/free</code>. Dat levert de Intelligence, Coding en Agentic Index, <code>artificial_analysis_intelligence_index_cost.cost_per_task.total_cost</code>, de prijs per miljoen input- en outputtokens en de mediane snelheid, tijd tot het eerste token en totale responstijd. De limiet is daar 100 verzoeken per vast venster van 24 uur. Pro voegt onder meer de blended prijs, het contextvenster, scores per benchmark en tokens per evaluatie toe. Een denkniveau is ook in de API een apart model, met een eigen <code>id</code> en een naam als <code>gpt-oss-20B (high)</code>; de <code>slug</code> (<code>gpt-oss-20b</code>) noemt het niveau niet. De lijst is gepagineerd, 200 modellen per pagina, en het voorbeeld in de documentatie telt twee pagina's. Wat hieronder over ontbrekende kosten staat, is daarmee achterhaald.</p>
     <p>Artificial Analysis heeft een gratis API. Volgens de <a href="https://artificialanalysis.ai/documentation">documentatie</a> geldt het volgende.</p>
     <ul>
       <li>De modellen komen van <code>GET /data/llms/models</code>, met de sleutel in de header <code>x-api-key</code>. De limiet is 1.000 verzoeken per dag.</li>
@@ -405,7 +405,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 
   <section id="dienst">
     <h2>De dienst op pulsar.ruimte.app</h2>
-    <p>Een Pro-licentie van ruim $400 per maand is te duur. De gratis tier heeft alles wat deze ene grafiek nodig heeft: de Intelligence Index en <code>artificial_analysis_intelligence_index_cost.cost_per_task.total_cost</code>. De limiet van 100 verzoeken per 24 uur is geen bezwaar, want een verversing per uur kost er 24.</p>
+    <p>Een Pro-licentie van ruim $400 per maand is te duur. De gratis tier heeft alles wat deze ene grafiek nodig heeft: de Intelligence Index en <code>artificial_analysis_intelligence_index_cost.cost_per_task.total_cost</code>. De limiet van 100 verzoeken per 24 uur is geen bezwaar, want een verversing per uur kost er 48 bij twee pagina's. De headers <code>X-RateLimit-Remaining</code> en <code>X-RateLimit-Reset</code> laten zien hoeveel er over is.</p>
 
     <h3 id="pulsar">Waarom dit binnen de voorwaarden valt</h3>
     <p>Een grafiek die de app zelf tekent, noemen de voorwaarden nergens als verboden. §2.3 staat <q>share charts and visualizations publicly</q> toe op elk tier, en de Data API-documentatie gaat ervan uit dat je data toont: <q>When you display or share API data, credit Artificial Analysis as the source.</q> Wat grijs blijft, is waar een grafiek ophoudt en ruwe data begint (§2.4(c)). Drie regels houden de dienst aan de kant van de grafiek.</p>
@@ -446,7 +446,8 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 }</code></pre>
       <figcaption>Wat <code>GET /v1/models/benchmarks</code> teruggeeft, ingekort. <code>effort</code> is het id van het denkniveau in Ruimte en <code>costPerTask</code> is in USD. De waarden komen uit het voorbeeld.</figcaption>
     </figure>
-    <p><span class="badge warning">Te bevestigen</span> Hoe de API denkniveaus weergeeft. Op de site zijn het aparte modellen, zoals <code>Claude Opus 5.5 (max with fallback)</code>. Dat blijkt pas uit een echte respons, en die vraagt de sleutel.</p>
+    <p><span class="badge confirmed">Bevestigd in de documentatie</span> Een denkniveau is een apart model met een eigen <code>id</code>. Omdat de <code>slug</code> het niveau niet noemt, legt de koppeling per denkniveau het <code>id</code> bij Artificial Analysis vast, met de naam ernaast om hem leesbaar te houden.</p>
+    <p><span class="badge warning">Te bevestigen</span> Welk <code>id</code> en welke naam elk model en denkniveau van Ruimte daar heeft. Op de site staat bijvoorbeeld <code>Claude Opus 5.5 (max with fallback)</code>. Dat blijkt pas uit een echte respons, en die vraagt de sleutel.</p>
   </section>
 
   <section id="overlay">
@@ -486,7 +487,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
     <ul>
       <li>De overlay hangt in <code>App.tsx</code> naast <code>UsageDialog</code>, buiten <code>WorkspaceShell</code>. Hij hoort bij geen project en geen machine, dus hij opent ook op het startscherm.</li>
       <li><code>useUi</code> krijgt <code>modelsOpen</code> met een setter, naar het voorbeeld van <code>usageOpen</code>. De client haalt de cijfers bij het openen op via <code>AddressBookClient</code>, van het adresboek dat <code>platform.addressBook()</code> noemt. Het account speelt geen rol: de route is openbaar.</li>
-      <li>De menubalk komt uit een ander rapport (<code>docs/reports/2026-09-23-menubar.html</code>). Dat bouwt één menumodel op de commando's uit <code>appCommands()</code> in <code>shell/commands.ts</code>, met een menubalk in de pagina op Windows, Linux en de station. De overlay krijgt daar een commando met een plek in de menuboom, maar niet in het palet. Kent het menumodel zo'n commando nog niet, dan hoort dat bij het werk aan de menubalk.</li>
+      <li>De menubalk komt uit een ander rapport (<code>docs/reports/2026-09-23-menubar.html</code>). Het menumodel staat sinds <code>48f86d80</code> in <code>shell/menu/model.ts</code>: een native menu op macOS en het menu van de station op Windows, Linux en de station zelf. Het Window-menu heeft al Processes en Usage. De overlay krijgt daar een commando met een plek in de menuboom, maar niet in het palet.</li>
       <li>Er komt geen sneltoets, geen actie in <code>packages/actions</code> en geen stemcommando.</li>
       <li>Het omhulsel is een <code>Dialog</code> van Base UI, zoals <code>ConflictOverlay</code>, met een <code>ErrorBoundary</code> om de inhoud.</li>
     </ul>
@@ -599,7 +600,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
       <li>De cijfers komen van Artificial Analysis, via een dienst op pulsar.ruimte.app die de gratis API elk uur leest. De Worker stuurt alleen wat de grafiek nodig heeft. Er komt geen tabel en geen export, en de bron staat als link in de voet.</li>
       <li>Een momentopname in de client, eerder route A, vervalt. De Worker maakt een release voor nieuwe cijfers of een nieuw model overbodig.</li>
     </ul>
-    <p>Nog open: waar het item in de menubalk komt. Window ligt voor de hand, naast Processes. Dat beslist Bas samen met het werk aan de menubalk.</p>
+    <p>Het item komt in het Window-menu, direct onder Usage, dat daar sinds het menumodel staat. Dat is één regel in <code>model.ts</code> als Bas het elders wil.</p>
     <p>Een latere uitbreiding: de modellen markeren die een persoon de laatste dertig dagen gebruikte, uit de gebruikssamenvatting. Het gebruik legt het denkniveau niet vast, dus zo'n markering kan alleen per model.</p>
   </section>
 
@@ -623,7 +624,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
       </div></li>
       <li class="step"><div>
         <h3>De menubalk</h3>
-        <p>Zodra het menumodel uit het menubalk-rapport bestaat: een commando dat de overlay opent, met een plek in de menuboom en zonder plek in het palet.</p>
+        <p>Een commando dat de overlay opent, in Window onder Usage, zonder plek in het palet. Het menumodel bestaat al.</p>
         <p>Klaar als het item de overlay opent in het native menu op macOS en in de menubalk in de pagina, en het palet hem niet toont.</p>
       </div></li>
     </ol>
@@ -641,9 +642,9 @@ Drie regels komen uit de voorwaarden van Artificial Analysis en staan vast:
 
 De API-sleutel komt nooit in git, in een bestand in de repository of in een log. Ik zet hem als Worker-secret ARTIFICIAL_ANALYSIS_API_KEY. Heb je hem voor stap 1 lokaal nodig, vraag hem dan en lees hem uit een omgevingsvariabele.
 
-Begin met stap 1. Haal /api/v2/language/models/free één keer op en leg vast hoe de modellen uit apps/server/src/providers/claude-models.json en codex-models.json en hun denkniveaus daar heten. Stel daarbij vast of een denkniveau een apart model is en hoe het veld met de kosten per taak precies heet. Zet de uitkomst als tabel in het rapport, en geen andere cijfers uit de respons. Maak daarna een kort plan voor stap 2 en 3 en wacht op mijn akkoord voordat je code schrijft.
+Begin met stap 1. Haal /api/v2/language/models/free één keer op en leg vast hoe de modellen uit apps/server/src/providers/claude-models.json en codex-models.json en hun denkniveaus daar heten. Een denkniveau is volgens de documentatie een apart model met een eigen id; controleer dat en het veld artificial_analysis_intelligence_index_cost.cost_per_task.total_cost. Zet de uitkomst als tabel in het rapport, en geen andere cijfers uit de respons. Maak daarna een kort plan voor stap 2 en 3 en wacht op mijn akkoord voordat je code schrijft.
 
-Stap 4 hangt af van de menubalk, waar een andere agent aan werkt (docs/reports/2026-09-23-menubar.html). Koppel de overlay pas aan als het menumodel bestaat. Tot dan is setModelsOpen de enige ingang.
+Voor stap 4 bestaat het menumodel al (apps/client/src/shell/menu/model.ts). Het item komt in Window, direct onder Usage, en niet in het palet.
 
 Werkwijze: commit op main met conventional commits en zonder Co-Authored-By. Een push naar main die apps/pulsar-worker of packages/pulsar raakt, deployt de Worker via .github/workflows/pulsar-worker.yml. Push dus pas als ik het zeg. bun run format, bun run check en bun run test slagen voor elke commit. Ik test in de Electron-dev-app en start die zelf.</code></pre>
   </section>
