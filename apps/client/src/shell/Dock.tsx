@@ -106,7 +106,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                 }}
                 shortcuts={CANVAS_SHORTCUTS}
                 onZoomTo={(next) => canvasStore.getState().zoomTo(next)}
-                onFitAll={fitAction}
+                onFitAll={() => fitAction()}
                 selection={{
                     label: t('dock.zoomToSelection'),
                     shortcut: CANVAS_SHORTCUTS.zoomSelection,
