@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Alles via de action registry</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #155dfc;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#samenvatting">Ga naar de samenvatting</a>
+<header>
+  <p class="eyebrow">RUIMTE / WIJZIGINGSRAPPORT / 23 SEPTEMBER 2026</p>
+  <h1>Alles wat je kunt doen loopt nu via de action registry</h1>
+  <p class="intro">Een klik, een sneltoets, een paletrij, Voice en <code>ruimte-context</code> voeren dezelfde getypeerde action uit. Wie wat mag, staat per action vast. Voor jou verandert er weinig zichtbaars, maar Voice en agents kunnen nu veel meer, en precies binnen die grenzen.</p>
+  <p class="status">Op main · CI groen op <code>6419004c</code></p>
+  <p class="caption">Bereik: 48 commits van <code>c15f898d</code> tot <code>6419004c</code>, 228 bestanden. Het plan en de volledige tabellen staan in <a href="2026-09-17-action-registry.html">het rapport over de action registry</a>.</p>
+  <nav aria-label="Inhoud">
+    <a href="#samenvatting">Samenvatting</a>
+    <a href="#wat">Wat er veranderde</a>
+    <a href="#testen">Testen</a>
+    <a href="#open">Bekend en open</a>
+  </nav>
+</header>
+<main>
+  <section id="samenvatting" class="recommendation">
+    <h2>Samenvatting</h2>
+    <div class="stats">
+      <div><strong>169</strong><span>actions in de catalogus, eerst 21</span></div>
+      <div><strong>15</strong><span>Voice-tools, gegenereerd uit de catalogus</span></div>
+      <div><strong>16 tot 45 kB</strong><span>toolschema per Voice-sessie, naar wat het project nodig heeft</span></div>
+      <div><strong>4755</strong><span>tests groen, 0 gefaald</span></div>
+    </div>
+    <p>Test eerst Voice live. Dat is de grootste verandering, en offline niet te bewijzen. Daarna een korte ronde in de Electron-app langs de plekken die een nieuw pad kregen.</p>
+  </section>
+
+  <section id="wat">
+    <h2>Wat er veranderde</h2>
+    <div class="split">
+      <div class="panel">
+        <h3>Voor jou</h3>
+        <ul>
+          <li>Palette, menu's, sneltoetsen, sidebar, Dock, het git-paneel, de composer, de promptkaarten, het bestandenpaneel en de editors van drawings en diagrams draaien dezelfde handlers als Voice. Je dialogen blijven de bevestiging.</li>
+          <li>Een view of node verwijderen slaat eerst open bestanden op en noemt de agents die meestoppen.</li>
+          <li>Een titel hernoemen en daarna in een andere cel klikken houdt de naam vast. Hernoemen en leegmaken via de sidebar werkt ook op een canvas dat niet in beeld staat.</li>
+          <li>Namen stoppen bij 120 tekens.</li>
+          <li>Een node uit de Dock landt in vrije ruimte bij het midden.</li>
+          <li>Fit, zoom naar selectie en zoom resetten werken met het toetsenbord in een diagram.</li>
+          <li>Elke bewerking in een drawing of diagram is één undo-stap, een notekleur ook.</li>
+          <li>Een treffer in "find in files" opent de preview op die regel.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Voor Voice</h3>
+        <ul>
+          <li>Een gesproken naam wordt eerst een id via <code>target.resolve</code>. Bij twee treffers vraagt Voice welke, en kiest het nooit stil de eerste.</li>
+          <li>Nieuw bereik: git, sessies en plannen, bestanden en inhoud, browserpagina's, projecten, het grid, processen en verbruik.</li>
+          <li>Destructief of extern werk vraagt eerst, met de concrete gevolgen erbij.</li>
+          <li>Per sessie gaan alleen de tools mee die bij het project passen.</li>
+          <li>Elk verzoek en een samenvatting per sessie gaan als <code>[voice]</code>-regels naar de console: toolkeuze, foutcodes, targetfouten en latency, zonder tekst of audio. Er wordt niets bewaard.</li>
+        </ul>
+        <h3>Voor agents</h3>
+        <ul>
+          <li>Elk verb van <code>ruimte-context</code> behalve <code>help</code> is een adapter op de daemon-registry. Uitvoer, exitcodes en weigercodes bleven gelijk; een paar helpregels zijn anders geformuleerd.</li>
+          <li>Een agent- of teamstart antwoordt <code>running</code> met een operation-id; <code>operation get</code> en <code>operation cancel</code> volgen hem.</li>
+          <li>Een schrijvend verb neemt <code>--revision N</code> en weigert met <code>rev-conflict</code> als het project intussen verder is.</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Wat alleen een persoon mag</h3>
+    <p>Goedkeuringen beantwoorden, een permission mode zetten, rebase en force-push, een conflictoplossing accepteren, een worktree verwijderen, een signaal naar een proces sturen, een view delen, een project aanmaken, verwijderen of de instellingen wijzigen, en een export opslaan. Alle keuzes per action staan onder "Wie mag wat" in <a href="2026-09-17-action-registry.html#wie-mag-wat">het registry-rapport</a>.</p>
+  </section>
+
+  <section id="testen">
+    <h2>Testen</h2>
+    <p>In volgorde van risico. Niets hiervan is in de app zelf geprobeerd.</p>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Voice start en voert een simpele opdracht uit</h3>
+        <p>Start Voice in een project met een repository. Vraag "maak een notitie met de tekst test" en "hernoem die naar Boodschappen".</p>
+        <p><span class="badge warning">Let op</span> De schema's zijn offline tegen de regels van strict mode gecontroleerd, maar nooit naar het echte endpoint gestuurd. Faalt Voice meteen, dan ligt het waarschijnlijk daar.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Voice bij een dubbele naam en bij iets destructiefs</h3>
+        <p>Maak twee nodes met dezelfde naam en vraag Voice er een te focussen: het moet vragen welke. Vraag daarna een view te verwijderen en de git-status te lezen.</p>
+        <p>Klopt als: Voice vraagt bij verwijderen eerst, met bestanden en agents erbij, en leest de status zonder te vragen.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De Voice-metingen in de console</h3>
+        <p>Open de ontwikkelaarstools, zet het niveau op "Verbose" en doe een paar verzoeken. Stop daarna Voice.</p>
+        <p>Klopt als: elk verzoek geeft een regel <code>[voice] request</code> met tools, codes en duur, het stoppen een regel <code>[voice] session</code> met de samenvatting, en nergens staat tekst uit je verzoeken.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Views en nodes in de Electron-app</h3>
+        <p>Verwijder een view waarin een agent draait. Hernoem een titel en klik meteen in een andere cel. Hernoem een node via de sidebar op een canvas dat niet in beeld staat. Sleep bestanden naar de sidebar en een view naar een cel van het grid.</p>
+        <p>Klopt als: de dialogen zijn zoals je ze kent, namen blijven staan, en elke stap is met Cmd+Z terug te draaien.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Git-paneel en conflict-overlay</h3>
+        <p>Stage, commit, pull en push, maak een branch en los een conflict op in het overlay. Annuleer een lopende fetch.</p>
+        <p>Klopt als: alles gedraagt zich als voorheen, inclusief de vraag hoe een branch samenkomt die aan beide kanten verder ging.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Chat, terminal en editors</h3>
+        <p>Beantwoord een promptkaart, stop een turn, fork een chat. Gebruik Restart en Resume onder een beëindigde shell. Wijzig de kleur van een note en draai die terug. Undo, redo en fit in een drawing en een diagram, met knoppen en met toetsen.</p>
+        <p>Klopt als: de terminal start opnieuw met een verse xterm, en elke undo draait precies één stap terug.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="open">
+    <h2>Bekend en open</h2>
+    <ul>
+      <li>Voice houdt zijn toolset de hele sessie vast. Wissel je halverwege van project, of maakt Voice net de eerste chat, dan ontbreken de tools die daarbij horen tot de volgende sessie.</li>
+      <li><code>process.list</code> antwoordt <code>not-measured</code> zolang het processenpaneel niet meet.</li>
+      <li>Wat Voice in een plan afvinkt, staat er als afgevinkt door een persoon; een stap die alleen jij mag afvinken weigert Voice.</li>
+      <li>Voice stuurt geen <code>expectedRevision</code> mee, omdat elke eigen schrijfactie de revisie verhoogt.</li>
+      <li>Bewust buiten de registry: pairing, machines, accounts, updates, geheimen, app-instellingen, lokale bediening zoals panelen en thema, gebaren en plumbing.</li>
+      <li>Oude ongebruikte exports van vóór dit werk (onder meer <code>answersToWire</code>, <code>clearUnseen</code>) staan er nog.</li>
+    </ul>
+    <p class="note">Tijdens het werk heeft een subagent per ongeluk een <code>git stash pop</code> gedaan op je <code>stash@{0}</code> (rust-daemon). Dat is teruggedraaid; de stash is hetzelfde object als op 18 september en de werkmap is schoon. Briefs verbieden sindsdien stash, reset, restore en clean.</p>
+  </section>
+</main>
+<footer><p>Geverifieerd: <code>bun run check</code> en <code>bun run test</code> lokaal (4755 geslaagd, 0 gefaald), CI groen op <code>6419004c</code>, en de gegenereerde Voice-tools offline tegen de regels van strict mode (15 tools, 45.413 bytes als alles meegaat). Niet geverifieerd: de Electron-app en Voice tegen het echte endpoint.</p></footer>
+</body>
+</html>
