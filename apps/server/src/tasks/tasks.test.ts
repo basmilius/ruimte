@@ -89,7 +89,7 @@ const delegateTeam = async (daemon: Daemon, titles: readonly string[]): Promise<
 /* A terminal child reporting back, and the outbox done with whatever that owed. */
 const report = async (daemon: Daemon, child: { childId: string; taskId: string }, result: string): Promise<void> => {
     expect(await verb(daemon, child.childId, 'done', ['--result', result])).toEqual([`done\t${child.taskId}\tchat-lead`]);
-    await daemon.until(() => daemon.outbox.list().some((entry) => entry.kind === 'wake-parent' && entry.payload.taskId === child.taskId));
+    await daemon.until(() => daemon.enqueued.some((work) => work.kind === 'wake-parent' && work.payload.taskId === child.taskId));
     await daemon.worker.settled();
 };
 
@@ -414,5 +414,22 @@ describe('the tasks of one team call wake the lead together', () => {
         // Read back from disk, two tasks made at one moment on the manual clock have no order between them.
         expect(wakeTurns(second).map((turn) => [...(turn.taskIds ?? [])].sort())).toEqual([roles.map((role) => role.taskId).sort()]);
         expect(second.outbox.list()).toEqual([]);
+    });
+});
+
+describe('waiting on owed work', () => {
+    test('a wake the worker already ran and took off the outbox is still seen as owed', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const single = await delegate(daemon, 'Review', 'review the plan', false);
+        await daemon.worker.settled();
+        expect(await verb(daemon, single.childId, 'done', ['--result', 'Looks fine'])).toEqual([`done\t${single.taskId}\tchat-lead`]);
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        // The order a loaded machine can take: the wake ran and is gone before `report` looks for it.
+        expect(daemon.outbox.list()).toEqual([]);
+        expect(daemon.enqueued.filter((work) => work.kind === 'wake-parent' && work.payload.taskId === single.taskId)).toHaveLength(1);
     });
 });

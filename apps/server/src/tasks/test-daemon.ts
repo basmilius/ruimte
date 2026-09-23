@@ -24,7 +24,7 @@ import { registerSessionHandlers } from '../handlers/session.ts';
 import { registerPlanHandlers } from '../handlers/plan.ts';
 import { registerTaskHandlers } from '../handlers/tasks.ts';
 import type { ManualClock } from '../outbox/manual-clock.ts';
-import { OutboxStore } from '../outbox/outbox.ts';
+import { OutboxStore, type OutboxWork } from '../outbox/outbox.ts';
 import type { OutboxWorker } from '../outbox/outbox-worker.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
 import type { TaskWiring } from './wiring.ts';
@@ -56,6 +56,8 @@ export interface TestDaemon {
     endChildren: EndChildrenWiring;
     host: CanvasHost;
     alerts: string[];
+    /* Every piece of work owed since boot, kept after the worker took it off the outbox. */
+    enqueued: OutboxWork[];
     /* A request over the wire from one client, answered by the same handlers a socket reaches. */
     request(type: string, payload: unknown): Promise<ServerFrame>;
     /* Resolves once what a deleted node took along (an unused fork's record) is gone. */
@@ -93,11 +95,16 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
     const sessions = new SessionManager({ adapter, env: { HOME: home, PATH: process.env.PATH }, firstPrompt: (id) => prompts.take(id) });
     const attachments = new AttachmentStore(home);
     const drops: Promise<void>[] = [];
+    const enqueued: OutboxWork[] = [];
     const outboxLink = new OutboxLink({
         outbox,
         projectOf: (chatId) => store.index.locate(chatId)?.projectId ?? null,
-        // Owed after the entry is written, so a wait on the outbox looks again once it is there.
-        onEnqueued: () => recheck()
+        /* Owed after the entry is written, so a wait on the outbox looks again once it is there. A
+           running worker may already have taken the entry off by then, so the work is kept too. */
+        onEnqueued: (work) => {
+            enqueued.push(work);
+            recheck();
+        }
     });
     const plans = new PlanStore(home, { now: () => clock.now() });
     const chats = new ChatManager({
@@ -276,6 +283,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         endChildren,
         host,
         alerts,
+        enqueued,
         request: async (type, payload) => {
             const frames: ServerFrame[] = [];
             await dispatcher.handle({ id: 'client-1', send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));

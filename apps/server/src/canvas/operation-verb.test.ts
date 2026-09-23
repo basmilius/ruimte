@@ -71,7 +71,7 @@ test('a start with a task is queued until the outbox runs it, running while the 
 
     await runVerb(daemon, child!, 'done', ['--result', 'fixed']);
     // The wake it owes the lead runs before anything is torn down.
-    await daemon.until(() => daemon.outbox.list().some((entry) => entry.kind === 'wake-parent'));
+    await daemon.until(() => daemon.enqueued.some((work) => work.kind === 'wake-parent'));
     await daemon.worker.settled();
     expect((await operation('chat-lead', id))[0]).toBe(`operation\t${id}\tagent.start\tcompleted`);
 });

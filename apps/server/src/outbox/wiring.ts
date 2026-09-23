@@ -21,7 +21,7 @@ export interface OutboxLinkOptions {
     /* The project a chat lives in, read when a run is owed a resume and not before. */
     projectOf(chatId: string): string | null;
     /* Run after every entry is on disk, for a test that waits on the outbox. */
-    onEnqueued?: () => void;
+    onEnqueued?: (work: OutboxWork) => void;
 }
 
 /*
@@ -32,7 +32,7 @@ export interface OutboxLinkOptions {
 export class OutboxLink {
     /* What the chat manager reports an interrupted run to. */
     readonly onInterruptedRun: ReturnType<typeof oweResume>;
-    private readonly onEnqueued: (() => void) | null;
+    private readonly onEnqueued: ((work: OutboxWork) => void) | null;
     private worker: OutboxWorker | null = null;
 
     constructor(options: OutboxLinkOptions) {
@@ -50,7 +50,7 @@ export class OutboxLink {
 
     async enqueue(projectId: string, target: string, work: OutboxWork): Promise<void> {
         await this.require().enqueue(projectId, target, work);
-        this.onEnqueued?.();
+        this.onEnqueued?.(work);
     }
 
     wake(chatId: string): void {
