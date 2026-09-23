@@ -20,6 +20,7 @@ import { chatCompletion, type VoiceChatFollowUp } from '@/voice/chat-follow-up';
 import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction, type VoiceActionKind } from '@/voice/state';
 import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
 import { currentVoiceDomains } from '@/voice/domains';
+import { finishVoiceDiagnostics, startVoiceDiagnostics, voiceDiagnosticsObserver } from '@/voice/diagnostics-store';
 
 let session: LiveSession | null = null;
 let releaseMicrophone: (() => void) | null = null;
@@ -246,7 +247,7 @@ export async function startVoice(): Promise<void> {
     const execute = async (name: string, args: string): Promise<Record<string, unknown>> => {
         const execution = await executeVoiceTool(name, args);
         if (session !== next) {
-            return { ok: false, message: 'The voice session ended.' };
+            return { ok: false, code: 'session-ended', message: 'The voice session ended.' };
         }
         if (execution.action) {
             addAction(execution.action.kind, execution.action.label, execution.action.detail, execution.action.undo);
@@ -262,7 +263,8 @@ export async function startVoice(): Promise<void> {
     toolLoop = new ResponseToolLoop(
         (event) => next.send(event),
         // A cancel is for the run the queue is waiting on, so it cannot wait its turn behind it.
-        (name, args) => (bypassesQueue(name, args) ? execute(name, args) : queue.run(() => execute(name, args)))
+        (name, args) => (bypassesQueue(name, args) ? execute(name, args) : queue.run(() => execute(name, args))),
+        voiceDiagnosticsObserver
     );
     session = next;
     try {
@@ -272,7 +274,13 @@ export async function startVoice(): Promise<void> {
             return;
         }
         const { voiceLanguage, liveVoice } = useSettings.getState();
-        await next.start(stream, { language: voiceLanguage, voice: liveVoice, domains: await currentVoiceDomains() });
+        const domains = await currentVoiceDomains();
+        if (session !== next) {
+            next.close();
+            return;
+        }
+        startVoiceDiagnostics(domains);
+        await next.start(stream, { language: voiceLanguage, voice: liveVoice, domains });
         if (session !== next) {
             next.close();
             return;
@@ -314,6 +322,7 @@ export async function startVoice(): Promise<void> {
         toolQueue = null;
         toolLoop?.reset();
         toolLoop = null;
+        finishVoiceDiagnostics();
         if (clockTimer !== null) {
             window.clearInterval(clockTimer);
             clockTimer = null;
@@ -360,6 +369,7 @@ export function stopVoice(): void {
     toolQueue = null;
     toolLoop?.reset();
     toolLoop = null;
+    finishVoiceDiagnostics();
     stopMicrophone();
     stopOutputWaveform();
     useVoice.setState({ phase: 'idle', sessionStartedAt: null });

@@ -28,6 +28,7 @@ import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { useNow } from '@/ui/useNow';
 import { closeVoicePanel, startVoice, stopVoice, undoVoiceAction, undoVoiceActions } from '@/voice/controller';
+import { VoiceDiagnostics } from '@/voice/VoiceDiagnostics';
 import { VoiceWaveform } from '@/voice/VoiceWaveform';
 import { useVoice, type VoiceAction, type VoiceActionKind, type VoicePhase, type VoiceUtterance } from '@/voice/state';
 import { voiceTimeline, type VoiceTimelineEntry } from '@/voice/timeline';
@@ -281,6 +282,7 @@ export function VoicePanel() {
                 <div ref={bottom} className="h-5" aria-hidden="true" />
             </div>
             <footer className="shrink-0 border-t border-border p-3">
+                <VoiceDiagnostics />
                 {error && <p className="mb-2 text-xs text-status-error">{error}</p>}
                 <Button
                     className="w-full"

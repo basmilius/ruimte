@@ -300,7 +300,7 @@ const failureOf = (result: ActionResult): VoiceToolExecution =>
               confirmation: result.confirmation
           })
         : failed(result.status === 'failed' ? result.error.message : 'The action could not be completed.', {
-              ...(result.status === 'failed' ? { code: result.error.code } : {})
+              code: result.status === 'failed' ? result.error.code : result.status
           });
 
 const completed = (name: ActionName, output: Record<string, unknown>, undoToken: string | undefined, endpointId: string): VoiceToolExecution => {
@@ -394,7 +394,7 @@ const runAction = async (name: ActionName, args: Record<string, unknown>): Promi
 const controlAction = async (args: Record<string, unknown>): Promise<VoiceToolExecution> => {
     const token = typeof args.confirmation_token === 'string' ? args.confirmation_token : null;
     if (!token || (args.action !== 'confirm' && args.action !== 'cancel')) {
-        return failed('Choose confirm or cancel and provide the confirmation token.');
+        return failed('Choose confirm or cancel and provide the confirmation token.', { code: 'invalid-confirmation' });
     }
     const endpointId = currentEndpointId();
     const result = await clientActions.confirm(token, args.action === 'confirm', VOICE_ACTION_CALL);
@@ -403,22 +403,22 @@ const controlAction = async (args: Record<string, unknown>): Promise<VoiceToolEx
 
 const runVoiceTool = async (tool: string, rawArguments: string): Promise<VoiceToolExecution> => {
     if (useProject.getState().switching) {
-        return failed('A project switch is in progress. Wait and inspect the workspace before retrying.');
+        return failed('A project switch is in progress. Wait and inspect the workspace before retrying.', { code: 'project-switching' });
     }
     const args = objectArguments(rawArguments);
     if (!args) {
-        return failed('The tool arguments were not valid JSON.');
+        return failed('The tool arguments were not valid JSON.', { code: 'invalid-arguments' });
     }
     if (tool === VOICE_CONTROL_TOOL) {
         return controlAction(args);
     }
     const actions = VOICE_TOOL_ACTIONS.get(tool);
     if (!actions) {
-        return failed(`Ruimte does not support the tool “${tool}”.`);
+        return failed(`Ruimte does not support the tool “${tool}”.`, { code: 'unknown-tool' });
     }
     const action = actions.find((name) => name === args.action);
     if (!action) {
-        return failed(`Choose one of ${actions.join(', ')} as the action of ${tool}.`);
+        return failed(`Choose one of ${actions.join(', ')} as the action of ${tool}.`, { code: 'unknown-action' });
     }
     return runAction(action, args);
 };
@@ -434,7 +434,7 @@ export const executeVoiceTool = async (tool: string, rawArguments: string): Prom
     if (tool === VOICE_CONTROL_TOOL) {
         const token = objectArguments(rawArguments)?.confirmation_token;
         if (typeof token !== 'string' || confirmationRevisions.get(token) !== revision) {
-            return failed('This confirmation no longer belongs to the current project. Request the action again.');
+            return failed('This confirmation no longer belongs to the current project. Request the action again.', { code: 'stale-confirmation' });
         }
         confirmationRevisions.delete(token);
     }

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { LiveEvent } from '@/voice/live-session';
-import { ResponseToolLoop } from '@/voice/response-tool-loop';
+import { ResponseToolLoop, type ToolLoopObserver } from '@/voice/response-tool-loop';
 
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -119,5 +119,38 @@ describe('ResponseToolLoop', () => {
         expect(completed).toEqual(['One', 'Two', 'Three', 'Four']);
         expect(sent.filter((event) => event.type === 'response.item.create')).toHaveLength(4);
         expect(sent.filter((event) => event.type === 'response.create')).toHaveLength(1);
+    });
+
+    test('tells its observer what it saw, ran and asked for, in that order', async () => {
+        const seen: string[] = [];
+        const observer: ToolLoopObserver = {
+            responseEvent: (delegationId, type) => seen.push(`event ${delegationId} ${type}`),
+            responseRequested: (delegationId) => seen.push(`requested ${delegationId}`),
+            callStarted: (delegationId, callId, tool) => seen.push(`started ${delegationId} ${callId} ${tool}`),
+            callFinished: (callId, output) => seen.push(`finished ${callId} ${String(output.code)}`)
+        };
+        const loop = new ResponseToolLoop(
+            () => undefined,
+            async () => {
+                throw new Error('The voice session or project changed.');
+            },
+            observer
+        );
+
+        loop.handle({
+            type: 'response.event',
+            delegation_id: 'd1',
+            event: { type: 'response.output_item.done', item: { type: 'function_call', call_id: 'c1', name: 'inspect_workspace', arguments: '{}' } }
+        });
+        loop.handle({ type: 'response.event', delegation_id: 'd1', event: { type: 'response.completed' } });
+        await flush();
+
+        expect(seen).toEqual([
+            'event d1 response.output_item.done',
+            'started d1 c1 inspect_workspace',
+            'event d1 response.completed',
+            'finished c1 tool-error',
+            'requested d1'
+        ]);
     });
 });
