@@ -2,14 +2,14 @@ import { createContext, useContext } from 'react';
 import { isUnderFolder } from '@/state/fs-watch';
 
 /*
- * The canvas zoom a file node starts editing at. Monaco measures a click against its own layout and
+ * The canvas zoom a file node can be edited from. Monaco measures a click against its own layout and
  * not the scale an ancestor puts on it, so under a transform the offset grows until the cursor lands
- * on a neighboring line: microsoft/monaco-editor#4468. Below this a node shows what it had, read only.
+ * on a neighboring line: microsoft/monaco-editor#4468. Below this a node's editor is read only.
  * Remove it once that issue is fixed upstream.
  */
 export const EDIT_MIN_ZOOM = 0.6;
 
-/* Why a file is not offered for editing here. Binary files, files too large to read and diffs never reach an editor at all. */
+/* Why a file is read only here. Binary files, files too large to read and diffs never reach an editor at all. */
 export type EditBlock = 'outside-project' | 'ruimte-state' | 'plain' | 'touch' | 'zoom';
 
 export interface EditGateInput {
@@ -17,7 +17,7 @@ export interface EditGateInput {
     path: string;
     /* The open project's folder and the worktrees of its repository, where the machine takes a save from this client. */
     roots: readonly string[];
-    /* The viewer drew the file as plain text for its length. */
+    /* The file is drawn as plain text for its length. */
     plain: boolean;
     /* The primary pointer is a finger, which Monaco does not take. */
     coarse: boolean;
@@ -28,7 +28,7 @@ export interface EditGateInput {
 const isInside = (root: string, path: string): boolean => path === root || isUnderFolder(path, root);
 
 /*
- * The machine's rule for `fs.write`, mirrored so a person is never offered an edit it will refuse.
+ * The machine's rule for `fs.write`, mirrored so a person never types an edit it will refuse.
  * The machine stays the authority: a worktree outside its own worktrees folder is offered here and
  * refused there, which the save says.
  */

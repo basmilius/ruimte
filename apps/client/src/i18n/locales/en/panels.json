@@ -71,8 +71,6 @@
     "codeTheme": "Code theme",
     "cannotShow": "{{name}} ({{mime}}, {{size}}) cannot be shown here.",
     "code": {
-      "plainReason": "Over {{lines}} lines, so syntax highlighting is off",
-      "plainText": "Plain text",
       "unwrap": "Stop wrapping long lines",
       "wrap": "Wrap long lines"
     },
@@ -135,11 +133,10 @@
       "invalidFrontmatter": "Frontmatter could not be read as YAML. The original text is shown below."
     },
     "edit": {
-      "start": "Edit",
-      "stop": "Stop editing",
+      "readOnly": "Read only",
       "outsideProject": "Only files in this project and its worktrees can be edited",
       "ruimteState": "Ruimte keeps its own state here, so it is not edited by hand",
-      "plain": "Files over {{lines}} lines are not edited here",
+      "plain": "Over {{lines}} lines, so it is plain text and not edited here",
       "touch": "Editing needs a mouse or a trackpad",
       "zoom": "Zoom in to edit",
       "loadFailed": "The editor did not load",

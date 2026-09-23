@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, WrapText } from 'lucide-react';
+import { WrapText } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
 import { formatNumber } from '@/format/number';
 import { DraftBar, EditorNotice } from '@/shell/panels/DraftBar';
@@ -13,7 +13,6 @@ import { highlightCode } from '@/shell/panels/highlight';
 import { useFileEditing } from '@/shell/panels/use-file-editing';
 import { useCodeTheme } from '@/state/code-theme';
 import { useFiles } from '@/state/files';
-import { BTN_GROUP } from '@/ui/classes';
 import { Button } from '@/ui/Button';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Pill } from '@/ui/Pill';
@@ -35,9 +34,9 @@ const LOOK_AHEAD = '600px';
 const FLASH_MS = 1600;
 
 /*
- * Past this a file is drawn as plain text. Chunks highlight themselves only as they come near the
- * viewport, so the cost is paid a screen at a time, but a generated file of a hundred thousand
- * lines is one nobody reads for its colors and every scroll through it would ask shiki again.
+ * Past this a file is plain text and read only, in the viewer and the editor alike. A generated file
+ * of a hundred thousand lines is one nobody reads for its colors, and Monaco would tokenize all of it
+ * in the background and hand all of it to a language service.
  */
 const HIGHLIGHT_MAX_LINES = 20000;
 
@@ -147,29 +146,7 @@ function CodeChunk({ code, lines, start, language, theme, reveal, revealNonce }:
     );
 }
 
-/*
- * The line and the column a click landed on, read off the lines the viewer drew, so the editor that
- * takes over puts its cursor there. Null off the text.
- */
-const pointInCode = (event: MouseEvent): { line: number; column: number } | null => {
-    const caret = document.caretPositionFromPoint(event.clientX, event.clientY);
-    const node = caret?.offsetNode ?? (event.target as Node | null);
-    const element = node instanceof Element ? node : (node?.parentElement ?? null);
-    const line = element?.closest('.line') ?? null;
-    const chunk = line?.closest<HTMLElement>('[data-start]') ?? null;
-    if (line === null || chunk === null) {
-        return null;
-    }
-    let column = 1;
-    if (caret !== null && line.contains(caret.offsetNode)) {
-        const before = document.createRange();
-        before.setStart(line, 0);
-        before.setEnd(caret.offsetNode, caret.offset);
-        column = before.toString().length + 1;
-    }
-    return { line: Number(chunk.dataset.start) + [...chunk.querySelectorAll('.line')].indexOf(line), column };
-};
-
+/* Why a file is read only, for the tooltip on the toolbar's pill and for typing into the editor anyway. */
 const BLOCK_LABELS: Record<EditBlock, string> = {
     'outside-project': 'file.edit.outsideProject',
     'ruimte-state': 'file.edit.ruimteState',
@@ -187,15 +164,17 @@ export interface CodeFileProps {
 }
 
 /*
- * Any text file, highlighted a block at a time, and the editor over the same place once a person
- * clicks into the text or presses Edit. Reading stays the default: a viewer costs next to nothing
- * on a canvas of many files, and a stray click never changes a file an agent is working on.
+ * Any text file, as an editor. The viewer's chunks draw the same place while Monaco loads, so nothing
+ * moves when it takes over, and stay for a finger, which Monaco does not take, and for an editor that
+ * did not load. Where the file cannot be written from here the editor is read only and the toolbar
+ * says why.
  */
 export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const { t } = useTranslation('panels');
     const theme = useCodeTheme();
     const [wrap, setWrap] = useState(false);
-    const container = useRef<HTMLDivElement>(null);
+    // Where the placeholder was scrolled to, for the editor that replaces it.
+    const viewerScroll = useRef(0);
     // A jump to a line is asked of a tab, so a node or a view of its own never answers one.
     const tabKey = useFileActions()?.tabKey ?? null;
     const reveal = useFiles((s) => (s.revealLine !== null && s.revealLine.key === tabKey ? s.revealLine : null));
@@ -213,84 +192,46 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const plain = lineCount > HIGHLIGHT_MAX_LINES;
     const language = plain ? null : (read.language ?? 'text');
     const editing = useFileEditing(path, read, plain);
-    const editorUp = editing.wanted && editing.engine !== null;
     const disk = useMemo(() => ({ text: read.text, mtime: read.mtime }), [read]);
-
-    const scrollTop = (): number => container.current?.querySelector('.file-code')?.scrollTop ?? 0;
-
-    /* A plain click, not the end of a drag that selected something, and not a double click that selects a word. */
-    const onViewerClick = (event: ReactMouseEvent<HTMLDivElement>): void => {
-        if (editing.block !== null || event.button !== 0 || event.detail !== 1 || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) {
-            return;
-        }
-        if (window.getSelection()?.isCollapsed === false) {
-            return;
-        }
-        const at = pointInCode(event.nativeEvent) ?? { line: lineCount, column: 1 };
-        editing.begin({ ...at, scrollTop: event.currentTarget.scrollTop });
-    };
-
-    const onEditToggle = (): void => {
-        if (editing.wanted) {
-            editing.stop();
-            return;
-        }
-        const top = scrollTop();
-        editing.begin({ line: Math.floor(top / LINE_HEIGHT) + 1, column: 1, scrollTop: top });
-    };
-
-    const editLabel =
-        editing.block !== null
-            ? t(BLOCK_LABELS[editing.block], { lines: formatNumber(HIGHLIGHT_MAX_LINES) })
-            : editing.wanted
-              ? t('file.edit.stop')
-              : t('file.edit.start');
+    const readOnlyReason = editing.block === null ? null : t(BLOCK_LABELS[editing.block], { lines: formatNumber(HIGHLIGHT_MAX_LINES) });
 
     return (
-        <div ref={container} className="flex min-h-0 min-w-0 grow flex-col">
+        <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar>
-                {plain && (
-                    <Tooltip label={t('file.code.plainReason', { lines: formatNumber(HIGHLIGHT_MAX_LINES) })}>
-                        <Pill>{t('file.code.plainText')}</Pill>
+                {readOnlyReason !== null && (
+                    <Tooltip label={readOnlyReason}>
+                        <Pill>{t('file.edit.readOnly')}</Pill>
                     </Tooltip>
                 )}
                 {toolbarExtra}
                 {toolbarExtra !== undefined && <Separator />}
-                <div className={BTN_GROUP}>
-                    <FileToolbarToggle icon={Pencil} label={editLabel} active={editing.wanted} disabled={editing.block !== null} onClick={onEditToggle} />
-                    <FileToolbarToggle
-                        icon={WrapText}
-                        label={wrap ? t('file.code.unwrap') : t('file.code.wrap')}
-                        active={wrap}
-                        onClick={() => setWrap(!wrap)}
-                    />
-                </div>
+                <FileToolbarToggle icon={WrapText} label={wrap ? t('file.code.unwrap') : t('file.code.wrap')} active={wrap} onClick={() => setWrap(!wrap)} />
             </FileToolbar>
             <DraftBar endpointId={editing.endpointId} path={path} />
-            {editing.wanted && editing.loadFailed && (
+            {!editing.viewer && editing.loadFailed && (
                 <EditorNotice message={t('file.edit.loadFailed')}>
                     <Button variant="secondary" size="sm" onClick={editing.retryLoad}>
                         {t('common:action.retry')}
                     </Button>
                 </EditorNotice>
             )}
-            {editorUp && editing.engine !== null ? (
+            {!editing.viewer && editing.engine !== null ? (
                 <ErrorBoundary label={t('file.edit.failed')} resetKeys={[path, editing.engine]} className="min-h-0 grow">
                     <FileEditor
                         engine={editing.engine}
                         endpointId={editing.endpointId}
                         path={path}
                         disk={disk}
-                        language={read.language}
+                        language={plain ? undefined : read.language}
                         wrap={wrap}
-                        readOnly={editing.readOnly}
-                        start={editing.start}
+                        readOnlyReason={readOnlyReason}
+                        placeholderScroll={viewerScroll}
                         focused={editing.focused}
                         reveal={reveal}
                     />
                 </ErrorBoundary>
             ) : (
-                <FileScroll className="file-code" data-wrap={wrap} onClick={onViewerClick}>
+                <FileScroll className="file-code" data-wrap={wrap} onScroll={(event) => (viewerScroll.current = event.currentTarget.scrollTop)}>
                     {chunks.map((chunk) => {
                         const inChunk = reveal !== null && reveal.line >= chunk.start && reveal.line < chunk.start + chunk.lines;
                         return (

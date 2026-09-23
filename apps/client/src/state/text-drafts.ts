@@ -105,7 +105,7 @@ export class TextDrafts {
         };
     }
 
-    /* An editor turned on over what the file read as. A draft that is already there stays and hears the read. */
+    /* An editor opened on what the file read as. A draft that is already there stays and hears the read. */
     open(endpointId: string, path: string, disk: DiskText): void {
         const key = endpointKey(endpointId, path);
         if (useTextDrafts.getState().rows[key] === undefined) {

@@ -1,16 +1,9 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { type RefObject, useEffect, useLayoutEffect, useRef } from 'react';
 import type { Editor, EditorEngine } from '@ruimte/editor';
-import { bindDraftEditor } from '@/shell/panels/draft-editor';
+import { mountDraftEditor } from '@/shell/panels/draft-editor';
 import { useCodeTheme } from '@/state/code-theme';
 import type { RevealLineRequest } from '@/state/files';
 import { type DiskText, textDrafts } from '@/state/text-drafts';
-
-/* Where a click in the viewer landed and where the viewer stood, so turning the editor on moves nothing. */
-export interface EditStart {
-    line: number;
-    column: number;
-    scrollTop: number;
-}
 
 interface FileEditorProps {
     engine: EditorEngine;
@@ -19,28 +12,30 @@ interface FileEditorProps {
     path: string;
     /* What the file read as, which the draft starts from when there is none yet. */
     disk: DiskText;
+    /* Undefined for plain text, which is also every file too long to color. */
     language: string | undefined;
     wrap: boolean;
-    readOnly: boolean;
-    /* Null when the editor came up for a draft rather than for a click. */
-    start: EditStart | null;
+    /* Why the file cannot be edited here, null when it can. */
+    readOnlyReason: string | null;
+    /* Where the placeholder was scrolled to when the editor took over, so nothing moves. */
+    placeholderScroll: RefObject<number>;
     /* Whether the node it sits in has the keyboard; null outside a node, where only a click gives it. */
     focused: boolean | null;
     reveal: RevealLineRequest | null;
 }
 
 /*
- * The file as an editor, in the place the viewer had. Its text is the file's one draft, so another
- * surface on the same file types into the same text, and leaving it saves.
+ * The file as an editor. Its text is the file's one draft, so another surface on the same file types
+ * into the same text, and leaving it saves.
  */
-export function FileEditor({ engine, endpointId, path, disk, language, wrap, readOnly, start, focused, reveal }: FileEditorProps) {
+export function FileEditor({ engine, endpointId, path, disk, language, wrap, readOnlyReason, placeholderScroll, focused, reveal }: FileEditorProps) {
     const host = useRef<HTMLDivElement>(null);
     const editorRef = useRef<Editor | null>(null);
     const theme = useCodeTheme();
     // What the editor mounts with; every later change reaches it through the effects below.
-    const initial = useRef({ disk, language, wrap, readOnly, start, theme, focused });
-    // A jump asked for before a click turned the editor on is behind the person already.
-    const revealed = useRef(start === null ? null : (reveal?.nonce ?? null));
+    const initial = useRef({ disk, language, wrap, readOnlyReason, theme, reveal });
+    const revealed = useRef<number | null>(null);
+    const readOnly = readOnlyReason !== null;
 
     useLayoutEffect(() => {
         const element = host.current;
@@ -48,27 +43,26 @@ export function FileEditor({ engine, endpointId, path, disk, language, wrap, rea
             return;
         }
         const first = initial.current;
-        textDrafts.open(endpointId, path, first.disk);
-        const editor = engine.mount(element, {
-            text: textDrafts.draft(endpointId, path)?.text ?? first.disk.text,
-            ...(first.language === undefined ? {} : { language: first.language }),
-            theme: first.theme,
-            readOnly: first.readOnly,
-            wrap: first.wrap,
-            ...(first.start ?? {})
-        });
-        const unbind = bindDraftEditor(editor, textDrafts, endpointId, path);
+        const { editor, unmount } = mountDraftEditor(
+            engine,
+            element,
+            textDrafts,
+            { endpointId, path, disk: first.disk },
+            {
+                ...(first.language === undefined ? {} : { language: first.language }),
+                theme: first.theme,
+                ...(first.readOnlyReason === null ? {} : { readOnly: true, readOnlyReason: first.readOnlyReason }),
+                wrap: first.wrap,
+                ...(first.reveal === null ? { scrollTop: placeholderScroll.current } : { line: first.reveal.line })
+            }
+        );
+        revealed.current = first.reveal?.nonce ?? null;
         editorRef.current = editor;
-        if (first.start !== null && !first.readOnly && first.focused !== false) {
-            editor.focus();
-        }
         return () => {
             editorRef.current = null;
-            unbind();
-            editor.dispose();
-            void textDrafts.save(endpointId, path);
+            unmount();
         };
-    }, [engine, endpointId, path]);
+    }, [engine, endpointId, path, placeholderScroll]);
 
     useEffect(() => {
         editorRef.current?.setTheme(theme);
@@ -79,8 +73,8 @@ export function FileEditor({ engine, endpointId, path, disk, language, wrap, rea
     }, [wrap]);
 
     useEffect(() => {
-        editorRef.current?.setReadOnly(readOnly);
-    }, [readOnly]);
+        editorRef.current?.setReadOnly(readOnly, readOnlyReason ?? undefined);
+    }, [readOnly, readOnlyReason]);
 
     useEffect(() => {
         if (reveal === null || reveal.nonce === revealed.current) {

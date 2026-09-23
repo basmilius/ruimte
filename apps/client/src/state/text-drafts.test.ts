@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import type { FsReadResult, FsWriteResult } from '@ruimte/contracts';
 import { FakeEditorEngine } from '@ruimte/editor/fake';
-import { bindDraftEditor } from '@/shell/panels/draft-editor';
+import { bindDraftEditor, mountDraftEditor } from '@/shell/panels/draft-editor';
 import { AUTOSAVE_DELAY_MS, type DraftLink, TextDrafts, useTextDrafts } from '@/state/text-drafts';
 import { TransportError } from '@/transport/transport';
 
@@ -299,6 +299,38 @@ describe('surfaces', () => {
         unbindTab();
         node.type('later');
         expect(tab.getText()).toBe('one from the node');
+    });
+
+    test('an editor taken down with its node saves on the way out and leaves what did not save to the next one', async () => {
+        const engine = new FakeEditorEngine();
+        const target = { endpointId: MACHINE, path: PATH, disk: { text: 'one', mtime: 1 } };
+        const culled = mountDraftEditor(engine, {} as HTMLElement, drafts, target, { theme: 'light', language: 'typescript' });
+        expect(engine.last.path).toBe(PATH);
+        engine.last.type('mine');
+
+        culled.unmount();
+        releaseSurface();
+        await flush();
+        expect(engine.editors[0]!.disposed).toBe(true);
+        expect(link.writes.map((write) => write.text)).toEqual(['mine']);
+        await link.refuse('io');
+        expect(draft()?.text).toBe('mine');
+
+        mountDraftEditor(engine, {} as HTMLElement, drafts, target, { theme: 'light' });
+        expect(engine.last.getText()).toBe('mine');
+    });
+
+    test('a read-only editor still follows the file on disk', () => {
+        const engine = new FakeEditorEngine();
+        mountDraftEditor(
+            engine,
+            {} as HTMLElement,
+            drafts,
+            { endpointId: MACHINE, path: PATH, disk: { text: 'one', mtime: 1 } },
+            { theme: 'light', readOnly: true }
+        );
+        drafts.received(MACHINE, PATH, { text: 'two', mtime: 2 });
+        expect(engine.last.getText()).toBe('two');
     });
 
     test('leaving the editor saves at once, and a reload reaches every editor', async () => {
