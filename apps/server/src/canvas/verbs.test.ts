@@ -817,7 +817,7 @@ describe('scoping', () => {
     });
 
     test('--view picks another canvas, where the caller is nobody', async () => {
-        expect(await post('node', ['list', '--view', 'board'])).toEqual({ status: 200, lines: ['self\t-\tyou are not a node on this canvas'] });
+        expect(await post('node', ['list', '--view', 'board'])).toEqual({ status: 200, lines: ['self\t-\tnone of these nodes is you'] });
     });
 
     test('a chat that is a view of its own needs --view, and hears which canvases there are', async () => {
@@ -1602,9 +1602,7 @@ describe('team', () => {
             ['agent', 'claude']
         ]) {
             const refused = await post(verb[0]!, verb.slice(1), 'chat');
-            expect(refused.lines[0]).toBe(
-                'refused\tview-required\tName the canvas with --view; what you open lands there without an edge from you, so the edge column shows -'
-            );
+            expect(refused.lines[0]).toBe(`refused\tview-required\t${OPENING_OFF_CANVAS}`);
         }
         const { lines } = await post('team', [...args(THREE), '--view', 'board'], 'chat');
         expect(lines.every((line) => line.split('\t')[3] === 'board')).toBe(true);
@@ -2688,7 +2686,7 @@ describe('notify', () => {
     test('a caller that is a view of its own has no line to travel', async () => {
         const { status, lines } = await post('notify', ['term-1', '--text', 'hi'], 'chat');
         expect(status).toBe(422);
-        expect(lines[0]).toBe('refused\tnot-on-a-canvas\tA message travels along a line from you into a node, and no line runs from you');
+        expect(lines[0]).toBe('refused\tnot-on-a-canvas\tA message travels along a line between two nodes of one canvas, and this view has none');
     });
 
     test('a chat that is a view of its own cannot be notified, and the refusal says why in one sentence', async () => {

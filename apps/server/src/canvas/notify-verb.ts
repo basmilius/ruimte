@@ -58,7 +58,7 @@ export const notifyVerb = defineVerb({
             throw new VerbRefusal('self-notify', `${id} is you; a node needs no message to itself`);
         }
         if (place.canvasId === null) {
-            throw new VerbRefusal('not-on-a-canvas', 'A message travels along a line from you into a node, and no line runs from you', [
+            throw new VerbRefusal('not-on-a-canvas', 'A message travels along a line between two nodes of one canvas, and this view has none', [
                 'see\truimte-context link new\ta line needs both of its ends on one canvas'
             ]);
         }

@@ -439,8 +439,8 @@ export const nodeListAction = defineAction('node', {
         'flag\t--view V\toptional\tThe canvas to list, by view id; ruimte-context view list lists them',
         'prints\tid\tkind\ttitle\tx\ty\tw\th\tgroup\tone line per node, rounded to whole pixels',
         'units\tx and y are the top left corner of the node in canvas pixels, w and h its size; the canvas has no edges and x or y may be negative',
-        'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
-        'self\tThe last row is not a node: it is self and your own id, or self and a dash when you are not a node on this canvas',
+        'where\tWithout --view the view you are in, when that is a canvas; from any other view, name one with --view',
+        'self\tThe last row is not a node: it is self and your own id, or self and a dash when none of these nodes is you',
         'self\tA terminal session also carries its own id in $RUIMTE_SESSION_ID; a chat backend is given none, which is what the self row is for',
         'groups\tA group is a row of kind group; its id is what --group takes on agent, and the group column names the frame a node stands in, empty on the canvas itself',
         'see\truimte-context link list\tthe lines of the same canvas, which this list does not show',
@@ -465,7 +465,7 @@ export const nodeListAction = defineAction('node', {
                 ].join('\t')
             ),
             // Which row is the caller, which it can read nowhere else: a chat backend has no $RUIMTE_SESSION_ID.
-            mine ? `self\t${call.caller}` : 'self\t-\tyou are not a node on this canvas'
+            mine ? `self\t${call.caller}` : 'self\t-\tnone of these nodes is you'
         ];
     }
 });

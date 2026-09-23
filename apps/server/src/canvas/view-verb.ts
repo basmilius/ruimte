@@ -382,7 +382,7 @@ const listSub = defineAction('view', {
         `kinds\t${VIEW_KINDS.join('\t')}`,
         'delete\tyes or no: whether ruimte-context view delete would remove that view for you, with the reason beside it',
         'why\tyours, this machine frees every view, a person made it, <id> made it, or you are in it',
-        'self\tThe last row is self and the view you are in: the canvas you stand on, or your own id when you are a view of your own',
+        'self\tThe last row is self and the id of the view you are in',
         'note\tA separator is a line in the sidebar and has an empty name',
         'see\truimte-context help view\tmaking a view, renaming it, marking it, moving it, removing it'
     ],
