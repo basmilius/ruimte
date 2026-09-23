@@ -23,7 +23,17 @@ import {
 import type { GitFile, GitFileState } from '@ruimte/contracts';
 import { GIT_GROUP, GIT_REPO } from '@/shell/panels/classes';
 import { revealableInFiles } from '@/shell/panels/files-tree';
-import { dirPathOf, expansionChanges, mergeCollapsedPaths, pathsUnder, statusColor, type GitTreeRow } from '@/shell/panels/git-tree';
+import {
+    allDirs,
+    branchesUnder,
+    collapseKey,
+    dirPathOf,
+    expansionChanges,
+    mergeCollapsedPaths,
+    pathsUnder,
+    statusColor,
+    type GitTreeRow
+} from '@/shell/panels/git-tree';
 import { directoryHandle, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
@@ -253,6 +263,8 @@ function GitRepoTree({ state, checkout, files, named, folder, platform, collapse
     const scopeRef = useRef(scope);
     /* Set while this component folds the tree, so the folding is not read back as a person's doing. */
     const applyingRef = useRef(false);
+    /* The collapse set the tree last stood by, to tell which folders just folded. */
+    const foldedRef = useRef<readonly string[] | null>(null);
 
     /* The tree keeps the renderer it was made with, so this reads the files of the moment. */
     const decorate = useCallback(({ item }: FileTreeRowDecorationContext): FileTreeRowDecoration | null => {
@@ -316,9 +328,23 @@ function GitRepoTree({ state, checkout, files, named, folder, platform, collapse
     }, [files, model]);
 
     useEffect(() => {
+        const before = foldedRef.current;
+        foldedRef.current = collapsed;
+        const branches = before === null ? [] : branchesUnder(before, collapsed, allDirs([...filesRef.current.values()]), scope);
         applyingRef.current = true;
+        for (const dir of branches) {
+            directoryHandle(model, dir)?.collapse();
+        }
         applyExpansion(model, new Set(collapsed), scope);
         applyingRef.current = false;
+        if (branches.length === 0) {
+            return;
+        }
+        const current = useGit.getState().collapsedDirs;
+        const added = branches.map((dir) => collapseKey(scope, dir)).filter((key) => !current.includes(key));
+        if (added.length > 0) {
+            useGit.getState().setCollapsedDirs([...current, ...added]);
+        }
     }, [collapsed, scope, model]);
 
     /*

@@ -282,6 +282,12 @@ export function FilesPanel() {
                     void load(absolute);
                 }
             }
+            // The tree keeps a folder under a closed one open, so it would open again with its parent.
+            for (const dir of reported) {
+                if (!open.has(dir)) {
+                    directoryHandle(model, dir)?.collapse();
+                }
+            }
         });
     }, [folder, load, model]);
 

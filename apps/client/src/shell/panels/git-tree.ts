@@ -71,6 +71,20 @@ export const mergeCollapsedPaths = (current: string[], rows: readonly GitTreeRow
     return next.length === current.length && next.every((dir, index) => dir === current[index]) ? current : next;
 };
 
+/*
+ * The folders under the ones that just folded, however deep, that do not stand folded yet. The tree
+ * keeps a folder under a closed one open, so it would open again together with its parent.
+ */
+export const branchesUnder = (before: readonly string[], after: readonly string[], dirs: readonly string[], scope = ''): string[] => {
+    const had = new Set(before);
+    const folded = new Set(after);
+    const fresh = after.filter((key) => !had.has(key));
+    return dirs.filter((dir) => {
+        const key = collapseKey(scope, dir);
+        return !folded.has(key) && fresh.some((parent) => key.startsWith(`${parent}/`));
+    });
+};
+
 /* Which rows have to move for a tree to stand the way the collapse set says. The set is shared by
    every group and every repository, so it holds folders this tree never heard of. */
 export const expansionChanges = (rows: readonly GitTreeRow[], collapsed: ReadonlySet<string>, scope = ''): { collapse: string[]; expand: string[] } => {

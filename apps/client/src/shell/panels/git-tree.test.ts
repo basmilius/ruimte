@@ -1,6 +1,16 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitFile } from '@ruimte/contracts';
-import { activeDiff, allDirs, collapsedPathsOf, expansionChanges, mergeCollapsedPaths, pathsUnder, statusColor, type GitTreeRow } from './git-tree.ts';
+import {
+    activeDiff,
+    allDirs,
+    branchesUnder,
+    collapsedPathsOf,
+    expansionChanges,
+    mergeCollapsedPaths,
+    pathsUnder,
+    statusColor,
+    type GitTreeRow
+} from './git-tree.ts';
 
 const file = (path: string, status = 'M'): GitFile => ({ path, state: 'unstaged', status, added: 1, deleted: 0, binary: false });
 
@@ -72,6 +82,14 @@ describe('which folders stand folded up', () => {
     test('only the rows that differ from the set move, and the folders of other groups are left alone', () => {
         const rows = [dir('src/', true), dir('apps/', false), dir('docs/', false)];
         expect(expansionChanges(rows, new Set(['src', 'apps', 'elsewhere']))).toEqual({ collapse: ['src/'], expand: ['docs/'] });
+    });
+
+    test('a folder that folds takes the folders under it along', () => {
+        const dirs = ['src', 'src/state', 'src/state/deep', 'docs', 'srcs'];
+        expect(branchesUnder([], ['src'], dirs)).toEqual(['src/state', 'src/state/deep']);
+        expect(branchesUnder(['src'], ['src'], dirs)).toEqual([]);
+        expect(branchesUnder([], ['src', 'src/state/deep'], dirs)).toEqual(['src/state']);
+        expect(branchesUnder([], ['frontend/src'], dirs, 'frontend')).toEqual(['src/state', 'src/state/deep']);
     });
 
     test('a tree that already stands the way the set says moves nothing', () => {
