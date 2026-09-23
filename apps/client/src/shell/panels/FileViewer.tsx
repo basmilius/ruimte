@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { runAsPerson } from '@/actions/client-actions';
 import { FileText, Search } from 'lucide-react';
 import { DiffFile } from '@/shell/panels/DiffFile';
 import { FileBody } from '@/shell/panels/FileBody';
@@ -7,7 +8,6 @@ import { basenameOf } from '@/shell/panels/files-tree';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
-import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
@@ -53,7 +53,7 @@ function EmptyPreview() {
                             <button
                                 key={path}
                                 className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm text-text hover:bg-surface-hover"
-                                onClick={() => useFiles.getState().open(path, useSettings.getState().filesTabLimit)}
+                                onClick={() => void runAsPerson('file.preview', { path, line: null })}
                             >
                                 <FileIcon path={path} size={14} />
                                 <span className="min-w-0 truncate">{basenameOf(path)}</span>

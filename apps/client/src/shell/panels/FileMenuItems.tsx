@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { runAsPerson } from '@/actions/client-actions';
 import { Menu } from '@base-ui-components/react/menu';
 import { Copy, FileText, ListX, Minus, Pin, PinOff, Plus, RefreshCw, SquareX, X } from 'lucide-react';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { isCheckoutDiff, useFiles } from '@/state/files';
-import { useSettings } from '@/state/settings';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
@@ -23,7 +23,6 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
     const tab = useFiles((s) => s.tabs.find((entry) => entry.key === tabKey) ?? null);
     const pinned = tab?.pinned ?? false;
     const hasOthers = useFiles((s) => s.tabs.some((entry) => entry.key !== tabKey));
-    const tabLimit = useSettings((s) => s.filesTabLimit);
 
     if (tab === null) {
         return null;
@@ -53,7 +52,7 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
             {aboutFile && (
                 <>
                     {view !== undefined && (
-                        <Menu.Item className="menu-item" onClick={() => useFiles.getState().open(path, tabLimit)}>
+                        <Menu.Item className="menu-item" onClick={() => void runAsPerson('file.preview', { path, line: null })}>
                             <Icon icon={FileText} size={14} /> {t('file.tab.openItself')}
                         </Menu.Item>
                     )}

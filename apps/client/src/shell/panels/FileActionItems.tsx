@@ -1,18 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Columns2, Copy, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
-import { createNodeAction, createViewAction } from '@/actions/client-actions';
+import { createNodeAction, createViewAction, runAsPerson } from '@/actions/client-actions';
 import { showFileOnCanvas } from '@/project/views';
 import { isHtmlName } from '@/shell/panels/file-kind';
 import { localFileUrl } from '@/shell/panels/file-url';
-import { basenameOf, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
+import { basenameOf, revealableInFiles } from '@/shell/panels/files-tree';
 import { hasActiveCanvas, useDocument } from '@/state/document';
-import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 
 /* Which of the three surfaces these items are on, since a file already on one does not offer to go
@@ -48,7 +46,7 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
 
     return (
         <>
-            <Menu.Item className="menu-item" disabled={!revealableInFiles(folder, path)} onClick={() => useFiles.getState().revealInFiles(path)}>
+            <Menu.Item className="menu-item" disabled={!revealableInFiles(folder, path)} onClick={() => void runAsPerson('file.reveal', { path })}>
                 <Icon icon={Folder} size={14} /> {t('file.menu.revealInFiles')}
             </Menu.Item>
             <Menu.Item
@@ -76,10 +74,10 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
                 </Menu.Item>
             )}
             <Menu.Separator className={MENU_SEPARATOR} />
-            <Menu.Item className="menu-item" onClick={() => copyText(path)}>
+            <Menu.Item className="menu-item" onClick={() => void runAsPerson('file.copyPath', { path, relative: false })}>
                 <Icon icon={Copy} size={14} /> {t('file.menu.copyPath')}
             </Menu.Item>
-            <Menu.Item className="menu-item" disabled={folder === null} onClick={() => copyText(relativeTo(folder ?? '', path))}>
+            <Menu.Item className="menu-item" disabled={folder === null} onClick={() => void runAsPerson('file.copyPath', { path, relative: true })}>
                 <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
             </Menu.Item>
             {onRefresh !== undefined && (

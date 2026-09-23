@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Eye, Folder, GitMerge, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
 import { type GitActionKind, type GitCapabilitiesResult, type GitFile, type GitRef, type GitStash, type Worktree } from '@ruimte/contracts';
-import { performAsPerson } from '@/actions/client-actions';
+import { performAsPerson, runAsPerson } from '@/actions/client-actions';
 import { desktop } from '@/desktop/bridge';
 import { BranchMenu, type CheckoutRefs } from '@/shell/panels/BranchMenu';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
@@ -292,7 +292,7 @@ export function GitPanel() {
 
     /* The file next to its diff, for a change a person wants to read whole rather than as a patch. */
     const openFile = (path: string, file: GitFile): void => {
-        useFiles.getState().open(`${path}/${file.path}`, tabLimit);
+        void runAsPerson('file.preview', { path: `${path}/${file.path}`, line: null });
     };
 
     const openCommit = (path: string, commit: { hash: string }): void => {

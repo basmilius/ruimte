@@ -3,8 +3,10 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { buildBrowserMenu, type BrowserMenuAction, type BrowserMenuItem } from '@/browser/browser-menu';
 import { menuPointFor } from '@/browser/menu-point';
 import { openLinkBeside } from '@/browser/open-beside';
+import { drivePage } from '@/browser/open-page';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { desktop, type BrowserContextAction } from '@/desktop/bridge';
+import { splitKey } from '@/state/keys';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
@@ -76,13 +78,9 @@ export function BrowserContextMenu() {
         switch (action.kind) {
             // The registry owns the page, so its own history and its error banner stay in one place.
             case 'back':
-                browserRegistry.back(current.key);
-                return;
             case 'forward':
-                browserRegistry.forward(current.key);
-                return;
             case 'reload':
-                browserRegistry.reload(current.key, false);
+                drivePage(splitKey(current.key).id, action.kind);
                 return;
             case 'open-beside':
                 openLinkBeside(action.url, current.webContentsId);

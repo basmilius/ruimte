@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from 'react';
+import { runAsPerson } from '@/actions/client-actions';
 import { absoluteOf, basenameOf, isAbsolutePath } from '@/shell/panels/files-tree';
-import { useFiles } from '@/state/files';
 
 export interface FileRef {
     /* As it was written: absolute, or relative to the folder the text is read in. */
@@ -156,19 +156,18 @@ export const resolveFileRef = (cwd: string | null, ref: FileRef): string | null 
 
 /*
  * A reference followed: a file opens as a tab in the preview, a folder is brought into view in the
- * files panel, which is the only one of the two that can draw a directory. The tab limit comes from
- * the caller, the way every other place that opens a file reads it from the settings itself.
+ * files panel, which is the only one of the two that can draw a directory.
  */
-export const openFileLink = (cwd: string | null, ref: FileRef, limit: number): void => {
+export const openFileLink = async (cwd: string | null, ref: FileRef): Promise<void> => {
     const path = resolveFileRef(cwd, ref);
     if (path === null) {
         return;
     }
     if (ref.directory) {
-        useFiles.getState().revealInFiles(path);
+        await runAsPerson('file.reveal', { path });
         return;
     }
-    useFiles.getState().open(path, limit, undefined, ref.line);
+    await runAsPerson('file.preview', { path, line: ref.line ?? null });
 };
 
 /*

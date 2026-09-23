@@ -8,7 +8,6 @@ import type { TimelineTarget } from '@/chat/logic/timeline-target';
 import { openFileLink, useFileLinkCwd } from '@/shell/panels/file-links';
 import { useChatRow } from '@/state/chats';
 import { useProject } from '@/state/project';
-import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { DisabledReason } from '@/ui/DisabledReason';
@@ -41,10 +40,9 @@ export function TimelineMenuPopup({
     // A thread outside a chat (a sub-agent's transcript) has no cwd of its own; the project answers there.
     const cwd = useFileLinkCwd();
     const folder = useProject((s) => s.current?.folder ?? null);
-    const tabLimit = useSettings((s) => s.filesTabLimit);
     const openInPreview = (): void => {
         if (target.path !== null) {
-            openFileLink(cwd ?? folder, { path: target.path, ...(target.line === null ? {} : { line: target.line }), directory: false }, tabLimit);
+            void openFileLink(cwd ?? folder, { path: target.path, ...(target.line === null ? {} : { line: target.line }), directory: false });
         }
     };
     return (

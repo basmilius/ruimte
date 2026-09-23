@@ -1,3 +1,4 @@
+import { performAsPerson, runAsPerson } from '@/actions/client-actions';
 import {
     useCallback,
     useEffect,
@@ -196,13 +197,13 @@ export function FilesPanel() {
         async (dir: string): Promise<void> => {
             try {
                 // Always with the hidden entries: the eye button then rebuilds from the cache alone.
-                const result = await transport.request('fs.list', { path: dir, hidden: true });
+                const result = await performAsPerson('file.list', { path: dir, hidden: true });
                 setListed((current) => ({ folder, byDir: new Map(current.folder === folder ? current.byDir : []).set(dir, result.entries) }));
             } catch {
                 // A folder that went away keeps the rows it had until the next refresh.
             }
         },
-        [transport, folder]
+        [folder]
     );
 
     useEffect(() => {
@@ -355,15 +356,14 @@ export function FilesPanel() {
             return;
         }
         const timer = window.setTimeout(() => {
-            transport
-                .request('fs.search', { cwd: folder, query: query.trim(), limit: SEARCH_LIMIT })
+            performAsPerson('file.search', { query: query.trim(), limit: SEARCH_LIMIT })
                 .then((result) => setMatches(result.files))
                 .catch(() => setMatches([]));
         }, SEARCH_DEBOUNCE_MS);
         return () => {
             window.clearTimeout(timer);
         };
-    }, [transport, folder, query, searching]);
+    }, [folder, query, searching]);
 
     useEffect(() => {
         searchModel.resetPaths([...matches]);
@@ -373,7 +373,7 @@ export function FilesPanel() {
         if (!folder || !treePath || isDirectoryPath(treePath)) {
             return;
         }
-        useFiles.getState().open(absoluteOf(folder, treePath), tabLimit);
+        void runAsPerson('file.preview', { path: absoluteOf(folder, treePath), line: null });
     };
 
     /* One click opens a file, the way every row in this app opens what it points at. A directory

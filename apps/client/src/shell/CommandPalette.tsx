@@ -33,7 +33,7 @@ import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { ensureMachine } from '@/endpoint/reach';
 import { openFolderOn, openProject } from '@/project/open';
-import { createViewAction } from '@/actions/client-actions';
+import { createViewAction, performAsPerson, runAsPerson } from '@/actions/client-actions';
 import { revealNode, showFileOnCanvas, showView } from '@/project/views';
 import { appCommands, OPENING_COMMAND_IDS, type Command } from '@/shell/commands';
 import {
@@ -67,7 +67,6 @@ import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
-import { useFiles } from '@/state/files';
 import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
 import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
@@ -468,8 +467,7 @@ export function CommandPalette() {
             return;
         }
         const timer = window.setTimeout(() => {
-            transport
-                .request('fs.search', { cwd: folder, query: trimmed, limit: FILE_RESULTS })
+            performAsPerson('file.search', { query: trimmed, limit: FILE_RESULTS })
                 .then((result) => {
                     if (mine === fileGeneration.current) {
                         setFileMatches(result.files);
@@ -482,12 +480,12 @@ export function CommandPalette() {
                 });
         }, FILE_DEBOUNCE_MS);
         return () => window.clearTimeout(timer);
-    }, [transport, browsing, folder, grepping, picking, query]);
+    }, [browsing, folder, grepping, picking, query]);
 
     /* A file row does what the palette was opened for: a node where the menu was clicked, a view of
        its own, or the preview tab every other route here means. */
     const openFile = useCallback(
-        (path: string): void => {
+        (path: string, line: number | null = null): void => {
             if (folder === null) {
                 return;
             }
@@ -500,7 +498,7 @@ export function CommandPalette() {
                 void createViewAction('file', { path: absolute });
                 return;
             }
-            useFiles.getState().open(absolute, useSettings.getState().filesTabLimit);
+            void runAsPerson('file.preview', { path: absolute, line });
         },
         [filePick, folder]
     );
@@ -719,7 +717,7 @@ export function CommandPalette() {
             return;
         }
         setOpen(false);
-        openFile(match.path);
+        openFile(match.path, match.line);
     };
 
     /* The machines take the list over and the field empties, so it can narrow them; the path the

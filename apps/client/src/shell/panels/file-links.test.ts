@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { openFileLink, parseFileRef, resolveFileRef } from '@/shell/panels/file-links';
 import { FILES_VIEW_ID } from '@/shell/files-view';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
+import { useProject } from '@/state/project';
 
 describe('parseFileRef', () => {
     test('takes a path with a separator, whatever the extension is', () => {
@@ -77,41 +78,44 @@ describe('resolveFileRef', () => {
 });
 
 describe('openFileLink', () => {
-    const LIMIT = 5;
-
     beforeEach(() => {
         // Without a project id, the tabs stay out of the storage the test environment does not have.
         useFiles.setState({ projectId: null, tabs: [], active: null, focusRequest: 0, reveal: null, revealLine: null });
         useDocument.getState().load(null, null);
+        useProject.setState({ current: { folder: '/repo' } as never });
     });
 
-    test('a file opens as a tab, and the files take a cell of the grid', () => {
-        openFileLink('/repo', { path: 'src/main.ts', directory: false }, LIMIT);
+    afterEach(() => {
+        useProject.setState({ current: null });
+    });
+
+    test('a file opens as a tab, and the files take a cell of the grid', async () => {
+        await openFileLink('/repo', { path: 'src/main.ts', directory: false });
         expect(useFiles.getState().tabs.map((tab) => tab.path)).toEqual(['/repo/src/main.ts']);
         expect(useDocument.getState().activeViewId).toBe(FILES_VIEW_ID);
     });
 
-    test('the line a reference names travels to the viewer, once per ask', () => {
-        openFileLink('/repo', { path: 'src/main.ts', line: 42, directory: false }, LIMIT);
+    test('the line a reference names travels to the viewer, once per ask', async () => {
+        await openFileLink('/repo', { path: 'src/main.ts', line: 42, directory: false });
         expect(useFiles.getState().revealLine).toEqual({ key: '/repo/src/main.ts', line: 42, nonce: 1 });
-        openFileLink('/repo', { path: 'src/main.ts', line: 42, directory: false }, LIMIT);
+        await openFileLink('/repo', { path: 'src/main.ts', line: 42, directory: false });
         expect(useFiles.getState().revealLine?.nonce).toBe(2);
     });
 
-    test('a file without a line leaves the jump that was asked for before it alone', () => {
-        openFileLink('/repo', { path: 'src/main.ts', line: 42, directory: false }, LIMIT);
-        openFileLink('/repo', { path: 'src/other.ts', directory: false }, LIMIT);
+    test('a file without a line leaves the jump that was asked for before it alone', async () => {
+        await openFileLink('/repo', { path: 'src/main.ts', line: 42, directory: false });
+        await openFileLink('/repo', { path: 'src/other.ts', directory: false });
         expect(useFiles.getState().revealLine?.line).toBe(42);
     });
 
-    test('a folder is brought into view in the files panel instead of opened as a tab', () => {
-        openFileLink('/repo', { path: 'src/usage/', directory: true }, LIMIT);
+    test('a folder is brought into view in the files panel instead of opened as a tab', async () => {
+        await openFileLink('/repo', { path: 'src/usage/', directory: true });
         expect(useFiles.getState().tabs).toEqual([]);
         expect(useFiles.getState().reveal?.path).toBe('/repo/src/usage');
     });
 
-    test('a relative reference with no folder to count from opens nothing', () => {
-        openFileLink(null, { path: 'src/main.ts', directory: false }, LIMIT);
+    test('a relative reference with no folder to count from opens nothing', async () => {
+        await openFileLink(null, { path: 'src/main.ts', directory: false });
         expect(useFiles.getState().tabs).toEqual([]);
         expect(useDocument.getState().layout).toBeNull();
     });

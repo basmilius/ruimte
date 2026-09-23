@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { BrowserSplash } from '@/browser/BrowserSplash';
 import { classifyLoadError, type LoadErrorKind } from '@/browser/load-error';
-import { openPage } from '@/browser/open-page';
+import { drivePage, openPage } from '@/browser/open-page';
 import { prettyUrl } from '@/browser/pretty-url';
 import { browserRegistry, useBrowserRow } from '@/browser/registry';
 import { BrowserStream } from '@/browser/BrowserStream';
@@ -38,7 +38,6 @@ import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
 import { formatShortcut, KEY_SHORTCUTS } from '@/ui/shortcut';
-import { browserClientFor } from '@/transport/connections';
 
 /*
  * Keeps one page alive for this client. The view's address starts it; navigation stays in the
@@ -71,19 +70,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     const endpointId = useEndpointId();
     const key = endpointKey(endpointId, id);
     const native = isDesktop();
-    const command = (action: 'back' | 'forward' | 'reload' | 'stop', ignoreCache?: boolean): void => {
-        if (!native) {
-            browserClientFor(endpointId)?.command(id, action, ignoreCache);
-        } else if (action === 'back') {
-            browserRegistry.back(key);
-        } else if (action === 'forward') {
-            browserRegistry.forward(key);
-        } else if (action === 'reload') {
-            browserRegistry.reload(key, ignoreCache ?? false);
-        } else {
-            browserRegistry.stop(key);
-        }
-    };
+    const command = (action: 'back' | 'forward' | 'reload' | 'stop', ignoreCache?: boolean): void => drivePage(id, action, ignoreCache);
     const [draft, setDraft] = useState<string | null>(null);
     // The field reads short until someone puts the keyboard in it, and whole while they edit.
     const [editing, setEditing] = useState(false);
@@ -163,7 +150,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                         }
                         e.stopPropagation();
                         if (e.key === 'Enter' && url.trim() !== '') {
-                            openPage(id, endpointId, url);
+                            openPage(id, url);
                             setDraft(null);
                             e.currentTarget.blur();
                         }
@@ -253,7 +240,7 @@ function BrowserErrorPlate({ id }: { id: string }) {
                 action={
                     <div className="flex items-center gap-2">
                         {error.retryable && (
-                            <Button variant="secondary" size="sm" onClick={() => browserRegistry.reload(key, true)}>
+                            <Button variant="secondary" size="sm" onClick={() => drivePage(id, 'reload', true)}>
                                 {t('common:action.retry')}
                             </Button>
                         )}

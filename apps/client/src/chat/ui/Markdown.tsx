@@ -12,7 +12,6 @@ import { rehypeChips, type ChipOptions } from '@/chat/ui/rehype-chips';
 import { rehypeFadeWords } from '@/chat/ui/rehype-fade';
 import { remarkHtmlAsText } from '@/chat/ui/remark-html-as-text';
 import { openFileLink, useFileLinkCwd, useFileLinkTarget, type FileRef } from '@/shell/panels/file-links';
-import { useSettings } from '@/state/settings';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 
@@ -28,7 +27,6 @@ const INLINE_CODE = 'rounded-sm bg-surface-sunken px-1 py-px font-mono text-code
  */
 function FileLink({ target, className, children }: { target: FileRef; className?: string; children: ReactNode }) {
     const cwd = useFileLinkCwd();
-    const limit = useSettings((s) => s.filesTabLimit);
     return (
         // `select-text` because a thread is copied as often as it is clicked, and a button is not
         // selectable on its own.
@@ -37,7 +35,7 @@ function FileLink({ target, className, children }: { target: FileRef; className?
             className={clsx('cursor-pointer select-text', className)}
             data-file-path={target.path}
             data-file-line={target.line}
-            onClick={() => openFileLink(cwd, target, limit)}
+            onClick={() => void openFileLink(cwd, target)}
         >
             {children}
         </button>

@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import type { DevServer } from '@ruimte/contracts';
 import { DEV_SERVER_PROBE_PORTS, devServerTiles, type DevServerTile } from '@/browser/dev-servers';
 import { openPage } from '@/browser/open-page';
-import { useEndpointId } from '@/state/keys';
 import { useOptionalConnection } from '@/transport/context';
 import { SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -21,7 +20,6 @@ const REFRESH_MS = 5_000;
  */
 export function BrowserSplash({ id, className }: { id: string; className?: string }) {
     const { t } = useTranslation('browser');
-    const endpointId = useEndpointId();
     const transport = useOptionalConnection()?.transport ?? null;
     const [running, setRunning] = useState<readonly DevServer[]>([]);
 
@@ -62,7 +60,7 @@ export function BrowserSplash({ id, className }: { id: string; className?: strin
                         icon={tile.running ? <span className="size-2 rounded-full bg-positive" /> : <Icon icon={Globe} size={16} />}
                         title={`localhost:${tile.port}`}
                         description={tile.detail}
-                        onClick={() => openPage(id, endpointId, tile.url)}
+                        onClick={() => openPage(id, tile.url)}
                     />
                 ))}
             </div>

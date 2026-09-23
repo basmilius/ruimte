@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import i18next from 'i18next';
 import type { FsGrepMatch } from '@ruimte/contracts';
-import { useFocusedMachine } from '@/transport/connections';
+import { performAsPerson } from '@/actions/client-actions';
 
 // Long enough that a typed word is one search, short enough that the list feels like it follows.
 const GREP_DEBOUNCE_MS = 140;
@@ -68,7 +68,6 @@ export const firstContextLine = (match: FsGrepMatch): number => match.line - mat
 export const useGrepSearch = (folder: string | null, query: string, options: GrepOptions): GrepState => {
     const [answer, setAnswer] = useState<Answer>(NOTHING);
     const generation = useRef(0);
-    const { transport } = useFocusedMachine();
 
     useEffect(() => {
         const trimmed = query.trim();
@@ -77,15 +76,13 @@ export const useGrepSearch = (folder: string | null, query: string, options: Gre
             return;
         }
         const timer = window.setTimeout(() => {
-            transport
-                .request('fs.grep', {
-                    cwd: folder,
-                    query: trimmed,
-                    limit: GREP_LIMIT,
-                    caseSensitive: options.caseSensitive,
-                    wholeWord: options.wholeWord,
-                    regex: options.regex
-                })
+            performAsPerson('file.grep', {
+                query: trimmed,
+                limit: GREP_LIMIT,
+                caseSensitive: options.caseSensitive,
+                wholeWord: options.wholeWord,
+                regex: options.regex
+            })
                 .then((result) => {
                     if (mine === generation.current) {
                         setAnswer({ ...result, query: trimmed, failure: null });
@@ -100,7 +97,7 @@ export const useGrepSearch = (folder: string | null, query: string, options: Gre
         return () => {
             window.clearTimeout(timer);
         };
-    }, [transport, folder, query, options.caseSensitive, options.wholeWord, options.regex]);
+    }, [folder, query, options.caseSensitive, options.wholeWord, options.regex]);
 
     const trimmed = query.trim();
     if (folder === null || trimmed === '') {
