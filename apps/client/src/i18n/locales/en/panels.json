@@ -169,7 +169,6 @@
     "noMatch": "No files match the filter.",
     "onlyHidden": "Everything in this folder is hidden or ignored. Turn on Show hidden and ignored files in the More menu.",
     "reading": "Reading {{name}}.",
-    "remoteMachine": "Remote machine",
     "showHidden": "Show hidden and ignored files"
   },
   "git": {

@@ -169,7 +169,6 @@
     "noMatch": "Geen bestanden die aan het filter voldoen.",
     "onlyHidden": "Alles in deze map is verborgen of genegeerd. Zet Verborgen en genegeerde bestanden tonen aan in het menu Meer.",
     "reading": "{{name}} lezen.",
-    "remoteMachine": "Machine op afstand",
     "showHidden": "Verborgen en genegeerde bestanden tonen"
   },
   "git": {

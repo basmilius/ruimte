@@ -69,7 +69,6 @@ import { copyText } from '@/ui/clipboard';
 import { EmptyState } from '@/ui/EmptyState';
 import { FILE_TREE_ICONS } from '@/ui/file-icon';
 import { Icon } from '@/ui/Icon';
-import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { Kbd } from '@/ui/Kbd';
@@ -112,8 +111,6 @@ export function FilesPanel() {
     const folder = useProject((s) => s.current?.folder ?? null);
     const onCanvas = useDocument(hasActiveCanvas);
     const platform = useServer((s) => s.platform);
-    const reachability = useServer((s) => s.reachability);
-    const machine = useServer((s) => s.label);
     const showHidden = useSettings((s) => s.filesShowHidden);
     const endpointId = useEndpointId();
     /* Which file the preview has up; a diff tab points at the same file and counts as well. */
@@ -526,11 +523,6 @@ export function FilesPanel() {
                     </MenuPopup>
                 </Menu.Root>
             </div>
-            {reachability !== null && reachability !== 'loopback' && (
-                <div className="flex h-7 shrink-0 items-center px-2">
-                    <Pill>{machine ?? t('files.remoteMachine')}</Pill>
-                </div>
-            )}
             {empty !== null ? (
                 <div className="grid min-h-0 grow place-items-center">{empty}</div>
             ) : (
