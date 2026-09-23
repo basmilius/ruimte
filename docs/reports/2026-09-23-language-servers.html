@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Fase 3: taalservers op de machine</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #353e53;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; font-variant-numeric: tabular-nums; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.panel p:last-child, .panel ul:last-child { margin-bottom: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+.step p:last-child { margin-bottom: 0; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+.diagram { display: block; max-width: 100%; height: auto; margin: 20px 0; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 14px; }
+.diagram .label { fill: var(--muted); font-size: 12px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); stroke-width: 1.5; }
+.diagram .ghost { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split, .split.three { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split, .split.three { grid-template-columns: 1fr; }
+  tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#kern">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">Ruimte / Ontwerp / 23 september 2026</p>
+  <h1>Fase 3: taalservers op de machine</h1>
+  <p class="intro">De editor kent één bestand tegelijk. Monaco's eigen taalservices zien geen <code>tsconfig.json</code>, geen <code>node_modules</code> en geen ander bestand van het project. Een import is voor ze een onbekende, en een typefout die een ander bestand veroorzaakt bestaat niet. Dit rapport ontwerpt de volgende stap. De daemon draait echte taalservers, één per project en taal, en de editor vraagt ze over de wire wat ze weten.</p>
+  <p class="status">Ontwerp, nog niets gebouwd. Wel gemeten tegen de TypeScript-server van deze repository.</p>
+  <p class="caption">Gelezen op <code>main</code> bij <code>f98633c7</code>. Bereik: <code>packages/editor</code>, <code>apps/client/src/shell/panels/{CodeFile,FileEditor,draft-editor,use-file-editing,edit-gate}</code>, <code>state/text-drafts.ts</code>, <code>apps/server/src/{fs,projects,processes}</code>, <code>chat/chat-process.ts</code>, <code>dispatcher.ts</code> en <code>packages/contracts/src/{fs,processes,index}.ts</code>. Dit rapport vervangt dat van 22 september over bestanden bewerken; de editor uit dat rapport staat op <code>main</code>.</p>
+  <nav aria-label="Inhoud">
+    <a href="#kern">De kern</a>
+    <a href="#nu">Hoe het nu zit</a>
+    <a href="#omvang">Omvang</a>
+    <a href="#servers">Welke servers</a>
+    <a href="#levensloop">Levensloop</a>
+    <a href="#documenten">Documenten</a>
+    <a href="#wire">De wire</a>
+    <a href="#editor">Editor en client</a>
+    <a href="#veiligheid">Veiligheid</a>
+    <a href="#tests">Tests</a>
+    <a href="#volgorde">Volgorde en open vragen</a>
+  </nav>
+</header>
+<main>
+
+<section id="kern" class="recommendation">
+  <h2>De kern</h2>
+  <p>De daemon wordt LSP-client. Hij start per project-root en taal één taalserver, de eerste keer dat iemand een bestand van die taal bewerkt. Elke client die het project open heeft deelt die server, en hij stopt als de laatste het project loslaat. De client praat nooit rechtstreeks met de server. Hij stuurt getypeerde requests uit <code>packages/contracts</code>, en de daemon vertaalt ze naar LSP en weer terug.</p>
+  <ul>
+    <li><strong>Eerste snede.</strong> Diagnostiek over het hele bestand met kennis van het project, aanvullen, hover, signature help, en naar de definitie, ook als die in een ander bestand staat. Referenties, hernoemen, formatteren en code actions komen later. Die vier schrijven in bestanden die niemand open heeft, en dat verdient een eigen ontwerp.</li>
+    <li><strong>Eerste taal.</strong> TypeScript en JavaScript, met de eigen TypeScript van het project. Vanaf versie 7 is <code>tsc --lsp --stdio</code> zelf een taalserver. Ik heb dat in deze repository gedraaid. Hover kostte 30 ms, het proces 142 MB geheugen. Python, Go, Rust, PHP en Swift zijn daarna elk een regel in een tabel plus een integratietest. CSS, HTML en JSON houden Monaco's workers.</li>
+    <li><strong>Niets installeren.</strong> De daemon zoekt in de <code>node_modules</code> van het project en op zijn eigen <code>PATH</code>. Vindt hij niets, dan zegt de editor welke server ontbreekt en werkt hij verder zoals nu.</li>
+    <li><strong>Eén keer toestemming per project.</strong> Een taalserver voert code van het project uit: de binary in <code>node_modules/.bin</code>, build scripts, macro's, <code>go list</code>. Een persoon zegt één keer per project ja. Dat antwoord staat onder <code>$RUIMTE_HOME</code>, zoals alles wat de daemon tegen een agent afdwingt, en nooit in <code>project.json</code> of <code>.ruimte/settings.json</code>. Een agent heeft geen werkwoord dat een server start.</li>
+    <li><strong>Eén document per pad.</strong> Elke client heeft per bestand één draft, en de server kent per pad één tekst. De daemon houdt per client een spiegel van die draft bij. De server krijgt de tekst van de client die als laatste iets veranderde of vroeg. Elk request noemt de <code>seq</code> van de tekst waar het over gaat, dus een antwoord valt nooit op tekst die al verschoven is.</li>
+  </ul>
+  <p>Ik raad <code>monaco-languageclient</code> af. Die library vervangt <code>monaco-editor</code> door een eigen build, brengt een tweede tokenizer naast Shiki mee en verwacht een ondoorzichtige JSON-RPC-lijn naar de server. Dat zijn drie dingen die dit ontwerp juist niet wil.</p>
+</section>
+
+<section id="nu">
+  <h2>Hoe het nu zit</h2>
+  <p>De editor uit fase 2 staat. Elk tekstbestand is een Monaco-editor, zonder aparte bewerkmodus, en een draft slaat zichzelf een seconde na het typen op. Wat ontbreekt is kennis van de rest van het project.</p>
+  <div class="table" role="region" aria-label="Wat er nu staat" tabindex="0">
+    <table>
+      <caption>Wat de code vandaag doet, per onderdeel</caption>
+      <thead><tr><th scope="col">Onderdeel</th><th scope="col">Nu</th><th scope="col">Weegt mee voor</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><code>packages/editor</code></th><td><code>Editor</code> en <code>EditorEngine</code> kennen tekst, taal, thema, cursor en wijzigingen. <code>loadMonacoEngine</code> is de enige deur naar Monaco, en de client importeert Monaco nooit. De kleuren komen van Shiki via <code>shiki-bridge.ts</code>.</td><td>Editor en client</td></tr>
+        <tr><th scope="row">Taalservices</th><td><code>services.ts</code> zet Monaco's workers aan voor TS/JS, CSS/SCSS/Less, JSON en HTML. Ze kennen alleen het ene bestand. De semantische diagnostiek van TypeScript staat uit, omdat die elke import als fout zou tonen. JSON-schema's staan uit en halen niets op. Daarnaast doet Monaco woordsuggesties uit de open documenten.</td><td>Editor en client</td></tr>
+        <tr><th scope="row">Modellen</th><td>Elke editor heeft een eigen model op <code>inmemory:/&lt;n&gt;/&lt;pad&gt;</code>. Twee oppervlakken op één bestand zijn dus twee modellen, omdat Monaco geen tweede model op dezelfde URI toestaat (<code>modelPath</code> in <code>languages.ts</code>).</td><td>Editor en client</td></tr>
+        <tr><th scope="row">Drafts</th><td><code>state/text-drafts.ts</code>: één draft per machine en pad per client, hoeveel tabs, views en nodes het bestand ook tonen. Autosave na 1000 ms. <code>stale</code> en <code>changed</code> wachten op een persoon. <code>Editor.setText</code> (een herlading) meldt zich niet als wijziging, de draft verandert dan wel.</td><td>Documenten</td></tr>
+        <tr><th scope="row">Bewerkgrens</th><td><code>editBlockOf</code> spiegelt de regel van <code>fs.write</code>: alleen binnen de projectmap en zijn worktrees, niet in <code>.ruimte</code>, niet boven 20.000 regels, niet met touch, niet onder zoom 0,6 op de canvas.</td><td>Veiligheid, editor</td></tr>
+        <tr><th scope="row">Schrijven</th><td><code>fs.write</code> met <code>expectedMtime</code>. De daemon controleert inode en mtime en weigert buiten de mappen die de client vasthoudt (<code>heldFolders</code>) en de worktrees onder <code>$RUIMTE_HOME/worktrees</code>.</td><td>Documenten, veiligheid</td></tr>
+        <tr><th scope="row">Projecthold</th><td><code>ProjectHolds</code>: een hold leeft zo lang als de socket. De laatste die loslaat roept <code>release</code> aan, wat de watcher stopt. Sessies lopen door tot iemand het project sluit.</td><td>Levensloop</td></tr>
+        <tr><th scope="row">Kindprocessen</th><td>Stdio-processen hebben al een seam, <code>ChatProcess</code> in <code>chat/chat-process.ts</code>, met een test die een CLI in hetzelfde proces geeft. Het processenpaneel toont alles wat de daemon start in de groep <code>daemon</code> en waarschuwt bij 2 GB geheugen. Het doodt niets zelf.</td><td>Levensloop, tests</td></tr>
+        <tr><th scope="row">Wire</th><td>Eén socket of één geordend DataChannel, frames tot 16 miljoen tekens, in stukken gesplitst. Afbreken bestaat per soort werk: <code>git.cancel</code> met een <code>actionId</code> die de client kiest, <code>chat.cancel</code>. Een request zelf heeft geen abort.</td><td>Wire</td></tr>
+        <tr><th scope="row">Omgeving</th><td>De service-definitie geeft de daemon het <code>PATH</code> van de login-shell. Sessies en chats krijgen <code>ruimte-context</code> vooraan op hun <code>PATH</code> en <code>RUIMTE_CONTEXT_URL</code> mee.</td><td>Servers, veiligheid</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="omvang">
+  <h2>Omvang: wat eerst, wat later</h2>
+  <p>De grens is één vraag. Schrijft de functie tekst in een bestand dat niet open is? Lezen en de tekst onder de cursor aanvullen passen in de drafts die er al zijn. Een wijziging over tien bestanden past daar niet in.</p>
+  <div class="table" role="region" aria-label="Omvang per functie" tabindex="0">
+    <table class="wide">
+      <caption>Functies en hun LSP-methode</caption>
+      <thead><tr><th scope="col">Functie</th><th scope="col">Methode</th><th scope="col">Snede</th><th scope="col">Waarom</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Diagnostiek, hele bestand</th><td><code>textDocument/publishDiagnostics</code></td><td><span class="badge confirmed">eerst</span></td><td>Dit is de grootste winst. De semantische fouten die nu uit staan komen terug, en dan kloppen ze.</td></tr>
+        <tr><th scope="row">Aanvullen</th><td><code>textDocument/completion</code></td><td><span class="badge confirmed">eerst</span></td><td>Zonder <code>completionItem/resolve</code>. Het label, de soort en de <code>detail</code>-regel komen mee, de documentatie volgt later.</td></tr>
+        <tr><th scope="row">Hover</th><td><code>textDocument/hover</code></td><td><span class="badge confirmed">eerst</span></td><td>Alleen lezen. Markdown, die Monaco zelf tekent, zonder vertrouwde links.</td></tr>
+        <tr><th scope="row">Signature help</th><td><code>textDocument/signatureHelp</code></td><td><span class="badge confirmed">eerst</span></td><td>Alleen lezen, klein antwoord.</td></tr>
+        <tr><th scope="row">Naar definitie</th><td><code>textDocument/definition</code></td><td><span class="badge confirmed">eerst</span></td><td>In hetzelfde bestand verspringt de cursor. In een ander bestand opent de client dat bestand op die regel, met <code>useFiles.open(path, limit, view, line)</code>, dat al bestaat.</td></tr>
+        <tr><th scope="row">Documentatie bij een aanvulling</th><td><code>completionItem/resolve</code></td><td><span class="badge info">direct daarna</span></td><td>Klein, maar het is een tweede request per gekozen regel. Eerst meten of de lijst zonder documentatie al volstaat.</td></tr>
+        <tr><th scope="row">Referenties</th><td><code>textDocument/references</code></td><td><span class="badge warning">later</span></td><td>Alleen lezen, maar er hoort een lijst van plekken bij, en die UI bestaat niet. Monaco's peek-venster wil een model voor elk doelbestand.</td></tr>
+        <tr><th scope="row">Hernoemen</th><td><code>textDocument/rename</code></td><td><span class="badge warning">later</span></td><td>Het antwoord is een <code>WorkspaceEdit</code> over bestanden die niet open zijn. Wie schrijft die weg, tegen welke mtime, en wat als een agent intussen een van die bestanden schrijft? Dat is een ontwerp op zich.</td></tr>
+        <tr><th scope="row">Formatteren</th><td><code>textDocument/formatting</code></td><td><span class="badge warning">later</span></td><td>Bij veel projecten formatteert niet de taalserver maar een eigen tool (deze repository heeft <code>bun run format</code>). Formatteren bij opslaan is een keuze die met autosave botst: elke seconde verspringt de tekst.</td></tr>
+        <tr><th scope="row">Code actions</th><td><code>textDocument/codeAction</code></td><td><span class="badge warning">later</span></td><td>Zelfde <code>WorkspaceEdit</code> als hernoemen, en vaak ook <code>workspace/executeCommand</code>, dat de server iets laat uitvoeren.</td></tr>
+        <tr><th scope="row">Diagnostiek voor het hele project</th><td><code>workspace/diagnostic</code></td><td><span class="badge">open</span></td><td>Een problemenpaneel is een ander product dan een editor. TypeScript 7 biedt het niet eens aan (<code>workspaceDiagnostics: false</code> in de meting).</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Monaco heeft voor al deze functies al toetsen. <code>register.all</code> laadt elke editorfunctie, dus F12 (definitie), F2 (hernoemen) en F8 (volgende fout) zijn nu al gebonden, zonder modifier. Dat botst met de regel dat elke sneltoets een modifier heeft. Vandaag doen ze weinig, omdat de worker maar één bestand kent. Met een server springt F12 naar een ander bestand. Mijn voorstel: de adapter haalt de kale F-toetsen weg en houdt Mod+klik en de chords met een modifier. Dit heb ik niet in de app geprobeerd; het volgt uit Monaco's standaardtoetsen.</p>
+</section>
+
+<section id="servers">
+  <h2>Welke servers, en hoe de daemon ze vindt</h2>
+  <p>De daemon zoekt op twee plekken en verder nergens. Eerst in het project zelf: <code>node_modules/.bin</code> en <code>.venv/bin</code> onder de root, want dan draait de versie die het project vastlegt. Daarna op het <code>PATH</code> van de daemon, dat de service van de login-shell heeft. Nooit <code>npx</code> of <code>bunx</code>, die iets ophalen als het er niet is, en nooit een eigen download. Als er niets is, zegt de status welke server ontbreekt en hoe die meestal geïnstalleerd wordt. De persoon beslist.</p>
+  <p>De root is de dichtstbijzijnde map boven het bestand met de marker van die taal, en nooit hoger dan de checkout waar het bestand in staat (<code>git/repos.ts</code>). Een worktree is een eigen checkout en krijgt dus een eigen server, met zijn eigen <code>node_modules</code>.</p>
+  <div class="table" role="region" aria-label="Servers per taal" tabindex="0">
+    <table class="wide">
+      <caption>De talen die het vaakst open gaan</caption>
+      <thead><tr><th scope="col">Taal</th><th scope="col">Server</th><th scope="col">Gevonden via</th><th scope="col">Root-marker</th><th scope="col">Voert zelf uit</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">TS/JS, TypeScript 7 en hoger</th><td><code>tsc --lsp --stdio</code></td><td>De <code>typescript</code> in <code>node_modules</code> van het project. <code>.bin/tsc</code> is een Node-script (<code>#!/usr/bin/env node</code>), dus de daemon start liever de native binary uit <code>@typescript/typescript-&lt;platform&gt;-&lt;arch&gt;</code>, zoals <code>lib/getExePath.js</code> hem vindt. Dan is Node niet nodig.</td><td>Map met <code>node_modules/typescript</code></td><td>Een binary uit het project. <span class="badge confirmed">gemeten</span></td></tr>
+        <tr><th scope="row">TS/JS, TypeScript 6 en lager</th><td><code>typescript-language-server --stdio</code></td><td><code>node_modules/.bin</code>, anders <code>PATH</code>. Hij gebruikt de <code>tsserver</code> van het project en valt terug op zijn eigen versie (<a href="https://github.com/typescript-language-server/typescript-language-server">README</a>).</td><td>Idem</td><td>tsserver-plugins uit <code>tsconfig.json</code>, dus JavaScript van het project.</td></tr>
+        <tr><th scope="row">Python</th><td><code>pyright-langserver --stdio</code> of <code>basedpyright-langserver --stdio</code></td><td><code>.venv/bin</code>, anders <code>PATH</code>. Op deze Mac staat <code>pyright-langserver</code> op <code>PATH</code>.</td><td><code>pyproject.toml</code>, <code>pyrightconfig.json</code></td><td>Vindt pyright geen <code>site-packages</code>, dan start hij de ingestelde Python-interpreter (<a href="https://github.com/microsoft/pyright/blob/main/docs/import-resolution.md">import-resolution</a>).</td></tr>
+        <tr><th scope="row">Go</th><td><code>gopls</code></td><td><code>PATH</code>. Meestal <code>go install golang.org/x/tools/gopls@latest</code>, dus in <code>$HOME/go/bin</code>, en dat staat niet altijd op het <code>PATH</code> van de login-shell.</td><td><code>go.work</code>, <code>go.mod</code></td><td>Het <code>go</code>-commando van het <code>PATH</code> (<a href="https://go.dev/gopls/">gopls</a>). Of dat een toolchain kan downloaden hangt af van <code>GOTOOLCHAIN</code>; dat heb ik niet nagegaan.</td></tr>
+        <tr><th scope="row">Rust</th><td><code>rust-analyzer</code></td><td><code>PATH</code>, meestal via <code>rustup component add rust-analyzer</code>.</td><td><code>Cargo.toml</code></td><td>Build scripts en proc macros, allebei standaard aan (<code>cargo.buildScripts.enable</code>, <code>procMacro.enable</code>, <a href="https://rust-analyzer.github.io/book/configuration.html">configuratie</a>). Uit te zetten via <code>initializationOptions</code>.</td></tr>
+        <tr><th scope="row">PHP</th><td><code>intelephense --stdio</code> of <code>phpactor language-server</code></td><td><code>vendor/bin</code> of <code>PATH</code>.</td><td><code>composer.json</code></td><td>Niet nagegaan. De maintainer van phpactor schrijft zelf in zijn <a href="https://github.com/phpactor/phpactor">README</a> dat er snellere servers komen.</td></tr>
+        <tr><th scope="row">Swift</th><td><code>sourcekit-lsp</code></td><td><code>xcrun --find sourcekit-lsp</code> op macOS (gevonden op deze Mac), <code>PATH</code> op Linux.</td><td><code>Package.swift</code>, <code>compile_commands.json</code></td><td>Werkt met SwiftPM en <code>compile_commands.json</code>. Zonder recente build of de experimentele achtergrondindex zijn functies over modules heen beperkt (<a href="https://github.com/swiftlang/sourcekit-lsp">README</a>). Een <code>.xcodeproj</code> zoals <code>apps/ios</code> krijgt zonder build server weinig.</td></tr>
+        <tr><th scope="row">CSS, SCSS, Less, HTML, JSON</th><td>Geen</td><td>Monaco's workers blijven.</td><td>n.v.t.</td><td>Niets. Wat een server hier toevoegt is vooral JSON-schema's, en die halen iets van het netwerk.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>De tabel is data in de daemon (<code>apps/server/src/lsp/servers.ts</code>): per taal de Shiki-ids, de markers, de kandidaten in volgorde en de <code>initializationOptions</code>. Een nieuwe taal is een regel en een integratietest, geen nieuwe code.</p>
+</section>
+
+<section id="levensloop">
+  <h2>Levensloop</h2>
+  <svg class="diagram" viewBox="0 0 900 230" role="img" aria-label="Twee clients met elk een draft, de daemon met een spiegel per client en een document per pad, en een server per root en taal">
+    <rect class="node" x="20" y="24" width="190" height="60" rx="10"/>
+    <text x="115" y="50" text-anchor="middle">Client A</text>
+    <text class="label" x="115" y="70" text-anchor="middle">editors, één draft per pad</text>
+    <rect class="node" x="20" y="120" width="190" height="60" rx="10"/>
+    <text x="115" y="146" text-anchor="middle">Client B</text>
+    <text class="label" x="115" y="166" text-anchor="middle">editors, één draft per pad</text>
+    <path class="edge" d="M210 54 H260 V112 H300"/>
+    <path class="edge" d="M210 150 H260 V112"/>
+    <text class="label" x="232" y="104" text-anchor="middle">lsp.*</text>
+    <rect class="node" x="300" y="72" width="250" height="80" rx="10"/>
+    <text x="425" y="100" text-anchor="middle">Daemon, LSP-client</text>
+    <text class="label" x="425" y="120" text-anchor="middle">spiegel per client en pad</text>
+    <text class="label" x="425" y="138" text-anchor="middle">één document per pad</text>
+    <path class="edge" d="M550 112 H610"/>
+    <rect class="node" x="610" y="72" width="270" height="80" rx="10"/>
+    <text x="745" y="100" text-anchor="middle">Server per root en taal</text>
+    <text class="label" x="745" y="120" text-anchor="middle">stdio, JSON-RPC</text>
+    <text class="label" x="745" y="138" text-anchor="middle">leest de schijf voor wat niet open is</text>
+    <rect class="ghost" x="610" y="170" width="270" height="44" rx="10"/>
+    <text class="label" x="745" y="197" text-anchor="middle">schijf, didChangeWatchedFiles</text>
+    <path class="edge" d="M745 152 V170"/>
+  </svg>
+
+  <h3>Starten</h3>
+  <p>Een server start bij het eerste <code>lsp.open</code> voor een bestand van zijn taal onder een root waar hij nog niet draait. Er gaat altijd een persoon aan vooraf. Iemand opende dat bestand, en het project heeft toestemming (zie <a href="#veiligheid">veiligheid</a>). Een tweede client op hetzelfde project krijgt dezelfde server. Starten gebeurt nooit bij het openen van het project, want een project met vijf talen zou dan vijf servers starten voor één blik op de canvas.</p>
+
+  <h3>Stoppen</h3>
+  <p>De server hoort bij de projecthold, net als de watcher. Roept <code>ProjectStore.release</code> de laatste hold af, dan stopt de daemon de servers van dat project. Eerst <code>shutdown</code> en <code>exit</code> volgens het protocol, na vijf seconden <code>SIGTERM</code>. Omdat een hold ook vervalt als een socket wegvalt, wacht de daemon eerst twee minuten. Een client die binnen die tijd terugkomt vindt een warme server. Voor TypeScript 7 maakt dat weinig uit, want starten kost milliseconden. Een Rust-workspace kan bij het starten minuten indexeren (niet gemeten).</p>
+  <p>Hoe verhoudt dit zich tot de regel dat een vastgelopen proces een waarschuwing krijgt en nooit een signaal waar niemand op drukte? Die regel beschermt werk, zoals een agent midden in een beurt of een shell met een build. Een taalserver heeft geen werk van iemand in handen, alleen een cache. Hem stoppen met het project kost opwarmtijd en verder niets. Een server stoppen omdat hij een tijd niets deed, stel ik niet voor. Dat is de daemon die oordeelt over een proces terwijl het project open is, en daar gaat de regel precies over. Een server die veel geheugen houdt ziet een persoon in het processenpaneel, waar de 2 GB-waarschuwing en de knop al zitten.</p>
+
+  <h3>Crashen, herstarten, hangen</h3>
+  <ul>
+    <li><strong>Crash.</strong> Stopt de server zonder dat de daemon erom vroeg, dan start het volgende request hem opnieuw, en de daemon stuurt de open documenten weer met <code>didOpen</code>. Na drie crashes binnen drie minuten stopt het herstarten. De status wordt <code>failed</code> en er komt een knop <em>Opnieuw starten</em> (<code>lsp.restart</code>). De laatste regels van stderr gaan mee in de status.</li>
+    <li><strong>Een traag antwoord.</strong> Elk request heeft een termijn op de daemon, vijf seconden voor aanvullen en tien voor de rest. Daarna antwoordt de daemon de client met <code>timeout</code> en stuurt hij <code>$/cancelRequest</code> naar de server. De server blijft draaien.</li>
+    <li><strong>Hangen.</strong> Drie termijnen achter elkaar zonder één antwoord maakt de status <code>unresponsive</code>. De editor toont een waarschuwing met <em>Opnieuw starten</em>, en alleen die knop stopt het proces. Dit is de regel van het processenpaneel, toegepast op een taalserver.</li>
+    <li><strong>Indexeren.</strong> <code>$/progress</code> van de server wordt <code>indexing</code> in de status, met een percentage als de server er een geeft.</li>
+  </ul>
+
+  <h3>Wat een persoon ziet</h3>
+  <p>Een kleine chip in de toolbar van het bestand, via het slot dat daar al is. De chip toont de naam van de server en zijn toestand (<em>starting</em>, <em>indexing 40%</em>, <em>ready</em>, <em>not found</em>, <em>failed</em>, <em>unresponsive</em>). Een klik opent een menu met de versie, de root, de laatste fout en <em>Opnieuw starten</em>. Is er geen server, dan zegt het menu wat de machine zocht en waar. De status reist als event <code>lsp.status</code> naar elke client die het project vasthoudt, alleen bij een verandering, zoals <code>chat.status</code>. Een client vraagt bij elke verse socket <code>lsp.list</code> voor de stand.</p>
+  <p>Het proces zelf staat in het processenpaneel in de groep <code>daemon</code>, zonder dat daarvoor iets verandert. Een nieuwe waarschuwingssoort in <code>ProcessAlertKindSchema</code> voeg ik niet toe. Dat zou een nieuwe enum-waarde zijn in een payload die oude clients valideren. Een client laat een event dat niet door zijn schema komt vallen (<code>dispatchEvent</code> in <code>link-transport.ts</code>), en de wire krijgt alleen optionele velden, requests en events.</p>
+</section>
+
+<section id="documenten">
+  <h2>Documenten</h2>
+  <p>LSP kent per URI één open document met één tekst. De specificatie is daar streng over: "An open notification must not be sent more than once without a corresponding close notification" (<a href="https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didOpen">didOpen</a>). Ruimte heeft per client één draft per pad. Twee clients met elk een eigen draft zijn twee teksten voor één URI. Een eigen URI per client zou dat oplossen, maar dan ziet de server een bestand dat niemand importeert en werkt niets over bestanden heen.</p>
+
+  <h3>De regel</h3>
+  <ol>
+    <li>De client meldt een pad aan met <code>lsp.open { path, seq, text }</code> zodra een editor op dat pad een draft vasthoudt, en af met <code>lsp.close</code> als de draft wegvalt. Meer oppervlakken op één pad zijn één draft en dus één aanmelding.</li>
+    <li>De client volgt de draft, niet de editor. <code>Editor.onChange</code> zwijgt bij een herlading, de draft niet. Bij elke verandering berekent de client het verschil met de vorige gestuurde tekst (<code>changedSpan</code> uit <code>text-span.ts</code> bestaat al) en stuurt <code>lsp.change { path, seq, changes }</code>.</li>
+    <li>De daemon houdt per client en pad een spiegel. De server kent per pad één document, met een versie die de daemon telt.</li>
+    <li>Is de spiegel van de client die verandert of vraagt dezelfde tekst als wat de server heeft, dan gaat de wijziging incrementeel door. Is het een andere tekst, dan krijgt de server eerst die hele tekst met één <code>didChange</code>. Wie het laatst typte of vroeg, bepaalt wat de server ziet.</li>
+    <li>Elk feature-request noemt de <code>seq</code> van de draft waar het over gaat. De daemon wacht tot de spiegel op die <code>seq</code> staat. Ligt de spiegel al verder, dan antwoordt hij <code>stale</code> en vraagt Monaco opnieuw.</li>
+    <li>Diagnostiek gaat alleen naar de clients waarvan de spiegel gelijk is aan de tekst die de server controleerde, met hun eigen <code>seq</code> erbij. Een client met een andere tekst krijgt geen fouten op verkeerde regels.</li>
+    <li>De laatste client die een pad afmeldt, of wiens socket wegvalt, laat de daemon <code>didClose</code> sturen. Vanaf dan leest de server de schijf.</li>
+  </ol>
+  <p>Het wisselen in stap 4 gebeurt zelden. Een draft slaat zich binnen een seconde op, dus twee clients hebben meestal dezelfde tekst. Alleen twee mensen die tegelijk in hetzelfde bestand typen laten de server heen en weer gaan. Dat kost dan een volle tekst per wissel, maximaal 2 MiB, en ook dan blijft elk antwoord juist.</p>
+
+  <h3>Schijf, <code>fs.changed</code> en <code>fs.write</code></h3>
+  <ul>
+    <li><strong>Een open bestand verandert op schijf.</strong> De draft herlaadt al vanzelf als hij niet dirty is (<code>weigh</code>), en de sync volgt de draft. Is hij dirty, dan houdt de server de tekst van de draft. Dat is wat de persoon ziet.</li>
+    <li><strong>Een bestand dat niet open is verandert.</strong> Een agent schrijft <code>types.ts</code>, en de fouten in het open <code>main.ts</code> moeten meebewegen. Servers vragen daarvoor met <code>client/registerCapability</code> om <code>workspace/didChangeWatchedFiles</code>. TypeScript 7 deed dat in de meting. De daemon ondersteunt het met een eigen recursieve watch per server, via de seam van <code>watch-seam.ts</code>. Een watch van <code>FolderWatcher</code> hoort bij een client en meldt mappen, maar LSP wil bestandsnamen.</li>
+    <li><strong>Opslaan.</strong> <code>fs.write</code> loopt al door de daemon. Na een geslaagde write van een pad dat open staat in een server stuurt de daemon <code>didSave</code>. Rust-analyzer draait zijn <code>cargo check</code> bij opslaan, dus daar hangt de volledige diagnostiek aan. Er komt niets bij op de wire.</li>
+  </ul>
+</section>
+
+<section id="wire">
+  <h2>De wire</h2>
+  <div class="split">
+    <div class="panel">
+      <h3>LSP doorgeven <span class="badge danger">afgewezen</span></h3>
+      <p>Eén request <code>lsp.rpc { server, message }</code> met de JSON-RPC ongezien erin. De client doet dan zelf LSP, en de daemon is een pijp.</p>
+      <ul>
+        <li>Het bericht is <code>z.unknown()</code>. Dat is een gat in de regel dat elke vorm in <code>packages/contracts</code> staat en aan beide kanten gevalideerd wordt.</li>
+        <li>De client ziet <code>file://</code>-URI's van de machine en kan elke methode sturen, <code>workspace/executeCommand</code> incluis.</li>
+        <li>Een aanvullijst gaat onbewerkt over de lijn: 424 KB in de meting.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Getypeerde requests <span class="badge confirmed">voorstel</span></h3>
+      <p>Per functie een request met een zod-schema, in de vorm die de editor gebruikt. Posities zijn nul-gebaseerd in UTF-16, paden zijn absolute paden op de machine, zoals bij <code>fs.read</code>.</p>
+      <ul>
+        <li>De daemon beslist welke methodes bestaan. Een nieuwe functie is een nieuw request, dus nooit een <code>PROTOCOL_VERSION</code>-bump.</li>
+        <li>De daemon filtert en snoeit een aanvullijst voordat die de lijn op gaat.</li>
+        <li>Een LSP-server die zich vreemd gedraagt wordt op de daemon gevangen, niet in elke client.</li>
+      </ul>
+    </div>
+  </div>
+  <pre><code>lsp.list        { projectId }                                   -&gt; { servers: LspStatus[] }
+lsp.allow       { projectId }                                   -&gt; { }
+lsp.open        { path, seq, text }                             -&gt; { served: true, server } | { served: false, reason }
+lsp.change      { path, seq, changes: { range, text }[] }       -&gt; { }
+lsp.close       { path }                                        -&gt; { }
+lsp.completion  { requestId, path, seq, position }              -&gt; { items, incomplete }
+lsp.hover       { requestId, path, seq, position }              -&gt; { markdown, range? } | null
+lsp.signature   { requestId, path, seq, position }              -&gt; { signatures, active, parameter } | null
+lsp.definition  { requestId, path, seq, position }              -&gt; { locations: { path, range }[] }
+lsp.cancel      { requestId }                                   -&gt; { }
+lsp.restart     { root, server }                                -&gt; { }
+
+event lsp.diagnostics  { path, seq, diagnostics }
+event lsp.status       { root, server, state, version?, progress?, detail? }
+
+errors: not-allowed, unavailable, outside-project, stale, cancelled, timeout</code></pre>
+  <p>Er komen alleen requests en events bij. Een client van vandaag kent ze niet en merkt niets, en de iPhone-app krijgt in dit plan geen editor.</p>
+
+  <h3>Gemeten: hoe groot is een antwoord</h3>
+  <p>Ik heb <code>tsc --lsp --stdio</code> van TypeScript 7.0.2 uit deze repository gestart met een klein script over stdio, en het <code>packages/editor/src/index.ts</code> gegeven. Dit is één run op deze Mac, geen reeks.</p>
+  <div class="table" role="region" aria-label="Meting tsc --lsp" tabindex="0">
+    <table>
+      <caption>TypeScript 7.0.2, <code>tsc --lsp --stdio</code>, root is deze repository</caption>
+      <thead><tr><th scope="col">Wat</th><th scope="col">Uitkomst</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><code>initialize</code></th><td>7 tot 8 ms</td></tr>
+        <tr><th scope="row">Hover op een import</th><td>27 tot 31 ms</td></tr>
+        <tr><th scope="row">Aanvullen op een lege regel</th><td>1.641 items, 424 KB JSON, 30 tot 51 ms</td></tr>
+        <tr><th scope="row">Aanvullen na <code>mon</code></th><td>1.070 items, 197 KB, <code>isIncomplete: false</code></td></tr>
+        <tr><th scope="row">Definitie van een type uit <code>shiki</code></th><td>Een echt pad onder <code>node_modules/.bun/shiki@4.4.3/…</code>, met <code>@</code> als <code>%40</code> in de URI</td></tr>
+        <tr><th scope="row">Definitie van <code>Promise</code></th><td><code>lib.es5.d.ts</code> in het platformpakket onder <code>node_modules</code>, een gewoon bestand</td></tr>
+        <tr><th scope="row">Positiecodering</th><td>Kiest <code>utf-8</code> als de client <code>utf-8</code> en <code>utf-16</code> aanbiedt, <code>utf-16</code> als de client alleen dat aanbiedt</td></tr>
+        <tr><th scope="row">Diagnostiek</th><td>Pusht <code>publishDiagnostics</code> en biedt ook pull (<code>diagnosticProvider</code>, <code>interFileDependencies: true</code>)</td></tr>
+        <tr><th scope="row">Geheugen na één bestand en vijf requests</th><td>142 MB RSS</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Wat daaruit volgt:</p>
+  <ul>
+    <li><strong>De daemon filtert de aanvullijst.</strong> Hij kent de tekst en dus het woord voor de cursor. Hij houdt de items die daar fuzzy op passen, in de volgorde van <code>sortText</code>, en stopt bij 200. Is er meer, dan staat <code>incomplete</code> op true en vraagt Monaco bij de volgende letter opnieuw. Per item gaan alleen label, soort, <code>detail</code>, <code>sortText</code>, <code>filterText</code> en de invoegtekst mee. Mijn schatting is 20 tot 30 KB per antwoord, gemeten is dat nog niet. Zonder die snoei zit een antwoord van 400 KB op het geordende DataChannel voor de terminaluitvoer.</li>
+    <li><strong>De daemon biedt alleen <code>utf-16</code> aan.</strong> Dat is de standaard die elke server moet kunnen (<a href="https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#positionEncodingKind">PositionEncodingKind</a>), en het is wat een JavaScript-string en Monaco tellen. Dan hoeft niemand om te rekenen.</li>
+    <li><strong>De daemon zet URI's om naar paden.</strong> De wire kent alleen absolute paden, zoals <code>fs.read</code>. <code>%40</code> wordt weer <code>@</code> voordat de client het ziet.</li>
+  </ul>
+
+  <h3>Afbreken</h3>
+  <p>Monaco geeft elke provider een cancellation token. De client kiest per request een <code>requestId</code>, zoals <code>git.cancel</code> dat met <code>actionId</code> doet. Bij een afgebroken token stuurt hij <code>lsp.cancel</code>. De daemon stuurt <code>$/cancelRequest</code> naar de server en antwoordt het oorspronkelijke request met <code>cancelled</code>. De server moet volgens de spec ook dan antwoorden (<a href="https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#cancelRequest">cancelRequest</a>, code <code>-32800</code>). De daemon vangt dat antwoord en gooit het weg. Een antwoord dat de client toch nog bereikt nadat de tekst verschoof, valt af op de <code>seq</code>.</p>
+
+  <h3>Diagnostiek als event</h3>
+  <p>Diagnostiek is een event en geen antwoord, want de server stuurt ze wanneer hij klaar is, ook na een wijziging in een ander bestand. <code>lsp.diagnostics</code> gaat alleen naar clients die het pad open hebben (zie de regel hierboven), en vervangt telkens de hele lijst voor dat pad. Pull-diagnostiek (<code>textDocument/diagnostic</code>, sinds 3.17) gebruik ik niet. Push werkt bij elke server in de tabel, en de daemon kan het event hetzelfde houden.</p>
+</section>
+
+<section id="editor">
+  <h2>Editor en client</h2>
+
+  <h3>De interface groeit met één object</h3>
+  <p>De client geeft bij het mounten een <code>LanguageFeatures</code> mee, een object met functies. De package vertaalt die naar Monaco-providers. De client importeert Monaco nog steeds niet, en de fake engine in <code>fake.ts</code> kan dezelfde functies in een test aanroepen.</p>
+  <pre><code>/* Zero-based, in UTF-16 code units, the way LSP and a JavaScript string count. */
+export interface TextPosition {
+    readonly line: number;
+    readonly character: number;
+}
+
+export interface TextRange {
+    readonly start: TextPosition;
+    readonly end: TextPosition;
+}
+
+export interface FileLocation {
+    /* Absolute on the machine, the path `fs.read` takes. */
+    readonly path: string;
+    readonly range: TextRange;
+}
+
+export interface LanguageFeatures {
+    completion?(at: TextPosition, signal: AbortSignal): Promise&lt;CompletionList | null&gt;;
+    hover?(at: TextPosition, signal: AbortSignal): Promise&lt;HoverInfo | null&gt;;
+    signatureHelp?(at: TextPosition, signal: AbortSignal): Promise&lt;SignatureInfo | null&gt;;
+    definition?(at: TextPosition, signal: AbortSignal): Promise&lt;readonly FileLocation[]&gt;;
+    onDiagnostics?(listener: (diagnostics: readonly TextDiagnostic[]) =&gt; void): () =&gt; void;
+    /* A definition in another file; the client opens it in a surface of its own. */
+    open(location: FileLocation): void;
+}
+
+export interface EditorOptions {
+    // ...what is there now, plus:
+    /* Answers from the machine; without it the editor keeps the built-in services. */
+    readonly features?: LanguageFeatures;
+}
+
+export interface Editor {
+    // ...what is there now, plus:
+    setFeatures(features: LanguageFeatures | null): void;
+}</code></pre>
+  <p>Monaco registreert providers per taal en voor de hele pagina. De adapter registreert er daarom één per taal, één keer, en zoekt bij elke aanroep via het model de <code>LanguageFeatures</code> van de editor op. <code>setFeatures</code> bestaat omdat een server later klaar kan zijn dan de editor, of kan uitvallen. De omzetting tussen Monaco's eengebaseerde regels en kolommen en LSP's nul-gebaseerde posities zit in de adapter, met een test.</p>
+  <p>Een definitie in een ander bestand loopt via <code>monaco.editor.registerEditorOpener</code>. Die bestaat in de meegeleverde <code>monaco.d.ts</code>: "Callback that is invoked when a resource other than the current model should be opened (e.g. when "go to definition" is called)". De opener roept <code>features.open</code> aan, en de client doet <code>useFiles.open</code> met de regel. De peek-weergave zet de adapter uit, want die wil een model van het doelbestand. Of gewoon naar de definitie gaan zonder dat model werkt, heb ik niet geprobeerd. Dat gaat in de spike.</p>
+
+  <h3>Naast Monaco's workers</h3>
+  <p>De TypeScript-worker registreert zijn providers voor de taal-ids <code>typescript</code> en <code>javascript</code>, voor elk model met die id. Twee bronnen voor hetzelfde model geven dubbele aanvullingen en twee hovers boven elkaar. Zijn instellingen (<code>setModeConfiguration</code>) gelden voor de hele pagina, dus uitzetten raakt ook het bestand buiten het project dat geen server heeft.</p>
+  <p>Mijn voorstel: een model dat een server bedient krijgt een eigen taal-id, bijvoorbeeld <code>ruimte-typescript</code>, met dezelfde Shiki-grammatica en dezelfde haakjes- en commentaarregels. De worker ziet dat model dan niet, en een ander bestand houdt hem gewoon. Zegt <code>lsp.open</code> <code>served: false</code>, of valt de server uit, dan gaat het model terug naar <code>typescript</code>. De woordsuggesties gaan uit voor een bediend model, zodat ze niet tussen de antwoorden van de server staan. Voor Python, Go en de rest is er geen worker en registreert de adapter gewoon onder de Shiki-id.</p>
+
+  <h3>Paden, worktrees en bestanden buiten het project</h3>
+  <ul>
+    <li>Een bestand in een worktree heeft zijn eigen root en dus zijn eigen server. Een definitie wijst binnen die worktree, want die server kent alleen die checkout.</li>
+    <li>Een bestand buiten de projectmap en zijn worktrees krijgt geen server. <code>editBlockOf</code> maakt het al alleen-lezen, en de daemon weigert <code>lsp.open</code> met <code>outside-project</code>, dezelfde grens als <code>fs.write</code>. Monaco's worker blijft daar.</li>
+    <li>Een definitie die buiten de projectmap valt (een SDK, een Go-module in <code>$GOPATH/pkg/mod</code>) opent als alleen-lezen bestand. Dat regelt de bestaande bewerkgrens. Een definitie in <code>node_modules</code> valt binnen de projectmap en is dus bewerkbaar. Dat is zo vandaag ook al, en ik laat het zo in de eerste snede.</li>
+  </ul>
+
+  <h3><code>monaco-languageclient</code></h3>
+  <p>Versie 10.7.0 op npm heeft 33 dependencies (<a href="https://registry.npmjs.org/monaco-languageclient/latest">registry</a>). Daaronder zitten <code>@codingame/monaco-vscode-api</code> (36 MB uitgepakt), veertien taalpakketten en een override van de tokenizer-service. De <a href="https://github.com/CodinGame/monaco-vscode-api">README van die API</a> zegt dat het pakket "is installed as an alias to <code>monaco-editor</code>". De library vervangt dus de editor die we hebben, zet een tweede tokenizer naast Shiki, en neemt aan dat de browser JSON-RPC met de server spreekt. Wat Ruimte nodig heeft is vier providers en een marker-lijst. Dat schrijf ik liever zelf in de adapter, geschat op een paar honderd regels.</p>
+  <p>Aan de daemonkant geldt hetzelfde als voor de CLI's in een chat. LSP over stdio is een header met <code>Content-Length</code> en JSON. Een eigen <code>lsp/rpc.ts</code> met framing en request-ids, plus <code>lsp/protocol.ts</code> met zod-schema's voor het deel dat de daemon leest, zijn puur en te testen zoals <code>claude-protocol.ts</code>. Geen SDK.</p>
+</section>
+
+<section id="veiligheid">
+  <h2>Veiligheid</h2>
+  <p>Een taalserver starten is code van het project uitvoeren. Soms is het de binary zelf (<code>node_modules/.bin</code>, <code>.venv/bin</code>, <code>vendor/bin</code>), soms wat die binary aanroept: tsserver-plugins, <code>build.rs</code> en proc macros, <code>go</code> dat <code>go list</code> draait, een Python-interpreter die pyright start. Dit is een groter recht dan <code>fs.write</code>, en het vraagt een eigen grens.</p>
+
+  <h3>Wie mag een server starten</h3>
+  <ul>
+    <li><strong>Alleen een client, alleen voor een project dat hij vasthoudt.</strong> <code>lsp.open</code> hanteert de grens van <code>fs.write</code>, dus de <code>heldFolders</code> van die client plus de worktrees onder <code>$RUIMTE_HOME/worktrees</code>, vergeleken op echte paden.</li>
+    <li><strong>Pas na toestemming voor dat project.</strong> De eerste keer toont de editor een balk boven het bestand: "Language servers run code from this project, such as its build scripts. Run them on this machine?" met <em>Allow</em> en <em>Not now</em>. <em>Allow</em> stuurt <code>lsp.allow</code>. Tot dan werkt de editor zoals nu.</li>
+    <li><strong>De toestemming staat onder <code>$RUIMTE_HOME</code>.</strong> In een nieuw bestand <code>$RUIMTE_HOME/language-servers.json</code> (<code>0600</code>), per echt pad van de projectmap. Niet in <code>project.json</code> of <code>.ruimte/settings.json</code>, want die kan een agent met een shell herschrijven. Dit volgt de regel dat wat de daemon tegen een agent afdwingt onder <code>$RUIMTE_HOME</code> leeft.</li>
+    <li><strong>Een agent start niets.</strong> Er komt geen <code>ruimte-context</code>-werkwoord voor taalservers, en <code>lsp.*</code> is alleen voor clients. Een agent kan wel een file node op de canvas zetten, en een client die die toont meldt het pad aan. Dan draait er een server zodra het project toestemming heeft. Dat vind ik aanvaardbaar: de toestemming gaat over de code van het project, niet over wie het bestand liet zien.</li>
+  </ul>
+
+  <h3>Wat de server meekrijgt</h3>
+  <ul>
+    <li>De omgeving van de daemon, dus het <code>PATH</code> van de login-shell, maar zonder <code>ruimte-context</code> op dat <code>PATH</code> en zonder <code>RUIMTE_CONTEXT_URL</code>. Een build script dat een taalserver aanroept, kan zich zo niet voordoen als een agent die werkwoorden gebruikt.</li>
+    <li>De root als werkmap. Geen argumenten die uit het project komen. De <code>initializationOptions</code> komen uit de tabel in de daemon, niet uit een bestand in het project.</li>
+  </ul>
+  <p class="note">Deze grens houdt een draaiende server niets tegen. Hij is een proces van dezelfde gebruiker als de daemon. Hij kan alles lezen wat die gebruiker kan, <code>$RUIMTE_HOME/local.key</code> incluis. De grens gaat over wie een server laat starten, niet over wat hij daarna kan. Dat is hetzelfde als een persoon die in dat project een build draait.</p>
+
+  <h3>Worktrees van agents</h3>
+  <p>De toestemming van een project geldt ook voor zijn worktrees onder <code>$RUIMTE_HOME/worktrees</code>. Het is dezelfde repository, en <code>fs.write</code> behandelt ze ook zo. Er zit een scherpe kant aan. Een agent in een beperkte modus schrijft een <code>build.rs</code> in zijn worktree. Opent een persoon daar een Rust-bestand, dan voert rust-analyzer dat script uit met de rechten van de daemon, buiten de sandbox van de agent. De persoon opent het bestand, maar weet niet wat erin staat. Voor de eerste snede (alleen TypeScript) speelt dit nauwelijks. Bij Rust wil ik build scripts en proc macros uitzetten in een worktree van een agent. Zie de open vragen.</p>
+</section>
+
+<section id="tests">
+  <h2>Tests</h2>
+  <ul>
+    <li><strong>Een nep-server in de standaardrun.</strong> <code>FakeLanguageServer</code> achter dezelfde seam als <code>ChatProcess</code>: stdin en stdout als streams, LSP-framing, vooraf ingestelde antwoorden, en een knop om te crashen of te zwijgen. Daarmee: framing (een header in twee chunks, <code>Content-Length</code> in bytes bij multibyte-tekst), de documentregel met twee clients en een wissel, <code>seq</code> en <code>stale</code>, afbreken, termijnen met een ingespoten klok, het herstartbudget, stoppen bij de laatste hold na de wachttijd, en de weigering zonder toestemming of buiten het project.</li>
+    <li><strong>Pure delen los.</strong> Het filteren en snoeien van een aanvullijst, URI naar pad (<code>%40</code>), de root-marker-zoektocht op een nep-bestandssysteem, en het kiezen van een server uit de tabel.</li>
+    <li><strong>De client.</strong> De sync van draft naar <code>lsp.change</code> tegen een <code>FakeTransport</code>, en de <code>LanguageFeatures</code> tegen de fake <code>EditorEngine</code> zonder DOM.</li>
+    <li><strong>Echte servers alleen in <code>*.integration.test.ts</code>.</strong> TypeScript 7 staat altijd in deze repository, dus <code>lsp/typescript.integration.test.ts</code> draait altijd, op een fixture-map die één keer per bestand gebouwd wordt, zoals <code>git/test-repo.ts</code>. Een test voor gopls, rust-analyzer, pyright of sourcekit-lsp slaat zichzelf over als de server er niet is, en ruimt zijn proces op.</li>
+    <li>Geen test in de standaardrun wacht op de wandklok of op een echt proces.</li>
+  </ul>
+</section>
+
+<section id="volgorde">
+  <h2>Volgorde en open vragen</h2>
+  <div class="table" role="region" aria-label="Volgorde" tabindex="0">
+    <table>
+      <thead><tr><th scope="col">Stap</th><th scope="col">Levert</th><th scope="col">Hangt af van</th><th scope="col">Grootte, geschat</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">1. Spike</th><td>Een eigen taal-id per bediend model houdt de Shiki-kleuren en houdt de TS-worker buiten. De opener opent een ander bestand zonder model. Grootte van een gesnoeide aanvullijst. Hover en suggesties in een file node op zoom 1 en 0,8.</td><td>Niets</td><td>Een dag</td></tr>
+        <tr><th scope="row">2. Daemon-kern</th><td><code>apps/server/src/lsp</code>: framing, processeam, nep-server, register per root en server, levensloop aan de hold, crash en termijnen, <code>language-servers.json</code>, de TypeScript-regels uit de tabel.</td><td>Niets</td><td>Drie dagen</td></tr>
+        <tr><th scope="row">3. Wire</th><td>De schema's in <code>packages/contracts</code>, handlers, tests.</td><td>2</td><td>Een dag</td></tr>
+        <tr><th scope="row">4. Documenten</th><td>Spiegels per client, de wissel, <code>seq</code>, <code>didSave</code> na <code>fs.write</code>, de watch voor <code>didChangeWatchedFiles</code>, de sync vanuit <code>text-drafts</code>.</td><td>2, 3</td><td>Twee dagen</td></tr>
+        <tr><th scope="row">5. Editor en client</th><td><code>LanguageFeatures</code>, de vier providers, markers, taal-id-wissel, opener, statuschip, toestemmingsbalk, F-toetsen weg, teksten in Engels en Nederlands.</td><td>1, 3, 4</td><td>Drie dagen</td></tr>
+        <tr><th scope="row">6. Meer talen</th><td>Python, Go, Rust, PHP, Swift als regels in de tabel, elk met een integratietest.</td><td>5</td><td>Een halve dag per taal</td></tr>
+        <tr><th scope="row">7. Later</th><td><code>completionItem/resolve</code>, referenties, en een ontwerp voor <code>WorkspaceEdit</code> dat hernoemen, code actions en formatteren draagt.</td><td>6</td><td>Apart rapport</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="caption">De schattingen zijn van mij en niet gemeten. Stap 2 en de spike kunnen naast elkaar.</p>
+
+  <h3>Open vragen voor Bas</h3>
+  <ol>
+    <li><strong>Toestemming per project, of niet?</strong> Voorstel: één keer per project vragen, bewaard onder <code>$RUIMTE_HOME</code>, in te trekken in de projectinstellingen. Het alternatief is geen vraag en alleen starten na een toetsaanslag van een persoon in de editor. Dat is minder gedoe, maar dan start een server ook voor een project dat net gekloond is en nog niet bekeken.</li>
+    <li><strong>TypeScript 6 en lager?</strong> Die hebben <code>typescript-language-server</code> nodig, en dat heeft bijna niemand in <code>node_modules</code>. Voorstel: niet meeleveren in de eerste snede. De status zegt wat er ontbreekt. Blijkt het veel voor te komen, dan kan Ruimte die server zelf meenemen, want hij draait tegen de tsserver van het project.</li>
+    <li><strong>Hoe lang wacht een server na de laatste hold?</strong> Voorstel: twee minuten, zodat een wegvallende socket geen koude start kost. Het alternatief is direct stoppen, zoals de watcher.</li>
+    <li><strong>Build scripts in de worktree van een agent?</strong> Voorstel: bij Rust <code>cargo.buildScripts.enable</code> en <code>procMacro.enable</code> uit in een worktree onder <code>$RUIMTE_HOME/worktrees</code>, en een regel in de status die dat zegt. Voor de eerste snede met alleen TypeScript is dit nog niet nodig.</li>
+    <li><strong>Kale F-toetsen in de editor?</strong> F2, F8 en F12 zijn nu al gebonden. Voorstel: weghalen, Mod+klik voor de definitie houden, en de rest met een modifier binden of weglaten tot de functie er is.</li>
+    <li><strong>Diagnostiek zichtbaar buiten de editor?</strong> Een foutenteller op de tab, de sidebar-rij of de node-plaat. Voorstel: eerst alleen in de editor. Een teller vraagt diagnostiek voor bestanden die niet open zijn, en daar vraagt dit ontwerp niet om.</li>
+  </ol>
+</section>
+
+</main>
+<footer><p>Gebaseerd op de code bij <code>f98633c7</code> en één run van <code>tsc --lsp --stdio</code> (TypeScript 7.0.2) op deze Mac. Nagegaan in bronnen: de LSP-regels over <code>didOpen</code>, <code>didClose</code>, afbreken en positiecodering, de standaardwaarden van rust-analyzer, dat gopls het <code>go</code>-commando van het <code>PATH</code> draait, dat pyright een interpreter kan starten, wat sourcekit-lsp nodig heeft, en de dependencies van <code>monaco-languageclient</code> op npm. Niet nagegaan: of servers zelf bestanden bewaken als de client dat niet aanbiedt, of gopls een toolchain downloadt, wat intelephense en phpactor uitvoeren, het geheugen en de opstarttijd van alle servers behalve TypeScript 7, en alles over Monaco zelf (opener zonder model, taal-id-wissel, F-toetsen). De spike in stap 1 meet het Monaco-deel. De schatting van 20 tot 30 KB per gesnoeide aanvullijst is een berekening, geen meting. Gecontroleerd op ankers, licht en donker en een smal venster in de bron; niet in een browser gerenderd.</p></footer>
+</body>
+</html>
