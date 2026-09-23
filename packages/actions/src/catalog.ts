@@ -1,4 +1,15 @@
-import { AgentKindSchema, AgentStatusSchema, NodeKindSchema, PROJECT_VIEW_KINDS, UNKNOWN_KIND } from '@ruimte/contracts';
+import {
+    AgentKindSchema,
+    AgentStatusSchema,
+    NodeKindSchema,
+    PROJECT_VIEW_KINDS,
+    PlanChecksSchema,
+    PlanKindSchema,
+    PlanSchema,
+    PlanStepStateSchema,
+    TaskSchema,
+    UNKNOWN_KIND
+} from '@ruimte/contracts';
 import { z } from 'zod';
 
 export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
@@ -63,6 +74,27 @@ const PERSON_AND_VOICE: readonly ActionActorKind[] = ['person', 'voice'];
 /* What only a client runs: no agent reaches a client, so an agent is left out. */
 const CLIENT_ACTORS: readonly ActionActorKind[] = ['person', 'voice', 'automation'];
 const AGENT: readonly ActionActorKind[] = ['agent'];
+
+/*
+ * Plan ids stay plain strings here: the plan store checks them and refuses under its own codes, which
+ * an input schema would turn into one invalid-input.
+ */
+const planId = z.string().min(1).nullable().describe('The plan by id; without it the newest plan of this chat');
+const PLAN_ITEM_TYPES = ['step', 'text', 'section'] as const;
+const planChanged = z.object({
+    plan: PlanSchema,
+    // Steps that got their first sub-step, so their own state is gone and follows from their sub-steps.
+    dropped: z.array(z.string())
+});
+
+const browserNode = nodeId.describe('The browser node, by id');
+const browserOutcome = z.object({
+    nodeId,
+    // Whether anyone has the page open; nobody watching is an answer and never an error.
+    open: z.boolean(),
+    page: z.object({ url: z.string(), title: z.string(), loading: z.boolean(), canGoBack: z.boolean(), canGoForward: z.boolean() }).nullable(),
+    error: z.string().nullable()
+});
 
 export const TARGET_KINDS = ['view', 'node', 'chat', 'agent', 'project'] as const;
 const resolvedTarget = z.object({
@@ -793,6 +825,285 @@ export const ACTION_DEFINITIONS = {
         actors: AGENT,
         input: z.object({ viewId, edgeId: z.string().min(1) }),
         output: z.object({ viewId, edgeId: z.string(), from: nodeId, to: nodeId, label: z.string().nullable() })
+    },
+    'agent.notify': {
+        title: 'Notify an agent',
+        description:
+            'Sends a short message to the agent in another node, along a line that runs from you into it, which gives a chat between turns a turn on it.',
+        effect: 'external',
+        domain: 'communicate',
+        actors: AGENT,
+        input: z.object({ nodeId: nodeId.describe('The node to notify, by id'), text: z.string().min(1).describe('The message') }),
+        output: z.object({
+            nodeId,
+            // Now when it was acted on as it arrived, waiting when it is held for the next turn of that node.
+            at: z.enum(['now', 'waiting']),
+            detail: z.string()
+        })
+    },
+    'task.list': {
+        title: 'List tasks',
+        description:
+            'Lists the tasks you gave and the task you were given that are still open or have yet to wake you: id, direction, status, the other node, title, wake, result, batch.',
+        effect: 'read',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            all: z.boolean().describe('Also lists the history: tasks that settled and already woke their chat, and a task you were given that settled')
+        }),
+        output: z.object({
+            tasks: z.array(TaskSchema),
+            // What the list left out without all: settled tasks that already reported.
+            hidden: z.number().int()
+        })
+    },
+    'task.create': {
+        title: 'Give a task',
+        description: 'Gives a task to an agent you opened that is already running, whose result wakes you the way the task of a new one does.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            nodeId: nodeId.describe('The agent to give the task to, by id; only a chat you opened yourself'),
+            prompt: z.string().nullable().describe('What the task asks'),
+            promptFile: agentField(z.string().min(1)).describe('The same assignment out of a file, for one with exact bytes'),
+            title: z.string().trim().min(1).nullable().describe('The title of the task; without one the first line of the prompt')
+        }),
+        output: z.object({
+            taskId: z.string(),
+            nodeId,
+            // Now for an agent that starts on it as you call, waiting for one still in a turn.
+            at: z.enum(['now', 'waiting'])
+        })
+    },
+    'task.complete': {
+        title: 'Report a task',
+        description: 'Reports the result of the task you were opened with, which wakes the chat that gave it.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            result: z.string().nullable().describe('The result'),
+            resultFile: agentField(z.string().min(1)).describe('The same result out of a file inside the project folder')
+        }),
+        output: z.object({ taskId: z.string(), parentId: nodeId })
+    },
+    'plan.list': {
+        title: 'List plans',
+        description: 'Lists every plan of this chat, oldest first.',
+        effect: 'read',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({ plans: z.array(PlanSchema) })
+    },
+    'plan.read': {
+        title: 'Read a plan',
+        description: 'Reads the newest plan of this chat, or the one named, with every item and its id.',
+        agentDescription: 'Prints the newest plan of this chat as text, with every id in brackets; after a compaction this is how you find the ids again.',
+        effect: 'read',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({ planId }),
+        output: z.object({
+            // Null when this chat has no plan at all.
+            plan: PlanSchema.nullable(),
+            others: z.array(PlanSchema)
+        })
+    },
+    'plan.create': {
+        title: 'Make a plan',
+        description: 'Makes a plan for this chat from a JSON document or a Markdown task list.',
+        effect: 'shared',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            document: z.string().nullable().describe('The plan as one JSON object, { meta, items }'),
+            markdown: z.string().nullable().describe('A GFM task list instead of JSON'),
+            title: z.string().min(1).nullable().describe('The title, over the one in the document'),
+            kind: PlanKindSchema.nullable(),
+            checks: PlanChecksSchema.nullable()
+        }),
+        output: z.object({ plan: PlanSchema })
+    },
+    'plan.setStepState': {
+        title: 'Set plan steps',
+        description: 'Sets the state of one or more steps in one rev; with next the step you move on to becomes active in the same rev.',
+        effect: 'shared',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            planId,
+            stepIds: z.array(z.string().min(1)).min(1).describe('One or more steps without sub-steps, by id'),
+            state: PlanStepStateSchema,
+            note: z.string().nullable().describe('A note on each of the steps; an empty one clears it'),
+            next: z.string().min(1).nullable().describe('The step that becomes active in the same rev')
+        }),
+        output: planChanged
+    },
+    'plan.addNote': {
+        title: 'Note a plan step',
+        description: 'Writes the note of a step, also one a person set; an empty text clears it.',
+        effect: 'shared',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({ planId, stepId: z.string().min(1).describe('The step, by id'), text: z.string().describe('The note') }),
+        output: planChanged
+    },
+    'plan.addItem': {
+        title: 'Add a plan item',
+        description: 'Adds a step, text block or section to a plan.',
+        effect: 'shared',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            planId,
+            type: z.enum(PLAN_ITEM_TYPES).describe('step, text or section'),
+            title: z.string().min(1).describe('One line'),
+            description: z.string().nullable().describe('Short Markdown'),
+            under: z.string().min(1).nullable().describe('The section or step it goes in, last'),
+            after: z.string().min(1).nullable().describe('The item it goes right after'),
+            checks: PlanChecksSchema.nullable().describe('Who sets a new step: anyone, agent or person'),
+            itemId: z.string().min(1).nullable().describe('The id you want, lowercase letters, digits and dashes; minted when absent')
+        }),
+        output: planChanged.extend({ itemId: z.string() })
+    },
+    'plan.editItem': {
+        title: 'Edit a plan item',
+        description: 'Changes the title, description or checks of an item.',
+        effect: 'shared',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            planId,
+            itemId: z.string().min(1).describe('The item, by id'),
+            title: z.string().min(1).nullable().describe('The new title'),
+            description: z.string().nullable().describe('The new description; an empty one removes it'),
+            checks: PlanChecksSchema.nullable().describe('Who sets the step')
+        }),
+        output: planChanged
+    },
+    'plan.moveItem': {
+        title: 'Move a plan item',
+        description: 'Moves an item, with everything under it, to another place in the plan.',
+        effect: 'shared',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            planId,
+            itemId: z.string().min(1).describe('The item, by id'),
+            under: z.string().min(1).nullable().describe('The section or step it goes in, last'),
+            after: z.string().min(1).nullable().describe('The item it goes right after')
+        }),
+        output: planChanged
+    },
+    'plan.removeItem': {
+        title: 'Remove a plan item',
+        description: 'Removes an item and everything under it; refused when a person set a state in it.',
+        effect: 'shared',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({ planId, itemId: z.string().min(1).describe('The item, by id') }),
+        output: planChanged
+    },
+    'plan.setStatus': {
+        title: 'Set plan status',
+        description: 'Sets the line under the title about what happens now or next; an empty text clears it.',
+        effect: 'shared',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({ planId, text: z.string().describe('One short sentence, such as Fixing the focus bug in the grid') }),
+        output: planChanged
+    },
+    'plan.delete': {
+        title: 'Delete a plan',
+        description: 'Removes a whole plan of this chat.',
+        effect: 'shared',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({ planId: z.string().min(1).describe('The plan by id; never the newest by default, since this cannot be undone') }),
+        output: z.object({ planId: z.string(), title: z.string() })
+    },
+    'diagram.replaceContent': {
+        title: 'Replace a diagram',
+        description: 'Replaces the whole diagram of a diagram view with a JSON document.',
+        effect: 'shared',
+        domain: 'views',
+        actors: AGENT,
+        input: z.object({
+            viewId: viewId.describe('A diagram view of this project'),
+            document: z.string().describe('The diagram as one JSON object: meta, nodes, groups and edges')
+        }),
+        output: z.object({ viewId, rev: z.number().int(), nodes: z.number().int(), groups: z.number().int(), edges: z.number().int() })
+    },
+    'browser.inspect': {
+        title: 'Read a page',
+        description: 'Where the page of a browser node stands: its address, its title, whether it is loading and what its history holds.',
+        effect: 'read',
+        domain: 'canvas',
+        actors: AGENT,
+        input: z.object({ nodeId: browserNode }),
+        output: browserOutcome
+    },
+    'browser.navigate': {
+        title: 'Go to an address',
+        description: 'Sends the page of a browser node to an address.',
+        effect: 'external',
+        domain: 'canvas',
+        actors: AGENT,
+        input: z.object({ nodeId: browserNode, url: z.string().min(1).describe('A whole http or https address, scheme and all') }),
+        output: browserOutcome.extend({
+            // The address a node that had none was given: written in the project, with no page driven.
+            assigned: z.object({ url: z.string(), title: z.string() }).nullable()
+        })
+    },
+    'browser.back': {
+        title: 'Go back',
+        description: 'Takes the page one step back through its own history.',
+        effect: 'external',
+        domain: 'canvas',
+        actors: AGENT,
+        input: z.object({ nodeId: browserNode }),
+        output: browserOutcome
+    },
+    'browser.forward': {
+        title: 'Go forward',
+        description: 'Takes the page one step forward again, after a step back.',
+        effect: 'external',
+        domain: 'canvas',
+        actors: AGENT,
+        input: z.object({ nodeId: browserNode }),
+        output: browserOutcome
+    },
+    'browser.reload': {
+        title: 'Reload a page',
+        description: 'Loads the page of a browser node again.',
+        effect: 'external',
+        domain: 'canvas',
+        actors: AGENT,
+        input: z.object({ nodeId: browserNode, hard: z.boolean().describe('Loads it past the cache, the way a person holding shift would') }),
+        output: browserOutcome
+    },
+    'browser.stop': {
+        title: 'Stop loading',
+        description: 'Ends a load that is still running, leaving the page as far as it got.',
+        effect: 'external',
+        domain: 'canvas',
+        actors: AGENT,
+        input: z.object({ nodeId: browserNode }),
+        output: browserOutcome
+    },
+    'browser.screenshot': {
+        title: 'Photograph a page',
+        description: 'Writes a png of the page of a browser node and answers where it is.',
+        effect: 'read',
+        domain: 'canvas',
+        actors: AGENT,
+        input: z.object({ nodeId: browserNode }),
+        output: browserOutcome.extend({
+            // On this machine, outside the project folder; null when nobody has the page open.
+            path: z.string().nullable()
+        })
     }
 } as const;
 
