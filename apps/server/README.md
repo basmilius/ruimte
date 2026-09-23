@@ -95,6 +95,7 @@ $RUIMTE_HOME/
   chats/                           mode 0700
     <chatId>.json                  the thread and info of one chat node, with the seq it holds
     <chatId>.log                   every event since that snapshot, one `{ seq, at, event }` per line
+    <chatId>.bookmarks.json        the messages of that chat someone bookmarked, by item id, with their names
   attachments/                     mode 0700
     <chatId>/<id>.<ext>            one file someone attached to a message in that chat
   checkpoints/                     mode 0700

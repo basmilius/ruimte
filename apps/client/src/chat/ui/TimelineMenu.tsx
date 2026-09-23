@@ -1,12 +1,14 @@
 import type { RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Braces, Copy, Eye, FileText, GitFork, MessageSquare, Scan } from 'lucide-react';
+import { BookmarkPlus, BookmarkX, Braces, Copy, Eye, FileText, GitFork, MessageSquare, Pencil, Scan } from 'lucide-react';
+import { placeBookmark, removeBookmark, useBookmarkNaming } from '@/chat/bookmarks';
 import { forkRefusal, turnIdOfRow } from '@/chat/logic/fork';
 import { markdownOf, messageTextOf } from '@/chat/logic/timeline-copy';
 import type { TimelineTarget } from '@/chat/logic/timeline-target';
 import { openFileLink, useFileLinkCwd } from '@/shell/panels/file-links';
 import { useChatRow } from '@/state/chats';
+import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { MENU_SEPARATOR } from '@/ui/classes';
@@ -37,6 +39,11 @@ export function TimelineMenuPopup({
     const turnId = chatId === null || target.row === null ? null : turnIdOfRow(target.row);
     const forkBlocked = useChatRow(chatId ?? '', (row) => (turnId === null ? null : forkRefusal(row?.info ?? null, row?.structure[turnId])));
     const markdown = target.row === null ? null : markdownOf(target.row);
+    const endpointId = useEndpointId();
+    const markable = chatId !== null && (target.row?.kind === 'user' || target.row?.kind === 'assistant') ? target.row.id : null;
+    const bookmark = useChatRow(chatId ?? '', (row) =>
+        markable === null ? null : (row?.bookmarks?.find((candidate) => candidate.itemId === markable) ?? null)
+    );
     // A thread outside a chat (a sub-agent's transcript) has no cwd of its own; the project answers there.
     const cwd = useFileLinkCwd();
     const folder = useProject((s) => s.current?.folder ?? null);
@@ -77,6 +84,24 @@ export function TimelineMenuPopup({
                                 <Icon icon={GitFork} size={14} /> {t('timeline.menu.forkFromHere')}
                             </ContextMenu.Item>
                         </DisabledReason>
+                    )}
+                    {chatId !== null && markable !== null && bookmark === null && (
+                        <ContextMenu.Item className="menu-item" onClick={() => void placeBookmark(endpointId, chatId, markable)}>
+                            <Icon icon={BookmarkPlus} size={14} /> {t('bookmarks.add')}
+                        </ContextMenu.Item>
+                    )}
+                    {chatId !== null && bookmark !== null && (
+                        <>
+                            <ContextMenu.Item
+                                className="menu-item"
+                                onClick={() => useBookmarkNaming.getState().open(endpointKey(endpointId, chatId), bookmark.itemId)}
+                            >
+                                <Icon icon={Pencil} size={14} /> {t('bookmarks.rename')}
+                            </ContextMenu.Item>
+                            <ContextMenu.Item className="menu-item" onClick={() => void removeBookmark(endpointId, chatId, bookmark)}>
+                                <Icon icon={BookmarkX} size={14} /> {t('bookmarks.remove')}
+                            </ContextMenu.Item>
+                        </>
                     )}
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item" onClick={() => selectAllWithin(thread.current)}>

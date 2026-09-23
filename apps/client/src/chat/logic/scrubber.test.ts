@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem } from '@ruimte/contracts';
 import { layoutTicks, messageAt, messagesInView, slotInView, slotOf, stepMessage, threadPaddingLeft, tickWidth, ticksOf, type TickKind } from './scrubber';
+import { bookmarkRows } from './bookmarks';
 import { deriveTimelineRows } from './timeline';
 
 const options = { expandedGroups: new Set<string>(), expandedTurns: new Set<string>(), expandedSubagents: new Set<string>(), activeTurnId: null };
@@ -57,6 +58,33 @@ describe('ticksOf', () => {
         expect(ticks.map((tick) => [tick.id, tick.kind, tick.text])).toEqual([['start-t5', 'wake', 'Woken by a message: Message from Lexer']]);
     });
 
+    test('a bookmark marks the tick of its message, and a marked reply gets a tick of its own, or its fold does', () => {
+        const bookmark = (itemId: string) => ({ itemId, excerpt: `start of ${itemId}`, createdAt: 1 });
+        const rows = deriveTimelineRows(thread, options);
+        const marks = bookmarkRows(rows, [bookmark('u1'), bookmark('a2')], Object.fromEntries(thread.map((item) => [item.id, item])));
+        const ticks = ticksOf(rows, marks);
+        expect(ticks.map((tick) => [tick.id, tick.kind, tick.bookmark?.itemId ?? null])).toEqual([
+            ['u1', 'person', 'u1'],
+            ['start-t2', 'wake', null],
+            ['a2', 'bookmark', 'a2'],
+            ['u4', 'person', null]
+        ]);
+
+        const folded: ChatItem[] = [
+            { id: 't9', kind: 'turn', createdAt: 1, turnId: 't9', state: 'done', endedAt: 2, costUsd: 0 },
+            { id: 'u9', kind: 'user', createdAt: 1, turnId: 't9', text: 'go' },
+            { id: 'a9', kind: 'assistant', createdAt: 1, turnId: 't9', text: 'On it.', streaming: false },
+            { id: 'x9', kind: 'tool', createdAt: 1, turnId: 't9', toolUseId: 'x9', name: 'Bash', input: {}, state: 'done', output: '', parentToolUseId: null },
+            { id: 'b9', kind: 'assistant', createdAt: 2, turnId: 't9', text: 'Done.', streaming: false }
+        ];
+        const foldedRows = deriveTimelineRows(folded, options);
+        const hidden = ticksOf(foldedRows, bookmarkRows(foldedRows, [bookmark('a9')], Object.fromEntries(folded.map((item) => [item.id, item]))));
+        expect(hidden.map((tick) => [tick.id, tick.kind, tick.text])).toEqual([
+            ['u9', 'person', 'go'],
+            ['fold-t9', 'bookmark', 'start of a9']
+        ]);
+    });
+
     test('a message of only attachments reads as their names', () => {
         const ticks = ticksOf(deriveTimelineRows(thread, options));
         expect(ticks[2]!.text).toBe('shot.png');
@@ -99,6 +127,15 @@ describe('layoutTicks', () => {
     test("a merged tick is the person's when one message in it is", () => {
         const layout = layoutTicks(['wake', 'wake', 'person', 'wake', 'wake', 'wake'], 12);
         expect(layout.slots.map((slot) => slot.kind)).toEqual(['wake', 'person', 'wake']);
+    });
+
+    test('a merged tick is marked when a message in it has a bookmark', () => {
+        const layout = layoutTicks(['wake', 'wake', 'bookmark', 'wake', 'person', 'wake'], 12, [false, false, true, false, false, false]);
+        expect(layout.slots.map((slot) => [slot.kind, slot.marked])).toEqual([
+            ['wake', false],
+            ['bookmark', true],
+            ['person', false]
+        ]);
     });
 
     test('a strip without room draws nothing', () => {
@@ -171,7 +208,7 @@ describe('messagesInView', () => {
     });
 
     test('a merged tick is in view when any of its messages is', () => {
-        const slot = { first: 20, last: 39, kind: 'person' as const, y: 0 };
+        const slot = { first: 20, last: 39, kind: 'person' as const, marked: false, y: 0 };
         expect(slotInView(slot, { first: 39, last: 41 })).toBe(true);
         expect(slotInView(slot, { first: 10, last: 20 })).toBe(true);
         expect(slotInView(slot, { first: 40, last: 45 })).toBe(false);

@@ -27,6 +27,7 @@ import { askOpenAsView, canOpenAsView } from '@/project/views';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
 import { EMPTY_DRAFT, writeDraft } from '@/chat/drafts';
+import { BookmarkSubmenu } from '@/chat/ui/BookmarkSubmenu';
 import { ForkMenuItem } from '@/chat/ui/ForkMenuItem';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
@@ -212,6 +213,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                         </ContextMenu.Item>
                     )}
                     {node.kind === 'chat' && <ForkMenuItem chatId={id} />}
+                    {node.kind === 'chat' && <BookmarkSubmenu chatId={id} />}
                     {canOpenAsView(node.kind) && (
                         <ContextMenu.Item className="menu-item" onClick={() => askOpenAsView(id)}>
                             <Icon icon={Frame} size={14} /> {t('menu.openAsView')}

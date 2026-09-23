@@ -121,3 +121,17 @@ describe('a status without an attach', () => {
         expect(useChats.getState().byKey).toBe(before);
     });
 });
+
+describe('bookmarks in the store', () => {
+    test('a reset of the thread keeps the bookmarks, which only their own list replaces', () => {
+        const key = 'bookmarks-test:chat-1';
+        const bookmark = { itemId: 'u1', excerpt: 'hi', createdAt: 1 };
+        useChats.getState().reset(key, info(), [user('u1', 'hi')]);
+        useChats.getState().bookmarks(key, [bookmark]);
+        useChats.getState().reset(key, info(), [user('u1', 'hi'), user('u2', 'again')]);
+        expect(useChats.getState().byKey[key]?.bookmarks).toEqual([bookmark]);
+        useChats.getState().bookmarks(key, []);
+        expect(useChats.getState().byKey[key]?.bookmarks).toEqual([]);
+        useChats.getState().forget(key);
+    });
+});

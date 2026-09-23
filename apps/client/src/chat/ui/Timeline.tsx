@@ -5,12 +5,14 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
 import type { ChatSubagentItem } from '@ruimte/contracts';
 import { useForkedTurns } from '@/chat/forks';
-import { deriveTimelineRows } from '@/chat/logic/timeline';
+import { bookmarkRows } from '@/chat/logic/bookmarks';
+import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
 import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
-import { registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
+import { registerItemJumper, registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
 import { SCRUBBER_MIN_TICKS, STRIP_INSET_PX, STRIP_WIDTH_PX, messagesInView, stepMessage, threadPaddingLeft, ticksOf } from '@/chat/logic/scrubber';
 import { EMPTY_TARGET, readTimelineTarget, withCurrentText, type TimelineTarget } from '@/chat/logic/timeline-target';
 import { forkRefusal } from '@/chat/logic/fork';
+import { MessageBookmark } from '@/chat/ui/MessageBookmark';
 import { Scrubber, type CardChat } from '@/chat/ui/Scrubber';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { FOLLOW_THRESHOLD_PX, rowRhythm } from '@/chat/ui/rows/row-rhythm';
@@ -61,12 +63,26 @@ function EmptyThread({ chatId }: { chatId: string }) {
     );
 }
 
+/* A message of the thread with its bookmark over it; every other row as it is. */
+function MarkableRow({ row, chatId, children }: { row: TimelineRow; chatId: string; children: ReactNode }) {
+    if (row.kind !== 'user' && row.kind !== 'assistant') {
+        return children;
+    }
+    return (
+        <div className="group/message relative">
+            <MessageBookmark chatId={chatId} itemId={row.id} align={row.kind === 'user' ? 'end' : 'start'} />
+            {children}
+        </div>
+    );
+}
+
 export function Timeline({ chatId, composer }: { chatId: string; composer?: ReactNode }) {
     const { t } = useTranslation('chat');
     const order = useChatRow(chatId, (row) => row?.order);
     // The structure, not the items. A delta growing a reply must not derive every row again.
     const items = useChatRow(chatId, (row) => row?.structure);
     const activeTurnId = useChatRow(chatId, (row) => row?.info.activeTurnId ?? null);
+    const bookmarks = useChatRow(chatId, (row) => row?.bookmarks);
     const forkedTurns = useForkedTurns(chatId);
     const info = useChatRow(chatId, (row) => row?.info ?? null);
     const endpointId = useEndpointId();
@@ -100,7 +116,10 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     }, [order, items, groups.ids, turns.ids, subagents.ids, activeTurnId, forkedTurns]);
 
     const empty = rows.length === 0;
-    const ticks = useMemo(() => ticksOf(rows), [rows]);
+    const marks = useMemo(() => bookmarkRows(rows, bookmarks ?? [], items ?? {}), [rows, bookmarks, items]);
+    const ticks = useMemo(() => ticksOf(rows, marks), [rows, marks]);
+    // A message a jump is on its way to; it may first have to open the turn its reply folded into.
+    const [seeking, setSeeking] = useState<string | null>(null);
 
     // Whether the thread's text clears the strip depends on the width of the view, which only the thread's own frame tells.
     useEffect(() => {
@@ -212,9 +231,33 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
         if (!tick) {
             return;
         }
+        if (tick.bookmark !== null) {
+            setSeeking(tick.bookmark.itemId);
+            return;
+        }
         followRef.current = false;
         virtualizer.scrollToIndex(tick.rowIndex, { align: 'start' });
     };
+
+    useLayoutEffect(() => {
+        if (seeking === null) {
+            return;
+        }
+        const index = rows.findIndex((row) => row.id === seeking);
+        if (index !== -1) {
+            setSeeking(null);
+            followRef.current = false;
+            virtualizer.scrollToIndex(index, { align: 'start' });
+            return;
+        }
+        const turnId = items?.[seeking]?.turnId ?? null;
+        if (turnId !== null && !turns.ids.has(turnId)) {
+            turns.add(turnId);
+            return;
+        }
+        setSeeking(null);
+    }, [seeking, rows, items, turns, virtualizer]);
+    useEffect(() => registerItemJumper(endpointKey(endpointId, chatId), setSeeking), [endpointId, chatId]);
     // The strip is memoized and draws on every scroll, so it gets one callback for its life.
     const jumpRef = useRef(jumpTo);
     jumpRef.current = jumpTo;
@@ -319,15 +362,17 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                                     )}
                                                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                                                 >
-                                                    <Row
-                                                        row={row}
-                                                        chatId={chatId}
-                                                        toggleGroup={groups.toggle}
-                                                        toggleTurn={turns.toggle}
-                                                        toggleSubagent={subagents.toggle}
-                                                        openSubagent={openSubagent}
-                                                        openConversation={openConversation}
-                                                    />
+                                                    <MarkableRow row={row} chatId={chatId}>
+                                                        <Row
+                                                            row={row}
+                                                            chatId={chatId}
+                                                            toggleGroup={groups.toggle}
+                                                            toggleTurn={turns.toggle}
+                                                            toggleSubagent={subagents.toggle}
+                                                            openSubagent={openSubagent}
+                                                            openConversation={openConversation}
+                                                        />
+                                                    </MarkableRow>
                                                 </div>
                                             );
                                         })}

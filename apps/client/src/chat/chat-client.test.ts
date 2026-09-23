@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatEvent, ChatInfo, ChatItem, EventMap, EventType, ProviderInfo, RequestMap, RequestType } from '@ruimte/contracts';
+import type { ChatBookmark, ChatEvent, ChatInfo, ChatItem, EventMap, EventType, ProviderInfo, RequestMap, RequestType } from '@ruimte/contracts';
 import type { ChatSink } from '../state/chats';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { ChatClient } from './chat-client';
@@ -103,6 +103,7 @@ class FakeSink implements ChatSink {
     readonly events: Array<{ chatId: string; event: ChatEvent }> = [];
     readonly forgotten: string[] = [];
     readonly statuses: Array<{ chatId: string; info: ChatInfo }> = [];
+    readonly bookmarked: Array<{ chatId: string; bookmarks: ChatBookmark[] }> = [];
 
     reset(chatId: string, _info: ChatInfo, items: ChatItem[]): void {
         this.resets.push({ chatId, items });
@@ -114,6 +115,10 @@ class FakeSink implements ChatSink {
 
     status(chatId: string, info: ChatInfo): void {
         this.statuses.push({ chatId, info });
+    }
+
+    bookmarks(chatId: string, bookmarks: ChatBookmark[]): void {
+        this.bookmarked.push({ chatId, bookmarks });
     }
 
     forget(chatId: string): void {
@@ -179,6 +184,20 @@ describe('ChatClient', () => {
         transport.setStatus('closed');
         transport.setStatus('open');
         expect(transport.of('chat.setPreferences').map((call) => call.payload)).toEqual([preference, preference]);
+    });
+
+    test('the bookmarks come with the attach and after that with every change, and a daemon without them leaves none', async () => {
+        const { transport, sink, client } = setup();
+        const bookmark: ChatBookmark = { itemId: 'u1', excerpt: 'hi', createdAt: 1 };
+        transport.attachResult = (payload) => (payload.chatId === 'marked' ? { bookmarks: [bookmark] } : {});
+        await client.open('marked', {});
+        await client.open('plain', {});
+        transport.emit('chat.bookmarks', { chatId: 'marked', bookmarks: [] });
+        expect(sink.bookmarked).toEqual([
+            { chatId: 'marked', bookmarks: [bookmark] },
+            { chatId: 'plain', bookmarks: [] },
+            { chatId: 'marked', bookmarks: [] }
+        ]);
     });
 
     test('events reach the store, whatever chat they are for', () => {

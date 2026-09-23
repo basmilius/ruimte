@@ -8,6 +8,7 @@ import type {
     AgentStatus,
     ChatAttachment,
     ChatAttachResult,
+    ChatBookmark,
     ChatHistoryResult,
     ChatAttachmentUpload,
     ChatCheckpointDiff,
@@ -32,6 +33,7 @@ import type { SessionSink } from '../sessions/manager.ts';
 import { SkillIndex } from '../skills/skills.ts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { AttachmentStore } from './attachment-store.ts';
+import type { BookmarkStore } from './bookmark-store.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
 import { ChatSession, PLAN_RESUME_PREAMBLE, type ChatSendExtras, type ResumeDecision } from './chat-session.ts';
 import { ChatLog, COMPACT_ABOVE_BYTES } from './chat-log.ts';
@@ -63,6 +65,18 @@ export interface ChatPlans {
     copyChat(fromChatId: string, toChatId: string): Promise<void>;
     hasOpenSteps(chatId: string): Promise<boolean>;
 }
+
+type BookmarkableItem = Extract<ChatItem, { kind: 'user' | 'assistant' }>;
+
+/* A message a person or the agent wrote in the chat's own thread; a subagent's words belong to its row. */
+const isBookmarkable = (item: ChatItem): item is BookmarkableItem =>
+    item.kind === 'user' || (item.kind === 'assistant' && (item.parentToolUseId ?? null) === null);
+
+/* The start of a message on one line; a message of only attachments is its file names. */
+const excerptOf = (item: BookmarkableItem): string => {
+    const files = item.kind === 'user' ? (item.attachments ?? []).map((attachment) => attachment.name).join(', ') : '';
+    return (item.text.trim() === '' ? files : item.text).replace(/\s+/g, ' ').trim();
+};
 
 // One process worked on the turn and one more may take it up after a restart; a loop of resumes could redo a command forever.
 const MAX_ATTEMPTS = 2;
@@ -118,6 +132,7 @@ interface ChatManagerOptions {
     // The tasks a chat gave, so a chat loaded from disk shows a row for each even when a crash lost the write of one.
     taskRows?: (chatId: string) => Task[];
     plans?: ChatPlans;
+    bookmarks?: BookmarkStore;
 }
 
 // Above this the record is big enough that rewriting it on every tool call costs more than it saves.
@@ -165,6 +180,7 @@ export class ChatManager {
     private readonly endedAt: (chatId: string) => number | null;
     private readonly taskRows: (chatId: string) => Task[];
     private readonly plans: ChatPlans | null;
+    private readonly bookmarks: BookmarkStore | null;
     /* Where Claude Code keeps its projects on this machine; empty when it has none. */
     readonly claudeProjectsDir: string;
     // Clients following the conversation of a node a task opened, per row of the chat that gave it.
@@ -175,6 +191,13 @@ export class ChatManager {
         this.endedAt = options.endedAt ?? (() => null);
         this.taskRows = options.taskRows ?? (() => []);
         this.plans = options.plans ?? null;
+        this.bookmarks = options.bookmarks ?? null;
+        // Only whoever reads the thread has anything to point a bookmark at, so the list goes where the thread goes.
+        this.bookmarks?.listen((chatId, bookmarks) => {
+            for (const clientId of this.attached.get(chatId) ?? []) {
+                this.sinks.to(clientId, { event: 'chat.bookmarks', payload: { chatId, bookmarks } });
+            }
+        });
         this.providers = options.providers;
         this.claudeTitles = options.claudeTitles ?? null;
         this.nameChat = options.nameChat ?? null;
@@ -259,13 +282,18 @@ export class ChatManager {
     /* Takes back a record `writeRecord` wrote, as long as nobody loaded the chat since. */
     async deleteRecord(chatId: string): Promise<void> {
         if (!this.chats.has(chatId) && !this.creating.has(chatId)) {
-            await Promise.all([this.store?.delete(chatId), this.plans?.removeChat(chatId)]);
+            await Promise.all([this.store?.delete(chatId), this.plans?.removeChat(chatId), this.bookmarks?.removeChat(chatId)]);
         }
     }
 
     /* Gives a fork the plans of the chat it was forked from. */
     async copyPlans(fromChatId: string, toChatId: string): Promise<void> {
         await this.plans?.copyChat(fromChatId, toChatId);
+    }
+
+    /* Gives a fork the bookmarks on the messages it copied. */
+    async copyBookmarks(fromChatId: string, toChatId: string, itemIds: ReadonlySet<string>): Promise<void> {
+        await this.bookmarks?.copyChat(fromChatId, toChatId, (itemId) => itemIds.has(itemId));
     }
 
     /* What a chat of this CLI starts with when nobody else says: the model named, else the newest composer pick, in that CLI's catalog. */
@@ -429,6 +457,47 @@ export class ChatManager {
         return historyLimit === undefined
             ? { ...session.thread.snapshot(), seq: log.seq }
             : { info: session.info, ...session.thread.history(historyLimit), pending: session.thread.pending(), seq: log.seq };
+    }
+
+    /*
+     * `attach` with the chat's bookmarks. They are read before the client joins, so a change written
+     * after the read reaches it as `chat.bookmarks` and never falls between the two. A file that
+     * cannot be read leaves the list out rather than the thread.
+     */
+    async attachWithBookmarks(chatId: string, clientId: string, historyLimit?: number, since?: number): Promise<ChatAttachResult> {
+        this.require(chatId);
+        const bookmarks = await this.bookmarks?.read(chatId).catch((e: unknown) => {
+            console.error(`The bookmarks of chat ${chatId} could not be read:`, errorText(e));
+            return undefined;
+        });
+        const result = this.attach(chatId, clientId, historyLimit, since);
+        return bookmarks === undefined ? result : { ...result, bookmarks };
+    }
+
+    /* Marks a message of the chat's own thread; a message that already has one keeps it. */
+    addBookmark(chatId: string, itemId: string, name?: string): Promise<ChatBookmark[]> {
+        const item = this.require(chatId).thread.get(itemId);
+        if (!item || !isBookmarkable(item)) {
+            throw new ChatError('item-not-found', `Chat ${chatId} has no message ${itemId} to bookmark`);
+        }
+        return this.requireBookmarks().add(chatId, { itemId, excerpt: excerptOf(item), ...(name === undefined ? {} : { name }) }, Date.now());
+    }
+
+    renameBookmark(chatId: string, itemId: string, name: string): Promise<ChatBookmark[]> {
+        this.require(chatId);
+        return this.requireBookmarks().rename(chatId, itemId, name);
+    }
+
+    removeBookmark(chatId: string, itemId: string): Promise<ChatBookmark[]> {
+        this.require(chatId);
+        return this.requireBookmarks().remove(chatId, itemId);
+    }
+
+    private requireBookmarks(): BookmarkStore {
+        if (!this.bookmarks) {
+            throw new ChatError('chat-unsupported', 'This machine keeps no bookmarks');
+        }
+        return this.bookmarks;
     }
 
     history(chatId: string, cursor: string, limit?: number): ChatHistoryResult {
@@ -682,14 +751,19 @@ export class ChatManager {
         session.compact();
     }
 
-    /* Empties the thread and drops the CLI's session and the chat's plans; `force` stops a turn that is in the way. */
+    /* Empties the thread and drops the CLI's session, the chat's plans and its bookmarks; `force` stops a turn that is in the way. */
     async clear(chatId: string, force = false): Promise<void> {
         const session = this.require(chatId);
         session.clear(force, this.taskRows(chatId));
         // A debounced write still waiting holds the old thread and must not land after the empty one.
         this.cancelWaiting(chatId);
         // Folded right away: every line before the reset describes a thread that is gone.
-        await Promise.all([this.persistNow(chatId, true), this.attachments.removeAll(chatId), this.plans?.removeChat(chatId)]);
+        await Promise.all([
+            this.persistNow(chatId, true),
+            this.attachments.removeAll(chatId),
+            this.plans?.removeChat(chatId),
+            this.bookmarks?.removeChat(chatId)
+        ]);
     }
 
     /* Stops the running turn; with `subagents` also marks the CLI's own subagents stopped, which that turn no longer waits on. */
@@ -754,6 +828,7 @@ export class ChatManager {
             this.store?.delete(chatId),
             this.attachments.removeAll(chatId),
             this.plans?.removeChat(chatId),
+            this.bookmarks?.removeChat(chatId),
             this.dropForkCopy(session.thread.snapshot())
         ]);
     }
@@ -772,7 +847,13 @@ export class ChatManager {
         if (stored === null || !unspokenFork(stored.items, stored.info)) {
             return;
         }
-        await Promise.all([this.store.delete(chatId), this.attachments.removeAll(chatId), this.plans?.removeChat(chatId), this.dropForkCopy(stored)]);
+        await Promise.all([
+            this.store.delete(chatId),
+            this.attachments.removeAll(chatId),
+            this.plans?.removeChat(chatId),
+            this.bookmarks?.removeChat(chatId),
+            this.dropForkCopy(stored)
+        ]);
     }
 
     /* The transcript copy of a Claude fork nobody resumed; Codex keeps its forked thread where Ruimte cannot remove it. */

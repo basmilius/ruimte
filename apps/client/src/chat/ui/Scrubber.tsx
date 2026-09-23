@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent 
 import { PreviewCard } from '@base-ui-components/react/preview-card';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Copy, GitFork, type LucideIcon } from 'lucide-react';
+import { Bookmark, Copy, GitFork, type LucideIcon } from 'lucide-react';
 import { layoutTicks, messageAt, slotInView, slotOf, tickWidth, TICK_HEIGHT_PX, type ScrubberTick } from '@/chat/logic/scrubber';
 import { formatMoment } from '@/format/datetime';
 import { MENU_SEPARATOR } from '@/ui/classes';
@@ -60,8 +60,8 @@ interface ScrubberProps {
 }
 
 /*
- * The strip at the left edge of a chat view: a tick per message of the person and per wake by tasks,
- * the ones on screen bright and the rest dimmed, growing only under the pointer. A single hover card follows the pointer along the strip, anchored at the tick
+ * The strip at the left edge of a chat view: a tick per message of the person, per wake by tasks and
+ * per other message with a bookmark, the ones on screen bright and the rest dimmed, a bookmark in the accent, growing only under the pointer. A single hover card follows the pointer along the strip, anchored at the tick
  * it points at, so a thousand ticks are a thousand spans and not a thousand popups.
  */
 export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView, onPick, chat = null }: ScrubberProps) {
@@ -84,7 +84,8 @@ export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView,
     }, [strip]);
 
     const kinds = useMemo(() => ticks.map((tick) => tick.kind), [ticks]);
-    const layout = useMemo(() => layoutTicks(kinds, height), [kinds, height]);
+    const marked = useMemo(() => ticks.map((tick) => tick.bookmark !== null), [ticks]);
+    const layout = useMemo(() => layoutTicks(kinds, height, marked), [kinds, height, marked]);
     const inView = firstInView === null || lastInView === null ? null : { first: firstInView, last: lastInView };
     const hoveredTick = hovered === null ? null : (ticks[hovered] ?? null);
     const hoveredSlot = hovered === null ? null : slotOf(layout, hovered);
@@ -138,14 +139,15 @@ export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView,
             >
                 {layout.slots.map((slot, index) => {
                     const distance = pointing && hoveredSlot !== null ? Math.abs(index - hoveredSlot) : null;
-                    const bright = slotInView(slot, inView) || distance === 0;
+                    // A bookmark is a place to find again from anywhere, so it never dims with the rest.
+                    const bright = slot.marked || slotInView(slot, inView) || distance === 0;
                     return (
                         <span
                             key={slot.first}
                             aria-hidden
                             className={clsx(
                                 'absolute left-1 rounded-full transition-[width,opacity] duration-100 ease-out motion-reduce:transition-none',
-                                slot.kind === 'wake' ? 'bg-text-muted' : 'bg-text',
+                                slot.marked ? 'bg-accent' : slot.kind === 'wake' ? 'bg-text-muted' : 'bg-text',
                                 bright ? 'opacity-100' : 'opacity-30'
                             )}
                             style={{ top: slot.y, height: TICK_HEIGHT_PX, width: tickWidth(slot.kind, distance) }}
@@ -160,7 +162,14 @@ export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView,
                             <>
                                 <div className="px-2.5 pt-1.5 pb-2">
                                     <div className="flex items-baseline justify-between gap-3 text-xs text-text-faint">
-                                        <span>{hoveredTick.kind === 'person' ? t('rows.user.heading') : t('scrubber.tasks')}</span>
+                                        {hoveredTick.bookmark === null ? (
+                                            <span>{hoveredTick.kind === 'person' ? t('rows.user.heading') : t('scrubber.tasks')}</span>
+                                        ) : (
+                                            <span className="flex min-w-0 items-center gap-1 self-center text-text-muted">
+                                                <Icon icon={Bookmark} size={12} className="shrink-0 fill-current text-accent" />
+                                                <span className="truncate">{hoveredTick.bookmark.name ?? t('bookmarks.unnamed')}</span>
+                                            </span>
+                                        )}
                                         <time className="tabular-nums">{timeOf(hoveredTick.createdAt)}</time>
                                     </div>
                                     <p className="mt-1 line-clamp-4 text-sm break-words whitespace-pre-line text-text">

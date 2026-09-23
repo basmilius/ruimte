@@ -31,7 +31,9 @@ export const registerChatHandlers = (
         return {};
     });
 
-    dispatcher.register('chat.attach', (payload, client) => translate(() => manager.attach(payload.chatId, client.id, payload.historyLimit, payload.since)));
+    dispatcher.register('chat.attach', (payload, client) =>
+        translate(() => manager.attachWithBookmarks(payload.chatId, client.id, payload.historyLimit, payload.since))
+    );
 
     dispatcher.register('chat.history', (payload) => translate(() => manager.history(payload.chatId, payload.cursor, payload.limit)));
 
@@ -132,6 +134,18 @@ export const registerChatHandlers = (
             manager.dismiss(payload.chatId, payload.itemId);
             return {};
         })
+    );
+
+    dispatcher.register('chat.addBookmark', (payload) =>
+        translate(async () => ({ bookmarks: await manager.addBookmark(payload.chatId, payload.itemId, payload.name) }))
+    );
+
+    dispatcher.register('chat.renameBookmark', (payload) =>
+        translate(async () => ({ bookmarks: await manager.renameBookmark(payload.chatId, payload.itemId, payload.name) }))
+    );
+
+    dispatcher.register('chat.removeBookmark', (payload) =>
+        translate(async () => ({ bookmarks: await manager.removeBookmark(payload.chatId, payload.itemId) }))
     );
 
     dispatcher.register('chat.kill', (payload) =>

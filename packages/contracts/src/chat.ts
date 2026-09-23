@@ -558,6 +558,53 @@ export type ChatStatusEvent = z.infer<typeof ChatStatusEventSchema>;
 export const ChatSubagentChangedEventSchema = z.object({ chatId: ChatIdSchema, toolUseId: z.string() });
 export type ChatSubagentChangedEvent = z.infer<typeof ChatSubagentChangedEventSchema>;
 
+export const CHAT_BOOKMARK_LIMITS = {
+    name: 120,
+    excerpt: 160,
+    perChat: 200
+} as const;
+
+/*
+ * A message a person marked to come back to. It hangs on the item's id, never on a place in the
+ * thread, and lives beside the chat under `$RUIMTE_HOME`, so every client of the chat sees the same.
+ */
+export const ChatBookmarkSchema = z.object({
+    itemId: z.string().min(1),
+    // Absent while nobody named it; a list shows the excerpt instead.
+    name: z.string().max(CHAT_BOOKMARK_LIMITS.name).optional(),
+    // The start of the message when it was marked, so a list needs no thread to say what it points at.
+    excerpt: z.string().max(CHAT_BOOKMARK_LIMITS.excerpt),
+    createdAt: z.number()
+});
+export type ChatBookmark = z.infer<typeof ChatBookmarkSchema>;
+
+export const ChatBookmarksSchema = z.array(ChatBookmarkSchema);
+
+// Marking a message that already has a bookmark keeps it, and names it when a name comes along.
+export const ChatAddBookmarkPayloadSchema = ChatTargetPayloadSchema.extend({
+    itemId: z.string().min(1),
+    name: z.string().max(CHAT_BOOKMARK_LIMITS.name).optional()
+});
+export type ChatAddBookmarkPayload = z.infer<typeof ChatAddBookmarkPayloadSchema>;
+
+// An empty name takes the name away.
+export const ChatRenameBookmarkPayloadSchema = ChatTargetPayloadSchema.extend({
+    itemId: z.string().min(1),
+    name: z.string().max(CHAT_BOOKMARK_LIMITS.name)
+});
+export type ChatRenameBookmarkPayload = z.infer<typeof ChatRenameBookmarkPayloadSchema>;
+
+// A bookmark that is already gone is no refusal: another client took it away first.
+export const ChatRemoveBookmarkPayloadSchema = ChatTargetPayloadSchema.extend({ itemId: z.string().min(1) });
+export type ChatRemoveBookmarkPayload = z.infer<typeof ChatRemoveBookmarkPayloadSchema>;
+
+export const ChatBookmarksResultSchema = z.object({ bookmarks: ChatBookmarksSchema });
+export type ChatBookmarksResult = z.infer<typeof ChatBookmarksResultSchema>;
+
+// The whole list after every change, to every client attached to the chat.
+export const ChatBookmarksEventSchema = z.object({ chatId: ChatIdSchema, bookmarks: ChatBookmarksSchema });
+export type ChatBookmarksEvent = z.infer<typeof ChatBookmarksEventSchema>;
+
 export const ChatAttachResultSchema = z.object({
     info: ChatInfoSchema,
     items: z.array(ChatItemSchema),
@@ -565,7 +612,9 @@ export const ChatAttachResultSchema = z.object({
     pending: z.array(ChatItemSchema).optional(),
     seq: z.number().int().nonnegative().optional(),
     // Only when `since` was honored: what happened after it, in order; `items` is then empty.
-    events: z.array(ChatEventSchema).optional()
+    events: z.array(ChatEventSchema).optional(),
+    // Absent from a daemon that keeps no bookmarks.
+    bookmarks: ChatBookmarksSchema.optional()
 });
 export type ChatAttachResult = z.infer<typeof ChatAttachResultSchema>;
 

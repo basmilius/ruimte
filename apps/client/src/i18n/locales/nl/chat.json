@@ -329,6 +329,20 @@
     "strip": "Berichten in deze thread",
     "tasks": "Taken"
   },
+  "bookmarks": {
+    "menu": "Bladwijzers",
+    "add": "Bladwijzer plaatsen",
+    "rename": "Bladwijzer hernoemen",
+    "remove": "Bladwijzer verwijderen",
+    "unnamed": "Bladwijzer",
+    "nameLabel": "Naam van de bladwijzer",
+    "namePlaceholder": "Geef een naam, of laat het leeg",
+    "removed": "Bladwijzer verwijderd",
+    "addFailed": "De bladwijzer kon niet worden geplaatst",
+    "renameFailed": "De bladwijzer kon niet worden hernoemd",
+    "removeFailed": "De bladwijzer kon niet worden verwijderd",
+    "offline": "De machine van deze chat is niet verbonden"
+  },
   "image": {
     "zoomIn": "Inzoomen",
     "zoomOut": "Uitzoomen",

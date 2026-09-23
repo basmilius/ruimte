@@ -329,6 +329,20 @@
     "strip": "Messages in this thread",
     "tasks": "Tasks"
   },
+  "bookmarks": {
+    "menu": "Bookmarks",
+    "add": "Bookmark message",
+    "rename": "Rename bookmark",
+    "remove": "Remove bookmark",
+    "unnamed": "Bookmark",
+    "nameLabel": "Bookmark name",
+    "namePlaceholder": "Name it, or leave it empty",
+    "removed": "Bookmark removed",
+    "addFailed": "The bookmark could not be placed",
+    "renameFailed": "The bookmark could not be renamed",
+    "removeFailed": "The bookmark could not be removed",
+    "offline": "The machine of this chat is not connected"
+  },
   "image": {
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",

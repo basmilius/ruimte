@@ -2,6 +2,7 @@ import type {
     AgentKind,
     ChatAttachmentUpload,
     ChatAttachResult,
+    ChatBookmark,
     ChatPreferencesPayload,
     ChatSkill,
     FsSearchResult,
@@ -69,6 +70,7 @@ export class ChatClient {
             }),
             // Every chat on the machine, attached or not, so a node waiting on a person says so on a view nobody has open.
             transport.on('chat.status', ({ chatId, info }) => this.sink.status(chatId, info)),
+            transport.on('chat.bookmarks', ({ chatId, bookmarks }) => this.sink.bookmarks(chatId, bookmarks)),
             transport.subscribeStatus((status) => this.onStatus(status))
         );
         if (transport.status === 'open') {
@@ -156,6 +158,23 @@ export class ChatClient {
             skills: extras.skills,
             attachments: extras.attachments
         });
+    }
+
+    /* Marks a message; the list every client of the chat holds comes back as `chat.bookmarks`. */
+    async addBookmark(chatId: string, itemId: string, name?: string): Promise<ChatBookmark[]> {
+        const { bookmarks } = await this.transport.request('chat.addBookmark', { chatId, itemId, ...(name === undefined ? {} : { name }) });
+        return bookmarks;
+    }
+
+    /* An empty name takes the name away. */
+    async renameBookmark(chatId: string, itemId: string, name: string): Promise<ChatBookmark[]> {
+        const { bookmarks } = await this.transport.request('chat.renameBookmark', { chatId, itemId, name });
+        return bookmarks;
+    }
+
+    async removeBookmark(chatId: string, itemId: string): Promise<ChatBookmark[]> {
+        const { bookmarks } = await this.transport.request('chat.removeBookmark', { chatId, itemId });
+        return bookmarks;
     }
 
     /* Files under `cwd` that fuzzy-match `query`, for the composer's mention picker. */
@@ -250,9 +269,11 @@ export class ChatClient {
             for (const event of result.events) {
                 this.sink.apply(chatId, event);
             }
-            return;
+        } else {
+            this.sink.reset(chatId, result.info, result.items);
         }
-        this.sink.reset(chatId, result.info, result.items);
+        // A daemon without bookmarks sends none, and then this chat has none.
+        this.sink.bookmarks(chatId, result.bookmarks ?? []);
     }
 
     private sendPreferences(): void {

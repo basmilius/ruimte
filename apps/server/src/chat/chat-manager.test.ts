@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { appendFile, cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatCheckpointDiff, ChatInfo, ChatItem, ChatSubagentItem, ContextSource } from '@ruimte/contracts';
+import type { ChatBookmark, ChatCheckpointDiff, ChatInfo, ChatItem, ChatSubagentItem, ContextSource } from '@ruimte/contracts';
 import { chatPrompt, verbsNote } from '../context/context-note.ts';
 import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from '../context/notices.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
+import type { SessionEvent } from '../sessions/manager.ts';
 import { AttachmentStore } from './attachment-store.ts';
+import { BookmarkStore } from './bookmark-store.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, FakeCheckpoints, RecordingStore } from './chat-test-helpers.ts';
 import { fakeClaude } from './fake-claude.ts';
@@ -1089,5 +1091,43 @@ describe('a message another node left', () => {
         await manager.send('chat-again', 'what happened');
         await recorder.until(idle);
         expect(recorder.ofKind('assistant')[0]?.text).toBe(`echo: ${heard}\n\nwhat happened`);
+    });
+});
+
+describe('bookmarks', () => {
+    test('a bookmark goes to every client reading the chat, rides on the next attach and goes with a clear', async () => {
+        await retire(manager);
+        manager = makeManager({ bookmarks: new BookmarkStore(home) });
+        manager.subscribe('c1', recorder.sink());
+        const heard: Array<{ clientId: string; bookmarks: ChatBookmark[] }> = [];
+        for (const clientId of ['c2', 'c3']) {
+            manager.subscribe(clientId, (event: SessionEvent) => {
+                if (event.event === 'chat.bookmarks') {
+                    heard.push({ clientId, bookmarks: event.payload.bookmarks });
+                }
+            });
+        }
+        await manager.create({ chatId: 'chat-b', cwd: home });
+        manager.attach('chat-b', 'c1');
+        await manager.send('chat-b', 'hello  there');
+        await recorder.until(idle);
+        manager.attach('chat-b', 'c2');
+
+        const reply = recorder.ofKind('assistant')[0]!;
+        const list = await manager.addBookmark('chat-b', reply.id, 'The answer');
+        expect(list).toEqual([{ itemId: reply.id, name: 'The answer', excerpt: 'echo: hello there', createdAt: expect.any(Number) }]);
+        // A client that is not reading the thread hears nothing and gets the list when it attaches.
+        expect(heard).toEqual([{ clientId: 'c2', bookmarks: list }]);
+        expect((await manager.attachWithBookmarks('chat-b', 'c3')).bookmarks).toEqual(list);
+
+        const turn = recorder.ofKind('turn')[0]!;
+        expect(() => manager.addBookmark('chat-b', turn.id)).toThrow('no message');
+
+        await manager.clear('chat-b');
+        expect(heard.slice(1)).toEqual([
+            { clientId: 'c2', bookmarks: [] },
+            { clientId: 'c3', bookmarks: [] }
+        ]);
+        expect((await manager.attachWithBookmarks('chat-b', 'c3')).bookmarks).toEqual([]);
     });
 });

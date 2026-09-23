@@ -1,3 +1,4 @@
+import type { ChatBookmark } from '@ruimte/contracts';
 import type { TimelineRow } from '@/chat/logic/timeline';
 
 /*
@@ -6,8 +7,8 @@ import type { TimelineRow } from '@/chat/logic/timeline';
  * which one a pointer means. The component only draws what comes out of here.
  */
 
-/* A message the person sent, or a turn the machine opened with the results of tasks. */
-export type TickKind = 'person' | 'wake';
+/* A message the person sent, a turn the machine opened with the results of tasks, or any other message with a bookmark on it. */
+export type TickKind = 'person' | 'wake' | 'bookmark';
 
 export interface ScrubberTick {
     id: string;
@@ -18,6 +19,7 @@ export interface ScrubberTick {
     createdAt: number;
     /* The turn the message opened, which is the turn a fork from the card goes on after. */
     turnId: string | null;
+    bookmark: ChatBookmark | null;
 }
 
 /* With fewer messages than this the thread is short enough to scroll through, and the strip is noise. */
@@ -42,18 +44,28 @@ const WIDTH_NEAR_WAKE_PX = 8;
 const WIDTH_PERSON_PX = 8;
 const WIDTH_WAKE_PX = 5;
 
-export const ticksOf = (rows: readonly TimelineRow[]): ScrubberTick[] =>
+/* `marks` is what `bookmarkRows` answers: the bookmark drawn at a row, by row id. */
+export const ticksOf = (rows: readonly TimelineRow[], marks: ReadonlyMap<string, ChatBookmark> = new Map()): ScrubberTick[] =>
     rows.flatMap((row, rowIndex): ScrubberTick[] => {
+        const bookmark = marks.get(row.id) ?? null;
         if (row.kind === 'user') {
             // A message of only attachments still has a place in the thread; its names stand in for the text.
             const text = row.item.text !== '' ? row.item.text : (row.item.attachments ?? []).map((attachment) => attachment.name).join(', ');
-            return [{ id: row.id, rowIndex, kind: 'person', text, createdAt: row.item.createdAt, turnId: row.item.turnId }];
+            return [{ id: row.id, rowIndex, kind: 'person', text, createdAt: row.item.createdAt, turnId: row.item.turnId, bookmark }];
         }
         // The other turns nobody asked for (a sub-agent that finished, the CLI going on) are no place to return to.
         if (row.kind === 'turn-start' && ((row.turn.taskIds?.length ?? 0) > 0 || (row.turn.messageFrom?.length ?? 0) > 0)) {
-            return [{ id: row.id, rowIndex, kind: 'wake', text: row.label, createdAt: row.turn.createdAt, turnId: row.turn.id }];
+            return [{ id: row.id, rowIndex, kind: 'wake', text: row.label, createdAt: row.turn.createdAt, turnId: row.turn.id, bookmark: null }];
         }
-        return [];
+        if (bookmark === null) {
+            return [];
+        }
+        if (row.kind === 'assistant') {
+            return [{ id: row.id, rowIndex, kind: 'bookmark', text: row.item.text, createdAt: row.item.createdAt, turnId: row.item.turnId, bookmark }];
+        }
+        // The fold of a turn a marked reply is hidden in; the card reads the start the bookmark kept.
+        const turnId = row.kind === 'turn-fold' ? row.turn.id : null;
+        return [{ id: row.id, rowIndex, kind: 'bookmark', text: bookmark.excerpt, createdAt: bookmark.createdAt, turnId, bookmark }];
     });
 
 /* One drawn tick: a message, or a run of messages merged once the height has fewer pixels than they need. */
@@ -61,6 +73,8 @@ export interface TickSlot {
     first: number;
     last: number;
     kind: TickKind;
+    /* Whether a message under it has a bookmark, which draws it in the accent. */
+    marked: boolean;
     /* The top of the tick inside the strip. */
     y: number;
 }
@@ -72,7 +86,8 @@ export interface ScrubberLayout {
     slots: TickSlot[];
 }
 
-export const layoutTicks = (kinds: readonly TickKind[], height: number): ScrubberLayout => {
+/* `marked` says per message whether it has a bookmark; absent, none has. */
+export const layoutTicks = (kinds: readonly TickKind[], height: number, marked: readonly boolean[] = []): ScrubberLayout => {
     const count = kinds.length;
     const room = Math.max(0, Math.floor(height));
     const slotCount = Math.min(count, Math.floor(room / MIN_PITCH_PX));
@@ -87,8 +102,9 @@ export const layoutTicks = (kinds: readonly TickKind[], height: number): Scrubbe
         const first = Math.floor((i * count) / slotCount);
         const last = Math.floor(((i + 1) * count) / slotCount) - 1;
         // A merged tick is the person's as soon as one message in it is, since those are what the strip is for.
-        const kind = kinds.slice(first, last + 1).includes('person') ? 'person' : 'wake';
-        slots.push({ first, last, kind, y: top + i * pitch + inset });
+        const run = kinds.slice(first, last + 1);
+        const kind = run.includes('person') ? 'person' : run.includes('bookmark') ? 'bookmark' : 'wake';
+        slots.push({ first, last, kind, marked: marked.slice(first, last + 1).includes(true), y: top + i * pitch + inset });
     }
     return { top, pitch, count, slots };
 };
@@ -133,9 +149,9 @@ export const tickWidth = (kind: TickKind, distanceFromPointer: number | null): n
         return WIDTH_HOVERED_PX;
     }
     if (distanceFromPointer === 1) {
-        return kind === 'person' ? WIDTH_NEAR_PERSON_PX : WIDTH_NEAR_WAKE_PX;
+        return kind === 'wake' ? WIDTH_NEAR_WAKE_PX : WIDTH_NEAR_PERSON_PX;
     }
-    return kind === 'person' ? WIDTH_PERSON_PX : WIDTH_WAKE_PX;
+    return kind === 'wake' ? WIDTH_WAKE_PX : WIDTH_PERSON_PX;
 };
 
 /* The last index whose start lies at or above a line, or -1. The starts only grow. */

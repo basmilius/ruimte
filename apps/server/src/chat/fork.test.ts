@@ -324,10 +324,16 @@ describe('forkChat', () => {
     /* Deps around an in-memory canvas, which record what the fork asked of each CLI. */
     const stub = (source: { info: ChatInfo; items: ChatItem[] }) => {
         let document = content();
-        const asked: { claude: unknown[]; codex: unknown[]; written: Array<{ info: ChatInfo; items: ChatItem[]; preambles: string[] }> } = {
+        const asked: {
+            claude: unknown[];
+            codex: unknown[];
+            written: Array<{ info: ChatInfo; items: ChatItem[]; preambles: string[] }>;
+            bookmarkedItems: string[][];
+        } = {
             claude: [],
             codex: [],
-            written: []
+            written: [],
+            bookmarkedItems: []
         };
         const deps: ChatForkDeps = {
             source: async () => source,
@@ -366,6 +372,9 @@ describe('forkChat', () => {
             },
             deleteRecord: async () => undefined,
             copyPlans: async () => undefined,
+            copyBookmarks: async (_fromChatId, _toChatId, itemIds) => {
+                asked.bookmarkedItems.push([...itemIds]);
+            },
             newSessionId: () => 'session-2',
             now: () => 5
         };
@@ -384,6 +393,13 @@ describe('forkChat', () => {
         expect(result.info).toMatchObject({ agentSessionId: 'session-2', runtimeMode: 'supervised', usage: { contextTokens: 0, costUsd: 0, turns: 2 } });
         expect(result.info.queue).toBeUndefined();
         expect(result.info.suggestedTitle).toBeUndefined();
+    });
+
+    test('the bookmarks go along on the messages up to the cut and no further', async () => {
+        const items = [turn('turn-1', { lastUuid: 'u-1' }), user('user-1', 'turn-1'), turn('turn-2', { lastUuid: 'u-2' }), user('user-2', 'turn-2')];
+        const { deps, asked } = stub({ info: info('claude'), items });
+        await forkChat(deps, { chatId: 'chat-lead', turnId: 'turn-1' });
+        expect(asked.bookmarkedItems).toEqual([['turn-1', 'user-1']]);
     });
 
     test('Codex is asked for the turn it named, all of it for a last turn without a name, and a count otherwise', async () => {

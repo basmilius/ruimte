@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AgentStatus, ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
+import type { AgentStatus, ChatBookmark, ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
 import { dropEndpoint, endpointKey, useEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 
@@ -14,6 +14,8 @@ export interface ChatState {
      */
     structure: Record<string, ChatItem>;
     order: string[];
+    /* The messages marked to come back to, as the daemon last said; absent until it said anything. */
+    bookmarks?: ChatBookmark[];
 }
 
 /* Rows keyed with `endpointKey`, so a thread says which daemon it runs on. */
@@ -25,6 +27,7 @@ export interface ChatSink {
     apply(chatId: string, event: ChatEvent): void;
     /* What a chat is doing, for a thread nobody in this window has open. */
     status(chatId: string, info: ChatInfo): void;
+    bookmarks(chatId: string, bookmarks: ChatBookmark[]): void;
     forget(chatId: string): void;
 }
 
@@ -33,6 +36,7 @@ interface ChatsStore {
     reset(key: string, info: ChatInfo, items: ChatItem[]): void;
     apply(key: string, event: ChatEvent): void;
     status(key: string, info: ChatInfo): void;
+    bookmarks(key: string, bookmarks: ChatBookmark[]): void;
     forget(key: string): void;
     /* Drops one machine's threads. They keep running on the daemon; this client is done looking at them. */
     clear(endpointId: string): void;
@@ -85,12 +89,16 @@ export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
 export const useChats = create<ChatsStore>((set) => ({
     byKey: {},
     reset(key, info, items) {
-        set((s) => ({
-            byKey: {
-                ...s.byKey,
-                [key]: stateOf(info, items)
-            }
-        }));
+        set((s) => {
+            // The bookmarks are not part of the thread; they come in on their own and outlive a reset of it.
+            const bookmarks = s.byKey[key]?.bookmarks;
+            return {
+                byKey: {
+                    ...s.byKey,
+                    [key]: bookmarks === undefined ? stateOf(info, items) : { ...stateOf(info, items), bookmarks }
+                }
+            };
+        });
     },
     apply(key, event) {
         set((s) => {
@@ -119,6 +127,15 @@ export const useChats = create<ChatsStore>((set) => ({
             return { byKey: { ...s.byKey, [key]: { ...current, info } } };
         });
     },
+    bookmarks(key, bookmarks) {
+        set((s) => {
+            const current = s.byKey[key];
+            if (!current) {
+                return {};
+            }
+            return { byKey: { ...s.byKey, [key]: { ...current, bookmarks } } };
+        });
+    },
     forget(key) {
         set((s) => {
             const next = { ...s.byKey };
@@ -136,6 +153,7 @@ export const chatSinkFor = (endpointId: string): ChatSink => ({
     reset: (chatId, info, items) => useChats.getState().reset(endpointKey(endpointId, chatId), info, items),
     apply: (chatId, event) => useChats.getState().apply(endpointKey(endpointId, chatId), event),
     status: (chatId, info) => useChats.getState().status(endpointKey(endpointId, chatId), info),
+    bookmarks: (chatId, bookmarks) => useChats.getState().bookmarks(endpointKey(endpointId, chatId), bookmarks),
     forget: (chatId) => useChats.getState().forget(endpointKey(endpointId, chatId))
 });
 

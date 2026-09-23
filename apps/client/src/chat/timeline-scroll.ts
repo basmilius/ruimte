@@ -91,3 +91,36 @@ export const registerMessageStepper = (key: string, step: (direction: -1 | 1) =>
 
 /* False when that chat has no timeline on screen or no message in that direction. */
 export const stepTimelineMessage = (key: string, direction: -1 | 1): boolean => steppers.get(key)?.(direction) ?? false;
+
+/*
+ * A jump to one message of a chat, asked from outside its thread (the chat's menu). A thread that is
+ * not on screen yet gets it when it registers, since the menu may have to show the chat first.
+ * Keyed with `endpointKey`, like the steppers.
+ */
+const jumpers = new Map<string, (itemId: string) => void>();
+const waitingJumps = new Map<string, string>();
+
+export const registerItemJumper = (key: string, jump: (itemId: string) => void): (() => void) => {
+    jumpers.set(key, jump);
+    const waiting = waitingJumps.get(key);
+    if (waiting !== undefined) {
+        waitingJumps.delete(key);
+        jump(waiting);
+    }
+    return () => {
+        if (jumpers.get(key) === jump) {
+            jumpers.delete(key);
+        }
+    };
+};
+
+/* False when that chat has no thread on screen; the jump then waits for the next one that registers. */
+export const jumpToTimelineItem = (key: string, itemId: string): boolean => {
+    const jump = jumpers.get(key);
+    if (jump === undefined) {
+        waitingJumps.set(key, itemId);
+        return false;
+    }
+    jump(itemId);
+    return true;
+};

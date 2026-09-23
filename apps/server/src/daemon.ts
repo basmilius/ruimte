@@ -65,6 +65,7 @@ import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from './context/notices.ts';
 import { turnFromMessage } from './context/deliver-message.ts';
 import { ChatStore } from './chat/chat-store.ts';
+import { BookmarkStore } from './chat/bookmark-store.ts';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, type ClientAccess } from './dispatcher.ts';
 import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
@@ -219,6 +220,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const attachments = new AttachmentStore(config.home);
     const checkpoints = new Checkpoints(config.home);
     const plans = new PlanStore(config.home);
+    const bookmarks = new BookmarkStore(config.home);
     const chats: ChatManager = new ChatManager({
         providers,
         store: new ChatStore(config.home, attachments),
@@ -244,7 +246,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         onInterruptedRun: outboxLink.onInterruptedRun,
         taskRows: (chatId) => tasks.ofParent(chatId),
         endedAt: (chatId) => lineage.endedAt(chatId),
-        plans
+        plans,
+        bookmarks
     });
     const projects = new ProjectStore(config.home);
     projects.attachTracked(isTrackedPath);

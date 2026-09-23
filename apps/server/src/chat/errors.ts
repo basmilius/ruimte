@@ -24,6 +24,10 @@ type ChatErrorCode =
     | 'checkpoint-missing'
     // What a summary is refused with.
     | 'not-a-fork'
-    | 'original-gone';
+    | 'original-gone'
+    // What a bookmark is refused with.
+    | 'item-not-found'
+    | 'bookmark-not-found'
+    | 'too-many-bookmarks';
 
 export class ChatError extends CodedError<ChatErrorCode> {}

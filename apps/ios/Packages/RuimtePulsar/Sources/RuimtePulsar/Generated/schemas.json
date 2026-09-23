@@ -14000,6 +14000,34 @@
             }
           ]
         }
+      },
+      "bookmarks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "itemId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "excerpt": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "createdAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "itemId",
+            "excerpt",
+            "createdAt"
+          ]
+        }
       }
     },
     "required": [
@@ -16473,6 +16501,180 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "request.chat.addBookmark.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "itemId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 120
+      }
+    },
+    "required": [
+      "chatId",
+      "itemId"
+    ]
+  },
+  "request.chat.addBookmark.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "bookmarks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "itemId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "excerpt": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "createdAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "itemId",
+            "excerpt",
+            "createdAt"
+          ]
+        }
+      }
+    },
+    "required": [
+      "bookmarks"
+    ]
+  },
+  "request.chat.renameBookmark.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "itemId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 120
+      }
+    },
+    "required": [
+      "chatId",
+      "itemId",
+      "name"
+    ]
+  },
+  "request.chat.renameBookmark.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "bookmarks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "itemId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "excerpt": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "createdAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "itemId",
+            "excerpt",
+            "createdAt"
+          ]
+        }
+      }
+    },
+    "required": [
+      "bookmarks"
+    ]
+  },
+  "request.chat.removeBookmark.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "itemId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "chatId",
+      "itemId"
+    ]
+  },
+  "request.chat.removeBookmark.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "bookmarks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "itemId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "excerpt": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "createdAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "itemId",
+            "excerpt",
+            "createdAt"
+          ]
+        }
+      }
+    },
+    "required": [
+      "bookmarks"
+    ]
   },
   "request.skills.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -34659,6 +34861,48 @@
     "required": [
       "chatId",
       "toolUseId"
+    ]
+  },
+  "event.chat.bookmarks": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "bookmarks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "itemId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "excerpt": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "createdAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "itemId",
+            "excerpt",
+            "createdAt"
+          ]
+        }
+      }
+    },
+    "required": [
+      "chatId",
+      "bookmarks"
     ]
   },
   "event.endpoint.changed": {
