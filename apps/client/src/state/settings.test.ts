@@ -160,8 +160,8 @@ describe('worktreeMergeStrategy', () => {
 });
 
 describe('the colors of code', () => {
-    test('start on Night Owl, light and dark', () => {
-        expect(settingsFrom({})).toMatchObject({ codeThemeLight: 'night-owl-light', codeThemeDark: 'night-owl' });
+    test('start on our own theme, light and dark', () => {
+        expect(settingsFrom({})).toMatchObject({ codeThemeLight: 'ruimte-light', codeThemeDark: 'ruimte-dark' });
     });
 
     test('keep a theme Shiki bundles for that side', () => {
@@ -177,19 +177,19 @@ describe('the colors of code', () => {
             codeThemeDark: 'ruimte-dark'
         });
         expect(settingsFrom({ codeThemeLight: 'ruimte-dark', codeThemeDark: 'ruimte-light' })).toMatchObject({
-            codeThemeLight: 'night-owl-light',
-            codeThemeDark: 'night-owl'
+            codeThemeLight: 'ruimte-light',
+            codeThemeDark: 'ruimte-dark'
         });
     });
 
     test('drop a theme that is gone, or one made for the other side', () => {
         expect(settingsFrom({ codeThemeLight: 'retired-theme', codeThemeDark: 42 as unknown as string })).toMatchObject({
-            codeThemeLight: 'night-owl-light',
-            codeThemeDark: 'night-owl'
+            codeThemeLight: 'ruimte-light',
+            codeThemeDark: 'ruimte-dark'
         });
         expect(settingsFrom({ codeThemeLight: 'github-dark', codeThemeDark: 'github-light' })).toMatchObject({
-            codeThemeLight: 'night-owl-light',
-            codeThemeDark: 'night-owl'
+            codeThemeLight: 'ruimte-light',
+            codeThemeDark: 'ruimte-dark'
         });
     });
 
