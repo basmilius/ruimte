@@ -1,4 +1,5 @@
-import { PLAN_LIMITS, PlanChecksSchema, PlanKindSchema, PlanStepStateSchema, type Plan, type PlanItem, type PlanOp } from '@ruimte/contracts';
+import type { ActionOutput } from '@ruimte/actions';
+import { PLAN_LIMITS, PlanChecksSchema, PlanKindSchema, PlanStepStateSchema, type PlanItem } from '@ruimte/contracts';
 import {
     PLAN_LEGEND,
     PlanDraftMetaSchema,
@@ -8,20 +9,14 @@ import {
     activeStepIds,
     allSteps,
     isParentStep,
-    parsePlanDraft,
-    parsePlanMarkdown,
     progressText,
-    renderPlanText,
-    type PlanApplied,
-    type PlanRefusal
+    renderPlanText
 } from '@ruimte/plan';
 import { z } from 'zod';
+import { defineActionVerb, runAction } from './action-verb.ts';
 import { fieldLines } from './diagram-verb.ts';
-import { callerKind } from './task-verbs.ts';
 import { unescapeText } from './text-escapes.ts';
-import { VerbRefusal, defineAction, defineNoun, field, orNote, placeOf, type VerbCall } from './verb.ts';
-
-const HELP_LINE = 'detail\truimte-context help plan';
+import { defineNoun, field } from './verb.ts';
 
 /* Agents repeat ids to people, who only know a plan and its steps by their titles. */
 const IDS_LINE = 'ids\tIds are for your commands. When you talk to the person, name the plan and its steps by their title, never by id';
@@ -82,7 +77,7 @@ export const PLAN_EXAMPLE = JSON.stringify({
     ]
 });
 
-const PLAN_FLAG = 'flag\t--plan P\toptional\tThe plan by id; without it the newest plan of this chat';
+const PLAN_FLAG = { syntax: '--plan P', need: 'optional', field: 'planId' } as const;
 
 const REFUSAL_CODES = [
     'refusals',
@@ -97,66 +92,14 @@ const REFUSAL_CODES = [
     'the codes these verbs refuse with most'
 ].join('\t');
 
-/* The chat the caller is: a plan is kept beside a chat's record, and a terminal has none. */
-const callerChat = async (call: VerbCall): Promise<string> => {
-    const place = placeOf(call);
-    const kind = callerKind(await call.host.read(place.projectId), call.caller);
-    if (kind !== 'chat') {
-        throw new VerbRefusal(
-            'plan-needs-chat',
-            `A plan belongs to a chat, and you are ${kind === null ? 'not a node of this project' : `a ${kind}`}: only a chat has a record to keep a plan beside`
-        );
-    }
-    return call.caller;
-};
-
-const planRow = (plan: Plan): string => `plan\t${plan.id}\t${plan.meta.kind}\t${field(plan.meta.title)}\t${field(progressText(plan))}`;
-
-const plansOrNote = (plans: readonly Plan[]): string[] => orNote(plans.map(planRow), 'This chat has no plan; ruimte-context plan new makes one');
-
-/* A refusal of the store, with what the agent can do next beside it. */
-const refused = async (call: VerbCall, chatId: string, refusal: PlanRefusal): Promise<VerbRefusal> => {
-    switch (refusal.code) {
-        case 'plan-not-found':
-            return new VerbRefusal(refusal.code, refusal.message, plansOrNote(await call.host.plans.read(chatId)));
-        case 'too-many-plans':
-            return new VerbRefusal(refusal.code, refusal.message, [
-                ...(await call.host.plans.read(chatId)).map(planRow),
-                'see\truimte-context plan delete --plan P\tremoves a plan you no longer keep'
-            ]);
-        case 'plan-missing-item':
-        case 'plan-not-a-step':
-        case 'plan-parent-state':
-            return new VerbRefusal(refusal.code, refusal.message, ['see\truimte-context plan read\tevery item with its id in brackets']);
-        case 'set-by-person':
-            return new VerbRefusal(refusal.code, refusal.message, [
-                'see\truimte-context plan note <stepId> --text T\ta note is always yours to add; or ask the person in the chat'
-            ]);
-        case 'plan-invalid':
-            return new VerbRefusal(refusal.code, refusal.message, [HELP_LINE]);
-        default:
-            return new VerbRefusal(refusal.code, refusal.message);
-    }
-};
-
 /* What every change prints: the plan and its rev, the steps now active, and states a new sub-step took away. */
-const changedLines = (applied: PlanApplied): string[] => {
-    const active = activeStepIds(applied.plan);
+const changedLines = ({ plan, dropped }: ActionOutput<'plan.addNote'>): string[] => {
+    const active = activeStepIds(plan);
     return [
-        `plan\t${applied.plan.id}\trev ${applied.plan.rev}\t${applied.plan.meta.kind}\t${field(applied.plan.meta.title)}\t${field(progressText(applied.plan))}`,
+        `plan\t${plan.id}\trev ${plan.rev}\t${plan.meta.kind}\t${field(plan.meta.title)}\t${field(progressText(plan))}`,
         ...(active.length > 0 ? [`now\t${active.join('\t')}`] : []),
-        ...applied.dropped.map((id) => `dropped\t${id}\tgot its first sub-step, so its own state is gone and follows from its sub-steps`)
+        ...dropped.map((id) => `dropped\t${id}\tgot its first sub-step, so its own state is gone and follows from its sub-steps`)
     ];
-};
-
-/* Runs operations of the agent on its own plan and prints the result, or refuses with what to do instead. */
-const applyAgentOps = async (call: VerbCall, planId: string | undefined, ops: PlanOp[]): Promise<{ chatId: string; applied: PlanApplied }> => {
-    const chatId = await callerChat(call);
-    const applied = await call.host.plans.apply(chatId, planId, ops, 'agent');
-    if (!applied.ok) {
-        throw await refused(call, chatId, applied);
-    }
-    return { chatId, applied };
 };
 
 /* Every item with the id it has, the item it stands under, its kind and title, in document order. */
@@ -175,26 +118,37 @@ const stateFlag = z.enum(PlanStepStateSchema.options, { error: `--state takes on
 const checksFlag = z.enum(PlanChecksSchema.options, { error: `--checks takes one of ${PlanChecksSchema.options.join(', ')}` }).optional();
 const textFlag = (needs: string) => z.string({ error: needs });
 
-const parseJson = (source: string): unknown => {
-    try {
-        return JSON.parse(source);
-    } catch (e) {
-        throw new VerbRefusal('bad-json', `The document is not JSON: ${e instanceof Error ? e.message : 'it does not parse'}`, [HELP_LINE]);
-    }
-};
+const ITEM_ID = { syntax: '<itemId>', need: 'required', field: 'itemId' } as const;
 
-const newSub = defineAction('plan', {
+const newSub = defineActionVerb('plan', {
     name: 'new',
+    action: 'plan.create',
     usage: '[--title T] [--kind steps|test] [--checks anyone|agent|person] [--dry-run] (< plan.json | --markdown -)',
-    summary: 'Makes a plan for this chat from a JSON document on stdin or a Markdown task list; prints the plan, every item id and how to check one off',
+    params: [
+        {
+            syntax: '--markdown -',
+            need: 'optional',
+            field: 'markdown',
+            text: 'A GFM task list on stdin instead of JSON: # title, ## section, - [ ] step, indented for a sub-step, > **Title** description for a text block, [x] [!] [-] [?] [~] [w] [i] for a state'
+        },
+        {
+            syntax: '--document JSON',
+            need: 'optional',
+            field: 'document',
+            text: 'The JSON as one argument instead of on stdin; the CLI puts stdin here when you give neither'
+        },
+        { syntax: '--title T', need: 'optional', field: 'title' },
+        { syntax: '--kind K', need: 'optional', field: 'kind', text: `${PlanKindSchema.options.join(' or ')}, over the one in the document` },
+        {
+            syntax: '--checks C',
+            need: 'optional',
+            field: 'checks',
+            text: `Who sets the steps that name no checks: ${PlanChecksSchema.options.join(', ')}; over the one in the document`
+        },
+        { syntax: '--dry-run', need: 'optional', text: 'The same checks, nothing written; minted ids differ from the ones a real run mints' }
+    ],
     detail: [
         "stdin\tThe plan as JSON, piped in or as a heredoc: ruimte-context plan new <<'EOF' ... EOF",
-        'flag\t--markdown -\toptional\tA GFM task list on stdin instead of JSON: # title, ## section, - [ ] step, indented for a sub-step, > **Title** description for a text block, [x] [!] [-] [?] [~] [w] [i] for a state',
-        'flag\t--document JSON\toptional\tThe JSON as one argument instead of on stdin; the CLI puts stdin here when you give neither',
-        'flag\t--title T\toptional\tThe title, over the one in the document',
-        `flag\t--kind K\toptional\t${PlanKindSchema.options.join(' or ')}, over the one in the document`,
-        `flag\t--checks C\toptional\tWho sets the steps that name no checks: ${PlanChecksSchema.options.join(', ')}; over the one in the document`,
-        'flag\t--dry-run\toptional\tThe same checks, nothing written; minted ids differ from the ones a real run mints',
         'prints\tplan\tid\trev 0\tkind\ttitle\tthe plan made; dry run instead of plan with --dry-run',
         'prints\titem\tid\ttype\tunder\ttitle\tone line per item in document order; under is the section or step it stands in, - at the top',
         'prints\texample\ta command that checks off the first step',
@@ -222,32 +176,18 @@ const newSub = defineAction('plan', {
     }),
     dryRun: true,
     async run({ flags, dryRun }, call) {
-        const chatId = await callerChat(call);
-        if (flags.document !== undefined && flags.markdown !== undefined) {
-            throw new VerbRefusal('two-documents', 'plan new takes the JSON document or --markdown, not both', [HELP_LINE]);
-        }
-        const source = flags.markdown ?? flags.document ?? '';
-        if (source.trim() === '') {
-            throw new VerbRefusal(
-                'no-document',
-                "plan new reads the plan on stdin and got nothing: ruimte-context plan new <<'EOF' {...} EOF, or ruimte-context plan new --markdown - <<'EOF' ... EOF",
-                [HELP_LINE]
-            );
-        }
-        const parsed = flags.markdown === undefined ? parsePlanDraft(parseJson(source)) : parsePlanMarkdown(source);
-        if (!parsed.ok) {
-            throw await refused(call, chatId, parsed);
-        }
-        const meta = {
-            ...(flags.title ? { title: flags.title } : {}),
-            ...(flags.kind ? { kind: flags.kind } : {}),
-            ...(flags.checks ? { checks: flags.checks } : {})
-        };
-        const created = await call.host.plans.create(chatId, { draft: parsed.draft, meta, dryRun });
-        if (!created.ok) {
-            throw await refused(call, chatId, created);
-        }
-        const { plan } = created;
+        const { plan } = await runAction(
+            call,
+            'plan.create',
+            {
+                document: flags.document ?? null,
+                markdown: flags.markdown ?? null,
+                title: flags.title ?? null,
+                kind: flags.kind ?? null,
+                checks: flags.checks ?? null
+            },
+            dryRun
+        );
         const firstStep = allSteps(plan.items).find((step) => !isParentStep(step));
         return [
             `${dryRun ? 'dry run' : 'plan'}\t${plan.id}\trev ${plan.rev}\t${plan.meta.kind}\t${field(plan.meta.title)}`,
@@ -261,13 +201,12 @@ const newSub = defineAction('plan', {
     }
 });
 
-const readSub = defineAction('plan', {
+const readSub = defineActionVerb('plan', {
     name: 'read',
+    action: 'plan.read',
     usage: '[--plan P] [--all]',
-    summary: 'Prints the newest plan of this chat as text, with every id in brackets; after a compaction this is how you find the ids again',
+    params: [PLAN_FLAG, { syntax: '--all', need: 'optional', text: 'Every plan of this chat, oldest first' }],
     detail: [
-        PLAN_FLAG,
-        'flag\t--all\toptional\tEvery plan of this chat, oldest first',
         'prints\tA plan as text: a line with title, id, kind, rev and progress, a line with status, the active steps and the other plans, then one line per item',
         `legend\t${PLAN_LEGEND}`,
         'marks\tperson-only and agent-only say who sets a step; set by a person means you leave its state alone'
@@ -276,79 +215,109 @@ const readSub = defineAction('plan', {
     flags: z.object({ plan: planFlag }),
     switches: ['all'],
     async run({ flags, switches }, call) {
-        const chatId = await callerChat(call);
-        const plans = await call.host.plans.read(chatId);
-        if (plans.length === 0) {
-            return ['note\tThis chat has no plan; ruimte-context plan new makes one'];
-        }
+        const NO_PLAN = 'note\tThis chat has no plan; ruimte-context plan new makes one';
         if (switches.has('all')) {
+            const { plans } = await runAction(call, 'plan.list', {});
+            if (plans.length === 0) {
+                return [NO_PLAN];
+            }
             return plans.flatMap((plan, index) => [...(index === 0 ? [] : ['']), ...renderPlanText(plan).split('\n')]);
         }
-        const plan = flags.plan === undefined ? plans.at(-1)! : plans.find((candidate) => candidate.id === flags.plan);
-        if (!plan) {
-            throw new VerbRefusal('plan-not-found', `This chat has no plan ${flags.plan}`, plansOrNote(plans));
+        const { plan, others } = await runAction(call, 'plan.read', { planId: flags.plan ?? null });
+        if (plan === null) {
+            return [NO_PLAN];
         }
-        return renderPlanText(plan, { others: plans.filter((other) => other !== plan) }).split('\n');
+        return renderPlanText(plan, { others }).split('\n');
     }
 });
 
-const setSub = defineAction('plan', {
+const setSub = defineActionVerb('plan', {
     name: 'set',
+    action: 'plan.setStepState',
     usage: '<stepId>... --state open|active|done|failed|skipped|blocked|warning|info [--note T] [--next ID] [--plan P]',
-    summary: 'Sets the state of one or more steps in one rev; with --next the step you move on to becomes active in the same rev',
+    params: [
+        { syntax: '<stepId>...', need: 'required', field: 'stepIds' },
+        {
+            syntax: '--state S',
+            need: 'required',
+            field: 'state',
+            text: `${PlanStepStateSchema.options.join(', ')}; active is the step you work on now, and more than one may be; warning ran with a concern and info ran with something worth reading, both with a --note that says what`
+        },
+        { syntax: '--note T', need: 'optional', field: 'note', more: '\\n reads as a newline' },
+        {
+            syntax: '--next ID',
+            need: 'optional',
+            field: 'next',
+            text: 'The step that becomes active in the same rev: plan set build --state done --next tests'
+        },
+        PLAN_FLAG
+    ],
     detail: [
-        'argument\t<stepId>...\trequired\tOne or more steps without sub-steps, by id',
-        `flag\t--state S\trequired\t${PlanStepStateSchema.options.join(', ')}; active is the step you work on now, and more than one may be; warning ran with a concern and info ran with something worth reading, both with a --note that says what`,
-        'flag\t--note T\toptional\tA note on each of the steps; an empty one clears it; \\n reads as a newline',
-        'flag\t--next ID\toptional\tThe step that becomes active in the same rev: plan set build --state done --next tests',
-        PLAN_FLAG,
         'prints\tplan\tid\trev N\tkind\ttitle\tprogress, then now\tthe active steps, and a dropped line for a state a change took away',
         'who\tA person-only step is never yours to set, and a state a person set stays; a note is always yours to add'
     ],
     positionals: z.array(z.string().min(1, 'a step id may not be empty')).min(1, 'plan set needs the id of at least one step'),
     flags: z.object({ state: stateFlag, note: z.string().optional(), next: z.string().min(1, '--next needs the id of a step').optional(), plan: planFlag }),
     async run({ positionals, flags }, call) {
-        const op: PlanOp = {
-            op: 'set',
-            ids: positionals,
-            state: flags.state,
-            ...(flags.note === undefined ? {} : { note: unescapeText(flags.note) }),
-            ...(flags.next === undefined ? {} : { next: flags.next })
-        };
-        return changedLines((await applyAgentOps(call, flags.plan, [op])).applied);
+        return changedLines(
+            await runAction(call, 'plan.setStepState', {
+                planId: flags.plan ?? null,
+                stepIds: positionals,
+                state: flags.state,
+                note: flags.note === undefined ? null : unescapeText(flags.note),
+                next: flags.next ?? null
+            })
+        );
     }
 });
 
-const noteSub = defineAction('plan', {
+const noteSub = defineActionVerb('plan', {
     name: 'note',
+    action: 'plan.addNote',
     usage: '<stepId> --text T [--plan P]',
-    summary: 'Writes the note of a step, also one a person set; an empty text clears it',
-    detail: [
-        'argument\t<stepId>\trequired\tThe step, by id',
-        `flag\t--text T\trequired\tAt most ${PLAN_LIMITS.note} characters; \\n reads as a newline, and --text - takes it from stdin`,
-        PLAN_FLAG,
-        'prints\tplan\tid\trev N\tkind\ttitle\tprogress'
+    params: [
+        { syntax: '<stepId>', need: 'required', field: 'stepId' },
+        {
+            syntax: '--text T',
+            need: 'required',
+            field: 'text',
+            text: `At most ${PLAN_LIMITS.note} characters; \\n reads as a newline, and --text - takes it from stdin`
+        },
+        PLAN_FLAG
     ],
+    detail: ['prints\tplan\tid\trev N\tkind\ttitle\tprogress'],
     positionals: itemId('plan note', 'a step'),
     flags: z.object({ text: textFlag('plan note needs --text with the note, or an empty one to clear it'), plan: planFlag }),
     async run({ positionals: [id], flags }, call) {
-        return changedLines((await applyAgentOps(call, flags.plan, [{ op: 'note', id: id as string, text: unescapeText(flags.text) }])).applied);
+        return changedLines(await runAction(call, 'plan.addNote', { planId: flags.plan ?? null, stepId: id as string, text: unescapeText(flags.text) }));
     }
 });
 
-const addSub = defineAction('plan', {
+const addSub = defineActionVerb('plan', {
     name: 'add',
+    action: 'plan.addItem',
     usage: '--type step|text|section --title T [--description D] [--under ID] [--after ID] [--checks anyone|agent|person] [--id ID] [--plan P]',
-    summary: 'Adds a step, text block or section; prints the plan and the id of the new item',
+    params: [
+        { syntax: '--type T', need: 'required', field: 'type' },
+        { syntax: '--title T', need: 'required', field: 'title', text: `One line, at most ${PLAN_LIMITS.title} characters` },
+        { syntax: '--description D', need: 'optional', field: 'description', more: '\\n reads as a newline' },
+        {
+            syntax: '--under ID',
+            need: 'optional',
+            field: 'under',
+            more: 'a step under a leaf makes that leaf a parent and drops its own state'
+        },
+        {
+            syntax: '--after ID',
+            need: 'optional',
+            field: 'after',
+            text: 'The item it goes right after, beside it; with --under it has to stand directly under that item'
+        },
+        { syntax: '--checks C', need: 'optional', field: 'checks' },
+        { syntax: '--id ID', need: 'optional', field: 'itemId' },
+        PLAN_FLAG
+    ],
     detail: [
-        'flag\t--type T\trequired\tstep, text or section',
-        `flag\t--title T\trequired\tOne line, at most ${PLAN_LIMITS.title} characters`,
-        'flag\t--description D\toptional\tShort Markdown; \\n reads as a newline',
-        'flag\t--under ID\toptional\tThe section or step it goes in, last; a step under a leaf makes that leaf a parent and drops its own state',
-        'flag\t--after ID\toptional\tThe item it goes right after, beside it; with --under it has to stand directly under that item',
-        'flag\t--checks C\toptional\tWho sets a new step: anyone, agent or person',
-        'flag\t--id ID\toptional\tThe id you want, lowercase letters, digits and dashes; minted when absent',
-        PLAN_FLAG,
         'place\tWithout --under and --after the item goes last at the top of the plan; a section only stands at the top',
         'prints\tplan\tid\trev N\tkind\ttitle\tprogress, then added\tid\ttype'
     ],
@@ -364,34 +333,37 @@ const addSub = defineAction('plan', {
         plan: planFlag
     }),
     async run({ flags }, call) {
-        const { applied } = await applyAgentOps(call, flags.plan, [
-            {
-                op: 'add',
-                type: flags.type,
-                title: flags.title,
-                ...(flags.description === undefined ? {} : { description: unescapeText(flags.description) }),
-                ...(flags.under === undefined ? {} : { under: flags.under }),
-                ...(flags.after === undefined ? {} : { after: flags.after }),
-                ...(flags.checks === undefined ? {} : { checks: flags.checks }),
-                ...(flags.id === undefined ? {} : { id: flags.id })
-            }
-        ]);
-        return [...changedLines(applied), `added\t${flags.id ?? applied.minted[0]}\t${flags.type}`];
+        const added = await runAction(call, 'plan.addItem', {
+            planId: flags.plan ?? null,
+            type: flags.type,
+            title: flags.title,
+            description: flags.description === undefined ? null : unescapeText(flags.description),
+            under: flags.under ?? null,
+            after: flags.after ?? null,
+            checks: flags.checks ?? null,
+            itemId: flags.id ?? null
+        });
+        return [...changedLines(added), `added\t${added.itemId}\t${flags.type}`];
     }
 });
 
-const editSub = defineAction('plan', {
+const editSub = defineActionVerb('plan', {
     name: 'edit',
+    action: 'plan.editItem',
     usage: '<itemId> [--title T] [--description D] [--checks anyone|agent|person] [--plan P]',
-    summary: 'Changes the title, description or checks of an item',
-    detail: [
-        'argument\t<itemId>\trequired\tThe item, by id',
-        'flag\t--title T\toptional\tThe new title',
-        'flag\t--description D\toptional\tThe new description; an empty one removes it',
-        'flag\t--checks C\toptional\tWho sets the step; a step a person unlocked stays anyone, and a person-only step stays person-only',
-        PLAN_FLAG,
-        'prints\tplan\tid\trev N\tkind\ttitle\tprogress'
+    params: [
+        ITEM_ID,
+        { syntax: '--title T', need: 'optional', field: 'title' },
+        { syntax: '--description D', need: 'optional', field: 'description' },
+        {
+            syntax: '--checks C',
+            need: 'optional',
+            field: 'checks',
+            more: 'a step a person unlocked stays anyone, and a person-only step stays person-only'
+        },
+        PLAN_FLAG
     ],
+    detail: ['prints\tplan\tid\trev N\tkind\ttitle\tprogress'],
     positionals: itemId('plan edit'),
     flags: z.object({
         title: z.string().min(1, '--title may not be empty').optional(),
@@ -400,32 +372,24 @@ const editSub = defineAction('plan', {
         plan: planFlag
     }),
     async run({ positionals: [id], flags }, call) {
-        if (flags.title === undefined && flags.description === undefined && flags.checks === undefined) {
-            throw new VerbRefusal('nothing-to-edit', 'plan edit needs at least one of --title, --description and --checks');
-        }
-        const op: PlanOp = {
-            op: 'edit',
-            id: id as string,
-            ...(flags.title === undefined ? {} : { title: flags.title }),
-            ...(flags.description === undefined ? {} : { description: unescapeText(flags.description) }),
-            ...(flags.checks === undefined ? {} : { checks: flags.checks })
-        };
-        return changedLines((await applyAgentOps(call, flags.plan, [op])).applied);
+        return changedLines(
+            await runAction(call, 'plan.editItem', {
+                planId: flags.plan ?? null,
+                itemId: id as string,
+                title: flags.title ?? null,
+                description: flags.description === undefined ? null : unescapeText(flags.description),
+                checks: flags.checks ?? null
+            })
+        );
     }
 });
 
-const moveSub = defineAction('plan', {
+const moveSub = defineActionVerb('plan', {
     name: 'move',
+    action: 'plan.moveItem',
     usage: '<itemId> [--under ID] [--after ID] [--plan P]',
-    summary: 'Moves an item, with everything under it, to another place in the plan',
-    detail: [
-        'argument\t<itemId>\trequired\tThe item, by id',
-        'flag\t--under ID\toptional\tThe section or step it goes in, last',
-        'flag\t--after ID\toptional\tThe item it goes right after',
-        PLAN_FLAG,
-        'place\tWithout either it goes last at the top of the plan',
-        'prints\tplan\tid\trev N\tkind\ttitle\tprogress'
-    ],
+    params: [ITEM_ID, { syntax: '--under ID', need: 'optional', field: 'under' }, { syntax: '--after ID', need: 'optional', field: 'after' }, PLAN_FLAG],
+    detail: ['place\tWithout either it goes last at the top of the plan', 'prints\tplan\tid\trev N\tkind\ttitle\tprogress'],
     positionals: itemId('plan move'),
     flags: z.object({
         under: z.string().min(1, '--under needs the id of a section or step').optional(),
@@ -433,61 +397,62 @@ const moveSub = defineAction('plan', {
         plan: planFlag
     }),
     async run({ positionals: [id], flags }, call) {
-        const op: PlanOp = {
-            op: 'move',
-            id: id as string,
-            ...(flags.under === undefined ? {} : { under: flags.under }),
-            ...(flags.after === undefined ? {} : { after: flags.after })
-        };
-        return changedLines((await applyAgentOps(call, flags.plan, [op])).applied);
+        return changedLines(
+            await runAction(call, 'plan.moveItem', { planId: flags.plan ?? null, itemId: id as string, under: flags.under ?? null, after: flags.after ?? null })
+        );
     }
 });
 
-const removeSub = defineAction('plan', {
+const removeSub = defineActionVerb('plan', {
     name: 'remove',
+    action: 'plan.removeItem',
     usage: '<itemId> [--plan P]',
-    summary: 'Removes an item and everything under it; refused when a person set a state in it',
-    detail: ['argument\t<itemId>\trequired\tThe item, by id', PLAN_FLAG, 'prints\tplan\tid\trev N\tkind\ttitle\tprogress'],
+    params: [ITEM_ID, PLAN_FLAG],
+    detail: ['prints\tplan\tid\trev N\tkind\ttitle\tprogress'],
     positionals: itemId('plan remove'),
     flags: z.object({ plan: planFlag }),
     async run({ positionals: [id], flags }, call) {
-        return changedLines((await applyAgentOps(call, flags.plan, [{ op: 'remove', id: id as string }])).applied);
+        return changedLines(await runAction(call, 'plan.removeItem', { planId: flags.plan ?? null, itemId: id as string }));
     }
 });
 
-const statusSub = defineAction('plan', {
+const statusSub = defineActionVerb('plan', {
     name: 'status',
+    action: 'plan.setStatus',
     usage: '--text T [--plan P]',
-    summary: 'Sets the line under the title about what happens now or next; an empty text clears it',
+    params: [
+        {
+            syntax: '--text T',
+            need: 'required',
+            field: 'text',
+            text: `One short sentence, at most ${PLAN_LIMITS.status} characters, such as Fixing the focus bug in the grid`
+        },
+        PLAN_FLAG
+    ],
     detail: [
-        `flag\t--text T\trequired\tOne short sentence, at most ${PLAN_LIMITS.status} characters, such as Fixing the focus bug in the grid`,
         'never\tNo counts or progress numbers, since the panel shows progress itself; clear the line rather than repeat the title or summary',
-        PLAN_FLAG,
         'prints\tplan\tid\trev N\tkind\ttitle\tprogress'
     ],
     positionals: z.tuple([], { error: 'plan status takes no arguments; the line goes in --text' }),
     flags: z.object({ text: textFlag('plan status needs --text with the line, or an empty one to clear it'), plan: planFlag }),
     async run({ flags }, call) {
-        return changedLines((await applyAgentOps(call, flags.plan, [{ op: 'meta', status: unescapeText(flags.text) }])).applied);
+        return changedLines(await runAction(call, 'plan.setStatus', { planId: flags.plan ?? null, text: unescapeText(flags.text) }));
     }
 });
 
-const deleteSub = defineAction('plan', {
+const deleteSub = defineActionVerb('plan', {
     name: 'delete',
+    action: 'plan.delete',
     usage: '--plan P',
-    summary: 'Removes a whole plan of this chat',
-    detail: ['flag\t--plan P\trequired\tThe plan by id; never the newest by default, since this cannot be undone', 'prints\tdeleted\tid\ttitle'],
+    params: [{ syntax: '--plan P', need: 'required', field: 'planId' }],
+    detail: ['prints\tdeleted\tid\ttitle'],
     positionals: z.tuple([], { error: 'plan delete takes no arguments; --plan names the plan' }),
     flags: z.object({
         plan: z.string({ error: 'plan delete needs --plan with the id of the plan' }).min(1, 'plan delete needs --plan with the id of the plan')
     }),
     async run({ flags }, call) {
-        const chatId = await callerChat(call);
-        const deleted = await call.host.plans.delete(chatId, flags.plan);
-        if (!deleted.ok) {
-            throw await refused(call, chatId, deleted);
-        }
-        return [`deleted\t${deleted.plan.id}\t${field(deleted.plan.meta.title)}`];
+        const deleted = await runAction(call, 'plan.delete', { planId: flags.plan });
+        return [`deleted\t${deleted.planId}\t${field(deleted.title)}`];
     }
 });
 

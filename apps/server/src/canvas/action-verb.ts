@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import { serverActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { VerbRefusal, canvasLines, defineAction, placeOf, type Action, type VerbCall } from './verb.ts';
+import { VerbRefusal, canvasLines, defineAction, defineVerb, placeOf, type Action, type Verb, type VerbCall } from './verb.ts';
 
 /* What the daemon's registry answers when a handler failed outright rather than refused. */
 const FAILURES: ReadonlySet<string> = new Set(['action-failed', 'invalid-output']);
@@ -87,6 +87,12 @@ const paramLine = <Name extends ActionName>(action: Name, param: ActionParam<Nam
     return `${param.syntax.startsWith('-') ? 'flag' : 'argument'}\t${param.syntax}\t${param.need}\t${text}`;
 };
 
+/* What `help` says about a verb that runs a catalog action, read off the definition. */
+const actionHelp = <Name extends ActionName>(spec: Pick<ActionVerbSpec<Name, z.ZodType, z.ZodObject>, 'action' | 'note' | 'params' | 'detail'>) => ({
+    summary: [actionDescription(spec.action, 'agent'), spec.note].filter((part): part is string => part !== undefined).join(' '),
+    detail: [...spec.params.map((param) => paramLine(spec.action, param)), ...spec.detail]
+});
+
 /*
  * A noun's action that runs a catalog action: `help` reads what it does and what its fields mean
  * from the action definition, and this adds only how the CLI spells them and what it prints.
@@ -94,9 +100,9 @@ const paramLine = <Name extends ActionName>(action: Name, param: ActionParam<Nam
 export const defineActionVerb = <Name extends ActionName, Positionals extends z.ZodType, Flags extends z.ZodObject>(
     noun: string,
     spec: ActionVerbSpec<Name, Positionals, Flags>
-): Action =>
-    defineAction(noun, {
-        ...spec,
-        summary: [actionDescription(spec.action, 'agent'), spec.note].filter((part): part is string => part !== undefined).join(' '),
-        detail: [...spec.params.map((param) => paramLine(spec.action, param)), ...spec.detail]
-    });
+): Action => defineAction(noun, { ...spec, ...actionHelp(spec) });
+
+/* The same for a verb with no noun in front of it, such as `done`. */
+export const defineStandaloneActionVerb = <Name extends ActionName, Positionals extends z.ZodType, Flags extends z.ZodObject>(
+    spec: ActionVerbSpec<Name, Positionals, Flags>
+): Verb => defineVerb({ ...spec, ...actionHelp(spec) });

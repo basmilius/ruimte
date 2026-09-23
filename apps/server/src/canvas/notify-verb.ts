@@ -1,17 +1,14 @@
-import { isAgentKind } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_NOTICE_LENGTH, MAX_NOTICES, NO_REPLY_NOTICE, NOTICE_MAX_AGE_MS } from '../context/notices.ts';
-import { refuseMissingNodes } from './own-view.ts';
+import { defineStandaloneActionVerb, runAction } from './action-verb.ts';
 import { unescapeText } from './text-escapes.ts';
-import { VerbRefusal, canvasFor, defineVerb, field, lengthOf, orNote, placeOf } from './verb.ts';
+import { lengthOf } from './verb.ts';
 
 const NEEDS_TEXT = '--text needs the message to leave, in quotes';
 
 const NOTICE_HOURS = Math.round(NOTICE_MAX_AGE_MS / 3_600_000);
 
 const NOTIFY_DETAIL: readonly string[] = [
-    'argument\t<id>\trequired\tThe node to notify, by id; ruimte-context link list lists the lines you have',
-    `flag\t--text M\trequired\tThe message, at most ${MAX_NOTICE_LENGTH} characters; \\n, \\t and \\\\ are read as escapes, and --text - takes it from stdin`,
     'prints\tnotified\tid\twhen\twhat happened\twhen is now for a message that is acted on as you call, on a screen or in a turn the chat takes on it, and waiting for one that is held until that node takes a turn of its own',
     'who\tOnly a node a line runs from you into, which is the same direction that makes you readable to it; ruimte-context link new draws that line',
     'who\tA link --to that names a terminal or a chat draws both ways at once, two edges and two rows, so one call is enough to be able to notify it and be notified back',
@@ -33,10 +30,19 @@ const NOTIFY_DETAIL: readonly string[] = [
     'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs'
 ];
 
-export const notifyVerb = defineVerb({
+export const notifyVerb = defineStandaloneActionVerb({
     name: 'notify',
+    action: 'agent.notify',
     usage: '<id> --text "..."',
-    summary: 'Sends a short message to the agent in another node, along a line that runs from you into it, which gives a chat between turns a turn on it',
+    params: [
+        { syntax: '<id>', need: 'required', field: 'nodeId', more: 'ruimte-context link list lists the lines you have' },
+        {
+            syntax: '--text M',
+            need: 'required',
+            field: 'text',
+            text: `The message, at most ${MAX_NOTICE_LENGTH} characters; \\n, \\t and \\\\ are read as escapes, and --text - takes it from stdin`
+        }
+    ],
     detail: NOTIFY_DETAIL,
     positionals: z.tuple([z.string({ error: 'notify takes the id of the node to notify' }).min(1, 'notify takes the id of the node to notify')], {
         error: (issue) =>
@@ -53,56 +59,7 @@ export const notifyVerb = defineVerb({
             .transform(unescapeText)
     }),
     async run({ positionals: [id], flags }, call) {
-        const place = placeOf(call);
-        if (id === call.caller) {
-            throw new VerbRefusal('self-notify', `${id} is you; a node needs no message to itself`);
-        }
-        if (place.canvasId === null) {
-            throw new VerbRefusal('not-on-a-canvas', 'A message travels along a line between two nodes of one canvas, and this view has none', [
-                'see\truimte-context link new\ta line needs both of its ends on one canvas'
-            ]);
-        }
-        const content = await call.host.read(place.projectId);
-        const canvas = canvasFor(content, place, undefined);
-        /*
-         * The rule is the one the canvas already draws: a line from the caller into an agent node is
-         * what `deriveContextSources` turns into readable context, so a message may travel exactly
-         * where a read already can. An agent cannot poke a node it has no relationship with, and the
-         * person who drew the line can see who may reach whom.
-         */
-        const reachable = canvas.nodes.filter(
-            (node) => isAgentKind(node.kind) && canvas.edges.some((edge) => edge.from === call.caller && edge.to === node.id)
-        );
-        const target = canvas.nodes.find((node) => node.id === id);
-        /* Only the nodes this same call would accept, and where there are none, what to do about
-           the node that was asked for rather than a sentence about the canvas in general. */
-        const lines = (): string[] =>
-            orNote(
-                reachable.map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),
-                `Nothing on ${canvas.id} has a line from you into it yet; ruimte-context link new --to ${id} draws the one this call needs`
-            );
-        if (!target) {
-            throw refuseMissingNodes(content, [id], canvas.id, 'no line can run from you into it, and that is what a message travels along', lines());
-        }
-        if (!isAgentKind(target.kind)) {
-            throw new VerbRefusal('not-an-agent', `${id} is a ${target.kind} node; only a terminal or a chat has an agent that could read a message`, lines());
-        }
-        if (!reachable.some((node) => node.id === id)) {
-            throw new VerbRefusal(
-                'not-linked',
-                `${id} is a ${target.kind} node on ${canvas.id}, but no line runs from you into it: draw that line and it can be notified`,
-                [...lines(), `see\truimte-context link new --to ${id}\tdraws the line this needs`]
-            );
-        }
-
-        const self = canvas.nodes.find((node) => node.id === call.caller);
-        const delivery = await call.host.notify({
-            projectId: place.projectId,
-            targetId: id,
-            from: call.caller,
-            fromTitle: field(self?.title ?? ''),
-            text: flags.text
-        });
-        return [`notified\t${id}\t${delivery.at}\t${delivery.detail}`];
+        const delivery = await runAction(call, 'agent.notify', { nodeId: id, text: flags.text });
+        return [`notified\t${delivery.nodeId}\t${delivery.at}\t${delivery.detail}`];
     }
 });

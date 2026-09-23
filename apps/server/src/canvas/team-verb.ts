@@ -11,7 +11,8 @@ import { readsFlag, readsIds, readsLines } from './link-verb.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId, nodesNamed } from './nodes.ts';
 import { placeFree, placeTeam, TEAM_COLUMNS } from './placement.ts';
 import { checkCwd } from './project-paths.ts';
-import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, nextLine, requireChatParent, taskBrief } from './task-verbs.ts';
+import { TASK_LINES, nextLine, taskBrief } from './task-verbs.ts';
+import { MAX_TASK_PROMPT_LENGTH, requireChatParent } from './tasks.ts';
 import {
     DRY_RUN_PREVIEW,
     MAX_TITLE_LENGTH,

@@ -1,7 +1,12 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ActionInput } from '@ruimte/actions';
-import type { ProjectContent } from '@ruimte/contracts';
+import type { ProjectContent, ProjectNode, Task } from '@ruimte/contracts';
+import type { Notice } from '../context/notices.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
+import { PlanStore } from '../plans/plan-store.ts';
 import { ProjectError } from '../projects/project-store.ts';
 import { serverActionCall } from './context.ts';
 import { serverActions } from './server-actions.ts';
@@ -12,6 +17,11 @@ let content: ProjectContent;
 let made: Map<string, string>;
 let ended: string[];
 let conflict: boolean;
+let notices: Omit<Notice, 'createdAt'>[];
+let tasks: Task[];
+let settled: string[];
+let plans: PlanStore;
+let home: string;
 
 /* Only what these handlers reach; anything else is a handler reaching further than it should. */
 const host = (): CanvasHost =>
@@ -32,7 +42,26 @@ const host = (): CanvasHost =>
         agentsDeleteAnyView: () => false,
         endSession: async (kind, nodeId) => {
             ended.push(`${kind}\t${nodeId}`);
-        }
+        },
+        notify: async (notice) => {
+            notices.push(notice);
+            return { at: 'waiting', wake: false, detail: 'that chat is in a turn' };
+        },
+        tasks: {
+            involving: (nodeId: string) => tasks.filter((task) => task.parentId === nodeId || task.childId === nodeId),
+            chatState: async () => 'idle',
+            done: async (childId: string, text: string) => {
+                const open = tasks.find((task) => task.childId === childId && task.status === 'open');
+                if (!open) {
+                    return null;
+                }
+                settled.push(text);
+                open.status = 'done';
+                return open;
+            }
+        } as Partial<CanvasHost['tasks']> as CanvasHost['tasks'],
+        plans,
+        browsers: { drive: async () => null, shot: async () => null }
     }) as Partial<CanvasHost> as CanvasHost;
 
 const agent = (dryRun = false) => serverActionCall(host(), PLACE, 'term-1', dryRun);
@@ -55,10 +84,45 @@ const nodesOnMain = (): string[] => {
     return main?.kind === 'canvas' ? main.nodes.map((node) => node.id) : [];
 };
 
-beforeEach(() => {
+const as = (caller: string, dryRun = false) => serverActionCall(host(), PLACE, caller, dryRun);
+
+const openTask = (childId: string, parentId: string): Task => ({
+    id: `task-${childId}`,
+    projectId: PLACE.projectId,
+    parentId,
+    childId,
+    title: 'Look into it',
+    prompt: 'Look into it',
+    status: 'open',
+    result: null,
+    createdAt: 0,
+    settledAt: null,
+    wake: 'pending'
+});
+
+const onMain = (...nodes: ProjectNode[]): void => {
+    const main = content.views.find((view) => view.id === 'main');
+    if (main?.kind === 'canvas') {
+        main.nodes.push(...nodes);
+    }
+};
+
+const lineOnMain = (from: string, to: string): void => {
+    const main = content.views.find((view) => view.id === 'main');
+    if (main?.kind === 'canvas') {
+        main.edges.push({ id: `${from}-${to}`, from, to });
+    }
+};
+
+beforeEach(async () => {
     made = new Map();
     ended = [];
     conflict = false;
+    notices = [];
+    tasks = [];
+    settled = [];
+    home = await mkdtemp(join(tmpdir(), 'ruimte-server-actions-'));
+    plans = new PlanStore(home);
     content = {
         name: 'repo',
         color: '#123456',
@@ -77,6 +141,10 @@ beforeEach(() => {
             }
         ]
     };
+});
+
+afterEach(async () => {
+    await rm(home, { recursive: true, force: true });
 });
 
 describe('the daemon actions', () => {
@@ -133,5 +201,71 @@ describe('the daemon actions', () => {
     test('only an agent reaches the actions an agent alone may run', async () => {
         const call = { ...agent(), actor: { kind: 'voice' as const, id: 'voice' } };
         expect(await serverActions.execute('node.list', { viewId: 'main' }, call)).toMatchObject({ status: 'failed', error: { code: 'forbidden-action' } });
+    });
+
+    test('agent.notify travels only along a line from the caller into an agent, and says where the message went', async () => {
+        const refused = await serverActions.execute('agent.notify', { nodeId: 'term-2', text: 'hello' }, agent());
+        expect(refused).toMatchObject({ status: 'failed', error: { code: 'not-linked' } });
+        expect(notices).toEqual([]);
+
+        lineOnMain('term-1', 'term-2');
+        const sent = await serverActions.execute('agent.notify', { nodeId: 'term-2', text: 'hello' }, agent());
+        expect(sent).toMatchObject({ status: 'completed', output: { nodeId: 'term-2', at: 'waiting' } });
+        expect(notices).toMatchObject([{ targetId: 'term-2', from: 'term-1', fromTitle: 'shell', text: 'hello' }]);
+
+        const voice = { ...agent(), actor: { kind: 'voice' as const, id: 'voice' } };
+        expect(await serverActions.execute('agent.notify', { nodeId: 'term-2', text: 'hello' }, voice)).toMatchObject({
+            status: 'failed',
+            error: { code: 'forbidden-action' }
+        });
+    });
+
+    test('task.create gives a task only to a chat the caller opened itself', async () => {
+        onMain(
+            { id: 'chat-1', kind: 'chat', title: 'lead', x: 0, y: 1200, w: 560, h: 360 },
+            { id: 'chat-2', kind: 'chat', title: 'helper', x: 700, y: 1200, w: 560, h: 360 }
+        );
+        const input = { nodeId: 'chat-2', prompt: 'Look into it', title: null };
+        expect(await serverActions.execute('task.create', input, as('term-1'))).toMatchObject({ status: 'failed', error: { code: 'not-a-chat-parent' } });
+        expect(await serverActions.execute('task.create', input, as('chat-1'))).toMatchObject({ status: 'failed', error: { code: 'not-yours' } });
+    });
+
+    test('task.complete settles the open task of the caller once and refuses a second result', async () => {
+        tasks = [openTask('term-1', 'chat-9')];
+        expect(await serverActions.execute('task.complete', { result: '  it works  ' }, agent())).toMatchObject({
+            status: 'completed',
+            output: { taskId: 'task-term-1', parentId: 'chat-9' }
+        });
+        expect(settled).toEqual(['it works']);
+        expect(await serverActions.execute('task.complete', { result: 'again' }, agent())).toMatchObject({
+            status: 'failed',
+            error: { code: 'no-open-task' }
+        });
+        expect(settled).toEqual(['it works']);
+    });
+
+    test('a dry run of plan.create writes nothing, and a step only a person checks stays out of reach of an agent', async () => {
+        onMain({ id: 'chat-1', kind: 'chat', title: 'lead', x: 0, y: 1200, w: 560, h: 360 });
+        const document = JSON.stringify({ meta: { title: 'Check it' }, items: [{ type: 'step', id: 'look', title: 'Look', checks: 'person' }] });
+        const create = { document, markdown: null, title: null, kind: null, checks: null };
+
+        expect(await serverActions.execute('plan.create', create, as('chat-1', true))).toMatchObject({ status: 'completed', dryRun: true });
+        expect(await plans.read('chat-1')).toEqual([]);
+
+        expect(await serverActions.execute('plan.create', create, as('chat-1'))).toMatchObject({ status: 'completed' });
+        const set = await serverActions.execute('plan.setStepState', { planId: null, stepIds: ['look'], state: 'done', note: null, next: null }, as('chat-1'));
+        expect(set).toMatchObject({ status: 'failed', error: { code: 'person-only' } });
+        expect(await serverActions.execute('plan.list', {}, as('term-1'))).toMatchObject({ status: 'failed', error: { code: 'plan-needs-chat' } });
+    });
+
+    test('a browser page nobody holds is an answer and not an error, and only a line lets the caller drive it', async () => {
+        onMain({ id: 'web-1', kind: 'browser', title: 'Docs', url: 'https://example.com', x: 700, y: 0, w: 560, h: 360 });
+        expect(await serverActions.execute('browser.back', { nodeId: 'web-1' }, agent())).toMatchObject({ status: 'failed', error: { code: 'not-linked' } });
+
+        lineOnMain('term-1', 'web-1');
+        expect(await serverActions.execute('browser.back', { nodeId: 'web-1' }, agent())).toMatchObject({
+            status: 'completed',
+            output: { nodeId: 'web-1', open: false, page: null, error: null }
+        });
     });
 });

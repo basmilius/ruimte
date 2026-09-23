@@ -11,7 +11,8 @@ import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines, nodesNamed } from './no
 import { refuseMissingNodes } from './own-view.ts';
 import { groupMembers, placeBeside, placeFree, placeInGroup, type Rect } from './placement.ts';
 import { checkCwd, readPromptFile } from './project-paths.ts';
-import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, nextLine, requireChatParent, taskBrief } from './task-verbs.ts';
+import { TASK_LINES, nextLine, taskBrief } from './task-verbs.ts';
+import { MAX_TASK_PROMPT_LENGTH, requireChatParent } from './tasks.ts';
 import { unescapeText } from './text-escapes.ts';
 import { WORKTREE_LINES, branchSlug, branchesForWorktrees, freeBranch, makeWorktrees } from './worktree.ts';
 import {
