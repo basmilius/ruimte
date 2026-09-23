@@ -163,13 +163,14 @@ button:active:not(:disabled):not([data-static]) { scale: 0.96; }
   <p class="eyebrow">Ruimte / Ontwerp / 23 september 2026</p>
   <h1>Een menu dat weet waar je bent</h1>
   <p class="intro">Eén menumodel in de client, afgeleid van de view die de focus heeft. Op macOS, Windows en Linux wordt het een native <code>Menu</code>, en Windows en Linux krijgen daarvoor hun standaard vensterframe terug. Op de station opent het wordmark in de sidebar hetzelfde menu als dropdown. Processes verhuist van de toolbar naar het Window-menu.</p>
-  <p class="status">Ontwerp met genomen beslissingen, geen code geschreven</p>
+  <p class="status">macOS en de station gebouwd; Windows en Linux krijgen het menu van de station</p>
   <p class="caption">Onderzocht op <code>main</code> bij <code>b7b46472</code>: <code>apps/desktop/src/main.ts</code>, <code>preload.ts</code>, <code>apps/client/src/shell</code> (commands, shortcuts, Toolbar, Sidebar, panels), <code>canvas/shortcuts.ts</code>, <code>terminal/keymap.ts</code>, <code>station.ts</code> en de types van Electron 44.3.0. Niets is in de app gedraaid of gemeten.</p>
   <nav aria-label="Inhoud">
     <a href="#summary">Samenvatting</a>
+    <a href="#progress">Stand van zaken</a>
     <a href="#now">Wat er nu is</a>
     <a href="#design">Ontwerp</a>
-    <a href="#frame">Windows en Linux</a>
+    <a href="#windows-linux">Windows en Linux</a>
     <a href="#station">Station</a>
     <a href="#menus">De menu's</a>
     <a href="#processes">Processes</a>
@@ -184,8 +185,28 @@ button:active:not(:disabled):not([data-static]) { scale: 0.96; }
     <h2>Samenvatting</h2>
     <p>De client kent al alles wat een menu nodig heeft. <code>appCommands()</code> in <code>shell/commands.ts</code> bouwt per actieve view een lijst commando's met label, sneltoets en handler; dat is precies wat het palet toont. De sneltoetsen staan als data in <code>APP_SHORTCUTS</code> en <code>CANVAS_SHORTCUTS</code>. Een menu is dezelfde inhoud in een boom.</p>
     <p>Een pure functie maakt die boom uit de context: platform, workspace, actieve view, selectie en panelen. Op de desktop stuurt de client de boom over IPC naar de shell, die er op elk platform een native <code>Menu</code> van bouwt; een klik komt terug als commando-id. Op de station tekent de client dezelfde boom als dropdown achter het wordmark. Het menu komt nergens in de toolbar, want daar zitten de knoppen van de views al.</p>
-    <p>Windows en Linux laten daarvoor hun eigen titelbalk los. De huidige <code>titleBarOverlay</code> tekent geen menubalk, dus die gaat terug naar het standaard frame, met de menubalk van het systeem boven de toolbar.</p>
+    <p><span class="badge info">Herzien op 23 september</span> Windows en Linux houden hun eigen titelbalk en krijgen hetzelfde uitklapmenu als de station, achter het wordmark met een hamburger-icoon. Het standaard frame met een native menubalk valt af; zie <a href="#windows-linux">Windows en Linux: het menu van de station</a>.</p>
     <p>Het grootste risico zit bij de toetsen. Op macOS kan een geregistreerde accelerator een toets wegnemen die een terminal nu zelf houdt, zoals <kbd>⌘K</kbd> om te wissen. Op Windows en Linux kan de native menubalk reageren op een losse <kbd>Alt</kbd>. Het werk begint daarom met een spike die dat meet.</p>
+  </section>
+
+  <section id="progress">
+    <h2>Stand van zaken</h2>
+    <p class="caption">Bijgewerkt op 23 september 2026.</p>
+    <div class="table" role="region" aria-label="Stappen en hun stand, scrollbaar" tabindex="0">
+      <table>
+        <thead><tr><th scope="col">Stap</th><th scope="col">Stand</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">1. Spike</th><td><span class="badge info">Vervangen</span> Niet gemeten. Een regel maakt de volgorde onbelangrijk: de shell gooit een command weg dat door zijn accelerator vuurde, want de pagina had die toets al. Alleen met de focus in een browserpagina voert het menu hem uit. Op macOS werken sneltoetsen daardoor zoals voorheen.</td></tr>
+          <tr><th scope="row">2. Het menumodel</th><td><span class="badge confirmed">Klaar</span> <code>apps/client/src/shell/menu/</code>, met de voorwaarden van <code>ViewMenuItems</code> in <code>shell/view-offers.ts</code>. Er zijn tests per viewsoort, host, platform en voor het startscherm, en voor een handler bij elk id.</td></tr>
+          <tr><th scope="row">3. Het native menu</th><td><span class="badge confirmed">Klaar op macOS</span> <code>menu:set</code> en <code>menu:run</code>, met het vaste menu als vangnet. Met één cel sluit ⌘W het venster, met meer de cel. Undo en Redo blijven rollen. Getest door Bas in de dev-app.</td></tr>
+          <tr><th scope="row">4. Windows en Linux</th><td><span class="badge warning">Open</span> Herzien: het menu van de station in plaats van het standaard frame (<a href="#windows-linux">zie hieronder</a>). Tot dan zien die platforms het menu niet.</td></tr>
+          <tr><th scope="row">5. De station</th><td><span class="badge confirmed">Live, deels getest</span> Op 23 september handmatig gedeployd en door Bas bekeken. Het wordmark heeft een hamburger-icoon en opent het menu. Bij een gesloten sidebar doet hetzelfde icoon naast de toggle dat. Elke rij heeft een icoon, zodat de labels gelijk beginnen. Undo en Redo werken op de history van canvas, drawing en diagram, en Full Screen gaat via de pagina. <code>BROWSER_KEEPS</code> noemt voorlopig ⌘W, ⌘T en ⌘N, zonder onderscheid tussen tab en geïnstalleerde app; de test in Chrome, Safari en Firefox moet nog.</td></tr>
+          <tr><th scope="row">6. Processes</th><td><span class="badge confirmed">Klaar</span> Op verzoek van Bas vóór stap 4. Op Windows en Linux opent Processes tot stap 4 alleen via het palet.</td></tr>
+          <tr><th scope="row">7. Opruimen</th><td><span class="badge confirmed">Klaar voor zover het kan</span> <code>CLAUDE.md</code> beschrijft <code>menu:set</code>, <code>menu:run</code> en de plek van een nieuw commando. De Engelse labels van het vaste menu in <code>main.ts</code> blijven, want dat is het vangnet. Het Windows-rapport verandert pas met stap 4.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Buiten het ontwerp erbij gekomen: Project Settings in File (het dialoog blijft van het projectmenu) en Clear in het menu van een terminal. Nog niet in het menu: Clear voor een chat (die vraagt om bevestiging) en de acties van een bestandsweergave.</p>
   </section>
 
   <section id="now">
@@ -253,8 +274,27 @@ button:active:not(:disabled):not([data-static]) { scale: 0.96; }
     <p>De labels komen uit de client en dus uit i18n (<code>shell</code>-namespace, Engels en Nederlands), waar <code>locales.test.ts</code> het uit elkaar lopen bewaakt. Een rol zou macOS zelf laten vertalen naar de systeemtaal, en een Engelse interface op een Nederlandse Mac liet dan "Knippen" naast "New View" zien. Daarom geeft het model ook elk rol-item een label mee. <span class="badge warning">Te bevestigen</span> Dat Electron op macOS bij een rol het label aanhoudt, is niet nagelezen voor Electron 44; de spike controleert het. Wat macOS zelf in Services zet, blijft in de systeemtaal.</p>
   </section>
 
+  <section id="windows-linux" class="recommendation">
+    <h2>Windows en Linux: het menu van de station</h2>
+    <p>Voorgesteld door Bas op 23 september, na de eerste deploy van de station. Windows en Linux gebruiken hetzelfde uitklapmenu als de station, achter het wordmark met een hamburger-icoon (en achter het hamburger-icoon naast de sidebar-toggle bij een gesloten sidebar). Er komt geen native menubalk en geen standaard frame.</p>
+    <h3>Wat dat oplevert</h3>
+    <ul>
+      <li>De eigen titelbalk met <code>titleBarOverlay</code> blijft. De opruimlijst van het standaard frame vervalt, en het Windows-rapport van 22 september blijft kloppen.</li>
+      <li>De twee onzekerheden van de menubalk verdwijnen: een losse <kbd>Alt</kbd> of <kbd>F10</kbd> die de focus uit een terminal haalt, en accelerators die een toets wegnemen. De pagina houdt elke toets, zoals nu.</li>
+      <li>Het menu ziet er op Windows, Linux en de station hetzelfde uit, met een icoon voor elke rij. Processes is daar meteen weer te bereiken zonder het palet.</li>
+    </ul>
+    <h3>Wat er nog moet</h3>
+    <ul>
+      <li><code>StationMenu</code> wordt een menu voor elke host zonder native menubalk: de station, Windows en Linux. Het model draait daar met <code>host: 'desktop'</code> en <code>apple: false</code>, dus met Settings in File, About in Help en Quit.</li>
+      <li>Rollen en shell-items tekent de page zelf, en een klik gaat over de bridge naar de shell: een nieuwe optionele methode die een rol (<code>webContents.undo()</code>, <code>copy()</code> en dergelijke) of een shell-item (Quit, Stop the Machine and Quit, Developer Tools, Full Screen) uitvoert.</li>
+      <li>Te testen: of Cut, Copy en Paste nog het juiste veld raken, nu de focus eerst naar het menu gaat en daarna terug. Base UI zet de focus bij het sluiten terug; of dat vóór de rol gebeurt is niet nagegaan.</li>
+      <li>Het native menu blijft op die platforms gezet, zonder zichtbare balk en met <code>registerAccelerator: false</code>, als vangnet voor Quit.</li>
+    </ul>
+  </section>
+
   <section id="frame">
     <h2>Windows en Linux: het standaard frame</h2>
+    <p class="note">Vervallen op 23 september: Windows en Linux krijgen het menu van de station. Deze sectie blijft staan als de afweging die eraan voorafging.</p>
     <p>Met <code>titleBarStyle: 'hidden'</code> en een overlay tekent Electron geen menubalk. Daarom krijgen Windows en Linux het standaard frame: de titelbalk van het systeem, daaronder de native menubalk en daaronder de toolbar van de client. De eigen titelbalk vervalt; dat is afgesproken. <span class="badge warning">Niet gezien</span> Dat de overlay de menubalk verbergt, volgt uit de code en het Windows-rapport, niet uit een test op Windows of Linux.</p>
     <p>Wat daarvoor weg kan:</p>
     <ul>
@@ -347,9 +387,9 @@ button:active:not(:disabled):not([data-static]) { scale: 0.96; }
         <p>Klaar als op macOS een wissel van view het contextmenu vervangt, About, Settings en Quit werken, Quit er nog is na een crash van de pagina, en een terminal <kbd>⌘K</kbd> nog zelf krijgt.</p>
       </div></li>
       <li class="step"><div>
-        <h3>Windows en Linux: het standaard frame</h3>
-        <p>De overlay eruit in <code>main.ts</code> en de client, zoals in <a href="#frame">Windows en Linux</a> staat. Het menu van stap 3 verschijnt dan vanzelf in de menubalk.</p>
-        <p>Klaar als in de Windows-VM en op Linux (X11 en Wayland) de menubalk dezelfde boom toont als macOS, de titelbalk het thema van de app volgt, de toolbar niet meer ruimt voor venstercontroles, en een terminal <kbd>Ctrl+W</kbd> en <kbd>Ctrl+B</kbd> houdt.</p>
+        <h3>Windows en Linux: het menu van de station</h3>
+        <p>Herzien: het uitklapmenu achter het wordmark op Windows en Linux, met rollen en shell-items over de bridge, zoals in <a href="#windows-linux">Windows en Linux</a> staat. De titelbalk en de overlay blijven.</p>
+        <p>Klaar als in de Windows-VM en op Linux (X11 en Wayland) het wordmark dezelfde boom opent als het menu op macOS, Quit, Settings en About werken, Copy en Paste het veld raken waar de focus stond, en een terminal <kbd>Ctrl+W</kbd> en <kbd>Ctrl+B</kbd> houdt.</p>
       </div></li>
       <li class="step"><div>
         <h3>De station</h3>
@@ -374,8 +414,8 @@ button:active:not(:disabled):not([data-static]) { scale: 0.96; }
     <p>Genomen op 23 september 2026. De spike kan de toetsregels nog bijstellen; de rest staat vast tenzij de code iets anders laat zien.</p>
     <ol>
       <li><strong>Geen menu in de toolbar.</strong> Daar staan de knoppen van views, het adresveld van een pagina en de panelen al.</li>
-      <li><strong>Een native menu op elke desktop.</strong> Eén builder in de shell voor macOS, Windows en Linux.</li>
-      <li><strong>Windows en Linux krijgen het standaard frame terug.</strong> De eigen titelbalk vervalt, zodat de menubalk van het systeem er kan staan.</li>
+      <li><strong>Een native menu op macOS.</strong> Oorspronkelijk op elke desktop; sinds 23 september tekenen Windows en Linux het menu zelf, zoals de station.</li>
+      <li><strong><s>Windows en Linux krijgen het standaard frame terug.</s></strong> Herzien op 23 september: Windows en Linux houden hun titelbalk en krijgen het uitklapmenu van de station achter het wordmark.</li>
       <li><strong>De station opent het menu vanuit het wordmark in de sidebar,</strong> alleen in een workspace. Bij een gesloten sidebar staat het als icoon naast de <code>SidebarToggle</code>.</li>
       <li><strong>Processes opent in het zijpaneel.</strong> Een eigen venster vraagt een tweede verbinding naar de machine en bestaat op de station niet.</li>
       <li><strong>Geen Alt-mnemonics en geen eigen <kbd>F10</kbd>.</strong> Mnemonics botsen met het toevoegen van nodes en met readline, en de productregel over modifiers blijft staan.</li>
