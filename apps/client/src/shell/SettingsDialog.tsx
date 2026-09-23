@@ -85,7 +85,8 @@ export function SettingsDialog() {
                                         key={entry.id}
                                         value={entry.id}
                                         keepMounted={false}
-                                        className="flex min-h-0 min-w-0 grow flex-col gap-5 overflow-y-auto px-6 pb-6 outline-none max-[960px]:px-4"
+                                        className="scroll-fade-top flex min-h-0 min-w-0 grow flex-col gap-5 overflow-y-auto px-6 pb-6 outline-none max-[960px]:px-4"
+                                        onScroll={(event) => event.currentTarget.toggleAttribute('data-fade-start', event.currentTarget.scrollTop > 0)}
                                     >
                                         <Pane />
                                     </Tabs.Panel>
