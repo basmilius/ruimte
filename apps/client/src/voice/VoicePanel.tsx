@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
     Check,
     ChevronRight,
+    GitBranch,
     LayoutGrid,
     MessageSquare,
     Mic,
@@ -43,7 +44,8 @@ const actionIcons: Record<VoiceActionKind, LucideIcon> = {
     chat: MessageSquare,
     node: Plus,
     view: LayoutGrid,
-    delete: Trash2
+    delete: Trash2,
+    git: GitBranch
 };
 
 function VoiceStatus({ elapsedMs, phase }: { elapsedMs: number; phase: VoicePhase }) {

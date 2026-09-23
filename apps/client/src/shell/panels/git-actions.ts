@@ -1,6 +1,14 @@
 import i18next from 'i18next';
 import type { GitActionKind, GitActionPhase, GitStatus } from '@ruimte/contracts';
 
+let counter = 0;
+
+/* Names one run, so the progress of this push is not drawn on the toast of the one before it. */
+export const nextActionId = (): string => {
+    counter += 1;
+    return `git-${Date.now()}-${counter}`;
+};
+
 export interface PushButton {
     label: string;
     kind: GitActionKind;

@@ -2,6 +2,16 @@ import {
     AgentKindSchema,
     AgentStatusSchema,
     DeviceReferenceSchema,
+    GitConflictResultSchema,
+    GitConflictsResultSchema,
+    GitDiffResultSchema,
+    GitDiffScopeSchema,
+    GitLogResultSchema,
+    GitRefsResultSchema,
+    GitRepoKindSchema,
+    GitResolveAiResultSchema,
+    GitResolveResultSchema,
+    GitStatusSchema,
     NodeKindSchema,
     PROJECT_VIEW_KINDS,
     PlanChecksSchema,
@@ -11,7 +21,8 @@ import {
     PlanStepStateSchema,
     RuntimeModeSchema,
     TaskSchema,
-    UNKNOWN_KIND
+    UNKNOWN_KIND,
+    WorktreeSchema
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_NOTICE_LENGTH, MAX_OPENED_PER_CALLER, MAX_PROMPT_LENGTH, MAX_TITLE_LENGTH } from './limits.ts';
@@ -20,7 +31,7 @@ export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as 
 export const ActionActorKindSchema = z.enum(ACTION_ACTOR_KINDS);
 
 /* What an action is about. Voice gets one tool per domain, so this is also how its tools are cut. */
-export const ACTION_DOMAINS = ['workspace', 'views', 'canvas', 'layout', 'communicate', 'agents', 'projects'] as const;
+export const ACTION_DOMAINS = ['workspace', 'views', 'canvas', 'layout', 'communicate', 'agents', 'projects', 'developer'] as const;
 export type ActionDomain = (typeof ACTION_DOMAINS)[number];
 
 /* Every kind a project knows, plus the one a newer Ruimte made. An action may name a view this version cannot open. */
@@ -127,6 +138,38 @@ const agentReads = z.array(nodeId).nullable().describe('Nodes the new agent can 
 // A dry run draws nothing, so its lines have no id yet.
 const drawnLine = z.object({ edgeId: z.string().nullable(), from: nodeId, to: nodeId });
 const worktreeBranch = z.string().min(1).describe('The branch of the worktree');
+
+/*
+ * A checkout of the project: the label git.status gives a repository, or the path of a repository or a
+ * worktree. A folder can hold several repositories, so an action on one of them names which.
+ */
+const repository = z.string().min(1).describe('The repository by the label git.status gives it, or the path of a repository or worktree');
+/* What the panel does over the whole folder at once (fetch, pull, push, commit) takes null for all of them. */
+const anyRepository = repository.nullable().describe('One repository by its label or path; null for every repository of the project');
+/* The panel names its own run, so the progress it draws and the cancel on its toast reach this one. */
+const gitRun = forActors(PERSON, z.string().min(1)).describe('The id the progress of this run streams under');
+const gitPaths = z.array(z.string().min(1)).min(1).describe('Files relative to the repository root, as git.status names them');
+const gitBranch = z.string().min(1).describe('A branch name as git.refs lists it');
+const gitRunOutput = z.object({
+    repository: z.string(),
+    path: z.string(),
+    // One line of what happened, in the words a person would use.
+    summary: z.string(),
+    // Everything git wrote.
+    output: z.string(),
+    commit: z.object({ hash: z.string(), subject: z.string() }).nullable(),
+    // The pull request a create-pr opened.
+    url: z.string().nullable(),
+    // Files git left unmerged: the operation did not fail, it waits in the checkout for a person.
+    conflicts: z.array(z.string())
+});
+/* A run over several repositories goes on past one that fails, so each says how it went. */
+const gitRunsOutput = z.object({
+    runs: z.array(gitRunOutput.extend({ error: z.object({ code: z.string(), message: z.string() }).nullable() }))
+});
+/* How a branch that moved on both sides comes together; only a person decides that, so without it a pull only fast-forwards. */
+const pullStrategy = forActors(PERSON, z.enum(['merge', 'rebase'])).describe('How a branch that moved on both sides comes together');
+const PERSON_VOICE_AND_AGENT: readonly ActionActorKind[] = ['person', 'voice', 'agent'];
 
 export const TARGET_KINDS = ['view', 'node', 'chat', 'agent', 'project'] as const;
 const resolvedTarget = z.object({
@@ -1240,12 +1283,345 @@ export const ACTION_DEFINITIONS = {
             agents: z.array(z.object({ nodeId, status: OperationStatusSchema, taskId: z.string().nullable(), detail: z.string() }))
         })
     },
+    'git.status': {
+        title: 'Read git status',
+        description:
+            'Reads the repositories of the project with the branch each is on, its upstream, how far ahead and behind it is, an operation that waits halfway, and the changed files: staged, unstaged, untracked or conflicted.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository: anyRepository }),
+        output: z.object({
+            repositories: z.array(
+                z.object({
+                    repository: z.string(),
+                    path: z.string(),
+                    kind: z.enum([...GitRepoKindSchema.options, 'worktree']),
+                    // Null when this one could not be read; `error` says why.
+                    status: GitStatusSchema.nullable(),
+                    error: z.string().nullable()
+                })
+            )
+        })
+    },
+    'git.diff': {
+        title: 'Read a git diff',
+        description:
+            'Reads a unified diff: one file of the working tree (staged or not), all work over a base branch, or one commit with every file it touched.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            path: z.string().min(1).nullable().describe('One file relative to the repository root; null for every file, which the commit and base scopes take'),
+            scope: GitDiffScopeSchema.describe('worktree for uncommitted changes, base for all work over the base branch, commit for one commit'),
+            commit: z.string().min(1).nullable().describe('The commit the commit scope reads'),
+            staged: z.boolean().nullable().describe('In the worktree scope: the index against HEAD instead of the working tree against the index'),
+            ignoreWhitespace: z.boolean().nullable().describe('Leaves changes that are only whitespace out'),
+            base: z.string().min(1).nullable().describe('The base scope starts at this branch instead of the repository base')
+        }),
+        output: GitDiffResultSchema
+    },
+    'git.log': {
+        title: 'Read git history',
+        description: 'Reads the commits of a repository, newest first, a page at a time.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            limit: z.number().int().min(1).max(200).nullable().describe('Commits per page; 20 without it'),
+            cursor: z.string().min(1).nullable().describe('Where the next page starts, as the previous answer gave it')
+        }),
+        output: GitLogResultSchema
+    },
+    'git.refs': {
+        title: 'Read git branches',
+        description: 'Reads the local and remote branches of a repository, which one it is on, and its stashes.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository }),
+        output: GitRefsResultSchema
+    },
+    'git.conflicts': {
+        title: 'Read git conflicts',
+        description:
+            'Reads the merge, rebase, cherry-pick or revert that waits halfway in a repository, what its two sides are called, and every file it left unmerged.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository }),
+        output: GitConflictsResultSchema
+    },
+    'git.conflict': {
+        title: 'Read a conflicted file',
+        description: 'Reads the three versions git holds of one unmerged file (base, ours and theirs) and the digest a resolution is written over.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository, path: z.string().min(1).describe('The unmerged file relative to the repository root') }),
+        output: GitConflictResultSchema
+    },
+    'git.stage': {
+        title: 'Stage files',
+        description: 'Puts files in the index, so the next commit takes them.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository, paths: gitPaths }),
+        output: z.object({ repository: z.string(), paths: z.array(z.string()) })
+    },
+    'git.unstage': {
+        title: 'Unstage files',
+        description: 'Takes files back out of the index; their changes stay in the working tree.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository, paths: gitPaths }),
+        output: z.object({ repository: z.string(), paths: z.array(z.string()) })
+    },
+    'git.discard': {
+        title: 'Discard changes',
+        description: 'Throws away the changes to files after confirmation, parking them in a stash that brings them back.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository, paths: gitPaths }),
+        // Null when git found nothing to stash and the files were already what HEAD holds.
+        output: z.object({ repository: z.string(), paths: z.array(z.string()), stash: z.string().nullable() })
+    },
+    'git.suggestCommitMessage': {
+        title: 'Write a commit message',
+        description: 'Asks an agent CLI on the machine for a commit message from the staged diff. It commits nothing.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository: anyRepository.describe('The repository; null for the one repository with something staged'), run: gitRun }),
+        output: z.object({ repository: z.string(), subject: z.string(), body: z.string() })
+    },
+    'git.commit': {
+        title: 'Commit',
+        description:
+            'Commits what is staged after confirmation, one commit per repository with the same message. With nothing staged anywhere and one repository changed, that repository is staged whole first. Push true pushes each commit after.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository: anyRepository.describe('One repository; null for every repository with something staged'),
+            message: z.string().trim().min(1).describe('The subject line of the commit'),
+            body: z.string().nullable().describe('The rest of the message'),
+            push: z.boolean().nullable().describe('Pushes the commit after'),
+            stageAll: forActors(PERSON, z.boolean()).describe('Stages every changed file of the repository first'),
+            run: gitRun
+        }),
+        output: gitRunsOutput
+    },
+    'git.fetch': {
+        title: 'Fetch',
+        description: 'Fetches from the remotes; no branch or file changes.',
+        effect: 'external',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository: anyRepository, run: gitRun }),
+        output: gitRunsOutput
+    },
+    'git.pull': {
+        title: 'Pull',
+        description:
+            'Pulls the upstream into the branch after confirmation. It only fast-forwards: a branch that moved on both sides is refused as diverged, and only the user decides in the app how it comes together.',
+        effect: 'external',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository: anyRepository, strategy: pullStrategy, run: gitRun }),
+        output: gitRunsOutput
+    },
+    'git.push': {
+        title: 'Push',
+        description: 'Pushes the commits of a branch to its upstream after confirmation. A branch without an upstream is published with git.publishBranch.',
+        effect: 'external',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository: anyRepository, run: gitRun }),
+        output: gitRunsOutput
+    },
+    'git.sync': {
+        title: 'Sync',
+        description: 'Pulls and then pushes after confirmation, with the same rule as a pull for a branch that moved on both sides.',
+        effect: 'external',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository: anyRepository, strategy: pullStrategy, run: gitRun }),
+        output: gitRunsOutput
+    },
+    'git.publishBranch': {
+        title: 'Publish branch',
+        description: 'Pushes the branch the repository is on to the remote for the first time and sets it as its upstream, after confirmation.',
+        effect: 'external',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository, run: gitRun }),
+        output: gitRunOutput
+    },
+    'git.forcePush': {
+        title: 'Force push',
+        description: 'Replaces the history of the upstream with the local branch, refused when the upstream moved since the last fetch.',
+        effect: 'external',
+        domain: 'developer',
+        // It rewrites history others may have pulled.
+        actors: PERSON,
+        input: z.object({ repository, run: gitRun }),
+        output: gitRunOutput
+    },
+    'git.checkout': {
+        title: 'Switch branch',
+        description:
+            'Switches the repository to a branch. A tree with changes asks for confirmation first and parks them in a stash, which git.popStash brings back.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            branch: gitBranch,
+            stashFirst: forActors(PERSON, z.boolean()).describe('Parks the changes in a stash first, so the switch is not refused'),
+            run: gitRun
+        }),
+        output: gitRunOutput
+    },
+    'git.createBranch': {
+        title: 'Create branch',
+        description: 'Creates a branch from where the repository is and switches to it.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository, name: z.string().trim().min(1).describe('The name of the new branch'), run: gitRun }),
+        output: gitRunOutput
+    },
+    'git.renameBranch': {
+        title: 'Rename branch',
+        description: 'Renames the branch the repository is on.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository, name: z.string().trim().min(1).describe('The new name of the branch'), run: gitRun }),
+        output: gitRunOutput
+    },
+    'git.deleteBranch': {
+        title: 'Delete branch',
+        description: 'Deletes a local branch after confirmation. Git refuses one it has not merged.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            branch: gitBranch,
+            // Loses commits no other branch has.
+            force: forActors(PERSON, z.boolean()).describe('Deletes a branch git has not merged'),
+            run: gitRun
+        }),
+        output: gitRunOutput
+    },
+    'git.merge': {
+        title: 'Merge branch',
+        description: 'Merges a branch into the one the repository is on, after confirmation. Conflicts stop it halfway for the user to resolve in the app.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository, branch: gitBranch, run: gitRun }),
+        output: gitRunOutput
+    },
+    'git.rebase': {
+        title: 'Rebase',
+        description: 'Puts the commits of the branch the repository is on on top of another branch.',
+        effect: 'shared',
+        domain: 'developer',
+        // It rewrites the commits of the branch.
+        actors: PERSON,
+        input: z.object({ repository, onto: gitBranch, run: gitRun }),
+        output: gitRunOutput
+    },
+    'git.stash': {
+        title: 'Stash changes',
+        description: 'Parks the changes of the working tree in a stash under a message; git.popStash brings them back.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository, message: z.string().trim().min(1).nullable().describe('What the stash is called'), run: gitRun }),
+        output: gitRunOutput
+    },
+    'git.popStash': {
+        title: 'Pop stash',
+        description: 'Applies a stash to the working tree after confirmation and drops it once it applied. It can conflict.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository, stash: z.string().min(1).describe('The stash as git.refs lists it, such as stash@{0}'), run: gitRun }),
+        output: gitRunOutput
+    },
+    'git.createPullRequest': {
+        title: 'Open a pull request',
+        description: 'Publishes the branch when needed and opens a pull request with a title and body, after confirmation. Needs gh on the machine.',
+        effect: 'external',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            title: z.string().trim().min(1).describe('The title of the pull request'),
+            body: z.string().nullable().describe('The description of the pull request'),
+            run: gitRun
+        }),
+        output: gitRunOutput
+    },
+    'git.proposeResolution': {
+        title: 'Propose a conflict resolution',
+        description:
+            'Asks an agent CLI on the machine how the conflicting stretches of one file come together. It writes nothing: the answer is an edit in the conflict view.',
+        effect: 'read',
+        domain: 'developer',
+        // The proposal lands as an edit a person reviews in the conflict view; there is nowhere else for it to go.
+        actors: PERSON,
+        input: z.object({ repository, path: z.string().min(1), run: gitRun }),
+        output: GitResolveAiResultSchema
+    },
+    'git.resolveConflict': {
+        title: 'Resolve a conflicted file',
+        description: 'Writes the merged file over the digest it was read at, or takes one side whole or the file out, and stages it.',
+        effect: 'shared',
+        domain: 'developer',
+        // Only a person accepts a resolution.
+        actors: PERSON,
+        input: z.object({
+            repository,
+            path: z.string().min(1),
+            content: z.string().nullable().describe('The merged file; needs hash'),
+            take: z.enum(['ours', 'theirs', 'delete']).nullable().describe('One side whole, or the file taken out'),
+            hash: z.string().min(1).nullable().describe('The digest git.conflict read the file at')
+        }),
+        output: GitResolveResultSchema
+    },
+    'git.operation': {
+        title: 'Finish or take back a merge',
+        description:
+            'Takes back the merge, rebase, cherry-pick or revert that waits halfway in a repository, after confirmation, and puts the checkout back as it was.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            // Finishing commits what was resolved, and only a person accepts a resolution.
+            step: z.union([z.enum(['abort']), z.enum(['continue']).meta({ actors: [...PERSON] })]).describe('abort takes the operation back'),
+            run: gitRun
+        }),
+        output: gitRunOutput
+    },
     'worktree.list': {
         title: 'List worktrees',
-        description: 'Lists the worktrees of the repository: branch, path, nodes, from, changed, new, commits',
+        description:
+            'Lists the worktrees of the project repository: the branch, the path, the nodes working in it, the branch it was made from and the work it holds.',
+        agentDescription: 'Lists the worktrees of the repository: branch, path, nodes, from, changed, new, commits',
         effect: 'read',
-        domain: 'agents',
-        actors: AGENT,
+        domain: 'developer',
+        actors: PERSON_VOICE_AND_AGENT,
         input: z.object({}),
         output: z.object({
             worktrees: z.array(
@@ -1268,8 +1644,8 @@ export const ACTION_DEFINITIONS = {
         description: 'Reads what a worktree changed since the branch it was made from, uncommitted and new files included',
         agentDescription: 'Prints what a worktree changed since the branch it was made from, uncommitted and new files included',
         effect: 'read',
-        domain: 'agents',
-        actors: AGENT,
+        domain: 'developer',
+        actors: PERSON_VOICE_AND_AGENT,
         input: z.object({ branch: worktreeBranch }),
         output: z.object({
             branch: z.string(),
@@ -1286,23 +1662,73 @@ export const ACTION_DEFINITIONS = {
             )
         })
     },
+    'worktree.create': {
+        title: 'Create a worktree',
+        description: 'Makes a git worktree of the project repository on a branch, after confirmation, or answers the one that branch already has.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ branch: z.string().trim().min(1).describe('The branch of the worktree; made when it does not exist') }),
+        // False when the branch already had a worktree and that one was answered.
+        output: z.object({ worktree: WorktreeSchema, created: z.boolean() })
+    },
     'worktree.merge': {
         title: 'Merge a worktree',
-        description: 'Merges the worktree of an agent you opened into the branch it was made from; the worktree and its branch stay',
+        description:
+            'Merges a worktree into the branch it was made from after confirmation, committing its uncommitted files first. Conflicts stop it halfway for the user to resolve in the app; the worktree stays.',
+        agentDescription: 'Merges the worktree of an agent you opened into the branch it was made from; the worktree and its branch stay',
         effect: 'shared',
-        domain: 'agents',
-        actors: AGENT,
+        domain: 'developer',
+        actors: PERSON_VOICE_AND_AGENT,
         input: z.object({
             branch: worktreeBranch,
-            strategy: z.enum(['merge', 'squash', 'rebase']).describe('A merge commit, one squashed commit, or the commits put on top of the target'),
+            // Putting the commits on top rewrites them, which Voice leaves to a person.
+            strategy: z
+                .union([z.enum(['merge', 'squash']), z.enum(['rebase']).meta({ actors: [...PERSON_AND_AGENT] })])
+                .describe('A merge commit, one squashed commit, or the commits put on top of the target'),
             message: z
                 .string()
                 .trim()
                 .min(1)
                 .nullable()
-                .describe('The message of the commit made of uncommitted files, and of a squash; without it the title of the node')
+                .describe('The message of the commit made of uncommitted files, and of a squash; without it the title of the node'),
+            body: forActors(PERSON, z.string()).describe('The rest of that message'),
+            commitFirst: forActors(PERSON, z.boolean()).describe(
+                'Commits the uncommitted and new files of the worktree first; without it such work is refused'
+            ),
+            // Nothing removes a worktree on its own, and Voice is not a person's hand there.
+            remove: forActors(PERSON, z.boolean()).describe('Removes the worktree and its branch once the merge went through'),
+            stopAgent: forActors(PERSON, z.boolean()).describe('Stops the agents working in the worktree first instead of refusing'),
+            into: forActors(PERSON, z.string().min(1)).describe('Merges into this branch instead of the one the worktree was made from'),
+            run: gitRun
         }),
-        output: z.object({ branch: z.string(), into: z.string().nullable(), strategy: z.enum(['merge', 'squash', 'rebase']), summary: z.string() })
+        output: z.object({
+            branch: z.string(),
+            into: z.string().nullable(),
+            strategy: z.enum(['merge', 'squash', 'rebase']),
+            summary: z.string(),
+            // What only the client's merge answers; the daemon's own merge refuses a conflict instead.
+            output: z.string().optional(),
+            cwd: z.string().optional(),
+            conflicts: z.array(z.string()).optional(),
+            removed: z.boolean().optional(),
+            branchDeleted: z.boolean().optional(),
+            kept: z.string().optional()
+        })
+    },
+    'worktree.remove': {
+        title: 'Remove a worktree',
+        description: 'Removes a worktree and its branch; one that holds work is refused without force.',
+        effect: 'shared',
+        domain: 'developer',
+        // Nothing removes a worktree on its own, and Voice is not a person's hand there.
+        actors: PERSON,
+        input: z.object({
+            branch: worktreeBranch,
+            force: forActors(PERSON, z.boolean()).describe('Removes a worktree that holds work, and a branch with commits the target lacks')
+        }),
+        // Where a deleted branch pointed, so git branch <name> <commit> brings it back until git collects it.
+        output: z.object({ branch: z.string(), branchDeleted: z.boolean().nullable(), branchCommit: z.string().nullable() })
     }
 } as const;
 

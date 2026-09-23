@@ -124,6 +124,12 @@ describe('Voice domain tools', () => {
         expect(result.output).toMatchObject({ ok: true, supported: false, tools: [] });
     });
 
+    test('git over a project without a machine says why instead of reporting a result', async () => {
+        const result = await run('manage_git', { action: 'git.status' });
+        expect(result.output).toMatchObject({ ok: false });
+        expect(result.action).toBeUndefined();
+    });
+
     test('workspace actions refuse while the project is switching', async () => {
         useProject.setState({ switching: true });
         const result = await run('manage_views', { action: 'view.focus', viewId: 'release' });

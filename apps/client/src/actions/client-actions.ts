@@ -1,3 +1,4 @@
+import { developerActions, type DeveloperMachine } from '@/actions/developer-actions';
 import { inspectionActions } from '@/actions/inspection-actions';
 import { resolveTarget } from '@/actions/resolve-target';
 import { ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionCall, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
@@ -315,6 +316,7 @@ export interface ClientActionMachine {
     /* A drawing or diagram keeps what it holds in a file of its own, which the daemon copies. */
     copyViewContent(kind: 'drawing' | 'diagram', from: string, to: string): void;
     viewDeletion: ViewDeletionMachine;
+    developer: Partial<DeveloperMachine>;
 }
 
 const LIVE_MACHINE: ClientActionMachine = {
@@ -322,13 +324,15 @@ const LIVE_MACHINE: ClientActionMachine = {
     clearTerminal: (terminalId) => sessionClient.clear(terminalId),
     providers: () => providersOf(currentEndpointId()).providers,
     copyViewContent: (kind, from, to) => void (kind === 'drawing' ? drawingClient.copy(from, to) : diagramClient.copy(from, to)),
-    viewDeletion: liveViewDeletion
+    viewDeletion: liveViewDeletion,
+    developer: {}
 };
 
 export const createClientActionRegistry = (document: StoreApi<DocumentState>, machine: Partial<ClientActionMachine> = {}): ActionRegistry<void> => {
-    const { clearChat, clearTerminal, providers, copyViewContent, viewDeletion } = { ...LIVE_MACHINE, ...machine };
+    const { clearChat, clearTerminal, providers, copyViewContent, viewDeletion, developer } = { ...LIVE_MACHINE, ...machine };
     return new ActionRegistry<void>({
         ...inspectionActions(document),
+        ...developerActions(document, developer),
         'target.resolve': (input) => ({ output: resolveTarget(document, input) }),
         'workspace.inspect': () => {
             const state = document.getState();
@@ -1167,6 +1171,21 @@ const runConfirmedAsPerson = async <Name extends ActionName>(name: Name, input: 
         return confirmed.status === 'completed' ? (confirmed.output as ActionOutput<Name>) : null;
     }
     return asked.status === 'completed' ? asked.output : null;
+};
+
+/*
+ * For a surface that says itself how an action went, such as a toast of the git panel: the output, or
+ * the refusal thrown with the machine's own code, so a diverged branch still reads apart from a failure.
+ */
+export const performAsPerson = async <Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name>> => {
+    const result = await clientActions.execute(name, input, PERSON_ACTION_CALL);
+    if (result.status === 'failed') {
+        throw new ActionRefusal(result.error.code, result.error.message, result.error.details);
+    }
+    if (result.status === 'needs_confirmation') {
+        throw new ActionRefusal('confirmation-required', `“${name}” asked a person for a confirmation their own dialog should have given.`);
+    }
+    return result.output;
 };
 
 const activeViewId = (): string | null => useDocument.getState().activeViewId;

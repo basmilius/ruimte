@@ -118,6 +118,10 @@ export const worktreeActions: ActionHandlers<ServerActionContext> = {
      * left running and the worktree and its branch left for a person to remove.
      */
     'worktree.merge': async ({ branch, strategy, message }, { actor, context }) => {
+        // A person and Voice merge through the client, which asks them first; the daemon's rules are an agent's.
+        if (actor.kind !== 'agent') {
+            throw new VerbRefusal('forbidden-action', `The daemon merges a worktree only for an agent, not for the ${actor.kind} actor`);
+        }
         const { host, place } = context;
         const { content, worktrees } = await worktreesOf(host, place);
         const worktree = named(worktrees, branch);

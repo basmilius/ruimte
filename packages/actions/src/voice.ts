@@ -31,7 +31,12 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
     layout: { name: 'manage_layout', description: 'Save, apply or delete layouts of the active canvas, and split, close or move between the cells on screen.' },
     communicate: { name: 'communicate', description: 'Send a direct prompt to, read or clear an AI Chat, or clear a terminal.' },
     agents: { name: 'inspect_agents', description: 'Read the status of the agents in this project and the tool calls of an AI Chat.' },
-    projects: { name: 'manage_projects', description: 'List the projects open in the project navigation or switch to one of them.' }
+    projects: { name: 'manage_projects', description: 'List the projects open in the project navigation or switch to one of them.' },
+    developer: {
+        name: 'manage_git',
+        description:
+            'Read and change the git repositories and worktrees of this project: status, diffs, history, branches, staging, commits, fetch, pull, push, merges, stashes, pull requests and worktrees. Repositories are named by the label git.status gives them.'
+    }
 };
 
 /* Fields only Voice's adapter reads; the action never sees them. */

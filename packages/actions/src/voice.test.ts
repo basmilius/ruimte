@@ -53,4 +53,17 @@ describe('Voice tools', () => {
         expect(views.parameters.properties.action?.enum).not.toContain('view.move');
         expect(JSON.stringify(VOICE_TOOL_DEFINITIONS)).not.toContain('"actors"');
     });
+
+    test('git leaves out what only a person decides: history, resolutions, removal and how a diverged branch comes together', () => {
+        const git = VOICE_TOOL_DEFINITIONS.find((tool) => tool.name === 'manage_git')!;
+        for (const field of ['run', 'stageAll', 'stashFirst', 'force', 'remove', 'stopAgent', 'into', 'commitFirst', 'onto', 'content', 'take', 'hash']) {
+            expect(git.parameters.properties).not.toHaveProperty(field);
+        }
+        const actions = git.parameters.properties.action?.enum as string[];
+        for (const action of ['git.rebase', 'git.forcePush', 'git.resolveConflict', 'git.proposeResolution', 'worktree.remove']) {
+            expect(actions).not.toContain(action);
+        }
+        expect(git.parameters.properties.step?.enum).toEqual(['abort', null]);
+        expect(git.parameters.properties.strategy?.enum).toEqual(['merge', 'squash', null]);
+    });
 });

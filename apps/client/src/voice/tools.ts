@@ -47,7 +47,8 @@ const TIMELINE_KINDS: Record<ActionDomain, VoiceActionKind> = {
     layout: 'view',
     communicate: 'chat',
     agents: 'chat',
-    projects: 'focus'
+    projects: 'focus',
+    developer: 'git'
 };
 
 const NODE_LABELS = {
@@ -159,9 +160,43 @@ const genericReply = (name: ActionName, output: Record<string, unknown>): Reply 
     return { message: `${definition.title}: done.`, entry: { kind: TIMELINE_KINDS[definition.domain], label: definition.title, detail } };
 };
 
+interface GitRunLine {
+    repository?: string;
+    branch?: string;
+    summary: string;
+    conflicts?: string[];
+    error?: { message: string } | null;
+}
+
+/* A conflict is a stop that waits for the user, never a success, so the sentence says which it was. */
+const gitLine = (run: GitRunLine): string => {
+    const name = run.repository ?? run.branch ?? 'git';
+    if (run.error) {
+        return `${name}: failed, ${run.error.message}`;
+    }
+    const conflicts = run.conflicts ?? [];
+    return conflicts.length > 0
+        ? `${name}: stopped halfway with conflicts in ${conflicts.join(', ')}; it waits for the user to resolve or take it back in the app`
+        : `${name}: ${run.summary}`;
+};
+
+const gitReply = (name: ActionName, output: Record<string, unknown>): Reply => {
+    const runs = Array.isArray(output.runs) ? (output.runs as GitRunLine[]) : typeof output.summary === 'string' ? [output as unknown as GitRunLine] : [];
+    const title = ACTION_DEFINITIONS[name].title;
+    if (runs.length === 0) {
+        return { message: `${title}: done.`, entry: { kind: 'git', label: title, detail: String(output.repository ?? output.branch ?? '') } };
+    }
+    const lines = runs.map(gitLine);
+    return { message: `${lines.join('. ')}. Report this result as it stands.`, entry: { kind: 'git', label: title, detail: lines.join('; ') } };
+};
+
 const replyOf = (name: ActionName, output: Record<string, unknown>): Reply => {
     const reply = REPLIES[name] as ((output: Record<string, unknown>) => Reply) | undefined;
-    return reply ? reply(output) : genericReply(name, output);
+    if (reply) {
+        return reply(output);
+    }
+    const definition = ACTION_DEFINITIONS[name];
+    return definition.domain === 'developer' && definition.effect !== 'read' ? gitReply(name, output) : genericReply(name, output);
 };
 
 const failed = (message: string, data: Record<string, unknown> = {}): VoiceToolExecution => ({
