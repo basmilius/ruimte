@@ -187,11 +187,11 @@ final class ChatModel {
         }
     }
 
-    /// Counts the forks after each turn among the chats the machine has loaded; a machine that cannot say leaves
+    /// Finds the forks after each turn among the chats the machine has loaded; a machine that cannot say leaves
     /// the turns unmarked.
     func refreshForks() async {
         guard let chats = try? await client.request("chat.list", payload: .object([:])) else { return }
-        presentation.setForkCounts(ChatForking.forkCounts(chats: chats.list("chats"), chatID: chatID))
+        presentation.setForks(ChatForking.forks(chats: chats.list("chats"), chatID: chatID))
     }
 
     func loadOlder() async {

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Bot, Brain, Check, ChevronDown, CircleAlert, Info, MessageCircleQuestionMark, Minimize2, Paperclip, TriangleAlert, X } from 'lucide-react';
+import { Bot, Brain, Check, ChevronDown, CircleAlert, Info, MessageCircleQuestionMark, Paperclip, TriangleAlert, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatAttachment, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
 import { formatBytes, isImageAttachment } from '@/chat/attachments';
 import { useChatRow } from '@/state/chats';
@@ -21,6 +21,7 @@ import { toolSummary } from '@/chat/logic/tools';
 import { ROW_GUTTER } from '@/chat/ui/icons';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
 import { Icon } from '@/ui/Icon';
+import { Tooltip } from '@/ui/Tooltip';
 
 // A long prompt folds so the answer stays in view; the reader can open it.
 const USER_FOLD_LINES = 8;
@@ -304,14 +305,16 @@ export function AgentTurnRow({ label, onOpen }: { label: string; onOpen?: () => 
     );
 }
 
+/* A dashed line, since what stands above it is still there for the reader but only a summary to the agent. */
 export function CompactionRow({ preTokens }: { preTokens: number | null }) {
     const { t } = useTranslation('chat');
     return (
         <div className="flex items-center gap-3 pb-3 text-xs text-text-faint">
-            <span className="h-px grow bg-border" />
-            <Icon icon={Minimize2} size={12} />
-            <span>{preTokens ? t('rows.compaction.from', { tokens: formatTokens(preTokens) }) : t('rows.compaction.plain')}</span>
-            <span className="h-px grow bg-border" />
+            <span className="grow border-t border-dashed border-border" />
+            <Tooltip label={t('rows.compaction.summary')}>
+                <span>{preTokens ? t('rows.compaction.from', { tokens: formatTokens(preTokens) }) : t('rows.compaction.plain')}</span>
+            </Tooltip>
+            <span className="grow border-t border-dashed border-border" />
         </div>
     );
 }

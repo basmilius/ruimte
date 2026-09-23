@@ -14,7 +14,7 @@ final class ChatItemState: Identifiable {
 }
 
 struct ChatTimelineEntry: Identifiable, Equatable {
-    enum Kind: Equatable { case message, tools, activity, turnFold, turnStart, changedFiles, subagent }
+    enum Kind: Equatable { case message, tools, activity, turnFold, turnStart, changedFiles, subagent, forks }
     let id: String
     let kind: Kind
     var items: [ChatItemState] = []
@@ -49,8 +49,8 @@ final class ChatPresentation {
     var forkRequest: ChatForkRequest?
     /// A row asked to open another chat of the project (a summary's fork); the screen pushes it.
     var openRequest: String?
-    /// How many forks this device knows of per turn, for the mark on the turn.
-    private(set) var forkCounts: [String: Int] = [:]
+    /// The forks this device knows of per turn, for the line under the turn.
+    private(set) var forks: [String: [String]] = [:]
     var places: ChatPlaces?
     /// The timeline entries on screen, answered by the timeline while it is there.
     @ObservationIgnored var visibleEntryIDs: () -> [String] = { [] }
@@ -154,8 +154,10 @@ final class ChatPresentation {
         return nil
     }
 
-    func setForkCounts(_ counts: [String: Int]) {
-        if counts != forkCounts { forkCounts = counts }
+    func setForks(_ forks: [String: [String]]) {
+        guard forks != self.forks else { return }
+        self.forks = forks
+        rebuild()
     }
 
     func forkRefusal(turnID: String) -> String? {
@@ -228,7 +230,11 @@ final class ChatPresentation {
             let notices = work.filter { $0.value.text("kind") == "note" }
             let folded = work.filter { $0 !== final && $0.value.text("kind") != "note" }
             if !rowsFor(folded, children: children).isEmpty {
-                rows.append(ChatTimelineEntry(id: "fold-\(turnID)", kind: .turnFold, items: [turn] + notices))
+                let tools = work.filter {
+                    $0.value.text("kind") == "tool" && Self.parent($0.value) == nil
+                        && ChatSubagents.handbackReport($0.value) == nil
+                }
+                rows.append(ChatTimelineEntry(id: "fold-\(turnID)", kind: .turnFold, items: [turn] + notices + tools))
                 if expandedTurns.contains(turnID) { rows += rowsFor(folded, children: children) }
             }
             let edits = work.filter {
@@ -243,6 +249,9 @@ final class ChatPresentation {
             }
             if let final { rows.append(ChatTimelineEntry(id: final.id, kind: .message, items: [final])) }
             rows += rowsFor(notices, children: children)
+            if forks[turnID]?.isEmpty == false {
+                rows.append(ChatTimelineEntry(id: "forks-\(turnID)", kind: .forks, items: [turn]))
+            }
         }
         if let activeID { rows.append(ChatTimelineEntry(id: "working-\(activeID)", kind: .activity)) }
         guard rows != entries else { return }
@@ -361,6 +370,55 @@ enum ChatToolPresentation {
         let output = item["progress"]?.text("output") ?? ""
         return String(output.suffix(4000)).split(separator: "\n", omittingEmptySubsequences: false).suffix(12).joined(
             separator: "\n")
+    }
+
+    /// What a folded turn did, a sentence per kind of call in the order it first came, as `summarizeTurn` in
+    /// `chat/logic/timeline.ts` writes it: every file change is one sentence, calls without one are counted last.
+    static func turnSummary(_ tools: [JSONValue]) -> [String] {
+        var order: [String] = []
+        var counts: [String: Int] = [:]
+        var edited = Set<String>()
+        var other = 0
+        for tool in tools {
+            let name = tool.text("name")
+            let key: String
+            if fileChanges.contains(name) {
+                edited.insert(tool["input"]?["file_path"]?.stringValue ?? tool.stableID)
+                key = "edited"
+            } else if sentences[name] != nil {
+                key = name
+            } else {
+                other += 1
+                continue
+            }
+            if counts[key] == nil { order.append(key) }
+            counts[key, default: 0] += 1
+        }
+        var parts = order.map { key in
+            key == "edited"
+                ? counted(edited.count, ("Edited", "file", "files")) : counted(counts[key] ?? 0, sentences[key]!)
+        }
+        if other > 0 {
+            parts.append(counted(other, parts.isEmpty ? ("", "tool call", "tool calls") : ("", "other tool call", "other tool calls")))
+        }
+        return parts
+    }
+
+    private static let fileChanges: Set<String> = ["Edit", "Write", "MultiEdit", "ApplyPatch"]
+
+    // The sentences of `chat:group.tools` in the client's English locale.
+    private static let sentences: [String: (String, String, String)] = [
+        "Read": ("Read", "file", "files"), "NotebookEdit": ("Edited", "notebook", "notebooks"),
+        "Bash": ("Ran", "command", "commands"), "Grep": ("Searched", "pattern", "patterns"),
+        "Glob": ("Listed", "pattern", "patterns"), "WebFetch": ("Fetched", "page", "pages"),
+        "WebSearch": ("Searched the web", "query", "queries"), "Task": ("Delegated", "task", "tasks"),
+        "Agent": ("Delegated", "task", "tasks"), "Skill": ("Used", "skill", "skills"),
+        "TodoWrite": ("Updated", "plan", "plans"),
+    ]
+
+    private static func counted(_ count: Int, _ sentence: (String, String, String)) -> String {
+        let noun = count == 1 ? sentence.1 : sentence.2
+        return sentence.0.isEmpty ? "\(count) \(noun)" : "\(sentence.0) \(count) \(noun)"
     }
 
     static func groupLabel(_ items: [JSONValue]) -> String {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
 import { notResumedNote } from '@ruimte/contracts';
-import { agentTurnLabel, deriveTimelineRows, isBlock, summarizeGroup, turnLabel } from './timeline';
+import { agentTurnLabel, deriveTimelineRows, isBlock, summarizeGroup, summarizeTurn, turnLabel } from './timeline';
 
 const tool = (id: string, name: string, input: unknown, state: ChatToolItem['state'] = 'done', turnId = 't1'): ChatToolItem => ({
     id,
@@ -39,8 +39,15 @@ describe('deriveTimelineRows', () => {
     test('a settled turn folds its work behind a label and keeps the final answer and changed files', () => {
         const rows = deriveTimelineRows(thread, options);
         expect(rows.map((row) => row.kind)).toEqual(['user', 'turn-fold', 'changed-files', 'assistant']);
-        expect(rows[1]).toMatchObject({ label: 'Worked for 12s', hiddenCount: 1, expanded: false });
+        expect(rows[1]).toMatchObject({ label: 'Worked for 12s', work: ['Read 2 files', 'Edited 1 file'], hiddenCount: 1, expanded: false });
         expect(rows[2]).toMatchObject({ tools: [{ id: 'e1' }] });
+    });
+
+    test('a line leads to the forks under a settled turn a fork went on after', () => {
+        const rows = deriveTimelineRows(thread, { ...options, forkedTurns: new Set(['t1']) });
+        expect(rows.map((row) => row.kind)).toEqual(['user', 'turn-fold', 'changed-files', 'assistant', 'forks']);
+        expect(rows[4]).toMatchObject({ id: 'forks-t1', turnId: 't1' });
+        expect(deriveTimelineRows(thread, { ...options, forkedTurns: new Set(['t2']) }).map((row) => row.kind)).not.toContain('forks');
     });
 
     test('expanding the turn shows the grouped tool run, expanding the group shows every call', () => {
@@ -194,6 +201,17 @@ describe('deriveTimelineRows', () => {
 });
 
 describe('labels', () => {
+    test('summarizeTurn', () => {
+        expect(summarizeTurn([tool('1', 'Read', {}), tool('2', 'Grep', {}), tool('3', 'Read', {})])).toEqual(['Read 2 files', 'Searched 1 pattern']);
+        expect(summarizeTurn([tool('1', 'Write', { file_path: 'a' }), tool('2', 'Bash', {}), tool('3', 'Edit', { file_path: 'a' })])).toEqual([
+            'Edited 1 file',
+            'Ran 1 command'
+        ]);
+        expect(summarizeTurn([tool('1', 'Read', {}), tool('2', 'mcp__x', {}), tool('3', 'mcp__y', {})])).toEqual(['Read 1 file', '2 other tool calls']);
+        expect(summarizeTurn([tool('1', 'mcp__x', {})])).toEqual(['1 tool call']);
+        expect(summarizeTurn([])).toEqual([]);
+    });
+
     test('summarizeGroup', () => {
         expect(summarizeGroup([tool('1', 'Read', {}), tool('2', 'Read', {})])).toBe('Read 2 files');
         expect(summarizeGroup([tool('1', 'Bash', {})])).toBe('Ran 1 command');

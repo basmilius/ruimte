@@ -20,7 +20,7 @@ import { hasFileChanges, isFileChange } from './tools';
 /*
  * What the thread shows, row by row. Items are what the daemon knows; rows are what a reader
  * wants: one line per tool call, runs of tool calls folded into a summary, past turns folded
- * behind "Worked for 12s", and the file changes of a turn gathered into one card.
+ * behind "Worked for 12s" and what the turn did, and the file changes of a turn gathered into one card.
  */
 export type TimelineRow =
     | { kind: 'user'; id: string; item: ChatUserItem }
@@ -38,7 +38,8 @@ export type TimelineRow =
     | { kind: 'note'; id: string; level: 'info' | 'warning' | 'error'; text: string; from?: string }
     | { kind: 'compaction'; id: string; preTokens: number | null }
     | { kind: 'changed-files'; id: string; turnId: string; tools: ChatToolItem[]; diff: ChatCheckpointDiff | null; checkpoint: boolean }
-    | { kind: 'turn-fold'; id: string; turn: ChatTurnItem; label: string; hiddenCount: number; expanded: boolean }
+    | { kind: 'turn-fold'; id: string; turn: ChatTurnItem; label: string; work: string[]; hiddenCount: number; expanded: boolean }
+    | { kind: 'forks'; id: string; turnId: string }
     | { kind: 'working'; id: string; startedAt: number };
 
 interface TimelineOptions {
@@ -46,6 +47,8 @@ interface TimelineOptions {
     expandedTurns: ReadonlySet<string>;
     expandedSubagents: ReadonlySet<string>;
     activeTurnId: string | null;
+    /* The settled turns a fork went on after; a thread that cannot fork leaves it out. */
+    forkedTurns?: ReadonlySet<string>;
 }
 
 /*
@@ -74,6 +77,34 @@ export const summarizeGroup = (tools: ChatToolItem[]): string => {
         return i18next.t('chat:group.calls', { name: only, count: tools.length });
     }
     return i18next.t('chat:group.toolCalls', { count: tools.length });
+};
+
+/*
+ * What a folded turn did, a sentence per kind of call in the order it first came: "Read 11 files",
+ * "Searched 2 patterns". Every file change reads as one sentence, and calls without a sentence of
+ * their own are counted together at the end.
+ */
+export const summarizeTurn = (tools: readonly ChatToolItem[]): string[] => {
+    // Keyed by the sentence, so its place is where the first call of that kind came.
+    const counts = new Map<string, number>();
+    const edited = new Set<string>();
+    let other = 0;
+    for (const tool of tools) {
+        if (isFileChange(tool.name)) {
+            edited.add((tool.input as { file_path?: string })?.file_path ?? tool.id);
+            counts.set('chat:group.edited', edited.size);
+        } else if (toolEntry(tool.name)?.grouped === true) {
+            const key = `chat:group.tools.${tool.name}`;
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+        } else {
+            other += 1;
+        }
+    }
+    const parts = [...counts].map(([key, count]) => i18next.t(key, { count }));
+    if (other > 0) {
+        parts.push(i18next.t(parts.length === 0 ? 'chat:group.toolCalls' : 'chat:group.otherCalls', { count: other }));
+    }
+    return parts;
 };
 
 /*
@@ -296,7 +327,16 @@ export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions):
         const folded = finalAssistant ? work.slice(0, work.indexOf(finalAssistant)) : work;
         const expanded = options.expandedTurns.has(turnId);
         if (folded.length > 0) {
-            rows.push({ kind: 'turn-fold', id: `fold-${turnId}`, turn, label: turnLabel(turn, chunk.items), hiddenCount: folded.length, expanded });
+            const tools = rest.filter((item): item is ChatToolItem => item.kind === 'tool' && parentOf(item) === null && handbackReportOf(item) === null);
+            rows.push({
+                kind: 'turn-fold',
+                id: `fold-${turnId}`,
+                turn,
+                label: turnLabel(turn, chunk.items),
+                work: summarizeTurn(tools),
+                hiddenCount: folded.length,
+                expanded
+            });
             if (expanded) {
                 rows.push(...folded);
             }
@@ -307,6 +347,9 @@ export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions):
         }
         if (finalAssistant) {
             rows.push(finalAssistant);
+        }
+        if (options.forkedTurns?.has(turnId) === true) {
+            rows.push({ kind: 'forks', id: `forks-${turnId}`, turnId });
         }
     }
     return rows;

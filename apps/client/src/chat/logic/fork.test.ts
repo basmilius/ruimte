@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem, ProjectView } from '@ruimte/contracts';
 import {
     branchRefusal,
-    forksAfter,
+    forkedTurnIds,
+    forkIdsAfter,
     summaryRefusal,
     forkOriginIn,
     forkPayload,
@@ -121,7 +122,7 @@ describe('the shape of a fork', () => {
         expect(summaryRefusal({ busy: true, originalPresent: false })).toBe('The original is no longer in this project');
     });
 
-    test('the forks after a turn are counted from the chats this client knows', () => {
+    test('the forks after a turn are found among the chats this client knows', () => {
         const at = { chatId: 'chat-1', turnId: 't1', at: 0 };
         const infos = [
             info({ chatId: 'fork-1', forkOf: at }),
@@ -129,8 +130,10 @@ describe('the shape of a fork', () => {
             info({ chatId: 'fork-3', forkOf: { ...at, turnId: 't2' } }),
             info()
         ];
-        expect(forksAfter(infos, 'chat-1', 't1')).toBe(2);
-        expect(forksAfter(infos, 'chat-1', 't3')).toBe(0);
+        expect(forkIdsAfter(infos, 'chat-1', 't1')).toEqual(['fork-1', 'fork-2']);
+        expect(forkIdsAfter(infos, 'chat-1', 't3')).toEqual([]);
+        expect(forkedTurnIds(infos, 'chat-1')).toEqual(new Set(['t1', 't2']));
+        expect(forkedTurnIds(infos, 'fork-1')).toEqual(new Set());
     });
 
     test('a branch has to be named and free', () => {

@@ -737,28 +737,36 @@ struct ChatEntryView: View {
                         ) {
                             presentation.toggleTurn(turn.value.text("turnId", fallback: turn.id))
                         } label: {
-                            Label(
-                                ChatPresentation.turnLabel(turn.value, items: entry.items.map(\.value)),
-                                lucideIcon: presentation.expandedTurns.contains(
-                                    turn.value.text("turnId", fallback: turn.id)) ? "chevron-down" : "chevron-right",
-                                iconSize: 12
-                            )
-                            .font(.footnote).foregroundStyle(
+                            // A line and not a button, like the tool lines it hides; the work reads fainter than the time.
+                            HStack(spacing: 8) {
+                                Image(
+                                    lucide: presentation.expandedTurns.contains(
+                                        turn.value.text("turnId", fallback: turn.id)) ? "chevron-down" : "chevron-right",
+                                    size: 12)
+                                Text(ChatPresentation.turnLabel(turn.value, items: entry.items.map(\.value)))
+                                    .layoutPriority(1)
+                                let work = ChatToolPresentation.turnSummary(
+                                    entry.items.map(\.value).filter { $0.text("kind") == "tool" })
+                                if !work.isEmpty {
+                                    Text(work.map { "· \($0)" }.joined(separator: " "))
+                                        .foregroundStyle(MobileStyle.faint)
+                                }
+                            }
+                            .font(.footnote).lineLimit(1).foregroundStyle(
                                 turn.value.text("state") == "error" ? Color.red : MobileStyle.muted
                             )
-                            .padding(.horizontal, 10).frame(minHeight: 44)
-                            .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 8))
-                            .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(MobileStyle.border) }
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
                         }.buttonStyle(.plain)
                             .accessibilityValue(
                                 presentation.expandedTurns.contains(turn.value.text("turnId", fallback: turn.id))
                                     ? "Expanded" : "Collapsed"
                             )
                             .modifier(ChatForkMenu(presentation: presentation, turnID: turn.id))
-                        if let forks = presentation.forkCounts[turn.id], forks > 0 {
-                            ChatForkedMark(count: forks)
-                        }
                     }
+                }
+            case .forks:
+                if let turn = entry.items.first {
+                    ChatForksRow(forkIDs: presentation.forks[turn.id] ?? [], presentation: presentation)
                 }
             case .turnStart:
                 if let turn = entry.items.first {
@@ -909,11 +917,7 @@ private struct ChatTimelineRow: View {
                     }
                 }
             case "compaction":
-                Label(
-                    item["preTokens"]?.numberValue.map { "Context compacted from \(Int($0).formatted()) tokens" }
-                        ?? "Context compacted", lucideIcon: "minimize-2", iconSize: 14
-                ).font(.caption)
-                    .foregroundStyle(MobileStyle.muted)
+                ChatCompactionRule(preTokens: item["preTokens"]?.numberValue)
             default: MarkdownMessage(text: item["text"]?.stringValue ?? "")
             }
         }.frame(maxWidth: .infinity, alignment: .leading)

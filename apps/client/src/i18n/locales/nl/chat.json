@@ -79,7 +79,8 @@
     },
     "compaction": {
       "plain": "Context gecomprimeerd",
-      "from": "Context gecomprimeerd vanaf {{tokens}} tokens"
+      "from": "Context gecomprimeerd vanaf {{tokens}} tokens",
+      "summary": "Alles hierboven kent de agent alleen nog als samenvatting"
     },
     "approval": {
       "allow": "Toegestaan",
@@ -110,8 +111,6 @@
     "runningFor": "loopt al {{elapsed}}",
     "forksAfter_one": "Een fork gaat verder na deze turn",
     "forksAfter_other": "{{count}} forks gaan verder na deze turn",
-    "forked_one": "Geforkt",
-    "forked_other": "{{count}}x geforkt",
     "omitted": {
       "binary": "Binair bestand, geen diff",
       "tooLarge": "Te groot om te tonen"
@@ -171,7 +170,9 @@
     "edited_one": "{{count}} bestand bewerkt",
     "edited_other": "{{count}} bestanden bewerkt",
     "toolCalls_one": "{{count}} tool-aanroep",
-    "toolCalls_other": "{{count}} tool-aanroepen"
+    "toolCalls_other": "{{count}} tool-aanroepen",
+    "otherCalls_one": "{{count}} andere tool-aanroep",
+    "otherCalls_other": "{{count}} andere tool-aanroepen"
   },
   "turn": {
     "about": "{{what}}: {{label}}",

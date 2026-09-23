@@ -2,13 +2,9 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, FileDiff, GitFork, X } from 'lucide-react';
-import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatInfo, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
+import { ChevronRight, FileDiff, X } from 'lucide-react';
+import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
-import { forksAfter } from '@/chat/logic/fork';
-import { useChats, type ChatsById } from '@/state/chats';
-import { splitKey, useEndpointId } from '@/state/keys';
-import { Tooltip } from '@/ui/Tooltip';
 import { fileChanges, liveOutput, readImagePath, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
 import { ReadImage } from '@/chat/ui/ImageView';
 import { formatClockDuration, formatElapsedShort } from '@/format/duration';
@@ -167,54 +163,38 @@ export function WorkGroupRow({ tools, summary, expanded, onToggle }: { tools: Ch
     );
 }
 
-/* The chats this client holds of one machine, which is where the forks it knows of are. */
-function* forkInfosOn(byKey: ChatsById, endpointId: string): Generator<ChatInfo> {
-    for (const [key, state] of Object.entries(byKey)) {
-        if (state.info.forkOf !== undefined && splitKey(key).endpointId === endpointId) {
-            yield state.info;
-        }
-    }
-}
-
+/*
+ * A settled turn folded behind how long it took and what it did. A line and not a button, like the
+ * tool lines it hides; the work reads fainter than the time so the eye lands on the time first.
+ */
 export function TurnFoldRow({
-    chatId,
     turn,
     label,
+    work,
     expanded,
     onToggle
 }: {
-    chatId: string;
     turn: ChatTurnItem;
     label: string;
+    work: readonly string[];
     expanded: boolean;
     onToggle(): void;
 }) {
-    const { t } = useTranslation('chat');
-    const endpointId = useEndpointId();
-    // A count, so the selector answers a number and never a new object.
-    const forks = useChats((s) => forksAfter(forkInfosOn(s.byKey, endpointId), chatId, turn.id));
     return (
-        <div className="flex items-center gap-2 pb-1.5">
-            <button
-                className={clsx(
-                    'mb-0.5 flex h-7 items-center gap-2 rounded-md border border-border px-2 text-xs text-text-muted hover:bg-surface-hover',
-                    turn.state === 'error' && 'text-status-error'
-                )}
-                onClick={onToggle}
-            >
-                <span className={ROW_GUTTER}>
-                    <Icon icon={ChevronRight} size={12} className={clsx('transition-transform', expanded && 'rotate-90')} />
-                </span>
-                {label}
-            </button>
-            {forks > 0 && (
-                <Tooltip label={t('work.forksAfter', { count: forks })}>
-                    <span className="mb-0.5 flex items-center gap-1 text-xs text-text-faint">
-                        <Icon icon={GitFork} size={12} /> {t('work.forked', { count: forks })}
-                    </span>
-                </Tooltip>
+        <button
+            className={clsx(
+                'group -mx-1 mb-2 flex h-7 w-[calc(100%+8px)] min-w-0 items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+                turn.state === 'error' && 'text-status-error'
             )}
-        </div>
+            aria-expanded={expanded}
+            onClick={onToggle}
+        >
+            <span className={ROW_GUTTER}>
+                <Icon icon={ChevronRight} size={12} className={clsx('transition-transform', expanded && 'rotate-90')} />
+            </span>
+            <span className="shrink-0 group-hover:text-text">{label}</span>
+            {work.length > 0 && <span className="min-w-0 truncate text-text-faint">{work.map((part) => ` · ${part}`).join('')}</span>}
+        </button>
     );
 }
 

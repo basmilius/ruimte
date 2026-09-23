@@ -105,13 +105,73 @@ struct ChatForkMenu: ViewModifier {
     }
 }
 
-/// Says a turn has forks that go on after it.
-struct ChatForkedMark: View {
-    let count: Int
+/// Under a turn that forks went on after, the way over to them: one fork opens at once, more open a menu of them by
+/// name. A fork no longer in the project has nowhere to lead.
+struct ChatForksRow: View {
+    let forkIDs: [String]
+    let presentation: ChatPresentation
+
     var body: some View {
-        Label(ChatForking.forkedLabel(count), lucideIcon: "git-fork", iconSize: 12)
-            .font(.caption).foregroundStyle(MobileStyle.faint)
-            .accessibilityLabel(count == 1 ? "A fork goes on after this turn" : "\(count) forks go on after this turn")
+        Group {
+            if forkIDs.count == 1, let id = forkIDs.first {
+                Button {
+                    presentation.openRequest = id
+                } label: {
+                    label
+                }
+                .disabled(presentation.places?.title(id) == nil)
+            } else {
+                Menu {
+                    ForEach(forkIDs, id: \.self) { id in
+                        let title = presentation.places?.title(id)
+                        Button(title ?? "Fork", lucideIcon: "git-fork") { presentation.openRequest = id }
+                            .disabled(title == nil)
+                    }
+                } label: {
+                    label
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var label: some View {
+        HStack(spacing: 8) {
+            Image(lucide: "git-fork", size: 12)
+            Text(ChatForking.forksLabel(forkIDs.count))
+            Image(lucide: "chevron-right", size: 12)
+        }
+        .font(.footnote).foregroundStyle(MobileStyle.muted)
+        .frame(minHeight: 44).contentShape(Rectangle())
+    }
+}
+
+/// A compaction as a dashed rule: what stands above it is still there to read, but only a summary to the agent.
+struct ChatCompactionRule: View {
+    let preTokens: Double?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            dash
+            Text(preTokens.map { "Context compacted from \(Int($0).formatted()) tokens" } ?? "Context compacted")
+                .font(.caption).foregroundStyle(MobileStyle.faint).lineLimit(1).layoutPriority(1)
+            dash
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Everything above reaches the agent only as a summary")
+    }
+
+    private var dash: some View {
+        ChatHorizontalLine().stroke(MobileStyle.border, style: StrokeStyle(lineWidth: 1, dash: [4, 3])).frame(height: 1)
+    }
+}
+
+private struct ChatHorizontalLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        }
     }
 }
 

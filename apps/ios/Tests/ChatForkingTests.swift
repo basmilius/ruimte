@@ -103,14 +103,14 @@ final class ChatForkingTests: XCTestCase {
         XCTAssertNil(ChatForking.branchRefusal("fork", taken: ["main"]))
     }
 
-    func testCountsForksPerTurnOfThisChat() {
+    func testFindsForksPerTurnOfThisChat() {
         let chats: [JSONValue] = [
-            fork(of: "chat", after: "t1"), fork(of: "chat", after: "t1"), fork(of: "chat", after: "t2"),
-            fork(of: "other", after: "t1"), .object(["chatId": .string("plain")]),
+            fork("a", of: "chat", after: "t1"), fork("b", of: "chat", after: "t1"), fork("c", of: "chat", after: "t2"),
+            fork("d", of: "other", after: "t1"), .object(["chatId": .string("plain")]),
         ]
-        XCTAssertEqual(ChatForking.forkCounts(chats: chats, chatID: "chat"), ["t1": 2, "t2": 1])
-        XCTAssertEqual(ChatForking.forkedLabel(1), "Forked")
-        XCTAssertEqual(ChatForking.forkedLabel(3), "Forked 3x")
+        XCTAssertEqual(ChatForking.forks(chats: chats, chatID: "chat"), ["t1": ["a", "b"], "t2": ["c"]])
+        XCTAssertEqual(ChatForking.forksLabel(1), "A fork goes on after this turn")
+        XCTAssertEqual(ChatForking.forksLabel(3), "3 forks go on after this turn")
     }
 
     func testSummaryNoteFoldsAfterItsFirstLine() {
@@ -159,10 +159,10 @@ final class ChatForkingTests: XCTestCase {
         let model = ChatModel(client: machine, chatID: "chat")
         XCTAssertTrue(model.presentation.forkable)
         await model.refreshForks()
-        XCTAssertEqual(model.presentation.forkCounts, ["t1": 1])
+        XCTAssertEqual(model.presentation.forks, ["t1": ["fork"]])
         machine.fails = true
         await model.refreshForks()
-        XCTAssertEqual(model.presentation.forkCounts, ["t1": 1])
+        XCTAssertEqual(model.presentation.forks, ["t1": ["fork"]])
     }
 
     private func turn(_ id: String, state: String) -> JSONValue {
@@ -179,9 +179,9 @@ final class ChatForkingTests: XCTestCase {
         ])
     }
 
-    private func fork(of chatID: String, after turnID: String) -> JSONValue {
+    private func fork(_ id: String, of chatID: String, after turnID: String) -> JSONValue {
         .object([
-            "chatId": .string(UUID().uuidString),
+            "chatId": .string(id),
             "forkOf": .object(["chatId": .string(chatID), "turnId": .string(turnID), "at": .number(1)]),
         ])
     }

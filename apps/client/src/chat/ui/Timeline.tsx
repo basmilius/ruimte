@@ -4,6 +4,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
 import type { ChatSubagentItem } from '@ruimte/contracts';
+import { useForkedTurns } from '@/chat/forks';
 import { deriveTimelineRows } from '@/chat/logic/timeline';
 import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
@@ -66,6 +67,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     // The structure, not the items. A delta growing a reply must not derive every row again.
     const items = useChatRow(chatId, (row) => row?.structure);
     const activeTurnId = useChatRow(chatId, (row) => row?.info.activeTurnId ?? null);
+    const forkedTurns = useForkedTurns(chatId);
     const info = useChatRow(chatId, (row) => row?.info ?? null);
     const endpointId = useEndpointId();
     // Read when the menu opens rather than subscribed to, for the same reason the rows use the structure.
@@ -93,9 +95,9 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
         }
         return deriveTimelineRows(
             order.map((id) => items[id]!),
-            { expandedGroups: groups.ids, expandedTurns: turns.ids, expandedSubagents: subagents.ids, activeTurnId }
+            { expandedGroups: groups.ids, expandedTurns: turns.ids, expandedSubagents: subagents.ids, activeTurnId, forkedTurns }
         );
-    }, [order, items, groups.ids, turns.ids, subagents.ids, activeTurnId]);
+    }, [order, items, groups.ids, turns.ids, subagents.ids, activeTurnId, forkedTurns]);
 
     const empty = rows.length === 0;
     const ticks = useMemo(() => ticksOf(rows), [rows]);

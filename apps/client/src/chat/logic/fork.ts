@@ -61,15 +61,26 @@ export const summaryRefusal = (state: { busy: boolean; originalPresent: boolean 
     return null;
 };
 
-/* How many forks this client knows of that went on after this turn of this chat. */
-export const forksAfter = (infos: Iterable<ChatInfo>, chatId: string, turnId: string): number => {
-    let count = 0;
+/* The forks this client knows of that went on after this turn of this chat, in the order it holds them. */
+export const forkIdsAfter = (infos: Iterable<ChatInfo>, chatId: string, turnId: string): string[] => {
+    const ids: string[] = [];
     for (const info of infos) {
         if (info.forkOf?.chatId === chatId && info.forkOf.turnId === turnId) {
-            count += 1;
+            ids.push(info.chatId);
         }
     }
-    return count;
+    return ids;
+};
+
+/* The turns of this chat that at least one fork this client knows of went on after. */
+export const forkedTurnIds = (infos: Iterable<ChatInfo>, chatId: string): Set<string> => {
+    const turns = new Set<string>();
+    for (const info of infos) {
+        if (info.forkOf?.chatId === chatId) {
+            turns.add(info.forkOf.turnId);
+        }
+    }
+    return turns;
 };
 
 /* The last turn that ended, which is where a fork from the node's menu goes on after. */
@@ -110,6 +121,7 @@ export const turnIdOfRow = (row: TimelineRow): string | null => {
         case 'turn-fold':
             return row.turn.id;
         case 'changed-files':
+        case 'forks':
             return row.turnId;
         case 'work':
         case 'work-live':

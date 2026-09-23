@@ -148,16 +148,19 @@ enum ChatForking {
         return .object(values)
     }
 
-    /// How many forks go on after each turn of this chat, among the chats a machine has loaded.
-    static func forkCounts(chats: [JSONValue], chatID: String) -> [String: Int] {
-        var counts: [String: Int] = [:]
+    /// The forks that go on after each turn of this chat, among the chats a machine has loaded, in the order it
+    /// lists them.
+    static func forks(chats: [JSONValue], chatID: String) -> [String: [String]] {
+        var forks: [String: [String]] = [:]
         for chat in chats where chat["forkOf"]?.text("chatId") == chatID {
-            if let turn = chat["forkOf"]?["turnId"]?.stringValue { counts[turn, default: 0] += 1 }
+            if let turn = chat["forkOf"]?["turnId"]?.stringValue { forks[turn, default: []].append(chat.text("chatId")) }
         }
-        return counts
+        return forks
     }
 
-    static func forkedLabel(_ count: Int) -> String { count == 1 ? "Forked" : "Forked \(count)x" }
+    static func forksLabel(_ count: Int) -> String {
+        count == 1 ? "A fork goes on after this turn" : "\(count) forks go on after this turn"
+    }
 
     /// The places the message index lists, in thread order.
     @MainActor static func marks(entries: [ChatTimelineEntry]) -> [ChatMessageMark] {

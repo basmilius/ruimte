@@ -11,6 +11,7 @@ import {
     ThinkingRow,
     UserRow
 } from '@/chat/ui/rows/MessageRows';
+import { ForksRow } from '@/chat/ui/rows/ForksRow';
 import { SubagentRow } from '@/chat/ui/rows/SubagentRow';
 import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
 
@@ -57,7 +58,9 @@ export function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, open
                 />
             );
         case 'turn-fold':
-            return <TurnFoldRow chatId={chatId} turn={row.turn} label={row.label} expanded={row.expanded} onToggle={() => toggleTurn(row.turn.id)} />;
+            return <TurnFoldRow turn={row.turn} label={row.label} work={row.work} expanded={row.expanded} onToggle={() => toggleTurn(row.turn.id)} />;
+        case 'forks':
+            return <ForksRow chatId={chatId} turnId={row.turnId} />;
         case 'changed-files':
             return <ChangedFilesRow chatId={chatId} turnId={row.turnId} tools={row.tools} diff={row.diff} checkpoint={row.checkpoint} />;
         case 'approval':

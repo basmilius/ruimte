@@ -79,7 +79,8 @@
     },
     "compaction": {
       "plain": "Context compacted",
-      "from": "Context compacted from {{tokens}} tokens"
+      "from": "Context compacted from {{tokens}} tokens",
+      "summary": "Everything above reaches the agent only as a summary"
     },
     "approval": {
       "allow": "Allowed",
@@ -110,8 +111,6 @@
     "runningFor": "running for {{elapsed}}",
     "forksAfter_one": "A fork goes on after this turn",
     "forksAfter_other": "{{count}} forks go on after this turn",
-    "forked_one": "Forked",
-    "forked_other": "Forked {{count}}x",
     "omitted": {
       "binary": "Binary file, no diff",
       "tooLarge": "Too large to show"
@@ -171,7 +170,9 @@
     "edited_one": "Edited {{count}} file",
     "edited_other": "Edited {{count}} files",
     "toolCalls_one": "{{count}} tool call",
-    "toolCalls_other": "{{count}} tool calls"
+    "toolCalls_other": "{{count}} tool calls",
+    "otherCalls_one": "{{count}} other tool call",
+    "otherCalls_other": "{{count}} other tool calls"
   },
   "turn": {
     "about": "{{what}}: {{label}}",
