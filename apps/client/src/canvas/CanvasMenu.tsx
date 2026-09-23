@@ -1,6 +1,7 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useTranslation } from 'react-i18next';
 import { FileText, Globe, LayoutGrid, Maximize, MessageSquare, Scan, SquareDashedMousePointer, StickyNote, Terminal, Type } from 'lucide-react';
+import { groupSelectionAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
@@ -52,7 +53,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                         <Icon icon={Type} size={14} /> {t('kinds.text')} <span className={MENU_HINT}>{t('menu.doubleClick')}</span>
                     </ContextMenu.Item>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
-                    <ContextMenu.Item className="menu-item" disabled={!hasSelection} onClick={() => canvasStore.getState().groupSelection()}>
+                    <ContextMenu.Item className="menu-item" disabled={!hasSelection} onClick={() => groupSelectionAction()}>
                         <Icon icon={SquareDashedMousePointer} size={14} /> {t('canvasMenu.groupSelection')} <Kbd shortcut={CANVAS_SHORTCUTS.group} />
                     </ContextMenu.Item>
                     <ContextMenu.Item

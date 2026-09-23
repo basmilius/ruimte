@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument } from '@ruimte/contracts';
 import { clientActions, createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import { defaultCanvases } from '@/state/canvas';
+import { defaultDiagrams } from '@/state/diagram';
 import { useDocument } from '@/state/document';
+import { defaultDrawings } from '@/state/drawing';
 
 const main: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] };
 
@@ -181,5 +183,62 @@ describe('client actions', () => {
         defaultCanvases.of('main').getState().addNode('note', { x: 500, y: 500 }, { title: 'Newer' });
         expect(await clientActions.undo(result.undoToken, VOICE_ACTION_CALL)).toMatchObject({ status: 'failed', error: { code: 'stale-undo' } });
         expect(Object.values(defaultCanvases.of('main').getState().nodes).map((node) => node.title)).toEqual(['First', 'Newer']);
+    });
+
+    test('names a new view the way the view menu always has, and an explicit name still wins', async () => {
+        const create = async (kind: 'canvas' | 'drawing' | 'diagram' | 'terminal', name: string | null = null) => {
+            const result = await clientActions.execute('view.create', { kind, name, url: null, command: null }, PERSON_ACTION_CALL);
+            return result.status === 'completed' ? result.output.view : null;
+        };
+        expect(await create('canvas')).toBe('Canvas');
+        expect(await create('canvas')).toBe('Canvas 2');
+        expect(await create('drawing')).toBe('Drawing');
+        expect(await create('diagram')).toBe('Diagram');
+        expect(await create('terminal')).toBe('Terminal');
+        expect(await create('terminal')).toBe('Terminal 2');
+        expect(await create('canvas', 'Launch')).toBe('Launch');
+    });
+
+    test('undoes and redoes a drawing on screen, and says when there was nothing to redo', async () => {
+        const viewId = useDocument.getState().addDrawingView('Sketch')!;
+        useDocument.getState().showView(viewId);
+        const drawing = defaultDrawings.of(viewId);
+        drawing
+            .getState()
+            .load(
+                viewId,
+                { version: 1, rev: 1, elements: [{ kind: 'rect', id: 'a', x: 0, y: 0, w: 100, h: 60, stroke: 'ink', strokeWidth: 2, seed: 1 }] },
+                null
+            );
+        defaultDrawings.focus(viewId);
+        drawing.getState().select(['a']);
+        drawing.getState().deleteSelected();
+        expect(await clientActions.execute('history.undo', { viewId }, PERSON_ACTION_CALL)).toMatchObject({
+            status: 'completed',
+            output: { view: 'Sketch', changed: true }
+        });
+        expect(drawing.getState().elements.map((element) => element.id)).toEqual(['a']);
+        expect(await clientActions.execute('history.redo', { viewId }, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed', output: { changed: true } });
+        expect(drawing.getState().elements).toEqual([]);
+        expect(await clientActions.execute('history.redo', { viewId }, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed', output: { changed: false } });
+        defaultDrawings.release(viewId);
+    });
+
+    test('undoes a diagram on screen and refuses one that is not', async () => {
+        const viewId = useDocument.getState().addDiagramView('Flow')!;
+        useDocument.getState().showView(viewId);
+        const diagram = defaultDiagrams.of(viewId);
+        diagram
+            .getState()
+            .load(viewId, { version: 1, rev: 1, meta: { title: '', direction: 'right' }, nodes: [{ id: 'a', label: 'Client' }], groups: [], edges: [] }, null);
+        defaultDiagrams.focus(viewId);
+        diagram.getState().renameNode('a', 'Browser');
+        expect(await clientActions.execute('history.undo', { viewId: 'main' }, PERSON_ACTION_CALL)).toMatchObject({
+            status: 'failed',
+            error: { code: 'inactive-view' }
+        });
+        expect(await clientActions.execute('history.undo', { viewId }, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed', output: { changed: true } });
+        expect(diagram.getState().content.nodes[0]).toMatchObject({ label: 'Client' });
+        defaultDiagrams.release(viewId);
     });
 });

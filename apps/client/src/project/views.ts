@@ -7,14 +7,13 @@ import {
     isFileView,
     isOpenableView,
     isSessionView,
-    MAIN_VIEW_NAME,
     resolveStoredPath,
     sessionNodesOfView,
     type AgentKind,
     type ProjectView
 } from '@ruimte/contracts';
 import { askBeforeEndingAgents } from '@/agents/end-children';
-import { focusViewAction } from '@/actions/client-actions';
+import { focusViewAction, freeName } from '@/actions/client-actions';
 import { offerDraft } from '@/chat/drafts';
 import { GRID, toWorld, type Point } from '@/canvas/math';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
@@ -89,25 +88,6 @@ export const revealNode = (nodeId: string): void => {
     focusedCanvas().getState().goToNode(nodeId);
 };
 
-/* A new view is named after what it is, "Canvas", then "Canvas 2", until someone renames it. */
-const freeName = (views: readonly ProjectView[], base: string): string => {
-    const taken = new Set(views.flatMap((view) => (view.name === undefined ? [] : [view.name])));
-    if (!taken.has(base)) {
-        return base;
-    }
-    let counter = 2;
-    while (taken.has(`${base} ${counter}`)) {
-        counter += 1;
-    }
-    return `${base} ${counter}`;
-};
-
-export const newCanvasView = (): string | null => useDocument.getState().addCanvasView(freeName(useDocument.getState().views, MAIN_VIEW_NAME));
-
-/* A shell of its own, with no agent in it. The plain Terminal beside the agent submenus. */
-export const newTerminalView = (): string | null =>
-    useDocument.getState().addStandaloneView({ kind: 'terminal', name: freeName(useDocument.getState().views, 'Terminal'), node: {} });
-
 export const newSeparatorView = (): string | null => useDocument.getState().addSeparatorView();
 
 /* A heading over the rows under it. It lands with a name it can be read by, and the sidebar puts the
@@ -117,10 +97,6 @@ export const newSubheaderView = (): string | null => {
     useUi.getState().setRenamingViewId(id);
     return id;
 };
-
-export const newDrawingView = (): string | null => useDocument.getState().addDrawingView(freeName(useDocument.getState().views, 'Drawing'));
-
-export const newDiagramView = (): string | null => useDocument.getState().addDiagramView(freeName(useDocument.getState().views, 'Diagram'));
 
 /*
  * Puts a mirror of a drawing or a diagram view on the canvas that was open last. The view itself

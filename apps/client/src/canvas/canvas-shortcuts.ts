@@ -7,8 +7,8 @@ import { isCanvasView, isDiagramView } from '@ruimte/contracts';
 import { browserRegistry } from '@/browser/registry';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
-import { addNodeAtCenter } from '@/shell/commands';
-import { newCanvasView, showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
+import { createNodeAction, createViewAction, groupSelectionAction, historyAction } from '@/actions/client-actions';
+import { showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { isInNodeBody } from '@/canvas/node-body';
 import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/prompt-stack';
@@ -16,7 +16,6 @@ import { useSubagentView } from '@/chat/subagent-view';
 import { stepTimelineMessage } from '@/chat/timeline-scroll';
 import { focusedCanvas } from '@/state/canvas';
 import { transportFor } from '@/transport';
-import { focusedDiagram } from '@/state/diagram';
 import { activeViewOf, useDocument } from '@/state/document';
 import { FILES_VIEW_ID } from '@/shell/files-view';
 import { useFiles } from '@/state/files';
@@ -228,7 +227,7 @@ export const useCanvasShortcuts = (): void => {
             }
             if (is(CANVAS_SHORTCUTS.newView)) {
                 e.preventDefault();
-                newCanvasView();
+                createViewAction('canvas');
                 return;
             }
             // From anywhere, a terminal included: the point is to answer without first leaving what you type in.
@@ -251,11 +250,7 @@ export const useCanvasShortcuts = (): void => {
                     return;
                 }
                 e.preventDefault();
-                if (is(CANVAS_SHORTCUTS.redo)) {
-                    focusedDiagram().getState().redo();
-                } else {
-                    focusedDiagram().getState().undo();
-                }
+                historyAction(is(CANVAS_SHORTCUTS.redo) ? 'redo' : 'undo');
                 return;
             }
             // A dialog owns the keyboard while it is up; Backspace there must not delete nodes. Nor may
@@ -266,17 +261,13 @@ export const useCanvasShortcuts = (): void => {
             const addKind = entryFor(ADD_NODE_SHORTCUTS, e, apple);
             if (addKind) {
                 e.preventDefault();
-                addNodeAtCenter(addKind);
+                createNodeAction(addKind);
             } else if (is(CANVAS_SHORTCUTS.undo) || is(CANVAS_SHORTCUTS.redo)) {
                 e.preventDefault();
-                if (is(CANVAS_SHORTCUTS.redo)) {
-                    s.redo();
-                } else {
-                    s.undo();
-                }
+                historyAction(is(CANVAS_SHORTCUTS.redo) ? 'redo' : 'undo');
             } else if (is(CANVAS_SHORTCUTS.group)) {
                 e.preventDefault();
-                s.groupSelection();
+                groupSelectionAction();
             } else if (is(CANVAS_SHORTCUTS.zoomReset)) {
                 e.preventDefault();
                 s.zoomTo(1);

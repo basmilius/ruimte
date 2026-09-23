@@ -1,12 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Columns2, Copy, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
+import { createNodeAction } from '@/actions/client-actions';
 import { newFileView, showFileOnCanvas } from '@/project/views';
 import { isHtmlName } from '@/shell/panels/file-kind';
 import { localFileUrl } from '@/shell/panels/file-url';
 import { basenameOf, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
-import { addNodeAtCenter } from '@/shell/commands';
-import { focusedCanvas } from '@/state/canvas';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
@@ -44,12 +43,7 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
     const name = basenameOf(path);
 
     const openInBrowserNode = (): void => {
-        const id = addNodeAtCenter('browser');
-        if (id !== null) {
-            focusedCanvas()
-                .getState()
-                .updateNode(id, { url: localFileUrl(path) });
-        }
+        createNodeAction('browser', localFileUrl(path));
     };
 
     return (

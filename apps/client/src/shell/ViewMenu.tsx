@@ -6,7 +6,8 @@ import { isOpenableView, viewIconOf, type ProjectView, type ProviderInfo } from 
 import { AgentIcon } from '@/agents/AgentIcon';
 import { AgentSubmenu } from '@/agents/AgentMenus';
 import { addAgentView, agentTargetLabel, type AgentTarget } from '@/agents/nodes';
-import { newCanvasView, newDiagramView, newDrawingView, newSeparatorView, newSubheaderView, newTerminalView, showView } from '@/project/views';
+import { createViewAction } from '@/actions/client-actions';
+import { newSeparatorView, newSubheaderView, showView } from '@/project/views';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
@@ -59,22 +60,38 @@ export function NewViewTiles({ size = 'sm' }: { size?: 'sm' | 'md' }) {
                 {
                     id: 'canvas',
                     label: t('viewKinds.canvas'),
-                    node: <Tile size={size} icon={<Icon icon={Frame} size={14} />} title={t('viewKinds.canvas')} onClick={() => newCanvasView()} />
+                    node: <Tile size={size} icon={<Icon icon={Frame} size={14} />} title={t('viewKinds.canvas')} onClick={() => createViewAction('canvas')} />
                 },
                 {
                     id: 'drawing',
                     label: t('viewKinds.drawing'),
-                    node: <Tile size={size} icon={<Icon icon={PenTool} size={14} />} title={t('viewKinds.drawing')} onClick={() => void newDrawingView()} />
+                    node: (
+                        <Tile size={size} icon={<Icon icon={PenTool} size={14} />} title={t('viewKinds.drawing')} onClick={() => createViewAction('drawing')} />
+                    )
                 },
                 {
                     id: 'diagram',
                     label: t('viewKinds.diagram'),
-                    node: <Tile size={size} icon={<Icon icon={Workflow} size={14} />} title={t('viewKinds.diagram')} onClick={() => void newDiagramView()} />
+                    node: (
+                        <Tile
+                            size={size}
+                            icon={<Icon icon={Workflow} size={14} />}
+                            title={t('viewKinds.diagram')}
+                            onClick={() => createViewAction('diagram')}
+                        />
+                    )
                 },
                 {
                     id: 'terminal',
                     label: t('viewKinds.terminal'),
-                    node: <Tile size={size} icon={<Icon icon={Terminal} size={14} />} title={t('viewKinds.terminal')} onClick={() => void newTerminalView()} />
+                    node: (
+                        <Tile
+                            size={size}
+                            icon={<Icon icon={Terminal} size={14} />}
+                            title={t('viewKinds.terminal')}
+                            onClick={() => createViewAction('terminal')}
+                        />
+                    )
                 },
                 ...agents.map((provider) => ({
                     id: `agent:${provider.kind}`,
@@ -136,7 +153,7 @@ export function NewViewItems() {
                     id: 'canvas',
                     label: t('viewKinds.canvas'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => newCanvasView()}>
+                        <Menu.Item className="menu-item" onClick={() => createViewAction('canvas')}>
                             <Icon icon={Frame} size={14} /> {t('viewKinds.canvas')} <Kbd shortcut={CANVAS_SHORTCUTS.newView} />
                         </Menu.Item>
                     )
@@ -145,7 +162,7 @@ export function NewViewItems() {
                     id: 'drawing',
                     label: t('viewKinds.drawing'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => void newDrawingView()}>
+                        <Menu.Item className="menu-item" onClick={() => createViewAction('drawing')}>
                             <Icon icon={PenTool} size={14} /> {t('viewKinds.drawing')}
                         </Menu.Item>
                     )
@@ -154,7 +171,7 @@ export function NewViewItems() {
                     id: 'diagram',
                     label: t('viewKinds.diagram'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => void newDiagramView()}>
+                        <Menu.Item className="menu-item" onClick={() => createViewAction('diagram')}>
                             <Icon icon={Workflow} size={14} /> {t('viewKinds.diagram')}
                         </Menu.Item>
                     )
@@ -163,7 +180,7 @@ export function NewViewItems() {
                     id: 'terminal',
                     label: t('viewKinds.terminal'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => void newTerminalView()}>
+                        <Menu.Item className="menu-item" onClick={() => createViewAction('terminal')}>
                             <Icon icon={Terminal} size={14} /> {t('viewKinds.terminal')}
                         </Menu.Item>
                     )

@@ -1,12 +1,13 @@
 import { useMemo, type ReactNode } from 'react';
 import { Bot, FileText, Globe, LayoutGrid, LayoutTemplate, LoaderCircle, MessageSquare, PenTool, StickyNote, Terminal, Type, Workflow } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
+import { createNodeAction } from '@/actions/client-actions';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { emptyCanvasSections, emptyCanvasSize, type EmptyCanvasTile } from '@/canvas/empty-canvas';
 import { toWorld } from '@/canvas/math';
 import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
 import { showOnCanvas } from '@/project/views';
-import { addAgentNodeAtCenter, addNodeAtCenter } from '@/shell/commands';
+import { addAgentNodeAtCenter } from '@/shell/commands';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -100,7 +101,7 @@ export function EmptyCanvas() {
                     title: t(`kinds.${tile.node}`),
                     description: t(`empty.node.${tile.node}`),
                     shortcut: ADD_NODE_SHORTCUTS[tile.node],
-                    run: () => void addNodeAtCenter(tile.node)
+                    run: () => createNodeAction(tile.node)
                 };
             case 'file':
                 return {

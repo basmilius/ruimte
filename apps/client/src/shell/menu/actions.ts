@@ -1,3 +1,4 @@
+import { historyAction } from '@/actions/client-actions';
 import { focusPromptStack } from '@/canvas/prompt-stack';
 import {
     askViewSettings,
@@ -15,10 +16,7 @@ import { appCommands } from '@/shell/commands';
 import { activeViewFacts } from '@/shell/menu/context';
 import { GO_VIEW_PREFIX, isPaletteId, type MenuActionId } from '@/shell/menu/ids';
 import { cellCount, type SplitDirection } from '@/shell/split';
-import { focusedCanvas } from '@/state/canvas';
-import { focusedDiagram } from '@/state/diagram';
-import { activeViewOf, useDocument } from '@/state/document';
-import { focusedDrawing } from '@/state/drawing';
+import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
 import { openReleaseNotes } from '@/state/release-notes';
 import { useUi } from '@/state/ui';
@@ -35,18 +33,6 @@ const withActiveView = (run: (facts: NonNullable<ReturnType<typeof activeViewFac
     }
 };
 
-/* The history of the surface on screen: a canvas, a drawing and a diagram each keep their own. */
-const history = (step: 'undo' | 'redo') => (): void => {
-    const view = activeViewOf(useDocument.getState());
-    if (view?.kind === 'canvas') {
-        focusedCanvas().getState()[step]();
-    } else if (view?.kind === 'drawing') {
-        focusedDrawing().getState()[step]();
-    } else if (view?.kind === 'diagram') {
-        focusedDiagram().getState()[step]();
-    }
-};
-
 const toggleFullscreen = (): void => {
     if (document.fullscreenElement) {
         void document.exitFullscreen().catch(() => undefined);
@@ -59,8 +45,8 @@ const MENU_ACTIONS: Record<MenuActionId, () => void> = {
     about: () => useUi.getState().setSettings({ open: true, section: 'about' }),
     'project-settings': () => useUi.getState().askProjectSettings(true),
     palette: () => runAppShortcut('palette'),
-    'edit-undo': history('undo'),
-    'edit-redo': history('redo'),
+    'edit-undo': () => historyAction('undo'),
+    'edit-redo': () => historyAction('redo'),
     fullscreen: toggleFullscreen,
     'terminal-clear': withActiveView(({ view }) => sessionClient.clear(view.id)),
     'close-cell': () => {

@@ -1,25 +1,12 @@
 import i18next from 'i18next';
 import { isCanvasView, isDiagramView, isDrawingView, isSessionView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import { addAgentNode, addAgentView, type AgentTarget } from '@/agents/nodes';
+import { createNodeAction, createViewAction, groupSelectionAction } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
-import { nearestFreeNodeRect } from '@/canvas/place-node';
-import {
-    askDeleteView,
-    askOpenAsView,
-    askViewSettings,
-    canOpenAsView,
-    newCanvasView,
-    newDiagramView,
-    newDrawingView,
-    newSeparatorView,
-    newSubheaderView,
-    newTerminalView,
-    putOnCanvas,
-    showOnCanvas
-} from '@/project/views';
+import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSeparatorView, newSubheaderView, putOnCanvas, showOnCanvas } from '@/project/views';
 import { copyDiagramJson, copyDiagramPng, copyDiagramSvg, openDiagramJson, saveDiagramPng, saveDiagramSvg } from '@/diagram/export';
 import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
-import { focusedCanvas, NODE_SIZE, type AddNodeOptions, type CanvasState, type NodeKind } from '@/state/canvas';
+import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { focusedDrawing } from '@/state/drawing';
 import { activeViewOf, useDocument } from '@/state/document';
@@ -58,12 +45,6 @@ const zoomTarget = (): Pick<CanvasState, 'fitAll' | 'zoomToSelection' | 'zoomTo'
 const centerWorld = () => {
     const s = focusedCanvas().getState();
     return toWorld(s.camera, { x: s.viewport.w / 2, y: s.viewport.h / 2 });
-};
-
-export const addNodeAtCenter = (kind: NodeKind, options?: AddNodeOptions): string | null => {
-    const canvas = focusedCanvas().getState();
-    const placed = nearestFreeNodeRect(Object.values(canvas.nodes), NODE_SIZE[kind], centerWorld());
-    return canvas.addNode(kind, { x: placed.x + placed.w / 2, y: placed.y + placed.h / 2 }, options);
 };
 
 export const addAgentNodeAtCenter = (target: AgentTarget, provider: ProviderInfo): string | null => addAgentNode(target, provider, centerWorld());
@@ -168,7 +149,7 @@ export const appCommands = (): Command[] => {
                       id: 'view-new',
                       label: i18next.t('shell:palette.commands.newCanvasView'),
                       shortcut: CANVAS_SHORTCUTS.newView,
-                      run: () => void newCanvasView()
+                      run: () => createViewAction('canvas')
                   },
                   ...(activeViewId
                       ? [
@@ -176,8 +157,8 @@ export const appCommands = (): Command[] => {
                             { id: 'view-delete', label: i18next.t('shell:viewMenu.deleteView'), run: () => askDeleteView(activeViewId) }
                         ]
                       : []),
-                  { id: 'view-new-drawing', label: i18next.t('shell:palette.commands.newDrawingView'), run: () => void newDrawingView() },
-                  { id: 'view-new-diagram', label: i18next.t('shell:palette.commands.newDiagramView'), run: () => void newDiagramView() },
+                  { id: 'view-new-drawing', label: i18next.t('shell:palette.commands.newDrawingView'), run: () => createViewAction('drawing') },
+                  { id: 'view-new-diagram', label: i18next.t('shell:palette.commands.newDiagramView'), run: () => createViewAction('diagram') },
                   ...(folder
                       ? [
                             {
@@ -187,7 +168,7 @@ export const appCommands = (): Command[] => {
                             }
                         ]
                       : []),
-                  { id: 'view-new-terminal', label: i18next.t('shell:palette.commands.newTerminalView'), run: () => void newTerminalView() },
+                  { id: 'view-new-terminal', label: i18next.t('shell:palette.commands.newTerminalView'), run: () => createViewAction('terminal') },
                   { id: 'view-new-separator', label: i18next.t('shell:palette.commands.newSeparator'), run: () => void newSeparatorView() },
                   { id: 'view-new-subheader', label: i18next.t('shell:palette.commands.newSubheader'), run: () => void newSubheaderView() },
                   {
@@ -224,31 +205,31 @@ export const appCommands = (): Command[] => {
                                 id: 'add-terminal',
                                 label: i18next.t('shell:palette.commands.newTerminal'),
                                 shortcut: ADD_NODE_SHORTCUTS.terminal,
-                                run: () => void addNodeAtCenter('terminal')
+                                run: () => createNodeAction('terminal')
                             },
                             {
                                 id: 'add-chat',
                                 label: i18next.t('shell:palette.commands.newChat'),
                                 shortcut: ADD_NODE_SHORTCUTS.chat,
-                                run: () => void addNodeAtCenter('chat')
+                                run: () => createNodeAction('chat')
                             },
                             {
                                 id: 'add-browser',
                                 label: i18next.t('shell:palette.commands.newBrowser'),
                                 shortcut: ADD_NODE_SHORTCUTS.browser,
-                                run: () => void addNodeAtCenter('browser')
+                                run: () => createNodeAction('browser')
                             },
                             {
                                 id: 'add-group',
                                 label: i18next.t('shell:palette.commands.newGroup'),
                                 shortcut: ADD_NODE_SHORTCUTS.group,
-                                run: () => void addNodeAtCenter('group')
+                                run: () => createNodeAction('group')
                             },
                             {
                                 id: 'add-note',
                                 label: i18next.t('shell:palette.commands.newNote'),
                                 shortcut: ADD_NODE_SHORTCUTS.note,
-                                run: () => void addNodeAtCenter('note')
+                                run: () => createNodeAction('note')
                             },
                             ...(folder
                                 ? [
@@ -265,7 +246,7 @@ export const appCommands = (): Command[] => {
                                 label: i18next.t('shell:palette.commands.groupSelection'),
                                 hint: canvas.selection.length === 0 ? i18next.t('shell:palette.hints.selectFirst') : undefined,
                                 shortcut: CANVAS_SHORTCUTS.group,
-                                run: () => void focusedCanvas().getState().groupSelection()
+                                run: () => groupSelectionAction()
                             },
                             {
                                 id: 'add-text',

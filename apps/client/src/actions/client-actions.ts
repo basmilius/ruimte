@@ -1,6 +1,17 @@
 import { inspectionActions } from '@/actions/inspection-actions';
-import { ActionRefusal, ActionRegistry, type ActionCall, type ActionOutput } from '@ruimte/actions';
-import { isCanvasView, isOpenableView, isUnknownNode, isUnknownView, type NodeTitleSource, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import { ActionRefusal, ActionRegistry, type ActionCall, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
+import {
+    isCanvasView,
+    isDiagramView,
+    isDrawingView,
+    isOpenableView,
+    isUnknownNode,
+    isUnknownView,
+    MAIN_VIEW_NAME,
+    type NodeTitleSource,
+    type ProjectNode,
+    type ProjectView
+} from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { toWorld } from '@/canvas/math';
 import { nearestFreeNodeRect } from '@/canvas/place-node';
@@ -8,7 +19,9 @@ import { recentChatMessages } from '@/chat/recent-messages';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { focusedCanvas, NODE_SIZE, type CanvasState, type NodeKind } from '@/state/canvas';
 import { useChats } from '@/state/chats';
+import { focusedDiagram } from '@/state/diagram';
 import { activeViewOf, useDocument, type DocumentState } from '@/state/document';
+import { focusedDrawing } from '@/state/drawing';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { chatClient } from '@/transport/connections';
@@ -24,16 +37,29 @@ const activeCanvas = (document: StoreApi<DocumentState>, viewId: string): { view
     return { view, canvas: focusedCanvas().getState() };
 };
 
-const freeViewName = (document: StoreApi<DocumentState>, base: string): string => {
-    const names = new Set(document.getState().views.map((view) => view.name));
-    if (!names.has(base)) {
+type CreatableViewKind = ActionInput<'view.create'>['kind'];
+type CreatableNodeKind = ActionInput<'node.create'>['kind'];
+
+const VIEW_BASE_NAMES: Record<CreatableViewKind, string> = {
+    canvas: MAIN_VIEW_NAME,
+    drawing: 'Drawing',
+    diagram: 'Diagram',
+    terminal: 'Terminal',
+    browser: 'Browser',
+    chat: 'AI Chat'
+};
+
+/* A new view is named after what it is, "Canvas", then "Canvas 2", until someone renames it. */
+export const freeName = (views: readonly ProjectView[], base: string): string => {
+    const taken = new Set(views.flatMap((view) => (view.name === undefined ? [] : [view.name])));
+    if (!taken.has(base)) {
         return base;
     }
-    let index = 2;
-    while (names.has(`${base} ${index}`)) {
-        index += 1;
+    let counter = 2;
+    while (taken.has(`${base} ${counter}`)) {
+        counter += 1;
     }
-    return `${base} ${index}`;
+    return `${base} ${counter}`;
 };
 
 const centerWorld = (canvas: CanvasState) =>
@@ -45,6 +71,16 @@ const centerWorld = (canvas: CanvasState) =>
 const addNodeInFreeSpace = (canvas: CanvasState, kind: NodeKind, options: Parameters<CanvasState['addNode']>[2]): string | null => {
     const placed = nearestFreeNodeRect(Object.values(canvas.nodes), NODE_SIZE[kind], centerWorld(canvas));
     return canvas.addNode(kind, { x: placed.x + placed.w / 2, y: placed.y + placed.h / 2 }, options);
+};
+
+/* The history of the view on screen: a canvas, a drawing and a diagram each keep their own. */
+const activeHistory = (document: StoreApi<DocumentState>, viewId: string) => {
+    const view = activeViewOf(document.getState());
+    if (!view || view.id !== viewId || !(isCanvasView(view) || isDrawingView(view) || isDiagramView(view))) {
+        throw new ActionRefusal('inactive-view', 'Open the target canvas, drawing or diagram before undoing or redoing a change in it.');
+    }
+    const editor = isCanvasView(view) ? focusedCanvas() : isDrawingView(view) ? focusedDrawing() : focusedDiagram();
+    return { view, history: () => editor.getState() };
 };
 
 const historyUndo = (viewId: string, expectedDepth: number, expectedNodeId?: string) => () => {
@@ -184,8 +220,7 @@ export const createClientActionRegistry = (
         },
         'view.create': ({ kind, name, url, command }) => {
             const state = document.getState();
-            const base = kind === 'chat' ? 'AI Chat' : kind.charAt(0).toUpperCase() + kind.slice(1);
-            const title = name ?? freeViewName(document, base);
+            const title = name ?? freeName(state.views, VIEW_BASE_NAMES[kind]);
             const viewId =
                 kind === 'canvas'
                     ? state.addCanvasView(title)
@@ -412,28 +447,16 @@ export const createClientActionRegistry = (
             return { output: { viewId, view: view.name } };
         },
         'history.undo': ({ viewId }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
-            const before = canvas.past.length;
-            canvas.undo();
-            return {
-                output: {
-                    viewId,
-                    view: view.name,
-                    changed: focusedCanvas().getState().past.length !== before
-                }
-            };
+            const { view, history } = activeHistory(document, viewId);
+            const before = history().past.length;
+            history().undo();
+            return { output: { viewId, view: view.name, changed: history().past.length !== before } };
         },
         'history.redo': ({ viewId }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
-            const before = canvas.future.length;
-            canvas.redo();
-            return {
-                output: {
-                    viewId,
-                    view: view.name,
-                    changed: focusedCanvas().getState().future.length !== before
-                }
-            };
+            const { view, history } = activeHistory(document, viewId);
+            const before = history().future.length;
+            history().redo();
+            return { output: { viewId, view: view.name, changed: history().future.length !== before } };
         },
         'chat.send': async ({ chatId, prompt }) => {
             const chat = chatTitle(document, chatId);
@@ -486,10 +509,50 @@ export const VOICE_ACTION_CALL: ActionCall<void> = {
     context: undefined
 };
 
+/* A person sees what happened on screen, so a refusal stays as quiet as the store call it replaced. */
+const runAsPerson = <Name extends ActionName>(name: Name, input: ActionInput<Name>): void => {
+    void clientActions.execute(name, input, PERSON_ACTION_CALL);
+};
+
 export const focusViewAction = (viewId: string): void => {
-    void clientActions.execute('view.focus', { viewId }, PERSON_ACTION_CALL);
+    runAsPerson('view.focus', { viewId });
 };
 
 export const renameViewAction = (viewId: string, name: string): void => {
-    void clientActions.execute('view.rename', { viewId, name }, PERSON_ACTION_CALL);
+    runAsPerson('view.rename', { viewId, name });
+};
+
+export const createViewAction = (kind: CreatableViewKind): void => {
+    runAsPerson('view.create', { kind, name: null, url: null, command: null });
+};
+
+/* On the canvas on screen, in free space near the middle of what it shows. */
+export const createNodeAction = (kind: CreatableNodeKind, url: string | null = null): void => {
+    const viewId = useDocument.getState().activeViewId;
+    if (viewId === null) {
+        return;
+    }
+    runAsPerson('node.create', { viewId, kind, title: null, content: null, url, command: null });
+};
+
+/* A group never goes inside a new group, so only the other selected nodes become its members. */
+export const groupSelectionAction = (): void => {
+    const viewId = useDocument.getState().activeViewId;
+    const { selection, nodes } = focusedCanvas().getState();
+    const nodeIds = selection.filter((id) => {
+        const node = nodes[id];
+        return node !== undefined && node.kind !== 'group';
+    });
+    if (viewId === null || nodeIds.length === 0) {
+        return;
+    }
+    runAsPerson('group.create', { viewId, nodeIds });
+};
+
+export const historyAction = (step: 'undo' | 'redo'): void => {
+    const viewId = useDocument.getState().activeViewId;
+    if (viewId === null) {
+        return;
+    }
+    runAsPerson(step === 'undo' ? 'history.undo' : 'history.redo', { viewId });
 };

@@ -313,16 +313,16 @@ export const ACTION_DEFINITIONS = {
         output: z.object({ viewId, view: viewName })
     },
     'history.undo': {
-        title: 'Undo canvas change',
-        description: 'Undoes the latest shared canvas change in the active view.',
+        title: 'Undo change',
+        description: 'Undoes the latest change in the active canvas, drawing or diagram.',
         effect: 'shared',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId }),
         output: z.object({ viewId, view: viewName, changed: z.boolean() })
     },
     'history.redo': {
-        title: 'Redo canvas change',
-        description: 'Redoes the next shared canvas change in the active view.',
+        title: 'Redo change',
+        description: 'Redoes the next change in the active canvas, drawing or diagram.',
         effect: 'shared',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId }),
