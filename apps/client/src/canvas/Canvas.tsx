@@ -8,7 +8,7 @@ import { GRID, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math'
 import { isSpaceDown } from '@/canvas/canvas-shortcuts';
 import type { NodeSide } from '@ruimte/contracts';
 import { rectFromPoints } from '@ruimte/drawing';
-import { alignmentGuides, type AlignmentGuide } from '@/canvas/alignment-guides';
+import { alignmentGuides, gapGuides, type AlignmentGuide, type GapGuide } from '@/canvas/alignment-guides';
 import { AlignmentGuides } from '@/canvas/AlignmentGuides';
 import { resizedRect } from '@/canvas/resize';
 import { canLink } from '@/canvas/edge-lines';
@@ -85,6 +85,7 @@ export function Canvas() {
     const rootRef = useRef<HTMLDivElement>(null);
     const gestureRef = useRef<Gesture | null>(null);
     const [guides, setGuides] = useState<AlignmentGuide[]>([]);
+    const [gaps, setGaps] = useState<GapGuide[]>([]);
     const [box, setBox] = useState<Rect | null>(null);
     const [activeGesture, setActiveGesture] = useState<Gesture['kind'] | null>(null);
     /* A drag carrying files is hanging over the canvas, which the border says so nobody has to
@@ -154,6 +155,7 @@ export function Canvas() {
             }
         }
         setGuides(alignmentGuides(moving, stationary));
+        setGaps(gapGuides(moving, stationary));
     }, [activeGesture, nodes, texts, camera, canvasStore]);
 
     // The pages park outside this transform and may not swallow the pointer mid-gesture.
@@ -474,6 +476,7 @@ export function Canvas() {
         gestureRef.current = null;
         setActiveGesture(null);
         setGuides([]);
+        setGaps([]);
         if (!g) {
             return;
         }
@@ -605,7 +608,7 @@ export function Canvas() {
                 {drawIds.length === 0 && textIds.length === 0 && <EmptyCanvas />}
                 {/* Over the pages, which the canvas itself cannot draw over. */}
                 <CellOverlay slot="view">
-                    <AlignmentGuides guides={guides} camera={camera} />
+                    <AlignmentGuides guides={guides} gaps={gaps} camera={camera} />
                     <TextToolbar />
                     {dropping && <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-accent ring-inset" aria-hidden />}
                     {box && (
