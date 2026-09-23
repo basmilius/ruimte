@@ -1,3 +1,5 @@
+import type { MenuSpec } from '@ruimte/desktop-bridge';
+
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
 const { contextBridge, ipcRenderer, webUtils } = require('electron') as typeof import('electron');
 
@@ -37,6 +39,12 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
         const handler = (_event: unknown, section: string | null): void => listener(section);
         ipcRenderer.on('menu:settings', handler);
         return () => ipcRenderer.removeListener('menu:settings', handler);
+    },
+    setMenu: (spec: MenuSpec): void => ipcRenderer.send('menu:set', spec),
+    onMenuCommand: (listener: (id: string) => void): (() => void) => {
+        const handler = (_event: unknown, id: string): void => listener(id);
+        ipcRenderer.on('menu:run', handler);
+        return () => ipcRenderer.removeListener('menu:run', handler);
     },
     isFullscreen: (): Promise<boolean> => ipcRenderer.invoke('window:is-fullscreen'),
     onFullscreen: (listener: (fullscreen: boolean) => void): (() => void) => {

@@ -64,6 +64,8 @@ import { Brand } from '@/ui/Brand';
 import { MENU_HINT, SECTION_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { SidebarToggle } from '@/shell/SidebarToggle';
+import { StationMenu } from '@/shell/menu/StationMenu';
+import { IS_STATION } from '@/station';
 import { NewViewItems } from '@/shell/ViewMenu';
 import { setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
@@ -845,7 +847,7 @@ export function Sidebar() {
                     className="app-drag relative flex h-12 shrink-0 items-center justify-between pr-2"
                     style={{ paddingLeft: inset === undefined ? STRIP_PADDING_PX : inset + 8 }}
                 >
-                    <Brand className="pointer-events-none" />
+                    {IS_STATION ? <StationMenu variant="wordmark" /> : <Brand className="pointer-events-none" />}
                     <SidebarToggle />
                 </div>
 

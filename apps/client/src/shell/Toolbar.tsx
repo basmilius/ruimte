@@ -10,6 +10,8 @@ import { FILES_VIEW_ID } from '@/shell/files-view';
 import { useHasViewToolbar, useShowsSubagents, useToolbarView, useViewToolbarLeads, ViewToolbar } from '@/shell/ViewToolbar';
 import { STRIP_PADDING_PX } from '@/shell/Sidebar';
 import { SidebarToggle } from '@/shell/SidebarToggle';
+import { StationMenu } from '@/shell/menu/StationMenu';
+import { IS_STATION } from '@/station';
 import { useDiagram } from '@/state/diagram';
 import { useDrawing } from '@/state/drawing';
 import { cellCount } from '@/shell/split';
@@ -57,6 +59,8 @@ export function Toolbar() {
             className="app-drag relative flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface pr-2 pl-2 text-xs text-text-muted transition-[padding] duration-200 ease-out"
             style={sidebarOpen ? undefined : { paddingLeft: inset ?? STRIP_PADDING_PX }}
         >
+            {/* The web client's menu goes where the wordmark went, so it stays one press away. */}
+            {!sidebarOpen && IS_STATION && <StationMenu variant="symbol" />}
             {!sidebarOpen && <SidebarToggle />}
             {/* With the view putting something in the bar, the slack belongs to that part, so the
                 breadcrumb stops at its own width and the address field of a page can run. */}

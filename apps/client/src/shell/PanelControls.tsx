@@ -13,7 +13,7 @@ export function PanelControls() {
 
     return (
         <>
-            {PANELS.map((entry) => (
+            {PANELS.filter((entry) => entry.toolbar).map((entry) => (
                 <Tooltip key={entry.kind} label={t(`panel.names.${entry.kind}`)} name>
                     <button className="icon-btn" data-active={panel.open && panel.kind === entry.kind} onClick={() => useUi.getState().togglePanel(entry.kind)}>
                         <Icon icon={entry.icon} size={16} />

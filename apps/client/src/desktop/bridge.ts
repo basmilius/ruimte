@@ -1,4 +1,12 @@
-import type { AgentActivity, BackgroundServiceState, OpenAiLivePreferences, ReleaseNotesState, SpeechBridge, UpdateState } from '@ruimte/desktop-bridge';
+import type {
+    AgentActivity,
+    BackgroundServiceState,
+    MenuSpec,
+    OpenAiLivePreferences,
+    ReleaseNotesState,
+    SpeechBridge,
+    UpdateState
+} from '@ruimte/desktop-bridge';
 import type { SessionLoginCode } from '@ruimte/pulsar';
 
 /* The shapes the preload and the page both hold, passed on so the client reads the whole bridge here. */
@@ -126,6 +134,11 @@ export interface DesktopBridge {
        (null), and neither does a section this client does not know, which open the settings where
        they were. Optional for the same reason `onBrowserContextMenu` is. */
     onOpenSettings?(listener: (section: string | null) => void): () => void;
+    /* The application menu, built from what has the focus (`shell/menu`). A click comes back as the
+       command's id. Optional for the same reason `onBrowserContextMenu` is; without them the shell
+       keeps its own fixed menu. */
+    setMenu?(spec: MenuSpec): void;
+    onMenuCommand?(listener: (id: string) => void): () => void;
     isFullscreen(): Promise<boolean>;
     onFullscreen(listener: (fullscreen: boolean) => void): () => void;
     /* The app's theme, which the shell needs for the native window controls, for the

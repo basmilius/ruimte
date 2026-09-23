@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { buildIdentityOf, machineWorkOf, MACHINE_HEALTH_PATH, MACHINE_WORK_PATH, type BuildIdentity, type MachineWork } from '@ruimte/contracts';
-import type { AgentActivity, BackgroundServiceState, UpdateState } from '@ruimte/desktop-bridge';
+import { MENU_ROLES, type AgentActivity, type BackgroundServiceState, type MenuNode, type MenuSpec, type UpdateState } from '@ruimte/desktop-bridge';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
@@ -443,7 +443,10 @@ const createWindow = (): Electron.BrowserWindow => {
         }
         setKeepAwake(false);
         setAgentActivity({ working: 0, attention: 0 });
+        setStaticMenu();
     });
+    // Without a page nobody answers a command, but Quit still has to be there.
+    window.webContents.on('render-process-gone', () => setStaticMenu());
     // In fullscreen macOS hides the traffic lights, so the client can take the room back.
     window.on('enter-full-screen', () => window.webContents.send('window:fullscreen', true));
     window.on('leave-full-screen', () => window.webContents.send('window:fullscreen', false));
@@ -1119,6 +1122,72 @@ function viewMenu(): Electron.MenuItemConstructorOptions {
     };
 }
 
+// What stands until the page sends its own menu, and again after a reload or a crash.
+const setStaticMenu = (): void => {
+    Menu.setApplicationMenu(Menu.buildFromTemplate([appMenu(), { role: 'editMenu' }, viewMenu(), { role: 'windowMenu' }]));
+};
+
+const DEVTOOLS_ACCELERATOR = process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I';
+
+/*
+ * A command from the menu goes to the page, which runs it the way the palette does. One fired by its
+ * accelerator is dropped: the page saw that key first and its own listeners answered it or let it
+ * pass on purpose. Only a page in a browser node never sees the key, so there the menu answers.
+ */
+const runMenuCommand = (id: string, byKey: boolean): void => {
+    const focused = webContents.getFocusedWebContents();
+    if (byKey && (focused === null || !isBrowserGuest(focused))) {
+        return;
+    }
+    mainWindow?.show();
+    mainWindow?.webContents.send('menu:run', id);
+};
+
+const menuItemOf = (node: MenuNode): Electron.MenuItemConstructorOptions | null => {
+    switch (node.kind) {
+        case 'separator':
+            return { type: 'separator' };
+        case 'submenu':
+            return { label: node.label, enabled: node.enabled ?? true, submenu: menuItemsOf(node.items) };
+        case 'role':
+            return MENU_ROLES.includes(node.role) ? { role: node.role, label: node.label } : null;
+        case 'shell':
+            if (node.action === 'devtools') {
+                /* Named instead of the role: that one follows the focused web contents, which is the
+                   page inside a browser node as soon as one has the keyboard. */
+                return { label: node.label, accelerator: DEVTOOLS_ACCELERATOR, click: () => mainWindow?.webContents.toggleDevTools() };
+            }
+            // Only where a service can run: anywhere else quitting already stops the machine.
+            return node.action === 'stop-machine-and-quit' && support === 'supported' ? { label: node.label, click: () => stopMachine() } : null;
+        case 'command':
+            return {
+                label: node.label,
+                type: node.checked === undefined ? 'normal' : 'checkbox',
+                checked: node.checked ?? false,
+                enabled: node.enabled ?? true,
+                ...(node.accelerator ? { accelerator: node.accelerator } : {}),
+                // Off macOS a registered accelerator would take Ctrl+W or Ctrl+B from a terminal before the page saw it.
+                registerAccelerator: process.platform === 'darwin',
+                click: (_item, _window, event) => runMenuCommand(node.id, event.triggeredByAccelerator === true)
+            };
+    }
+};
+
+const menuItemsOf = (nodes: readonly MenuNode[]): Electron.MenuItemConstructorOptions[] =>
+    nodes.map(menuItemOf).filter((item): item is Electron.MenuItemConstructorOptions => item !== null);
+
+// The client builds the menu from what has the focus (`apps/client/src/shell/menu`); the shell draws it.
+ipcMain.on('menu:set', (event, spec: MenuSpec) => {
+    if (event.sender !== mainWindow?.webContents || !Array.isArray(spec?.menus)) {
+        return;
+    }
+    try {
+        Menu.setApplicationMenu(Menu.buildFromTemplate(spec.menus.map((menu) => ({ label: menu.label, submenu: menuItemsOf(menu.items) }))));
+    } catch (error) {
+        console.error('[ruimte] menu refused', error);
+    }
+});
+
 /*
  * Writes the left end of the title bar band to a PNG in device pixels, which is how its geometry
  * gets measured instead of guessed. The traffic lights are native and never show up in a page
@@ -1202,7 +1271,7 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     void app.whenReady().then(async () => {
-        Menu.setApplicationMenu(Menu.buildFromTemplate([appMenu(), { role: 'editMenu' }, viewMenu(), { role: 'windowMenu' }]));
+        setStaticMenu();
         sealPreviewSession();
         registerGuestPreload();
         try {

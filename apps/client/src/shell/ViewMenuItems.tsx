@@ -12,9 +12,9 @@ import {
     putOnCanvas,
     setViewShared,
     showOnCanvas,
-    splitFocusedCell,
-    type SessionHandoff
+    splitFocusedCell
 } from '@/project/views';
+import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { canSplit, cellCount, type CellAt, type SplitDirection } from '@/shell/split';
@@ -30,9 +30,6 @@ import { MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Kbd } from '@/ui/Kbd';
 import { KEY_SHORTCUTS } from '@/ui/shortcut';
-
-/* A view a person drew on a surface of its own is duplicated rather than moved to a canvas. */
-const DRAWN_KINDS: readonly ProjectView['kind'][] = ['canvas', 'drawing', 'diagram'];
 
 interface ViewMenuItemsProps {
     viewId: string;
@@ -52,7 +49,6 @@ interface ViewMenuItemsProps {
  */
 export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItemsProps) {
     const { t } = useTranslation(['shell', 'common']);
-    const drawn = DRAWN_KINDS.includes(kind);
     const shared = useDocument((state) => state.shared).includes(viewId);
     /* Offered whether or not the folder is a repository: finding that out means starting a git watch,
        which opening a menu has no business doing, and sharing without one only writes a file nobody
@@ -72,30 +68,30 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     const offersFork = useOffersFork(viewId);
     const transport = useTransport();
 
-    const offerShare = view !== undefined && kind !== 'separator' && kind !== 'subheader' && (shared || canShareView(view));
-    const offerFork = kind === 'chat' && offersFork;
-
-    /*
-     * The same session in the other kind of view. A terminal only goes on in a chat where the daemon
-     * has a chat backend for that CLI, and a chat only goes on in a terminal once the CLI has told
-     * it which session it is, which is what the resume line is built from.
-     */
-    const asChat: SessionHandoff | null =
-        kind === 'terminal' && agent && providers.some((entry) => entry.kind === agent.kind && entry.capabilities.chat)
-            ? { provider: agent.kind, resume: agent.agentSessionId, cwd: view?.kind === 'terminal' ? view.node.cwd : undefined }
-            : null;
-    const asTerminal: SessionHandoff | null =
-        kind === 'chat' && chat?.agentSessionId ? { provider: chat.provider, resume: chat.agentSessionId, cwd: chat.cwd } : null;
-    const copies = drawn || offerFork || asChat !== null || asTerminal !== null;
-
+    const { asChat, asTerminal } = sessionHandoffs(kind, view, chat, agent, providers);
     // The node of a session view works somewhere; without a folder of its own that is the project's.
     const workingFolder = view?.kind === 'chat' || view?.kind === 'terminal' ? (view.node.cwd ?? chat?.cwd ?? folder) : null;
     // What a file view holds is stored against the project folder; the menu acts on the daemon's path.
     const filePath = view?.kind === 'file' ? resolveStoredPath(folder, view.path) : null;
-    const offerPut = !drawn && kind !== 'file' && hasCanvas;
-    const offerShow = (kind === 'drawing' || kind === 'diagram') && onCanvas;
+    const offers = viewOffers({
+        kind,
+        shared,
+        canShare: view !== undefined && canShareView(view),
+        hasCanvas,
+        onCanvas,
+        offersFork,
+        asChat,
+        asTerminal,
+        workingFolder,
+        filePath
+    });
+    const drawn = offers.duplicate;
+    const offerShare = view !== undefined && offers.share;
+    const offerFork = offers.fork;
+    const copies = drawn || offerFork || asChat !== null || asTerminal !== null;
+    const offerPut = offers.putOnCanvas;
+    const offerShow = offers.showOnCanvas;
     const place = offerPut || offerShow || filePath !== null || workingFolder !== null;
-
     return (
         <>
             <Menu.Item className="menu-item" onClick={() => askViewSettings(viewId)}>

@@ -30,6 +30,7 @@ import { MachineUpdateDialog } from '@/shell/MachineUpdateDialog';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { closeLinkRequest, useLinkRequest } from '@/pulsar/link-request';
 import { ReleaseNotesDialog } from '@/shell/ReleaseNotesDialog';
+import { useNativeMenu } from '@/shell/menu/native-menu';
 import { Sidebar } from '@/shell/Sidebar';
 import { Toasts } from '@/shell/Toasts';
 import { Toolbar } from '@/shell/Toolbar';
@@ -125,6 +126,7 @@ function LinkRequestDialog() {
 export function App() {
     const name = useProject((s) => s.current?.name ?? null);
     useAppShortcuts();
+    useNativeMenu();
 
     // The Electron window has no title of its own, so this names it as well.
     useEffect(() => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
@@ -156,6 +156,26 @@ export function ProjectMenu() {
         setSettingsTarget(row);
         setSettingsOpen(true);
     };
+
+    // The application menu asks for the settings of the project that is open.
+    useEffect(
+        () =>
+            useUi.subscribe((state) => {
+                if (!state.projectSettingsAsked) {
+                    return;
+                }
+                useUi.getState().askProjectSettings(false);
+                const { current: project, currentEndpointId: endpointId } = useProject.getState();
+                const row = useProjectList
+                    .getState()
+                    .projects.find((candidate) => candidate.endpointId === endpointId && candidate.summary.projectId === project?.projectId);
+                if (row) {
+                    setSettingsTarget({ endpointId: row.endpointId, machineLabel: '', connected: true, summary: row.summary });
+                    setSettingsOpen(true);
+                }
+            }),
+        []
+    );
 
     const rememberSettings = (result: ProjectSettingsResult): void => {
         setSettingsTarget((target) =>

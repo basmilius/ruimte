@@ -167,7 +167,10 @@ interface UiStore {
     /* The row the sidebar puts the caret in, which is how a new heading opens. It is nothing but
        what it says, so it is typed where it stands rather than in a dialog. */
     renamingViewId: string | null;
+    /* The application menu asks for the open project's settings; the project menu owns that dialog. */
+    projectSettingsAsked: boolean;
     setUsageOpen(open: boolean): void;
+    askProjectSettings(asked: boolean): void;
     setWorktreeDialogFor(groupId: string | null): void;
     setWorktreeRemoval(removal: { folder: string; paths: string[] } | null): void;
     setWorktreeMerge(merge: WorktreeMergeRequest | null): void;
@@ -228,8 +231,12 @@ export const useUi = create<UiStore>((set, get) => ({
     forkDialog: null,
     viewDialog: null,
     renamingViewId: null,
+    projectSettingsAsked: false,
     setUsageOpen(open) {
         set({ usageOpen: open });
+    },
+    askProjectSettings(asked) {
+        set({ projectSettingsAsked: asked });
     },
     setWorktreeDialogFor(groupId) {
         set({ worktreeDialogFor: groupId });
