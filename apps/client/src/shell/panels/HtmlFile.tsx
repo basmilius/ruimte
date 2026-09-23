@@ -5,7 +5,7 @@ import type { FsReadText } from '@ruimte/contracts';
 import { focusCellOfView, watchGuestFocus } from '@/browser/guest-focus';
 import { isDesktop } from '@/desktop/bridge';
 import { CodeFile } from '@/shell/panels/CodeFile';
-import { DisabledWrapToggle, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { localFileUrl } from '@/shell/panels/file-url';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { htmlPreviewDocument } from '@/shell/panels/html-preview';
@@ -18,7 +18,6 @@ import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
-import { Separator } from '@/ui/Separator';
 
 type HtmlView = 'preview' | 'source';
 
@@ -168,15 +167,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            {view === 'source' ? (
-                <CodeFile path={path} read={read} toolbarExtra={controls} />
-            ) : (
-                <FileToolbar>
-                    {controls}
-                    <Separator />
-                    <DisabledWrapToggle />
-                </FileToolbar>
-            )}
+            {view === 'source' ? <CodeFile path={path} read={read} toolbarExtra={controls} /> : <FileToolbar>{controls}</FileToolbar>}
             <div className={view === 'preview' ? 'relative flex min-h-0 grow flex-col bg-surface' : 'hidden'}>
                 {nativePreview ? (
                     <>

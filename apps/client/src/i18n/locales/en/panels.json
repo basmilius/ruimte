@@ -68,7 +68,6 @@
     "generic": "That did not work."
   },
   "file": {
-    "codeTheme": "Code theme",
     "cannotShow": "{{name}} ({{mime}}, {{size}}) cannot be shown here.",
     "code": {
       "unwrap": "Stop wrapping long lines",
@@ -117,9 +116,6 @@
       "unstage": "Unstage this file"
     },
     "tooLarge": "{{name}} is {{size}}. Files over {{limit}} do not open here.",
-    "toolbar": {
-      "wrapDisabled": "Wrap long lines (source view only)"
-    },
     "video": {
       "cannotPlay": "{{name}} ({{mime}}, {{size}}) cannot be played here."
     },

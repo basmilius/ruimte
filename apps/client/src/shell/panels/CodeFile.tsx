@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { WrapText } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
 import { formatNumber } from '@/format/number';
 import { DraftBar, EditorNotice } from '@/shell/panels/DraftBar';
@@ -8,15 +7,15 @@ import type { EditBlock } from '@/shell/panels/edit-gate';
 import { useFileActions } from '@/shell/panels/file-actions';
 import { FileEditor } from '@/shell/panels/FileEditor';
 import { FileScroll } from '@/shell/panels/FileScroll';
-import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { FileToolbar } from '@/shell/panels/FileToolbar';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useFileEditing } from '@/shell/panels/use-file-editing';
 import { useCodeTheme } from '@/state/code-theme';
 import { useFiles } from '@/state/files';
+import { useSettings } from '@/state/settings';
 import { Button } from '@/ui/Button';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Pill } from '@/ui/Pill';
-import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 
 // One screen of code, near enough. Small enough to highlight without a stutter, large enough that a
@@ -172,7 +171,7 @@ export interface CodeFileProps {
 export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const { t } = useTranslation('panels');
     const theme = useCodeTheme();
-    const [wrap, setWrap] = useState(false);
+    const wrap = useSettings((s) => s.codeWrap);
     // Where the placeholder was scrolled to, for the editor that replaces it.
     const viewerScroll = useRef(0);
     // A jump to a line is asked of a tab, so a node or a view of its own never answers one.
@@ -204,8 +203,6 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     </Tooltip>
                 )}
                 {toolbarExtra}
-                {toolbarExtra !== undefined && <Separator />}
-                <FileToolbarToggle icon={WrapText} label={wrap ? t('file.code.unwrap') : t('file.code.wrap')} active={wrap} onClick={() => setWrap(!wrap)} />
             </FileToolbar>
             <DraftBar endpointId={editing.endpointId} path={path} />
             {!editing.viewer && editing.loadFailed && (

@@ -2,14 +2,12 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Menu } from '@base-ui-components/react/menu';
-import { MoreHorizontal, WrapText, type LucideIcon } from 'lucide-react';
+import { MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
-import { CodeThemeMenu } from '@/shell/panels/CodeThemeMenu';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { useFileActions } from '@/shell/panels/file-actions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
-import { MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
@@ -75,13 +73,6 @@ export function FileToolbarToggle({ icon, label, active, disabled = false, onCli
     );
 }
 
-/* The code view's wrap control as every other view draws it: there, so the switch beside it keeps its
-   place, and inert, because there are no lines of source to wrap. */
-export function DisabledWrapToggle() {
-    const { t } = useTranslation('panels');
-    return <FileToolbarToggle icon={WrapText} label={t('file.toolbar.wrapDisabled')} active={false} disabled onClick={() => undefined} />;
-}
-
 /*
  * Everything the file can be asked, in one menu at the end of the bar. On a tab the items are the
  * ones a right click on it offers as well; a node and a view of its own have no tab to pin or
@@ -109,8 +100,6 @@ function FileMenu() {
                 ) : (
                     <FileMenuItems tabKey={actions.tabKey} onRefresh={actions.refresh} />
                 )}
-                <Menu.Separator className={MENU_SEPARATOR} />
-                <CodeThemeMenu />
             </MenuPopup>
         </Menu.Root>
     );

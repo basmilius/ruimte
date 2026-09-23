@@ -1,3 +1,4 @@
+import { bundledThemesInfo } from 'shiki/themes';
 import { create } from 'zustand';
 import { isLiveVoice, isVoiceLanguage, WorktreeMergeStrategySchema, type LiveVoice, type VoiceLanguage, type WorktreeMergeStrategy } from '@ruimte/contracts';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
@@ -34,6 +35,13 @@ export const chatStreamingFrom = (stored: unknown): ChatStreamingMode => {
     return CHAT_STREAMING_MODES.find((mode) => mode === stored) ?? 'words';
 };
 
+/* The Shiki themes code can be drawn in under the app's light or dark, in Shiki's own order. */
+export const codeThemesOf = (mode: 'light' | 'dark'): typeof bundledThemesInfo => bundledThemesInfo.filter((info) => info.type === mode);
+
+/* A stored Shiki theme id, if Shiki still bundles it as a theme for that mode. */
+const codeThemeFrom = (stored: unknown, mode: 'light' | 'dark', fallback: string): string =>
+    codeThemesOf(mode).find((info) => info.id === stored)?.id ?? fallback;
+
 export const FONT_SIZE_RANGE = { min: 10, max: 20, step: 1 } as const;
 export const INTERFACE_FONT_SIZE_RANGE = { min: 14, max: 24, step: 1 } as const;
 export const FILES_TAB_LIMIT_RANGE = { min: 1, max: 20, step: 1 } as const;
@@ -57,6 +65,12 @@ export interface Settings {
        the folders people keep their work in have the same name everywhere; a path that is not on the
        machine being browsed falls back to its home, which `fs.browse` answering `exists` can tell. */
     browseStartFolder: string;
+    /* The Shiki theme id code is drawn in while the app is light, in the viewer, the editor and a chat. */
+    codeThemeLight: string;
+    /* The same while the app is dark. */
+    codeThemeDark: string;
+    /* Whether a long line of code wraps in the viewer and the editor. A diff keeps its own switch. */
+    codeWrap: boolean;
     /* Whether a diff draws the two sides next to each other or one patch under the other. */
     diffLayout: 'stacked' | 'split';
     /* Whether a diff counts and shows changes that are whitespace alone. */
@@ -136,6 +150,9 @@ const DEFAULT_SETTINGS: Settings = {
     filesTabLimit: 5,
     filesShowHidden: false,
     browseStartFolder: '',
+    codeThemeLight: 'night-owl-light',
+    codeThemeDark: 'night-owl',
+    codeWrap: false,
     diffLayout: 'stacked',
     diffWhitespace: true,
     worktreeMergeStrategy: 'squash',
@@ -176,6 +193,9 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
     // A path is typed by hand and read back as one; anything else in the blob is no folder.
     browseStartFolder: typeof stored.browseStartFolder === 'string' ? stored.browseStartFolder : DEFAULT_SETTINGS.browseStartFolder,
+    codeThemeLight: codeThemeFrom(stored.codeThemeLight, 'light', DEFAULT_SETTINGS.codeThemeLight),
+    codeThemeDark: codeThemeFrom(stored.codeThemeDark, 'dark', DEFAULT_SETTINGS.codeThemeDark),
+    codeWrap: stored.codeWrap === true,
     // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
     accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
     // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
@@ -263,6 +283,9 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 filesTabLimit,
                 filesShowHidden,
                 browseStartFolder,
+                codeThemeLight,
+                codeThemeDark,
+                codeWrap,
                 diffLayout,
                 diffWhitespace,
                 worktreeMergeStrategy,
@@ -293,6 +316,9 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 filesTabLimit,
                 filesShowHidden,
                 browseStartFolder,
+                codeThemeLight,
+                codeThemeDark,
+                codeWrap,
                 diffLayout,
                 diffWhitespace,
                 worktreeMergeStrategy,

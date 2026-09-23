@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
-import { iceServersFrom, settingsFrom } from './settings';
+import { codeThemesOf, iceServersFrom, settingsFrom } from './settings';
 
 describe('a view an agent asks for', () => {
     test('is not followed until a person says so', () => {
@@ -156,6 +156,47 @@ describe('worktreeMergeStrategy', () => {
         expect(settingsFrom({}).worktreeMergeStrategy).toBe('squash');
         expect(settingsFrom({ worktreeMergeStrategy: 'rebase' }).worktreeMergeStrategy).toBe('rebase');
         expect(settingsFrom({ worktreeMergeStrategy: 'octopus' as unknown as 'merge' }).worktreeMergeStrategy).toBe('squash');
+    });
+});
+
+describe('the colors of code', () => {
+    test('start on Night Owl, light and dark', () => {
+        expect(settingsFrom({})).toMatchObject({ codeThemeLight: 'night-owl-light', codeThemeDark: 'night-owl' });
+    });
+
+    test('keep a theme Shiki bundles for that side', () => {
+        expect(settingsFrom({ codeThemeLight: 'github-light', codeThemeDark: 'github-dark' })).toMatchObject({
+            codeThemeLight: 'github-light',
+            codeThemeDark: 'github-dark'
+        });
+    });
+
+    test('drop a theme that is gone, or one made for the other side', () => {
+        expect(settingsFrom({ codeThemeLight: 'retired-theme', codeThemeDark: 42 as unknown as string })).toMatchObject({
+            codeThemeLight: 'night-owl-light',
+            codeThemeDark: 'night-owl'
+        });
+        expect(settingsFrom({ codeThemeLight: 'github-dark', codeThemeDark: 'github-light' })).toMatchObject({
+            codeThemeLight: 'night-owl-light',
+            codeThemeDark: 'night-owl'
+        });
+    });
+
+    test('offer every bundled theme on its own side only', () => {
+        const light = codeThemesOf('light');
+        const dark = codeThemesOf('dark');
+        expect(light.map((info) => info.id)).toContain('night-owl-light');
+        expect(dark.map((info) => info.id)).toContain('night-owl');
+        expect(light.every((info) => info.type === 'light')).toBe(true);
+        expect(dark.every((info) => info.type === 'dark')).toBe(true);
+    });
+});
+
+describe('wrapping long lines of code', () => {
+    test('is off until a person turns it on', () => {
+        expect(settingsFrom({}).codeWrap).toBe(false);
+        expect(settingsFrom({ codeWrap: true }).codeWrap).toBe(true);
+        expect(settingsFrom({ codeWrap: 'yes' as unknown as boolean }).codeWrap).toBe(false);
     });
 });
 

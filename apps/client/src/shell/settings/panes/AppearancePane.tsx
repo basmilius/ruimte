@@ -9,6 +9,7 @@ import { formatMoney } from '@/format/number';
 import { FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM } from '@/format/regions';
 import { chooseLanguage, chooseRegion } from '@/i18n';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
+import { CodeSection } from '@/shell/settings/panes/CodeSection';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Segmented, Stepper, Toggle } from '@/shell/settings/controls';
@@ -250,6 +251,7 @@ export function AppearancePane() {
                     }
                 />
             </SettingsSection>
+            <CodeSection />
         </>
     );
 }

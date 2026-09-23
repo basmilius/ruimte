@@ -68,7 +68,6 @@
     "generic": "Dat werkte niet."
   },
   "file": {
-    "codeTheme": "Codethema",
     "cannotShow": "{{name}} ({{mime}}, {{size}}) kan hier niet getoond worden.",
     "code": {
       "unwrap": "Lange regels niet meer afbreken",
@@ -117,9 +116,6 @@
       "unstage": "Dit bestand unstagen"
     },
     "tooLarge": "{{name}} is {{size}}. Bestanden boven {{limit}} openen hier niet.",
-    "toolbar": {
-      "wrapDisabled": "Lange regels afbreken (alleen in de broncodeweergave)"
-    },
     "video": {
       "cannotPlay": "{{name}} ({{mime}}, {{size}}) kan hier niet afgespeeld worden."
     },

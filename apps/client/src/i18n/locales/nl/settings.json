@@ -48,6 +48,22 @@
                 "label": "Tekstgrootte"
             }
         },
+        "code": {
+            "title": "Code",
+            "light": {
+                "label": "Licht thema",
+                "description": "De kleuren van code als de app licht is, in bestanden, de editor en chats."
+            },
+            "dark": {
+                "label": "Donker thema",
+                "description": "De kleuren van code als de app donker is."
+            },
+            "preview": "Voorbeeld van {{theme}}",
+            "wrap": {
+                "label": "Lange regels afbreken",
+                "description": "In bestanden en de editor. Een diff heeft een eigen knop."
+            }
+        },
         "sidebar": {
             "label": "Sidebar",
             "description": "Kies welke projecten de sidebar en Needs attention tonen, over al je machines.",

@@ -48,6 +48,22 @@
                 "label": "Font size"
             }
         },
+        "code": {
+            "title": "Code",
+            "light": {
+                "label": "Light theme",
+                "description": "The colors of code while the app is light, in files, the editor and chats."
+            },
+            "dark": {
+                "label": "Dark theme",
+                "description": "The colors of code while the app is dark."
+            },
+            "preview": "Preview of {{theme}}",
+            "wrap": {
+                "label": "Wrap long lines",
+                "description": "In files and the editor. A diff keeps its own switch."
+            }
+        },
         "sidebar": {
             "label": "Sidebar",
             "description": "Choose which projects appear in the sidebar and Needs attention, across all your machines.",

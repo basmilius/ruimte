@@ -7,11 +7,10 @@ import { CodeFile } from '@/shell/panels/CodeFile';
 import { FileLinkContext } from '@/shell/panels/file-links';
 import { FileScroll } from '@/shell/panels/FileScroll';
 import { dirnameOf } from '@/shell/panels/files-tree';
-import { DisabledWrapToggle, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { useEndpointId } from '@/state/keys';
 import { useUnsaved } from '@/state/text-drafts';
 import { BTN_GROUP } from '@/ui/classes';
-import { Separator } from '@/ui/Separator';
 
 type MarkdownView = 'preview' | 'source';
 
@@ -43,11 +42,7 @@ export function MarkdownFile({ path, read }: { path: string; read: FsReadText })
     }
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            <FileToolbar>
-                {toggle}
-                <Separator />
-                <DisabledWrapToggle />
-            </FileToolbar>
+            <FileToolbar>{toggle}</FileToolbar>
             {/* Prose is read in the same column the standalone chat view gives a thread, at the
                 app's own type. The scroller keeps the panel's full width, so its scrollbar stays at
                 the panel's edge; only the text inside it is centered. */}
