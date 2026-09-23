@@ -81,7 +81,7 @@ export function VoiceWaveform({ phase, compact = false }: { phase: VoicePhase; c
             aria-label={t('waveform')}
         >
             {!compact && (
-                <div className="flex items-center justify-between text-xs font-medium tracking-wide uppercase">
+                <div className="flex items-center justify-between text-[10px] font-medium tracking-wide uppercase tabular-nums">
                     <span className={inputSpeaking ? 'text-text' : 'text-text-muted'}>
                         {t('speaker.person')} · {inputLabel}
                     </span>
