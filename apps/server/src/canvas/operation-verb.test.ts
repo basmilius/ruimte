@@ -86,7 +86,26 @@ test('a start without a task is completed once the agent ran its first turn', as
 
     expect(await operation('chat-lead', `agent.start:${child}`)).toEqual([
         `operation\tagent.start:${child}\tagent.start\tcompleted`,
-        `agent\t${child}\tcompleted\t-\tit started and waits for its next message`
+        `agent\t${child}\tcompleted\t-\tthe start is done: its first turn ended and it waits for a message, which says nothing about whether the work is`
+    ]);
+});
+
+test('a cancelled start reads cancelled once its turn stopped, and not completed', async () => {
+    const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--prompt', 'slow']);
+    const child = line!.split('\t')[0]!;
+    const id = `agent.start:${child}`;
+
+    daemon.worker.start();
+    await daemon.worker.settled();
+    await daemon.until(() => daemon.chats.get(child)?.info.status === 'running');
+
+    const [cancelled] = await runVerb(daemon, 'chat-lead', 'operation', ['cancel', id]);
+    expect(cancelled).toStartWith(`operation\t${id}\tcancelled\t${child}: its turn is told to stop`);
+    await daemon.until(() => daemon.chats.get(child)?.info.status === 'idle');
+
+    expect(await operation('chat-lead', id)).toEqual([
+        `operation\t${id}\tagent.start\tcancelled`,
+        `agent\t${child}\tcancelled\t-\tits turn was stopped before it finished; the chat and its thread stay`
     ]);
 });
 

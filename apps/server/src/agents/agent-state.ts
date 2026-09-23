@@ -7,7 +7,7 @@ import type { AgentLineageStore } from './lineage.ts';
 export interface AgentStateSources {
     outbox: Pick<OutboxStore, 'list'>;
     lineage: Pick<AgentLineageStore, 'endedAt'>;
-    chats: Pick<ChatManager, 'get' | 'hasStored' | 'cancel'>;
+    chats: Pick<ChatManager, 'get' | 'hasStored' | 'cancel' | 'lastTurn'>;
     sessions: Pick<SessionManager, 'get'>;
 }
 
@@ -25,16 +25,18 @@ export const agentStates = (sources: AgentStateSources): AgentStateHost => ({
             return 'ended';
         }
         const chat = sources.chats.get(nodeId);
-        if (chat) {
-            return chat.info.status;
-        }
-        const session = sources.sessions.get(nodeId);
+        const session = chat === undefined ? sources.sessions.get(nodeId) : undefined;
         if (session) {
             // A CLI whose hooks have not spoken yet is one that just started.
             return session.exited ? 'exited' : (session.agent?.status ?? 'running');
         }
         // A chat nobody has loaded is idle: its thread is on disk and a turn opens on it.
-        return (await sources.chats.hasStored(nodeId)) ? 'idle' : 'none';
+        const status = chat?.info.status ?? ((await sources.chats.hasStored(nodeId)) ? 'idle' : 'none');
+        // A stopped turn leaves a chat as idle as a finished one; only the turn itself tells them apart.
+        if (status === 'idle' && (await sources.chats.lastTurn(nodeId))?.state === 'aborted') {
+            return 'stopped';
+        }
+        return status;
     },
     cancelTurn: (nodeId) => {
         const status = sources.chats.get(nodeId)?.info.status;

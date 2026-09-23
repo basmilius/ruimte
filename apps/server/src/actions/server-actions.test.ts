@@ -376,6 +376,7 @@ describe('the daemon actions', () => {
         for (const [state, status] of [
             ['error', 'failed'],
             ['ended', 'cancelled'],
+            ['stopped', 'cancelled'],
             ['exited', 'completed'],
             ['owed', 'queued'],
             ['none', 'failed']

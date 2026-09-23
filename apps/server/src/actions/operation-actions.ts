@@ -34,6 +34,9 @@ const startTask = (host: CanvasHost, caller: string, nodeId: string): Task | und
 
 const byTask = (task: Task, state: AgentState): Pick<AgentOperation, 'status' | 'detail'> => {
     if (task.status === 'open') {
+        if (state === 'stopped') {
+            return { status: 'cancelled', detail: 'its turn was stopped before it finished; its task stays open' };
+        }
         return state === 'owed' ? { status: 'queued', detail: 'its start is owed and runs next' } : { status: 'running', detail: 'its task is open' };
     }
     if (task.status === 'done') {
@@ -49,12 +52,17 @@ const byState = (state: AgentState): Pick<AgentOperation, 'status' | 'detail'> =
             return { status: 'queued', detail: 'its start is owed and runs next' };
         case 'ended':
             return { status: 'cancelled', detail: 'it ended along with the node that opened it' };
+        case 'stopped':
+            return { status: 'cancelled', detail: 'its turn was stopped before it finished; the chat and its thread stay' };
         case 'running':
             return { status: 'running', detail: 'it is working' };
         case 'needs-you':
             return { status: 'running', detail: 'it waits on a person' };
         case 'idle':
-            return { status: 'completed', detail: 'it started and waits for its next message' };
+            return {
+                status: 'completed',
+                detail: 'the start is done: its first turn ended and it waits for a message, which says nothing about whether the work is'
+            };
         case 'exited':
             return { status: 'completed', detail: 'its CLI exited' };
         case 'error':
@@ -82,7 +90,11 @@ type CancelLine = ActionOutput<'operation.cancel'>['operations'][number];
 const cancelNode = async (agents: AgentStateHost, operationId: string, nodeId: string): Promise<CancelLine> => {
     const state = await agents.stateOf(nodeId);
     if (agents.cancelTurn(nodeId)) {
-        return { operationId, status: 'cancelled', detail: `${nodeId}: its turn stopped unfinished; the chat, its thread and its task stay` };
+        return {
+            operationId,
+            status: 'cancelled',
+            detail: `${nodeId}: its turn is told to stop, and operation get reads cancelled once it has; the chat, its thread and its task stay`
+        };
     }
     if (state === 'owed') {
         return { operationId, status: 'left', detail: `${nodeId}: its start is owed and runs next, and a cancel does not take a start back` };

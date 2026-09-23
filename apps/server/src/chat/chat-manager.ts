@@ -19,6 +19,7 @@ import type {
     ChatSkill,
     ChatSubagentPayload,
     ChatSubagentResult,
+    ChatTurnItem,
     ContextSource,
     ModelSelection,
     RuntimeMode,
@@ -525,6 +526,16 @@ export class ChatManager {
     /* Whether a chat has a thread on disk, for work that must not make an empty chat of an id it only remembers. */
     async hasStored(chatId: string): Promise<boolean> {
         return this.chats.has(chatId) || (await this.store?.has(chatId)) === true;
+    }
+
+    /* The turn a chat took last, read off the record without loading a chat nobody has; null before its first. */
+    async lastTurn(chatId: string): Promise<ChatTurnItem | null> {
+        const session = this.chats.get(chatId);
+        if (session) {
+            return session.thread.find('turn', () => true) ?? null;
+        }
+        const stored = await this.store?.read(chatId);
+        return stored?.items.findLast((item): item is ChatTurnItem => item.kind === 'turn') ?? null;
     }
 
     /* A line from the daemon in a chat's thread, loading the chat when nobody has; nothing for a chat that is gone. */

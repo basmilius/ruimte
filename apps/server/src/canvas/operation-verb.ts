@@ -15,8 +15,9 @@ const getSub = defineActionVerb('operation', {
         'prints\tagent\tid\tstatus\ttask\tdetail\tone line per agent it started, with the id of its task or - without one',
         ...OPERATION_FORMS,
         'status\tqueued\trunning\tcompleted\tfailed\tcancelled\tqueued while its start is owed, running while it works or its task is open, and one of the last three once it is over',
-        'task\tWith a task the task decides: done is completed, failed is failed, and a child a person removed is cancelled',
-        'without\tWithout a task the start is over once the agent runs and its first turn ended, which is completed',
+        'task\tWith a task the task decides: done is completed, failed is failed, and a child a person removed is cancelled; an open task whose turn was stopped is cancelled too',
+        'without\tWithout a task the start is over once the agent runs and its first turn ended, which is completed: the start is done, never a word on whether the work is',
+        'stopped\tA chat whose last turn was stopped before it finished, by operation cancel or by a person, is cancelled',
         'who\tOnly an operation you started; a node that is gone reads as cancelled',
         'wake\tA task wakes you with its result anyway, so this is for a look in between and never something to poll'
     ],
@@ -42,7 +43,8 @@ const cancelSub = defineActionVerb('operation', {
     params: [{ syntax: '<id>', need: 'required', field: 'operationId', more: 'agent.start:<id> after agent, team.start:<id>,<id> after team' }],
     detail: [
         'prints\toperation\tid\tstatus\tdetail\tone line per agent it started, the detail starting with the id of its node',
-        'status\tcancelled\tover\tleft\tcancelled when a chat stopped its turn, over when nothing ran, left when it goes on',
+        'status\tcancelled\tover\tleft\tcancelled when a chat was told to stop its turn, over when nothing ran, left when it goes on',
+        'after\tA stop takes the CLI a moment; operation get reads running until the turn has ended and cancelled from then on',
         'left\tA start still owed runs anyway, and a terminal agent keeps running: nothing sends a signal a person did not press',
         'stays\tThe chats, their threads and their tasks stay; nothing is rolled back',
         'who\tOnly an operation you started'
