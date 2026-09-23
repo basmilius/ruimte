@@ -18,9 +18,10 @@ import {
     SlidersHorizontal,
     Smartphone
 } from 'lucide-react';
-import { isCanvasView, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
+import { deviceTools, isCanvasView, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
 import { DeviceControls, DeviceSurface } from '@/devices/DeviceBody';
 import { DeviceToolsPanel } from '@/devices/DeviceToolsPanel';
+import { deviceStateText, unavailableNotes } from '@/devices/device-text';
 import { PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/shell/PanelHeaderSlot';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
@@ -40,21 +41,6 @@ const referenceOf = (device: DeviceInfo): DeviceReference => ({ platform: device
 
 const sameReference = (left: DeviceReference, right: DeviceReference): boolean =>
     left.platform === right.platform && left.kind === right.kind && left.name === right.name && left.runtime === right.runtime;
-
-const stateText = (device: DeviceInfo): string => {
-    if (device.kind === 'physical') {
-        return device.state === 'booted'
-            ? i18next.t('panels:devices.state.paired')
-            : device.state === 'shutdown'
-              ? i18next.t('panels:devices.state.unavailable')
-              : i18next.t('panels:devices.state.connecting');
-    }
-    return device.state === 'booted'
-        ? i18next.t('panels:devices.state.running')
-        : device.state === 'shutdown'
-          ? i18next.t('panels:devices.state.stopped')
-          : i18next.t('panels:devices.state.changing');
-};
 
 interface DeviceGroup {
     key: string;
@@ -133,7 +119,7 @@ function DeviceMenuItems({ device, onOpen }: { device: DeviceInfo; onOpen?: (dev
             {onOpen !== undefined && device.capabilities.stream && (
                 <>
                     <Menu.Item className="menu-item" onClick={() => onOpen(device)}>
-                        <Icon icon={ChevronRight} size={14} /> {device.kind === 'physical' ? t('devices.openPreview') : t('devices.openInPanel')}
+                        <Icon icon={ChevronRight} size={14} /> {device.capabilities.input ? t('devices.openInPanel') : t('devices.openPreview')}
                     </Menu.Item>
                     <Menu.Separator className={MENU_SEPARATOR} />
                 </>
@@ -186,7 +172,7 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                 <div className="min-w-0 grow">
                     <h3 className="truncate text-sm font-medium text-text">{device.name}</h3>
                     <p className="mt-0.5 truncate text-xs text-text-muted">
-                        {displayRuntime(device)} · {stateText(device)}
+                        {displayRuntime(device)} · {deviceStateText(device)}
                     </p>
                 </div>
                 <div className={BTN_GROUP}>
@@ -218,7 +204,7 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                         </span>
                     )}
                     {canOpen && (
-                        <Tooltip label={device.kind === 'physical' ? t('devices.openPreview') : t('devices.openInPanel')} name>
+                        <Tooltip label={device.capabilities.input ? t('devices.openInPanel') : t('devices.openPreview')} name>
                             <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => onOpen(device)}>
                                 <Icon icon={ChevronRight} size={14} />
                             </button>
@@ -294,7 +280,7 @@ function DevicePlacementMenu({ device }: { device: DeviceInfo }) {
                 </Menu.Trigger>
             </Tooltip>
             <MenuPopup align="end">
-                <div className={MENU_LABEL}>{t('devices.openSimulator')}</div>
+                <div className={MENU_LABEL}>{t('devices.openDevice')}</div>
                 <DeviceMenuItems device={device} />
             </MenuPopup>
         </Menu.Root>
@@ -341,7 +327,7 @@ function DeviceToolsFlyout({ device }: { device: DeviceInfo }) {
     return (
         <Popover.Root open={open} onOpenChange={setOpen}>
             <Tooltip label={t('devices.tools')} name>
-                <Popover.Trigger className="icon-btn" aria-pressed={open} disabled={device.kind !== 'simulator' || device.state !== 'booted'}>
+                <Popover.Trigger className="icon-btn" aria-pressed={open} disabled={device.state !== 'booted' || deviceTools(device).length === 0}>
                     <Icon icon={SlidersHorizontal} size={16} />
                 </Popover.Trigger>
             </Tooltip>
@@ -393,16 +379,10 @@ export function DevicesPanel() {
         </PanelHeaderSlot>
     );
 
+    const notes = unavailableNotes(row.unavailable, platform);
     const closeDevice = (): void => setSelection(null);
     const detailHeader = selectedDevice ? <DeviceDetailHeader device={selectedDevice} onClose={closeDevice} /> : null;
 
-    if (platform !== 'darwin') {
-        return (
-            <PanelEmpty header={listHeader} icon={Smartphone}>
-                {t('devices.macOnly')}
-            </PanelEmpty>
-        );
-    }
     if (streamingAllowed === false) {
         return (
             <PanelEmpty header={listHeader} icon={CircleAlert}>
@@ -435,6 +415,11 @@ export function DevicesPanel() {
         return (
             <PanelEmpty header={listHeader} icon={Smartphone}>
                 {t('devices.none')}
+                {notes.map((note) => (
+                    <span key={note} className="mt-2 block">
+                        {note}
+                    </span>
+                ))}
             </PanelEmpty>
         );
     }
@@ -461,6 +446,15 @@ export function DevicesPanel() {
                         setSelection({ endpointId, device: referenceOf(device) });
                     }}
                 />
+                {row.unavailable.length > 0 && (
+                    <p className="mt-5 px-1 text-xs text-text-muted">
+                        {notes.map((note) => (
+                            <span key={note} className="block">
+                                {note}
+                            </span>
+                        ))}
+                    </p>
+                )}
             </div>
         </div>
     );

@@ -2,7 +2,7 @@
   "devices": {
     "addToCanvas": "Toevoegen aan canvas",
     "back": "Terug naar apparaten",
-    "finding": "Simulators zoeken...",
+    "finding": "Apparaten zoeken...",
     "group": {
       "androidDevices": "Android-apparaten",
       "androidEmulators": "Android Emulators",
@@ -11,28 +11,35 @@
       "runningAndroid": "Actieve Android Emulators",
       "runningIos": "Actieve iOS Simulators"
     },
-    "macOnly": "iOS-simulators zijn beschikbaar als deze machine macOS draait.",
-    "none": "Er zijn geen iOS-simulators geïnstalleerd in Xcode.",
+    "none": "Er zijn geen apparaten gevonden op deze machine.",
     "openAsView": "Openen als weergave",
-    "openElsewhere": "Simulator ergens anders openen",
+    "openDevice": "Apparaat openen",
+    "openElsewhere": "Apparaat ergens anders openen",
     "openInPanel": "Openen in het apparaatpaneel",
     "openPreview": "Alleen-lezen voorbeeld openen",
-    "openSimulator": "Simulator openen",
     "refresh": "Apparaten vernieuwen",
-    "shutdown": "Simulator afsluiten",
-    "start": "Simulator starten",
-    "starting": "Simulator wordt gestart",
+    "shutdown": "Apparaat afsluiten",
+    "start": "Apparaat starten",
+    "starting": "Apparaat wordt gestart",
     "state": {
       "changing": "Bezig met wisselen",
+      "connected": "Verbonden",
       "connecting": "Verbinden",
+      "offline": "Offline",
       "paired": "Gekoppeld",
       "running": "Actief",
       "stopped": "Gestopt",
+      "unauthorized": "Sta USB-foutopsporing toe op het apparaat",
       "unavailable": "Niet beschikbaar"
     },
     "streamingOff": "Browser- en apparaatstreaming staat uit in de instellingen van deze machine.",
     "thisMachine": "Deze machine",
-    "tools": "Simulatortools"
+    "tools": "Apparaattools",
+    "unavailable": {
+      "androidSdk": "De Android SDK staat niet op deze machine. Installeer hem om Android-emulators en -apparaten te gebruiken.",
+      "needsMac": "iOS-simulators hebben een Mac nodig.",
+      "xcode": "Installeer Xcode om iOS-simulators en iPhones te gebruiken."
+    }
   },
   "diff": {
     "commitFailed": "Kon de commit niet lezen.",

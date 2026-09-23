@@ -2,7 +2,7 @@
   "devices": {
     "addToCanvas": "Add to canvas",
     "back": "Back to devices",
-    "finding": "Finding simulators...",
+    "finding": "Finding devices...",
     "group": {
       "androidDevices": "Android Devices",
       "androidEmulators": "Android Emulators",
@@ -11,28 +11,35 @@
       "runningAndroid": "Running Android Emulators",
       "runningIos": "Running iOS Simulators"
     },
-    "macOnly": "iOS simulators are available when this machine runs macOS.",
-    "none": "No iOS simulators are installed in Xcode.",
+    "none": "No devices were found on this machine.",
     "openAsView": "Open as view",
-    "openElsewhere": "Open simulator elsewhere",
+    "openDevice": "Open device",
+    "openElsewhere": "Open device elsewhere",
     "openInPanel": "Open in device panel",
     "openPreview": "Open read-only preview",
-    "openSimulator": "Open simulator",
     "refresh": "Refresh devices",
-    "shutdown": "Shut down simulator",
-    "start": "Start simulator",
-    "starting": "Starting simulator",
+    "shutdown": "Shut down device",
+    "start": "Start device",
+    "starting": "Starting device",
     "state": {
       "changing": "Changing state",
+      "connected": "Connected",
       "connecting": "Connecting",
+      "offline": "Offline",
       "paired": "Paired",
       "running": "Running",
       "stopped": "Stopped",
+      "unauthorized": "Allow USB debugging on the device",
       "unavailable": "Unavailable"
     },
     "streamingOff": "Browser and device streaming is disabled in this machine's settings.",
     "thisMachine": "This machine",
-    "tools": "Simulator tools"
+    "tools": "Device tools",
+    "unavailable": {
+      "androidSdk": "The Android SDK was not found on this machine. Install it to use Android emulators and devices.",
+      "needsMac": "iOS simulators need a Mac.",
+      "xcode": "Install Xcode to use iOS simulators and iPhones."
+    }
   },
   "diff": {
     "commitFailed": "Could not read the commit.",

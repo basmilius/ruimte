@@ -1,7 +1,18 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CircleAlert, LoaderCircle, X } from 'lucide-react';
-import type { DeviceAction, DeviceColorFilter, DeviceInfo, DevicePermission, DeviceSettings, DeviceTextSize, DeviceToggleSetting } from '@ruimte/contracts';
+import {
+    devicePermissions,
+    deviceTools,
+    type DeviceAction,
+    type DeviceColorFilter,
+    type DeviceInfo,
+    type DevicePermission,
+    type DeviceSettings,
+    type DeviceTextSize,
+    type DeviceToggleSetting,
+    type DeviceTool
+} from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
 import { Segmented, Toggle } from '@/shell/settings/controls';
@@ -16,18 +27,11 @@ const TEXT_SIZES: readonly DeviceTextSize[] = ['small', 'default', 'large', 'ext
 
 const COLOR_FILTERS: readonly DeviceColorFilter[] = ['none', 'grayscale', 'red-green', 'green-red', 'blue-yellow'];
 
-const PERMISSIONS: readonly DevicePermission[] = [
-    'camera',
-    'microphone',
-    'photos',
-    'contacts',
-    'calendar',
-    'reminders',
-    'location',
-    'motion',
-    'media-library',
-    'faceid'
-];
+const TOGGLES: readonly DeviceToggleSetting[] = ['reduceMotion', 'increaseContrast', 'reduceTransparency', 'showBorders', 'voiceOver'];
+
+const APP_TOOLS: readonly DeviceTool[] = ['openUrl', 'launchApp', 'terminateApp'];
+
+const DISPLAY_TOOLS: readonly DeviceTool[] = ['appearance', 'textSize', 'liquidGlass', 'colorFilter', ...TOGGLES];
 
 /* City names and their coordinates, which read the same in every language. */
 const LOCATIONS = [
@@ -84,6 +88,12 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
         }
     };
 
+    const tools = deviceTools(device);
+    const has = (tool: DeviceTool): boolean => tools.includes(tool);
+    const appTools = APP_TOOLS.filter(has);
+    const displayTools = DISPLAY_TOOLS.filter(has);
+    const permissions = devicePermissions(device);
+    const appIdPlaceholder = device.platform === 'android' ? t('device.tools.packageName') : t('device.tools.bundleId');
     const disabled = pending || settings === null;
     return (
         <aside className="flex h-full min-h-0 w-full flex-col bg-surface">
@@ -107,108 +117,113 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
                         <Icon icon={LoaderCircle} size={14} className="animate-spin" /> {t('device.tools.loading')}
                     </div>
                 )}
-                <ToolSection title={t('device.tools.app.title')}>
-                    <TextAction
-                        placeholder={t('device.tools.app.urlPlaceholder')}
-                        label={t('device.tools.app.open')}
-                        disabled={disabled}
-                        onSubmit={(url) => act({ action: 'openUrl', url })}
-                    />
-                    <TextAction
-                        placeholder={t('device.tools.bundleId')}
-                        label={t('device.tools.app.launch')}
-                        disabled={disabled}
-                        onSubmit={(appId) => act({ action: 'launchApp', appId })}
-                    />
-                    <TextAction
-                        placeholder={t('device.tools.bundleId')}
-                        label={t('device.tools.app.terminate')}
-                        disabled={disabled}
-                        onSubmit={(appId) => act({ action: 'terminateApp', appId })}
-                    />
-                </ToolSection>
-                <ToolSection title={t('device.tools.display.title')}>
-                    <ToolRow label={t('device.tools.display.appearance')}>
-                        <Segmented
-                            label={t('device.tools.display.appearance')}
-                            value={settings?.appearance ?? 'light'}
-                            options={[
-                                { id: 'light', label: t('device.tools.display.light') },
-                                { id: 'dark', label: t('device.tools.display.dark') }
-                            ]}
-                            disabled={disabled || settings?.appearance === undefined}
-                            onChange={(value) => void act({ action: 'setAppearance', value })}
-                        />
-                    </ToolRow>
-                    <ToolRow label={t('device.tools.display.textSize')}>
-                        <Select
-                            label={t('device.tools.display.textSize')}
-                            value={settings?.textSize ?? null}
-                            items={TEXT_SIZES.map((size) => ({ value: size, label: t(`device.tools.textSizes.${size}`) }))}
-                            size="sm"
-                            align="end"
-                            disabled={disabled || settings?.textSize === undefined}
-                            onValueChange={(value) => void act({ action: 'setTextSize', value })}
-                        />
-                    </ToolRow>
-                    <ToolRow label={t('device.tools.display.liquidGlass')}>
-                        <Segmented
-                            label={t('device.tools.display.liquidGlass')}
-                            value={settings?.liquidGlass ?? 'clear'}
-                            options={[
-                                { id: 'clear', label: t('device.tools.display.clear') },
-                                { id: 'tinted', label: t('device.tools.display.tinted') }
-                            ]}
-                            disabled={disabled || settings?.liquidGlass === undefined}
-                            onChange={(value) => void act({ action: 'setLiquidGlass', value })}
-                        />
-                    </ToolRow>
-                    <ToolRow label={t('device.tools.display.colorFilter')}>
-                        <Select
-                            label={t('device.tools.display.colorFilter')}
-                            value={settings?.colorFilter ?? null}
-                            items={COLOR_FILTERS.map((filter) => ({ value: filter, label: t(`device.tools.colorFilters.${filter}`) }))}
-                            size="sm"
-                            align="end"
-                            disabled={disabled || settings?.colorFilter === undefined}
-                            onValueChange={(value) => void act({ action: 'setColorFilter', value })}
-                        />
-                    </ToolRow>
-                    <SettingToggle
-                        label={t('device.tools.display.reduceMotion')}
-                        setting="reduceMotion"
-                        value={settings?.reduceMotion}
-                        disabled={disabled}
-                        act={act}
-                    />
-                    <SettingToggle
-                        label={t('device.tools.display.increaseContrast')}
-                        setting="increaseContrast"
-                        value={settings?.increaseContrast}
-                        disabled={disabled}
-                        act={act}
-                    />
-                    <SettingToggle
-                        label={t('device.tools.display.reduceTransparency')}
-                        setting="reduceTransparency"
-                        value={settings?.reduceTransparency}
-                        disabled={disabled}
-                        act={act}
-                    />
-                    <SettingToggle
-                        label={t('device.tools.display.showBorders')}
-                        setting="showBorders"
-                        value={settings?.showBorders}
-                        disabled={disabled}
-                        act={act}
-                    />
-                    <SettingToggle label={t('device.tools.display.voiceOver')} setting="voiceOver" value={settings?.voiceOver} disabled={disabled} act={act} />
-                </ToolSection>
-                <LocationTools disabled={disabled} act={act} />
-                <PermissionTools disabled={disabled} act={act} />
-                <ToolSection title={t('device.tools.push.title')}>
-                    <PushAction disabled={disabled} act={act} />
-                </ToolSection>
+                {appTools.length > 0 && (
+                    <ToolSection title={t('device.tools.app.title')}>
+                        {has('openUrl') && (
+                            <TextAction
+                                placeholder={t('device.tools.app.urlPlaceholder')}
+                                label={t('device.tools.app.open')}
+                                disabled={disabled}
+                                onSubmit={(url) => act({ action: 'openUrl', url })}
+                            />
+                        )}
+                        {has('launchApp') && (
+                            <TextAction
+                                placeholder={appIdPlaceholder}
+                                label={t('device.tools.app.launch')}
+                                disabled={disabled}
+                                onSubmit={(appId) => act({ action: 'launchApp', appId })}
+                            />
+                        )}
+                        {has('terminateApp') && (
+                            <TextAction
+                                placeholder={appIdPlaceholder}
+                                label={t('device.tools.app.terminate')}
+                                disabled={disabled}
+                                onSubmit={(appId) => act({ action: 'terminateApp', appId })}
+                            />
+                        )}
+                    </ToolSection>
+                )}
+                {displayTools.length > 0 && (
+                    <ToolSection title={t('device.tools.display.title')}>
+                        {has('appearance') && (
+                            <ToolRow label={t('device.tools.display.appearance')}>
+                                <Segmented
+                                    label={t('device.tools.display.appearance')}
+                                    value={settings?.appearance ?? 'light'}
+                                    options={[
+                                        { id: 'light', label: t('device.tools.display.light') },
+                                        { id: 'dark', label: t('device.tools.display.dark') }
+                                    ]}
+                                    disabled={disabled || settings?.appearance === undefined}
+                                    onChange={(value) => void act({ action: 'setAppearance', value })}
+                                />
+                            </ToolRow>
+                        )}
+                        {has('textSize') && (
+                            <ToolRow label={t('device.tools.display.textSize')}>
+                                <Select
+                                    label={t('device.tools.display.textSize')}
+                                    value={settings?.textSize ?? null}
+                                    items={TEXT_SIZES.map((size) => ({ value: size, label: t(`device.tools.textSizes.${size}`) }))}
+                                    size="sm"
+                                    align="end"
+                                    disabled={disabled || settings?.textSize === undefined}
+                                    onValueChange={(value) => void act({ action: 'setTextSize', value })}
+                                />
+                            </ToolRow>
+                        )}
+                        {has('liquidGlass') && (
+                            <ToolRow label={t('device.tools.display.liquidGlass')}>
+                                <Segmented
+                                    label={t('device.tools.display.liquidGlass')}
+                                    value={settings?.liquidGlass ?? 'clear'}
+                                    options={[
+                                        { id: 'clear', label: t('device.tools.display.clear') },
+                                        { id: 'tinted', label: t('device.tools.display.tinted') }
+                                    ]}
+                                    disabled={disabled || settings?.liquidGlass === undefined}
+                                    onChange={(value) => void act({ action: 'setLiquidGlass', value })}
+                                />
+                            </ToolRow>
+                        )}
+                        {has('colorFilter') && (
+                            <ToolRow label={t('device.tools.display.colorFilter')}>
+                                <Select
+                                    label={t('device.tools.display.colorFilter')}
+                                    value={settings?.colorFilter ?? null}
+                                    items={COLOR_FILTERS.map((filter) => ({ value: filter, label: t(`device.tools.colorFilters.${filter}`) }))}
+                                    size="sm"
+                                    align="end"
+                                    disabled={disabled || settings?.colorFilter === undefined}
+                                    onValueChange={(value) => void act({ action: 'setColorFilter', value })}
+                                />
+                            </ToolRow>
+                        )}
+                        {TOGGLES.filter(has).map((setting) => (
+                            <SettingToggle
+                                key={setting}
+                                label={t(`device.tools.display.${setting}`)}
+                                setting={setting}
+                                value={settings?.[setting]}
+                                disabled={disabled}
+                                act={act}
+                            />
+                        ))}
+                    </ToolSection>
+                )}
+                {(has('location') || has('clearLocation')) && (
+                    <LocationTools canSet={has('location')} canClear={has('clearLocation')} disabled={disabled} act={act} />
+                )}
+                {has('permissions') && permissions.length > 0 && (
+                    <PermissionTools permissions={permissions} appIdPlaceholder={appIdPlaceholder} disabled={disabled} act={act} />
+                )}
+                {has('push') && (
+                    <ToolSection title={t('device.tools.push.title')}>
+                        <PushAction appIdPlaceholder={appIdPlaceholder} disabled={disabled} act={act} />
+                    </ToolSection>
+                )}
             </div>
         </aside>
     );
@@ -287,7 +302,17 @@ function TextAction({
     );
 }
 
-function LocationTools({ disabled, act }: { disabled: boolean; act: (body: ActionBody) => Promise<void> }) {
+function LocationTools({
+    canSet,
+    canClear,
+    disabled,
+    act
+}: {
+    canSet: boolean;
+    canClear: boolean;
+    disabled: boolean;
+    act: (body: ActionBody) => Promise<void>;
+}) {
     const { t } = useTranslation('machines');
     const [latitude, setLatitude] = useState('');
     const [longitude, setLongitude] = useState('');
@@ -295,64 +320,82 @@ function LocationTools({ disabled, act }: { disabled: boolean; act: (body: Actio
     const valid = latitude.trim() !== '' && longitude.trim() !== '' && Math.abs(parsed.latitude) <= 90 && Math.abs(parsed.longitude) <= 180;
     return (
         <ToolSection title={t('device.tools.location.title')}>
-            <div className="flex gap-1.5">
-                <input
-                    className={`${FIELD} w-1/2`}
-                    inputMode="decimal"
-                    value={latitude}
-                    disabled={disabled}
-                    placeholder={t('device.tools.location.latitude')}
-                    onChange={(event) => setLatitude(event.target.value)}
-                />
-                <input
-                    className={`${FIELD} w-1/2`}
-                    inputMode="decimal"
-                    value={longitude}
-                    disabled={disabled}
-                    placeholder={t('device.tools.location.longitude')}
-                    onChange={(event) => setLongitude(event.target.value)}
-                />
-            </div>
+            {canSet && (
+                <div className="flex gap-1.5">
+                    <input
+                        className={`${FIELD} w-1/2`}
+                        inputMode="decimal"
+                        value={latitude}
+                        disabled={disabled}
+                        placeholder={t('device.tools.location.latitude')}
+                        onChange={(event) => setLatitude(event.target.value)}
+                    />
+                    <input
+                        className={`${FIELD} w-1/2`}
+                        inputMode="decimal"
+                        value={longitude}
+                        disabled={disabled}
+                        placeholder={t('device.tools.location.longitude')}
+                        onChange={(event) => setLongitude(event.target.value)}
+                    />
+                </div>
+            )}
             <div className="flex flex-wrap gap-1.5">
-                <Select
-                    label={t('device.tools.location.preset')}
-                    value={null}
-                    placeholder={t('device.tools.location.presetPlaceholder')}
-                    items={LOCATIONS.map((location) => ({ value: location.label, label: location.label }))}
-                    size="sm"
-                    disabled={disabled}
-                    onValueChange={(label) => {
-                        const location = LOCATIONS.find((candidate) => candidate.label === label);
-                        if (location) {
-                            setLatitude(String(location.latitude));
-                            setLongitude(String(location.longitude));
-                            void act({ action: 'setLocation', latitude: location.latitude, longitude: location.longitude });
-                        }
-                    }}
-                />
-                <Button size="sm" variant="secondary" disabled={disabled || !valid} onClick={() => void act({ action: 'setLocation', ...parsed })}>
-                    {t('device.tools.location.set')}
-                </Button>
-                <Button
-                    size="sm"
-                    disabled={disabled}
-                    onClick={() => {
-                        setLatitude('');
-                        setLongitude('');
-                        void act({ action: 'clearLocation' });
-                    }}
-                >
-                    {t('device.tools.location.clear')}
-                </Button>
+                {canSet && (
+                    <>
+                        <Select
+                            label={t('device.tools.location.preset')}
+                            value={null}
+                            placeholder={t('device.tools.location.presetPlaceholder')}
+                            items={LOCATIONS.map((location) => ({ value: location.label, label: location.label }))}
+                            size="sm"
+                            disabled={disabled}
+                            onValueChange={(label) => {
+                                const location = LOCATIONS.find((candidate) => candidate.label === label);
+                                if (location) {
+                                    setLatitude(String(location.latitude));
+                                    setLongitude(String(location.longitude));
+                                    void act({ action: 'setLocation', latitude: location.latitude, longitude: location.longitude });
+                                }
+                            }}
+                        />
+                        <Button size="sm" variant="secondary" disabled={disabled || !valid} onClick={() => void act({ action: 'setLocation', ...parsed })}>
+                            {t('device.tools.location.set')}
+                        </Button>
+                    </>
+                )}
+                {canClear && (
+                    <Button
+                        size="sm"
+                        disabled={disabled}
+                        onClick={() => {
+                            setLatitude('');
+                            setLongitude('');
+                            void act({ action: 'clearLocation' });
+                        }}
+                    >
+                        {t('device.tools.location.clear')}
+                    </Button>
+                )}
             </div>
         </ToolSection>
     );
 }
 
-function PermissionTools({ disabled, act }: { disabled: boolean; act: (body: ActionBody) => Promise<void> }) {
+function PermissionTools({
+    permissions,
+    appIdPlaceholder,
+    disabled,
+    act
+}: {
+    permissions: DevicePermission[];
+    appIdPlaceholder: string;
+    disabled: boolean;
+    act: (body: ActionBody) => Promise<void>;
+}) {
     const { t } = useTranslation('machines');
     const [appId, setAppId] = useState('');
-    const [permission, setPermission] = useState<DevicePermission>('camera');
+    const [permission, setPermission] = useState<DevicePermission>(permissions[0]!);
     const decide = (decision: 'grant' | 'revoke' | 'reset'): void => {
         const resolved = appId.trim();
         if (resolved) {
@@ -361,18 +404,12 @@ function PermissionTools({ disabled, act }: { disabled: boolean; act: (body: Act
     };
     return (
         <ToolSection title={t('device.tools.permissions.title')}>
-            <input
-                className={FIELD}
-                value={appId}
-                disabled={disabled}
-                placeholder={t('device.tools.bundleId')}
-                onChange={(event) => setAppId(event.target.value)}
-            />
+            <input className={FIELD} value={appId} disabled={disabled} placeholder={appIdPlaceholder} onChange={(event) => setAppId(event.target.value)} />
             <div className="flex flex-wrap gap-1.5">
                 <Select<DevicePermission>
                     label={t('device.tools.permissions.label')}
                     value={permission}
-                    items={PERMISSIONS.map((value) => ({ value, label: t(`device.tools.permissions.kinds.${value}`) }))}
+                    items={permissions.map((value) => ({ value, label: t(`device.tools.permissions.kinds.${value}`) }))}
                     size="sm"
                     disabled={disabled}
                     onValueChange={setPermission}
@@ -391,7 +428,7 @@ function PermissionTools({ disabled, act }: { disabled: boolean; act: (body: Act
     );
 }
 
-function PushAction({ disabled, act }: { disabled: boolean; act: (body: ActionBody) => Promise<void> }) {
+function PushAction({ appIdPlaceholder, disabled, act }: { appIdPlaceholder: string; disabled: boolean; act: (body: ActionBody) => Promise<void> }) {
     const { t } = useTranslation('machines');
     const [appId, setAppId] = useState('');
     const [payload, setPayload] = useState('');
@@ -403,13 +440,7 @@ function PushAction({ disabled, act }: { disabled: boolean; act: (body: ActionBo
     };
     return (
         <form className="flex flex-col gap-1.5" onSubmit={submit}>
-            <input
-                className={FIELD}
-                value={appId}
-                disabled={disabled}
-                placeholder={t('device.tools.bundleId')}
-                onChange={(event) => setAppId(event.target.value)}
-            />
+            <input className={FIELD} value={appId} disabled={disabled} placeholder={appIdPlaceholder} onChange={(event) => setAppId(event.target.value)} />
             <div className="flex gap-1.5">
                 <input
                     className={`${FIELD} grow`}

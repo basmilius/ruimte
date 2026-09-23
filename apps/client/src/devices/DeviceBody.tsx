@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { CircleAlert, Hand, House, LoaderCircle, Lock, Mic, RotateCcw, RotateCw, Smartphone, type LucideIcon } from 'lucide-react';
-import type { DeviceInfo, DeviceInput, DeviceReference } from '@ruimte/contracts';
+import { CircleAlert, Hand, House, LoaderCircle, Lock, Mic, RotateCcw, RotateCw, Smartphone, Undo2, type LucideIcon } from 'lucide-react';
+import { deviceButtons, type DeviceButton, type DeviceInfo, type DeviceInput, type DeviceReference } from '@ruimte/contracts';
 import { useNodeHost } from '@/nodes/node-host';
 import { useDeviceList, useResolvedDevice } from '@/devices/state';
 import { DeviceStream } from '@/devices/DeviceStream';
@@ -13,6 +13,15 @@ import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { PanelEmpty } from '@/ui/PanelEmpty';
+
+const GESTURES: ReadonlyArray<{ button: DeviceButton; icon: LucideIcon }> = [
+    { button: 'swipeHome', icon: Hand },
+    { button: 'appSwitcher', icon: Smartphone },
+    { button: 'lock', icon: Lock },
+    { button: 'siri', icon: Mic }
+];
+
+const ANDROID_LABELS: Partial<Record<DeviceButton, string>> = { appSwitcher: 'recentApps', lock: 'power', siri: 'assistant' };
 
 const useDeviceFor = (reference: DeviceReference | undefined): { device: DeviceInfo | null; loading: boolean; error: string | null } => {
     const endpointId = useEndpointId();
@@ -28,40 +37,50 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
     if (device.state !== 'booted' || !device.capabilities.input) {
         return null;
     }
+    const buttons = deviceButtons(device);
+    const gestures = GESTURES.filter((gesture) => buttons.includes(gesture.button));
     const send = (command: DeviceInput): void => deviceClientFor(endpointId)?.input(device, command);
+    const label = (button: DeviceButton): string => {
+        const androidName = device.platform === 'android' ? ANDROID_LABELS[button] : undefined;
+        return t(`device.controls.${androidName ?? button}`);
+    };
     return (
         <div className={BTN_GROUP}>
-            <Tooltip label={t('device.controls.home')} name>
-                <button className="icon-btn" onClick={() => send({ kind: 'button', button: 'home' })}>
-                    <Icon icon={House} size={16} />
-                </button>
-            </Tooltip>
-            <Menu.Root>
-                <Tooltip label={t('device.controls.gestures')} name>
-                    <Menu.Trigger className="icon-btn">
-                        <Icon icon={Hand} size={16} />
-                    </Menu.Trigger>
+            {buttons.includes('back') && (
+                <Tooltip label={label('back')} name>
+                    <button className="icon-btn" onClick={() => send({ kind: 'button', button: 'back' })}>
+                        <Icon icon={Undo2} size={16} />
+                    </button>
                 </Tooltip>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
-                        <Menu.Popup className="menu-popup">
-                            <div className={MENU_LABEL}>{t('device.controls.gestures')}</div>
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'swipeHome' })}>
-                                <Icon icon={Hand} size={14} /> {t('device.controls.swipeHome')}
-                            </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'appSwitcher' })}>
-                                <Icon icon={Smartphone} size={14} /> {t('device.controls.appSwitcher')}
-                            </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'lock' })}>
-                                <Icon icon={Lock} size={14} /> {t('device.controls.lock')}
-                            </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'siri' })}>
-                                <Icon icon={Mic} size={14} /> {t('device.controls.siri')}
-                            </Menu.Item>
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
-            </Menu.Root>
+            )}
+            {buttons.includes('home') && (
+                <Tooltip label={label('home')} name>
+                    <button className="icon-btn" onClick={() => send({ kind: 'button', button: 'home' })}>
+                        <Icon icon={House} size={16} />
+                    </button>
+                </Tooltip>
+            )}
+            {gestures.length > 0 && (
+                <Menu.Root>
+                    <Tooltip label={t('device.controls.gestures')} name>
+                        <Menu.Trigger className="icon-btn">
+                            <Icon icon={Hand} size={16} />
+                        </Menu.Trigger>
+                    </Tooltip>
+                    <Menu.Portal>
+                        <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
+                            <Menu.Popup className="menu-popup">
+                                <div className={MENU_LABEL}>{t('device.controls.gestures')}</div>
+                                {gestures.map((gesture) => (
+                                    <Menu.Item key={gesture.button} className="menu-item" onClick={() => send({ kind: 'button', button: gesture.button })}>
+                                        <Icon icon={gesture.icon} size={14} /> {label(gesture.button)}
+                                    </Menu.Item>
+                                ))}
+                            </Menu.Popup>
+                        </Menu.Positioner>
+                    </Menu.Portal>
+                </Menu.Root>
+            )}
             <Menu.Root>
                 <Tooltip label={t('device.controls.rotate')} name>
                     <Menu.Trigger className="icon-btn">
