@@ -31,6 +31,8 @@ const localTime = (at: string): string => {
 
 const oneLine = (text: string): string => text.replace(/\s*\n\s*/g, ' ');
 
+const descriptionLines = (description: string | undefined, indent: string): string[] => (description ? [`${indent}${oneLine(description)}`] : []);
+
 const counter = (progress: PlanProgress): string => `${progress.finished}/${progress.total}`;
 
 export const progressText = (plan: Pick<Plan, 'meta' | 'items'>): string => {
@@ -63,12 +65,16 @@ const sentences = (parts: string[]): string => parts.map((part, index) => (index
 
 /*
  * The compact text `plan read` prints for an agent: one line per item with its id in brackets, so
- * the ids survive a compacted conversation. The markers are `PLAN_LEGEND`.
+ * the ids survive a compacted conversation, and a step's or a section's description on the line
+ * under it, the way the Markdown of a plan has it. The markers are `PLAN_LEGEND`.
  */
 export const renderPlanText = (plan: Plan, options: PlanTextOptions = {}): string => {
     const formatTime = options.formatTime ?? localTime;
     const lines = [`Plan "${plan.meta.title}" (${plan.id}, ${plan.meta.kind}, rev ${plan.rev}): ${progressText(plan)}`];
     const second: string[] = [];
+    if (plan.meta.summary) {
+        second.push(`Summary: ${oneLine(plan.meta.summary)}`);
+    }
     if (plan.meta.status) {
         second.push(`Status: ${plan.meta.status}`);
     }
@@ -107,7 +113,7 @@ export const renderPlanText = (plan: Plan, options: PlanTextOptions = {}): strin
         if (step.note) {
             line += `: "${oneLine(step.note)}"`;
         }
-        lines.push(line);
+        lines.push(line, ...descriptionLines(step.description, `${indent}  `));
         step.steps?.forEach((child, index) => stepLine(child, `${number}.${index + 1}`, `${indent}  `));
     };
     const itemLines = (items: readonly PlanItem[], indent: string): void => {
@@ -137,7 +143,7 @@ export const renderPlanText = (plan: Plan, options: PlanTextOptions = {}): strin
         }
         flushLoose();
         const progress = planProgress(item.items);
-        lines.push('', `## ${item.title} [${item.id}]${progress.total > 0 ? ` ${counter(progress)}` : ''}`);
+        lines.push('', `## ${item.title} [${item.id}]${progress.total > 0 ? ` ${counter(progress)}` : ''}`, ...descriptionLines(item.description, '  '));
         itemLines(item.items, '  ');
     }
     flushLoose();

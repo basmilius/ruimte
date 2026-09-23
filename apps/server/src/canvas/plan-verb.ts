@@ -207,7 +207,7 @@ const readSub = defineActionVerb('plan', {
     usage: '[--plan P] [--all]',
     params: [PLAN_FLAG, { syntax: '--all', need: 'optional', text: 'Every plan of this chat, oldest first' }],
     detail: [
-        'prints\tA plan as text: a line with title, id, kind, rev and progress, a line with status, the active steps and the other plans, then one line per item',
+        'prints\tA plan as text: a line with title, id, kind, rev and progress, a line with summary, status, the active steps and the other plans, then one line per item, with the description of a step or a section on the line under it',
         `legend\t${PLAN_LEGEND}`,
         'marks\tperson-only and agent-only say who sets a step; set by a person means you leave its state alone'
     ],

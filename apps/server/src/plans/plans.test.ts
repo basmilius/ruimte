@@ -206,6 +206,15 @@ describe('plan verbs', () => {
         expect(events.map((event) => event.event)).toEqual(['plan.changed', 'plan.changed']);
     });
 
+    test('a description plan edit sets is what plan read shows under the step', async () => {
+        const daemon = await boot();
+        await newPlan(daemon);
+        await runVerb(daemon, 'chat-lead', 'plan', ['edit', 'tests', '--description', 'Cover the lexer\\nand the parser']);
+        const lines = await runVerb(daemon, 'chat-lead', 'plan', ['read']);
+        const at = lines.findIndex((line) => line.includes('[tests]'));
+        expect(lines[at + 1]).toBe('  Cover the lexer and the parser');
+    });
+
     test('a chat keeps at most twenty plans, and the refusal points at plan delete', async () => {
         const daemon = await boot();
         for (let i = 0; i < 20; i++) {

@@ -566,12 +566,14 @@ describe('plan read', () => {
         expect(text).toBe(
             [
                 'Plan "Test the split placement" (plan-7f3a, test, rev 14): 4 of 8 run, 2 passed, 1 failed, 1 skipped',
-                'Status: Fixing focus after a refused drop. Now: fix-focus. Also in this chat: plan-2c1d "Split placement" (steps, 1/1)',
+                'Summary: Run in the Electron dev app. Status: Fixing focus after a refused drop. Now: fix-focus. Also in this chat: plan-2c1d "Split placement" (steps, 1/1)',
                 '',
                 '## Splitting a cell [split] 3/5',
+                '  Run in the Electron dev app, one project with a chat view.',
                 '  Before you start [prep]: Close every split so the project shows one cell.',
                 '  [x] 1 Dragging a view right makes a new column [new-column] person-only, set by a person 14:02',
                 '  [!] 2 A full grid refuses a fourth column [full-grid] 2/2',
+                '    Three columns, drag a fourth view in.',
                 '    [x] 2.1 No drop zone on the edge [no-zone] set by a person',
                 '    [!] 2.2 Focus stays where it was [focus] set by a person: "Focus jumped to the first column."',
                 '  [~] 3 Fix focus after a refused drop [fix-focus] agent-only',
