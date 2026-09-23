@@ -529,6 +529,19 @@ describe('help', () => {
         }
     });
 
+    test('every flag of a detail is in the usage help <noun> and a refusal print, and the usage names no flag the parser lacks', async () => {
+        const entries = [...VERBS.flatMap((entry) => (entry.served === 'canvas' ? [entry] : [])), ...allActions().map(({ action }) => action)];
+        for (const { name, usage, detail, flagNames } of entries) {
+            const documented = detail.filter((line) => line.startsWith('flag\t--')).map((line) => line.split('\t')[1]!.split(' ')[0]!);
+            const spelled = [...usage.matchAll(/(?:^|[^\w-])--([\w-]+)/g)].map((match) => match[1]!);
+            expect({ name, missing: documented.filter((flag) => !spelled.includes(flag.slice(2))) }).toEqual({ name, missing: [] });
+            expect({ name, unknown: spelled.filter((flag) => !flagNames.includes(flag)) }).toEqual({ name, unknown: [] });
+        }
+        expect(nounNamed('plan').actions.find((action) => action.word === 'new')!.usage).toContain('[--document JSON]');
+        expect((await post('help', ['view'])).lines.some((line) => line.startsWith('action\tview rename\t<viewId> <name> [--revision N]\t'))).toBe(true);
+        expect((await post('view', ['rename', 'board'])).lines).toContain('usage\tview rename\t<viewId> <name> [--revision N]');
+    });
+
     test('help node new says what it prints, which flag goes with which kind, and where a node lands', async () => {
         const { lines } = await post('help', ['node', 'new']);
         expect(lines).toContain(

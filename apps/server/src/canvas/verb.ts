@@ -263,6 +263,21 @@ const flagsOf = (spec: ArgsSpec<z.ZodType, z.ZodObject>): { values: string[]; sw
     switches: [...(spec.switches ?? []), ...(spec.dryRun === true ? [DRY_RUN_FLAG] : [])]
 });
 
+const flagSpelled = (usage: string, flag: string): boolean => new RegExp(`(^|[^\\w-])${flag}(?![\\w-])`).test(usage);
+
+/*
+ * The synopsis with every flag the detail documents: what the hand-written one leaves out is added
+ * from its detail line, bracketed unless that line says it is required, so the two never drift.
+ */
+const usageWithFlags = (usage: string, detail: readonly string[]): string => {
+    const missing = detail
+        .filter((line) => line.startsWith('flag\t--'))
+        .map((line) => line.split('\t'))
+        .filter(([, syntax]) => !flagSpelled(usage, syntax!.split(' ')[0]!))
+        .map(([, syntax, need]) => (need === 'required' ? syntax! : `[${syntax}]`));
+    return [usage, ...missing].filter((part) => part !== '').join(' ');
+};
+
 /* One set of arguments parsed and run. `name` is what a refusal calls it, so `view new` refuses under both its words. */
 const runArgs = async <Positionals extends z.ZodType, Flags extends z.ZodObject>(
     name: string,
@@ -308,14 +323,15 @@ const defineArgs = <Positionals extends z.ZodType, Flags extends z.ZodObject>(na
     if (spec.dryRun === true) {
         dryRunVerbs.push(name);
     }
+    const usage = usageWithFlags(spec.usage, spec.detail);
     return {
         name,
-        usage: spec.usage,
+        usage,
         summary: spec.summary,
         detail: spec.detail,
         flagNames: [...values, ...switches],
         dryRun: spec.dryRun === true,
-        run: (argv, call) => runArgs(name, spec.usage, spec, argv, call)
+        run: (argv, call) => runArgs(name, usage, spec, argv, call)
     };
 };
 
