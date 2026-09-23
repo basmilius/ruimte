@@ -1,4 +1,5 @@
 import type { ShikiTransformer } from 'shiki';
+import { shikiThemeOf } from '@/shell/panels/code-themes';
 
 type Highlight = (code: string, language: string, theme: string) => Promise<string>;
 
@@ -21,11 +22,11 @@ let loading: Promise<Highlight> | null = null;
 const loadHighlighter = (): Promise<Highlight> => {
     loading ??= import('shiki').then(({ bundledLanguages, codeToHtml }) => async (code, language, theme) => {
         const lang = language in bundledLanguages ? language : 'text';
-        return codeToHtml(code, { lang, theme, transformers: [DROP_LINE_BREAKS] });
+        return codeToHtml(code, { lang, theme: shikiThemeOf(theme), transformers: [DROP_LINE_BREAKS] });
     });
     return loading;
 };
 
-/* One block of code as highlighted HTML in a Shiki theme. A language nothing recognizes comes back as plain text. */
+/* One block of code as highlighted HTML in a code theme. A language nothing recognizes comes back as plain text. */
 export const highlightCode = (code: string, language: string, theme: string): Promise<string> =>
     loadHighlighter().then((highlight) => highlight(code, language, theme));

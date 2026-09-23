@@ -171,6 +171,17 @@ describe('the colors of code', () => {
         });
     });
 
+    test('keep one of our own themes for its side', () => {
+        expect(settingsFrom({ codeThemeLight: 'ruimte-light', codeThemeDark: 'ruimte-dark' })).toMatchObject({
+            codeThemeLight: 'ruimte-light',
+            codeThemeDark: 'ruimte-dark'
+        });
+        expect(settingsFrom({ codeThemeLight: 'ruimte-dark', codeThemeDark: 'ruimte-light' })).toMatchObject({
+            codeThemeLight: 'night-owl-light',
+            codeThemeDark: 'night-owl'
+        });
+    });
+
     test('drop a theme that is gone, or one made for the other side', () => {
         expect(settingsFrom({ codeThemeLight: 'retired-theme', codeThemeDark: 42 as unknown as string })).toMatchObject({
             codeThemeLight: 'night-owl-light',
@@ -182,9 +193,11 @@ describe('the colors of code', () => {
         });
     });
 
-    test('offer every bundled theme on its own side only', () => {
+    test('offer our own theme first, then every bundled theme, each on its own side only', () => {
         const light = codeThemesOf('light');
         const dark = codeThemesOf('dark');
+        expect(light[0]?.id).toBe('ruimte-light');
+        expect(dark[0]?.id).toBe('ruimte-dark');
         expect(light.map((info) => info.id)).toContain('night-owl-light');
         expect(dark.map((info) => info.id)).toContain('night-owl');
         expect(light.every((info) => info.type === 'light')).toBe(true);

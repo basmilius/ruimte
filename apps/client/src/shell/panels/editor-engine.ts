@@ -1,5 +1,6 @@
 import { type EditorEngine, loadMonacoEngine } from '@ruimte/editor';
 import { isApplePlatform } from '@/desktop/bridge';
+import { CODE_THEMES } from '@/shell/panels/code-themes';
 import { shellShortcuts } from '@/terminal/keymap';
 
 let loaded: EditorEngine | null = null;
@@ -12,7 +13,13 @@ let loaded: EditorEngine | null = null;
 export const loadEditorEngine = (): Promise<EditorEngine> => {
     const apple = isApplePlatform();
     return loadMonacoEngine({
-        highlighter: () => import('shiki').then(({ getSingletonHighlighter }) => getSingletonHighlighter()),
+        // Ours go in up front, since the editor loads a theme it has not seen by a bundled id.
+        highlighter: () =>
+            import('shiki').then(async ({ getSingletonHighlighter }) => {
+                const highlighter = await getSingletonHighlighter();
+                await highlighter.loadTheme(...CODE_THEMES);
+                return highlighter;
+            }),
         handBack: shellShortcuts(apple),
         apple
     }).then((engine) => {

@@ -1,9 +1,10 @@
 import { Fragment, memo, useContext, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import clsx from 'clsx';
-import type { BundledLanguage, BundledTheme, createHighlighter } from 'shiki/bundle/web';
+import type { BundledLanguage, BundledTheme, createHighlighter, ThemeRegistration } from 'shiki/bundle/web';
 import { IncrementalLines, type CodeToken, type Tokenize } from '@/chat/ui/code-lines';
 import { CodeStreamingContext } from '@/chat/ui/code-streaming';
 import { WHOLE_FADE_CLASS } from '@/chat/ui/rehype-fade';
+import { shikiThemeOf } from '@/shell/panels/code-themes';
 import { useCodeTheme } from '@/state/code-theme';
 
 type Highlighter = Awaited<ReturnType<typeof createHighlighter>>;
@@ -54,7 +55,7 @@ const loadTheme = (theme: string): Promise<void> => {
     let load = themeLoads.get(theme);
     if (!load) {
         load = loadHighlighter().then(async (loaded) => {
-            await loaded.loadTheme(theme as BundledTheme);
+            await loaded.loadTheme(shikiThemeOf(theme) as BundledTheme | ThemeRegistration);
             loadedThemes.add(theme);
         });
         themeLoads.set(theme, load);

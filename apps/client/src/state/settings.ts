@@ -5,6 +5,7 @@ import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@/format/regions';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
+import { CODE_THEMES } from '@/shell/panels/code-themes';
 
 const STORAGE_KEY = 'ruimte.settings';
 
@@ -35,10 +36,19 @@ export const chatStreamingFrom = (stored: unknown): ChatStreamingMode => {
     return CHAT_STREAMING_MODES.find((mode) => mode === stored) ?? 'words';
 };
 
-/* The Shiki themes code can be drawn in under the app's light or dark, in Shiki's own order. */
-export const codeThemesOf = (mode: 'light' | 'dark'): typeof bundledThemesInfo => bundledThemesInfo.filter((info) => info.type === mode);
+export interface CodeThemeInfo {
+    readonly id: string;
+    readonly displayName: string;
+    readonly type: 'light' | 'dark';
+}
 
-/* A stored Shiki theme id, if Shiki still bundles it as a theme for that mode. */
+/* The themes code can be drawn in under the app's light or dark: ours first, then Shiki's in its own order. */
+export const codeThemesOf = (mode: 'light' | 'dark'): readonly CodeThemeInfo[] => [
+    ...CODE_THEMES.filter((theme) => theme.type === mode).map(({ name, displayName, type }) => ({ id: name, displayName, type })),
+    ...bundledThemesInfo.filter((info) => info.type === mode)
+];
+
+/* A stored code theme id, if it is still one of ours or one Shiki bundles for that mode. */
 const codeThemeFrom = (stored: unknown, mode: 'light' | 'dark', fallback: string): string =>
     codeThemesOf(mode).find((info) => info.id === stored)?.id ?? fallback;
 
