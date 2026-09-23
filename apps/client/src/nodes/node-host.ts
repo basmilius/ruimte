@@ -1,16 +1,18 @@
 import { useEffect, useMemo } from 'react';
 import {
+    isCanvasView,
     isSessionView,
     type AgentKind,
     type CanvasNodeKind,
     type DeviceReference,
     type NodeTitleSource,
+    type ProjectNode,
     type ProjectView,
     type RuntimeMode
 } from '@ruimte/contracts';
 import { deleteNodesAction, deleteViewAction } from '@/actions/client-actions';
 import { suggestedTitleFor } from '@/chat/title';
-import { canvasOfNode, DEFAULT_TITLES, useCanvas, type CanvasNode } from '@/state/canvas';
+import { canvasOfNode, DEFAULT_TITLES, useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
 import { providersOf } from '@/state/providers';
@@ -38,7 +40,7 @@ export interface NodeHost {
     onCanvas: boolean;
 }
 
-const hostOfNode = (node: CanvasNode): NodeHost => ({
+const hostOfNode = (node: ProjectNode): NodeHost => ({
     id: node.id,
     kind: node.kind,
     title: node.title,
@@ -133,12 +135,18 @@ export const automaticTitleOf = (host: NodeHost): string => {
  * its kind starts with and nothing has named it again, so its own source takes over once more, which
  * is the page's title for a browser and the next prompt for a chat.
  */
-export const resetTitle = (id: string): void => {
+export const resetTitle = (id: string, viewId?: string): void => {
     const host = readNodeHost(id);
-    if (!host) {
+    if (host) {
+        renameHost(id, automaticTitleOf(host), null);
         return;
     }
-    renameHost(id, automaticTitleOf(host), null);
+    // A node on a canvas in no cell lives only in its stored view, which the sidebar still lists.
+    const view = viewId === undefined ? undefined : useDocument.getState().views.find((each) => each.id === viewId);
+    const stored = view && isCanvasView(view) ? view.nodes.find((node) => node.id === id) : undefined;
+    if (view && stored) {
+        useDocument.getState().renameNodeOnView(view.id, id, automaticTitleOf(hostOfNode(stored)), null);
+    }
 };
 
 /* Closing a body: the node leaves its canvas, or the view leaves the project. */

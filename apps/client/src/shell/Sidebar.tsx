@@ -211,7 +211,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                         if (next) {
                             renameNodeAction(row.viewId, node.id, next);
                         } else {
-                            resetTitle(node.id);
+                            resetTitle(node.id, row.viewId);
                         }
                         setRenaming(false);
                     }}
