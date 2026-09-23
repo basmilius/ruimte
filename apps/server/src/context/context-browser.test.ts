@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { BROWSER_TEXT_MAX_CHARS } from '../browser/manager.ts';
+import { BROWSER_TEXT_MAX_CHARS } from '@ruimte/contracts';
 import { renderPage } from './context-browser.ts';
 
 describe('renderPage', () => {

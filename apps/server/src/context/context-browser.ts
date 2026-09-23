@@ -1,4 +1,4 @@
-import { BROWSER_TEXT_MAX_CHARS } from '../browser/manager.ts';
+import { BROWSER_TEXT_MAX_CHARS } from '@ruimte/contracts';
 
 /*
  * A browser as an agent reads it: the address at the top, because that is where it starts, and what
@@ -7,13 +7,16 @@ import { BROWSER_TEXT_MAX_CHARS } from '../browser/manager.ts';
  * another visit and a page behind a login would answer something else entirely. A `tail` counts the
  * lines of the page and leaves the address standing, the way a drawing's tail leaves its picture out.
  */
-export const renderPage = (url: string, text: string | null, tail: number | null = null): string => {
+export const renderPage = (url: string, text: string | null, tail: number | null = null, open: boolean = text !== null): string => {
     if (url === '') {
         return ['# Page', '', 'This node has no address yet, so there is nothing to read. `ruimte-context browser go <id> --url <address>` gives it one.'].join(
             '\n'
         );
     }
     const heading = `# Page: ${url}`;
+    if (text === null && open) {
+        return [heading, '', 'The page is open, but it did not give its text; `ruimte-context browser shot <id>` shows what is on it.'].join('\n');
+    }
     if (text === null) {
         return [heading, '', 'No page of this node is open on this machine, so its address is all that can be read here.'].join('\n');
     }

@@ -9,8 +9,16 @@ export interface DriveOutcome {
     state: BrowserPageState | null;
     /* The png of a shot. */
     image?: Uint8Array;
+    /* What a text ask read off the page. */
+    text?: string;
     /* Why it did not happen, in the browser's own words. */
     error?: string;
+}
+
+/* A page as an agent reads it: where it is now and what it says, null text when it could not be read. */
+export interface PageReading {
+    url: string;
+    text: string | null;
 }
 
 export interface ShotOutcome {
@@ -45,10 +53,10 @@ const pageState = (info: BrowserInfo): BrowserPageState => ({
  */
 export class BrowserDriver {
     private readonly home: string;
-    private readonly manager: Pick<BrowserManager, 'drive' | 'capture'>;
+    private readonly manager: Pick<BrowserManager, 'drive' | 'capture' | 'text'>;
     private readonly pages: Pick<BrowserPages, 'drive' | 'state'>;
 
-    constructor(home: string, manager: Pick<BrowserManager, 'drive' | 'capture'>, pages: Pick<BrowserPages, 'drive' | 'state'>) {
+    constructor(home: string, manager: Pick<BrowserManager, 'drive' | 'capture' | 'text'>, pages: Pick<BrowserPages, 'drive' | 'state'>) {
         this.home = home;
         this.manager = manager;
         this.pages = pages;
@@ -66,6 +74,19 @@ export class BrowserDriver {
             return held === null ? null : { state: held };
         }
         return this.pages.drive(browserId, action);
+    }
+
+    /* What the page says wherever it is open, and the address it is at now; null when nobody has it open. */
+    async read(browserId: string): Promise<PageReading | null> {
+        const own = await this.manager.drive(browserId, { kind: 'state' });
+        if (own !== null) {
+            return { url: own.url, text: await this.manager.text(browserId) };
+        }
+        const outcome = await this.pages.drive(browserId, { kind: 'text' });
+        if (outcome === null) {
+            return null;
+        }
+        return { url: outcome.state?.url ?? '', text: outcome.text?.trim() ?? null };
     }
 
     /* The path of a png of that page, written under the machine's own folder; null when nobody has the page open. */

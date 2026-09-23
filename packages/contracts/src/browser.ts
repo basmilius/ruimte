@@ -122,7 +122,9 @@ export const BrowserDriveActionSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('forward') }),
     z.object({ kind: z.literal('reload'), ignoreCache: z.boolean().optional() }),
     z.object({ kind: z.literal('stop') }),
-    z.object({ kind: z.literal('shot') })
+    z.object({ kind: z.literal('shot') }),
+    /* What the page says; a client from before this leaves it unanswered, so the page reads without its text. */
+    z.object({ kind: z.literal('text') })
 ]);
 
 /*
@@ -150,6 +152,12 @@ export const BrowserDriveEventSchema = z.object({
     action: BrowserDriveActionSchema
 });
 
+export const BROWSER_TEXT_MAX_CHARS = 40_000;
+
+/* What a page says as a reader sees it, the same on the daemon's own page and in a client's <webview>:
+   `innerText` leaves out what is hidden and keeps the line breaks the layout makes. */
+export const PAGE_TEXT_EXPRESSION = `(document.body ? document.body.innerText : '').slice(0, ${BROWSER_TEXT_MAX_CHARS})`;
+
 /* A png of the page, base64, which is only ever the answer to a shot. */
 const BrowserShotSchema = z.string().max(16 * 1024 * 1024);
 
@@ -157,6 +165,8 @@ export const BrowserDriveResultPayloadSchema = z.object({
     askId: z.string().min(1).max(128),
     state: BrowserPageStateSchema.optional(),
     image: BrowserShotSchema.optional(),
+    /* The visible text of the page, which is only ever the answer to a text ask. */
+    text: z.string().max(BROWSER_TEXT_MAX_CHARS).optional(),
     /* Why it did not happen; absent when it did. */
     error: z.string().max(1024).optional()
 });

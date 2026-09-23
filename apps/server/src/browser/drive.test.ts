@@ -40,7 +40,8 @@ const driverOf = (): BrowserDriver =>
                 driven.push(action);
                 return ownPage;
             },
-            capture: async () => (ownPage === null ? null : new Uint8Array([1, 2, 3]))
+            capture: async () => (ownPage === null ? null : new Uint8Array([1, 2, 3])),
+            text: async () => (ownPage === null ? null : 'Own page')
         },
         {
             drive: async (_browserId, action) => {
@@ -88,6 +89,24 @@ describe('BrowserDriver', () => {
         expect(await driverOf().drive('page-1', { kind: 'state' })).toBeNull();
         expect(await driverOf().drive('page-1', { kind: 'go', url: 'https://example.com' })).toBeNull();
         expect(await driverOf().shot('page-1')).toBeNull();
+    });
+
+    test('a page is read where it is open, under the address it is at now', async () => {
+        ownPage = infoOf('page-1');
+        expect(await driverOf().read('page-1')).toEqual({ url: 'https://example.com', text: 'Own page' });
+        expect(asked).toEqual([]);
+
+        ownPage = null;
+        answer = { state: stateOf('page-1'), text: '  Client page\n' };
+        expect(await driverOf().read('page-1')).toEqual({ url: 'https://client.example', text: 'Client page' });
+        expect(asked).toEqual([{ kind: 'text' }]);
+    });
+
+    test('a held page that gives no text is open and unread, and one nobody holds is a null', async () => {
+        answer = { state: stateOf('page-1'), error: 'The page did not answer in time' };
+        expect(await driverOf().read('page-1')).toEqual({ url: 'https://client.example', text: null });
+        answer = null;
+        expect(await driverOf().read('page-1')).toBeNull();
     });
 
     test('a shot is written under the machine folder, outside any project', async () => {

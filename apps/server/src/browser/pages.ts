@@ -80,6 +80,7 @@ export class BrowserPages {
         return {
             state: result.state ?? this.state(browserId),
             ...(result.image === undefined ? {} : { image: Buffer.from(result.image, 'base64') }),
+            ...(result.text === undefined ? {} : { text: result.text }),
             ...(result.error === undefined ? {} : { error: result.error })
         };
     }

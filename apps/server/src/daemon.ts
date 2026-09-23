@@ -204,7 +204,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }),
         terminalText: (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null),
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
-        browserText: (browserId) => browsers.text(browserId),
+        browserPage: (browserId) => browserDriver.read(browserId),
         devices: () => devices.list(),
         chatPlans: (chatId) => plans.read(chatId),
         subagentItems: (chatId, toolUseId) => chats.subagentItems(chatId, toolUseId),
@@ -283,6 +283,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const browsers = BrowserManager.withBun(config.home, liveStreams);
     // The pages the clients draw themselves, which this machine can only reach by asking them.
     const browserPages = new BrowserPages();
+    const browserDriver = new BrowserDriver(config.home, browsers, browserPages);
     const deviceHelperCommand = compiled ? [process.execPath, 'device-helper'] : [process.execPath, resolve(import.meta.dir, 'main.ts'), 'device-helper'];
     const physicalStreamSource = createPhysicalStreamSourceFactory(physicalStreamHelperPath(compiled, process.execPath, resolve(import.meta.dir, '../..')));
     // A development checkout fetches the pinned screen server on first use; a build carries it.
@@ -380,7 +381,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         claimWorktree: (folder: string, path: string, nodeId: string) => worktrees.claim(folder, path, nodeId),
         removeWorktree: (folder: string, path: string) => worktrees.remove(folder, path),
         worktrees: worktreeHost(worktrees, merges),
-        browsers: new BrowserDriver(config.home, browsers, browserPages),
+        browsers: browserDriver,
         agents: agentStates({ outbox, lineage, chats, sessions: manager }),
         context: {
             list: (targetId: string) => context.list(targetId),

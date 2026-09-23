@@ -6421,6 +6421,10 @@
         "type": "string",
         "maxLength": 16777216
       },
+      "text": {
+        "type": "string",
+        "maxLength": 40000
+      },
       "error": {
         "type": "string",
         "maxLength": 1024
@@ -31448,6 +31452,18 @@
               "kind": {
                 "type": "string",
                 "const": "shot"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "text"
               }
             },
             "required": [

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import {
     BROWSER_FAVICON_MAX_BYTES,
     BROWSER_FAVICON_MAX_DATA_URL_LENGTH,
+    PAGE_TEXT_EXPRESSION,
     type BrowserDriveAction,
     type BrowserFrame,
     type BrowserInfo,
@@ -75,11 +76,6 @@ const normalizeUrl = (input: string): string => {
 };
 
 /* A page the length of a book would push everything else out of an agent's window; an article fits well inside this. */
-export const BROWSER_TEXT_MAX_CHARS = 40_000;
-
-/* What the page says, as a reader sees it: `innerText` leaves out what is hidden and keeps the line breaks the layout makes. */
-const PAGE_TEXT_EXPRESSION = `(document.body ? document.body.innerText : '').slice(0, ${BROWSER_TEXT_MAX_CHARS})`;
-
 const FAVICON_DATA_URL = /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/]+=*$/i;
 const LOCATION_EXPRESSION = 'location.href';
 const USER_AGENT_EXPRESSION = 'navigator.userAgent';

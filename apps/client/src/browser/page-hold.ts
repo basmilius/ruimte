@@ -82,6 +82,12 @@ const answer = async (endpointId: string, event: BrowserDriveEvent): Promise<Bro
             ? { askId: event.askId, state: state(), error: 'This client could not photograph the page' }
             : { askId: event.askId, state: state(), image: base64(image) };
     }
+    if (action.kind === 'text') {
+        const text = await browserRegistry.text(key);
+        return text === null
+            ? { askId: event.askId, state: state(), error: 'This client could not read the text of the page' }
+            : { askId: event.askId, state: state(), text };
+    }
     if (action.kind === 'go') {
         browserRegistry.navigate(key, action.url);
     } else if (action.kind === 'back') {

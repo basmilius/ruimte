@@ -89,7 +89,12 @@ const store = new ContextStore({
     sources: (targetId) => linked.get(targetId) ?? [],
     terminalText: async (id) => (id === 'term' ? `${Array.from({ length: 2500 }, (_, i) => `line ${i}`).join('\n')}` : null),
     chatItems: (id) => (id === 'chat' ? items : null),
-    browserText: async (id) => (id === 'page' ? 'Release notes\n\nEverything is new.' : null),
+    browserPage: async (id) => {
+        if (id === 'page') {
+            return { url: 'https://ruimte.app/notes', text: 'Release notes\n\nEverything is new.' };
+        }
+        return id === 'moved' ? { url: 'https://ruimte.app/now', text: null } : null;
+    },
     devices: async () => [phone],
     drawingElements: async (id) => (id === 'view-1' ? drawing : null),
     // Only the agent of the project that holds it reads the diagram, which is what the daemon's reader does too.
@@ -122,6 +127,13 @@ describe('ContextStore', () => {
         const read = (await store.read('agent', 'closed')) ?? '';
         expect(read).toContain('https://ruimte.app');
         expect(read).toContain('No page of this node is open on this machine');
+    });
+
+    test('a browser open elsewhere reads under the address it is at now, and says when it gave no text', async () => {
+        linked.set('agent', [{ id: 'moved', kind: 'browser', title: 'Docs', text: 'https://ruimte.app/start' }]);
+        const read = (await store.read('agent', 'moved')) ?? '';
+        expect(read.split('\n')[0]).toBe('# Page: https://ruimte.app/now');
+        expect(read).toContain('The page is open, but it did not give its text');
     });
 
     test('a device is looked up among the devices this machine has, ids and all', async () => {

@@ -1,3 +1,4 @@
+import { PAGE_TEXT_EXPRESSION } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { feedWheel, IDLE_SWIPE, settleSwipe, SWIPE_GESTURE_GAP_MS, type SwipeOutcome, type SwipeState, type WheelSample } from '@/browser/swipe';
 import { useSwipeOverlay } from '@/browser/swipe-overlay';
@@ -111,6 +112,7 @@ interface WebviewElement extends HTMLElement {
     loadURL(url: string): Promise<void>;
     getWebContentsId(): number;
     send(channel: string, ...args: unknown[]): void;
+    executeJavaScript(code: string): Promise<unknown>;
 }
 
 /* What the guest preload sends to its element (`apps/desktop/src/guest.ts`). */
@@ -281,6 +283,21 @@ class BrowserRegistry {
             return await shell.capturePage(element.getWebContentsId());
         } catch {
             // The guest is not attached yet, so there is nothing to photograph.
+            return null;
+        }
+    }
+
+    /* What the page says as a reader sees it, cut where the daemon cuts a page it runs itself; null when the guest cannot answer. */
+    async text(key: string): Promise<string | null> {
+        const element = this.elements.get(key);
+        if (!element) {
+            return null;
+        }
+        try {
+            const value = await element.executeJavaScript(PAGE_TEXT_EXPRESSION);
+            return typeof value === 'string' ? value.trim() : null;
+        } catch {
+            // The guest is not attached yet, or the page went away while it was asked.
             return null;
         }
     }
