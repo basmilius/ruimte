@@ -558,7 +558,7 @@ describe('help', () => {
         expect(lines.some((line) => line.includes('--text - takes the body from stdin'))).toBe(true);
         // What the line into a new node means, which differs per kind and is on no canvas to read.
         expect(lines.some((line) => line.startsWith('edge\t') && line.includes('that line is context'))).toBe(true);
-        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('an origin line'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('lets you read that node'))).toBe(true);
         expect(lines.some((line) => line.startsWith('edge\t') && line.includes('the edge column shows -'))).toBe(true);
         expect(lines.some((line) => line.startsWith('flag\t--dry-run\t') && line.includes('<from> -> <new node>'))).toBe(true);
     });
