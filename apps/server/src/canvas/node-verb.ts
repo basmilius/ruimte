@@ -159,7 +159,7 @@ export const nodeListAction = defineActionVerb('node', {
         'prints\tid\tkind\ttitle\tx\ty\tw\th\tgroup\tone line per node, rounded to whole pixels',
         'units\tx and y are the top left corner of the node in canvas pixels, w and h its size; the canvas has no edges and x or y may be negative',
         'where\tWithout --view the view you are in, when that is a canvas; from any other view, name one with --view',
-        'self\tThe row after the nodes is not a node: it is self and your own id, or self and a dash when none of these nodes is you',
+        'self\tThe row after the nodes is not a node: it is self and your own id, or self, a dash and a sentence saying so when none of these nodes is you',
         REVISION_ROW,
         'self\tA terminal session also carries its own id in $RUIMTE_SESSION_ID; a chat backend is given none, which is what the self row is for',
         'groups\tA group is a row of kind group; its id is what --group takes on agent, and the group column names the frame a node stands in, empty on the canvas itself',

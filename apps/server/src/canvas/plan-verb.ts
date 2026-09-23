@@ -149,7 +149,7 @@ const newSub = defineActionVerb('plan', {
     ],
     detail: [
         "stdin\tThe plan as JSON, piped in or as a heredoc: ruimte-context plan new <<'EOF' ... EOF",
-        'prints\tplan\tid\trev 0\tkind\ttitle\tthe plan made; dry run instead of plan with --dry-run',
+        'prints\tplan\tid\trev 0\tkind\ttitle\tthe plan made; dry-run instead of plan with --dry-run',
         'prints\titem\tid\ttype\tunder\ttitle\tone line per item in document order; under is the section or step it stands in, - at the top',
         'prints\texample\ta command that checks off the first step',
         'prints\tids\ta reminder that ids are for commands, never for the person',
@@ -190,7 +190,7 @@ const newSub = defineActionVerb('plan', {
         );
         const firstStep = allSteps(plan.items).find((step) => !isParentStep(step));
         return [
-            `${dryRun ? 'dry run' : 'plan'}\t${plan.id}\trev ${plan.rev}\t${plan.meta.kind}\t${field(plan.meta.title)}`,
+            `${dryRun ? 'dry-run' : 'plan'}\t${plan.id}\trev ${plan.rev}\t${plan.meta.kind}\t${field(plan.meta.title)}`,
             ...itemLines(plan.items),
             firstStep
                 ? `example\truimte-context plan set ${firstStep.id} --state done`

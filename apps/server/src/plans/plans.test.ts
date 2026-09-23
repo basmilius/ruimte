@@ -131,7 +131,7 @@ describe('plan verbs', () => {
         const daemon = await boot();
         const events = listen(daemon);
         const dry = await runVerb(daemon, 'chat-lead', 'plan', ['new', '--dry-run', `--document=${DOCUMENT}`]);
-        expect(dry[0]).toStartWith('dry run\tplan-');
+        expect(dry[0]).toStartWith('dry-run\tplan-');
         expect(await daemon.plans.read('chat-lead')).toEqual([]);
         expect(events).toEqual([]);
 
