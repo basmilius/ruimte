@@ -18,6 +18,7 @@ const phone: DeviceInfo = {
 class FakeTransport implements Transport {
     status: TransportStatus = 'open';
     streamId = 'device:stream-1';
+    unavailable = [{ platform: 'android' as const, code: 'adb-unavailable', message: 'adb was not found' }];
     readonly calls: Array<{ type: RequestType; payload: unknown }> = [];
     private readonly eventHandlers = new Map<EventType, Set<(payload: unknown) => void>>();
     private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
@@ -25,7 +26,7 @@ class FakeTransport implements Transport {
     async request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
         this.calls.push({ type, payload });
         if (type === 'device.list') {
-            return { devices: [phone] } as RequestMap[T]['result'];
+            return { devices: [phone], unavailable: this.unavailable } as RequestMap[T]['result'];
         }
         if (type === 'device.open') {
             return { ...phone, streamId: this.streamId } as RequestMap[T]['result'];
@@ -83,6 +84,7 @@ describe('DeviceClient', () => {
 
         await client.refresh();
         expect(useDevices.getState().byEndpoint['machine-1']?.devices).toEqual([phone]);
+        expect(useDevices.getState().byEndpoint['machine-1']?.unavailable).toEqual(transport.unavailable);
         await client.shutdown(phone);
         expect(useDevices.getState().byEndpoint['machine-1']?.devices[0]?.state).toBe('shutdown');
         client.dispose();
@@ -151,7 +153,7 @@ describe('DeviceClient', () => {
         await Promise.resolve();
         expect(transport.calls).toContainEqual({
             type: 'device.open',
-            payload: { backendId: 'simctl', platform: 'ios', deviceId: 'phone-1', stream: 'events' }
+            payload: { backendId: 'simctl', platform: 'ios', deviceId: 'phone-1', stream: 'events', formats: ['jpeg', 'hevc', 'h264'] }
         });
         stop();
         client.dispose();

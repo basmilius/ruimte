@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { CircleAlert, LoaderCircle } from 'lucide-react';
-import { HEVC_STREAM_CONTENT_TYPE, LiveStreamDecoder, LIVE_STREAM_CONTENT_TYPE, type DeviceInfo, type DeviceInput } from '@ruimte/contracts';
+import { LiveStreamDecoder, liveStreamFormatOf, type DeviceInfo, type DeviceInput } from '@ruimte/contracts';
 import { credentialFor } from '@/endpoint/credentials';
 import {
     approachGestureTotal,
@@ -13,7 +13,7 @@ import {
     positionInContainedFrame,
     trackpadGesturePoint
 } from '@/devices/device-layout';
-import { hevcFrameDecoder } from '@/devices/hevc-decoder';
+import { videoFrameDecoder } from '@/devices/video-decoder';
 import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
@@ -79,7 +79,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                     failed: setStreamError,
                     undrawable: () => i18next.t('machines:device.stream.frameFailed')
                 },
-                hevcFrameDecoder
+                videoFrameDecoder
             )
     );
 
@@ -131,9 +131,8 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                                 : i18next.t('machines:device.stream.httpStatus', { status: response.status })
                         );
                     }
-                    const contentType = response.headers.get('content-type') ?? '';
-                    const hevc = contentType.startsWith(HEVC_STREAM_CONTENT_TYPE.split(';')[0]!);
-                    if (!hevc && !contentType.startsWith(LIVE_STREAM_CONTENT_TYPE.split(';')[0]!)) {
+                    const format = liveStreamFormatOf(response.headers.get('content-type') ?? '');
+                    if (format === null) {
                         throw new Error(i18next.t('machines:device.stream.unknownFormat'));
                     }
                     const decoder = new LiveStreamDecoder();
@@ -144,7 +143,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                             break;
                         }
                         for (const frame of decoder.push(next.value)) {
-                            framePainter.push(hevc ? { ...frame, format: 'hevc' } : frame);
+                            framePainter.push({ ...frame, format });
                         }
                     }
                 } catch (error) {

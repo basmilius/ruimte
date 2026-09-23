@@ -1,19 +1,20 @@
 import { create } from 'zustand';
-import { deviceMatches, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
+import { deviceMatches, type DeviceInfo, type DeviceReference, type DeviceUnavailable } from '@ruimte/contracts';
 
 export interface DeviceListState {
     devices: DeviceInfo[];
+    unavailable: DeviceUnavailable[];
     loaded: boolean;
     loading: boolean;
     error: string | null;
 }
 
-export const EMPTY_DEVICE_LIST: DeviceListState = { devices: [], loaded: false, loading: false, error: null };
+export const EMPTY_DEVICE_LIST: DeviceListState = { devices: [], unavailable: [], loaded: false, loading: false, error: null };
 
 interface DevicesState {
     byEndpoint: Record<string, DeviceListState>;
     setLoading(endpointId: string): void;
-    receive(endpointId: string, devices: DeviceInfo[]): void;
+    receive(endpointId: string, devices: DeviceInfo[], unavailable: DeviceUnavailable[]): void;
     fail(endpointId: string, error: string): void;
     patch(endpointId: string, device: DeviceInfo): void;
     forget(endpointId: string): void;
@@ -25,8 +26,8 @@ export const useDevices = create<DevicesState>((set, get) => ({
         const current = get().byEndpoint[endpointId] ?? EMPTY_DEVICE_LIST;
         set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, loading: true, error: null } } });
     },
-    receive(endpointId, devices) {
-        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { devices, loaded: true, loading: false, error: null } } });
+    receive(endpointId, devices, unavailable) {
+        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { devices, unavailable, loaded: true, loading: false, error: null } } });
     },
     fail(endpointId, error) {
         const current = get().byEndpoint[endpointId] ?? EMPTY_DEVICE_LIST;

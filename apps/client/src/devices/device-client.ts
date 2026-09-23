@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { DeviceAction, DeviceDetail, DeviceFrame, DeviceInfo, DeviceInput, LiveStreamFrame } from '@ruimte/contracts';
+import type { DeviceAction, DeviceDetail, DeviceFrame, DeviceInfo, DeviceInput, DeviceVideoFormat, LiveStreamFrame } from '@ruimte/contracts';
 import { useDevices } from '@/devices/state';
 import { HandlerTable } from '@/transport/handler-table';
 import { MountedRegistry, type MountedEntry } from '@/transport/mounted-registry';
@@ -13,6 +13,7 @@ interface MountedDevice extends MountedEntry {
 }
 
 const DEVICE_REFRESH_MS = 1_000;
+const DRAWABLE_FORMATS: DeviceVideoFormat[] = ['jpeg', 'hevc', 'h264'];
 export type DeviceTarget = Pick<DeviceInfo, 'backendId' | 'platform' | 'deviceId'>;
 
 const keyOf = (device: Pick<DeviceInfo, 'backendId' | 'deviceId'>): string => `${device.backendId}:${device.deviceId}`;
@@ -175,8 +176,8 @@ export class DeviceClient {
             useDevices.getState().setLoading(this.endpointId);
         }
         try {
-            const { devices } = await this.transport.request('device.list', {});
-            useDevices.getState().receive(this.endpointId, devices);
+            const { devices, unavailable } = await this.transport.request('device.list', {});
+            useDevices.getState().receive(this.endpointId, devices, unavailable ?? []);
             return devices;
         } catch (error) {
             if (!isConnectionError(error)) {
@@ -189,7 +190,8 @@ export class DeviceClient {
     private async attach(mounted: MountedDevice): Promise<string> {
         const opened = await this.transport.request('device.open', {
             ...targetOf(mounted.device),
-            ...(mounted.stream === 'events' ? { stream: 'events' as const } : {})
+            ...(mounted.stream === 'events' ? { stream: 'events' as const } : {}),
+            formats: DRAWABLE_FORMATS
         });
         mounted.attached = true;
         mounted.streamId = opened.streamId;

@@ -59,18 +59,3 @@ export const pinchPoints = (center: { x: number; y: number }, spread: number): [
     { x: clamp(center.x - spread, 0, 1), y: center.y },
     { x: clamp(center.x + spread, 0, 1), y: center.y }
 ];
-
-export const hevcKeyFrame = (data: Uint8Array): boolean => {
-    for (let index = 0; index + 5 < data.byteLength; index += 1) {
-        const fourByteStart = data[index] === 0 && data[index + 1] === 0 && data[index + 2] === 0 && data[index + 3] === 1;
-        const threeByteStart = data[index] === 0 && data[index + 1] === 0 && data[index + 2] === 1;
-        const header = index + (fourByteStart ? 4 : threeByteStart ? 3 : 0);
-        if (header !== index && header < data.byteLength) {
-            const type = (data[header]! >> 1) & 0x3f;
-            if (type >= 16 && type <= 23) {
-                return true;
-            }
-        }
-    }
-    return false;
-};
