@@ -32,7 +32,8 @@ import {
 } from 'lucide-react';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { MENTION_DRAG_TYPE } from '@/chat/mentions';
-import { newFileView, showFileOnCanvas } from '@/project/views';
+import { createViewAction } from '@/actions/client-actions';
+import { showFileOnCanvas } from '@/project/views';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import {
     LOADING_NAME,
@@ -579,11 +580,14 @@ export function FilesPanel() {
                                     <>
                                         <ContextMenu.Separator className={MENU_SEPARATOR} />
                                         {onCanvas && (
-                                            <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => showFileOnCanvas(absolute))}>
+                                            <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => void showFileOnCanvas(absolute))}>
                                                 <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
                                             </ContextMenu.Item>
                                         )}
-                                        <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => newFileView(absolute))}>
+                                        <ContextMenu.Item
+                                            className="menu-item"
+                                            onClick={onMenuPath((absolute) => void createViewAction('file', { path: absolute }))}
+                                        >
                                             <Icon icon={Columns2} size={14} /> {t('file.menu.openAsView')}
                                         </ContextMenu.Item>
                                     </>

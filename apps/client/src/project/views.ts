@@ -1,27 +1,25 @@
 import i18next from 'i18next';
-import {
-    canShareView,
-    isCanvasView,
-    isDiagramView,
-    isDrawingView,
-    isOpenableView,
-    isSessionView,
-    sessionNodesOfView,
-    type AgentKind,
-    type ProjectView
-} from '@ruimte/contracts';
+import { isCanvasView, isOpenableView, isSessionView, sessionNodesOfView, type AgentKind, type ProjectView } from '@ruimte/contracts';
 import { askBeforeEndingAgents } from '@/agents/end-children';
-import { deleteViewAction, focusNodeAction, focusViewAction, freeName } from '@/actions/client-actions';
+import {
+    createNodeAction,
+    createViewAction,
+    deleteViewAction,
+    focusNodeAction,
+    focusViewAction,
+    promoteNodeAction,
+    shareViewAction,
+    showViewOnCanvasAction
+} from '@/actions/client-actions';
 import { offerDraft } from '@/chat/drafts';
-import { GRID, toWorld, type Point } from '@/canvas/math';
+import { GRID, type Point } from '@/canvas/math';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { filesOfView, nodesOfView } from '@/project/view-deletion';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
-import { viewIdsIn, type SplitDirection } from '@/shell/split';
 import { NODE_SIZE, focusedCanvas, liveCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { currentEndpointId } from '@/state/keys';
-import { useDocument, viewOfNode, type DocumentState } from '@/state/document';
+import { useDocument, viewOfNode } from '@/state/document';
 import { useProject } from '@/state/project';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
@@ -51,33 +49,6 @@ export const showViewWhenItLands = (id: string): void => {
     });
 };
 
-/*
- * The view a split puts in the cell it makes. The first one that is not standing anywhere yet, from
- * the focused view down the list and around. A view lives in at most one cell, so with every view
- * already up there is nothing to put beside them and the split does not happen.
- */
-export const freeViewFor = (state: Pick<DocumentState, 'views' | 'layout' | 'activeViewId'>): string | null => {
-    const openable = state.views.filter(isOpenableView);
-    const taken = new Set(state.layout === null ? [] : viewIdsIn(state.layout));
-    const from = openable.findIndex((view) => view.id === state.activeViewId);
-    for (let step = 1; step <= openable.length; step += 1) {
-        const view = openable[(Math.max(from, 0) + step) % openable.length]!;
-        if (!taken.has(view.id)) {
-            return view.id;
-        }
-    }
-    return null;
-};
-
-/* Splitting the focused cell, from a shortcut or from a menu. The grid decides, this picks the view. */
-export const splitFocusedCell = (direction: SplitDirection): void => {
-    const state = useDocument.getState();
-    const viewId = freeViewFor(state);
-    if (viewId !== null) {
-        state.splitFocused(direction, viewId);
-    }
-};
-
 export const revealNode = (nodeId: string): void => {
     const { views, activeViewId } = useDocument.getState();
     const view = viewOfNode(views, nodeId);
@@ -90,45 +61,22 @@ export const revealNode = (nodeId: string): void => {
     }
 };
 
-export const newSeparatorView = (): string | null => useDocument.getState().addSeparatorView();
-
 /* A heading over the rows under it. It lands with a name it can be read by, and the sidebar puts the
    caret in it at once, since a heading is nothing but what it says. */
-export const newSubheaderView = (): string | null => {
-    const id = useDocument.getState().addSubheaderView(freeName(useDocument.getState().views, 'Section'));
-    useUi.getState().setRenamingViewId(id);
-    return id;
-};
-
-/*
- * Puts a mirror of a drawing or a diagram view on the canvas that was open last. The view itself
- * stays a view of its own. The node reads the same file and opens the view on a double-click.
- */
-export const showOnCanvas = (viewId: string): string | null => {
-    const document = useDocument.getState();
-    const view = document.views.find((candidate) => candidate.id === viewId);
-    const canvasViewId = document.lastCanvasViewId ?? document.views.find(isCanvasView)?.id ?? null;
-    if (!view || !(isDrawingView(view) || isDiagramView(view)) || !canvasViewId) {
-        return null;
+export const newSubheaderView = async (): Promise<void> => {
+    const id = await createViewAction('subheader');
+    if (id !== null) {
+        useUi.getState().setRenamingViewId(id);
     }
-    showView(canvasViewId);
-    const canvas = focusedCanvas().getState();
-    const center = toWorld(canvas.camera, { x: canvas.viewport.w / 2, y: canvas.viewport.h / 2 });
-    const id = canvas.addNode(view.kind, center, { title: view.name, viewId });
-    if (id === null) {
-        return null;
-    }
-    canvas.goToNode(id);
-    return id;
 };
 
 /*
  * An empty diagram handed to an agent: the diagram goes on the canvas, a chat next to it with a line
  * from the diagram into it, and a first question in its prompt that the person finishes and sends.
  */
-export const askAgentAboutDiagram = (viewId: string): string | null => {
+export const askAgentAboutDiagram = async (viewId: string): Promise<string | null> => {
     const view = useDocument.getState().views.find((candidate) => candidate.id === viewId);
-    const mirror = showOnCanvas(viewId);
+    const mirror = await showViewOnCanvasAction(viewId);
     if (!view || mirror === null) {
         return null;
     }
@@ -162,19 +110,17 @@ const storedFilePath = (path: string): string => storedPathOf(useProject.getStat
  * A file as a node on the canvas. The path may be absolute on the daemon's machine or already
  * stored the way a node holds one; both come out the same, since shortening a stored path is a
  * no-op. `at` says where the node's middle goes, in world units, which a drop knows and a menu does
- * not. Without one it lands in the middle of the view and the camera travels to it.
+ * not. Without one it lands near the middle of the view and the camera travels to it.
  */
-export const showFileOnCanvas = (path: string, at?: Point): string | null => {
+export const showFileOnCanvas = async (path: string, at?: Point): Promise<string | null> => {
     const canvasViewId = canvasForFile();
     if (canvasViewId === null) {
         return null;
     }
     showView(canvasViewId);
-    const canvas = focusedCanvas().getState();
-    const point = at ?? toWorld(canvas.camera, { x: canvas.viewport.w / 2, y: canvas.viewport.h / 2 });
-    const id = canvas.addNode('file', point, { title: basenameOf(path), path: storedFilePath(path) });
+    const id = await createNodeAction('file', { path, ...(at === undefined ? {} : { at }) });
     if (id !== null && at === undefined) {
-        canvas.goToNode(id);
+        focusNodeAction(canvasViewId, id);
     }
     return id;
 };
@@ -188,17 +134,15 @@ export const newFileView = (path: string, opens = true): string | null => useDoc
  * line names the count, which is the one thing a person did not see coming; the titles ride along
  * with it, and a chat titles itself after its first prompt.
  */
-export const setViewShared = (viewId: string, shared: boolean): void => {
-    const document = useDocument.getState();
-    const view = document.views.find((candidate) => candidate.id === viewId);
-    if (!view || (shared && !canShareView(view))) {
+export const setViewShared = async (viewId: string, shared: boolean): Promise<void> => {
+    const done = await shareViewAction(viewId, shared);
+    if (done === null) {
         return;
     }
-    document.setShared(viewId, shared);
     useToasts.getState().show({
         kind: 'success',
-        title: i18next.t(shared ? 'shell:share.shared' : 'shell:share.private', { name: view.name }),
-        action: { label: i18next.t('common:action.undo'), run: () => useDocument.getState().setShared(viewId, !shared) }
+        title: i18next.t(shared ? 'shell:share.shared' : 'shell:share.private', { name: done.view }),
+        action: { label: i18next.t('common:action.undo'), run: done.undo }
     });
 };
 
@@ -230,21 +174,6 @@ export const openSessionInKind = (viewId: string, kind: 'chat' | 'terminal', han
     });
     useDocument.getState().moveView(id, at + 1);
     return id;
-};
-
-/* Copies a canvas, a drawing or a diagram view. What a drawing or a diagram holds is copied by the daemon, not here. */
-export const duplicateViewOf = (id: string): string | null => {
-    const source = useDocument.getState().views.find((view) => view.id === id);
-    const copyId = useDocument.getState().duplicateView(id);
-    if (copyId && source && isDrawingView(source)) {
-        // Loaded here rather than at the top. This module is the actions, and importing the clients
-        // would pull the transport into everything that only wants to know what a view holds.
-        void import('@/project').then(({ drawingClient }) => drawingClient.copy(id, copyId));
-    }
-    if (copyId && source && isDiagramView(source)) {
-        void import('@/project').then(({ diagramClient }) => diagramClient.copy(id, copyId));
-    }
-    return copyId;
 };
 
 /* The nth view, one-based, for Cmd+1 through Cmd+9. A divider is no place to go, so it is not counted. */
@@ -310,14 +239,7 @@ export const askOpenAsView = (nodeId: string): void => {
         useUi.getState().setViewDialog({ kind: 'promote', nodeId });
         return;
     }
-    useDocument.getState().openAsView(nodeId);
-};
-
-/* The other way. The view becomes a node again, on the canvas that was up last. */
-export const putOnCanvas = (viewId: string): boolean => {
-    const { views, lastCanvasViewId } = useDocument.getState();
-    const target = views.find((view) => view.id === lastCanvasViewId && isCanvasView(view)) ?? views.find(isCanvasView);
-    return target ? useDocument.getState().putOnCanvas(viewId, target.id) : false;
+    promoteNodeAction(nodeId);
 };
 
 /*

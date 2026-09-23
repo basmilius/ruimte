@@ -1,29 +1,25 @@
-import { historyAction } from '@/actions/client-actions';
-import { focusPromptStack } from '@/canvas/prompt-stack';
 import {
-    askViewSettings,
-    duplicateViewOf,
-    openSessionInKind,
-    putOnCanvas,
-    setViewShared,
-    showView,
-    splitFocusedCell,
-    stepView,
-    viewAtIndex
-} from '@/project/views';
+    clearTerminalAction,
+    closeCellAction,
+    duplicateViewAction,
+    focusCellAction,
+    historyAction,
+    placeViewOnCanvasAction,
+    splitAction
+} from '@/actions/client-actions';
+import { focusPromptStack } from '@/canvas/prompt-stack';
+import { askViewSettings, openSessionInKind, setViewShared, showView, stepView, viewAtIndex } from '@/project/views';
 import { runAppShortcut } from '@/shell/app-shortcuts';
 import { appCommands } from '@/shell/commands';
 import { activeViewFacts } from '@/shell/menu/context';
 import { GO_VIEW_PREFIX, isPaletteId, type MenuActionId } from '@/shell/menu/ids';
-import { cellCount, type SplitDirection } from '@/shell/split';
-import { useDocument } from '@/state/document';
+import type { SplitDirection } from '@/shell/split';
 import { currentEndpointId } from '@/state/keys';
 import { openReleaseNotes } from '@/state/release-notes';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
-import { sessionClient } from '@/terminal';
 
-const focusTowards = (direction: SplitDirection) => (): void => useDocument.getState().focusTowards(direction);
+const focusTowards = (direction: SplitDirection) => (): void => focusCellAction(direction);
 
 /* Runs against the view with the focus, and does nothing once it is gone. */
 const withActiveView = (run: (facts: NonNullable<ReturnType<typeof activeViewFacts>>) => void) => (): void => {
@@ -48,15 +44,10 @@ const MENU_ACTIONS: Record<MenuActionId, () => void> = {
     'edit-undo': () => historyAction('undo'),
     'edit-redo': () => historyAction('redo'),
     fullscreen: toggleFullscreen,
-    'terminal-clear': withActiveView(({ view }) => sessionClient.clear(view.id)),
-    'close-cell': () => {
-        const layout = useDocument.getState().layout;
-        if (layout !== null && cellCount(layout) > 1) {
-            useDocument.getState().closeCellAt(layout.focus);
-        }
-    },
-    'split-right': () => splitFocusedCell('right'),
-    'split-down': () => splitFocusedCell('down'),
+    'terminal-clear': withActiveView(({ view }) => clearTerminalAction(view.id)),
+    'close-cell': () => closeCellAction(),
+    'split-right': () => splitAction('right'),
+    'split-down': () => splitAction('down'),
     'panel-devices': () => useUi.getState().togglePanel('devices'),
     'panel-toggle': () => useUi.getState().togglePanel(),
     'view-previous': () => stepView(-1),
@@ -83,8 +74,8 @@ const MENU_ACTIONS: Record<MenuActionId, () => void> = {
             openSessionInKind(view.id, 'terminal', asTerminal);
         }
     }),
-    'view-duplicate': withActiveView(({ view }) => void duplicateViewOf(view.id)),
-    'view-put-on-canvas': withActiveView(({ view }) => void putOnCanvas(view.id)),
+    'view-duplicate': withActiveView(({ view }) => duplicateViewAction(view.id)),
+    'view-put-on-canvas': withActiveView(({ view }) => placeViewOnCanvasAction(view.id)),
     'view-reveal': withActiveView(({ workingFolder }) => {
         if (workingFolder !== null) {
             void transportFor(currentEndpointId())
@@ -92,7 +83,7 @@ const MENU_ACTIONS: Record<MenuActionId, () => void> = {
                 .catch(() => undefined);
         }
     }),
-    'view-share': withActiveView(({ view, shared }) => setViewShared(view.id, !shared)),
+    'view-share': withActiveView(({ view, shared }) => void setViewShared(view.id, !shared)),
     'view-settings': withActiveView(({ view }) => askViewSettings(view.id))
 };
 

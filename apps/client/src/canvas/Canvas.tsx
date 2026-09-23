@@ -18,6 +18,7 @@ import { stackingOrder } from '@/canvas/stacking';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { carriedByGroups, isNodeActive, NODE_SIZE, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
+import { createTextAction } from '@/actions/client-actions';
 import { showFileOnCanvas } from '@/project/views';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
 import { EmptyCanvas } from '@/canvas/EmptyCanvas';
@@ -539,7 +540,7 @@ export function Canvas() {
         // Several files at once are several nodes in a row, so none of them lands on top of another.
         const points = dropPoints(at, paths.length, DROP_STEP);
         for (const [index, path] of paths.entries()) {
-            showFileOnCanvas(path, points[index]!);
+            void showFileOnCanvas(path, points[index]!);
         }
     };
 
@@ -548,8 +549,7 @@ export function Canvas() {
         if (target.closest('[data-node-id]') || target.closest('[data-text-id]') || isInFloatingLayer(target)) {
             return;
         }
-        const s = canvasStore.getState();
-        s.addText(toWorld(s.camera, screenPoint(e)));
+        createTextAction(toWorld(canvasStore.getState().camera, screenPoint(e)));
     };
 
     const gridStep = GRID * 3 * camera.zoom;

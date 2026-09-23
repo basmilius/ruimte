@@ -33,7 +33,8 @@ import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { ensureMachine } from '@/endpoint/reach';
 import { openFolderOn, openProject } from '@/project/open';
-import { newFileView, revealNode, showFileOnCanvas, showView } from '@/project/views';
+import { createViewAction } from '@/actions/client-actions';
+import { revealNode, showFileOnCanvas, showView } from '@/project/views';
 import { appCommands, OPENING_COMMAND_IDS, type Command } from '@/shell/commands';
 import {
     browseBack,
@@ -492,11 +493,11 @@ export function CommandPalette() {
             }
             const absolute = absoluteOf(folder, path);
             if (filePick?.kind === 'node') {
-                showFileOnCanvas(absolute, filePick.at);
+                void showFileOnCanvas(absolute, filePick.at);
                 return;
             }
             if (filePick?.kind === 'view') {
-                newFileView(absolute);
+                void createViewAction('file', { path: absolute });
                 return;
             }
             useFiles.getState().open(absolute, useSettings.getState().filesTabLimit);

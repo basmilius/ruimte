@@ -195,6 +195,8 @@ export interface CanvasState extends CameraSlice {
     /* "Connect to..." from a menu: the line follows the pointer until a click lands on a target. */
     startLink(from: string): void;
     saveLayout(name: string): void;
+    /* A layout as it was, for an undo that brings back what a save replaced or a delete took. */
+    putLayout(layout: ProjectLayout): void;
     applyLayout(name: string): void;
     deleteLayout(name: string): void;
 
@@ -617,7 +619,10 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 nodes: Object.fromEntries(Object.values(s.nodes).map((node) => [node.id, { x: node.x, y: node.y, w: node.w, h: node.h }])),
                 texts: Object.fromEntries(Object.values(s.texts).map((text) => [text.id, { x: text.x, y: text.y }]))
             };
-            set({ layouts: [...s.layouts.filter((entry) => entry.name !== name), layout] });
+            get().putLayout(layout);
+        },
+        putLayout(layout) {
+            set((s) => ({ layouts: [...s.layouts.filter((entry) => entry.name !== layout.name), layout] }));
         },
         applyLayout(name) {
             const s = get();

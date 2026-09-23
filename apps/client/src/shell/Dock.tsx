@@ -5,13 +5,10 @@ import { Menu } from '@base-ui-components/react/menu';
 import { Check, Globe, LayoutGrid, LayoutTemplate, Lock, LockOpen, MessageSquare, Plus, Save, StickyNote, Terminal, Type, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { isCanvasView } from '@ruimte/contracts';
-import { createNodeAction, fitAction } from '@/actions/client-actions';
+import { applyLayoutAction, createNodeAction, createTextAction, deleteLayoutAction, fitAction, setLocksAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
-import { addAgentNode } from '@/agents/nodes';
-import { toWorld } from '@/canvas/math';
 import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
-import type { StoreApi } from 'zustand';
-import { useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { StatusSummary } from '@/shell/StatusSummary';
@@ -23,11 +20,6 @@ import { Separator } from '@/ui/Separator';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
 import { ZoomControls } from '@/ui/ZoomControls';
-
-const centerWorld = (store: StoreApi<CanvasState>) => {
-    const s = store.getState();
-    return toWorld(s.camera, { x: s.viewport.w / 2, y: s.viewport.h / 2 });
-};
 
 /*
  * The canvas's own controls: zoom, locks, layouts and the plus that adds a node. A view of its own
@@ -76,24 +68,24 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                 <Menu.Portal>
                     <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="start">
                         <Menu.Popup className="menu-popup">
-                            <Menu.Item className="menu-item" onClick={() => createNodeAction('terminal')}>
+                            <Menu.Item className="menu-item" onClick={() => void createNodeAction('terminal')}>
                                 <Icon icon={Terminal} size={14} /> {t('nodeKinds.terminal')} <Kbd shortcut={ADD_NODE_SHORTCUTS.terminal} />
                             </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => createNodeAction('chat')}>
+                            <Menu.Item className="menu-item" onClick={() => void createNodeAction('chat')}>
                                 <Icon icon={MessageSquare} size={14} /> {t('nodeKinds.chat')} <Kbd shortcut={ADD_NODE_SHORTCUTS.chat} />
                             </Menu.Item>
-                            <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, centerWorld(canvasStore))} />
-                            <Menu.Item className="menu-item" onClick={() => createNodeAction('browser')}>
+                            <AgentSubmenus onPick={(target, provider) => void createNodeAction(target, { provider: provider.kind })} />
+                            <Menu.Item className="menu-item" onClick={() => void createNodeAction('browser')}>
                                 <Icon icon={Globe} size={14} /> {t('nodeKinds.browser')} <Kbd shortcut={ADD_NODE_SHORTCUTS.browser} />
                             </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => createNodeAction('group')}>
+                            <Menu.Item className="menu-item" onClick={() => void createNodeAction('group')}>
                                 <Icon icon={LayoutGrid} size={14} /> {t('nodeKinds.group')} <Kbd shortcut={ADD_NODE_SHORTCUTS.group} />
                             </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => createNodeAction('note')}>
+                            <Menu.Item className="menu-item" onClick={() => void createNodeAction('note')}>
                                 <Icon icon={StickyNote} size={14} /> {t('nodeKinds.note')} <Kbd shortcut={ADD_NODE_SHORTCUTS.note} />
                             </Menu.Item>
                             <Menu.Separator className={MENU_SEPARATOR} />
-                            <Menu.Item className="menu-item" onClick={() => canvasStore.getState().addText(centerWorld(canvasStore))}>
+                            <Menu.Item className="menu-item" onClick={() => createTextAction()}>
                                 <Icon icon={Type} size={14} /> {t('nodeKinds.text')} <span className={MENU_HINT}>{t('dock.doubleClick')}</span>
                             </Menu.Item>
                         </Menu.Popup>
@@ -149,7 +141,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                                         key={key}
                                         className="menu-item"
                                         checked={locks[key]}
-                                        onCheckedChange={() => canvasStore.getState().toggleLock(key)}
+                                        onCheckedChange={() => setLocksAction(!locks[key], [key])}
                                         closeOnClick={false}
                                     >
                                         <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
@@ -164,7 +156,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                                     </Menu.CheckboxItem>
                                 ))}
                                 <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={() => canvasStore.getState().setAllLocks(!allLocked)}>
+                                <Menu.Item className="menu-item" onClick={() => setLocksAction(!allLocked)}>
                                     {allLocked ? <Icon icon={LockOpen} size={14} /> : <Icon icon={Lock} size={14} />}
                                     {allLocked ? t('dock.unlockEverything') : t('dock.lockEverything')}
                                 </Menu.Item>
@@ -186,7 +178,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                                 <div className={MENU_LABEL}>{t('dock.savedLayouts')}</div>
                                 {layouts.length === 0 && <div className="px-2.5 pb-1.5 text-xs text-text-faint">{t('dock.noLayouts')}</div>}
                                 {layouts.map((layout) => (
-                                    <Menu.Item key={layout.name} className="menu-item group" onClick={() => canvasStore.getState().applyLayout(layout.name)}>
+                                    <Menu.Item key={layout.name} className="menu-item group" onClick={() => applyLayoutAction(layout.name)}>
                                         <Icon icon={LayoutTemplate} size={14} className="text-text-faint" />
                                         <span className="truncate">{layout.name}</span>
                                         <Tooltip label={t('common:action.delete')} name>
@@ -196,7 +188,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                                                 onClick={(e) => {
                                                     // The row applies; only the corner deletes.
                                                     e.stopPropagation();
-                                                    canvasStore.getState().deleteLayout(layout.name);
+                                                    deleteLayoutAction(layout.name);
                                                 }}
                                             >
                                                 <Icon icon={X} size={14} />

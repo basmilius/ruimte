@@ -1,6 +1,6 @@
+import { createNodeAction, createViewAction } from '@/actions/client-actions';
 import { browserRegistry } from '@/browser/registry';
 import { focusedCanvas, NODE_SIZE } from '@/state/canvas';
-import { useDocument } from '@/state/document';
 import { splitKey } from '@/state/keys';
 
 // The room between a page and the one a link opened beside it, the same step a duplicate takes.
@@ -16,11 +16,9 @@ export const openLinkBeside = (url: string, webContentsId: number): void => {
     const sourceKey = browserRegistry.keyOfContents(webContentsId);
     const source = sourceKey === null ? undefined : focusedCanvas().getState().nodes[splitKey(sourceKey).id];
     if (!source) {
-        useDocument.getState().addStandaloneView({ kind: 'browser', name: url, url });
+        void createViewAction('browser', { name: url, url });
         return;
     }
     const size = NODE_SIZE.browser;
-    focusedCanvas()
-        .getState()
-        .addNode('browser', { x: source.x + source.w + BESIDE_PX + size.w / 2, y: source.y + size.h / 2 }, { url });
+    void createNodeAction('browser', { url, at: { x: source.x + source.w + BESIDE_PX + size.w / 2, y: source.y + size.h / 2 } });
 };

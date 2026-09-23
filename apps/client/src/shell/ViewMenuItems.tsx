@@ -3,21 +3,12 @@ import { Menu } from '@base-ui-components/react/menu';
 import { Copy, CornerUpRight, Frame, MessageSquare, PanelBottom, PanelRight, Settings2, Terminal, Trash, UserRoundMinus, Users, X } from 'lucide-react';
 import { canShareView, isCanvasView, type ProjectView } from '@ruimte/contracts';
 import { ForkMenuItem, useOffersFork } from '@/chat/ui/ForkMenuItem';
-import {
-    askDeleteView,
-    askViewSettings,
-    duplicateViewOf,
-    freeViewFor,
-    openSessionInKind,
-    putOnCanvas,
-    setViewShared,
-    showOnCanvas,
-    splitFocusedCell
-} from '@/project/views';
+import { closeCellAction, duplicateViewAction, placeViewOnCanvasAction, showViewOnCanvasAction, splitAction } from '@/actions/client-actions';
+import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from '@/project/views';
 import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
-import { canSplit, cellCount, type CellAt, type SplitDirection } from '@/shell/split';
+import { canSplit, cellAt, cellCount, freeViewFor, type CellAt } from '@/shell/split';
 import { useChatRow } from '@/state/chats';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
@@ -100,7 +91,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
 
             {copies && <Menu.Separator className={MENU_SEPARATOR} />}
             {drawn && (
-                <Menu.Item className="menu-item" onClick={() => duplicateViewOf(viewId)}>
+                <Menu.Item className="menu-item" onClick={() => duplicateViewAction(viewId)}>
                     <Icon icon={Copy} size={14} /> {t('sidebar.duplicate')}
                 </Menu.Item>
             )}
@@ -118,12 +109,12 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
 
             {place && <Menu.Separator className={MENU_SEPARATOR} />}
             {offerPut && (
-                <Menu.Item className="menu-item" onClick={() => putOnCanvas(viewId)}>
+                <Menu.Item className="menu-item" onClick={() => placeViewOnCanvasAction(viewId)}>
                     <Icon icon={Frame} size={14} /> {t('viewMenu.putOnCanvas')}
                 </Menu.Item>
             )}
             {offerShow && (
-                <Menu.Item className="menu-item" onClick={() => showOnCanvas(viewId)}>
+                <Menu.Item className="menu-item" onClick={() => void showViewOnCanvasAction(viewId)}>
                     <Icon icon={Frame} size={14} /> {t('viewMenu.showOnCanvas')}
                 </Menu.Item>
             )}
@@ -139,7 +130,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
             {offerShare && (
                 <>
                     <Menu.Separator className={MENU_SEPARATOR} />
-                    <Menu.Item className="menu-item" onClick={() => setViewShared(viewId, !shared)}>
+                    <Menu.Item className="menu-item" onClick={() => void setViewShared(viewId, !shared)}>
                         <Icon icon={shared ? UserRoundMinus : Users} size={14} /> {t(shared ? 'share.stop' : 'share.start')}
                     </Menu.Item>
                 </>
@@ -167,15 +158,16 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
     const free = useDocument(freeViewFor);
     const cell = at ?? layout?.focus ?? null;
     const closable = layout !== null && cellCount(layout) > 1;
-    const room = (direction: SplitDirection): boolean => layout !== null && free !== null && cell !== null && canSplit(layout, cell, direction, free);
+    const standing = layout !== null && cell !== null ? (cellAt(layout, cell)?.viewId ?? null) : null;
+    const room = (direction: 'right' | 'down'): boolean => layout !== null && free !== null && cell !== null && canSplit(layout, cell, direction, free);
     if (!room('right') && !room('down') && !closable) {
         return null;
     }
-    const split = (direction: SplitDirection): void => {
+    const split = (direction: 'right' | 'down'): void => {
         if (at !== undefined) {
             useDocument.getState().focusCellAt(at);
         }
-        splitFocusedCell(direction);
+        splitAction(direction);
     };
     return (
         <>
@@ -189,8 +181,8 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
                     <Icon icon={PanelBottom} size={14} /> {t('viewMenu.splitDown')} <Kbd shortcut={CANVAS_SHORTCUTS.splitDown} />
                 </Menu.Item>
             )}
-            {closable && cell !== null && (
-                <Menu.Item className="menu-item" onClick={() => useDocument.getState().closeCellAt(cell)}>
+            {closable && standing !== null && (
+                <Menu.Item className="menu-item" onClick={() => closeCellAction(standing)}>
                     <Icon icon={X} size={14} /> {t('cellToolbar.closeCell')} <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
                 </Menu.Item>
             )}

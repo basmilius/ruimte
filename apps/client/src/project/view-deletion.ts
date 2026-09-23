@@ -1,4 +1,4 @@
-import { isCanvasView, isFileView, isSessionView, resolveStoredPath, sessionNodesOfView, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isFileView, isSessionView, resolveStoredPath, sessionNodesOfView, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { agentsEndedBy } from '@/agents/end-children';
 import { nodeWorking } from '@/state/agent-work';
 import { liveCanvas } from '@/state/canvas';
@@ -23,15 +23,17 @@ export const nodesOfView = (view: ProjectView): (StatusOf & { title: string })[]
     return canvas === null ? view.nodes : canvas.order.map((id) => canvas.nodes[id]!);
 };
 
+const resolved = (stored: readonly string[], folder: string | null): string[] => stored.flatMap((path) => resolveStoredPath(folder, path) ?? []);
+
+const filesOfNodes = (nodes: readonly ProjectNode[], folder: string | null): string[] =>
+    resolved(
+        nodes.flatMap((node) => (node.kind === 'file' && node.path ? [node.path] : [])),
+        folder
+    );
+
 /* The files a view shows: itself for a file view, its file nodes for a canvas. */
-export const filesOfView = (view: ProjectView, folder: string | null): string[] => {
-    const stored = isFileView(view)
-        ? [view.path]
-        : isCanvasView(view)
-          ? view.nodes.flatMap((node) => (node.kind === 'file' && node.path ? [node.path] : []))
-          : [];
-    return stored.flatMap((path) => resolveStoredPath(folder, path) ?? []);
-};
+export const filesOfView = (view: ProjectView, folder: string | null): string[] =>
+    isFileView(view) ? resolved([view.path], folder) : isCanvasView(view) ? filesOfNodes(view.nodes, folder) : [];
 
 /* What deleting a view reaches beyond the document: the drafts of its files and the agents on the machine. */
 export interface ViewDeletionMachine {
@@ -74,23 +76,52 @@ const titleOfNode = (views: readonly ProjectView[], nodeId: string): string | nu
     return null;
 };
 
-export const unsavedFilesOf = (view: ProjectView, machine: ViewDeletionMachine): string[] =>
-    [...new Set(filesOfView(view, machine.folder()))].filter((path) => machine.isUnsaved(path));
+const unsavedOf = (files: readonly string[], machine: ViewDeletionMachine): string[] => [...new Set(files)].filter((path) => machine.isUnsaved(path));
 
-/* `view` is the exported copy, so a canvas on screen is counted with what its editor holds now. */
-export const viewDeletionFacts = async (view: ProjectView, views: readonly ProjectView[], machine: ViewDeletionMachine): Promise<ViewDeletionFacts> => {
-    const working = nodesOfView(view).filter((node) => machine.working(node));
-    const ending = await machine.endedBy(sessionNodesOfView(view).map((node) => node.id));
+/* What a delete of these nodes, or of a view holding them, reaches beyond the document. */
+const deletionFacts = async (
+    nodes: readonly (StatusOf & { title: string })[],
+    sessions: readonly string[],
+    files: readonly string[],
+    views: readonly ProjectView[],
+    machine: ViewDeletionMachine
+): Promise<ViewDeletionFacts> => {
+    const ending = await machine.endedBy(sessions);
     return {
-        unsaved: unsavedFilesOf(view, machine),
-        working: working.map((node) => node.title),
+        unsaved: unsavedOf(files, machine),
+        working: nodes.filter((node) => machine.working(node)).map((node) => node.title),
         ending: ending.map((nodeId) => titleOfNode(views, nodeId))
     };
 };
 
-/* Saves what the view shows with unsaved changes and resolves the files that did not save. */
-export const saveViewFiles = async (view: ProjectView, machine: ViewDeletionMachine): Promise<string[]> => {
-    const unsaved = unsavedFilesOf(view, machine);
+/* `view` is the exported copy, so a canvas on screen is counted with what its editor holds now. */
+export const viewDeletionFacts = (view: ProjectView, views: readonly ProjectView[], machine: ViewDeletionMachine): Promise<ViewDeletionFacts> =>
+    deletionFacts(
+        nodesOfView(view),
+        sessionNodesOfView(view).map((node) => node.id),
+        filesOfView(view, machine.folder()),
+        views,
+        machine
+    );
+
+/* `nodes` are the ones that go, a collapsed group's hidden members included. */
+export const nodeDeletionFacts = (nodes: readonly ProjectNode[], views: readonly ProjectView[], machine: ViewDeletionMachine): Promise<ViewDeletionFacts> =>
+    deletionFacts(
+        nodes,
+        nodes.flatMap((node) => (node.kind === 'chat' || node.kind === 'terminal' ? [node.id] : [])),
+        filesOfNodes(nodes, machine.folder()),
+        views,
+        machine
+    );
+
+/* Saves what is unsaved among these files and resolves the ones that did not save. */
+const saveFiles = async (files: readonly string[], machine: ViewDeletionMachine): Promise<string[]> => {
+    const unsaved = unsavedOf(files, machine);
     const saved = await Promise.all(unsaved.map((path) => machine.save(path)));
     return unsaved.filter((_path, index) => !saved[index]);
 };
+
+export const saveViewFiles = (view: ProjectView, machine: ViewDeletionMachine): Promise<string[]> => saveFiles(filesOfView(view, machine.folder()), machine);
+
+export const saveNodeFiles = (nodes: readonly ProjectNode[], machine: ViewDeletionMachine): Promise<string[]> =>
+    saveFiles(filesOfNodes(nodes, machine.folder()), machine);

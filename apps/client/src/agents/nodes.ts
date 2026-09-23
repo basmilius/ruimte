@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import type { ProviderInfo } from '@ruimte/contracts';
 import type { Point } from '@/canvas/math';
 import { readChatPreferences } from '@/chat/preferences';
-import { focusedCanvas } from '@/state/canvas';
+import { focusedCanvas, type AddNodeOptions } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 
 // The two kinds of node an agent CLI can live in; every menu offers a provider under one of them.
@@ -11,27 +11,25 @@ export type AgentTarget = 'chat' | 'terminal';
 export const agentTargetLabel = (target: AgentTarget): string => i18next.t(`agents:target.${target}`);
 
 /*
- * One agent node at a point, titled with the catalog name. A terminal agent keeps the mode it
+ * An agent node is titled with the catalog name. A terminal agent keeps the mode it
  * started in on the node, so a reload (which creates the session again) launches the same line.
  * A chat picked here is fixed to its CLI: the composer shows a badge instead of a model picker.
  */
-export const addAgentNode = (target: AgentTarget, provider: ProviderInfo, at: Point): string | null => {
-    const runtimeMode = readChatPreferences().terminalRuntimeMode;
-    return focusedCanvas()
-        .getState()
-        .addNode(target, at, {
-            title: provider.name,
-            provider: provider.kind,
-            ...(target === 'terminal' ? { runtimeMode } : { providerFixed: true })
-        });
-};
+export const agentNodeOptions = (target: AgentTarget, provider: ProviderInfo): AddNodeOptions => ({
+    title: provider.name,
+    provider: provider.kind,
+    ...(target === 'terminal' ? { runtimeMode: readChatPreferences().terminalRuntimeMode } : { providerFixed: true })
+});
+
+export const addAgentNode = (target: AgentTarget, provider: ProviderInfo, at: Point): string | null =>
+    focusedCanvas().getState().addNode(target, at, agentNodeOptions(target, provider));
 
 /* The same agent as a view of its own: no canvas under it, the same session rules on the daemon. */
-export const addAgentView = (target: AgentTarget, provider: ProviderInfo): string | null => {
+export const addAgentView = (target: AgentTarget, provider: ProviderInfo, name = provider.name): string | null => {
     const runtimeMode = readChatPreferences().terminalRuntimeMode;
     return useDocument.getState().addStandaloneView({
         kind: target,
-        name: provider.name,
+        name,
         node: { provider: provider.kind, ...(target === 'terminal' ? { runtimeMode } : { providerFixed: true }) }
     });
 };

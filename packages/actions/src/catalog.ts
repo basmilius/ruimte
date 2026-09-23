@@ -1,4 +1,4 @@
-import { AgentStatusSchema, NodeKindSchema, PROJECT_VIEW_KINDS, UNKNOWN_KIND } from '@ruimte/contracts';
+import { AgentKindSchema, AgentStatusSchema, NodeKindSchema, PROJECT_VIEW_KINDS, UNKNOWN_KIND } from '@ruimte/contracts';
 import { z } from 'zod';
 
 export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
@@ -9,17 +9,21 @@ export const ActionViewKindSchema = z.enum([...PROJECT_VIEW_KINDS, UNKNOWN_KIND]
 export const VIEW_KINDS = ActionViewKindSchema.options;
 
 /* What an action may ask to be made. Shorter than what it can name, and this catalog's own decision. */
-export const CREATABLE_VIEW_KINDS = ['canvas', 'drawing', 'diagram', 'terminal', 'browser', 'chat'] as const;
+export const CREATABLE_VIEW_KINDS = ['canvas', 'drawing', 'diagram', 'terminal', 'browser', 'chat', 'file', 'separator', 'subheader'] as const;
 export const ActionCreatableViewKindSchema = z.enum(CREATABLE_VIEW_KINDS);
 
 export const ActionCanvasNodeKindSchema = z.enum([...NodeKindSchema.options, UNKNOWN_KIND]);
 export const CANVAS_NODE_KINDS = ActionCanvasNodeKindSchema.options;
 
-export const CREATABLE_CANVAS_NODE_KINDS = ['terminal', 'chat', 'browser', 'group', 'note'] as const;
+export const CREATABLE_CANVAS_NODE_KINDS = ['terminal', 'chat', 'browser', 'group', 'note', 'file'] as const;
 export const ActionCreatableCanvasNodeKindSchema = z.enum(CREATABLE_CANVAS_NODE_KINDS);
 
 const viewId = z.string().min(1);
 const viewName = z.string().trim().min(1);
+/* In world units, the canvas's own coordinates, so a camera move does not change where it lands. */
+const worldPoint = z.object({ x: z.number(), y: z.number() });
+const LOCK_GESTURES = ['pan', 'zoom', 'move', 'resize'] as const;
+const PERSON_AND_VOICE: readonly ActionActorKind[] = ['person', 'voice'];
 
 export const ACTION_DEFINITIONS = {
     'agents.inspect': {
@@ -173,14 +177,17 @@ export const ACTION_DEFINITIONS = {
     },
     'view.create': {
         title: 'Create view',
-        description: 'Creates and focuses a new canvas, drawing, diagram, terminal, browser or AI Chat view.',
+        description:
+            'Creates and focuses a new canvas, drawing, diagram, terminal, browser, AI Chat or file view, or adds a separator or subheader to the view list. A chat or terminal can run a specific agent CLI; a file view shows the file at a path, relative to the project folder or absolute.',
         effect: 'shared',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({
             kind: ActionCreatableViewKindSchema,
             name: z.string().trim().min(1).nullable(),
             url: z.string().trim().min(1).nullable(),
-            command: z.string().trim().min(1).nullable()
+            command: z.string().trim().min(1).nullable(),
+            path: z.string().trim().min(1).nullable(),
+            provider: AgentKindSchema.nullable()
         }),
         output: z.object({
             viewId,
@@ -231,7 +238,8 @@ export const ACTION_DEFINITIONS = {
     },
     'node.create': {
         title: 'Create canvas node',
-        description: 'Creates a node in free space near the center of the active canvas.',
+        description:
+            'Creates a node on the active canvas, centered on a world position or in free space near the middle of the screen. A chat or terminal can run a specific agent CLI; a file node shows the file at a path, relative to the project folder or absolute, read-only.',
         effect: 'shared',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({
@@ -240,7 +248,10 @@ export const ACTION_DEFINITIONS = {
             title: z.string().trim().min(1).nullable(),
             content: z.string().nullable(),
             url: z.string().trim().min(1).nullable(),
-            command: z.string().trim().min(1).nullable()
+            command: z.string().trim().min(1).nullable(),
+            path: z.string().trim().min(1).nullable(),
+            provider: AgentKindSchema.nullable(),
+            at: worldPoint.nullable()
         }),
         output: z.object({
             viewId,
@@ -327,6 +338,134 @@ export const ACTION_DEFINITIONS = {
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId }),
         output: z.object({ viewId, view: viewName, changed: z.boolean() })
+    },
+    'canvasText.create': {
+        title: 'Add canvas text',
+        description: 'Adds a text element to the active canvas at a world position or near the middle of the screen. Without text it opens for typing.',
+        effect: 'shared',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId, text: z.string().trim().min(1).nullable(), at: worldPoint.nullable() }),
+        output: z.object({ viewId, view: viewName, textId: z.string().min(1) })
+    },
+    'node.promoteToView': {
+        title: 'Open canvas node as view',
+        description:
+            'Lifts a chat, terminal, browser or device node off the active canvas into a view of its own, keeping its session. Lines drawn to it are removed, after confirmation.',
+        effect: 'shared',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId, nodeId: z.string().min(1) }),
+        output: z.object({ viewId, nodeId: z.string().min(1), view: z.string(), kind: ActionViewKindSchema })
+    },
+    'node.moveToView': {
+        title: 'Move canvas node to view',
+        description:
+            'Moves one node from the active canvas to another canvas view, keeping its id and session. Lines drawn to it are removed, after confirmation.',
+        effect: 'shared',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId, nodeId: z.string().min(1), targetViewId: viewId }),
+        output: z.object({ viewId, nodeId: z.string().min(1), node: z.string(), targetViewId: viewId, target: viewName })
+    },
+    'view.duplicate': {
+        title: 'Duplicate view',
+        description: 'Copies a canvas, drawing or diagram view with everything it holds. The copy goes right under it and is not opened.',
+        effect: 'shared',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId }),
+        output: z.object({ sourceViewId: viewId, viewId, view: viewName, kind: ActionViewKindSchema })
+    },
+    'view.placeOnCanvas': {
+        title: 'Place view on canvas',
+        description: 'Turns a chat, terminal, browser or device view into a node on the canvas that was open last, keeping its session, and shows that canvas.',
+        effect: 'shared',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId }),
+        output: z.object({ viewId, view: z.string(), canvasViewId: viewId, canvas: viewName })
+    },
+    'view.showOnCanvas': {
+        title: 'Show view on canvas',
+        description: 'Puts a live mirror of a drawing or diagram view on the canvas that was open last and shows it there. The view itself stays.',
+        effect: 'shared',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId }),
+        output: z.object({ viewId, view: viewName, canvasViewId: viewId, canvas: viewName, nodeId: z.string().min(1) })
+    },
+    'view.share': {
+        title: 'Share view',
+        description: "Moves a view into the project file a team commits, or back into this person's private file.",
+        effect: 'shared',
+        // Nothing is shared until a person names it, so neither Voice nor an agent may move a view between the files.
+        actors: ['person'] as readonly ActionActorKind[],
+        input: z.object({ viewId, shared: z.boolean() }),
+        output: z.object({ viewId, view: z.string(), shared: z.boolean(), changed: z.boolean() })
+    },
+    'layout.save': {
+        title: 'Save canvas layout',
+        description: 'Saves where the nodes and text of the active canvas are under a name. A saved layout with the same name is replaced, after confirmation.',
+        effect: 'shared',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId, name: viewName }),
+        output: z.object({ viewId, view: viewName, name: viewName, replaced: z.boolean() })
+    },
+    'layout.apply': {
+        title: 'Apply canvas layout',
+        description: 'Moves the nodes and text of the active canvas to where a saved layout has them. Nothing is added or removed.',
+        effect: 'shared',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId, name: viewName }),
+        output: z.object({ viewId, view: viewName, name: viewName })
+    },
+    'layout.delete': {
+        title: 'Delete canvas layout',
+        description: 'Deletes a saved layout of the active canvas, after confirmation. The nodes stay where they are.',
+        effect: 'shared',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId, name: viewName }),
+        output: z.object({ viewId, view: viewName, name: viewName })
+    },
+    'canvas.setLocks': {
+        title: 'Lock canvas gestures',
+        description: 'Locks or unlocks panning, zooming, moving and resizing on the active canvas in this client. Without gestures it sets all four.',
+        effect: 'local',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId, locked: z.boolean(), gestures: z.array(z.enum(LOCK_GESTURES)).min(1).nullable() }),
+        output: z.object({
+            viewId,
+            view: viewName,
+            locks: z.object({ pan: z.boolean(), zoom: z.boolean(), move: z.boolean(), resize: z.boolean() })
+        })
+    },
+    'split.create': {
+        title: 'Split view',
+        description: 'Opens a view in a new cell to the right of or below the focused one. Without a view it takes the first one that is not on screen yet.',
+        effect: 'local',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ direction: z.enum(['right', 'down']), viewId: viewId.nullable() }),
+        output: z.object({ viewId, view: z.string(), direction: z.enum(['right', 'down']) })
+    },
+    'split.close': {
+        title: 'Close split cell',
+        description: 'Closes the cell a view stands in, or the focused cell, while more than one is open. The view stays in the project.',
+        effect: 'local',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId: viewId.nullable() }),
+        output: z.object({ viewId, view: z.string() })
+    },
+    'split.focus': {
+        title: 'Focus neighboring cell',
+        description: 'Moves the focus to the cell left of, right of, above or below the focused one.',
+        effect: 'local',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ direction: z.enum(['left', 'right', 'up', 'down']) }),
+        output: z.object({ viewId, view: z.string(), changed: z.boolean() })
+    },
+    'terminal.clear': {
+        title: 'Clear terminal',
+        description: 'Clears the screen and scrollback of a terminal view or node, after confirmation. The process in it keeps running.',
+        effect: 'external',
+        // An agent never types into or clears the session of another node.
+        actors: PERSON_AND_VOICE,
+        input: z.object({ terminalId: z.string().min(1) }),
+        output: z.object({ terminalId: z.string().min(1), terminal: z.string() })
     },
     'chat.send': {
         title: 'Send AI Chat prompt',

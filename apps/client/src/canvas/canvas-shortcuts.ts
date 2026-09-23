@@ -7,8 +7,17 @@ import { isCanvasView, isDiagramView } from '@ruimte/contracts';
 import { browserRegistry } from '@/browser/registry';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
-import { createNodeAction, createViewAction, fitAction, groupSelectionAction, historyAction } from '@/actions/client-actions';
-import { showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
+import {
+    closeCellAction,
+    createNodeAction,
+    createViewAction,
+    fitAction,
+    focusCellAction,
+    groupSelectionAction,
+    historyAction,
+    splitAction
+} from '@/actions/client-actions';
+import { showView, stepView, viewAtIndex } from '@/project/views';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { isInNodeBody } from '@/canvas/node-body';
 import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/prompt-stack';
@@ -142,13 +151,13 @@ export const useCanvasShortcuts = (): void => {
                closing and stepping between cells are about the window, not about what is in a cell. */
             if (is(CANVAS_SHORTCUTS.splitRight) || is(CANVAS_SHORTCUTS.splitDown)) {
                 e.preventDefault();
-                splitFocusedCell(is(CANVAS_SHORTCUTS.splitDown) ? 'down' : 'right');
+                splitAction(is(CANVAS_SHORTCUTS.splitDown) ? 'down' : 'right');
                 return;
             }
             const direction: SplitDirection | null = entryFor(FOCUS_SHORTCUTS, e, apple);
             if (direction) {
                 e.preventDefault();
-                useDocument.getState().focusTowards(direction);
+                focusCellAction(direction);
                 return;
             }
             /* Stepping between the open files, which is the one thing a files cell has that no other
@@ -182,8 +191,8 @@ export const useCanvasShortcuts = (): void => {
                 if (closes || !apple) {
                     e.preventDefault();
                 }
-                if (closes && layout !== null) {
-                    useDocument.getState().closeCellAt(layout.focus);
+                if (closes) {
+                    closeCellAction();
                 }
                 return;
             }
@@ -227,7 +236,7 @@ export const useCanvasShortcuts = (): void => {
             }
             if (is(CANVAS_SHORTCUTS.newView)) {
                 e.preventDefault();
-                createViewAction('canvas');
+                void createViewAction('canvas');
                 return;
             }
             // From anywhere, a terminal included: the point is to answer without first leaving what you type in.
@@ -261,7 +270,7 @@ export const useCanvasShortcuts = (): void => {
             const addKind = entryFor(ADD_NODE_SHORTCUTS, e, apple);
             if (addKind) {
                 e.preventDefault();
-                createNodeAction(addKind);
+                void createNodeAction(addKind);
             } else if (is(CANVAS_SHORTCUTS.undo) || is(CANVAS_SHORTCUTS.redo)) {
                 e.preventDefault();
                 historyAction(is(CANVAS_SHORTCUTS.redo) ? 'redo' : 'undo');

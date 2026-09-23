@@ -1,13 +1,11 @@
 import { useMemo, type ReactNode } from 'react';
 import { Bot, FileText, Globe, LayoutGrid, LayoutTemplate, LoaderCircle, MessageSquare, PenTool, StickyNote, Terminal, Type, Workflow } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
-import { createNodeAction } from '@/actions/client-actions';
+import { applyLayoutAction, createNodeAction, createTextAction, showViewOnCanvasAction } from '@/actions/client-actions';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { emptyCanvasSections, emptyCanvasSize, type EmptyCanvasTile } from '@/canvas/empty-canvas';
 import { toWorld } from '@/canvas/math';
 import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
-import { showOnCanvas } from '@/project/views';
-import { addAgentNodeAtCenter } from '@/shell/commands';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -68,16 +66,11 @@ export function EmptyCanvas() {
     const lookOf = (tile: EmptyCanvasTile): TileLook => {
         switch (tile.kind) {
             case 'agent': {
-                const provider = providers.find((entry) => entry.kind === tile.provider);
                 return {
                     icon: <AgentIcon kind={tile.provider} size={16} />,
                     title: tile.name,
                     description: tile.target === 'chat' ? t('empty.agent.chat') : t('empty.agent.terminal'),
-                    run: () => {
-                        if (provider) {
-                            addAgentNodeAtCenter(tile.target, provider);
-                        }
-                    }
+                    run: () => void createNodeAction(tile.target, { provider: tile.provider })
                 };
             }
             case 'connecting':
@@ -101,7 +94,7 @@ export function EmptyCanvas() {
                     title: t(`kinds.${tile.node}`),
                     description: t(`empty.node.${tile.node}`),
                     shortcut: ADD_NODE_SHORTCUTS[tile.node],
-                    run: () => createNodeAction(tile.node)
+                    run: () => void createNodeAction(tile.node)
                 };
             case 'file':
                 return {
@@ -115,21 +108,21 @@ export function EmptyCanvas() {
                     icon: <Icon icon={Type} size={16} />,
                     title: t('kinds.text'),
                     description: t('empty.text'),
-                    run: () => void canvasStore.getState().addText(center())
+                    run: () => createTextAction(center())
                 };
             case 'layout':
                 return {
                     icon: <Icon icon={LayoutTemplate} size={16} />,
                     title: tile.name,
                     description: t('empty.layout'),
-                    run: () => canvasStore.getState().applyLayout(tile.name)
+                    run: () => applyLayoutAction(tile.name)
                 };
             case 'view':
                 return {
                     icon: <Icon icon={tile.view === 'drawing' ? PenTool : Workflow} size={16} />,
                     title: tile.name,
                     description: tile.view === 'drawing' ? t('empty.drawing') : t('empty.diagram'),
-                    run: () => void showOnCanvas(tile.viewId)
+                    run: () => void showViewOnCanvasAction(tile.viewId)
                 };
         }
     };

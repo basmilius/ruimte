@@ -1,4 +1,5 @@
 import { TerminalDictation } from '@/dictation/TerminalDictation';
+import { clearTerminalAction } from '@/actions/client-actions';
 import { useEffect, useRef, useState } from 'react';
 import i18next from 'i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
@@ -147,7 +148,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             }
             if (isClearShortcut(e, apple)) {
                 e.preventDefault();
-                sessionClient.clear(id);
+                clearTerminalAction(id);
                 return false;
             }
             if (apple) {

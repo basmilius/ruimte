@@ -202,7 +202,9 @@ const manageViews = async (args: Record<string, unknown>): Promise<VoiceToolExec
                 kind,
                 name: name ?? null,
                 url: url ?? null,
-                command: command ?? null
+                command: command ?? null,
+                path: null,
+                provider: null
             },
             VOICE_ACTION_CALL
         );
@@ -371,7 +373,10 @@ const manageCanvas = async (args: Record<string, unknown>): Promise<VoiceToolExe
                 title: title ?? null,
                 content: content ?? null,
                 url: url ?? null,
-                command: command ?? null
+                command: command ?? null,
+                path: null,
+                provider: null,
+                at: null
             },
             VOICE_ACTION_CALL
         );

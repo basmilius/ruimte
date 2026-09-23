@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Columns2, Copy, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
-import { createNodeAction } from '@/actions/client-actions';
-import { newFileView, showFileOnCanvas } from '@/project/views';
+import { createNodeAction, createViewAction } from '@/actions/client-actions';
+import { showFileOnCanvas } from '@/project/views';
 import { isHtmlName } from '@/shell/panels/file-kind';
 import { localFileUrl } from '@/shell/panels/file-url';
 import { basenameOf, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
@@ -43,7 +43,7 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
     const name = basenameOf(path);
 
     const openInBrowserNode = (): void => {
-        createNodeAction('browser', localFileUrl(path));
+        void createNodeAction('browser', { url: localFileUrl(path) });
     };
 
     return (
@@ -66,12 +66,12 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
             )}
             {(offerShow || offerView) && <Menu.Separator className={MENU_SEPARATOR} />}
             {offerShow && (
-                <Menu.Item className="menu-item" onClick={() => showFileOnCanvas(path)}>
+                <Menu.Item className="menu-item" onClick={() => void showFileOnCanvas(path)}>
                     <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
                 </Menu.Item>
             )}
             {offerView && (
-                <Menu.Item className="menu-item" onClick={() => newFileView(path)}>
+                <Menu.Item className="menu-item" onClick={() => void createViewAction('file', { path })}>
                     <Icon icon={Columns2} size={14} /> {t('file.menu.openAsView')}
                 </Menu.Item>
             )}

@@ -277,6 +277,24 @@ export const cleanLayout = (layout: SplitLayout, viewIds: readonly string[]): Sp
     return settled(columns, layout.focus);
 };
 
+/*
+ * The view a split puts in the cell it makes. The first one that is not standing anywhere yet, from
+ * the focused view down the list and around. A view lives in at most one cell, so with every view
+ * already up there is nothing to put beside them and the split does not happen.
+ */
+export const freeViewFor = (state: { views: readonly ProjectView[]; layout: SplitLayout | null; activeViewId: string | null }): string | null => {
+    const openable = state.views.filter(isOpenableView);
+    const taken = new Set(state.layout === null ? [] : viewIdsIn(state.layout));
+    const from = openable.findIndex((view) => view.id === state.activeViewId);
+    for (let step = 1; step <= openable.length; step += 1) {
+        const view = openable[(Math.max(from, 0) + step) % openable.length]!;
+        if (!taken.has(view.id)) {
+            return view.id;
+        }
+    }
+    return null;
+};
+
 /* The ids a layout may point at, in the order the sidebar lists them, so the fallback is the top view. */
 export const openableViewIds = (views: readonly ProjectView[]): string[] => views.filter(isOpenableView).map((view) => view.id);
 

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Trash } from 'lucide-react';
-import { deleteViewAction } from '@/actions/client-actions';
+import { createViewAction, deleteViewAction, promoteNodeAction } from '@/actions/client-actions';
 import { viewIsBusy } from '@/project/views';
 import { ViewSettingsDialog } from '@/shell/ViewSettingsDialog';
 import { useCanvas } from '@/state/canvas';
@@ -31,7 +31,7 @@ export function ViewDialogs() {
                 field={{ ariaLabel: t('viewDialogs.newBrowser.label'), placeholder: 'localhost:5173' }}
                 confirmLabel={t('common:action.open')}
                 onConfirm={(url) => {
-                    useDocument.getState().addStandaloneView({ kind: 'browser', name: url, url });
+                    void createViewAction('browser', { name: url, url });
                     close();
                 }}
                 onClose={close}
@@ -60,7 +60,7 @@ export function ViewDialogs() {
                 confirmLabel={t('viewDialogs.promote.confirm')}
                 onConfirm={() => {
                     if (dialog?.kind === 'promote') {
-                        useDocument.getState().openAsView(dialog.nodeId);
+                        promoteNodeAction(dialog.nodeId);
                     }
                     close();
                 }}

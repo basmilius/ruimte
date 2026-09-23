@@ -1,11 +1,10 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useTranslation } from 'react-i18next';
 import { FileText, Globe, LayoutGrid, Maximize, MessageSquare, Scan, SquareDashedMousePointer, StickyNote, Terminal, Type } from 'lucide-react';
-import { fitAction, groupSelectionAction } from '@/actions/client-actions';
+import { createNodeAction, createTextAction, fitAction, groupSelectionAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
-import { addAgentNode } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
-import { useCanvas, useCanvasStore, type NodeKind } from '@/state/canvas';
+import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
@@ -20,8 +19,8 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
     const hasSelection = useCanvas((s) => s.selection.length > 0);
     /* A file comes out of the open folder, so a project without one has nothing to pick from. */
     const hasFolder = useProject((s) => s.current?.folder != null);
-    const add = (kind: NodeKind): void => {
-        canvasStore.getState().addNode(kind, at());
+    const add = (kind: 'terminal' | 'chat' | 'browser' | 'group' | 'note'): void => {
+        void createNodeAction(kind, { at: at() });
     };
     return (
         <ContextMenu.Portal>
@@ -34,7 +33,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     <ContextMenu.Item className="menu-item" onClick={() => add('chat')}>
                         <Icon icon={MessageSquare} size={14} /> {t('kinds.chat')} <Kbd shortcut={ADD_NODE_SHORTCUTS.chat} />
                     </ContextMenu.Item>
-                    <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, at())} />
+                    <AgentSubmenus onPick={(target, provider) => void createNodeAction(target, { provider: provider.kind, at: at() })} />
                     <ContextMenu.Item className="menu-item" onClick={() => add('browser')}>
                         <Icon icon={Globe} size={14} /> {t('kinds.browser')} <Kbd shortcut={ADD_NODE_SHORTCUTS.browser} />
                     </ContextMenu.Item>
@@ -49,7 +48,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                             <Icon icon={FileText} size={14} /> {t('canvasMenu.file')}
                         </ContextMenu.Item>
                     )}
-                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().addText(at())}>
+                    <ContextMenu.Item className="menu-item" onClick={() => createTextAction(at())}>
                         <Icon icon={Type} size={14} /> {t('kinds.text')} <span className={MENU_HINT}>{t('menu.doubleClick')}</span>
                     </ContextMenu.Item>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />

@@ -5,6 +5,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Popover } from '@base-ui-components/react/popover';
 import { Files, MoreHorizontal, X } from 'lucide-react';
 import { viewIconOf } from '@ruimte/contracts';
+import { closeCellAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { isFilesView, type CellView } from '@/shell/files-view';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
@@ -184,7 +185,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         </span>
                     )}
                     <Tooltip label={t('cellToolbar.closeCell')}>
-                        <button type="button" className="icon-btn h-7 w-7 cursor-default" onClick={() => useDocument.getState().closeCellAt(at)}>
+                        <button type="button" className="icon-btn h-7 w-7 cursor-default" onClick={() => closeCellAction(view.id)}>
                             <Icon icon={X} size={14} />
                         </button>
                     </Tooltip>

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { focusedCanvas } from '@/state/canvas';
+import { saveLayoutAction } from '@/actions/client-actions';
 import { useUi } from '@/state/ui';
 import { PromptDialog } from '@/ui/PromptDialog';
 
@@ -16,7 +16,7 @@ export function LayoutDialog() {
             field={{ ariaLabel: t('layoutDialog.nameLabel'), placeholder: t('layoutDialog.namePlaceholder') }}
             confirmLabel={t('common:action.save')}
             onConfirm={(name) => {
-                focusedCanvas().getState().saveLayout(name);
+                saveLayoutAction(name);
                 setOpen(false);
             }}
             onClose={() => setOpen(false)}

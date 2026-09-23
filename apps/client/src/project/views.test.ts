@@ -21,9 +21,9 @@ afterEach(() => {
 });
 
 describe('asking an agent to write an empty diagram', () => {
-    test('puts the diagram and a chat on the canvas with a line from one into the other, and a first question in the prompt', () => {
+    test('puts the diagram and a chat on the canvas with a line from one into the other, and a first question in the prompt', async () => {
         useDocument.getState().load(document, { activeViewId: 'flow', views: {} });
-        const chat = askAgentAboutDiagram('flow');
+        const chat = await askAgentAboutDiagram('flow');
 
         expect(chat).not.toBeNull();
         expect(useDocument.getState().activeViewId).toBe('main');
@@ -35,9 +35,9 @@ describe('asking an agent to write an empty diagram', () => {
         expect(useDrafts.getState().ids).toContain(chat!);
     });
 
-    test('a view that is not a diagram or a drawing asks nothing', () => {
+    test('a view that is not a diagram or a drawing asks nothing', async () => {
         useDocument.getState().load(document, { activeViewId: 'main', views: {} });
-        expect(askAgentAboutDiagram('main')).toBeNull();
+        expect(await askAgentAboutDiagram('main')).toBeNull();
     });
 });
 
