@@ -9,7 +9,7 @@ const contextOf = (context: ServerActionContext): ContextHost => {
     return context.host.context;
 };
 
-/* What a person linked into the caller: only a line into it, or the frame of a group, makes a source readable. */
+/* What a person linked into the caller: only a line it sits on, or the frame of a group, makes a source readable. */
 export const contextActions: ActionHandlers<ServerActionContext> = {
     'context.list': (_input, { actor, context }) => ({ output: { sources: contextOf(context).list(actor.id) } }),
     'context.read': async ({ sourceId, tail, subagent }, { actor, context }) => ({

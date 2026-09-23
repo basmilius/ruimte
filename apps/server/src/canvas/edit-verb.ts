@@ -26,7 +26,7 @@ export const nodeEditAction = defineActionVerb('node', {
         'prints\tedited\tid\tlines\tcharacters\tthe note as it now stands, so an append tells you how much is written there in total',
         "kind\tOnly a note: a file node is the file system's, and a browser, a terminal and a chat show what they run, not text of yours",
         'who\tA note you made yourself, or one a line joins you to, whichever way that line runs: a person drawing that line is what says you may write here',
-        'who\tThe same line lets you read the note back with ruimte-context read, which only runs from the note into you',
+        'who\tThe same line lets you read the note back with ruimte-context read, whichever way it runs',
         'append\tThe text lands on a line of its own under what is there, so two agents writing in turn never drop what the other put down',
         'append\tEach call reads the note in the moment it writes it, so an append that crosses another keeps both lines',
         'note\tThe body it already carries writes nothing and is not a refusal',

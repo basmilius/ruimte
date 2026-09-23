@@ -159,7 +159,8 @@ const readVerb: ContextVerb = {
         'kind\tbrowser\tReading leaves the page where it is; ruimte-context browser is what sends it somewhere, over the same line',
         'kind\tdevice\tWhich device the node points at: its name, platform, kind and runtime, and the state, deviceId and backendId this machine knows it by, or a line saying the device is not here right now\t--tail does nothing here',
         'cheap\tThe last fifteen lines of a neighbour is usually the whole answer; read the source whole only when it is not',
-        'direction\tA line runs one way: the one you draw into another agent lets it read you, and reading it back takes a line from it into you, which ruimte-context link new --from <id> --to <you> draws',
+        'direction\tBetween two agents a line runs one way: the one you draw into another agent lets it read you, and reading it back takes a line from it into you, which ruimte-context link new --from <id> --to <you> draws',
+        'direction\tA node that is no agent, a note, a page, a file, a drawing or a diagram, you read over a line whichever way that line runs',
         'refusals\tnot-linked\tunreadable\tunknown-source\tunknown-subagent\tbad-arguments\tthe whole set this verb refuses with',
         SCOPE_LINE
     ]
@@ -177,7 +178,7 @@ const nodeNoun = defineNoun({
 
 const linkNoun = defineNoun({
     name: 'link',
-    summary: 'Lists, draws and removes the lines of a canvas, which is what lets an agent read the node a line runs from',
+    summary: 'Lists, draws and removes the lines of a canvas, which is what lets an agent read the node at the other end of a line',
     detail: [SCOPE_LINE],
     actions: [linkListAction, linkNewAction, linkDeleteAction]
 });

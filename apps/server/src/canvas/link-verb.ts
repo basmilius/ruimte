@@ -27,7 +27,7 @@ export const readsIds = (raw: string | undefined): string[] => {
 
 /* What --reads does, said the same way by every verb that takes it; `head` is what its lines run into. */
 export const readsLines = (head: string): readonly string[] => [
-    `reads\tThe line runs from the node you name into ${head}, the direction that makes that node readable: it can run ruimte-context read on the id`,
+    `reads\tThe line runs from the node you name into ${head}, so ${head} can run ruimte-context read on the id; between two agents that direction is what makes it readable`,
     'reads\tNo role and the label context, like every other line this verb draws into an agent',
     'reads\tThe node, its lines and the start of the agent are one write, so a line is there before the first turn runs; this is how you open an agent on a note you just put down',
     'reads\tOnly nodes that are on that canvas already, so never an agent this same call opens; an id that names none of them is refused with the ids that do',
@@ -39,7 +39,7 @@ export const readsLines = (head: string): readonly string[] => [
 const LINK_DETAIL: readonly string[] = [
     'prints\tid\tfrom\tto\tstate\tway\tone line per edge, where state is new for one that was drawn, updated for one that was there and took the --role you named, and existing for one nothing happened to',
     'way\tout for the line you asked for, back for the one this verb drew the other way by itself, so two rows for one --to is not a mistake',
-    'context\tAn edge into a terminal or a chat node is what lets that agent read the other end with ruimte-context read; a line between two other nodes is only a line',
+    'context\tAn edge with a terminal or a chat at one end lets that agent read the other end with ruimte-context read, whichever way it runs; between two agents only the head reads the tail, and a line between two other nodes is only a line',
     'both ways\tA --to that names a terminal or a chat, from a terminal or a chat, is two edges and two rows: each of them then reads the other, and either may notify the other',
     'both ways\tInto anything else it is one edge and one row, since only an agent node reads what a line brings it',
     'both ways\tA --role of target or origin is one edge and one row whatever the two ends are, since either only reads one way',
@@ -100,7 +100,7 @@ export const linkListAction = defineActionVerb('link', {
     params: [{ syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas to list, by view id', more: 'ruimte-context view list lists them' }],
     detail: [
         'prints\tid\tfrom\tto\tlabel\tone line per line on the canvas, the label empty where it has none',
-        'direction\tA line runs from the first id into the second; into an agent node that is what makes the first readable to it, and never the other way round',
+        'direction\tA line runs from the first id into the second; between two agents that makes the first readable to the second and never the other way round, while with one agent on it that agent reads the other end whichever way it runs',
         'both ways\tTwo agents that read each other are two lines, one each way; ruimte-context link new draws the second',
         'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
         'note\tA canvas with no lines on it prints only the revision row',

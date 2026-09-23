@@ -44,13 +44,21 @@ describe('readRefusal', () => {
     test('a node on the canvas with no line at all is told which line it needs', () => {
         const refusal = refuseRead('chat-1', 'note-1', [], canvas);
         const [first, second] = refusal.split('\n');
-        expect(first).toBe('not-linked\tnote-1 is a note node on main, but no line runs from it into you, and that line is what a read takes');
+        expect(first).toBe('not-linked\tnote-1 is a note node on main, but no line joins it to you, and that line is what a read takes');
         expect(second).toStartWith('see\truimte-context link new --from note-1 --to chat-1\t');
     });
 
     test('a text is named as one, and a drawing is linked through the node that shows it', () => {
         expect(refuseRead('chat-1', 'text-1', [], canvas).split('\n')[0]).toStartWith('not-linked\ttext-1 is a text on main');
         expect(refuseRead('chat-1', 'view-1', [], canvas)).toInclude('see\truimte-context link new --from draw-1 --to chat-1\t');
+    });
+
+    test('only an agent it would read is told the line has to run from it, since any other line reads either way', () => {
+        const unlinked: ProjectCanvasView = { ...canvas, edges: [] };
+        expect(refuseRead('chat-1', 'terminal-a', [], unlinked).split('\n')[0]).toInclude('but no line runs from it into you');
+        for (const id of ['note-1', 'text-1', 'view-1']) {
+            expect(refuseRead('chat-1', id, [], unlinked).split('\n')[0]).toInclude('but no line joins it to you');
+        }
     });
 
     test('an id of no canvas of this project keeps the sentence the CLI has always written', () => {

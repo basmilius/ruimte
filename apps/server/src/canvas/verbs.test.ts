@@ -618,7 +618,7 @@ describe('help', () => {
         for (const words of [['list'], ['read'], ['node', 'list']]) {
             const scope = (await post('help', words)).lines.filter((line) => line.startsWith('scope\t'));
             expect(scope).toHaveLength(1);
-            expect(scope[0]).toInclude('a node you add is readable through read only once a line runs from it into you');
+            expect(scope[0]).toInclude('a node you add is readable through read only once a line joins it to you, and a terminal or a chat only once');
         }
     });
 

@@ -214,7 +214,7 @@ export type VerbEntry = Verb | Noun | ContextVerb;
 
 /* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
 export const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; node, link, browser, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; node, link, browser, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
 
 export const DRY_RUN_FLAG = 'dry-run';
 

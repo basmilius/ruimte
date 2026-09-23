@@ -1,4 +1,4 @@
-import type { ContextSource, ProjectCanvasView } from '@ruimte/contracts';
+import { isAgentKind, type ContextSource, type ProjectCanvasView } from '@ruimte/contracts';
 import type { ParsedRefusal } from '../refusal.ts';
 
 const body = (code: string, message: string, ...lines: string[]): ParsedRefusal => ({ code, message, lines });
@@ -36,9 +36,7 @@ export const readRefusal = (readerId: string, sourceId: string, sources: readonl
             drawLine(linkId, readerId)
         );
     }
-    return body(
-        'not-linked',
-        `${sourceId} is ${what} on ${canvas.id}, but no line runs from it into you, and that line is what a read takes`,
-        drawLine(linkId, readerId)
-    );
+    // Only between two agents does the direction decide who reads; any other line reads either way.
+    const missing = node !== undefined && isAgentKind(node.kind) ? 'no line runs from it into you' : 'no line joins it to you';
+    return body('not-linked', `${sourceId} is ${what} on ${canvas.id}, but ${missing}, and that line is what a read takes`, drawLine(linkId, readerId));
 };
