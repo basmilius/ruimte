@@ -56,9 +56,8 @@ larger ones becomes a GitHub issue when it starts.
    `apps/server/src/actions`). `agent.start` and `team.start` answer `running` with an operation
    id, which `operation.get` (`ruimte-context operation get`) reads off the outbox, the tasks and
    the agent's own state, with no store of its own. Left: operation events for a client, a
-   person's agent start and worktree actions on the registry, and the title limit on `node.create`
-   and `node.rename`, which waits for the client's title fields to hold it. The binding table in 10
-   hangs on it.
+   person's agent start and worktree actions on the registry, and a file dropped on a cell of the
+   grid, which no action can place since none names a cell. The binding table in 10 hangs on it.
 10. **Settings and keyboard**: one binding table with `when` contexts, read by the handlers and the
     Keyboard pane (which lists them read-only today), then overrides with press-to-record, conflict
     labels and reset. A "restore defaults" action, a canvas font size for chat and text elements,
