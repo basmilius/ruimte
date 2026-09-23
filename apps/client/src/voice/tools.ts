@@ -234,6 +234,14 @@ const REPLIES: Replies = {
     'terminal.resumeAgent': (output) => ({
         message: `Resumed the agent in “${output.terminal}”.`,
         entry: { kind: 'terminal', label: 'Resumed terminal agent', detail: output.terminal }
+    }),
+    'terminal.restart': (output) => ({
+        message: `Started “${output.terminal}” again in a new session.`,
+        entry: { kind: 'terminal', label: 'Restarted terminal', detail: output.terminal }
+    }),
+    'note.setColor': (output) => ({
+        message: output.changed ? `Made the note ${output.color}.` : `The note was already ${output.color}.`,
+        entry: { kind: 'note', label: 'Changed note color', detail: output.color }
     })
 };
 
