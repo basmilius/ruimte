@@ -88,7 +88,7 @@ interface SettingsState {
 }
 
 export type ViewDialog =
-    | { kind: 'settings' | 'delete'; viewId: string }
+    | { kind: 'settings'; viewId: string }
     /* Promoting a node that has lines drawn into it. Those lines do not survive the move. */
     | { kind: 'promote'; nodeId: string }
     | { kind: 'new-browser' }

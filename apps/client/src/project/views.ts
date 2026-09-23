@@ -15,14 +15,13 @@ import {
 } from '@/actions/client-actions';
 import { offerDraft } from '@/chat/drafts';
 import { GRID, type Point } from '@/canvas/math';
-import { filesOfView, nodesOfView } from '@/project/view-deletion';
+import { filesOfView } from '@/project/view-deletion';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { NODE_SIZE, focusedCanvas, liveCanvas } from '@/state/canvas';
-import { useChats } from '@/state/chats';
 import { currentEndpointId } from '@/state/keys';
 import { useDocument, viewOfNode } from '@/state/document';
 import { useProject } from '@/state/project';
-import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
+import type { StatusOf } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
@@ -221,17 +220,6 @@ export const projectNodes = (): ProjectNodeRef[] => {
     });
 };
 
-/* Whether anything in a view is still talking to the daemon, which is what a delete asks about. */
-export const viewIsBusy = (view: ProjectView): boolean => {
-    const endpointId = currentEndpointId();
-    const sessions = useSessions.getState().byKey;
-    const chats = useChats.getState().byKey;
-    return nodesOfView(view).some((node) => {
-        const status = nodeStatus(node, sessions, chats, endpointId);
-        return status !== undefined && status !== 'idle';
-    });
-};
-
 /* Which nodes can leave a canvas for a view of their own: the ones that are a session, not a frame. */
 export const canOpenAsView = (kind: string): boolean => kind === 'chat' || kind === 'terminal' || kind === 'browser' || kind === 'device';
 
@@ -250,9 +238,9 @@ export const askOpenAsView = (nodeId: string): void => {
 };
 
 /*
- * Deleting takes a question when something in the view is still running, and a question of its own
- * when its chats and terminals opened agents that would end with it. A file it shows with unsaved
- * changes is saved first (`unsaved-close.ts`).
+ * Deleting asks only when the chats and terminals of the view opened agents that would end with it;
+ * anything else goes at once, with a toast to take it back. A file it shows with unsaved changes is
+ * saved first (`unsaved-close.ts`).
  */
 export const askDeleteView = (id: string): void => {
     const view = useDocument.getState().views.find((each) => each.id === id);
@@ -269,18 +257,9 @@ export const askDeleteView = (id: string): void => {
     const endpointId = currentEndpointId();
     closeAfterSaving(endpointId, filesOfView(exported, useProject.getState().current?.folder ?? null), () => {
         void askBeforeEndingAgents(transportFor(endpointId), sessions, ('name' in view ? view.name : undefined) ?? i18next.t('project:view.fallbackName'), () =>
-            deleteViewAsking(view)
+            deleteViewAction(id)
         );
     });
-};
-
-const deleteViewAsking = (view: ProjectView): void => {
-    const id = view.id;
-    if (viewIsBusy(view)) {
-        useUi.getState().setViewDialog({ kind: 'delete', viewId: id });
-        return;
-    }
-    deleteViewAction(id);
 };
 
 /* What a view is called and what it wears, in the one dialog that holds both. */

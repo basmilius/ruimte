@@ -19,6 +19,7 @@ import {
     splitAction
 } from '@/actions/client-actions';
 import { showView, stepView, viewAtIndex } from '@/project/views';
+import { undoLatestDeletion } from '@/project/view-trash';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { isInNodeBody } from '@/canvas/node-body';
 import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/prompt-stack';
@@ -342,6 +343,19 @@ export const useCanvasShortcuts = (): void => {
                     e.preventDefault();
                     e.stopPropagation();
                 }
+                return;
+            }
+            /* A deleted view comes back before any history hears the key: the deletion is the newest
+               step there is, and a drawing or a diagram in front would take the key for its own. */
+            if (
+                !e.isComposing &&
+                !isTypingTarget(e.target) &&
+                !isInFloatingLayer(e.target) &&
+                matchesShortcut(CANVAS_SHORTCUTS.undo, e, isApplePlatform()) &&
+                undoLatestDeletion(useDocument)
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
                 return;
             }
             if (e.key === 'Escape' && useDictation.getState().targetId !== null) {

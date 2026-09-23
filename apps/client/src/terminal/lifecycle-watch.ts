@@ -1,4 +1,5 @@
 import { isSessionView, type CanvasNodeKind } from '@ruimte/contracts';
+import { nodesOfView } from '@/project/view-deletion';
 import { projectNodes } from '@/project/views';
 import { liveCanvases, subscribeCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -24,6 +25,12 @@ const liveNodes = (): Map<string, CanvasNodeKind> => {
         if (isSessionView(view)) {
             // A standalone view is one node without a canvas, under the same id as its session.
             live.set(endpointKey(endpointId, view.id), view.kind);
+        }
+    }
+    // A deleted view that can still be taken back keeps what runs on it until it is purged.
+    for (const { view } of useDocument.getState().trashed) {
+        for (const node of nodesOfView(view)) {
+            live.set(endpointKey(endpointId, node.id), node.kind);
         }
     }
     return live;
@@ -60,7 +67,10 @@ export const watchNodes = (end: NodeEnder): (() => void) => {
     nodesMoved();
     const offCanvas = subscribeCanvases(() => step(nodesMoved(), canvasLoading() || useDocument.getState().loading));
     const offDocument = useDocument.subscribe((state, before) =>
-        step(state.views !== before.views || state.activeViewId !== before.activeViewId, state.loading || before.loading || canvasLoading())
+        step(
+            state.views !== before.views || state.trashed !== before.trashed || state.activeViewId !== before.activeViewId,
+            state.loading || before.loading || canvasLoading()
+        )
     );
     /* Another machine is another project on another daemon. What this one holds keeps running, and
        what the next one holds was never this watcher's to end. */

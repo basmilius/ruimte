@@ -82,6 +82,12 @@ export interface DocumentState {
     /* The views that live in the shared file, which is the one a team commits. Everything else is
        this person's, which is what a view is until someone shares it. */
     shared: string[];
+    /*
+     * Views a person deleted that can still come back, oldest first. They are gone from the list and
+     * the grid but not from the file, since another client and the daemon end what a view holds the
+     * moment it leaves the file. Their sessions run on until `purgeTrash`.
+     */
+    trashed: TrashedView[];
 
     load(document: ProjectDocument | null, local: ProjectLocal | null): void;
     /*
@@ -144,6 +150,12 @@ export interface DocumentState {
     /* Overrules the mark a view wears in the lists; null hands it back to its kind. */
     setViewIcon(id: string, icon: ProjectIconChoice | null): void;
     deleteView(id: string): void;
+    /* Deletes a view the way `deleteView` does, but holds on to it for `restoreView`. False when there is no such view. */
+    trashView(id: string): boolean;
+    /* Puts a trashed view back where it stood, in the list and on the grid. False when it is no longer trashed. */
+    restoreView(id: string): boolean;
+    /* Lets the trashed view with this id go for good, or every one of them; the file loses it with the next save. */
+    purgeTrash(id?: string): void;
     duplicateView(id: string): string | null;
     moveView(id: string, toIndex: number): void;
     /* Moves a node from the canvas it sits on to another canvas view, keeping its id and its session. */
@@ -159,6 +171,8 @@ export interface DocumentState {
 
     /* The views as they would be saved: the canvas on screen written back into the view it belongs to. */
     exportViews(): ProjectView[];
+    /* What the project file holds: the exported views with the trashed ones still in their place. */
+    fileViews(): ProjectView[];
     exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout'>;
 }
 
@@ -171,6 +185,31 @@ export interface ViewNotice {
     message: string;
     action: { kind: 'go'; viewId: string } | { kind: 'back'; shown: Omit<ShownView, 'layout'> } | null;
 }
+
+/* A deleted view on its way out, with what it takes to put it back as it stood. */
+export interface TrashedView {
+    view: ProjectView;
+    index: number;
+    local: ProjectViewLocal | undefined;
+    /* The grid on either side of the deletion, so an undo with nothing moved in between puts back the very same one. */
+    layout: { before: SplitLayout; after: SplitLayout | null } | null;
+}
+
+/* What a view list holds of the trashed views: the list without them, and their copies as the list has them now. */
+const splitTrash = (views: ProjectView[], trashed: TrashedView[]): { views: ProjectView[]; trashed: TrashedView[] } => {
+    if (trashed.length === 0) {
+        return { views, trashed };
+    }
+    const byId = new Map(views.map((view) => [view.id, view]));
+    return {
+        views: views.filter((view) => !trashed.some((entry) => entry.view.id === view.id)),
+        // A view another writer deleted meanwhile has nothing left to come back to.
+        trashed: trashed.flatMap((entry) => {
+            const current = byId.get(entry.view.id);
+            return current === undefined ? [] : [{ ...entry, view: current }];
+        })
+    };
+};
 
 /* What a new standalone view needs: a chat and a terminal carry a node, a browser carries a page. */
 export type StandaloneRequest =
@@ -352,6 +391,36 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             }
         };
 
+        /* Takes a view out of the list and off the grid. A trashed one is no edit yet: the file keeps it until it is purged. */
+        const removeView = (id: string, trash: boolean): boolean => {
+            const state = get();
+            const at = state.views.findIndex((view) => view.id === id);
+            const result = withoutView(state.exportViews(), id);
+            if (result === null) {
+                return false;
+            }
+            const { views, removed } = result;
+            const { [id]: local, ...viewLocal } = { ...state.viewLocal, ...state.exportLocal().views };
+            const standing = state.layout === null ? null : locateView(state.layout, id);
+            /* The cell it stood in falls away and the neighbors grow into it. Only when it was
+               the last cell is a view picked: the nearest one under it, or the last one over it. */
+            const next = views.slice(at).find(isOpenableView) ?? views.filter(isOpenableView).at(-1);
+            const stood =
+                state.layout === null || standing === null
+                    ? null
+                    : { before: state.layout, after: closeCell(state.layout, standing) ?? (next ? singleLayout(next.id) : null) };
+            set({
+                views,
+                viewLocal,
+                viewNotice: keptNotice(state.viewNotice, views),
+                ...(trash ? { trashed: [...state.trashed, { view: removed, index: at, local, layout: stood }] } : { edits: state.edits + 1 })
+            });
+            if (stood !== null) {
+                commit(stood.after);
+            }
+            return true;
+        };
+
         /* A new view goes last in the list; everything but a divider opens on the spot. */
         const addView = (view: ProjectView, opens: boolean): string => {
             set((state) => ({ views: withView(state.exportViews(), view), edits: state.edits + 1 }));
@@ -372,16 +441,18 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             edits: 0,
             loading: false,
             shared: [],
+            trashed: [],
 
             load(document, local) {
-                const views = document?.views ?? [];
+                const kept = splitTrash(document?.views ?? [], get().trashed);
+                const views = kept.views;
                 // A view deleted since the local state was written has nothing left to stand for.
                 const viewLocal = Object.fromEntries(Object.entries(local?.views ?? {}).filter(([viewId]) => views.some((view) => view.id === viewId)));
                 // A file written before views could stand side by side reads as one cell on the view it named.
                 const layout = layoutOf(local ?? { activeViewId: null, layout: undefined }, views);
                 const settled = settledOn(views, viewLocal, layout, { lastCanvasViewId: views.find(isCanvasView)?.id ?? null });
                 // Another project is another set of views, so a banner about the one that just left goes with it.
-                set({ ...settled, viewNotice: null, loading: true, edits: 0, shared: document?.shared ?? [] });
+                set({ ...settled, viewNotice: null, loading: true, edits: 0, shared: document?.shared ?? [], trashed: kept.trashed });
                 // The project that was here goes first, editors and all, so nothing of it may show through.
                 peers.canvases.keep([]);
                 openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), settled.activeViewId, peers);
@@ -395,8 +466,9 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 });
             },
 
-            applyMerge(views, canvases, shared) {
-                set((state) => ({ views, shared, viewNotice: keptNotice(state.viewNotice, views) }));
+            applyMerge(merged, canvases, shared) {
+                const { views, trashed } = splitTrash(merged, get().trashed);
+                set((state) => ({ views, shared, trashed, viewNotice: keptNotice(state.viewNotice, views) }));
                 for (const [viewId, patch] of Object.entries(canvases)) {
                     peers.canvases.peek(viewId)?.getState().applyExternal(patch);
                 }
@@ -620,23 +692,44 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             },
 
             deleteView(id) {
+                removeView(id, false);
+            },
+
+            trashView(id) {
+                return removeView(id, true);
+            },
+
+            restoreView(id) {
                 const state = get();
-                const at = state.views.findIndex((view) => view.id === id);
-                const result = withoutView(state.exportViews(), id);
-                if (result === null) {
-                    return;
+                const entry = state.trashed.find((candidate) => candidate.view.id === id);
+                if (!entry) {
+                    return false;
                 }
-                const { views } = result;
-                const { [id]: _gone, ...viewLocal } = state.viewLocal;
-                set({ views, viewLocal, edits: state.edits + 1, viewNotice: keptNotice(state.viewNotice, views) });
-                const standing = state.layout === null ? null : locateView(state.layout, id);
-                if (state.layout === null || standing === null) {
-                    return;
+                const views = [...state.exportViews()];
+                views.splice(Math.min(entry.index, views.length), 0, entry.view);
+                // One update, so the view is never in neither list and nothing watching reads it as gone.
+                set({
+                    views,
+                    viewLocal: entry.local === undefined ? state.viewLocal : { ...state.viewLocal, [id]: entry.local },
+                    trashed: state.trashed.filter((candidate) => candidate !== entry)
+                });
+                if (entry.layout === null) {
+                    return true;
                 }
-                /* The cell it stood in falls away and the neighbors grow into it. Only when it was
-                   the last cell is a view picked: the nearest one under it, or the last one over it. */
-                const next = views.slice(at).find(isOpenableView) ?? views.filter(isOpenableView).at(-1);
-                commit(closeCell(state.layout, standing) ?? (next ? singleLayout(next.id) : null));
+                if (get().layout === entry.layout.after) {
+                    commit(entry.layout.before);
+                } else {
+                    get().setActiveView(id);
+                }
+                return true;
+            },
+
+            purgeTrash(id) {
+                const { trashed } = get();
+                const going = trashed.filter((entry) => id === undefined || entry.view.id === id);
+                if (going.length > 0) {
+                    set((state) => ({ trashed: trashed.filter((entry) => !going.includes(entry)), edits: state.edits + 1 }));
+                }
             },
 
             duplicateView(id) {
@@ -759,6 +852,15 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                     const held = isCanvasView(view) ? content.get(view.id) : undefined;
                     return held ? { ...view, ...held } : view;
                 });
+            },
+
+            fileViews() {
+                const views = [...get().exportViews()];
+                // Newest first, since each index was read off the list the older deletions had already left.
+                for (const entry of [...get().trashed].reverse()) {
+                    views.splice(Math.min(entry.index, views.length), 0, entry.view);
+                }
+                return views;
             },
 
             exportLocal() {

@@ -117,6 +117,7 @@
         "nextFinished": "Go to the next agent that finished while you were away"
     },
     "toasts": {
+        "deletedView": "Deleted view “{{name}}”",
         "copied": "Copied",
         "copyOutput": "Copy output"
     },
@@ -153,11 +154,6 @@
             "title": "New browser view",
             "description": "An address without a scheme opens over https.",
             "label": "Address"
-        },
-        "delete": {
-            "title": "Delete {{name}}?",
-            "description": "Removes the view and everything on it.",
-            "busy": "Something in this view is still running. Deleting it ends those sessions."
         },
         "promote": {
             "title": "Open {{name}} as a view?",
@@ -642,7 +638,7 @@
         "share": "Share with Your Team",
         "unshare": "Keep to Yourself",
         "viewSettings": "View Settings…",
-        "deleteView": "Delete View…",
+        "deleteView": "Delete View",
         "palette": "Command Palette",
         "previousView": "Previous View",
         "nextView": "Next View",

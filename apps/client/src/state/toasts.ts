@@ -1,13 +1,20 @@
 import { create } from 'zustand';
+import type { Shortcut } from '@/ui/shortcut';
 
 // How long a toast that went well stays up; a failure waits for the person instead.
 export const SUCCESS_MS = 4000;
 
-export type ToastKind = 'progress' | 'success' | 'error';
+// How long a deletion can still be taken back.
+export const UNDO_MS = 8000;
+
+/* `deleted` says something went that can still come back, which is what its action is for. */
+export type ToastKind = 'progress' | 'success' | 'error' | 'deleted';
 
 export interface ToastAction {
     label: string;
     run(): void;
+    /* The key that does the same, printed beside the label. The key itself is bound elsewhere. */
+    shortcut?: Shortcut;
 }
 
 export interface Toast {
@@ -21,6 +28,8 @@ export interface Toast {
     action?: ToastAction;
     /* A success that waits to be dismissed, for news that lands while nobody is looking yet. */
     persist?: boolean;
+    /* Runs once the toast is gone, whether it ran out or was dismissed. */
+    onClose?: () => void;
 }
 
 export type ToastInput = Omit<Toast, 'id'> & { id?: string };
@@ -43,14 +52,15 @@ const timers = new Map<string, ReturnType<typeof setTimeout>>();
  * a person never watches two cards for one push.
  */
 export const useToasts = create<ToastStore>((set, get) => {
-    /* A toast that went well takes itself away; a failure and a running action stay. */
+    /* A toast that went well takes itself away, and so does the offer to undo; a failure and a running action stay. */
     const schedule = (id: string, kind: ToastKind, persist: boolean): void => {
         const running = timers.get(id);
         if (running !== undefined) {
             clearTimeout(running);
             timers.delete(id);
         }
-        if (kind !== 'success' || persist) {
+        const lifetime = kind === 'deleted' ? UNDO_MS : kind === 'success' && !persist ? SUCCESS_MS : null;
+        if (lifetime === null) {
             return;
         }
         timers.set(
@@ -58,7 +68,7 @@ export const useToasts = create<ToastStore>((set, get) => {
             setTimeout(() => {
                 timers.delete(id);
                 get().dismiss(id);
-            }, SUCCESS_MS)
+            }, lifetime)
         );
     };
 
@@ -87,7 +97,9 @@ export const useToasts = create<ToastStore>((set, get) => {
                 clearTimeout(running);
                 timers.delete(id);
             }
+            const gone = get().toasts.find((entry) => entry.id === id);
             set({ toasts: get().toasts.filter((entry) => entry.id !== id) });
+            gone?.onClose?.();
         }
     };
 });

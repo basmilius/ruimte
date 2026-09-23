@@ -9,11 +9,13 @@ import {
 } from '@/actions/client-actions';
 import { focusPromptStack } from '@/canvas/prompt-stack';
 import { askViewSettings, openSessionInKind, setViewShared, showView, stepView, viewAtIndex } from '@/project/views';
+import { undoLatestDeletion } from '@/project/view-trash';
 import { runAppShortcut } from '@/shell/app-shortcuts';
 import { appCommands } from '@/shell/commands';
 import { activeViewFacts } from '@/shell/menu/context';
 import { GO_VIEW_PREFIX, isPaletteId, type MenuActionId } from '@/shell/menu/ids';
 import type { SplitDirection } from '@/shell/split';
+import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
 import { openReleaseNotes } from '@/state/release-notes';
 import { useUi } from '@/state/ui';
@@ -41,7 +43,11 @@ const MENU_ACTIONS: Record<MenuActionId, () => void> = {
     about: () => useUi.getState().setSettings({ open: true, section: 'about' }),
     'project-settings': () => useUi.getState().askProjectSettings(true),
     palette: () => runAppShortcut('palette'),
-    'edit-undo': () => historyAction('undo'),
+    'edit-undo': () => {
+        if (!undoLatestDeletion(useDocument)) {
+            historyAction('undo');
+        }
+    },
     'edit-redo': () => historyAction('redo'),
     fullscreen: toggleFullscreen,
     'terminal-clear': withActiveView(({ view }) => clearTerminalAction(view.id)),

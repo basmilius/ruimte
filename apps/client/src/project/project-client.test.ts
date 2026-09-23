@@ -966,4 +966,70 @@ describe('the same project in two clients', () => {
         a.dispose();
         b.dispose();
     });
+
+    test('a view deleted in one stays in the file, and in the other, until its undo is over', async () => {
+        const { a, b } = await twoClients();
+
+        a.stores.document.getState().trashView('notes');
+        a.stores.document.getState().renameView('main', 'Board');
+        await tick(10);
+        const saved = a.transport.of('project.save').at(-1)?.payload as { content: ProjectContent };
+        expect(saved.content.views.map((view) => view.id)).toEqual(['main', 'notes']);
+        expect(namesIn(b)).toEqual(['Board', 'notes']);
+        expect(namesIn(a)).toEqual(['Board']);
+
+        a.stores.document.getState().purgeTrash();
+        await tick(10);
+        expect(namesIn(b)).toEqual(['Board']);
+        a.dispose();
+        b.dispose();
+    });
+
+    test('a change from the other merges in without bringing a deleted view back', async () => {
+        const { a, b } = await twoClients();
+        relay(b, a);
+
+        a.stores.document.getState().trashView('notes');
+        b.stores.document.getState().renameView('notes', 'Ideas');
+        await tick(10);
+        expect(namesIn(a)).toEqual(['main']);
+        expect(a.state.conflict).toBeNull();
+
+        a.stores.document.getState().restoreView('notes');
+        expect(namesIn(a)).toEqual(['main', 'Ideas']);
+        a.dispose();
+        b.dispose();
+    });
+});
+
+describe('a deleted view waiting on its undo', () => {
+    test('goes for good when the page goes, and the save is sent before it is gone', async () => {
+        const listeners = new Map<string, () => void>();
+        const host = {
+            addEventListener: (type: string, listener: () => void) => void listeners.set(type, listener),
+            removeEventListener: (type: string) => void listeners.delete(type)
+        } as unknown as Pick<Window, 'addEventListener' | 'removeEventListener'>;
+        const { transport, stores, dispose } = setup({ open: 'p1', window: host, stores: createWorkspaceStores() });
+        transport.views = [canvasView('main'), canvasView('notes')];
+        await tick();
+        stores.document.getState().trashView('notes');
+
+        listeners.get('pagehide')!();
+        expect(stores.document.getState().trashed).toEqual([]);
+        const saved = transport.of('project.save').at(-1)?.payload as { content: ProjectContent };
+        expect(saved.content.views.map((view) => view.id)).toEqual(['main']);
+        dispose();
+    });
+
+    test('goes for good before the project is left', async () => {
+        const { transport, stores, client, dispose } = setup({ open: 'p1', stores: createWorkspaceStores() });
+        transport.views = [canvasView('main'), canvasView('notes')];
+        await tick();
+        stores.document.getState().trashView('notes');
+
+        await client.leave();
+        const saved = transport.of('project.save').at(-1)?.payload as { content: ProjectContent };
+        expect(saved.content.views.map((view) => view.id)).toEqual(['main']);
+        dispose();
+    });
 });

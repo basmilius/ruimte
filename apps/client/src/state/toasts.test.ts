@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import { SUCCESS_MS, useToasts } from '@/state/toasts';
+import { SUCCESS_MS, UNDO_MS, useToasts } from '@/state/toasts';
 
 describe('useToasts', () => {
     beforeEach(() => {
@@ -32,6 +32,24 @@ describe('useToasts', () => {
         useToasts.getState().update('updated', { kind: 'success' });
         jest.advanceTimersByTime(SUCCESS_MS + 1);
         expect(ids()).toEqual(['updated']);
+    });
+
+    test('an offer to undo stays longer than a success, then goes and says so', () => {
+        const closed: string[] = [];
+        useToasts.getState().show({ id: 'deleted', title: 'Deleted view', kind: 'deleted', onClose: () => closed.push('deleted') });
+        jest.advanceTimersByTime(SUCCESS_MS + 1);
+        expect(ids()).toEqual(['deleted']);
+        jest.advanceTimersByTime(UNDO_MS - SUCCESS_MS);
+        expect(ids()).toEqual([]);
+        expect(closed).toEqual(['deleted']);
+    });
+
+    test('a toast that is dismissed says so once, and its timer never fires after', () => {
+        const closed: string[] = [];
+        useToasts.getState().show({ id: 'deleted', title: 'Deleted view', kind: 'deleted', onClose: () => closed.push('deleted') });
+        useToasts.getState().dismiss('deleted');
+        jest.advanceTimersByTime(UNDO_MS + 1);
+        expect(closed).toEqual(['deleted']);
     });
 
     test('a failure waits for the person', () => {

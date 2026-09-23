@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ProjectSavePayloadSchema, storedViewsOf, type ProjectCanvasView, type ProjectDocument, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { viewIdsIn } from '@/shell/split';
 import { focusedCanvas } from './canvas';
@@ -395,6 +395,90 @@ describe('a drawing view', () => {
         useDocument.getState().deleteView(id);
         expect(useDocument.getState().views.map((each) => each.id)).toEqual(['a', 'b']);
         expect(useDocument.getState().activeViewId).toBe('b');
+    });
+});
+
+describe('a view in the trash', () => {
+    afterEach(() => {
+        useDocument.getState().purgeTrash();
+    });
+
+    test('leaves the list and the grid but stays in the file, and claims no edit until it is purged', () => {
+        const edits = useDocument.getState().edits;
+        expect(useDocument.getState().trashView('a')).toBe(true);
+        expect(useDocument.getState().views.map((each) => each.id)).toEqual(['b']);
+        expect(useDocument.getState().activeViewId).toBe('b');
+        expect(
+            useDocument
+                .getState()
+                .fileViews()
+                .map((each) => each.id)
+        ).toEqual(['a', 'b']);
+        expect(useDocument.getState().edits).toBe(edits);
+
+        useDocument.getState().purgeTrash('a');
+        expect(
+            useDocument
+                .getState()
+                .fileViews()
+                .map((each) => each.id)
+        ).toEqual(['b']);
+        expect(useDocument.getState().edits).toBe(edits + 1);
+        expect(useDocument.getState().restoreView('a')).toBe(false);
+    });
+
+    test('comes back in its place with its nodes, its camera and the grid it left', () => {
+        focusedCanvas().getState().panBy(10, 0);
+        const camera = focusedCanvas().getState().viewCamera();
+        const layout = useDocument.getState().layout;
+        useDocument.getState().trashView('a');
+        expect(useDocument.getState().restoreView('a')).toBe(true);
+        expect(useDocument.getState().views.map((each) => each.id)).toEqual(['a', 'b']);
+        expect(useDocument.getState().layout).toBe(layout);
+        expect(focusedCanvas().getState().order).toEqual(['n1']);
+        expect(focusedCanvas().getState().viewCamera()).toEqual(camera);
+        expect(useDocument.getState().trashed).toEqual([]);
+    });
+
+    test('opens in the focused cell when the grid moved on in the meantime', () => {
+        const c = useDocument.getState().addCanvasView('c');
+        useDocument.getState().setActiveView('a');
+        useDocument.getState().trashView('a');
+        useDocument.getState().setActiveView(c);
+        useDocument.getState().restoreView('a');
+        expect(useDocument.getState().activeViewId).toBe('a');
+        expect(focusedCanvas().getState().order).toEqual(['n1']);
+    });
+
+    test('several go back into the file where each of them stood', () => {
+        useDocument.getState().addCanvasView('c');
+        const ids = useDocument.getState().views.map((each) => each.id);
+        useDocument.getState().trashView('b');
+        useDocument.getState().trashView('a');
+        expect(
+            useDocument
+                .getState()
+                .fileViews()
+                .map((each) => each.id)
+        ).toEqual(ids);
+    });
+
+    test('a merge keeps it out of the list and takes in what another writer changed on it', () => {
+        useDocument.getState().trashView('a');
+        const renamed = { ...view('a', [node('n1', 40, 40)]), name: 'Renamed' };
+        useDocument.getState().applyMerge([renamed, view('b', [node('n2', 900, 900)])], {}, []);
+        expect(useDocument.getState().views.map((each) => each.id)).toEqual(['b']);
+        expect(useDocument.getState().trashed[0]!.view).toEqual(renamed);
+
+        useDocument.getState().restoreView('a');
+        expect(canvasAt(0).name).toBe('Renamed');
+    });
+
+    test('a merge without it lets it go, since another writer deleted it too', () => {
+        useDocument.getState().trashView('a');
+        useDocument.getState().applyMerge([view('b', [node('n2', 900, 900)])], {}, []);
+        expect(useDocument.getState().trashed).toEqual([]);
+        expect(useDocument.getState().restoreView('a')).toBe(false);
     });
 });
 

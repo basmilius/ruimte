@@ -1,15 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { Trash } from 'lucide-react';
-import { createViewAction, deleteViewAction, promoteNodeAction } from '@/actions/client-actions';
-import { viewIsBusy } from '@/project/views';
+import { createViewAction, promoteNodeAction } from '@/actions/client-actions';
 import { ViewSettingsDialog } from '@/shell/ViewSettingsDialog';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { PromptDialog } from '@/ui/PromptDialog';
 
-/* Settings, deleting, promoting and a new page: everything a view asks before it happens. */
+/* Settings, promoting and a new page: everything a view asks before it happens. */
 export function ViewDialogs() {
     const { t } = useTranslation(['shell', 'common']);
     const dialog = useUi((s) => s.viewDialog);
@@ -32,22 +30,6 @@ export function ViewDialogs() {
                 confirmLabel={t('common:action.open')}
                 onConfirm={(url) => {
                     void createViewAction('browser', { url });
-                    close();
-                }}
-                onClose={close}
-            />
-
-            <PromptDialog
-                open={present && dialog.kind === 'delete'}
-                title={t('viewDialogs.delete.title', { name: view?.name ?? '' })}
-                description={view && viewIsBusy(view) ? t('viewDialogs.delete.busy') : t('viewDialogs.delete.description')}
-                confirmLabel={t('common:action.delete')}
-                confirmIcon={Trash}
-                danger
-                onConfirm={() => {
-                    if (view) {
-                        deleteViewAction(view.id);
-                    }
                     close();
                 }}
                 onClose={close}

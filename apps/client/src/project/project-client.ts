@@ -34,6 +34,7 @@ interface DocumentAccess {
     getState(): {
         views: ProjectView[];
         shared: string[];
+        trashed: readonly unknown[];
         activeViewId: string | null;
         edits: number;
         loading: boolean;
@@ -41,6 +42,8 @@ interface DocumentAccess {
         applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>, shared: string[]): void;
         heldNodeIds(): Set<string>;
         exportViews(): ProjectView[];
+        fileViews(): ProjectView[];
+        purgeTrash(): void;
         exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout'>;
     };
     subscribe: StoreApi<DocumentAccess extends { getState(): infer S } ? S : never>['subscribe'];
@@ -179,8 +182,15 @@ export class ProjectClient {
         );
         const host = options.window === undefined ? (typeof window === 'undefined' ? null : window) : options.window;
         if (host) {
-            // localStorage is synchronous, so a page on its way out still keeps where it stood.
-            const onLeave = (): void => this.flushLocal();
+            /* localStorage is synchronous, so a page on its way out still keeps where it stood. A view
+               still waiting on its undo goes for good, and the save is on the wire before the page is gone. */
+            const onLeave = (): void => {
+                this.flushLocal();
+                if (this.opened && this.documents.getState().trashed.length > 0) {
+                    this.documents.getState().purgeTrash();
+                    void this.flush();
+                }
+            };
             host.addEventListener('pagehide', onLeave);
             this.unsubscribe.push(() => host.removeEventListener('pagehide', onLeave));
         }
@@ -213,6 +223,9 @@ export class ProjectClient {
      */
     async leave(): Promise<void> {
         const current = this.opened ? this.sink.getState().current : null;
+        if (current) {
+            this.documents.getState().purgeTrash();
+        }
         await this.beforeLeave();
         await this.flush();
         this.flushLocal();
@@ -230,6 +243,9 @@ export class ProjectClient {
      */
     async closeProject(): Promise<void> {
         const current = this.sink.getState().current;
+        if (this.opened) {
+            this.documents.getState().purgeTrash();
+        }
         await this.flush();
         this.flushLocal();
         if (current) {
@@ -544,14 +560,14 @@ export class ProjectClient {
         return true;
     }
 
-    /* The project as it stands on this screen, unsaved edits and all: what a save writes and a merge holds. */
+    /* The project as it stands on this screen, unsaved edits and the views still waiting on an undo included: what a save writes and a merge holds. */
     private contentOfScreen(): ProjectContent {
         const { current, chosenIcon } = this.sink.getState();
         return {
             name: current?.name ?? '',
             color: current?.color ?? '',
             ...(chosenIcon ? { icon: chosenIcon } : {}),
-            views: this.documents.getState().exportViews()
+            views: this.documents.getState().fileViews()
         };
     }
 

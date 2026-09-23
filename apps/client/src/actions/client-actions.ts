@@ -55,6 +55,7 @@ import {
     type ViewDeletionFacts,
     type ViewDeletionMachine
 } from '@/project/view-deletion';
+import { offerViewUndo } from '@/project/view-trash';
 import type { PromptClients } from '@/prompts/logic/subjects';
 import { FILES_VIEW_ID } from '@/shell/files-view';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
@@ -503,7 +504,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 }
             };
         },
-        'view.delete': async ({ viewId }, { confirmed }) => {
+        'view.delete': async ({ viewId }, { confirmed, actor }) => {
             const exported = () =>
                 document
                     .getState()
@@ -540,8 +541,22 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             if (!exported()) {
                 throw new ActionRefusal('unknown-view', `“${view.name}” is no longer in this project.`);
             }
-            document.getState().deleteView(viewId);
-            return { output: { viewId, view: view.name ?? viewId, kind: kindOf(view) } };
+            const output = { viewId, view: view.name ?? viewId, kind: kindOf(view) };
+            if (actor.kind !== 'person') {
+                document.getState().deleteView(viewId);
+                return { output };
+            }
+            // A person gets a way back instead of a question, so nothing on the view ends until that offer does.
+            document.getState().trashView(viewId);
+            offerViewUndo(document, viewId, output.view);
+            return {
+                output,
+                undo: () => {
+                    if (!document.getState().restoreView(viewId)) {
+                        throw new ActionRefusal('stale-undo', `“${output.view}” can no longer be brought back.`);
+                    }
+                }
+            };
         },
         'node.focus': ({ viewId, nodeId }) => {
             const { view, canvas } = canvasOnScreen(document, viewId);
