@@ -19,6 +19,7 @@ import { Icon } from '@/ui/Icon';
 const SCALES: readonly CostScale[] = ['log', 'linear'];
 
 // The attribution the terms of Artificial Analysis ask for, with a link to them; a page opens it in the system browser.
+// Those terms allow a chart and not the data itself, so the overlay never gets a table, an export or a way to copy the numbers.
 const SOURCE_URL = 'https://artificialanalysis.ai';
 
 const MINUTE = 60_000;
