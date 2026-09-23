@@ -21,13 +21,13 @@ export const stopsTaskWarning = (agents: number): string => `${i18next.t('agents
 export const stopsSubagentsWarning = (agents: number): string => `${i18next.t('agents:ending.stopsSubagents')} ${endsAgentsWarning(agents)}`;
 
 /*
- * The live agents these nodes opened, counted once however many of them opened the same one. A
- * machine that does not know the question (or cannot be asked) counts none, which is how deleting
- * worked before it ended anything.
+ * The live agents these nodes opened, each once however many of them opened it. A machine that
+ * does not know the question (or cannot be asked) names none, which is how deleting worked before
+ * it ended anything.
  */
-export const agentsEndedWith = async (transport: Pick<Transport, 'request'> | null, nodeIds: readonly string[]): Promise<number> => {
+export const agentsEndedBy = async (transport: Pick<Transport, 'request'> | null, nodeIds: readonly string[]): Promise<string[]> => {
     if (transport === null || nodeIds.length === 0) {
-        return 0;
+        return [];
     }
     const answers = await Promise.all(
         nodeIds.map((nodeId) =>
@@ -38,8 +38,11 @@ export const agentsEndedWith = async (transport: Pick<Transport, 'request'> | nu
         )
     );
     const going = new Set(nodeIds);
-    return new Set(answers.flat().filter((id) => !going.has(id))).size;
+    return [...new Set(answers.flat().filter((id) => !going.has(id)))];
 };
+
+export const agentsEndedWith = async (transport: Pick<Transport, 'request'> | null, nodeIds: readonly string[]): Promise<number> =>
+    (await agentsEndedBy(transport, nodeIds)).length;
 
 /*
  * Asks first when the delete would end an agent or leave a worktree behind. A worktree is never

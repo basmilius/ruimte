@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import { isCanvasView, resolveStoredPath } from '@ruimte/contracts';
+import { deleteNodesAction } from '@/actions/client-actions';
 import { askBeforeEndingAgents, type PendingEnd } from '@/agents/end-children';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { worktreesLeftBy } from '@/shell/panels/worktree-rows';
@@ -59,17 +60,7 @@ export const deleteSelectionAsking = (
     });
     return new Promise((resolve) => {
         closeAfterSaving(currentEndpointId(), files, () => {
-            void askBeforeEndingAgents(
-                transport,
-                sessions,
-                what,
-                () => {
-                    const now = store.getState();
-                    now.select(picked);
-                    now.deleteSelected();
-                },
-                leftBehind
-            ).finally(resolve);
+            void askBeforeEndingAgents(transport, sessions, what, () => deleteNodesAction(store, picked), leftBehind).finally(resolve);
         });
     });
 };

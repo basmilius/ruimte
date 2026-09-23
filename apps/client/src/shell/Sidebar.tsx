@@ -25,14 +25,14 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { isCanvasView, isSessionView, type AgentKind, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
-import { renameViewAction } from '@/actions/client-actions';
+import { renameNodeAction, renameViewAction } from '@/actions/client-actions';
 import { useDrafts } from '@/chat/drafts';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
 import { askDeleteView, askViewSettings, newFileView, revealNode, showView } from '@/project/views';
-import { focusedCanvas, useCanvas } from '@/state/canvas';
+import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
@@ -209,7 +209,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                     value={node.title}
                     onDone={(next) => {
                         if (next) {
-                            focusedCanvas().getState().renameNode(node.id, next);
+                            renameNodeAction(row.viewId, node.id, next);
                         } else {
                             resetTitle(node.id);
                         }

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { focusNodeAction } from '@/actions/client-actions';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { isTypingTarget } from '@/canvas/canvas-shortcuts';
 import { leavePromptStack, PROMPT_STACK_ATTRIBUTE, usePromptFront } from '@/canvas/prompt-stack';
@@ -124,10 +125,10 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
 
     const nodeId = active.subject.nodeId;
     const goTo = (): void => {
-        canvasStore.getState().goToNode(nodeId);
+        focusNodeAction(viewId, nodeId);
     };
     const reveal = (): void => {
-        canvasStore.getState().goToNode(nodeId);
+        focusNodeAction(viewId, nodeId);
         canvasStore.getState().activateNode(nodeId);
     };
     const denyReason = active.subject.kind === 'chat' && providers.find((provider) => provider.kind === active.provider)?.capabilities.denyReason === true;

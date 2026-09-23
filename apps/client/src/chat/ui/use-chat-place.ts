@@ -1,3 +1,4 @@
+import { focusNodeAction } from '@/actions/client-actions';
 import { forkOriginIn } from '@/chat/logic/fork';
 import { revealNode, showView } from '@/project/views';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
@@ -21,7 +22,7 @@ export const useChatPlace = (chatId: string): ChatPlace => {
     const canvasStore = useCanvasStore();
     const go = (): void => {
         if (liveTitle !== null) {
-            canvasStore.getState().goToNode(chatId);
+            focusNodeAction(canvasStore.getState().viewId, chatId);
         } else if (shape === 'view') {
             showView(chatId);
         } else if (shape === 'node') {

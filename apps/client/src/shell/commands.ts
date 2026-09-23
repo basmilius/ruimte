@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import { isCanvasView, isDiagramView, isDrawingView, isSessionView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import { addAgentNode, addAgentView, type AgentTarget } from '@/agents/nodes';
-import { createNodeAction, createViewAction, groupSelectionAction } from '@/actions/client-actions';
+import { createNodeAction, createViewAction, fitAction, groupSelectionAction } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
 import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSeparatorView, newSubheaderView, putOnCanvas, showOnCanvas } from '@/project/views';
 import { copyDiagramJson, copyDiagramPng, copyDiagramSvg, openDiagramJson, saveDiagramPng, saveDiagramSvg } from '@/diagram/export';
@@ -34,7 +34,7 @@ export interface Command {
 }
 
 /* Whichever surface is on screen owns the zoom rows in the palette. */
-const zoomTarget = (): Pick<CanvasState, 'fitAll' | 'zoomToSelection' | 'zoomTo'> => {
+const zoomTarget = (): Pick<CanvasState, 'zoomToSelection' | 'zoomTo'> => {
     const view = activeViewOf(useDocument.getState());
     if (view && isDrawingView(view)) {
         return focusedDrawing().getState();
@@ -281,7 +281,7 @@ export const appCommands = (): Command[] => {
                   // A drawing has a camera of its own, so the same three rows act on whichever is on screen.
                   ...(onCanvas || drawing || diagram
                       ? [
-                            { id: 'fit', label: i18next.t('shell:dock.zoomToFit'), shortcut: CANVAS_SHORTCUTS.fitAll, run: () => zoomTarget().fitAll() },
+                            { id: 'fit', label: i18next.t('shell:dock.zoomToFit'), shortcut: CANVAS_SHORTCUTS.fitAll, run: () => fitAction() },
                             {
                                 id: 'zoom-selection',
                                 label: i18next.t('shell:dock.zoomToSelection'),

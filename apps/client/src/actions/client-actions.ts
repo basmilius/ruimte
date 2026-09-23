@@ -16,6 +16,8 @@ import type { StoreApi } from 'zustand';
 import { toWorld } from '@/canvas/math';
 import { nearestFreeNodeRect } from '@/canvas/place-node';
 import { recentChatMessages } from '@/chat/recent-messages';
+import { liveViewDeletion, saveViewFiles, viewDeletionFacts, type ViewDeletionMachine } from '@/project/view-deletion';
+import { basenameOf } from '@/shell/panels/files-tree';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { focusedCanvas, NODE_SIZE, type CanvasState, type NodeKind } from '@/state/canvas';
 import { useChats } from '@/state/chats';
@@ -73,15 +75,19 @@ const addNodeInFreeSpace = (canvas: CanvasState, kind: NodeKind, options: Parame
     return canvas.addNode(kind, { x: placed.x + placed.w / 2, y: placed.y + placed.h / 2 }, options);
 };
 
-/* The history of the view on screen: a canvas, a drawing and a diagram each keep their own. */
-const activeHistory = (document: StoreApi<DocumentState>, viewId: string) => {
+/* The editor of the view on screen: a canvas, a drawing and a diagram each keep their own history and camera. */
+const activeEditor = (document: StoreApi<DocumentState>, viewId: string, doing: string) => {
     const view = activeViewOf(document.getState());
     if (!view || view.id !== viewId || !(isCanvasView(view) || isDrawingView(view) || isDiagramView(view))) {
-        throw new ActionRefusal('inactive-view', 'Open the target canvas, drawing or diagram before undoing or redoing a change in it.');
+        throw new ActionRefusal('inactive-view', `Open the target canvas, drawing or diagram before ${doing}.`);
     }
     const editor = isCanvasView(view) ? focusedCanvas() : isDrawingView(view) ? focusedDrawing() : focusedDiagram();
-    return { view, history: () => editor.getState() };
+    return { view, editor: () => editor.getState() };
 };
+
+const listed = (items: readonly string[]): string => (items.length === 1 ? items[0]! : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`);
+
+const quoted = (names: readonly string[]): string => listed(names.map((name) => `“${name}”`));
 
 const historyUndo = (viewId: string, expectedDepth: number, expectedNodeId?: string) => () => {
     const current = activeCanvas(useDocument, viewId).canvas;
@@ -111,11 +117,19 @@ const chatTitle = (document: StoreApi<DocumentState>, chatId: string): string | 
     return null;
 };
 
-export const createClientActionRegistry = (
-    document: StoreApi<DocumentState>,
-    clearChat: (chatId: string) => Promise<void> = (chatId) => chatClient.clear(chatId, true)
-): ActionRegistry<void> =>
-    new ActionRegistry<void>({
+export interface ClientActionMachine {
+    clearChat(chatId: string): Promise<void>;
+    viewDeletion: ViewDeletionMachine;
+}
+
+const LIVE_MACHINE: ClientActionMachine = {
+    clearChat: (chatId) => chatClient.clear(chatId, true),
+    viewDeletion: liveViewDeletion
+};
+
+export const createClientActionRegistry = (document: StoreApi<DocumentState>, machine: Partial<ClientActionMachine> = {}): ActionRegistry<void> => {
+    const { clearChat, viewDeletion } = { ...LIVE_MACHINE, ...machine };
+    return new ActionRegistry<void>({
         ...inspectionActions(document),
         'workspace.inspect': () => {
             const state = document.getState();
@@ -256,9 +270,13 @@ export const createClientActionRegistry = (
                 }
             };
         },
-        'view.delete': ({ viewId }, { confirmed }) => {
-            const state = document.getState();
-            const view = state.exportViews().find((candidate) => candidate.id === viewId);
+        'view.delete': async ({ viewId }, { confirmed }) => {
+            const exported = () =>
+                document
+                    .getState()
+                    .exportViews()
+                    .find((candidate) => candidate.id === viewId);
+            const view = exported();
             if (!view) {
                 throw new ActionRefusal('unknown-view', `No view with id “${viewId}” exists in this project.`);
             }
@@ -269,6 +287,7 @@ export const createClientActionRegistry = (
                     : view.kind === 'chat' || view.kind === 'terminal'
                       ? 1
                       : 0;
+                const { unsaved, working, ending } = await viewDeletionFacts(view, document.getState().exportViews(), viewDeletion);
                 return {
                     confirmation: {
                         title: `Delete “${view.name}”?`,
@@ -276,12 +295,27 @@ export const createClientActionRegistry = (
                             nodes === 0 ? 'The view will be removed.' : `The view and its ${nodes} ${nodes === 1 ? 'node' : 'nodes'} will be removed.`,
                             ...(sessions === 0
                                 ? []
-                                : [`${sessions} ${sessions === 1 ? 'chat or terminal session' : 'chat or terminal sessions'} may be ended.`])
+                                : [`${sessions} ${sessions === 1 ? 'chat or terminal session' : 'chat or terminal sessions'} may be ended.`]),
+                            ...(unsaved.length === 0 ? [] : [`Unsaved changes to ${quoted(unsaved.map(basenameOf))} will be saved first.`]),
+                            ...(working.length === 0 ? [] : [`${quoted(working)} ${working.length === 1 ? 'is' : 'are'} still working and will be stopped.`]),
+                            ...(ending.length === 0
+                                ? []
+                                : [
+                                      `${listed(ending.map((title) => (title === null ? 'an agent' : `“${title}”`)))} ${ending.length === 1 ? 'was' : 'were'} started from this view and will end too.`
+                                  ])
                         ]
                     }
                 };
             }
-            state.deleteView(viewId);
+            const unsaved = await saveViewFiles(view, viewDeletion);
+            if (unsaved.length > 0) {
+                throw new ActionRefusal('unsaved-files', `${quoted(unsaved.map(basenameOf))} could not be saved, so “${view.name}” was kept.`);
+            }
+            // Saving waits on the machine, and the view may have gone in the meantime.
+            if (!exported()) {
+                throw new ActionRefusal('unknown-view', `“${view.name}” is no longer in this project.`);
+            }
+            document.getState().deleteView(viewId);
             return { output: { viewId, view: view.name ?? viewId, kind: kindOf(view) } };
         },
         'node.focus': ({ viewId, nodeId }) => {
@@ -442,21 +476,21 @@ export const createClientActionRegistry = (
             };
         },
         'canvas.fit': ({ viewId }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
-            canvas.fitAll();
+            const { view, editor } = activeEditor(document, viewId, 'fitting it in view');
+            editor().fitAll();
             return { output: { viewId, view: view.name } };
         },
         'history.undo': ({ viewId }) => {
-            const { view, history } = activeHistory(document, viewId);
-            const before = history().past.length;
-            history().undo();
-            return { output: { viewId, view: view.name, changed: history().past.length !== before } };
+            const { view, editor } = activeEditor(document, viewId, 'undoing or redoing a change in it');
+            const before = editor().past.length;
+            editor().undo();
+            return { output: { viewId, view: view.name, changed: editor().past.length !== before } };
         },
         'history.redo': ({ viewId }) => {
-            const { view, history } = activeHistory(document, viewId);
-            const before = history().future.length;
-            history().redo();
-            return { output: { viewId, view: view.name, changed: history().future.length !== before } };
+            const { view, editor } = activeEditor(document, viewId, 'undoing or redoing a change in it');
+            const before = editor().future.length;
+            editor().redo();
+            return { output: { viewId, view: view.name, changed: editor().future.length !== before } };
         },
         'chat.send': async ({ chatId, prompt }) => {
             const chat = chatTitle(document, chatId);
@@ -497,6 +531,7 @@ export const createClientActionRegistry = (
             return { output: { chatId, chat, ...recentChatMessages(state.items, state.order, limit) } };
         }
     });
+};
 
 export const clientActions = createClientActionRegistry(useDocument);
 
@@ -514,6 +549,16 @@ const runAsPerson = <Name extends ActionName>(name: Name, input: ActionInput<Nam
     void clientActions.execute(name, input, PERSON_ACTION_CALL);
 };
 
+/* The person already answered the app's own dialogs before this runs, so the confirmation is theirs to give. */
+const runConfirmedAsPerson = async <Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<void> => {
+    const asked = await clientActions.execute(name, input, PERSON_ACTION_CALL);
+    if (asked.status === 'needs_confirmation') {
+        await clientActions.confirm(asked.confirmationToken, true, PERSON_ACTION_CALL);
+    }
+};
+
+const activeViewId = (): string | null => useDocument.getState().activeViewId;
+
 export const focusViewAction = (viewId: string): void => {
     runAsPerson('view.focus', { viewId });
 };
@@ -526,9 +571,53 @@ export const createViewAction = (kind: CreatableViewKind): void => {
     runAsPerson('view.create', { kind, name: null, url: null, command: null });
 };
 
+export const deleteViewAction = (viewId: string): void => {
+    void runConfirmedAsPerson('view.delete', { viewId });
+};
+
+export const focusNodeAction = (viewId: string | null, nodeId: string): void => {
+    if (viewId !== null) {
+        runAsPerson('node.focus', { viewId, nodeId });
+    }
+};
+
+export const duplicateNodeAction = (viewId: string | null, nodeId: string): void => {
+    if (viewId !== null) {
+        runAsPerson('node.duplicate', { viewId, nodeId });
+    }
+};
+
+export const renameNodeAction = (viewId: string | null, nodeId: string, name: string): void => {
+    if (viewId !== null) {
+        runAsPerson('node.rename', { viewId, nodeId, name });
+    }
+};
+
+/*
+ * The action names nodes on the canvas in focus and nothing else. A pick that also holds text or a
+ * line, or that stands on a canvas outside the focus, goes to its own store in one step, so a single
+ * undo still brings all of it back.
+ */
+export const deleteNodesAction = (store: StoreApi<CanvasState>, ids: readonly string[]): void => {
+    const canvas = store.getState();
+    if (canvas.viewId !== null && store === focusedCanvas() && ids.length > 0 && ids.every((id) => canvas.nodes[id] !== undefined)) {
+        void runConfirmedAsPerson('node.delete', { viewId: canvas.viewId, nodeIds: [...ids] });
+        return;
+    }
+    canvas.select([...ids]);
+    canvas.deleteSelected();
+};
+
+export const fitAction = (): void => {
+    const viewId = activeViewId();
+    if (viewId !== null) {
+        runAsPerson('canvas.fit', { viewId });
+    }
+};
+
 /* On the canvas on screen, in free space near the middle of what it shows. */
 export const createNodeAction = (kind: CreatableNodeKind, url: string | null = null): void => {
-    const viewId = useDocument.getState().activeViewId;
+    const viewId = activeViewId();
     if (viewId === null) {
         return;
     }
@@ -537,7 +626,7 @@ export const createNodeAction = (kind: CreatableNodeKind, url: string | null = n
 
 /* A group never goes inside a new group, so only the other selected nodes become its members. */
 export const groupSelectionAction = (): void => {
-    const viewId = useDocument.getState().activeViewId;
+    const viewId = activeViewId();
     const { selection, nodes } = focusedCanvas().getState();
     const nodeIds = selection.filter((id) => {
         const node = nodes[id];
@@ -550,7 +639,7 @@ export const groupSelectionAction = (): void => {
 };
 
 export const historyAction = (step: 'undo' | 'redo'): void => {
-    const viewId = useDocument.getState().activeViewId;
+    const viewId = activeViewId();
     if (viewId === null) {
         return;
     }

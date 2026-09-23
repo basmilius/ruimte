@@ -299,6 +299,32 @@ const matchNodeSet = (canvas: CanvasState, names: string[] | null, kind: string 
     return { nodes: source };
 };
 
+/* A drawing and a diagram have a camera and a history of their own, so these reach past a canvas. */
+const editorAction = async (action: 'fit' | 'undo' | 'redo'): Promise<VoiceToolExecution> => {
+    const viewId = useDocument.getState().activeViewId;
+    if (viewId === null) {
+        return failed('Open a canvas, drawing or diagram first.');
+    }
+    if (action === 'fit') {
+        const result = await clientActions.execute('canvas.fit', { viewId }, VOICE_ACTION_CALL);
+        return result.status === 'completed'
+            ? ok('Fitted everything in view.', result.output, {
+                  kind: 'focus',
+                  label: 'Zoomed to fit',
+                  detail: result.output.view
+              })
+            : failureOf(result);
+    }
+    const result = await clientActions.execute(action === 'undo' ? 'history.undo' : 'history.redo', { viewId }, VOICE_ACTION_CALL);
+    return result.status === 'completed'
+        ? ok(result.output.changed ? `${action === 'undo' ? 'Undid' : 'Redid'} the change.` : `There was nothing to ${action}.`, result.output, {
+              kind: 'node',
+              label: action === 'undo' ? 'Undid change' : 'Redid change',
+              detail: result.output.view
+          })
+        : failureOf(result);
+};
+
 const manageCanvas = async (args: Record<string, unknown>): Promise<VoiceToolExecution> => {
     const action = stringArgument(args, 'action');
     const target = nullableStringArgument(args, 'node');
@@ -325,6 +351,9 @@ const manageCanvas = async (args: Record<string, unknown>): Promise<VoiceToolExe
     }
     if (scope !== null && !['selected', 'visible', 'all'].includes(scope)) {
         return failed('Choose selected, visible or all as the canvas scope.');
+    }
+    if (action === 'fit' || action === 'undo' || action === 'redo') {
+        return editorAction(action);
     }
     const current = activeCanvas();
     if (!current) {
@@ -367,26 +396,6 @@ const manageCanvas = async (args: Record<string, unknown>): Promise<VoiceToolExe
             detail: `${result.output.node} · ${result.output.view}`,
             ...undoAction(result.undoToken)
         });
-    }
-    if (action === 'fit') {
-        const result = await clientActions.execute('canvas.fit', { viewId: current.view.id }, VOICE_ACTION_CALL);
-        return result.status === 'completed'
-            ? ok('Fitted all canvas content in view.', result.output, {
-                  kind: 'focus',
-                  label: 'Fit canvas',
-                  detail: result.output.view
-              })
-            : failureOf(result);
-    }
-    if (action === 'undo' || action === 'redo') {
-        const result = await clientActions.execute(action === 'undo' ? 'history.undo' : 'history.redo', { viewId: current.view.id }, VOICE_ACTION_CALL);
-        return result.status === 'completed'
-            ? ok(result.output.changed ? `${action === 'undo' ? 'Undid' : 'Redid'} the canvas change.` : `There was nothing to ${action}.`, result.output, {
-                  kind: 'node',
-                  label: action === 'undo' ? 'Undid canvas change' : 'Redid canvas change',
-                  detail: result.output.view
-              })
-            : failureOf(result);
     }
     if (action === 'group_selection') {
         const nodeIds = current.canvas.selection.filter((id) => current.canvas.nodes[id]?.kind !== 'group');

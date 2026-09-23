@@ -21,6 +21,7 @@ import {
     Terminal,
     X
 } from 'lucide-react';
+import { focusNodeAction } from '@/actions/client-actions';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { TaskMark } from '@/tasks/TaskMark';
@@ -351,7 +352,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     <div className={`${BTN_GROUP} shrink-0`}>
                         {node.kind === 'chat' && <SubagentButton chatId={id} />}
                         <Tooltip label={t('node.zoomTo')} name>
-                            <button className="icon-btn h-7 w-7" onClick={() => canvasStore.getState().goToNode(id)}>
+                            <button className="icon-btn h-7 w-7" onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
                                 <Icon icon={Maximize2} size={16} />
                             </button>
                         </Tooltip>

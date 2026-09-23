@@ -7,7 +7,7 @@ import { isCanvasView, isDiagramView } from '@ruimte/contracts';
 import { browserRegistry } from '@/browser/registry';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
-import { createNodeAction, createViewAction, groupSelectionAction, historyAction } from '@/actions/client-actions';
+import { createNodeAction, createViewAction, fitAction, groupSelectionAction, historyAction } from '@/actions/client-actions';
 import { showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { isInNodeBody } from '@/canvas/node-body';
@@ -273,7 +273,7 @@ export const useCanvasShortcuts = (): void => {
                 s.zoomTo(1);
             } else if (is(CANVAS_SHORTCUTS.fitAll)) {
                 e.preventDefault();
-                s.fitAll();
+                fitAction();
             } else if (is(CANVAS_SHORTCUTS.zoomSelection)) {
                 e.preventDefault();
                 s.zoomToSelection();

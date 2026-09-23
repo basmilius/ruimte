@@ -190,7 +190,7 @@ export const ACTION_DEFINITIONS = {
     },
     'view.delete': {
         title: 'Delete view',
-        description: 'Deletes a view and everything it contains after confirmation.',
+        description: 'Deletes a view and everything it contains after confirmation, saving the files it shows with unsaved changes first.',
         effect: 'shared',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId }),
@@ -305,8 +305,8 @@ export const ACTION_DEFINITIONS = {
         })
     },
     'canvas.fit': {
-        title: 'Fit canvas',
-        description: 'Fits all content of the active canvas in the viewport.',
+        title: 'Zoom to fit',
+        description: 'Fits all content of the active canvas, drawing or diagram in the viewport.',
         effect: 'local',
         actors: ACTION_ACTOR_KINDS,
         input: z.object({ viewId }),

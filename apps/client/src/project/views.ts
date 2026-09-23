@@ -4,19 +4,18 @@ import {
     isCanvasView,
     isDiagramView,
     isDrawingView,
-    isFileView,
     isOpenableView,
     isSessionView,
-    resolveStoredPath,
     sessionNodesOfView,
     type AgentKind,
     type ProjectView
 } from '@ruimte/contracts';
 import { askBeforeEndingAgents } from '@/agents/end-children';
-import { focusViewAction, freeName } from '@/actions/client-actions';
+import { deleteViewAction, focusNodeAction, focusViewAction, freeName } from '@/actions/client-actions';
 import { offerDraft } from '@/chat/drafts';
 import { GRID, toWorld, type Point } from '@/canvas/math';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
+import { filesOfView, nodesOfView } from '@/project/view-deletion';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { viewIdsIn, type SplitDirection } from '@/shell/split';
 import { NODE_SIZE, focusedCanvas, liveCanvas } from '@/state/canvas';
@@ -85,7 +84,10 @@ export const revealNode = (nodeId: string): void => {
     if (view && view.id !== activeViewId) {
         showView(view.id);
     }
-    focusedCanvas().getState().goToNode(nodeId);
+    const viewId = view?.id ?? activeViewId;
+    if (viewId !== null) {
+        focusNodeAction(viewId, nodeId);
+    }
 };
 
 export const newSeparatorView = (): string | null => useDocument.getState().addSeparatorView();
@@ -258,20 +260,6 @@ export const stepView = (delta: -1 | 1): void => {
     showView(views[(at + delta + views.length) % views.length]!.id);
 };
 
-/* What a view holds, in the words the status needs. The canvas store owns the view that is on screen. */
-export const nodesOfView = (view: ProjectView): StatusOf[] => {
-    if (isSessionView(view)) {
-        // A standalone view is one node without a canvas, under its own id.
-        return [{ id: view.id, kind: view.kind }];
-    }
-    if (!isCanvasView(view)) {
-        return [];
-    }
-    // A view on screen is held by its editor, wherever in the grid it stands, and that is newer.
-    const canvas = liveCanvas(view.id);
-    return canvas === null ? view.nodes : canvas.order.map((id) => canvas.nodes[id]!);
-};
-
 /* A node as the whole project sees it: enough to have a status and a name, never a place. */
 export interface ProjectNodeRef extends StatusOf {
     title: string;
@@ -332,16 +320,6 @@ export const putOnCanvas = (viewId: string): boolean => {
     return target ? useDocument.getState().putOnCanvas(viewId, target.id) : false;
 };
 
-/* The files a view shows: itself for a file view, its file nodes for a canvas. */
-const filesOfView = (view: ProjectView, folder: string | null): string[] => {
-    const stored = isFileView(view)
-        ? [view.path]
-        : isCanvasView(view)
-          ? view.nodes.flatMap((node) => (node.kind === 'file' && node.path ? [node.path] : []))
-          : [];
-    return stored.flatMap((path) => resolveStoredPath(folder, path) ?? []);
-};
-
 /*
  * Deleting takes a question when something in the view is still running, and a question of its own
  * when its chats and terminals opened agents that would end with it. A file it shows with unsaved
@@ -373,7 +351,7 @@ const deleteViewAsking = (view: ProjectView): void => {
         useUi.getState().setViewDialog({ kind: 'delete', viewId: id });
         return;
     }
-    useDocument.getState().deleteView(id);
+    deleteViewAction(id);
 };
 
 /* What a view is called and what it wears, in the one dialog that holds both. */

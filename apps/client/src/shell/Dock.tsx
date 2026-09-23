@@ -5,12 +5,13 @@ import { Menu } from '@base-ui-components/react/menu';
 import { Check, Globe, LayoutGrid, LayoutTemplate, Lock, LockOpen, MessageSquare, Plus, Save, StickyNote, Terminal, Type, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { isCanvasView } from '@ruimte/contracts';
+import { createNodeAction, fitAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import { toWorld } from '@/canvas/math';
 import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
 import type { StoreApi } from 'zustand';
-import { useCanvas, useCanvasStore, type CanvasState, type NodeKind } from '@/state/canvas';
+import { useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { StatusSummary } from '@/shell/StatusSummary';
@@ -36,8 +37,8 @@ const centerWorld = (store: StoreApi<CanvasState>) => {
 export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) => void }) {
     const { t } = useTranslation(['shell', 'common']);
     const dictationEnabled = useDictation((state) => state.model?.enabled === true);
-    /* The canvas under this dock. It is drawn in the focused cell only, so the focused editor would
-       answer the same today, but reading the cell keeps that a coincidence rather than a rule. */
+    /* The canvas under this dock. It is drawn in the focused cell only, which is also the one canvas
+       the actions behind adding a node and fitting can reach. */
     const canvasStore = useCanvasStore();
     /* A project whose views all went has no canvas either, and these controls would act on one nothing saves. */
     const onCanvas = useDocument((s) => {
@@ -59,10 +60,6 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
     const anyLocked = Object.values(locks).some(Boolean);
     const allLocked = Object.values(locks).every(Boolean);
 
-    const add = (kind: NodeKind) => {
-        canvasStore.getState().addNode(kind, centerWorld(canvasStore));
-    };
-
     if (!onCanvas) {
         return null;
     }
@@ -79,20 +76,20 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                 <Menu.Portal>
                     <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="start">
                         <Menu.Popup className="menu-popup">
-                            <Menu.Item className="menu-item" onClick={() => add('terminal')}>
+                            <Menu.Item className="menu-item" onClick={() => createNodeAction('terminal')}>
                                 <Icon icon={Terminal} size={14} /> {t('nodeKinds.terminal')} <Kbd shortcut={ADD_NODE_SHORTCUTS.terminal} />
                             </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => add('chat')}>
+                            <Menu.Item className="menu-item" onClick={() => createNodeAction('chat')}>
                                 <Icon icon={MessageSquare} size={14} /> {t('nodeKinds.chat')} <Kbd shortcut={ADD_NODE_SHORTCUTS.chat} />
                             </Menu.Item>
                             <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, centerWorld(canvasStore))} />
-                            <Menu.Item className="menu-item" onClick={() => add('browser')}>
+                            <Menu.Item className="menu-item" onClick={() => createNodeAction('browser')}>
                                 <Icon icon={Globe} size={14} /> {t('nodeKinds.browser')} <Kbd shortcut={ADD_NODE_SHORTCUTS.browser} />
                             </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => add('group')}>
+                            <Menu.Item className="menu-item" onClick={() => createNodeAction('group')}>
                                 <Icon icon={LayoutGrid} size={14} /> {t('nodeKinds.group')} <Kbd shortcut={ADD_NODE_SHORTCUTS.group} />
                             </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => add('note')}>
+                            <Menu.Item className="menu-item" onClick={() => createNodeAction('note')}>
                                 <Icon icon={StickyNote} size={14} /> {t('nodeKinds.note')} <Kbd shortcut={ADD_NODE_SHORTCUTS.note} />
                             </Menu.Item>
                             <Menu.Separator className={MENU_SEPARATOR} />
@@ -117,7 +114,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                 }}
                 shortcuts={CANVAS_SHORTCUTS}
                 onZoomTo={(next) => canvasStore.getState().zoomTo(next)}
-                onFitAll={() => canvasStore.getState().fitAll()}
+                onFitAll={fitAction}
                 selection={{
                     label: t('dock.zoomToSelection'),
                     shortcut: CANVAS_SHORTCUTS.zoomSelection,

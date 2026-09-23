@@ -21,6 +21,7 @@ import {
     Trash
 } from 'lucide-react';
 import type { ProviderInfo } from '@ruimte/contracts';
+import { duplicateNodeAction, focusNodeAction } from '@/actions/client-actions';
 import { ChatAgentSubmenu } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import { askOpenAsView, canOpenAsView } from '@/project/views';
@@ -121,10 +122,10 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     <ContextMenu.Item className="menu-item" onClick={onRename}>
                         <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <span className={MENU_HINT}>{t('menu.doubleClick')}</span>
                     </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().duplicateNode(id)}>
+                    <ContextMenu.Item className="menu-item" onClick={() => duplicateNodeAction(canvasStore.getState().viewId, id)}>
                         <Icon icon={Copy} size={14} /> {t('menu.duplicate')}
                     </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().goToNode(id)}>
+                    <ContextMenu.Item className="menu-item" onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
                         <Icon icon={Maximize2} size={14} /> {t('node.zoomTo')}
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().startLink(id)}>
@@ -315,7 +316,7 @@ function UnknownNodeMenuPopup({ id, onDelete }: { id: string; onDelete(): void }
         <ContextMenu.Portal>
             <ContextMenu.Positioner className="z-(--z-popup)">
                 <ContextMenu.Popup className="menu-popup">
-                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().goToNode(id)}>
+                    <ContextMenu.Item className="menu-item" onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
                         <Icon icon={Maximize2} size={14} /> {t('node.zoomTo')}
                     </ContextMenu.Item>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />

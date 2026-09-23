@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { create } from 'zustand';
 import { isCanvasView, type Plan } from '@ruimte/contracts';
 import { planToMarkdown } from '@ruimte/plan';
+import { focusNodeAction } from '@/actions/client-actions';
 import { offerDraft } from '@/chat/drafts';
 import { PlanClient } from '@/plan/plan-client';
 import { foldableIds, resultsText, revealOptions, type PlanFilter } from '@/plan/plan-view';
@@ -102,7 +103,7 @@ export const focusChat = (chatId: string): void => {
     const holding = views.find((view) => isCanvasView(view) && inCells.has(view.id) && liveCanvas(view.id)?.nodes[chatId] !== undefined);
     if (holding) {
         setActiveView(holding.id);
-        liveCanvas(holding.id)?.goToNode(chatId);
+        focusNodeAction(holding.id, chatId);
         return;
     }
     revealNode(chatId);

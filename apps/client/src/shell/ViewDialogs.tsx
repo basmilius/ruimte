@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Trash } from 'lucide-react';
+import { deleteViewAction } from '@/actions/client-actions';
 import { viewIsBusy } from '@/project/views';
 import { ViewSettingsDialog } from '@/shell/ViewSettingsDialog';
 import { useCanvas } from '@/state/canvas';
@@ -45,7 +46,7 @@ export function ViewDialogs() {
                 danger
                 onConfirm={() => {
                     if (view) {
-                        useDocument.getState().deleteView(view.id);
+                        deleteViewAction(view.id);
                     }
                     close();
                 }}

@@ -1,7 +1,7 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useTranslation } from 'react-i18next';
 import { FileText, Globe, LayoutGrid, Maximize, MessageSquare, Scan, SquareDashedMousePointer, StickyNote, Terminal, Type } from 'lucide-react';
-import { groupSelectionAction } from '@/actions/client-actions';
+import { fitAction, groupSelectionAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
@@ -65,7 +65,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     >
                         <Icon icon={Scan} size={14} /> {t('common:action.selectAll')} <Kbd shortcut={CANVAS_SHORTCUTS.selectAll} />
                     </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().fitAll()}>
+                    <ContextMenu.Item className="menu-item" onClick={fitAction}>
                         <Icon icon={Maximize} size={14} /> {t('canvasMenu.zoomToFit')} <Kbd shortcut={CANVAS_SHORTCUTS.fitAll} />
                     </ContextMenu.Item>
                 </ContextMenu.Popup>

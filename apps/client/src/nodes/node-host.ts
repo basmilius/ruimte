@@ -8,6 +8,7 @@ import {
     type ProjectView,
     type RuntimeMode
 } from '@ruimte/contracts';
+import { deleteNodesAction, deleteViewAction } from '@/actions/client-actions';
 import { suggestedTitleFor } from '@/chat/title';
 import { canvasOfNode, DEFAULT_TITLES, useCanvas, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -142,11 +143,10 @@ export const resetTitle = (id: string): void => {
 
 /* Closing a body: the node leaves its canvas, or the view leaves the project. */
 export const closeHost = (id: string): void => {
-    const canvas = canvasOfNode(id)?.getState();
-    if (canvas !== undefined) {
-        canvas.select([id]);
-        canvas.deleteSelected();
+    const canvas = canvasOfNode(id);
+    if (canvas !== null) {
+        deleteNodesAction(canvas, [id]);
         return;
     }
-    useDocument.getState().deleteView(id);
+    deleteViewAction(id);
 };
