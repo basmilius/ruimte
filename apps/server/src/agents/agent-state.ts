@@ -6,7 +6,7 @@ import type { AgentLineageStore } from './lineage.ts';
 
 export interface AgentStateSources {
     outbox: Pick<OutboxStore, 'list'>;
-    lineage: Pick<AgentLineageStore, 'endedAt'>;
+    lineage: Pick<AgentLineageStore, 'endedAt' | 'startedBy'>;
     chats: Pick<ChatManager, 'get' | 'hasStored' | 'cancel' | 'lastTurn'>;
     sessions: Pick<SessionManager, 'get'>;
 }
@@ -38,6 +38,7 @@ export const agentStates = (sources: AgentStateSources): AgentStateHost => ({
         }
         return status;
     },
+    startedBy: (nodeId) => sources.lineage.startedBy(nodeId),
     cancelTurn: (nodeId) => {
         const status = sources.chats.get(nodeId)?.info.status;
         if (status !== 'running' && status !== 'needs-you') {

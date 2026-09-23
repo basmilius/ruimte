@@ -10,7 +10,7 @@ const sources = (
 ): AgentStateSources =>
     ({
         outbox: { list: () => [] },
-        lineage: { endedAt: () => null },
+        lineage: { endedAt: () => null, startedBy: () => null },
         chats: {
             get: (id: string) => (statuses[id] === undefined ? undefined : { info: { status: statuses[id] } }),
             hasStored: async (id: string) => stored.includes(id),

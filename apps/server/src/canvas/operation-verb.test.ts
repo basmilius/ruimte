@@ -86,7 +86,7 @@ test('a start without a task is completed once the agent ran its first turn', as
 
     expect(await operation('chat-lead', `agent.start:${child}`)).toEqual([
         `operation\tagent.start:${child}\tagent.start\tcompleted`,
-        `agent\t${child}\tcompleted\t-\tthe start is done: its first turn ended and it waits for a message, which says nothing about whether the work is`
+        `agent\t${child}\tcompleted\t-\tthe start is done: its first turn ended and it waits for a message; whether the work itself is done, it does not say`
     ]);
 });
 
@@ -125,4 +125,17 @@ test('a team is one operation over its roles, and only the one who started it ma
     expect((await operation('term-other', id))[0]).toStartWith('refused\tnot-yours\t');
     expect((await operation('chat-lead', 'agent.start:')).at(0)).toStartWith('refused\tunknown-operation\t');
     expect((await operation('chat-lead', 'agent.start:chat-nowhere')).at(0)).toStartWith('refused\tunknown-operation\t');
+});
+
+test('a node that is no agent the caller started names no operation, even one the caller made', async () => {
+    const [note] = (await runVerb(daemon, 'chat-lead', 'node', ['new', 'note', '--text', 'hi']))[0]!.split('\t');
+    const [terminal] = (await runVerb(daemon, 'chat-lead', 'node', ['new', 'terminal']))[0]!.split('\t');
+    const [agent] = (await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--terminal', '--prompt', 'a']))[0]!.split('\t');
+
+    for (const id of [`agent.start:${note}`, `agent.start:${terminal}`, `team.start:${agent},${note}`, 'agent.start:term-other']) {
+        expect((await operation('chat-lead', id))[0]).toStartWith(`refused\tunknown-operation\t`);
+        expect((await runVerb(daemon, 'chat-lead', 'operation', ['cancel', id]))[0]).toStartWith(`refused\tunknown-operation\t`);
+    }
+    expect((await operation('term-other', `agent.start:${agent}`))[0]).toStartWith('refused\tnot-yours\t');
+    expect((await operation('chat-lead', `agent.start:${agent}`))[0]).toBe(`operation\tagent.start:${agent}\tagent.start\tqueued`);
 });

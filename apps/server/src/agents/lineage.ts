@@ -117,6 +117,12 @@ export class AgentLineageStore {
         return entry === undefined || entry.relation === 'fork' ? null : entry.openedBy;
     }
 
+    /* The node that opened this one as an agent, or null for a node no agent or team started. */
+    startedBy(nodeId: string): string | null {
+        const entry = this.opened.get(nodeId);
+        return entry !== undefined && openedByAgent(entry) ? entry.openedBy : null;
+    }
+
     /* The chat a fork was made from, or null for a node that is no fork. */
     forkedFrom(nodeId: string): string | null {
         const entry = this.opened.get(nodeId);

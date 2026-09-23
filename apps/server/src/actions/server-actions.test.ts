@@ -362,7 +362,7 @@ describe('the daemon actions', () => {
                 {
                     ...host(),
                     locate: (id: string) => (nodesOnMain().includes(id) ? PLACE : null),
-                    agents: { stateOf: async (id: string) => states[id] ?? 'none', cancelTurn: () => false }
+                    agents: { stateOf: async (id: string) => states[id] ?? 'none', startedBy: (id: string) => made.get(id) ?? null, cancelTurn: () => false }
                 },
                 PLACE,
                 caller
@@ -405,6 +405,7 @@ describe('the daemon actions', () => {
                     locate: (id: string) => (nodesOnMain().includes(id) ? PLACE : null),
                     agents: {
                         stateOf: async (id: string) => states[id] ?? 'none',
+                        startedBy: (id: string) => made.get(id) ?? null,
                         cancelTurn: (id: string) => {
                             if (id !== 'chat-2' || states[id] !== 'running') {
                                 return false;

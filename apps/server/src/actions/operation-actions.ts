@@ -32,6 +32,25 @@ const parseOperationId = (operationId: string): { action: OperationAction; nodeI
 const startTask = (host: CanvasHost, caller: string, nodeId: string): Task | undefined =>
     host.tasks.involving(nodeId).find((task) => task.childId === nodeId && task.parentId === caller);
 
+/*
+ * Whether a node of an operation id is a start of this caller's. A node that is here and no agent the
+ * caller started is refused, so a note never reads as an agent whose start gave up; a node that is gone
+ * counts when a task or the lineage still says it was the caller's.
+ */
+const isOwnStart = (host: CanvasHost, agents: AgentStateHost, caller: string, nodeId: string, operationId: string, verb: 'follow' | 'cancel'): boolean => {
+    const startedBy = agents.startedBy(nodeId);
+    if (host.locate(nodeId) === null) {
+        return startedBy === caller || startTask(host, caller, nodeId) !== undefined;
+    }
+    if (startedBy === caller) {
+        return true;
+    }
+    if (startedBy !== null) {
+        throw new VerbRefusal('not-yours', `${nodeId} is not an agent you opened, so ${operationId} is not yours to ${verb}`);
+    }
+    throw new VerbRefusal('unknown-operation', `${nodeId} is no agent that agent or team started, so ${operationId} names no start`, [...OPERATION_FORMS]);
+};
+
 const byTask = (task: Task, state: AgentState): Pick<AgentOperation, 'status' | 'detail'> => {
     if (task.status === 'open') {
         if (state === 'stopped') {
@@ -61,7 +80,7 @@ const byState = (state: AgentState): Pick<AgentOperation, 'status' | 'detail'> =
         case 'idle':
             return {
                 status: 'completed',
-                detail: 'the start is done: its first turn ended and it waits for a message, which says nothing about whether the work is'
+                detail: 'the start is done: its first turn ended and it waits for a message; whether the work itself is done, it does not say'
             };
         case 'exited':
             return { status: 'completed', detail: 'its CLI exited' };
@@ -118,16 +137,12 @@ export const operationActions: ActionHandlers<ServerActionContext> = {
         }
         const rows: Array<AgentOperation | null> = [];
         for (const nodeId of parsed.nodeIds) {
-            const task = startTask(host, actor.id, nodeId);
-            const placed = host.locate(nodeId) !== null;
-            if (task === undefined && host.madeBy(nodeId) !== actor.id) {
-                // A node that is gone says nothing about whose it was; one that is there and not yours is refused.
-                if (placed) {
-                    throw new VerbRefusal('not-yours', `${nodeId} is not an agent you opened, so ${operationId} is not yours to follow`);
-                }
+            if (!isOwnStart(host, agents, actor.id, nodeId, operationId, 'follow')) {
                 rows.push(null);
                 continue;
             }
+            const task = startTask(host, actor.id, nodeId);
+            const placed = host.locate(nodeId) !== null;
             const state = await agents.stateOf(nodeId);
             const read = task !== undefined ? byTask(task, state) : placed ? byState(state) : { status: 'cancelled' as const, detail: 'the node is gone' };
             rows.push({ nodeId, ...read, taskId: task?.id ?? null });
@@ -158,10 +173,7 @@ export const operationActions: ActionHandlers<ServerActionContext> = {
         let yours = 0;
         for (const nodeId of parsed.nodeIds) {
             const placed = host.locate(nodeId) !== null;
-            if (startTask(host, actor.id, nodeId) === undefined && host.madeBy(nodeId) !== actor.id) {
-                if (placed) {
-                    throw new VerbRefusal('not-yours', `${nodeId} is not an agent you opened, so ${operationId} is not yours to cancel`);
-                }
+            if (!isOwnStart(host, agents, actor.id, nodeId, operationId, 'cancel')) {
                 lines.push({ operationId, status: 'over', detail: `${nodeId}: the node is gone` });
                 continue;
             }
