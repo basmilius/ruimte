@@ -228,8 +228,8 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 <header>
   <p class="eyebrow">Ruimte / Ontwerp / 23 september 2026</p>
   <h1>Modellen vergelijken: intelligentie tegen kosten</h1>
-  <p class="intro">Ruimte laat een persoon kiezen uit vijftien modellen en tot zes denkniveaus per model, maar zegt nergens wat die keuze oplevert of kost. Dit rapport ontwerpt een overlay die dat laat zien: de Intelligence Index van Artificial Analysis tegen de kosten per taak, per model en per denkniveau. De cijfers komen van een dienst op pulsar.ruimte.app die elk uur ververst. De overlay opent alleen vanuit de menubalk.</p>
-  <p class="status">Besloten op 23 september 2026 en dezelfde dag nagelopen bij <code>48f86d80</code>. De Worker, de overlay en het menu-item worden gebouwd; welke meting bij welk model hoort, wacht op de sleutel.</p>
+  <p class="intro">Ruimte laat een persoon kiezen uit vijftien modellen en tot zes denkniveaus per model, maar zegt nergens wat die keuze oplevert of kost. Dit rapport ontwerpt een overlay die dat laat zien: de Intelligence Index van Artificial Analysis tegen de kosten per taak, per model en per denkniveau. De cijfers komen van een dienst op pulsar.ruimte.app die elke drie uur ververst. De overlay opent alleen vanuit de menubalk.</p>
+  <p class="status">Besloten en gebouwd op 23 september 2026. De koppeling staat vast (stap 1); de Worker, de overlay en het menu-item staan op <code>main</code> in <code>535fd069</code>, <code>0b5d844f</code> en <code>af03d8c1</code>. Nog niet gepusht: de Worker deployt pas met de push.</p>
   <p class="caption">Gelezen op <code>main</code> bij <code>0173ea89</code>. Bereik: <code>apps/server/src/providers/{claude,codex}-models.json</code>, <code>catalog.ts</code>, <code>terminal-providers.ts</code>, <code>apps/server/src/usage/pricing.ts</code> met <code>prices-snapshot.json</code>, <code>apps/client/src/shell/usage</code>, <code>state/ui.ts</code>, <code>App.tsx</code>, <code>conflicts/ConflictOverlay.tsx</code>, <code>desktop/bridge.ts</code> en <code>appMenu()</code> in <code>apps/desktop/src/main.ts</code>, <code>apps/pulsar-worker</code> (<code>index.ts</code>, <code>http.ts</code>, <code>wrangler.jsonc</code>, README), <code>packages/pulsar/src/address-book{,-client}.ts</code>, <code>packages/csp</code> en het menubalk-rapport van dezelfde dag. Voorbeeld: <a href="https://fc4rgpnygo9f.postplan.dev/">fc4rgpnygo9f.postplan.dev</a>, met data van Artificial Analysis van 22 september 2026.</p>
   <nav aria-label="Inhoud">
     <a href="#kern">Het besluit</a>
@@ -248,14 +248,14 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   <section id="kern" class="recommendation">
     <h2>Het besluit</h2>
     <ul>
-      <li>De Worker op pulsar.ruimte.app leest de gratis API van Artificial Analysis één keer per uur, met een cron en de sleutel als secret. Hij bewaart het resultaat in D1 en geeft alleen wat de grafiek tekent: per model en denkniveau de index en de kosten per taak.</li>
+      <li>De Worker op pulsar.ruimte.app leest de gratis API van Artificial Analysis elke drie uur, met een cron en de sleutel als secret. Hij bewaart het resultaat in D1 en geeft alleen wat de grafiek tekent: per model en denkniveau de index en de kosten per taak.</li>
       <li>De koppeling tussen de modellen van Ruimte en die van Artificial Analysis staat in de Worker. Een nieuw model vraagt dan een deploy van de Worker en geen release van de app.</li>
       <li>De overlay hangt in de shell, naast <code>UsageDialog</code>, en opent alleen vanuit de menubalk. Hij heeft één grafiek, geen tabel en geen export. In de voet staat de bron met een link.</li>
       <li>De grafiek heeft een logaritmische kostenas en een lijn per model door zijn denkniveaus. Daaronder ligt een band over de punten die door geen ander punt verslagen worden.</li>
       <li>Epoch AI blijft de terugval, mocht Artificial Analysis de dienst toch afkeuren (<a href="#bronnen">Alternatieven</a>).</li>
     </ul>
     <div class="stats">
-      <div><strong>48</strong><span>verzoeken per dag, van de 100 die de gratis tier toestaat</span></div>
+      <div><strong>32</strong><span>verzoeken per dag, vier pagina's elke drie uur, van de 100 die de gratis tier toestaat</span></div>
       <div><strong>2</strong><span>getallen per punt: index en kosten per taak</span></div>
       <div><strong>15</strong><span>modellen in de catalogus, 8 actueel en 7 legacy</span></div>
       <div><strong>0</strong><span>wijzigingen in <code>packages/contracts</code></span></div>
@@ -351,19 +351,101 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
         </tbody>
       </table>
     </div>
-    <p><span class="badge warning">Niet gecontroleerd</span> Of Artificial Analysis de modellen meet die niet in het voorbeeld staan. Het voorbeeld toont er zes; het kan een keuze van de maker zijn.</p>
+    <p><span class="badge confirmed">Nagelopen</span> Artificial Analysis meet veertien van de vijftien modellen, zie <a href="#koppeling">De koppeling</a>. Alleen GPT-5.3 Codex Spark ontbreekt.</p>
     <p>Drie gaten staan wel vast.</p>
     <ul>
       <li>Ultrathink en ultra hebben geen tegenhanger, want Artificial Analysis meet tot max. De overlay toont die niveaus niet en zegt dat in de tabel.</li>
       <li>Fast mode en de priority tier veranderen snelheid en prijs en laten het model gelijk. Ze vallen buiten deze cijfers.</li>
-      <li>Haiku 4.5 heeft geen denkniveaus maar een schakelaar. Dat worden hooguit twee punten.</li>
+      <li>Haiku 4.5 heeft geen denkniveaus maar een schakelaar. Dat zijn twee punten, met en zonder denken.</li>
     </ul>
-    <p>Artificial Analysis noemt een denkniveau in de naam, zoals <code>Claude Opus 5.5 (max with fallback)</code>. Uit een slug van Ruimte valt die naam niet af te leiden, dus de koppeling moet expliciet in data staan.</p>
+    <p>Artificial Analysis noemt een denkniveau in de naam, zoals <code>Claude Opus 5.5 (Adaptive Reasoning, Max Effort, Default Fallback)</code>. Uit een slug van Ruimte valt die naam niet af te leiden, dus de koppeling staat expliciet in data.</p>
+    <h3 id="koppeling">De koppeling</h3>
+    <p>Stap 1, op 23 september 2026 met een echte respons: per model en denkniveau van Ruimte de naam van het model bij Artificial Analysis dat ervoor staat. De Worker zoekt op het <code>id</code> ernaast (<code>apps/pulsar-worker/src/benchmark-models.ts</code>); de naam is er om de tabel leesbaar te houden. Geen cijfers uit de respons.</p>
+    <div class="table" role="region" aria-label="Koppeling met Artificial Analysis" tabindex="0">
+      <table class="wide">
+        <caption>Modellen en denkniveaus van Ruimte tegen de modellen van Artificial Analysis</caption>
+        <thead><tr><th scope="col">Model</th><th scope="col">Denkniveau</th><th scope="col">Bij Artificial Analysis</th></tr></thead>
+        <tbody>
+          <tr><th scope="row" rowspan="5">Claude Fable 5.1</th><td><code>low</code></td><td><code>Claude Fable 5.1 (Adaptive Reasoning, Low Effort, Default Fallback)</code></td></tr>
+          <tr><td><code>medium</code></td><td><code>Claude Fable 5.1 (Adaptive Reasoning, Medium Effort, Default Fallback)</code></td></tr>
+          <tr><td><code>high</code></td><td><code>Claude Fable 5.1 (Adaptive Reasoning, High Effort, Default Fallback)</code></td></tr>
+          <tr><td><code>xhigh</code></td><td><code>Claude Fable 5.1 (Adaptive Reasoning, Xhigh Effort, Default Fallback)</code></td></tr>
+          <tr><td><code>max</code></td><td><code>Claude Fable 5.1 (Adaptive Reasoning, Max Effort, Default Fallback)</code></td></tr>
+          <tr><th scope="row" rowspan="5">Claude Opus 5.5</th><td><code>low</code></td><td><code>Claude Opus 5.5 (Adaptive Reasoning, Low Effort, Default Fallback)</code></td></tr>
+          <tr><td><code>medium</code></td><td><code>Claude Opus 5.5 (Adaptive Reasoning, Medium Effort, Default Fallback)</code></td></tr>
+          <tr><td><code>high</code></td><td><code>Claude Opus 5.5 (Adaptive Reasoning, High Effort, Default Fallback)</code></td></tr>
+          <tr><td><code>xhigh</code></td><td><code>Claude Opus 5.5 (Adaptive Reasoning, Xhigh Effort, Default Fallback)</code></td></tr>
+          <tr><td><code>max</code></td><td><code>Claude Opus 5.5 (Adaptive Reasoning, Max Effort, Default Fallback)</code></td></tr>
+          <tr><th scope="row" rowspan="5">Claude Opus 5</th><td><code>low</code></td><td><code>Claude Opus 5 (Adaptive Reasoning, Low Effort)</code></td></tr>
+          <tr><td><code>medium</code></td><td><code>Claude Opus 5 (Adaptive Reasoning, Medium Effort)</code></td></tr>
+          <tr><td><code>high</code></td><td><code>Claude Opus 5 (Adaptive Reasoning, High Effort)</code></td></tr>
+          <tr><td><code>xhigh</code></td><td><code>Claude Opus 5 (Adaptive Reasoning, Xhigh Effort)</code></td></tr>
+          <tr><td><code>max</code></td><td><code>Claude Opus 5 (Adaptive Reasoning, Max Effort)</code></td></tr>
+          <tr><th scope="row" rowspan="5">Claude Sonnet 5</th><td><code>low</code></td><td><code>Claude Sonnet 5 (Adaptive Reasoning, Low Effort)</code></td></tr>
+          <tr><td><code>medium</code></td><td><code>Claude Sonnet 5 (Adaptive Reasoning, Medium Effort)</code></td></tr>
+          <tr><td><code>high</code></td><td><code>Claude Sonnet 5 (Adaptive Reasoning, High Effort)</code></td></tr>
+          <tr><td><code>xhigh</code></td><td><code>Claude Sonnet 5 (Adaptive Reasoning, Xhigh Effort)</code></td></tr>
+          <tr><td><code>max</code></td><td><code>Claude Sonnet 5 (Adaptive Reasoning, Max Effort)</code></td></tr>
+          <tr><th scope="row" rowspan="2">Claude Haiku 4.5</th><td><code>off</code></td><td><code>Claude 4.5 Haiku (Non-reasoning)</code></td></tr>
+          <tr><td><code>thinking</code></td><td><code>Claude 4.5 Haiku (Reasoning)</code></td></tr>
+          <tr><th scope="row" rowspan="5">Claude Opus 4.6</th><td><code>low</code></td><td><span class="badge">niet gemeten</span></td></tr>
+          <tr><td><code>medium</code></td><td><span class="badge">niet gemeten</span></td></tr>
+          <tr><td><code>high</code></td><td><span class="badge">niet gemeten</span></td></tr>
+          <tr><td><code>xhigh</code></td><td><span class="badge">niet gemeten</span></td></tr>
+          <tr><td><code>max</code></td><td><code>Claude Opus 4.6 (Adaptive Reasoning, Max Effort)</code></td></tr>
+          <tr><th scope="row" rowspan="5">Claude Sonnet 4.6</th><td><code>low</code></td><td><span class="badge">niet gemeten</span></td></tr>
+          <tr><td><code>medium</code></td><td><span class="badge">niet gemeten</span></td></tr>
+          <tr><td><code>high</code></td><td><span class="badge">niet gemeten</span></td></tr>
+          <tr><td><code>xhigh</code></td><td><span class="badge">niet gemeten</span></td></tr>
+          <tr><td><code>max</code></td><td><code>Claude Sonnet 4.6 (Adaptive Reasoning, Max Effort)</code></td></tr>
+          <tr><th scope="row" rowspan="5">GPT-6 Astra</th><td><code>low</code></td><td><code>GPT-6 Astra (low)</code></td></tr>
+          <tr><td><code>medium</code></td><td><code>GPT-6 Astra (medium)</code></td></tr>
+          <tr><td><code>high</code></td><td><code>GPT-6 Astra (high)</code></td></tr>
+          <tr><td><code>xhigh</code></td><td><code>GPT-6 Astra (xhigh)</code></td></tr>
+          <tr><td><code>max</code></td><td><code>GPT-6 Astra (max)</code></td></tr>
+          <tr><th scope="row" rowspan="5">GPT-6 Sol</th><td><code>low</code></td><td><code>GPT-6 Sol (low)</code></td></tr>
+          <tr><td><code>medium</code></td><td><code>GPT-6 Sol (medium)</code></td></tr>
+          <tr><td><code>high</code></td><td><code>GPT-6 Sol (high)</code></td></tr>
+          <tr><td><code>xhigh</code></td><td><code>GPT-6 Sol (xhigh)</code></td></tr>
+          <tr><td><code>max</code></td><td><code>GPT-6 Sol (max)</code></td></tr>
+          <tr><th scope="row" rowspan="5">GPT-6 Luna</th><td><code>low</code></td><td><code>GPT-6 Luna (low)</code></td></tr>
+          <tr><td><code>medium</code></td><td><code>GPT-6 Luna (medium)</code></td></tr>
+          <tr><td><code>high</code></td><td><code>GPT-6 Luna (high)</code></td></tr>
+          <tr><td><code>xhigh</code></td><td><code>GPT-6 Luna (xhigh)</code></td></tr>
+          <tr><td><code>max</code></td><td><code>GPT-6 Luna (max)</code></td></tr>
+          <tr><th scope="row" rowspan="5">GPT-5.6 Sol</th><td><code>low</code></td><td><code>GPT-5.6 Sol (low)</code></td></tr>
+          <tr><td><code>medium</code></td><td><code>GPT-5.6 Sol (medium)</code></td></tr>
+          <tr><td><code>high</code></td><td><code>GPT-5.6 Sol (high)</code></td></tr>
+          <tr><td><code>xhigh</code></td><td><code>GPT-5.6 Sol (xhigh)</code></td></tr>
+          <tr><td><code>max</code></td><td><code>GPT-5.6 Sol (max)</code></td></tr>
+          <tr><th scope="row" rowspan="5">GPT-5.6 Terra</th><td><code>low</code></td><td><code>GPT-5.6 Terra (low)</code></td></tr>
+          <tr><td><code>medium</code></td><td><code>GPT-5.6 Terra (medium)</code></td></tr>
+          <tr><td><code>high</code></td><td><code>GPT-5.6 Terra (high)</code></td></tr>
+          <tr><td><code>xhigh</code></td><td><code>GPT-5.6 Terra (xhigh)</code></td></tr>
+          <tr><td><code>max</code></td><td><code>GPT-5.6 Terra (max)</code></td></tr>
+          <tr><th scope="row" rowspan="5">GPT-5.6 Luna</th><td><code>low</code></td><td><code>GPT-5.6 Luna (low)</code></td></tr>
+          <tr><td><code>medium</code></td><td><code>GPT-5.6 Luna (medium)</code></td></tr>
+          <tr><td><code>high</code></td><td><code>GPT-5.6 Luna (high)</code></td></tr>
+          <tr><td><code>xhigh</code></td><td><code>GPT-5.6 Luna (xhigh)</code></td></tr>
+          <tr><td><code>max</code></td><td><code>GPT-5.6 Luna (max)</code></td></tr>
+          <tr><th scope="row" rowspan="4">GPT-5.5</th><td><code>low</code></td><td><code>GPT-5.5 (low)</code></td></tr>
+          <tr><td><code>medium</code></td><td><code>GPT-5.5 (medium)</code></td></tr>
+          <tr><td><code>high</code></td><td><code>GPT-5.5 (high)</code></td></tr>
+          <tr><td><code>xhigh</code></td><td><code>GPT-5.5 (xhigh)</code></td></tr>
+          <tr><th scope="row" rowspan="4">GPT-5.3 Codex Spark</th><td><code>low</code></td><td><span class="badge">niet gemeten</span></td></tr>
+          <tr><td><code>medium</code></td><td><span class="badge">niet gemeten</span></td></tr>
+          <tr><td><code>high</code></td><td><span class="badge">niet gemeten</span></td></tr>
+          <tr><td><code>xhigh</code></td><td><span class="badge">niet gemeten</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Haiku 4.5 heeft een schakelaar en geen keuzelijst, dus zijn twee niveaus heten <code>off</code> en <code>thinking</code>, naar het id van de schakelaar in het manifest. Van Opus 4.6 en Sonnet 4.6 meet Artificial Analysis alleen max; hun varianten zonder redeneren kent Ruimte niet. Codex Spark staat er niet in.</p>
   </section>
 
   <section id="bron">
     <h2>De databron</h2>
     <p class="note">Bijgewerkt op 23 september 2026. Deze sectie las eerst alleen de oude documentatiepagina. De <a href="https://artificialanalysis.ai/data-api/docs">Data API-documentatie</a> beschrijft een nieuwer endpoint voor de gratis tier, <code>/api/v2/language/models/free</code>. Dat levert de Intelligence, Coding en Agentic Index, <code>artificial_analysis_intelligence_index_cost.cost_per_task.total_cost</code>, de prijs per miljoen input- en outputtokens en de mediane snelheid, tijd tot het eerste token en totale responstijd. De limiet is daar 100 verzoeken per vast venster van 24 uur. Pro voegt onder meer de blended prijs, het contextvenster, scores per benchmark en tokens per evaluatie toe. Een denkniveau is ook in de API een apart model, met een eigen <code>id</code> en een naam als <code>gpt-oss-20B (high)</code>; de <code>slug</code> (<code>gpt-oss-20b</code>) noemt het niveau niet. De lijst is gepagineerd, 200 modellen per pagina, en het voorbeeld in de documentatie telt twee pagina's. Wat hieronder over ontbrekende kosten staat, is daarmee achterhaald.</p>
+    <p><span class="badge confirmed">Bevestigd met een echte respons</span> Op 23 september 2026: de pagina is de query parameter <code>page</code>, vanaf 1. <code>page_size</code> staat vast op 200; een hogere waarde wordt genegeerd. Er waren 673 modellen over vier pagina's, en <code>has_more</code> klopt. Hier noemt de slug het niveau wel (<code>gpt-6-sol-low</code>), maar de koppeling loopt op <code>id</code>. <code>evaluations.artificial_analysis_intelligence_index</code> en <code>artificial_analysis_intelligence_index_cost.cost_per_task.total_cost</code> bestaan. Sommige modellen hebben de index zonder kosten, als <code>null</code> of zonder het hele object; zo'n punt valt weg. De headers <code>x-ratelimit-limit</code>, <code>x-ratelimit-remaining</code> en <code>x-ratelimit-reset</code> bestaan.</p>
     <p>Artificial Analysis heeft een gratis API. Volgens de <a href="https://artificialanalysis.ai/documentation">documentatie</a> geldt het volgende.</p>
     <ul>
       <li>De modellen komen van <code>GET /data/llms/models</code>, met de sleutel in de header <code>x-api-key</code>. De limiet is 1.000 verzoeken per dag.</li>
@@ -405,7 +487,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 
   <section id="dienst">
     <h2>De dienst op pulsar.ruimte.app</h2>
-    <p>Een Pro-licentie van ruim $400 per maand is te duur. De gratis tier heeft alles wat deze ene grafiek nodig heeft: de Intelligence Index en <code>artificial_analysis_intelligence_index_cost.cost_per_task.total_cost</code>. De limiet van 100 verzoeken per 24 uur is geen bezwaar, want een verversing per uur kost er 48 bij twee pagina's. De headers <code>X-RateLimit-Remaining</code> en <code>X-RateLimit-Reset</code> laten zien hoeveel er over is.</p>
+    <p>Een Pro-licentie van ruim $400 per maand is te duur. De gratis tier heeft alles wat deze ene grafiek nodig heeft: de Intelligence Index en <code>artificial_analysis_intelligence_index_cost.cost_per_task.total_cost</code>. Met 673 modellen over vier pagina's zou een verversing per uur er 96 van de 100 per 24 uur kosten. De Worker ververst daarom elke drie uur, dat zijn er 32 per dag, en leest hooguit tien pagina's. De headers <code>X-RateLimit-Remaining</code> en <code>X-RateLimit-Reset</code> laten zien hoeveel er over is.</p>
 
     <h3 id="pulsar">Waarom dit binnen de voorwaarden valt</h3>
     <p>Een grafiek die de app zelf tekent, noemen de voorwaarden nergens als verboden. §2.3 staat <q>share charts and visualizations publicly</q> toe op elk tier, en de Data API-documentatie gaat ervan uit dat je data toont: <q>When you display or share API data, credit Artificial Analysis as the source.</q> Wat grijs blijft, is waar een grafiek ophoudt en ruwe data begint (§2.4(c)). Drie regels houden de dienst aan de kant van de grafiek.</p>
@@ -420,11 +502,12 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
     <ul>
       <li>Een openbare route zonder aanmelding, <code>GET /v1/models/benchmarks</code>, naast <code>GET /v1/providers</code>. CORS loopt via <code>allowedOrigin</code> in <code>http.ts</code>, dat de loopback-origin van de desktop en de station al toelaat. De CSP van de client staat <code>https:</code> in <code>connect-src</code> al toe.</li>
       <li>Het schema staat in <code>packages/pulsar/src/address-book.ts</code> naast <code>ProvidersResultSchema</code>, en <code>AddressBookClient</code> krijgt er een methode voor. <code>packages/contracts</code> blijft onaangeroerd: dit is geen wire van de daemon.</li>
-      <li>Een nieuwe cron in <code>wrangler.jsonc</code>, één keer per uur. <code>scheduled()</code> kiest op <code>controller.cron</code> tussen die verversing en de bestaande dagelijkse opruiming.</li>
+      <li>Een nieuwe cron in <code>wrangler.jsonc</code>, elke drie uur (<code>17 */3 * * *</code>, nooit tegelijk met de opruiming om 04:17). <code>scheduled()</code> kiest op <code>controller.cron</code> tussen die verversing en de bestaande dagelijkse opruiming.</li>
       <li>Het resultaat staat als één rij in D1, via een nieuwe migratie. De Cache API is geen optie: die cache is per datacenter, zodat elk datacenter zelf Artificial Analysis zou vragen en de 100 verzoeken snel op zijn.</li>
-      <li>Een mislukte fetch, een respons die niet parseert of een respons zonder één herkend model laat de vorige rij staan. Zonder secret antwoordt de route <code>503</code> met <code>not-configured</code>, zoals GitHub zonder zijn secrets doet. Zonder rij antwoordt hij <code>503</code> met een eigen code.</li>
-      <li>De koppeling is een tabel in de Worker. Per model van Ruimte staan daar de slug, de naam, de provider, of het legacy is en per denkniveau de naam bij Artificial Analysis. Alleen modellen uit die tabel gaan de deur uit. Een model zonder meting krijgt een lege lijst punten.</li>
-      <li>Een test legt de tabel naast de twee manifesten in <code>apps/server/src/providers</code>, zodat een model dat Ruimte aanbiedt niet ongemerkt ontbreekt.</li>
+      <li>Een mislukte fetch, een respons die niet parseert of een respons zonder één herkend model laat de vorige rij staan. Zonder secret antwoordt de route <code>503</code> met <code>not-configured</code>, zoals GitHub zonder zijn secrets doet. Zonder rij antwoordt hij <code>503</code> met een eigen code, <code>no-benchmarks</code>. Een punt met een index maar zonder kosten valt weg, en kosten van nul ook, want die passen niet op een logaritmische as.</li>
+      <li>De koppeling is een tabel in de Worker. Per model van Ruimte staan daar de slug, de naam, de provider, of het legacy is en per denkniveau het <code>id</code> en de naam bij Artificial Analysis, of <code>null</code> voor een niveau dat niet gemeten is. Alleen modellen uit die tabel gaan de deur uit. Een model zonder meting krijgt een lege lijst punten.</li>
+      <li>Een test legt de tabel naast de twee manifesten in <code>apps/server/src/providers</code>, zodat een model dat Ruimte aanbiedt niet ongemerkt ontbreekt. Hij vergelijkt modellen en denkniveaus, niet de ids.</li>
+      <li><code>provider</code> en <code>effort</code> zijn strings in het schema, zoals in <code>ProvidersResultSchema</code>, zodat een oudere client een nieuwe waarde overslaat. De client laat een provider zonder kleur weg. Elk schema in <code>address-book.ts</code> gaat mee naar de gegenereerde Swift-modellen van de iPhone-app, dus die zijn opnieuw gegenereerd.</li>
       <li>Het secret heet <code>ARTIFICIAL_ANALYSIS_API_KEY</code> en komt in de tabel met secrets van de README. Bas zet het met <code>bunx wrangler secret put</code>.</li>
     </ul>
     <figure class="panel">
@@ -446,8 +529,8 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 }</code></pre>
       <figcaption>Wat <code>GET /v1/models/benchmarks</code> teruggeeft, ingekort. <code>effort</code> is het id van het denkniveau in Ruimte en <code>costPerTask</code> is in USD. De waarden komen uit het voorbeeld.</figcaption>
     </figure>
-    <p><span class="badge confirmed">Bevestigd in de documentatie</span> Een denkniveau is een apart model met een eigen <code>id</code>. Omdat de <code>slug</code> het niveau niet noemt, legt de koppeling per denkniveau het <code>id</code> bij Artificial Analysis vast, met de naam ernaast om hem leesbaar te houden.</p>
-    <p><span class="badge warning">Te bevestigen</span> Welk <code>id</code> en welke naam elk model en denkniveau van Ruimte daar heeft. Op de site staat bijvoorbeeld <code>Claude Opus 5.5 (max with fallback)</code>. Dat blijkt pas uit een echte respons, en die vraagt de sleutel.</p>
+    <p><span class="badge confirmed">Bevestigd met een echte respons</span> Een denkniveau is een apart model met een eigen <code>id</code>. Omdat de <code>slug</code> het niveau niet noemt, legt de koppeling per denkniveau het <code>id</code> bij Artificial Analysis vast, met de naam ernaast om hem leesbaar te houden.</p>
+    <p><span class="badge confirmed">Vastgelegd</span> Welk <code>id</code> en welke naam elk model en denkniveau van Ruimte daar heeft, staat in <a href="#koppeling">De koppeling</a>.</p>
   </section>
 
   <section id="overlay">
@@ -514,6 +597,18 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
       <li>Teksten staan in een eigen namespace in het Engels en het Nederlands. <em>Intelligence Index</em> en <em>Coding Index</em> zijn namen en blijven onvertaald.</li>
       <li>Alleen de vier lettergroottes uit <code>@theme</code>. Assen en rasterlijnen gebruiken de randkleur en nooit het accent.</li>
       <li>Iconen via <code>Icon</code>, providerlogo's via <code>ProviderLogo</code>.</li>
+    </ul>
+
+    <h3>Hoe het gebouwd is</h3>
+    <p>De overlay staat in <code>apps/client/src/shell/models</code>: <code>ModelsDialog.tsx</code>, <code>ModelsChart.tsx</code>, <code>ModelsLegend.tsx</code> en de pure delen in <code>chart.ts</code> (band, assen, kleuren, labels, pijltjes), met een test ernaast. Waar de bouw iets vastlegt dat hierboven open bleef:</p>
+    <ul>
+      <li>Elke provider heeft vijf lichtheidsstappen, <code>--chart-claude-1</code> tot <code>-5</code> en <code>--chart-codex-1</code> tot <code>-5</code>. De actuele modellen krijgen eerst een stap, legacy-modellen daarna; een legacy-model kan een stap delen met een actueel, en het label aan het eind van zijn lijn maakt het verschil.</li>
+      <li>De band heeft een eigen token, <code>--chart-frontier</code>: inkt met een lage alpha en niet het accent dat de schets in dit rapport gebruikt.</li>
+      <li>De legenda groepeert per provider onder zijn logo, met de band en de schakelaar voor legacy-modellen eronder.</li>
+      <li>Kosten gaan door <code>formatUsdSignificant</code> in <code>format/number.ts</code>, drie significante cijfers.</li>
+      <li>In het Nederlands staat in de voet <q>Bron: Artificial Analysis (artificialanalysis.ai)</q>; de Engelse tekst is die van het besluit.</li>
+      <li>Hoe lang geleden de Worker ververste, geldt voor het moment dat het antwoord binnenkwam en loopt niet mee terwijl de overlay open staat.</li>
+      <li>De client vraagt de route aan het adresboek dat het platform noemt; een pagina zonder platform om op aan te melden vraagt het adresboek in productie.</li>
     </ul>
   </section>
 
@@ -597,9 +692,10 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
       <li>De overlay opent alleen vanuit de menubalk. Volgens het menubalk-rapport krijgt de station een menubalk in de pagina, dus daar opent hij ook. De iPhone krijgt hem niet.</li>
       <li>De band over de beste punten komt erin, om hem in de praktijk te zien. Hij kan later alsnog weg.</li>
       <li>Een Pro-licentie van Artificial Analysis is te duur.</li>
-      <li>De cijfers komen van Artificial Analysis, via een dienst op pulsar.ruimte.app die de gratis API elk uur leest. De Worker stuurt alleen wat de grafiek nodig heeft. Er komt geen tabel en geen export, en de bron staat als link in de voet.</li>
+      <li>De cijfers komen van Artificial Analysis, via een dienst op pulsar.ruimte.app die de gratis API elke drie uur leest. De Worker stuurt alleen wat de grafiek nodig heeft. Er komt geen tabel en geen export, en de bron staat als link in de voet.</li>
       <li>Een momentopname in de client, eerder route A, vervalt. De Worker maakt een release voor nieuwe cijfers of een nieuw model overbodig.</li>
     </ul>
+    <p>Elke drie uur in plaats van elk uur: met vier pagina's kost elk uur 96 van de 100 verzoeken per dag.</p>
     <p>Het item komt in het Window-menu, direct onder Usage, dat daar sinds het menumodel staat. Dat is één regel in <code>model.ts</code> als Bas het elders wil.</p>
     <p>Een latere uitbreiding: de modellen markeren die een persoon de laatste dertig dagen gebruikte, uit de gebruikssamenvatting. Het gebruik legt het denkniveau niet vast, dus zo'n markering kan alleen per model.</p>
   </section>
@@ -609,21 +705,25 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
     <ol class="steps">
       <li class="step"><div>
         <h3>De sleutel en de echte respons</h3>
+        <p><span class="badge confirmed">Klaar</span> De sleutel staat als secret en in <code>.dev.vars</code>, en de koppeling staat in <a href="#koppeling">De koppeling</a>.</p>
         <p>Bas maakt een gratis sleutel aan en zet hem als secret. De agent haalt <code>/api/v2/language/models/free</code> één keer op en legt vast hoe elk model en denkniveau van Ruimte daar heet.</p>
         <p>Klaar als het rapport een tabel heeft met per actueel model de namen bij Artificial Analysis, of <em>niet gemeten</em>, en als vaststaat hoe denkniveaus in de API staan en hoe het veld met de kosten per taak heet.</p>
       </div></li>
       <li class="step"><div>
         <h3>De Worker</h3>
+        <p><span class="badge confirmed">Klaar</span> <code>535fd069</code>. Niet gepusht.</p>
         <p>Migratie, cron, route, koppelingstabel, schema en client in <code>packages/pulsar</code>, README en tests met een nagebootste respons van Artificial Analysis.</p>
         <p>Klaar als de tests laten zien dat de route alleen de afgesproken velden geeft, dat een mislukte fetch de vorige rij laat staan, dat de route zonder secret <code>503 not-configured</code> antwoordt en dat de koppelingstabel elk model uit de manifesten kent. Een push naar <code>main</code> deployt de Worker; die komt pas als Bas het zegt.</p>
       </div></li>
       <li class="step"><div>
         <h3>De overlay</h3>
+        <p><span class="badge confirmed">Klaar</span> <code>0b5d844f</code>. Licht, donker en beide talen nog te zien in de app.</p>
         <p><code>modelsOpen</code> in <code>useUi</code>, het omhulsel naast <code>UsageDialog</code>, de grafiek, de legenda, de band en de voet.</p>
         <p>Klaar als <code>setModelsOpen(true)</code> de overlay opent op het startscherm en in een workspace, de as standaard logaritmisch is, muis en toetsenbord dezelfde kaart tonen, de lege staat verschijnt als de Worker niet antwoordt, en de overlay klopt in licht en donker en in beide talen. <code>bun run format</code>, <code>bun run check</code> en <code>bun run test</code> slagen.</p>
       </div></li>
       <li class="step"><div>
         <h3>De menubalk</h3>
+        <p><span class="badge confirmed">Klaar</span> <code>af03d8c1</code>, als <em>Compare Models</em>, zonder sneltoets.</p>
         <p>Een commando dat de overlay opent, in Window onder Usage, zonder plek in het palet. Het menumodel bestaat al.</p>
         <p>Klaar als het item de overlay opent in het native menu op macOS en in de menubalk in de pagina, en het palet hem niet toont.</p>
       </div></li>
@@ -633,6 +733,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   <section id="prompt">
     <h2>Startprompt</h2>
     <p>Voor een schone agent, zonder dit gesprek. Kopieer het blok als geheel.</p>
+    <p class="note">Uitgevoerd op 23 september 2026, met stap 2 tot en met 4 zonder tussenstop. Het blok blijft staan als verslag van de opdracht.</p>
     <pre><code>We gaan een overlay bouwen die de modellen van Ruimte vergelijkt: de Intelligence Index van Artificial Analysis tegen de kosten per taak, per model en per denkniveau. Lees eerst docs/reports/2026-09-23-model-comparison.html, vooral "Het besluit", "De dienst op pulsar.ruimte.app", "De overlay" en "Stappen". Het ontwerp is besloten. Wijk er niet van af zonder het te vragen.
 
 Drie regels komen uit de voorwaarden van Artificial Analysis en staan vast:
@@ -650,7 +751,7 @@ Werkwijze: commit op main met conventional commits en zonder Co-Authored-By. Een
   </section>
 </main>
 <footer>
-  <p>De cijfers in de grafiek komen van de voorbeeldpagina, gelezen op 23 september 2026. Die noemt Artificial Analysis met de stand van 22 september 2026. De velden van de API komen uit de documentatie van Artificial Analysis en niet uit een echte respons. De grafiek is met de hand uit die cijfers getekend; de band en het aantal punten erop zijn nagerekend. De Data Platform Terms zijn gelezen op 23 september 2026. De bundel van Epoch AI is gedownload en doorzocht op dezelfde dag; de licenties van DeepSWE en CursorBench zijn gezocht en niet gevonden. De grafiek in <a href="#voorbeeld">Het voorbeeld</a> toont data van Artificial Analysis met een bronvermelding en een link, zoals de Data API-documentatie vraagt. Niet gecontroleerd: welke andere modellen van Ruimte Artificial Analysis meet.</p>
+  <p>De cijfers in de grafiek komen van de voorbeeldpagina, gelezen op 23 september 2026. Die noemt Artificial Analysis met de stand van 22 september 2026. De velden van de API komen uit de documentatie van Artificial Analysis en zijn op 23 september 2026 nagelopen tegen een echte respons; de koppeling komt uit die respons, zonder de cijfers ervan. De grafiek is met de hand uit die cijfers getekend; de band en het aantal punten erop zijn nagerekend. De Data Platform Terms zijn gelezen op 23 september 2026. De bundel van Epoch AI is gedownload en doorzocht op dezelfde dag; de licenties van DeepSWE en CursorBench zijn gezocht en niet gevonden. De grafiek in <a href="#voorbeeld">Het voorbeeld</a> toont data van Artificial Analysis met een bronvermelding en een link, zoals de Data API-documentatie vraagt.</p>
 </footer>
 </body>
 </html>
