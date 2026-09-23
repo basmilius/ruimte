@@ -1263,7 +1263,17 @@ export const ACTION_DEFINITIONS = {
         actors: AGENT,
         input: z.object({}),
         output: z.object({
-            views: z.array(z.object({ viewId, kind: ActionViewKindSchema, name: z.string(), deletable: z.boolean(), why: z.string() })),
+            views: z.array(
+                z.object({
+                    viewId,
+                    kind: ActionViewKindSchema,
+                    name: z.string(),
+                    deletable: z.boolean(),
+                    why: z.string(),
+                    // The Lucide name of the mark view icon gave it; null for a view that wears the mark of its kind.
+                    icon: z.string().nullable()
+                })
+            ),
             // The view the caller is in: the canvas it is a node on, or its own id when it is a view.
             self: z.string(),
             // Of the project file.

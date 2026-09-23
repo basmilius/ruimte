@@ -183,10 +183,11 @@ const listSub = defineActionVerb('view', {
     usage: '',
     params: [],
     detail: [
-        'prints\tid\tkind\tname\tdelete\twhy\tone line per view, in the order the sidebar has them',
+        'prints\tid\tkind\tname\tdelete\twhy\ticon\tone line per view, in the order the sidebar has them',
         `kinds\t${VIEW_KINDS.join('\t')}`,
         'delete\tyes or no: whether ruimte-context view delete would remove that view for you, with the reason beside it',
         'why\tyours, this machine frees every view, a person made it, <id> made it, or you are in it',
+        'icon\tThe Lucide name ruimte-context view icon gave the view, or - for one that wears the mark of its kind',
         'self\tThe row after the views is self and the id of the view you are in',
         REVISION_ROW,
         'note\tA separator is a line in the sidebar and has an empty name',
@@ -197,7 +198,9 @@ const listSub = defineActionVerb('view', {
     async run(_input, call) {
         const { views, self, revision } = await runAction(call, 'view.list', {});
         return [
-            ...views.map((view) => `${view.viewId}\t${view.kind}\t${field(view.name)}\t${view.deletable ? 'yes' : 'no'}\t${view.why}`),
+            ...views.map((view) =>
+                [view.viewId, view.kind, field(view.name), view.deletable ? 'yes' : 'no', view.why, view.icon === null ? '-' : field(view.icon)].join('\t')
+            ),
             `self\t${self}`,
             `revision\t${revision}`
         ];

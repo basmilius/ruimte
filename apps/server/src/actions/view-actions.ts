@@ -10,6 +10,7 @@ import {
     withView,
     withViewIcon,
     withoutView,
+    viewIconOf,
     type NodeTitleSource,
     type ProjectView
 } from '@ruimte/contracts';
@@ -42,7 +43,7 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
             output: {
                 views: content.views.map((view) => {
                     const { may, why } = deleteReason(view, { caller: actor.id, place: context.place, anyView });
-                    return { viewId: view.id, kind: kindOf(view), name: view.name ?? '', deletable: may, why };
+                    return { viewId: view.id, kind: kindOf(view), name: view.name ?? '', deletable: may, why, icon: viewIconOf(view)?.value ?? null };
                 }),
                 self: context.place.canvasId ?? actor.id,
                 revision

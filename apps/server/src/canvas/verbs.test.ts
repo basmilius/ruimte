@@ -865,11 +865,11 @@ describe('scoping', () => {
 describe('view list', () => {
     test('lists every view in sidebar order, a separator with an empty name', async () => {
         expect((await post('view', ['list'])).lines).toEqual([
-            'main\tcanvas\tCanvas\tno\tyou are in it',
-            'sep-1\tseparator\t\tno\ta person made it',
-            'board\tcanvas\tBoard\tno\ta person made it',
-            'chat-1\tchat\tPlanner\tno\ta person made it',
-            'sketch-1\tdrawing\tSketch\tno\ta person made it',
+            'main\tcanvas\tCanvas\tno\tyou are in it\t-',
+            'sep-1\tseparator\t\tno\ta person made it\t-',
+            'board\tcanvas\tBoard\tno\ta person made it\t-',
+            'chat-1\tchat\tPlanner\tno\ta person made it\t-',
+            'sketch-1\tdrawing\tSketch\tno\ta person made it\t-',
             // The view the caller stands in, which it can read nowhere else.
             'self\tmain',
             'revision\t1'
@@ -2116,6 +2116,14 @@ describe('view icon', () => {
     test('takes a Lucide name from the closed set', async () => {
         expect((await post('view', ['icon', 'board', 'rocket'])).lines).toEqual(['board\tcanvas\tlucide\trocket']);
         expect(await viewOnDisk('board')).toMatchObject({ icon: { kind: 'lucide', value: 'rocket' } });
+    });
+
+    test('view list shows the mark in its last column, after every column it had before', async () => {
+        await post('view', ['icon', 'board', 'rocket']);
+        const board = (await post('view', ['list'])).lines.find((line) => line.startsWith('board\t'));
+        expect(board).toBe('board\tcanvas\tBoard\tno\ta person made it\trocket');
+        await post('view', ['icon', 'board', 'null']);
+        expect((await post('view', ['list'])).lines.find((line) => line.startsWith('board\t'))).toBe('board\tcanvas\tBoard\tno\ta person made it\t-');
     });
 
     test('null takes a mark away again', async () => {
