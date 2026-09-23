@@ -6,13 +6,22 @@ const element = {} as HTMLElement;
 describe('FakeEditorEngine', () => {
     test('mounts an editor with the options it was given', () => {
         const engine = new FakeEditorEngine();
-        const editor = engine.mount(element, { text: 'a\nb', language: 'typescript', theme: 'dark', line: 2 });
+        const editor = engine.mount(element, { text: 'a\nb', language: 'typescript', theme: 'dark', line: 2, column: 3, scrollTop: 40 });
         expect(engine.last).toBe(editor);
         expect(editor.getText()).toBe('a\nb');
         expect(editor.language).toBe('typescript');
         expect(editor.theme).toBe('dark');
         expect(editor.revealedLine).toBe(2);
+        expect(editor.column).toBe(3);
+        expect(editor.scrollTop).toBe(40);
         expect(editor.readOnly).toBe(false);
+        expect(editor.wrap).toBe(false);
+    });
+
+    test('follows the wrap it is set to', () => {
+        const editor = new FakeEditorEngine().mount(element, { text: '', theme: 'light', wrap: true });
+        editor.setWrap(false);
+        expect(editor.wrap).toBe(false);
     });
 
     test('reports a typed change and never one set from outside', () => {

@@ -5,7 +5,9 @@ import { emit, type Listener, subscribe } from './listeners.ts';
 export class FakeEditor implements Editor {
     readonly element: HTMLElement;
     readonly language: string | undefined;
-    readonly wrap: boolean;
+    readonly column: number | null;
+    readonly scrollTop: number | null;
+    wrap: boolean;
     theme: EditorTheme;
     readOnly: boolean;
     revealedLine: number | null;
@@ -24,6 +26,8 @@ export class FakeEditor implements Editor {
         this.theme = options.theme;
         this.readOnly = options.readOnly ?? false;
         this.revealedLine = options.line ?? null;
+        this.column = options.column ?? null;
+        this.scrollTop = options.scrollTop ?? null;
     }
 
     /* A person's edit: the text changes and every change listener hears it. A read-only editor refuses it, as Monaco does. */
@@ -72,6 +76,10 @@ export class FakeEditor implements Editor {
 
     revealLine(line: number): void {
         this.revealedLine = line;
+    }
+
+    setWrap(wrap: boolean): void {
+        this.wrap = wrap;
     }
 
     setTheme(theme: EditorTheme): void {

@@ -11,11 +11,16 @@ export interface EditorOptions {
     readonly wrap?: boolean;
     /* One-based, the line the cursor opens on. */
     readonly line?: number;
+    /* One-based, where on that line. */
+    readonly column?: number;
+    /* In pixels, where the view opens; without it the cursor's line is brought into view. */
+    readonly scrollTop?: number;
 }
 
 export interface Editor {
     getText(): string;
-    /* A change from outside, such as a reload after `fs.changed`. It is never reported as a change. */
+    /* A change from outside, such as a reload after `fs.changed` or another surface's edit. It is never
+       reported as a change, and the cursor and the scroll stay put wherever the text around them did. */
     setText(text: string): void;
     onChange(listener: () => void): () => void;
     /* Mod+S from inside the editor; what happens then is the client's. */
@@ -23,6 +28,7 @@ export interface Editor {
     /* The focus left the editor and every widget of its own, such as its find bar. */
     onBlur(listener: () => void): () => void;
     revealLine(line: number): void;
+    setWrap(wrap: boolean): void;
     setTheme(theme: EditorTheme): void;
     setReadOnly(readOnly: boolean): void;
     focus(): void;

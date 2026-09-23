@@ -10,6 +10,7 @@ import { readChromeColors, readEditorFont } from './chrome.ts';
 import type { Editor, EditorEngine, EditorOptions, EditorTheme } from './index.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
 import { monacoTheme, PLAIN_TEXT, SHIKI_THEMES, ShikiBridge, type ShikiTheme } from './shiki-bridge.ts';
+import { changedSpan } from './text-span.ts';
 
 const SHIKI_THEME: Readonly<Record<EditorTheme, ShikiTheme>> = { light: 'github-light', dark: 'github-dark' };
 
@@ -86,7 +87,14 @@ class MonacoEditor implements Editor {
             run: () => emit(this.saves)
         });
         if (options.line !== undefined) {
-            this.revealLine(options.line);
+            const lineNumber = this.clampLine(options.line);
+            this.editor.setPosition({ lineNumber, column: Math.max(1, options.column ?? 1) });
+            if (options.scrollTop === undefined) {
+                this.editor.revealLineInCenter(lineNumber);
+            }
+        }
+        if (options.scrollTop !== undefined) {
+            this.editor.setScrollTop(options.scrollTop);
         }
         void engine.language(options.language).then((language) => {
             if (!this.disposed && language !== PLAIN_TEXT) {
@@ -100,12 +108,22 @@ class MonacoEditor implements Editor {
     }
 
     setText(text: string): void {
-        if (text === this.model.getValue()) {
+        const span = changedSpan(this.model.getValue(), text);
+        if (span === null) {
             return;
         }
+        const start = this.model.getPositionAt(span.start);
+        const end = this.model.getPositionAt(span.end);
         this.settingText = true;
         try {
-            this.model.setValue(text);
+            // An edit and not `setValue`, which would drop the undo history and put the cursor on line one.
+            this.model.pushStackElement();
+            this.model.pushEditOperations(
+                [],
+                [{ range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column), text: span.text }],
+                () => null
+            );
+            this.model.pushStackElement();
         } finally {
             this.settingText = false;
         }
@@ -124,9 +142,13 @@ class MonacoEditor implements Editor {
     }
 
     revealLine(line: number): void {
-        const lineNumber = Math.min(Math.max(1, line), this.model.getLineCount());
+        const lineNumber = this.clampLine(line);
         this.editor.setPosition({ lineNumber, column: 1 });
         this.editor.revealLineInCenter(lineNumber);
+    }
+
+    setWrap(wrap: boolean): void {
+        this.editor.updateOptions({ wordWrap: wrap ? 'on' : 'off' });
     }
 
     setTheme(theme: EditorTheme): void {
@@ -151,6 +173,10 @@ class MonacoEditor implements Editor {
         this.blurs.clear();
         this.editor.dispose();
         this.model.dispose();
+    }
+
+    private clampLine(line: number): number {
+        return Math.min(Math.max(1, line), this.model.getLineCount());
     }
 }
 
