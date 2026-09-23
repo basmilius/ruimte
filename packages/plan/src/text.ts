@@ -1,5 +1,5 @@
 import type { Plan, PlanItem, PlanStep, PlanStepState } from '@ruimte/contracts';
-import { activeStepIds, effectiveChecks, isParentStep, planProgress, stepState, type PlanProgress } from './tree.ts';
+import { effectiveChecks, isParentStep, leafSteps, planProgress, stepState, type PlanProgress } from './tree.ts';
 
 export const PLAN_STATE_MARKERS: Record<PlanStepState, string> = {
     open: '[ ]',
@@ -78,9 +78,9 @@ export const renderPlanText = (plan: Plan, options: PlanTextOptions = {}): strin
     if (plan.meta.status) {
         second.push(`Status: ${plan.meta.status}`);
     }
-    const active = activeStepIds(plan);
+    const active = leafSteps(plan.items).filter((step) => step.state === 'active');
     if (active.length > 0) {
-        second.push(`Now: ${active.join(', ')}`);
+        second.push(`Now: ${active.map((step) => `"${step.title}" [${step.id}]`).join(', ')}`);
     }
     if (options.others && options.others.length > 0) {
         const others = options.others.map((other) => `${other.id} "${other.meta.title}" (${other.meta.kind}, ${counter(planProgress(other.items))})`);

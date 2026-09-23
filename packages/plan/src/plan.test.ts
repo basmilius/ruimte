@@ -566,7 +566,7 @@ describe('plan read', () => {
         expect(text).toBe(
             [
                 'Plan "Test the split placement" (plan-7f3a, test, rev 14): 4 of 8 run, 2 passed, 1 failed, 1 skipped',
-                'Summary: Run in the Electron dev app. Status: Fixing focus after a refused drop. Now: fix-focus. Also in this chat: plan-2c1d "Split placement" (steps, 1/1)',
+                'Summary: Run in the Electron dev app. Status: Fixing focus after a refused drop. Now: "Fix focus after a refused drop" [fix-focus]. Also in this chat: plan-2c1d "Split placement" (steps, 1/1)',
                 '',
                 '## Splitting a cell [split] 3/5',
                 '  Run in the Electron dev app, one project with a chat view.',
