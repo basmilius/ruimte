@@ -172,10 +172,11 @@ figcaption { margin-top: 10px; }
   <p class="eyebrow">RUIMTE / ARCHITECTUUR- EN BOUWPLAN / 17 SEPTEMBER 2026</p>
   <h1>Een gedeelde action-registry voor Ruimte</h1>
   <p class="intro">Breng betekenisvolle gebruikersacties samen in één getypeerde laag. Voice, de UI, sneltoetsen, de command palette en <code>ruimte-context</code> worden adapters op dezelfde uitvoering.</p>
-  <p class="status">Voorgesteld ontwerp · klaar om in fasen te bouwen</p>
+  <p class="status">Voorgesteld ontwerp · fase A deels gebouwd, stand bijgewerkt op 23 september 2026</p>
   <p class="caption">Scope: desktopclient, lokale daemon, agent-CLI en GPT-Live. Bronrevision: <code>c8bafe3b</code> plus lokale Voice-wijzigingen. Inventaris gecontroleerd tegen CLI-help, command palette, stores, menus en RPC-contracten.</p>
   <nav aria-label="Inhoud">
     <a href="#besluit">Besluit</a>
+    <a href="#stand">Stand</a>
     <a href="#architectuur">Architectuur</a>
     <a href="#ingangen">Ingangen</a>
     <a href="#contract">Contract</a>
@@ -197,6 +198,22 @@ figcaption { margin-top: 10px; }
       <div><strong>4</strong><span>bouwfasen tot brede productdekking</span></div>
     </div>
     <p><span class="badge confirmed">Aanbevolen</span> Bouw geen tweede dispatcher naast de bestaande UI en CLI. Verplaats gedeeld gedrag achter de nieuwe seam en vervang oude paden per domein.</p>
+  </section>
+
+  <section id="stand">
+    <h2>Stand op 23 september</h2>
+    <p>De seam staat. <code>packages/actions</code> heeft de registry met <code>catalog</code>, <code>execute</code>, <code>confirm</code> en <code>undo</code>, vier actor-soorten (<code>person</code>, <code>voice</code>, <code>agent</code>, <code>automation</code>), <code>needs_confirmation</code> en undo-tokens. De catalogus telt 21 actions. De rest van dit rapport blijft het doelmodel.</p>
+    <div class="table" role="region" aria-label="Stand van de action-registry" tabindex="0">
+      <table><thead><tr><th>Onderdeel</th><th>Stand</th></tr></thead><tbody>
+        <tr><th>Voice</th><td><span class="badge confirmed">Gebouwd</span> Alle Voice-tools lopen via <code>clientActions</code> (<code>apps/client/src/voice/tools.ts</code>). Undo gaat per token en weigert wanneer het canvas intussen veranderde.</td></tr>
+        <tr><th><code>ruimte-context</code></th><td><span class="badge confirmed">Gebouwd</span> <code>rename</code>, <code>view</code> en <code>open</code> delen <code>view.rename</code> en <code>view.focus</code> met de daemon-registry (<code>apps/server/src/actions/view-actions.ts</code>). De overige verbs lopen nog rechtstreeks.</td></tr>
+        <tr><th>Palette, menu en sneltoetsen</th><td><span class="badge warning">Deels</span> Views maken, nodes maken, groeperen en undo/redo lopen vanuit palette, menu, sneltoetsen, <code>ViewMenu</code>, <code>CanvasMenu</code> en <code>EmptyCanvas</code> via dezelfde handlers als Voice (<code>06435ce3</code>). Undo werkt daar op een canvas, een drawing en een diagram. De overige paletrijen en menu-items roepen nog rechtstreeks stores aan, en <code>Dock</code> plaatst een node nog zelf. De knoppen en toetsen binnen een drawing of diagram houden bewust hun eigen store.</td></tr>
+        <tr><th>Voice-tools uit de catalogus</th><td><span class="badge">Open</span> <code>catalog()</code> draait alleen in tests. De Voice-tools zijn met de hand geschreven.</td></tr>
+        <tr><th>Langlopend werk</th><td><span class="badge">Open</span> Geen <code>queued</code> of <code>running</code>, geen operation-events, geen <code>target.resolve</code> en geen <code>expectedRevision</code>.</td></tr>
+        <tr><th><code>view.delete</code></th><td><span class="badge danger">Afwijking</span> De UI (<code>askDeleteView</code>) bewaart open bestanden en vraagt voordat agents stoppen. De action doet geen van beide, dus Voice verwijdert een view zonder die stappen.</td></tr>
+      </tbody></table>
+    </div>
+    <p class="note">Na dit rapport kwamen er functies bij die de catalogus nog niet kent: het conflict-overlay (<code>git.conflict</code>, <code>git.operation</code>), een git-paneel over meerdere repositories, de promptstapel, dicteren en de modelvergelijking. Een git-action die één repository raakt heeft daarom een repository-parameter nodig.</p>
   </section>
 
   <section id="architectuur">
@@ -460,7 +477,7 @@ type ActionResult = {
           <tr><th><code>terminal.list</code></th><td>Leest terminals en runtime-status.</td><td>Alleen lezen.</td><td>C · UI, Voice</td></tr>
           <tr><th><code>terminal.start</code></th><td>Start een shell met expliciete cwd en optioneel initieel command.</td><td>Langlopend. Command kan bijeffecten hebben.</td><td>B · UI, palette, Voice</td></tr>
           <tr><th><code>terminal.readOutput</code></th><td>Leest begrensde recente uitvoer van een toegestane terminal.</td><td>Alleen lezen en terminaltoegang controleren.</td><td>B · UI, CLI, Voice, agents</td></tr>
-          <tr><th><code>terminal.write</code></th><td>Stuurt tekst of een toets naar één terminal.</td><td>Hoog risico omdat shellinvoer willekeurig werk kan uitvoeren. Actorbeleid en bevestiging voor onveilige commands.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>terminal.write</code></th><td>Stuurt tekst of een toets naar één terminal.</td><td>Hoog risico omdat shellinvoer willekeurig werk kan uitvoeren. Alleen een persoon: een agent typt nooit in de sessie van een andere node (productregel). Actorbeleid en bevestiging voor onveilige commands.</td><td>C · UI, Voice</td></tr>
           <tr><th><code>terminal.clear</code></th><td>Wist de terminalbuffer volgens de bestaande sessiesemantiek.</td><td>Niet herstelbaar. Geen processtop.</td><td>D · UI, Voice</td></tr>
           <tr><th><code>terminal.stop</code></th><td>Beëindigt een shell of terminalagent.</td><td>Destructief voor runtime. Gevolgen bevestigen bij lopend werk.</td><td>C · UI, Voice</td></tr>
           <tr><th><code>task.list</code></th><td>Leest taken, status, parent, child en resultaat.</td><td>Alleen lezen.</td><td>C · UI, CLI, Voice, agents</td></tr>
@@ -533,7 +550,7 @@ type ActionResult = {
           <tr><th><code>git.unstage</code></th><td>Haalt exacte bestanden uit de index.</td><td>Inverse via stage als inhoud nog klopt.</td><td>C · UI, Voice</td></tr>
           <tr><th><code>git.discard</code></th><td>Verwerpt opgegeven wijzigingen en rapporteert eventueel een herstelstash.</td><td>Destructief. Bestanden en herstelpad bevestigen.</td><td>C · UI, Voice</td></tr>
           <tr><th><code>git.fetch</code></th><td>Haalt remote refs op.</td><td>Langlopend, geen gewone undo.</td><td>C · UI, Voice, agents</td></tr>
-          <tr><th><code>git.pull</code></th><td>Integreert remote wijzigingen in de checkout.</td><td>Langlopend. Dirty state en conflictstrategie vooraf valideren.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.pull</code></th><td>Integreert remote wijzigingen in de checkout.</td><td>Langlopend. Alleen fast-forward: een branch die aan beide kanten verder ging wacht op de keuze van een persoon (productregel).</td><td>C · UI, Voice</td></tr>
           <tr><th><code>git.push</code></th><td>Publiceert commits naar een bestaande upstream.</td><td>Externe write, geen gewone undo.</td><td>C · UI, Voice</td></tr>
           <tr><th><code>git.publishBranch</code></th><td>Publiceert een branch en stelt upstream in.</td><td>Externe write. Exacte remote en branch tonen.</td><td>C · UI, Voice</td></tr>
           <tr><th><code>git.forcePush</code></th><td>Vervangt remote historie volgens ondersteunde lease-semantiek.</td><td>Destructief. Altijd expliciete menselijke bevestiging.</td><td>D · UI</td></tr>
@@ -679,17 +696,17 @@ type ActionResult = {
     <h2>Bouwplan</h2>
     <ol class="steps">
       <li class="step"><div>
-        <h3>Leg de seam en contracten vast</h3>
+        <h3><span class="badge warning">Deels</span> Leg de seam en contracten vast</h3>
         <p>Voeg action-definities, actorcontext, resultaatstates, targetresolver en operation-events toe aan een gedeeld package. Bouw client- en daemonadapters achter de coordinator.</p>
         <p><strong>Acceptatie:</strong> contracttests kunnen één read, één lokale action, één daemonwrite, één confirmation en één undo via dezelfde interface uitvoeren.</p>
       </div></li>
       <li class="step"><div>
-        <h3>Migreer de huidige negen Voice-tools</h3>
+        <h3><span class="badge confirmed">Gebouwd</span> Migreer de Voice-tools</h3>
         <p>Laat de bestaande Voice-definities actions aanroepen in plaats van <code>voice/tools.ts</code> rechtstreeks stores te laten muteren. Repareer tegelijk unieke targetresolutie en undo-tokens.</p>
         <p><strong>Acceptatie:</strong> huidig Voice-gedrag blijft werken, maar UI, CLI en Voice delen voor focus, create, rename, chat en canvascontrol dezelfde tests en implementatie.</p>
       </div></li>
       <li class="step"><div>
-        <h3>Sluit command palette en overlappende CLI-verbs aan</h3>
+        <h3><span class="badge warning">Deels</span> Sluit command palette en overlappende CLI-verbs aan</h3>
         <p>Genereer palette-items en CLI-help uit actionmetadata. Behoud mensvriendelijke CLI-syntax als adapter. Verwijder vervangen paden en hun onnodige unit tests zodra action-interface-tests dezelfde observaties dekken.</p>
         <p><strong>Acceptatie:</strong> een view hernoemen of node maken heeft één uitvoerder, ongeacht menu, sneltoets, CLI of Voice.</p>
       </div></li>
@@ -714,11 +731,11 @@ type ActionResult = {
   <section id="beslissingen">
     <h2>Beslissingen die vóór implementatie vast moeten staan</h2>
     <ul>
-      <li><strong>Packageplaatsing.</strong> Advies: action-contracten in een nieuw gedeeld package, executors in client en daemon.</li>
-      <li><strong>Voice actor.</strong> Een aparte actor die namens de aanwezige gebruiker handelt, nooit namens een agentnode.</li>
+      <li><strong>Packageplaatsing.</strong> Genomen: contracten in <code>packages/actions</code>, executors in client en daemon.</li>
+      <li><strong>Voice actor.</strong> Genomen: actor-soort <code>voice</code>, nooit namens een agentnode.</li>
       <li><strong>Confirmation ownership.</strong> Alleen een interactieve client mag destructive of permissiongevoelige acties bevestigen.</li>
       <li><strong>Session undo.</strong> Documentherstel en runtimeherstel blijven twee verschillende concepten.</li>
-      <li><strong>Toolbudget.</strong> Verhoog het gedelegeerde Responses-outputbudget boven de huidige 256 tokens voor samengestelde workflows, en meet voordat een vaste waarde wordt gekozen.</li>
+      <li><strong>Toolbudget.</strong> Genomen: het outputbudget staat op 1024 tokens (<code>apps/desktop/src/openai-live.ts</code>).</li>
       <li><strong>Scope van administratie.</strong> Machine pairing, auth-revocation, updates en geheime settings blijven eerst buiten Voice. Ze kunnen later dezelfde registry gebruiken met uitsluitend UI-exposure.</li>
     </ul>
   </section>
