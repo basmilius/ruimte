@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, GitCommitHorizontal } from 'lucide-react';
 import { GIT_GROUP } from '@/shell/panels/classes';
+import { performAsPerson } from '@/actions/client-actions';
 import { groupCommits, mergeLogs, relativeTime, type LoadedLog, type LogRow } from '@/shell/panels/commit-log';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
@@ -55,6 +56,7 @@ export function CommitLog({ sources, reading, onOpen }: CommitLogProps) {
     const [held, setHeld] = useState<{ asked: string; logs: LoadedLog[]; failed: boolean } | null>(null);
     const [paging, setPaging] = useState(false);
     const [now] = useState(() => Math.floor(Date.now() / 1000));
+    // The same path on another machine is another log, so a switch reads it again.
     const transport = useTransport();
     const shown = held !== null && held.asked === asked ? held : null;
 
@@ -64,7 +66,7 @@ export function CommitLog({ sources, reading, onOpen }: CommitLogProps) {
         Promise.all(
             list.map(async (source): Promise<LoadedLog | null> => {
                 try {
-                    const answer = await transport.request('git.log', { cwd: source.cwd, limit: PAGE });
+                    const answer = await performAsPerson('git.log', { repository: source.cwd, limit: PAGE, cursor: null });
                     return { cwd: source.cwd, repo: source.repo, commits: answer.commits, cursor: answer.cursor };
                 } catch {
                     return null;
@@ -95,7 +97,7 @@ export function CommitLog({ sources, reading, onOpen }: CommitLogProps) {
                     return log;
                 }
                 try {
-                    const answer = await transport.request('git.log', { cwd: log.cwd, limit: PAGE, cursor: log.cursor });
+                    const answer = await performAsPerson('git.log', { repository: log.cwd, limit: PAGE, cursor: log.cursor });
                     return { ...log, commits: [...log.commits, ...answer.commits], cursor: answer.cursor };
                 } catch {
                     return { ...log, cursor: null };

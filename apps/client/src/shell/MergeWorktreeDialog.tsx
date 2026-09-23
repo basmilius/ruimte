@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
-import type { Worktree, WorktreeMergeStrategy } from '@ruimte/contracts';
+import type { Worktree, WorktreeMergeResult, WorktreeMergeStrategy } from '@ruimte/contracts';
+import { performAsPerson } from '@/actions/client-actions';
 import { agentsEndedWith } from '@/agents/end-children';
-import { nextActionId } from '@/shell/panels/use-git-actions';
-import { phaseLabel } from '@/shell/panels/git-actions';
+import { nextActionId, phaseLabel } from '@/shell/panels/git-actions';
 import {
     checkedOutBranch,
     defaultSubject,
@@ -270,7 +270,7 @@ const mergeWithToasts = async (transport: Transport, folder: string, runs: reado
     };
     try {
         await runMerges(
-            transport,
+            mergeAsPerson,
             runs,
             nextActionId,
             (run, actionId) => {
@@ -367,5 +367,32 @@ const stashTarget = async (transport: Transport, folder: string, worktree: Workt
     if (cwd === null) {
         throw new Error(i18next.t('shell:merge.notCheckedOut', { branch: worktree.from?.branch ?? i18next.t('shell:merge.targetBranch') }));
     }
-    await transport.request('git.action', { cwd, actionId: nextActionId(), kind: 'stash', subject: `Before merging ${worktree.branch}` });
+    await performAsPerson('git.stash', { repository: cwd, message: `Before merging ${worktree.branch}`, run: nextActionId() });
+};
+
+/* One worktree merged as the person set it up in the dialog, by the branch the catalog names a worktree with. */
+const mergeAsPerson = async ({ worktree, payload }: MergeRun, actionId: string): Promise<WorktreeMergeResult> => {
+    const merged = await performAsPerson('worktree.merge', {
+        branch: worktree.branch,
+        strategy: payload.strategy,
+        message: payload.subject?.trim() || null,
+        body: payload.body ?? null,
+        commitFirst: payload.commitFirst ?? false,
+        remove: payload.remove ?? false,
+        stopAgent: payload.stopAgent ?? false,
+        into: payload.into ?? null,
+        run: actionId
+    });
+    const { output, cwd, conflicts, removed, branchDeleted, kept } = merged;
+    return {
+        actionId,
+        summary: merged.summary,
+        output: output ?? '',
+        ...(merged.into === null ? {} : { into: merged.into }),
+        ...(cwd === undefined ? {} : { cwd }),
+        ...(conflicts === undefined ? {} : { conflicts }),
+        ...(removed === undefined ? {} : { removed }),
+        ...(branchDeleted === undefined ? {} : { branchDeleted }),
+        ...(kept === undefined ? {} : { kept })
+    };
 };

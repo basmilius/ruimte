@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { ActionRefusal } from '@ruimte/actions';
 import type { Worktree, WorktreeMergeResult } from '@ruimte/contracts';
-import { TransportError } from '@/transport';
-import type { Transport } from '@/transport/transport';
 import {
     checkedOutBranch,
     defaultSubject,
@@ -27,26 +26,24 @@ const run = (branch: string): MergeRun => ({ worktree: worktree(branch), payload
 
 const result = (extra: Partial<WorktreeMergeResult> = {}): WorktreeMergeResult => ({ actionId: 'a', summary: 'ok', output: '', ...extra });
 
-const transportAnswering = (answers: Record<string, () => WorktreeMergeResult>): { transport: Pick<Transport, 'request'>; asked: string[] } => {
+const mergeAnswering = (answers: Record<string, () => WorktreeMergeResult>): { merge: (run: MergeRun) => Promise<WorktreeMergeResult>; asked: string[] } => {
     const asked: string[] = [];
-    const transport = {
-        request: (async (_type: string, payload: { path: string }) => {
-            asked.push(payload.path);
-            return answers[payload.path]!();
-        }) as unknown as Transport['request']
+    const merge = async (run: MergeRun): Promise<WorktreeMergeResult> => {
+        asked.push(run.payload.path);
+        return answers[run.payload.path]!();
     };
-    return { transport, asked };
+    return { merge, asked };
 };
 
 describe('runMerges', () => {
     test('merges in order and stops at the first conflict, leaving the rest alone', async () => {
-        const { transport, asked } = transportAnswering({
+        const { merge, asked } = mergeAnswering({
             '/wt/a': () => result(),
             '/wt/b': () => result({ conflicts: ['x.ts'] }),
             '/wt/c': () => result()
         });
         const outcomes = await runMerges(
-            transport,
+            merge,
             [run('a'), run('b'), run('c')],
             () => 'id',
             () => undefined,
@@ -57,14 +54,14 @@ describe('runMerges', () => {
     });
 
     test('a refusal carries its code and stops the run as well', async () => {
-        const { transport, asked } = transportAnswering({
+        const { merge, asked } = mergeAnswering({
             '/wt/a': () => {
-                throw new TransportError('agent-working', '1 agent is still working in a.');
+                throw new ActionRefusal('agent-working', '1 agent is still working in a.');
             },
             '/wt/b': () => result()
         });
         const outcomes = await runMerges(
-            transport,
+            merge,
             [run('a'), run('b')],
             () => 'id',
             () => undefined,

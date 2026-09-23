@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { GitBranch } from 'lucide-react';
+import { performAsPerson } from '@/actions/client-actions';
 import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { useTransport } from '@/transport/context';
 import { PromptDialog } from '@/ui/PromptDialog';
 
 // A group's title, as a branch name git accepts.
@@ -20,14 +20,12 @@ export function WorktreeDialog() {
     const close = useUi((s) => s.setWorktreeDialogFor);
     const group = useCanvas((s) => (groupId ? s.nodes[groupId] : undefined));
     const folder = useProject((s) => s.current?.folder ?? null);
-    const projectId = useProject((s) => s.current?.projectId ?? null);
-    const transport = useTransport();
 
     const submit = async (branch: string): Promise<void> => {
         if (!groupId || !folder) {
             return;
         }
-        const result = await transport.request('git.worktree-add', { repo: folder, branch, ...(projectId === null ? {} : { projectId }) });
+        const result = await performAsPerson('worktree.create', { branch });
         focusedCanvas().getState().setGroupWorktree(groupId, result.worktree);
         close(null);
     };

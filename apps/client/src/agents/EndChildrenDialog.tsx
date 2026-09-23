@@ -3,14 +3,13 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import i18next from 'i18next';
 import { Square, Trash } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { performAsPerson } from '@/actions/client-actions';
 import { endsAgentsWarning, stopsSubagentsWarning, stopsTaskWarning, useEndingAgents, type PendingEnd } from '@/agents/end-children';
 import { hasWork, leftBehindLine, removedToast } from '@/shell/panels/worktree-rows';
 import { Toggle } from '@/shell/settings/controls';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { worktreeLists } from '@/state/worktrees';
-import { useTransport } from '@/transport/context';
-import type { Transport } from '@/transport/transport';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
@@ -34,7 +33,6 @@ export function EndChildrenDialog() {
     const { t } = useTranslation('agents');
     const { t: common } = useTranslation();
     const pending = useEndingAgents((s) => s.pending);
-    const transport = useTransport();
     const endpointId = useEndpointId();
     // Off for every new question. Removing a worktree is only ever what the person ticked this time.
     const [removal, setRemoval] = useState<{ pending: PendingEnd | null; remove: boolean }>({ pending: null, remove: false });
@@ -74,7 +72,7 @@ export function EndChildrenDialog() {
                             onClick={() => {
                                 pending?.run();
                                 if (offered !== undefined && removal.remove) {
-                                    void removeClean(transport, offered.folder, clean).finally(() => worktreeLists.reload(endpointId, offered.folder));
+                                    void removeClean(clean).finally(() => worktreeLists.reload(endpointId, offered.folder));
                                 }
                                 close();
                             }}
@@ -89,10 +87,10 @@ export function EndChildrenDialog() {
 }
 
 /* Without force, so a worktree that gained work since the question was asked is refused by the machine and stays. */
-const removeClean = async (transport: Transport, folder: string, worktrees: readonly PendingEndWorktree[]): Promise<void> => {
+const removeClean = async (worktrees: readonly PendingEndWorktree[]): Promise<void> => {
     for (const worktree of worktrees) {
         try {
-            const result = await transport.request('git.worktree-remove', { repo: folder, path: worktree.path });
+            const result = await performAsPerson('worktree.remove', { branch: worktree.branch, force: false });
             useToasts.getState().show({
                 title: i18next.t('agents:dialog.worktreeRemoved', { branch: worktree.branch }),
                 ...(removedToast(worktree.branch, result) ?? {}),

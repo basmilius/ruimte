@@ -96,11 +96,14 @@ export const removeAllQuestion = (worktrees: readonly Worktree[]): RemoveQuestio
 };
 
 /* What the toast adds under its title: that a branch stayed, or how to bring back one that held commits. */
-export const removedToast = (branch: string, result: WorktreeRemoveResult): { description: string } | null => {
+export const removedToast = (
+    branch: string,
+    result: { [Field in keyof WorktreeRemoveResult]?: WorktreeRemoveResult[Field] | null }
+): { description: string } | null => {
     if (result.branchDeleted === false) {
         return { description: i18next.t('panels:worktree.removed.branchStays', { branch }) };
     }
-    if (result.branchCommit !== undefined) {
+    if (result.branchCommit != null) {
         return { description: i18next.t('panels:worktree.removed.branchDeleted', { branch, commit: result.branchCommit.slice(0, 12) }) };
     }
     return null;

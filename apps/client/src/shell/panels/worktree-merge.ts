@@ -1,7 +1,6 @@
 import i18next from 'i18next';
+import { ActionRefusal } from '@ruimte/actions';
 import type { Worktree, WorktreeMergePayload, WorktreeMergeResult, WorktreeMergeStrategy } from '@ruimte/contracts';
-import { TransportError } from '@/transport';
-import type { Transport } from '@/transport/transport';
 
 /* The three ways a worktree lands, in the order the dialog offers them. */
 export const MERGE_STRATEGIES: readonly WorktreeMergeStrategy[] = ['squash', 'merge', 'rebase'];
@@ -64,7 +63,7 @@ export interface MergeRun {
  * "all" stop where a person has to look.
  */
 export const runMerges = async (
-    transport: Pick<Transport, 'request'>,
+    merge: (run: MergeRun, actionId: string) => Promise<WorktreeMergeResult>,
     runs: readonly MergeRun[],
     actionId: () => string,
     onStart: (run: MergeRun, actionId: string) => void,
@@ -76,7 +75,7 @@ export const runMerges = async (
         onStart(run, id);
         let outcome: MergeOutcome;
         try {
-            const result = await transport.request('git.worktree-merge', { ...run.payload, actionId: id });
+            const result = await merge(run, id);
             // Conflicts, or none when a hook stopped a merge that ran: either way it waits in the target.
             outcome =
                 result.conflicts !== undefined ? { kind: 'conflict', worktree: run.worktree, result } : { kind: 'merged', worktree: run.worktree, result };
@@ -84,7 +83,7 @@ export const runMerges = async (
             outcome = {
                 kind: 'refused',
                 worktree: run.worktree,
-                code: error instanceof TransportError ? error.code : 'failed',
+                code: error instanceof ActionRefusal ? error.code : 'failed',
                 message: error instanceof Error ? error.message : i18next.t('panels:error.generic')
             };
         }

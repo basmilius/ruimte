@@ -10,7 +10,8 @@ import { ConflictSides } from '@/conflicts/ConflictSides';
 import { conflictIndexes, contentOf, draftWith, fileOf, nextConflict, openInDraft, usableBlocks, type ConflictFile } from '@/conflicts/conflict-model';
 import type { ConflictDraft } from '@/conflicts/editor';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { nextActionId } from '@/shell/panels/use-git-actions';
+import { performAsPerson } from '@/actions/client-actions';
+import { nextActionId } from '@/shell/panels/git-actions';
 import { useGitStatus } from '@/state/git-watch';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
@@ -79,11 +80,10 @@ export function ConflictOverlay() {
         if (cwd === null) {
             return;
         }
-        transport
-            .request('git.conflicts', { cwd })
+        performAsPerson('git.conflicts', { repository: cwd })
             .then((next) => setReading({ cwd, answer: next }))
             .catch((error: unknown) => setReading({ cwd, failure: error instanceof Error ? error.message : t('failed') }));
-    }, [transport, cwd, t]);
+    }, [cwd, t]);
 
     /* A fresh opening starts on the file it was pointed at, and forgets what was read for the one
        before it: the checkout may be another machine's. */
@@ -117,8 +117,7 @@ export function ConflictOverlay() {
         }
         let cancelled = false;
         setLoading(true);
-        transport
-            .request('git.conflict', { cwd, path: activeFile })
+        performAsPerson('git.conflict', { repository: cwd, path: activeFile })
             .then((result) => {
                 if (cancelled) {
                     return;
@@ -198,7 +197,7 @@ export function ConflictOverlay() {
         if (cwd === null) {
             return 0;
         }
-        const result = await transport.request('git.resolveAi', { cwd, path: target.path, actionId });
+        const result = await performAsPerson('git.proposeResolution', { repository: cwd, path: target.path, run: actionId });
         const usable = usableBlocks(target, result.blocks);
         if (target.path === activeFile) {
             for (const entry of usable) {
@@ -221,7 +220,7 @@ export function ConflictOverlay() {
         if (known !== undefined) {
             return known;
         }
-        const result = await transport.request('git.conflict', { cwd, path });
+        const result = await performAsPerson('git.conflict', { repository: cwd, path });
         const made = fileOf(result);
         files.current.set(path, made);
         return made;
@@ -257,7 +256,7 @@ export function ConflictOverlay() {
         if (cwd === null || target === undefined || written === undefined) {
             return;
         }
-        await transport.request('git.resolve', { cwd, path, content: contentOf(target, written.text), hash: target.hash });
+        await performAsPerson('git.resolveConflict', { repository: cwd, path, content: contentOf(target, written.text), take: null, hash: target.hash });
         files.current.delete(path);
         drafts.current.delete(path);
         setOpen((previous) => Object.fromEntries(Object.entries(previous).filter(([key]) => key !== path)));
@@ -288,7 +287,7 @@ export function ConflictOverlay() {
         }
         setBusy(true);
         try {
-            await transport.request('git.resolve', { cwd, path, take: side });
+            await performAsPerson('git.resolveConflict', { repository: cwd, path, content: null, take: side, hash: null });
             files.current.delete(path);
             drafts.current.delete(path);
             setActivePath(null);
@@ -307,8 +306,8 @@ export function ConflictOverlay() {
         }
         setBusy(true);
         try {
-            const result = await transport.request('git.operation', { cwd, actionId: nextActionId(), action });
-            const left = result.conflicts?.length ?? 0;
+            const result = await performAsPerson('git.operation', { repository: cwd, step: action, run: nextActionId() });
+            const left = result.conflicts.length;
             /* The daemon's summary is English wherever it lands; what happened is known here, so the
                toast says it in the language the rest of the overlay is in. */
             const title =

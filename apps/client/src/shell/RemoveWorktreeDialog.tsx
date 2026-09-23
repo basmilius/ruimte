@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActionRefusal } from '@ruimte/actions';
 import type { Worktree } from '@ruimte/contracts';
+import { performAsPerson } from '@/actions/client-actions';
 import { PromptDialog } from '@/ui/PromptDialog';
 import { removeAllQuestion, removedToast } from '@/shell/panels/worktree-rows';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { worktreeLists } from '@/state/worktrees';
-import { TransportError } from '@/transport';
 import { useTransport } from '@/transport/context';
 
 type Reading = { key: string; worktrees: Worktree[]; failure: string | null };
@@ -70,11 +71,7 @@ export function RemoveWorktreeDialog() {
         try {
             // One after the other, stopping at the first refusal so what follows it stays as it was.
             for (const worktree of shown.worktrees) {
-                const result = await transport.request('git.worktree-remove', {
-                    repo: removal.folder,
-                    path: worktree.path,
-                    ...(question.force ? { force: true } : {})
-                });
+                const result = await performAsPerson('worktree.remove', { branch: worktree.branch, force: question.force });
                 useToasts.getState().show({
                     title: t('removeWorktree.removed', { branch: worktree.branch }),
                     ...(removedToast(worktree.branch, result) ?? {}),
@@ -83,7 +80,7 @@ export function RemoveWorktreeDialog() {
             }
             close();
         } catch (error: unknown) {
-            if (error instanceof TransportError && error.code === 'worktree-has-work') {
+            if (error instanceof ActionRefusal && error.code === 'worktree-has-work') {
                 setReading(null);
                 setAttempt((count) => count + 1);
                 return;

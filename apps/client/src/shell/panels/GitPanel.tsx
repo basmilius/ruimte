@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Eye, Folder, GitMerge, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
 import { type GitActionKind, type GitCapabilitiesResult, type GitFile, type GitRef, type GitStash, type Worktree } from '@ruimte/contracts';
+import { performAsPerson } from '@/actions/client-actions';
 import { desktop } from '@/desktop/bridge';
 import { BranchMenu, type CheckoutRefs } from '@/shell/panels/BranchMenu';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
@@ -154,16 +155,12 @@ export function GitPanel() {
     const roomForPills = (useUi((s) => s.panelWidth) ?? 540) >= PILLS_FROM_WIDTH;
     const run = useGitActions();
 
-    const loadRefs = useCallback(
-        (path: string): void => {
-            setRefsByCwd((previous) => ({ ...previous, [path]: { refs: previous[path]?.refs ?? [], stashes: previous[path]?.stashes ?? [], loading: true } }));
-            transport
-                .request('git.refs', { cwd: path })
-                .then((answer) => setRefsByCwd((previous) => ({ ...previous, [path]: { refs: answer.refs, stashes: answer.stashes, loading: false } })))
-                .catch(() => setRefsByCwd((previous) => ({ ...previous, [path]: { refs: [], stashes: [], loading: false } })));
-        },
-        [transport]
-    );
+    const loadRefs = useCallback((path: string): void => {
+        setRefsByCwd((previous) => ({ ...previous, [path]: { refs: previous[path]?.refs ?? [], stashes: previous[path]?.stashes ?? [], loading: true } }));
+        performAsPerson('git.refs', { repository: path })
+            .then((answer) => setRefsByCwd((previous) => ({ ...previous, [path]: { refs: answer.refs, stashes: answer.stashes, loading: false } })))
+            .catch(() => setRefsByCwd((previous) => ({ ...previous, [path]: { refs: [], stashes: [], loading: false } })));
+    }, []);
 
     const refsOf = useCallback(
         (path: string): CheckoutRefs => ({
@@ -248,7 +245,7 @@ export function GitPanel() {
             return;
         }
         setBusy(true);
-        void stageFiles(transport, path, paths, staged).finally(() => {
+        void stageFiles(path, paths, staged).finally(() => {
             setBusy(false);
             void refresh(path);
         });
@@ -257,8 +254,7 @@ export function GitPanel() {
     const discard = (path: string, file: GitFile): void => {
         setDialog(null);
         setBusy(true);
-        transport
-            .request('git.discard', { cwd: path, paths: [file.path] })
+        performAsPerson('git.discard', { repository: path, paths: [file.path] })
             .then(({ stash }) => {
                 useToasts.getState().show({
                     title: stash === null ? t('git.panel.discardNothing', { path: file.path }) : t('git.panel.discardStashed', { path: file.path }),
@@ -337,8 +333,7 @@ export function GitPanel() {
     };
 
     const openPullRequest = (path: string): void => {
-        transport
-            .request('git.log', { cwd: path, limit: 1 })
+        performAsPerson('git.log', { repository: path, limit: 1, cursor: null })
             .then((answer) => setDialog({ kind: 'pull-request', cwd: path, subject: answer.commits[0]?.subject ?? '' }))
             .catch(() => setDialog({ kind: 'pull-request', cwd: path, subject: '' }));
     };

@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { FolderGit2, LoaderCircle, Sparkles } from 'lucide-react';
 import type { GitCapabilitiesResult } from '@ruimte/contracts';
 import { COMMIT_MESSAGE } from '@/ui/classes';
-import { commitTargets, splitMessage, type CommitCandidate } from '@/shell/panels/git-actions';
-import { nextActionId } from '@/shell/panels/use-git-actions';
+import { performAsPerson } from '@/actions/client-actions';
+import { commitTargets, nextActionId, splitMessage, type CommitCandidate } from '@/shell/panels/git-actions';
 import { useGit } from '@/state/git';
 import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
@@ -66,8 +66,7 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
         const actionId = nextActionId();
         writingId.current = actionId;
         setWriting(true);
-        transport
-            .request('git.suggestMessage', { cwd: writeFrom, actionId })
+        performAsPerson('git.suggestCommitMessage', { repository: writeFrom, run: actionId })
             .then((suggestion) => {
                 useGit.getState().setMessage(messageKey, suggestion.body === '' ? suggestion.subject : `${suggestion.subject}\n\n${suggestion.body}`);
             })

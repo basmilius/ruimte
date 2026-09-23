@@ -2,7 +2,9 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Columns2, FileDiff, FileWarning, GitBranch, GitCompare, LoaderCircle, RefreshCw, Rows2, Space, WrapText } from 'lucide-react';
-import type { GitDiffFile, GitDiffPayload, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
+import type { ActionInput } from '@ruimte/actions';
+import type { GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
+import { performAsPerson } from '@/actions/client-actions';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { relativeTime } from '@/shell/panels/commit-log';
 import { FileActionsContext } from '@/shell/panels/file-actions';
@@ -56,20 +58,21 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
        one lands, or every write would blink the tab back to its spinner. */
     const asked = `${view.cwd}\u0000${relative}\u0000${view.scope}\u0000${String(view.staged)}\u0000${String(whitespace)}\u0000${view.base ?? ''}`;
     const [held, setHeld] = useState<{ asked: string; state: DiffState } | null>(null);
+    // The same path on another machine is another diff, so a switch reads it again.
     const transport = useTransport();
     const state: DiffState = held !== null && held.asked === asked ? held.state : { status: 'loading' };
 
     useEffect(() => {
         let alive = true;
-        transport
-            .request('git.diff', {
-                cwd: view.cwd,
-                path: relative,
-                scope: view.scope,
-                staged: view.staged,
-                ignoreWhitespace: !whitespace,
-                ...(view.base === undefined ? {} : { base: view.base })
-            })
+        performAsPerson('git.diff', {
+            repository: view.cwd,
+            path: relative,
+            scope: view.scope,
+            commit: null,
+            staged: view.staged,
+            ignoreWhitespace: !whitespace,
+            base: view.base ?? null
+        })
             .then((diff) => {
                 if (alive) {
                     setHeld({ asked, state: { status: 'ready', diff } });
@@ -206,15 +209,17 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
     const asked = `${cwd}\u0000${commit ?? ''}\u0000${base ?? ''}`;
 
     const [held, setHeld] = useState<{ asked: string; state: CommitState } | null>(null);
+    // The same path on another machine is another diff, so a switch reads it again.
     const transport = useTransport();
     const state: CommitState = held !== null && held.asked === asked ? held.state : { status: 'loading' };
 
     useEffect(() => {
         let alive = true;
-        const ask: GitDiffPayload =
-            commit === undefined ? { cwd, scope: 'base', ...(base === null || base === undefined ? {} : { base }) } : { cwd, scope: 'commit', commit };
-        transport
-            .request('git.diff', ask)
+        const ask: ActionInput<'git.diff'> =
+            commit === undefined
+                ? { repository: cwd, path: null, scope: 'base', commit: null, staged: null, ignoreWhitespace: null, base: base ?? null }
+                : { repository: cwd, path: null, scope: 'commit', commit, staged: null, ignoreWhitespace: null, base: null };
+        performAsPerson('git.diff', ask)
             .then((diff) => {
                 if (alive) {
                     setHeld({ asked, state: { status: 'ready', diff } });

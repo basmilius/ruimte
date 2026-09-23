@@ -6,7 +6,6 @@ import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { isCheckoutDiff, useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
-import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
@@ -25,7 +24,6 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
     const pinned = tab?.pinned ?? false;
     const hasOthers = useFiles((s) => s.tabs.some((entry) => entry.key !== tabKey));
     const tabLimit = useSettings((s) => s.filesTabLimit);
-    const transport = useTransport();
 
     if (tab === null) {
         return null;
@@ -43,7 +41,7 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
             return;
         }
         const staged = !view.staged;
-        void stageFiles(transport, view.cwd, [relativeTo(view.cwd, path)], staged).then((ok) => {
+        void stageFiles(view.cwd, [relativeTo(view.cwd, path)], staged).then((ok) => {
             if (ok) {
                 useFiles.getState().setStaged(tabKey, staged);
             }

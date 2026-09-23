@@ -1,17 +1,88 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import i18next from 'i18next';
+import { ActionRefusal, type ActionOutput } from '@ruimte/actions';
 import type { GitActionKind, GitActionPayload, GitActionResult } from '@ruimte/contracts';
-import { actionTitle, manySummary, manyTitle, phaseLabel } from '@/shell/panels/git-actions';
+import { performAsPerson } from '@/actions/client-actions';
+import { actionTitle, manySummary, manyTitle, nextActionId, phaseLabel } from '@/shell/panels/git-actions';
 import { useToasts, type ToastAction } from '@/state/toasts';
-import { TransportError } from '@/transport/transport';
 import { useTransport } from '@/transport/context';
 
-let counter = 0;
+type GitRun = ActionOutput<'git.publishBranch'>;
 
-/* Names one run, so the progress of this push is not drawn on the toast of the one before it. */
-export const nextActionId = (): string => {
-    counter += 1;
-    return `git-${Date.now()}-${counter}`;
+const resultOf = (actionId: string, run: GitRun): GitActionResult => ({
+    actionId,
+    summary: run.summary,
+    output: run.output,
+    ...(run.commit === null ? {} : { commit: run.commit }),
+    ...(run.url === null ? {} : { url: run.url }),
+    ...(run.conflicts.length === 0 ? {} : { conflicts: run.conflicts })
+});
+
+/* A run of one repository answers the first entry; the panel never names more than one at a time. */
+const firstOf = (actionId: string, output: ActionOutput<'git.push'>): GitActionResult => resultOf(actionId, output.runs[0]!);
+
+/*
+ * One of the panel's actions, by the kind the daemon knows it under, run through the catalog as a
+ * person's. The panel's own dialogs have asked whatever there was to ask.
+ */
+export const runGitKind = async ({
+    cwd: repository,
+    actionId: run,
+    kind,
+    ref,
+    name,
+    subject,
+    body,
+    stageAll,
+    stash,
+    force,
+    strategy
+}: GitActionPayload): Promise<GitActionResult> => {
+    switch (kind) {
+        case 'fetch':
+            return firstOf(run, await performAsPerson('git.fetch', { repository, run }));
+        case 'pull':
+            return firstOf(run, await performAsPerson('git.pull', { repository, strategy: strategy ?? null, run }));
+        case 'sync':
+            return firstOf(run, await performAsPerson('git.sync', { repository, strategy: strategy ?? null, run }));
+        case 'push':
+            return firstOf(run, await performAsPerson('git.push', { repository, run }));
+        case 'commit':
+        case 'commit-push':
+            return firstOf(
+                run,
+                await performAsPerson('git.commit', {
+                    repository,
+                    message: subject ?? '',
+                    body: body ?? null,
+                    push: kind === 'commit-push',
+                    stageAll: stageAll ?? false,
+                    run
+                })
+            );
+        case 'publish':
+            return resultOf(run, await performAsPerson('git.publishBranch', { repository, run }));
+        case 'force-push':
+            return resultOf(run, await performAsPerson('git.forcePush', { repository, run }));
+        case 'checkout':
+            return resultOf(run, await performAsPerson('git.checkout', { repository, branch: ref ?? '', stashFirst: stash ?? false, run }));
+        case 'create-branch':
+            return resultOf(run, await performAsPerson('git.createBranch', { repository, name: name ?? '', run }));
+        case 'rename-branch':
+            return resultOf(run, await performAsPerson('git.renameBranch', { repository, name: name ?? '', run }));
+        case 'delete-branch':
+            return resultOf(run, await performAsPerson('git.deleteBranch', { repository, branch: ref ?? '', force: force ?? false, run }));
+        case 'merge':
+            return resultOf(run, await performAsPerson('git.merge', { repository, branch: ref ?? '', run }));
+        case 'rebase':
+            return resultOf(run, await performAsPerson('git.rebase', { repository, onto: ref ?? '', run }));
+        case 'stash':
+            return resultOf(run, await performAsPerson('git.stash', { repository, message: subject?.trim() || null, run }));
+        case 'stash-pop':
+            return resultOf(run, await performAsPerson('git.popStash', { repository, stash: ref ?? '', run }));
+        case 'create-pr':
+            return resultOf(run, await performAsPerson('git.createPullRequest', { repository, title: subject ?? '', body: body ?? null, run }));
+    }
 };
 
 export type ActionOutcome = { ok: true; result: GitActionResult } | { ok: false; message: string; code: string | null };
@@ -23,7 +94,7 @@ export interface ManyJob {
     /* What the toast calls this repository while its turn runs. */
     label: string;
     /* Everything else the action takes, such as the message of a commit. */
-    extra?: Record<string, unknown>;
+    extra?: Partial<Omit<GitActionPayload, 'cwd' | 'kind' | 'actionId'>>;
 }
 
 export interface RunOptions {
@@ -77,7 +148,7 @@ export const useGitActions = (): GitActions => {
             });
             toastByAction.current.set(actionId, { toastId, title: null });
             try {
-                const result = await transport.request('git.action', { ...payload, actionId });
+                const result = await runGitKind({ ...payload, actionId });
                 const action = options.done?.(result);
                 useToasts.getState().show({
                     id: toastId,
@@ -88,7 +159,7 @@ export const useGitActions = (): GitActions => {
                 return { ok: true, result };
             } catch (error: unknown) {
                 const message = error instanceof Error ? error.message : i18next.t('panels:error.generic');
-                const code = error instanceof TransportError ? error.code : null;
+                const code = error instanceof ActionRefusal ? error.code : null;
                 // A branch that moved on both sides is a question the panel asks, not a failure to read.
                 if (code === 'diverged') {
                     useToasts.getState().dismiss(toastId);
@@ -149,7 +220,7 @@ export const useGitActions = (): GitActions => {
                 toastByAction.current.set(actionId, { toastId, title });
                 useToasts.getState().update(toastId, { title, description: undefined });
                 try {
-                    await transport.request('git.action', { cwd: job.cwd, kind: job.kind, actionId, ...job.extra });
+                    await runGitKind({ cwd: job.cwd, kind: job.kind, actionId, ...job.extra });
                     done += 1;
                 } catch (error: unknown) {
                     const message = error instanceof Error ? error.message : i18next.t('panels:error.generic');
