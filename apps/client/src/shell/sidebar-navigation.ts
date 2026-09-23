@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { openProject } from '@/project/open';
+import { runAsPerson } from '@/actions/client-actions';
 import { revealNode, showView } from '@/project/views';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
@@ -11,7 +11,7 @@ import { sidebarNavigator } from './sidebar-target';
 export type { SidebarTarget } from './sidebar-target';
 
 export const openSidebarTarget = sidebarNavigator({
-    open: openProject,
+    open: async (endpointId, projectId) => ((await runAsPerson('project.switch', { endpointId, projectId })) === null ? 'failed' : 'done'),
     current: () => ({ endpointId: useProject.getState().currentEndpointId, projectId: useProject.getState().current?.projectId ?? null }),
     reveal(target) {
         const view = useDocument.getState().views.find((view) => view.id === target.viewId);

@@ -1,7 +1,7 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useTranslation } from 'react-i18next';
 import { FileText, Globe, LayoutGrid, Maximize, MessageSquare, Scan, SquareDashedMousePointer, StickyNote, Terminal, Type } from 'lucide-react';
-import { createNodeAction, createTextAction, fitAction, groupSelectionAction } from '@/actions/client-actions';
+import { createNodeAction, createTextAction, fitAction, groupSelectionAction, selectAllAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import type { Point } from '@/canvas/math';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
@@ -55,13 +55,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     <ContextMenu.Item className="menu-item" disabled={!hasSelection} onClick={() => groupSelectionAction()}>
                         <Icon icon={SquareDashedMousePointer} size={14} /> {t('canvasMenu.groupSelection')} <Kbd shortcut={CANVAS_SHORTCUTS.group} />
                     </ContextMenu.Item>
-                    <ContextMenu.Item
-                        className="menu-item"
-                        onClick={() => {
-                            const s = canvasStore.getState();
-                            s.select([...s.order, ...Object.keys(s.texts)]);
-                        }}
-                    >
+                    <ContextMenu.Item className="menu-item" onClick={() => selectAllAction(canvasStore)}>
                         <Icon icon={Scan} size={14} /> {t('common:action.selectAll')} <Kbd shortcut={CANVAS_SHORTCUTS.selectAll} />
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => fitAction()}>

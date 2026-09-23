@@ -32,7 +32,7 @@ import {
     groupTitle,
     type AlertAction
 } from '@/processes/format';
-import { performAsPerson } from '@/actions/client-actions';
+import { performAsPerson, performConfirmedAsPerson, runAsPerson } from '@/actions/client-actions';
 import { messageOf } from '@/pulsar/account';
 import { projectNodes, revealNode } from '@/project/views';
 import { Segmented } from '@/shell/settings/controls';
@@ -191,7 +191,6 @@ function AlertLine({ alert, now, onAction, onDismiss }: { alert: ProcessAlert; n
 export function ProcessesPanel() {
     const { t } = useTranslation('panels');
     useProcessesFeed();
-    const transport = useTransport();
     const endpointId = useEndpointId();
     const connection = useEndpointConnection(endpointId);
     const platform = useServer((s) => s.platform);
@@ -269,10 +268,11 @@ export function ProcessesPanel() {
     const fail = (title: string, e: unknown): void => {
         useToasts.getState().show({ title, description: messageOf(e), kind: 'error' });
     };
+    /* SIGKILL only comes here after the force dialog, which is the person's answer to the action's question. */
     const signal = (target: Target, kind: ProcessSignal): void => {
-        transport
-            .request('processes.signal', { pid: target.pid, startTime: target.startTime, signal: kind })
-            .catch((e: unknown) => fail(t('processes.signalFailed', { name: target.name }), e));
+        performConfirmedAsPerson('process.signal', { pid: target.pid, startTime: target.startTime, name: target.name, signal: kind }).catch((e: unknown) =>
+            fail(t('processes.signalFailed', { name: target.name }), e)
+        );
     };
     const act = (alert: ProcessAlert, action: AlertAction): void => {
         const target =
@@ -303,7 +303,7 @@ export function ProcessesPanel() {
         }
     };
     const dismiss = (alert: ProcessAlert): void => {
-        transport.request('processes.dismiss', { id: alert.id }).catch(() => undefined);
+        void runAsPerson('process.dismissAlert', { alertId: alert.id });
     };
 
     return (

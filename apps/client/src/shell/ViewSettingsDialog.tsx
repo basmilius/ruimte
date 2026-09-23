@@ -4,10 +4,9 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import { RotateCcw } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { type ProjectIconChoice, type ProjectView, viewIconOf } from '@ruimte/contracts';
-import { renameViewAction } from '@/actions/client-actions';
+import { renameViewAction, setViewIconAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { resetTitle } from '@/nodes/node-host';
-import { useDocument } from '@/state/document';
 import { Button } from '@/ui/Button';
 import { SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -25,7 +24,7 @@ export function ViewSettingsDialog({ view, onClose }: { view: ProjectView; onClo
     const given = view.name ?? '';
     const [name, setName] = useState(given);
 
-    const pick = (icon: ProjectIconChoice | null): void => useDocument.getState().setViewIcon(view.id, icon);
+    const pick = (icon: ProjectIconChoice | null): void => setViewIconAction(view.id, icon);
 
     const save = (): void => {
         const typed = name.trim();

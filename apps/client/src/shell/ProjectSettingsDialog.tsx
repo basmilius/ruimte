@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { FolderSearch, ImageUp } from 'lucide-react';
+import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { Button } from '@/ui/Button';
@@ -83,6 +84,7 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
             <input
                 autoFocus
                 className="field"
+                maxLength={MAX_TITLE_LENGTH}
                 aria-label={t('projectName.label')}
                 value={name}
                 onChange={(event) => setName(event.target.value)}

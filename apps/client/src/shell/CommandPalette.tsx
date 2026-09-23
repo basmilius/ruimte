@@ -32,8 +32,7 @@ import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { ensureMachine } from '@/endpoint/reach';
-import { openFolderOn, openProject } from '@/project/open';
-import { createViewAction, performAsPerson, runAsPerson } from '@/actions/client-actions';
+import { createViewAction, openFolderAction, openProjectAction, performAsPerson, runAsPerson } from '@/actions/client-actions';
 import { revealNode, showFileOnCanvas, showView } from '@/project/views';
 import { appCommands, OPENING_COMMAND_IDS, type Command } from '@/shell/commands';
 import {
@@ -509,7 +508,7 @@ export function CommandPalette() {
     /* The main column says how the open goes from here, and why it failed, so the palette is out of the way at once. */
     const submitPath = (path: string): void => {
         setOpen(false);
-        void openFolderOn(browseEndpointId, path, presence === 'missing');
+        openFolderAction(browseEndpointId, path, presence === 'missing');
     };
 
     const entries = useMemo<Entry[]>(() => {
@@ -625,7 +624,7 @@ export function CommandPalette() {
                     hint: projectMachines.size > 1 ? `${machine} · ${where}` : where,
                     icon: <ProjectGlyph projectId={summary.projectId} endpointId={endpointId} icon={summary.icon} color={summary.color} size={14} />,
                     section: 'projects',
-                    run: () => void openProject(endpointId, summary.projectId).catch(() => undefined)
+                    run: () => openProjectAction(endpointId, summary.projectId)
                 };
             });
         /* What the last answer held stays out of a list it no longer belongs to; the effect above

@@ -15,7 +15,6 @@ import {
 } from '@/actions/client-actions';
 import { offerDraft } from '@/chat/drafts';
 import { GRID, type Point } from '@/canvas/math';
-import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { filesOfView, nodesOfView } from '@/project/view-deletion';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { NODE_SIZE, focusedCanvas, liveCanvas } from '@/state/canvas';
@@ -108,9 +107,6 @@ const canvasForFile = (): string | null => {
     return lastCanvasViewId ?? views.find(isCanvasView)?.id ?? null;
 };
 
-/* The path a node or a view stores, from a path on the daemon's machine. */
-const storedFilePath = (path: string): string => storedPathOf(useProject.getState().current?.folder ?? null, path);
-
 /*
  * A file as a node on the canvas. The path may be absolute on the daemon's machine or already
  * stored the way a node holds one; both come out the same, since shortening a stored path is a
@@ -129,9 +125,6 @@ export const showFileOnCanvas = async (path: string, at?: Point): Promise<string
     }
     return id;
 };
-
-/* A file as a view of its own, a column beside the canvas rather than a frame on it. */
-export const newFileView = (path: string, opens = true): string | null => useDocument.getState().addFileView(basenameOf(path), storedFilePath(path), opens);
 
 /* Files as views of their own, in the list in the order given, the first right under `after` (null for the top). */
 export const newFileViewsAfter = async (paths: readonly string[], after: string | null): Promise<void> => {

@@ -6,6 +6,7 @@ import { Menu } from '@base-ui-components/react/menu';
 import { ArrowDown, ArrowUp, CircleAlert, Eye, FilePen, FilePlus, FolderX, GitBranch, GitMerge, LocateFixed, Lock, MoreHorizontal, Trash } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Worktree } from '@ruimte/contracts';
+import { performAsPerson } from '@/actions/client-actions';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { PromptDialog } from '@/ui/PromptDialog';
 import { nodesInWorktree, originLabel, sharePathsOf, workBadges, workBadgesLabel, type WorkBadgeKind } from '@/shell/panels/worktree-rows';
@@ -68,8 +69,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
             return;
         }
         let cancelled = false;
-        transport
-            .request('project.settings', { folder })
+        performAsPerson('project.readSettings', {})
             .then((settings) => {
                 if (!cancelled) {
                     setShare({ folder, paths: settings.worktrees?.share ?? [] });
@@ -84,8 +84,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
 
     const saveShare = (value: string): void => {
         const paths = sharePathsOf(value);
-        transport
-            .request('project.settings-update', { folder, settings: { worktrees: { share: paths } } })
+        performAsPerson('project.updateSettings', { settings: { worktrees: { share: paths } } })
             .then((settings) => {
                 setShare({ folder, paths: settings.worktrees?.share ?? [] });
                 setSharing(false);

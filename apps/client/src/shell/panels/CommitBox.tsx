@@ -3,11 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { FolderGit2, LoaderCircle, Sparkles } from 'lucide-react';
 import type { GitCapabilitiesResult } from '@ruimte/contracts';
 import { COMMIT_MESSAGE } from '@/ui/classes';
-import { performAsPerson } from '@/actions/client-actions';
+import { cancelGitRunAction, performAsPerson } from '@/actions/client-actions';
 import { commitTargets, nextActionId, splitMessage, type CommitCandidate } from '@/shell/panels/git-actions';
 import { useGit } from '@/state/git';
 import { useToasts } from '@/state/toasts';
-import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -38,7 +37,6 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
     const message = useGit((s) => s.messages[messageKey] ?? '');
     const [writing, setWriting] = useState(false);
     const writingId = useRef<string | null>(null);
-    const transport = useTransport();
     const { targets, stageAll } = commitTargets(checkouts);
     const changed = checkouts.some((checkout) => (checkout.status?.files.length ?? 0) > 0);
     const { subject, body } = splitMessage(message);
@@ -56,7 +54,7 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
         if (writing) {
             const running = writingId.current;
             if (running !== null) {
-                void transport.request('git.cancel', { actionId: running }).catch(() => undefined);
+                cancelGitRunAction(running);
             }
             return;
         }

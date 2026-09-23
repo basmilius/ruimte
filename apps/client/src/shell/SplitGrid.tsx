@@ -5,7 +5,7 @@ import { PromptStack } from '@/canvas/PromptStack';
 import { carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { isFilesView } from '@/shell/files-view';
 import { useCellView } from '@/shell/use-cell-view';
-import { newFileView } from '@/project/views';
+import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
 import { useDocument } from '@/state/document';
 import { CellViewContext } from '@/state/workspace-stores';
 import { canSplit, cellCount, isSameCell, locateView, snapToEven, type CellAt, type SplitZone } from '@/shell/split';
@@ -257,21 +257,14 @@ function Cell({
                     if (paths.length === 0) {
                         const dragged = draggedViewId(event.dataTransfer);
                         if (dragged !== null) {
-                            useDocument.getState().dropViewAt(dragged, at, here);
+                            placeViewAction(dragged, viewId, here);
                         }
                         return;
                     }
                     /* A file of its own, not a tab: the cell beside this one shows that one file and
                        keeps showing it. The files cell is for looking through a folder; this is for
-                       keeping a file in sight while working next to it. Every path becomes a view so
-                       the sidebar lists them all, and the first takes the cell that was aimed at,
-                       since one drop is one place on the grid. */
-                    for (const [index, path] of paths.entries()) {
-                        const id = newFileView(path, false);
-                        if (id !== null && index === 0) {
-                            useDocument.getState().dropViewAt(id, at, here);
-                        }
-                    }
+                       keeping a file in sight while working next to it. */
+                    placeFilesAction(paths, viewId, here);
                 }}
             >
                 {/* One cell means the window's toolbar speaks for the view, and a second bar under it

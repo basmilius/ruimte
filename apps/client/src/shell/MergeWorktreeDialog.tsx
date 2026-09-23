@@ -3,7 +3,7 @@ import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import type { Worktree, WorktreeMergeResult, WorktreeMergeStrategy } from '@ruimte/contracts';
-import { performAsPerson } from '@/actions/client-actions';
+import { cancelGitRunAction, performAsPerson } from '@/actions/client-actions';
 import { agentsEndedWith } from '@/agents/end-children';
 import { nextActionId, phaseLabel } from '@/shell/panels/git-actions';
 import {
@@ -281,7 +281,7 @@ const mergeWithToasts = async (transport: Transport, folder: string, runs: reado
                         kind: 'progress',
                         action: {
                             label: i18next.t('common:action.cancel'),
-                            run: () => void transport.request('git.cancel', { actionId }).catch(() => undefined)
+                            run: () => cancelGitRunAction(actionId)
                         }
                     })
                 );

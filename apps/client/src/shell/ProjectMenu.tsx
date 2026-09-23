@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { ActionInput } from '@ruimte/actions';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { projectClient } from '@/project';
 import { menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
-import { closeProjectOn, closingProject, openProject } from '@/project/open';
+import { openProjectAction, performAsPerson, runAsPerson } from '@/actions/client-actions';
+import { closingProject } from '@/project/open';
 import { closeWarning, sessionNodesOf } from '@/project/project-sessions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
-import { setProjectFolderIcon, setProjectIdentity, uploadProjectIcon, type ProjectSettingsResult } from '@/project/settings';
 import { ProjectSettingsDialog, type ProjectSettingsSubject } from '@/shell/ProjectSettingsDialog';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
@@ -54,7 +54,7 @@ function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
         <Menu.Item
             className={clsx('menu-item min-w-0 flex-1', (!summary.available || !row.connected) && 'opacity-50')}
             disabled={!summary.available}
-            onClick={() => void openProject(row.endpointId, summary.projectId).catch(() => undefined)}
+            onClick={() => openProjectAction(row.endpointId, summary.projectId)}
         >
             <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} />
             <span className="min-w-0 truncate">{summary.name}</span>
@@ -177,9 +177,22 @@ export function ProjectMenu() {
         []
     );
 
-    const rememberSettings = (result: ProjectSettingsResult): void => {
+    const appearance = async (change: Partial<Pick<ActionInput<'project.setAppearance'>, 'name' | 'icon' | 'image'>>): Promise<void> => {
+        if (settingsTarget === null) {
+            return;
+        }
+        const done = await performAsPerson('project.setAppearance', {
+            endpointId: settingsTarget.endpointId,
+            projectId: settingsTarget.summary.projectId,
+            name: change.name ?? null,
+            icon: change.icon ?? null,
+            image: change.image ?? null
+        });
+        const row = useProjectList
+            .getState()
+            .projects.find((candidate) => candidate.endpointId === done.endpointId && candidate.summary.projectId === done.projectId);
         setSettingsTarget((target) =>
-            target?.summary.projectId === result.summary.projectId ? { ...target, endpointId: result.endpointId, summary: result.summary } : target
+            target?.summary.projectId === done.projectId ? { ...target, endpointId: done.endpointId, summary: row?.summary ?? target.summary } : target
         );
     };
 
@@ -190,34 +203,10 @@ export function ProjectMenu() {
                   project: settingsProject,
                   endpointId: settingsTarget.endpointId,
                   actions: {
-                      rename: async (name) => {
-                          if (settingsIsCurrent) {
-                              await projectClient.rename(name);
-                              return;
-                          }
-                          rememberSettings(await setProjectIdentity(settingsTarget.endpointId, settingsTarget.summary.projectId, { name }));
-                      },
-                      setChosenIcon: async (icon) => {
-                          if (settingsIsCurrent) {
-                              await projectClient.setChosenIcon(icon);
-                              return;
-                          }
-                          rememberSettings(await setProjectIdentity(settingsTarget.endpointId, settingsTarget.summary.projectId, { icon }));
-                      },
-                      uploadIcon: async (mime, base64) => {
-                          if (settingsIsCurrent) {
-                              await projectClient.uploadIcon(mime, base64);
-                              return;
-                          }
-                          rememberSettings(await uploadProjectIcon(settingsTarget.endpointId, settingsTarget.summary.projectId, mime, base64));
-                      },
-                      useFolderIcon: async () => {
-                          if (settingsIsCurrent) {
-                              await projectClient.useFolderIcon();
-                              return;
-                          }
-                          rememberSettings(await setProjectFolderIcon(settingsTarget.endpointId, settingsTarget.summary.projectId));
-                      }
+                      rename: (name) => appearance({ name }),
+                      setChosenIcon: (icon) => appearance({ icon: icon.value }),
+                      uploadIcon: (mime, base64) => appearance({ image: { mime, base64 } }),
+                      useFolderIcon: () => appearance({ icon: 'folder' })
                   }
               };
 
@@ -228,7 +217,7 @@ export function ProjectMenu() {
         const answer = await closingProject(row.endpointId, row.summary, local);
         if (answer === null) {
             // A machine out of reach has nothing to say about it; the row goes here and that is all.
-            await closeProjectOn(row.endpointId, row.summary);
+            await runAsPerson('project.close', { endpointId: row.endpointId, projectId: row.summary.projectId });
             return;
         }
         setClosing({ row, name: (here ? current?.name : null) ?? row.summary.name, ...answer });
@@ -238,7 +227,7 @@ export function ProjectMenu() {
         const target = closing;
         setClosing(null);
         if (target) {
-            await closeProjectOn(target.row.endpointId, target.row.summary);
+            await runAsPerson('project.close', { endpointId: target.row.endpointId, projectId: target.row.summary.projectId });
         }
     };
 

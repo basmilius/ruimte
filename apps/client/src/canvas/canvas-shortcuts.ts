@@ -15,6 +15,7 @@ import {
     focusCellAction,
     groupSelectionAction,
     historyAction,
+    selectAllAction,
     splitAction
 } from '@/actions/client-actions';
 import { showView, stepView, viewAtIndex } from '@/project/views';
@@ -304,7 +305,7 @@ export const useCanvasShortcuts = (): void => {
                 s.zoomToSelection();
             } else if (is(CANVAS_SHORTCUTS.selectAll)) {
                 e.preventDefault();
-                s.select([...s.order, ...Object.keys(s.texts)]);
+                selectAllAction(focusedCanvas());
             } else if ((e.key === 'Delete' || e.key === 'Backspace') && s.selection.length > 0) {
                 e.preventDefault();
                 const endpointId = workspaceEndpointId();

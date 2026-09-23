@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import i18next from 'i18next';
 import { ActionRefusal, type ActionOutput } from '@ruimte/actions';
 import type { GitActionKind, GitActionPayload, GitActionResult } from '@ruimte/contracts';
-import { performAsPerson } from '@/actions/client-actions';
+import { cancelGitRunAction, performAsPerson } from '@/actions/client-actions';
 import { actionTitle, manySummary, manyTitle, nextActionId, phaseLabel } from '@/shell/panels/git-actions';
 import { useToasts, type ToastAction } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
@@ -134,51 +134,48 @@ export const useGitActions = (): GitActions => {
         });
     }, [transport]);
 
-    const run = useCallback(
-        async (payload: Omit<GitActionPayload, 'actionId'>, options: RunOptions = {}): Promise<ActionOutcome> => {
-            const actionId = nextActionId();
-            const toasts = useToasts.getState();
-            const toastId = toasts.show({
-                title: actionTitle(payload.kind),
-                kind: 'progress',
-                action: {
-                    label: i18next.t('common:action.cancel'),
-                    run: () => void transport.request('git.cancel', { actionId }).catch(() => undefined)
-                }
+    const run = useCallback(async (payload: Omit<GitActionPayload, 'actionId'>, options: RunOptions = {}): Promise<ActionOutcome> => {
+        const actionId = nextActionId();
+        const toasts = useToasts.getState();
+        const toastId = toasts.show({
+            title: actionTitle(payload.kind),
+            kind: 'progress',
+            action: {
+                label: i18next.t('common:action.cancel'),
+                run: () => cancelGitRunAction(actionId)
+            }
+        });
+        toastByAction.current.set(actionId, { toastId, title: null });
+        try {
+            const result = await runGitKind({ ...payload, actionId });
+            const action = options.done?.(result);
+            useToasts.getState().show({
+                id: toastId,
+                title: result.summary,
+                kind: 'success',
+                ...(action ? { action } : {})
             });
-            toastByAction.current.set(actionId, { toastId, title: null });
-            try {
-                const result = await runGitKind({ ...payload, actionId });
-                const action = options.done?.(result);
+            return { ok: true, result };
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : i18next.t('panels:error.generic');
+            const code = error instanceof ActionRefusal ? error.code : null;
+            // A branch that moved on both sides is a question the panel asks, not a failure to read.
+            if (code === 'diverged') {
+                useToasts.getState().dismiss(toastId);
+            } else {
                 useToasts.getState().show({
                     id: toastId,
-                    title: result.summary,
-                    kind: 'success',
-                    ...(action ? { action } : {})
+                    title: i18next.t('panels:git.actionFailed', { action: actionTitle(payload.kind) }),
+                    description: message.split('\n')[0],
+                    kind: 'error',
+                    output: message
                 });
-                return { ok: true, result };
-            } catch (error: unknown) {
-                const message = error instanceof Error ? error.message : i18next.t('panels:error.generic');
-                const code = error instanceof ActionRefusal ? error.code : null;
-                // A branch that moved on both sides is a question the panel asks, not a failure to read.
-                if (code === 'diverged') {
-                    useToasts.getState().dismiss(toastId);
-                } else {
-                    useToasts.getState().show({
-                        id: toastId,
-                        title: i18next.t('panels:git.actionFailed', { action: actionTitle(payload.kind) }),
-                        description: message.split('\n')[0],
-                        kind: 'error',
-                        output: message
-                    });
-                }
-                return { ok: false, message, code };
-            } finally {
-                toastByAction.current.delete(actionId);
             }
-        },
-        [transport]
-    );
+            return { ok: false, message, code };
+        } finally {
+            toastByAction.current.delete(actionId);
+        }
+    }, []);
 
     /*
      * One repository after another, never two at once: a folder of nine pushes over one link, and
@@ -187,60 +184,57 @@ export const useGitActions = (): GitActions => {
      * where the whole outcome is read; cancel breaks off the turn that is running and leaves the rest
      * alone.
      */
-    const runMany = useCallback(
-        async (jobs: readonly ManyJob[]): Promise<{ done: number; failed: number }> => {
-            if (jobs.length === 0) {
-                return { done: 0, failed: 0 };
-            }
-            let stopped = false;
-            let running: string | null = null;
-            const toastId = useToasts.getState().show({
-                title: manyTitle(jobs[0]!.kind, jobs[0]!.label, 0, jobs.length),
-                kind: 'progress',
-                action: {
-                    label: i18next.t('common:action.cancel'),
-                    run: () => {
-                        stopped = true;
-                        if (running !== null) {
-                            void transport.request('git.cancel', { actionId: running }).catch(() => undefined);
-                        }
+    const runMany = useCallback(async (jobs: readonly ManyJob[]): Promise<{ done: number; failed: number }> => {
+        if (jobs.length === 0) {
+            return { done: 0, failed: 0 };
+        }
+        let stopped = false;
+        let running: string | null = null;
+        const toastId = useToasts.getState().show({
+            title: manyTitle(jobs[0]!.kind, jobs[0]!.label, 0, jobs.length),
+            kind: 'progress',
+            action: {
+                label: i18next.t('common:action.cancel'),
+                run: () => {
+                    stopped = true;
+                    if (running !== null) {
+                        cancelGitRunAction(running);
                     }
                 }
-            });
-            const failed: string[] = [];
-            const outputs: string[] = [];
-            let done = 0;
-            for (const [index, job] of jobs.entries()) {
-                if (stopped) {
-                    break;
-                }
-                const actionId = nextActionId();
-                const title = manyTitle(job.kind, job.label, index, jobs.length);
-                running = actionId;
-                toastByAction.current.set(actionId, { toastId, title });
-                useToasts.getState().update(toastId, { title, description: undefined });
-                try {
-                    await runGitKind({ cwd: job.cwd, kind: job.kind, actionId, ...job.extra });
-                    done += 1;
-                } catch (error: unknown) {
-                    const message = error instanceof Error ? error.message : i18next.t('panels:error.generic');
-                    failed.push(job.label);
-                    outputs.push(`${job.label}: ${message}`);
-                } finally {
-                    running = null;
-                    toastByAction.current.delete(actionId);
-                }
             }
-            useToasts.getState().show({
-                id: toastId,
-                title: manySummary(done, failed),
-                kind: failed.length === 0 ? 'success' : 'error',
-                ...(outputs.length === 0 ? {} : { description: outputs[0]!.split('\n')[0], output: outputs.join('\n\n') })
-            });
-            return { done, failed: failed.length };
-        },
-        [transport]
-    );
+        });
+        const failed: string[] = [];
+        const outputs: string[] = [];
+        let done = 0;
+        for (const [index, job] of jobs.entries()) {
+            if (stopped) {
+                break;
+            }
+            const actionId = nextActionId();
+            const title = manyTitle(job.kind, job.label, index, jobs.length);
+            running = actionId;
+            toastByAction.current.set(actionId, { toastId, title });
+            useToasts.getState().update(toastId, { title, description: undefined });
+            try {
+                await runGitKind({ cwd: job.cwd, kind: job.kind, actionId, ...job.extra });
+                done += 1;
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : i18next.t('panels:error.generic');
+                failed.push(job.label);
+                outputs.push(`${job.label}: ${message}`);
+            } finally {
+                running = null;
+                toastByAction.current.delete(actionId);
+            }
+        }
+        useToasts.getState().show({
+            id: toastId,
+            title: manySummary(done, failed),
+            kind: failed.length === 0 ? 'success' : 'error',
+            ...(outputs.length === 0 ? {} : { description: outputs[0]!.split('\n')[0], output: outputs.join('\n\n') })
+        });
+        return { done, failed: failed.length };
+    }, []);
 
     return useMemo(() => ({ run, runMany }), [run, runMany]);
 };

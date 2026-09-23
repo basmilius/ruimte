@@ -10,7 +10,7 @@ import { ConflictSides } from '@/conflicts/ConflictSides';
 import { conflictIndexes, contentOf, draftWith, fileOf, nextConflict, openInDraft, usableBlocks, type ConflictFile } from '@/conflicts/conflict-model';
 import type { ConflictDraft } from '@/conflicts/editor';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { performAsPerson } from '@/actions/client-actions';
+import { cancelGitRunAction, performAsPerson } from '@/actions/client-actions';
 import { nextActionId } from '@/shell/panels/git-actions';
 import { useGitStatus } from '@/state/git-watch';
 import { useToasts } from '@/state/toasts';
@@ -362,10 +362,7 @@ export function ConflictOverlay() {
                             <span className="flex items-center gap-2 text-xs text-text-muted">
                                 <Icon icon={LoaderCircle} size={12} className="animate-spin" />
                                 {t('ai.working', { path: basenameOf(run.path), done: run.done + 1, total: run.total })}
-                                <button
-                                    className="h-6 rounded-md px-2 text-xs hover:bg-surface-hover"
-                                    onClick={() => void transport.request('git.cancel', { actionId: run.actionId }).catch(() => undefined)}
-                                >
+                                <button className="h-6 rounded-md px-2 text-xs hover:bg-surface-hover" onClick={() => cancelGitRunAction(run.actionId)}>
                                     {t('common:action.cancel')}
                                 </button>
                             </span>
