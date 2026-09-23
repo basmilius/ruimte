@@ -19,6 +19,7 @@ import { RemoveWorktreeDialog } from '@/shell/RemoveWorktreeDialog';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { SettingsDialog } from '@/shell/SettingsDialog';
 import { UsageDialog } from '@/shell/usage/UsageDialog';
+import { ModelsDialog } from '@/shell/models/ModelsDialog';
 import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { Panel } from '@/shell/Panel';
 import { PlanPanel } from '@/shell/PlanPanel';
@@ -159,6 +160,7 @@ export function App() {
                 <CommandPalette />
                 <SettingsDialog />
                 <UsageDialog />
+                <ModelsDialog />
                 <Toasts />
                 <ReleaseNotesDialog />
                 <MachineUpdateDialog />

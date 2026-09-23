@@ -127,6 +127,19 @@
     --chart-codex: #30b0c7;
     --chart-gemini: #3b82f6;
     --chart-copilot: #64748b;
+    /* A step of lightness per model within its provider's color, for the lines of the model comparison. */
+    --chart-claude-1: var(--chart-claude);
+    --chart-claude-2: color-mix(in oklab, var(--chart-claude) 72%, #000);
+    --chart-claude-3: color-mix(in oklab, var(--chart-claude) 62%, #fff);
+    --chart-claude-4: color-mix(in oklab, var(--chart-claude) 50%, #000);
+    --chart-claude-5: color-mix(in oklab, var(--chart-claude) 86%, #000);
+    --chart-codex-1: var(--chart-codex);
+    --chart-codex-2: color-mix(in oklab, var(--chart-codex) 72%, #000);
+    --chart-codex-3: color-mix(in oklab, var(--chart-codex) 62%, #fff);
+    --chart-codex-4: color-mix(in oklab, var(--chart-codex) 50%, #000);
+    --chart-codex-5: color-mix(in oklab, var(--chart-codex) 86%, #000);
+    /* The band under the points no other point beats; ink at a low alpha, never the accent. */
+    --chart-frontier: rgb(0 0 0 / 0.07);
     /* The ten colors a drawing may name. The file holds the name, never the value, so a sketch
        reads in both themes and follows the accent when it asks for it. */
     --draw-ink: var(--text);
@@ -261,6 +274,17 @@
     --chart-codex: #40c8e0;
     --chart-gemini: #60a5fa;
     --chart-copilot: #94a3b8;
+    --chart-claude-1: var(--chart-claude);
+    --chart-claude-2: color-mix(in oklab, var(--chart-claude) 70%, #fff);
+    --chart-claude-3: color-mix(in oklab, var(--chart-claude) 68%, #000);
+    --chart-claude-4: color-mix(in oklab, var(--chart-claude) 45%, #fff);
+    --chart-claude-5: color-mix(in oklab, var(--chart-claude) 84%, #000);
+    --chart-codex-1: var(--chart-codex);
+    --chart-codex-2: color-mix(in oklab, var(--chart-codex) 70%, #fff);
+    --chart-codex-3: color-mix(in oklab, var(--chart-codex) 68%, #000);
+    --chart-codex-4: color-mix(in oklab, var(--chart-codex) 45%, #fff);
+    --chart-codex-5: color-mix(in oklab, var(--chart-codex) 84%, #000);
+    --chart-frontier: rgb(255 255 255 / 0.08);
     --draw-red: #ff7b72;
     --draw-orange: #ffa657;
     --draw-yellow: #e3b341;

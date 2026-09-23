@@ -293,6 +293,9 @@ const addressBookClient = (): Promise<AddressBookClient> => {
     return book;
 };
 
+/* For the routes that need no account; a page without a platform to sign in on reads them from the production address book. */
+export const publicAddressBook = (): Promise<AddressBookClient> => (platform ? addressBookClient() : Promise.resolve(new AddressBookClient()));
+
 /*
  * One call against the address book with a fresh access token. An `unauthorized` answer refreshes
  * once and tries again, since a token can run out between the check and the request.

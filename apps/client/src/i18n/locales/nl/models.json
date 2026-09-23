@@ -1,0 +1,57 @@
+{
+  "dialog": {
+    "title": "Modellen vergelijken",
+    "subtitle": "Intelligence Index tegen kosten per taak",
+    "description": "De Intelligence Index van Artificial Analysis tegen de kosten per taak, per model en denkniveau.",
+    "close": "Modelvergelijking sluiten",
+    "failed": "De modelvergelijking kon niet worden getekend",
+    "scale": "Kostenas",
+    "scales": {
+      "log": "Log",
+      "linear": "Lineair"
+    }
+  },
+  "chart": {
+    "label": "Intelligence Index tegen kosten per taak in USD",
+    "cost": "Kosten per taak (USD)",
+    "costLog": "Kosten per taak (USD, logaritmisch)",
+    "intelligence": "Intelligence Index",
+    "point": "{{model}}, {{effort}}: Intelligence Index {{intelligence}}, {{cost}} per taak",
+    "range": "{{model}} loopt van {{fromIntelligence}} voor {{fromCost}} tot {{toIntelligence}} voor {{toCost}}.",
+    "single": "{{model}} scoort {{intelligence}} voor {{cost}}.",
+    "frontier": "Niet verslagen op beide assen",
+    "nothingShown": "Zet een model in de lijst aan om het te tekenen."
+  },
+  "card": {
+    "intelligence": "Intelligence Index",
+    "cost": "Kosten per taak"
+  },
+  "legend": {
+    "label": "Modellen",
+    "notMeasured": "Niet gemeten",
+    "legacy": "Legacy-modellen tonen"
+  },
+  "efforts": {
+    "low": "Laag",
+    "medium": "Gemiddeld",
+    "high": "Hoog",
+    "xhigh": "Extra hoog",
+    "max": "Max",
+    "off": "Zonder denken",
+    "thinking": "Denken"
+  },
+  "empty": {
+    "unavailable": "Er zijn nog geen benchmarks om te tonen.",
+    "unreachable": "De benchmarks konden niet worden geladen. Controleer de verbinding en probeer het opnieuw."
+  },
+  "footer": {
+    "source": "Bron: Artificial Analysis (artificialanalysis.ai)",
+    "justNow": "Zojuist bijgewerkt",
+    "minutes_one": "{{value}} minuut geleden bijgewerkt",
+    "minutes_other": "{{value}} minuten geleden bijgewerkt",
+    "hours_one": "{{value}} uur geleden bijgewerkt",
+    "hours_other": "{{value}} uur geleden bijgewerkt",
+    "days_one": "{{value}} dag geleden bijgewerkt",
+    "days_other": "{{value}} dagen geleden bijgewerkt"
+  }
+}

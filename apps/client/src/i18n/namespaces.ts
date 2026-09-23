@@ -8,6 +8,7 @@ export const NAMESPACES = [
     'settings',
     'panels',
     'usage',
+    'models',
     'shell',
     'chat',
     'canvas',

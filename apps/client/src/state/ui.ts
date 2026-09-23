@@ -122,6 +122,7 @@ interface UiStore {
     paletteOpen: boolean;
     paletteMode: PaletteMode;
     usageOpen: boolean;
+    modelsOpen: boolean;
     /* Whether the session list is in view; it survives a reload, like everything else on the canvas. */
     sidebarOpen: boolean;
     /* Which canvases the sidebar has folded open, per project, or null until the list seeds itself.
@@ -170,6 +171,7 @@ interface UiStore {
     /* The application menu asks for the open project's settings; the project menu owns that dialog. */
     projectSettingsAsked: boolean;
     setUsageOpen(open: boolean): void;
+    setModelsOpen(open: boolean): void;
     askProjectSettings(asked: boolean): void;
     setWorktreeDialogFor(groupId: string | null): void;
     setWorktreeRemoval(removal: { folder: string; paths: string[] } | null): void;
@@ -208,6 +210,7 @@ export const useUi = create<UiStore>((set, get) => ({
     paletteOpen: false,
     paletteMode: 'default',
     usageOpen: false,
+    modelsOpen: false,
     paletteSeed: '',
     paletteBrowseAt: 0,
     paletteBrowseMachine: null,
@@ -234,6 +237,9 @@ export const useUi = create<UiStore>((set, get) => ({
     projectSettingsAsked: false,
     setUsageOpen(open) {
         set({ usageOpen: open });
+    },
+    setModelsOpen(open) {
+        set({ modelsOpen: open });
     },
     askProjectSettings(asked) {
         set({ projectSettingsAsked: asked });

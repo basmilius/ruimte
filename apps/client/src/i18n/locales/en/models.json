@@ -1,0 +1,57 @@
+{
+  "dialog": {
+    "title": "Compare models",
+    "subtitle": "Intelligence Index against cost per task",
+    "description": "The Intelligence Index of Artificial Analysis against the cost per task, per model and effort.",
+    "close": "Close model comparison",
+    "failed": "The model comparison failed to render",
+    "scale": "Cost axis",
+    "scales": {
+      "log": "Log",
+      "linear": "Linear"
+    }
+  },
+  "chart": {
+    "label": "Intelligence Index against cost per task in USD",
+    "cost": "Cost per task (USD)",
+    "costLog": "Cost per task (USD, logarithmic)",
+    "intelligence": "Intelligence Index",
+    "point": "{{model}}, {{effort}}: Intelligence Index {{intelligence}}, {{cost}} per task",
+    "range": "{{model}} runs from {{fromIntelligence}} for {{fromCost}} to {{toIntelligence}} for {{toCost}}.",
+    "single": "{{model}} scores {{intelligence}} for {{cost}}.",
+    "frontier": "Not beaten on both axes",
+    "nothingShown": "Turn on a model in the list to draw it."
+  },
+  "card": {
+    "intelligence": "Intelligence Index",
+    "cost": "Cost per task"
+  },
+  "legend": {
+    "label": "Models",
+    "notMeasured": "Not measured",
+    "legacy": "Show legacy models"
+  },
+  "efforts": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "xhigh": "Extra high",
+    "max": "Max",
+    "off": "No thinking",
+    "thinking": "Thinking"
+  },
+  "empty": {
+    "unavailable": "There are no benchmarks to show yet.",
+    "unreachable": "The benchmarks could not be loaded. Check the connection and try again."
+  },
+  "footer": {
+    "source": "Source: Artificial Analysis (artificialanalysis.ai)",
+    "justNow": "Updated just now",
+    "minutes_one": "Updated {{value}} minute ago",
+    "minutes_other": "Updated {{value}} minutes ago",
+    "hours_one": "Updated {{value}} hour ago",
+    "hours_other": "Updated {{value}} hours ago",
+    "days_one": "Updated {{value}} day ago",
+    "days_other": "Updated {{value}} days ago"
+  }
+}

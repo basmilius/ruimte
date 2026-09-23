@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { formatBytes, formatDecimal, formatMoney, formatNumber, formatPercent, formatTokens } from '@/format/number';
+import { formatBytes, formatDecimal, formatMoney, formatNumber, formatPercent, formatTokens, formatUsdSignificant } from '@/format/number';
 import { FORMAT_SYSTEM } from '@/format/regions';
 import { useSettings } from '@/state/settings';
 
@@ -72,5 +72,17 @@ describe('a size', () => {
         inRegion('en-US');
         expect(formatBytes(512)).toBe('512 B');
         expect(formatBytes(1536, true)).toBe('2 KB');
+    });
+});
+
+describe('dollars to significant digits', () => {
+    test('keep what a cent would round away and drop what a dollar does not need', () => {
+        inRegion('en-US');
+        expect(formatUsdSignificant(0.004)).toBe('$0.004');
+        expect(formatUsdSignificant(0.0683)).toBe('$0.0683');
+        expect(formatUsdSignificant(7.634)).toBe('$7.63');
+        expect(formatUsdSignificant(10)).toBe('$10');
+        inRegion('nl-NL');
+        expect(formatUsdSignificant(0.55)).toBe('$\u00a00,55');
     });
 });

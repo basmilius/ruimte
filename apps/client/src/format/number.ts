@@ -40,6 +40,11 @@ const moneySpec = (currency: string, maximumFractionDigits: number | undefined):
 export const formatMoney = (value: number, currency: string, maximumFractionDigits?: number): string =>
     numberFormatter(moneySpec(currency, maximumFractionDigits)).format(value);
 
+const SIGNIFICANT_MONEY: Intl.NumberFormatOptions = { style: 'currency', currency: 'USD', currencyDisplay: 'narrowSymbol', maximumSignificantDigits: 3 };
+
+/* Dollars to three significant digits, for amounts that run from a fraction of a cent to tens of dollars in one list. */
+export const formatUsdSignificant = (value: number): string => numberFormatter(SIGNIFICANT_MONEY).format(value);
+
 /* `1.2M`, `412K`, `640`: a token count is read as a size, not counted. */
 export const formatTokens = (value: number): string => {
     const rounded = Math.round(value);
