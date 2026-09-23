@@ -2,9 +2,8 @@ import { shikiToMonaco, textmateThemeToMonacoTheme } from '@shikijs/monaco';
 import type { editor, IDisposable, languages } from 'monaco-editor/editor';
 import type { Highlighter } from 'shiki';
 
-export type ShikiTheme = 'github-light' | 'github-dark';
-
-export const SHIKI_THEMES: readonly ShikiTheme[] = ['github-light', 'github-dark'];
+// A theme id the highlighter has loaded.
+export type ShikiTheme = string;
 
 export const PLAIN_TEXT = 'plaintext';
 
@@ -21,16 +20,14 @@ export const monacoTheme = (highlighter: Highlighter, theme: ShikiTheme): editor
     textmateThemeToMonacoTheme(highlighter.getTheme(theme)) as editor.IStandaloneThemeData;
 
 interface Grammar {
-    readonly provider: TokensProvider;
-    readonly followTheme: (theme: ShikiTheme) => void;
     registration: IDisposable;
 }
 
 /*
  * Colors Monaco with Shiki through `@shikijs/monaco`, one grammar at a time as a file asks for it.
  * That package is written to run once over every loaded language and to patch the global
- * `monaco.editor`, so each language gets its own run against a stand-in that keeps the tokenizer and
- * the call that moves its colors to another theme; the real Monaco only ever sees a tokens provider.
+ * `monaco.editor`, so each language gets its own run against a stand-in that keeps the tokenizer; the
+ * real Monaco only ever sees a tokens provider.
  */
 export class ShikiBridge {
     private readonly highlighter: Highlighter;
@@ -59,9 +56,9 @@ export class ShikiBridge {
     }
 
     /*
-     * Shiki tokenizes with whichever theme it was last set to, and a tokenizer turns those colors back
-     * into scopes of its theme, so every grammar follows along. Registering a provider again is what
-     * makes Monaco tokenize the open files anew instead of keeping the scopes of the previous theme.
+     * A tokenizer turns Shiki's colors back into scopes of the one theme it was built for, so every
+     * grammar gets a tokenizer of the new theme. Registering a provider again is also what makes Monaco
+     * tokenize the open files anew instead of keeping the scopes of the previous theme.
      */
     setTheme(theme: ShikiTheme): void {
         if (theme === this.theme) {
@@ -69,9 +66,11 @@ export class ShikiBridge {
         }
         this.theme = theme;
         for (const [id, grammar] of this.grammars) {
-            grammar.followTheme(theme);
-            grammar.registration.dispose();
-            grammar.registration = this.languages.setTokensProvider(id, grammar.provider);
+            const provider = this.tokenizer(id);
+            if (provider !== null) {
+                grammar.registration.dispose();
+                grammar.registration = this.languages.setTokensProvider(id, provider);
+            }
         }
     }
 
@@ -85,14 +84,24 @@ export class ShikiBridge {
         if (!this.highlighter.getLoadedLanguages().includes(id)) {
             return PLAIN_TEXT;
         }
+        const provider = this.tokenizer(id);
+        if (provider === null) {
+            return PLAIN_TEXT;
+        }
+        this.languages.register({ id });
+        this.grammars.set(id, { registration: this.languages.setTokensProvider(id, provider) });
+        return id;
+    }
+
+    /* Also sets the highlighter to the current theme, which is what fills the tokenizer's colors. */
+    private tokenizer(id: string): TokensProvider | null {
         let provider: TokensProvider | null = null;
-        const editor = {
-            defineTheme: () => {},
-            setTheme: (_theme: string) => {},
-            create: () => {}
-        };
         const standIn = {
-            editor,
+            editor: {
+                defineTheme: () => {},
+                setTheme: (_theme: string) => {},
+                create: () => {}
+            },
             languages: {
                 getLanguages: () => [{ id }],
                 setTokensProvider: (_id: string, tokens: TokensProvider) => {
@@ -100,14 +109,7 @@ export class ShikiBridge {
                 }
             }
         };
-        const other = this.theme === 'github-light' ? 'github-dark' : 'github-light';
-        shikiToMonaco({ ...this.highlighter, getLoadedLanguages: () => [id], getLoadedThemes: () => [this.theme, other] }, standIn);
-        if (provider === null) {
-            return PLAIN_TEXT;
-        }
-        this.languages.register({ id });
-        const followTheme = editor.setTheme;
-        this.grammars.set(id, { provider, followTheme, registration: this.languages.setTokensProvider(id, provider) });
-        return id;
+        shikiToMonaco({ ...this.highlighter, getLoadedLanguages: () => [id], getLoadedThemes: () => [this.theme] }, standIn);
+        return provider;
     }
 }

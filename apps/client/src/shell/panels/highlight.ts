@@ -1,6 +1,6 @@
 import type { ShikiTransformer } from 'shiki';
 
-type Highlight = (code: string, language: string, theme: 'light' | 'dark') => Promise<string>;
+type Highlight = (code: string, language: string, theme: string) => Promise<string>;
 
 /*
  * Shiki separates its line spans with a newline of its own. The viewer needs every line to be a
@@ -21,11 +21,11 @@ let loading: Promise<Highlight> | null = null;
 const loadHighlighter = (): Promise<Highlight> => {
     loading ??= import('shiki').then(({ bundledLanguages, codeToHtml }) => async (code, language, theme) => {
         const lang = language in bundledLanguages ? language : 'text';
-        return codeToHtml(code, { lang, theme: theme === 'dark' ? 'github-dark' : 'github-light', transformers: [DROP_LINE_BREAKS] });
+        return codeToHtml(code, { lang, theme, transformers: [DROP_LINE_BREAKS] });
     });
     return loading;
 };
 
-/* One block of code as highlighted HTML. A language nothing recognizes comes back as plain text. */
-export const highlightCode = (code: string, language: string, theme: 'light' | 'dark'): Promise<string> =>
+/* One block of code as highlighted HTML in a Shiki theme. A language nothing recognizes comes back as plain text. */
+export const highlightCode = (code: string, language: string, theme: string): Promise<string> =>
     loadHighlighter().then((highlight) => highlight(code, language, theme));

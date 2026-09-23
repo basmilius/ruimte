@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { languages } from 'monaco-editor/editor';
-import { getSingletonHighlighter } from 'shiki';
+import { type BundledTheme, getSingletonHighlighter } from 'shiki';
 import { type MonacoLanguages, monacoTheme, PLAIN_TEXT, ShikiBridge, type ShikiTheme } from './shiki-bridge.ts';
 
 type Provider = languages.TokensProvider;
@@ -34,6 +34,12 @@ const fakeLanguages = (): MonacoLanguages & { registered: string[]; providers: R
 
 const highlighter = await getSingletonHighlighter({ themes: ['github-light', 'github-dark'] });
 
+// Shiki writes an opaque color with its alpha at times and Monaco without; both are the same paint.
+const opaque = (color: string): string => {
+    const lower = color.toLowerCase();
+    return lower.length === 9 && lower.endsWith('ff') ? lower.slice(0, 7) : lower;
+};
+
 const LINE = 'export const answer: number = await compute("forty-two", 42);';
 
 /* The color Monaco paints each character in, by the scope the provider hands it and the rules of the theme. */
@@ -47,7 +53,7 @@ const monacoColors = (provider: Provider, theme: ShikiTheme): string[] => {
         const rule = rules.find((candidate) => candidate.token === token.scopes);
         const color = rule?.foreground ? `#${rule.foreground}` : foreground;
         for (let i = token.startIndex; i < end; i++) {
-            colors.push(color.toLowerCase());
+            colors.push(opaque(color));
         }
     });
     return colors;
@@ -55,8 +61,8 @@ const monacoColors = (provider: Provider, theme: ShikiTheme): string[] => {
 
 /* The color the file viewer paints each character in: Shiki's own tokens, under the same theme. */
 const viewerColors = (theme: ShikiTheme): string[] => {
-    const [line = []] = highlighter.codeToTokensBase(LINE, { lang: 'typescript', theme });
-    return line.flatMap((token) => [...token.content].map(() => (token.color ?? '').toLowerCase()));
+    const [line = []] = highlighter.codeToTokensBase(LINE, { lang: 'typescript', theme: theme as BundledTheme });
+    return line.flatMap((token) => [...token.content].map(() => opaque(token.color ?? '')));
 };
 
 describe('ShikiBridge', () => {
@@ -75,6 +81,18 @@ describe('ShikiBridge', () => {
         const light = monacoColors(monaco.providers[1]!.provider, 'github-light');
         expect(light).toEqual(viewerColors('github-light'));
         expect(light).not.toEqual(dark);
+    });
+
+    test('colors in a theme that was not loaded when the grammar was', async () => {
+        const monaco = fakeLanguages();
+        const bridge = new ShikiBridge(highlighter, monaco, 'github-light');
+        await bridge.language('typescript');
+        await highlighter.loadTheme('nord');
+
+        bridge.setTheme('nord');
+        const nord = monacoColors(monaco.providers[1]!.provider, 'nord');
+        expect(nord).toEqual(viewerColors('nord'));
+        expect(nord).not.toEqual(viewerColors('github-light'));
     });
 
     test('loads a grammar once however often it is asked for', async () => {

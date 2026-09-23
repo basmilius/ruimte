@@ -5,9 +5,11 @@ import { Menu } from '@base-ui-components/react/menu';
 import { MoreHorizontal, WrapText, type LucideIcon } from 'lucide-react';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
+import { CodeThemeMenu } from '@/shell/panels/CodeThemeMenu';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { useFileActions } from '@/shell/panels/file-actions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
+import { MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
@@ -107,6 +109,8 @@ function FileMenu() {
                 ) : (
                     <FileMenuItems tabKey={actions.tabKey} onRefresh={actions.refresh} />
                 )}
+                <Menu.Separator className={MENU_SEPARATOR} />
+                <CodeThemeMenu />
             </MenuPopup>
         </Menu.Root>
     );

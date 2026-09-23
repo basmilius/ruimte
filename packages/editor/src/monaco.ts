@@ -9,35 +9,52 @@ import type { Highlighter } from 'shiki';
 import { readChromeColors, readEditorFont } from './chrome.ts';
 import type { Editor, EditorEngine, EditorOptions, EditorTheme } from './index.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
-import { monacoTheme, PLAIN_TEXT, SHIKI_THEMES, ShikiBridge, type ShikiTheme } from './shiki-bridge.ts';
+import { monacoTheme, PLAIN_TEXT, ShikiBridge } from './shiki-bridge.ts';
 import { changedSpan } from './text-span.ts';
-
-const SHIKI_THEME: Readonly<Record<EditorTheme, ShikiTheme>> = { light: 'github-light', dark: 'github-dark' };
 
 class MonacoEngine implements EditorEngine {
     private readonly highlighter: Highlighter;
-    private readonly bridge: ShikiBridge;
+    private bridge: ShikiBridge | null = null;
+    private requested: EditorTheme | null = null;
+    // Settles once the theme asked for last is painted, so a grammar is never built for the one before it.
+    private painted: Promise<void> = Promise.resolve();
 
-    constructor(highlighter: Highlighter, bridge: ShikiBridge) {
+    constructor(highlighter: Highlighter) {
         this.highlighter = highlighter;
-        this.bridge = bridge;
     }
 
     mount(element: HTMLElement, options: EditorOptions): Editor {
         return new MonacoEditor(this, element, options);
     }
 
-    /* Monaco has one theme for the page, so this repaints every editor, which all follow the app's theme anyway. */
+    /* Monaco has one theme for the page, so this repaints every editor, which all follow the one code theme anyway. */
     applyTheme(element: HTMLElement, theme: EditorTheme): void {
-        const name = SHIKI_THEME[theme];
-        const base = monacoTheme(this.highlighter, name);
-        monaco.editor.defineTheme(name, { ...base, colors: { ...base.colors, ...readChromeColors(element) } });
-        this.bridge.setTheme(name);
-        monaco.editor.setTheme(name);
+        this.requested = theme;
+        if (this.highlighter.getLoadedThemes().includes(theme)) {
+            this.paint(element, theme);
+            return;
+        }
+        this.painted = this.highlighter
+            .loadTheme(theme as Parameters<Highlighter['loadTheme']>[0])
+            .then(() => {
+                if (this.requested === theme) {
+                    this.paint(element, theme);
+                }
+            })
+            .catch(() => undefined);
     }
 
-    language(id: string | undefined): Promise<string> {
-        return this.bridge.language(id);
+    async language(id: string | undefined): Promise<string> {
+        await this.painted;
+        return this.bridge === null ? PLAIN_TEXT : this.bridge.language(id);
+    }
+
+    private paint(element: HTMLElement, theme: EditorTheme): void {
+        const base = monacoTheme(this.highlighter, theme);
+        monaco.editor.defineTheme(theme, { ...base, colors: { ...base.colors, ...readChromeColors(element) } });
+        this.bridge ??= new ShikiBridge(this.highlighter, monaco.languages, theme);
+        this.bridge.setTheme(theme);
+        monaco.editor.setTheme(theme);
     }
 }
 
@@ -182,10 +199,9 @@ class MonacoEditor implements Editor {
 
 export const createMonacoEngine = async (source: () => Promise<Highlighter>): Promise<EditorEngine> => {
     const highlighter = await source();
-    await highlighter.loadTheme(...SHIKI_THEMES);
     // Monaco would otherwise resolve its worker by a path of its own, which no bundler follows.
     globalThis.MonacoEnvironment = {
         getWorker: () => new Worker(new URL('./editor.worker.ts', import.meta.url), { type: 'module', name: 'monaco-editor' })
     };
-    return new MonacoEngine(highlighter, new ShikiBridge(highlighter, monaco.languages, SHIKI_THEME.light));
+    return new MonacoEngine(highlighter);
 };

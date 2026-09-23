@@ -1,6 +1,7 @@
 import type { Highlighter } from 'shiki';
 
-export type EditorTheme = 'light' | 'dark';
+/* A Shiki theme id, the one the viewer draws the same file in. */
+export type EditorTheme = string;
 
 export interface EditorOptions {
     readonly text: string;

@@ -11,8 +11,8 @@ import { FileScroll } from '@/shell/panels/FileScroll';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useFileEditing } from '@/shell/panels/use-file-editing';
+import { useCodeTheme } from '@/state/code-theme';
 import { useFiles } from '@/state/files';
-import { useTheme } from '@/state/theme';
 import { BTN_GROUP } from '@/ui/classes';
 import { Button } from '@/ui/Button';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
@@ -48,7 +48,8 @@ interface ChunkProps {
     start: number;
     /* Null in a file too long to highlight, which draws as the plain text it falls back to anyway. */
     language: string | null;
-    theme: 'light' | 'dark';
+    /* A Shiki theme id. */
+    theme: string;
     /* The line this chunk was asked to bring into view, one-based, when the ask landed in it. */
     reveal?: number;
     /* Which ask that was, so the same line twice jumps twice. */
@@ -192,7 +193,7 @@ export interface CodeFileProps {
  */
 export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const { t } = useTranslation('panels');
-    const theme = useTheme((s) => s.resolved);
+    const theme = useCodeTheme();
     const [wrap, setWrap] = useState(false);
     const container = useRef<HTMLDivElement>(null);
     // A jump to a line is asked of a tab, so a node or a view of its own never answers one.

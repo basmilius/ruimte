@@ -68,6 +68,7 @@
     "generic": "That did not work."
   },
   "file": {
+    "codeTheme": "Code theme",
     "cannotShow": "{{name}} ({{mime}}, {{size}}) cannot be shown here.",
     "code": {
       "plainReason": "Over {{lines}} lines, so syntax highlighting is off",

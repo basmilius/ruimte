@@ -4,14 +4,10 @@ import type { BundledLanguage, BundledTheme, createHighlighter } from 'shiki/bun
 import { IncrementalLines, type CodeToken, type Tokenize } from '@/chat/ui/code-lines';
 import { CodeStreamingContext } from '@/chat/ui/code-streaming';
 import { WHOLE_FADE_CLASS } from '@/chat/ui/rehype-fade';
-import { useTheme } from '@/state/theme';
+import { useCodeTheme } from '@/state/code-theme';
 
 type Highlighter = Awaited<ReturnType<typeof createHighlighter>>;
 type GrammarState = ReturnType<Highlighter['getLastGrammarState']>;
-type ThemeMode = 'light' | 'dark';
-
-const THEMES: Record<ThemeMode, BundledTheme> = { light: 'github-light', dark: 'github-dark' };
-
 // A plain language needs no grammar; shiki draws it in the theme's own foreground.
 const PLAIN = 'text';
 
@@ -19,12 +15,14 @@ let highlighter: Highlighter | null = null;
 let highlighterLoad: Promise<Highlighter> | null = null;
 const loadedLanguages = new Set<string>([PLAIN]);
 const languageLoads = new Map<string, Promise<void>>();
+const loadedThemes = new Set<string>();
+const themeLoads = new Map<string, Promise<void>>();
 const tokenizers = new Map<string, { tokenize: Tokenize<GrammarState>; fg: string | undefined }>();
 
 // Shiki loads on the first code block, not with the app; the web bundle covers the languages a coding agent writes.
 const loadHighlighter = (): Promise<Highlighter> => {
     highlighterLoad ??= import('shiki/bundle/web').then(async ({ createHighlighter }) => {
-        highlighter = await createHighlighter({ themes: Object.values(THEMES), langs: [] });
+        highlighter = await createHighlighter({ themes: [], langs: [] });
         return highlighter;
     });
     return highlighterLoad;
@@ -51,9 +49,22 @@ const loadLanguage = (lang: string): Promise<void> => {
     return load;
 };
 
-/* The tokenizer for a language in a theme, or null while shiki or the grammar is still on its way. */
-const tokenizerFor = (lang: string, theme: ThemeMode): { tokenize: Tokenize<GrammarState>; fg: string | undefined } | null => {
-    if (highlighter === null || bundled === null || !languageLoads.has(lang)) {
+/* Loads a theme into the highlighter, once. */
+const loadTheme = (theme: string): Promise<void> => {
+    let load = themeLoads.get(theme);
+    if (!load) {
+        load = loadHighlighter().then(async (loaded) => {
+            await loaded.loadTheme(theme as BundledTheme);
+            loadedThemes.add(theme);
+        });
+        themeLoads.set(theme, load);
+    }
+    return load;
+};
+
+/* The tokenizer for a language in a theme, or null while shiki, the grammar or the theme is still on its way. */
+const tokenizerFor = (lang: string, theme: string): { tokenize: Tokenize<GrammarState>; fg: string | undefined } | null => {
+    if (highlighter === null || bundled === null || !languageLoads.has(lang) || !loadedThemes.has(theme)) {
         return null;
     }
     const language = resolveLanguage(lang, bundled);
@@ -64,13 +75,13 @@ const tokenizerFor = (lang: string, theme: ThemeMode): { tokenize: Tokenize<Gram
     let entry = tokenizers.get(key);
     if (!entry) {
         const loaded = highlighter;
-        const options = { lang: language as BundledLanguage, theme: THEMES[theme] };
+        const options = { lang: language as BundledLanguage, theme };
         entry = {
             tokenize: (code, state) => {
                 const result = loaded.codeToTokens(code, state ? { ...options, grammarState: state } : options);
                 return { lines: result.tokens, state: result.grammarState };
             },
-            fg: loaded.getTheme(THEMES[theme]).fg
+            fg: loaded.getTheme(theme).fg
         };
         tokenizers.set(key, entry);
     }
@@ -111,9 +122,10 @@ const CodeLine = memo(function CodeLine({ tokens }: { tokens: CodeToken[] }) {
  * closes, so closing it does not draw it again.
  */
 export function CodeBlock({ code, lang }: { code: string; lang: string }) {
-    const theme = useTheme((t) => t.resolved);
+    const theme = useCodeTheme();
     const streaming = useContext(CodeStreamingContext);
-    const [loaded, setLoaded] = useState<'waiting' | 'ready' | 'failed'>('waiting');
+    // What loaded last, so a block whose theme changes draws again once the new one is in.
+    const [loaded, setLoaded] = useState<string | null>(null);
     const tokenizer = tokenizerFor(lang, theme);
     // Only a block that had to wait fades in; one drawn highlighted from its first frame just stands there.
     const [waited] = useState(tokenizer === null);
@@ -125,13 +137,13 @@ export function CodeBlock({ code, lang }: { code: string; lang: string }) {
             return;
         }
         let cancelled = false;
-        loadLanguage(lang)
-            .then(() => !cancelled && setLoaded('ready'))
+        Promise.all([loadLanguage(lang), loadTheme(theme)])
+            .then(() => !cancelled && setLoaded(`${lang}:${theme}`))
             .catch(() => !cancelled && setLoaded('failed'));
         return () => {
             cancelled = true;
         };
-    }, [lang, tokenizer]);
+    }, [lang, theme, tokenizer]);
 
     if (tokenizer === null || tokens === null) {
         const failed = loaded === 'failed';

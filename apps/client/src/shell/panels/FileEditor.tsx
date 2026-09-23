@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { Editor, EditorEngine } from '@ruimte/editor';
 import { bindDraftEditor } from '@/shell/panels/draft-editor';
+import { useCodeTheme } from '@/state/code-theme';
 import type { RevealLineRequest } from '@/state/files';
 import { type DiskText, textDrafts } from '@/state/text-drafts';
-import { useTheme } from '@/state/theme';
 
 /* Where a click in the viewer landed and where the viewer stood, so turning the editor on moves nothing. */
 export interface EditStart {
@@ -36,7 +36,7 @@ interface FileEditorProps {
 export function FileEditor({ engine, endpointId, path, disk, language, wrap, readOnly, start, focused, reveal }: FileEditorProps) {
     const host = useRef<HTMLDivElement>(null);
     const editorRef = useRef<Editor | null>(null);
-    const theme = useTheme((s) => s.resolved);
+    const theme = useCodeTheme();
     // What the editor mounts with; every later change reaches it through the effects below.
     const initial = useRef({ disk, language, wrap, readOnly, start, theme, focused });
     // A jump asked for before a click turned the editor on is behind the person already.

@@ -68,6 +68,7 @@
     "generic": "Dat werkte niet."
   },
   "file": {
+    "codeTheme": "Codethema",
     "cannotShow": "{{name}} ({{mime}}, {{size}}) kan hier niet getoond worden.",
     "code": {
       "plainReason": "Meer dan {{lines}} regels, dus syntax highlighting staat uit",
