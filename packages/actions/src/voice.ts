@@ -63,7 +63,25 @@ const CONTROL_TOOL: VoiceToolDefinition = {
 };
 
 /* Strict function schemas refuse keywords outside their subset; the registry checks these again on every call. */
-const UNSUPPORTED_KEYWORDS = new Set(['$schema', 'minLength', 'maxLength']);
+const UNSUPPORTED_KEYWORDS = new Set(['$schema', 'minLength', 'maxLength', 'actors']);
+
+/* A field, or a member of a union, that the catalog keeps for other actors is none of Voice's business. */
+const forVoice = (schema: unknown): boolean => {
+    const actors = (schema as JsonSchema).actors;
+    return !Array.isArray(actors) || actors.includes('voice');
+};
+
+const voiceMembers = (schema: JsonSchema): JsonSchema => {
+    if (!Array.isArray(schema.anyOf)) {
+        return schema;
+    }
+    const members = schema.anyOf.filter(forVoice) as JsonSchema[];
+    if (members.length === 1) {
+        const { anyOf: _anyOf, ...rest } = schema;
+        return { ...rest, ...members[0] };
+    }
+    return { ...schema, anyOf: members };
+};
 
 const supported = (schema: unknown): unknown => {
     if (Array.isArray(schema)) {
@@ -125,8 +143,10 @@ const joined = (field: string, left: JsonSchema, right: JsonSchema): JsonSchema 
 };
 
 const inputFields = (name: ActionName): [string, { schema: JsonSchema; nullable: boolean }][] => {
-    const schema = supported(z.toJSONSchema(ACTION_DEFINITIONS[name].input)) as { properties?: Record<string, JsonSchema> };
-    return Object.entries(schema.properties ?? {}).map(([field, value]) => [field, withoutNull(value)]);
+    const schema = z.toJSONSchema(ACTION_DEFINITIONS[name].input) as { properties?: Record<string, JsonSchema> };
+    return Object.entries(schema.properties ?? {})
+        .filter(([, value]) => forVoice(value))
+        .map(([field, value]) => [field, withoutNull(supported(voiceMembers(value)) as JsonSchema)]);
 };
 
 const signature = (name: ActionName): string =>

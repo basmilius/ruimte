@@ -65,4 +65,80 @@ describe('ActionRegistry', () => {
         expect(await registry.undo(completed.undoToken, call('voice'))).toMatchObject({ status: 'completed' });
         expect(name).toBe('Board');
     });
+
+    test('a dry run reaches only an action listed under previews, and leaves nothing to undo', async () => {
+        const seen: boolean[] = [];
+        const registry = new ActionRegistry<Context>(
+            {
+                'view.rename': ({ viewId, name }, action) => {
+                    seen.push(action.dryRun === true);
+                    return { output: { viewId, kind: 'canvas', previousName: 'Board', name, changed: true }, undo: () => undefined };
+                },
+                'view.focus': ({ viewId }) => ({ output: { viewId, view: 'Board', kind: 'canvas', changed: true } })
+            },
+            { previews: ['view.rename'] }
+        );
+
+        const previewed = await registry.execute('view.rename', { viewId: 'board', name: 'Plan' }, { ...call(), dryRun: true });
+        expect(previewed).toMatchObject({ status: 'completed', dryRun: true });
+        expect(previewed).not.toHaveProperty('undoToken');
+        expect(seen).toEqual([true]);
+        expect(await registry.execute('view.focus', { viewId: 'board' }, { ...call(), dryRun: true })).toMatchObject({
+            status: 'failed',
+            error: { code: 'no-dry-run' }
+        });
+    });
+
+    test('a field or a kind kept for agents is refused from anyone else', async () => {
+        const made: string[] = [];
+        const registry = new ActionRegistry<Context>({
+            'node.create': (input) => {
+                made.push(input.kind);
+                return { output: { viewId: input.viewId, view: 'Board', nodeId: 'note-1', node: 'Note', kind: input.kind } };
+            }
+        });
+        const input = { viewId: 'board', kind: 'note', title: null, content: null, url: null, command: null, path: null, provider: null, at: null } as const;
+
+        expect(await registry.execute('node.create', { ...input, cwd: 'src' }, call('voice'))).toMatchObject({
+            status: 'failed',
+            error: { code: 'forbidden-field' }
+        });
+        expect(await registry.execute('node.create', { ...input, kind: 'drawing', source: 'sketch' }, call('voice'))).toMatchObject({
+            status: 'failed',
+            error: { code: 'forbidden-field' }
+        });
+        expect(await registry.execute('node.create', { ...input, cwd: null }, call('voice'))).toMatchObject({ status: 'completed' });
+        expect(
+            await registry.execute(
+                'node.create',
+                { ...input, kind: 'drawing', source: 'sketch' },
+                { actor: { kind: 'agent', id: 'term-1' }, context: { name: 'Board' } }
+            )
+        ).toMatchObject({ status: 'completed' });
+        expect(made).toEqual(['note', 'drawing']);
+    });
+
+    test('an executor names the refusals its own errors carry', async () => {
+        class Coded extends Error {
+            readonly code: string;
+
+            constructor(code: string, message: string) {
+                super(message);
+                this.code = code;
+            }
+        }
+        const registry = new ActionRegistry<Context>(
+            {
+                'view.rename': () => {
+                    throw new Coded('rev-conflict', 'The project moved on.');
+                }
+            },
+            { refusalOf: (error) => (error instanceof Coded ? { code: error.code, message: error.message, details: ['line'] } : null) }
+        );
+
+        expect(await registry.execute('view.rename', { viewId: 'board', name: 'Plan' }, call())).toMatchObject({
+            status: 'failed',
+            error: { code: 'rev-conflict', message: 'The project moved on.', details: ['line'] }
+        });
+    });
 });

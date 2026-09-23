@@ -38,4 +38,15 @@ describe('Voice tools', () => {
         const canvas = VOICE_TOOL_DEFINITIONS.find((tool) => tool.name === 'manage_canvas');
         expect(canvas?.parameters.properties.viewId).toEqual({ type: 'string' });
     });
+
+    test('leave out what only an agent may give', () => {
+        const canvas = VOICE_TOOL_DEFINITIONS.find((tool) => tool.name === 'manage_canvas')!;
+        for (const field of ['source', 'cwd', 'beside', 'label', 'color']) {
+            expect(canvas.parameters.properties).not.toHaveProperty(field);
+        }
+        expect(canvas.parameters.properties.kind?.enum).not.toContain('drawing');
+        const views = VOICE_TOOL_DEFINITIONS.find((tool) => tool.name === 'manage_views')!;
+        expect(views.parameters.properties).not.toHaveProperty('after');
+        expect(JSON.stringify(VOICE_TOOL_DEFINITIONS)).not.toContain('"actors"');
+    });
 });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ACTION_DEFINITIONS, type ActionActorKind, type ActionInput, type ActionName, type ActionOutput } from './catalog.ts';
+import { ACTION_DEFINITIONS, actionDescription, fieldActors, type ActionActorKind, type ActionInput, type ActionName, type ActionOutput } from './catalog.ts';
 
 export interface ActionActor {
     kind: ActionActorKind;
@@ -9,6 +9,8 @@ export interface ActionActor {
 export interface ActionCall<Context> {
     actor: ActionActor;
     context: Context;
+    /* Validate everything and change nothing; only an action the registry lists under `previews` takes it. */
+    dryRun?: boolean;
 }
 
 export interface ActionConfirmation {
@@ -29,6 +31,8 @@ export type ActionCompleted<Name extends ActionName> = {
     action: Name;
     output: ActionOutput<Name>;
     undoToken?: string;
+    /* The output of a dry run: what the action would have done, with nothing done. */
+    dryRun?: true;
 };
 
 export interface ActionFailed {
@@ -100,6 +104,15 @@ interface UndoAction<Context> {
 
 const TOKEN_LIMIT = 100;
 
+/* A refusal an executor's own error type carries, such as a coded error of the daemon; null for a plain failure. */
+export type ActionRefusalOf = (error: unknown) => { code: string; message: string; details?: unknown } | null;
+
+export interface ActionRegistryOptions {
+    /* The actions whose handler honors `dryRun`; any other refuses a dry run rather than run for real. */
+    previews?: readonly ActionName[];
+    refusalOf?: ActionRefusalOf;
+}
+
 const sameActor = (left: ActionActor, right: ActionActor): boolean => left.kind === right.kind && left.id === right.id;
 
 const remember = <Value>(entries: Map<string, Value>, token: string, value: Value): void => {
@@ -112,6 +125,18 @@ const remember = <Value>(entries: Map<string, Value>, token: string, value: Valu
     entries.set(token, value);
 };
 
+/* Whether this actor may give this value, down to a member of a union that only some actors may pick. */
+const mayGive = (schema: z.ZodType, value: unknown, actor: ActionActorKind): boolean => {
+    const actors = fieldActors(schema);
+    if (actors !== null && !actors.includes(actor)) {
+        return value === null || value === undefined;
+    }
+    if (schema instanceof z.ZodUnion) {
+        return (schema.options as z.ZodType[]).some((option) => option.safeParse(value).success && mayGive(option, value, actor));
+    }
+    return true;
+};
+
 const failure = (action: ActionName | null, code: string, message: string, details?: unknown): ActionFailed => ({
     status: 'failed',
     action,
@@ -122,9 +147,13 @@ export class ActionRegistry<Context> {
     readonly #handlers: ActionHandlers<Context>;
     readonly #pending = new Map<string, PendingAction>();
     readonly #undo = new Map<string, UndoAction<Context>>();
+    readonly #previews: ReadonlySet<ActionName>;
+    readonly #refusalOf: ActionRefusalOf | undefined;
 
-    constructor(handlers: ActionHandlers<Context>) {
+    constructor(handlers: ActionHandlers<Context>, options: ActionRegistryOptions = {}) {
         this.#handlers = handlers;
+        this.#previews = new Set(options.previews ?? []);
+        this.#refusalOf = options.refusalOf;
     }
 
     catalog(call: ActionCall<Context>): ActionCapability[] {
@@ -137,7 +166,7 @@ export class ActionRegistry<Context> {
                 {
                     name,
                     title: definition.title,
-                    description: definition.description,
+                    description: actionDescription(name, call.actor.kind),
                     effect: definition.effect,
                     input: z.toJSONSchema(definition.input) as Record<string, unknown>
                 }
@@ -184,9 +213,19 @@ export class ActionRegistry<Context> {
         if (!definition.actors.includes(call.actor.kind)) {
             return failure(name, 'forbidden-action', `The ${call.actor.kind} actor may not run “${name}”.`);
         }
+        if (call.dryRun === true && !this.#previews.has(name)) {
+            return failure(name, 'no-dry-run', `The action “${name}” cannot be previewed here.`);
+        }
         const parsed = definition.input.safeParse(input);
         if (!parsed.success) {
             return failure(name, 'invalid-input', z.prettifyError(parsed.error));
+        }
+        const values = parsed.data as Record<string, unknown>;
+        const forbidden = Object.entries(definition.input.shape as Record<string, z.ZodType>).find(
+            ([field, schema]) => !mayGive(schema, values[field], call.actor.kind)
+        );
+        if (forbidden) {
+            return failure(name, 'forbidden-field', `The ${call.actor.kind} actor may not give “${forbidden[0]}” to “${name}”.`);
         }
         try {
             const handled = await handler(parsed.data as ActionInput<Name>, {
@@ -194,6 +233,9 @@ export class ActionRegistry<Context> {
                 confirmed
             });
             if ('confirmation' in handled) {
+                if (call.dryRun === true) {
+                    return failure(name, 'confirmation-required', `A dry run of “${name}” cannot ask for confirmation.`);
+                }
                 if (confirmed) {
                     return failure(name, 'confirmation-loop', `The confirmed action “${name}” asked for confirmation again.`);
                 }
@@ -213,6 +255,9 @@ export class ActionRegistry<Context> {
             const output = definition.output.safeParse(handled.output);
             if (!output.success) {
                 return failure(name, 'invalid-output', `The “${name}” executor returned an invalid result.`, output.error.issues);
+            }
+            if (call.dryRun === true) {
+                return { status: 'completed', action: name, output: output.data as ActionOutput<Name>, dryRun: true };
             }
             const undoToken = handled.undo ? crypto.randomUUID() : undefined;
             if (undoToken && handled.undo) {
@@ -236,6 +281,10 @@ export class ActionRegistry<Context> {
     #failed(action: ActionName, error: unknown): ActionFailed {
         if (error instanceof ActionRefusal) {
             return failure(action, error.code, error.message, error.details);
+        }
+        const refusal = this.#refusalOf?.(error);
+        if (refusal) {
+            return failure(action, refusal.code, refusal.message, refusal.details);
         }
         return failure(action, 'action-failed', error instanceof Error ? error.message : `The action “${action}” failed.`);
     }
