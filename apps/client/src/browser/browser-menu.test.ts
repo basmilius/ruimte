@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { buildBrowserMenu, type BrowserMenuInput, type BrowserMenuItem } from '@/browser/browser-menu';
+import { buildBrowserMenu, buildPreviewMenu, type BrowserMenuInput, type BrowserMenuItem } from '@/browser/browser-menu';
 
 const input = (patch: Partial<BrowserMenuInput> = {}): BrowserMenuInput => ({
     webContentsId: 7,
@@ -89,5 +89,41 @@ describe('buildBrowserMenu', () => {
     test('inspect ends every menu', () => {
         const menu = buildBrowserMenu(input({ linkURL: 'https://bas.dev/', mediaType: 'image', srcURL: 'https://bas.dev/a.png' }));
         expect(ids(menu).at(-1)).toEqual(['inspect']);
+    });
+});
+
+describe('buildPreviewMenu', () => {
+    const preview = (patch: Partial<BrowserMenuInput> = {}): BrowserMenuInput => input({ guest: 'preview', pageURL: 'file:///work/site/index.html', ...patch });
+
+    test('a click on nothing copies and selects, with no history and no inspector', () => {
+        const menu = buildPreviewMenu(preview());
+        expect(ids(menu)).toEqual([['copy', 'select-all']]);
+        expect(find(menu, 'copy')?.disabled).toBe(true);
+        expect(find(menu, 'select-all')?.action).toEqual({ kind: 'select-all' });
+    });
+
+    test('a selection is copied by the guest itself', () => {
+        const menu = buildPreviewMenu(preview({ selectionText: 'hello', editFlags: { canCut: false, canCopy: true, canPaste: false, canSelectAll: true } }));
+        expect(find(menu, 'copy')?.disabled).toBe(false);
+        expect(find(menu, 'copy')?.action).toEqual({ kind: 'copy-selection' });
+    });
+
+    test('a web link opens in a browser node or lands on the clipboard', () => {
+        const menu = buildPreviewMenu(preview({ linkURL: 'https://bas.dev/over' }));
+        expect(ids(menu)[0]).toEqual(['link-node', 'link-address']);
+        expect(find(menu, 'link-node')?.action).toEqual({ kind: 'open-beside', url: 'https://bas.dev/over' });
+    });
+
+    test('a link to a file beside the preview is only copied', () => {
+        expect(ids(buildPreviewMenu(preview({ linkURL: 'file:///work/site/about.html' })))[0]).toEqual(['link-address']);
+    });
+
+    test('an image is copied and nothing else', () => {
+        const menu = buildPreviewMenu(preview({ mediaType: 'image', srcURL: 'file:///work/site/a.png' }));
+        expect(ids(menu)).toEqual([['image-copy'], ['copy', 'select-all']]);
+    });
+
+    test("an editable field is the shell's own native menu", () => {
+        expect(buildPreviewMenu(preview({ isEditable: true }))).toEqual([]);
     });
 });

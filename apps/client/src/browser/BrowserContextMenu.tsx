@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { buildBrowserMenu, type BrowserMenuAction, type BrowserMenuItem } from '@/browser/browser-menu';
+import { buildBrowserMenu, buildPreviewMenu, type BrowserMenuAction, type BrowserMenuItem } from '@/browser/browser-menu';
 import { menuPointFor } from '@/browser/menu-point';
 import { openLinkBeside } from '@/browser/open-beside';
 import { drivePage } from '@/browser/open-page';
+import { previewGuestOf } from '@/browser/preview-guests';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { desktop, type BrowserContextAction } from '@/desktop/bridge';
 import { splitKey } from '@/state/keys';
@@ -13,15 +14,15 @@ import { Icon } from '@/ui/Icon';
 
 interface MenuTarget {
     webContentsId: number;
-    /* The page's node, keyed on the machine its project is on (`state/keys.ts`). */
-    key: string;
+    /* The page's node, keyed on the machine its project is on (`state/keys.ts`); null for an HTML preview. */
+    key: string | null;
     guest: { x: number; y: number };
 }
 
 /* Flip while working on the mapping itself; a build logs nothing. */
 const DEBUG: boolean = false;
 
-// A browser page lives outside React, so the shell reports the click and this component owns the menu.
+// A browser page or an HTML preview lives outside React, so the shell reports the click and this component owns the menu.
 export function BrowserContextMenu() {
     const [groups, setGroups] = useState<BrowserMenuItem[][] | null>(null);
     const target = useRef<MenuTarget | null>(null);
@@ -31,12 +32,13 @@ export function BrowserContextMenu() {
     useEffect(
         () =>
             desktop()?.onBrowserContextMenu?.((params) => {
-                const key = browserRegistry.keyOfContents(params.webContentsId);
-                const element = key === null ? undefined : browserRegistry.get(key);
-                if (key === null || !element) {
+                const preview = params.guest === 'preview';
+                const key = preview ? null : browserRegistry.keyOfContents(params.webContentsId);
+                const element = preview ? previewGuestOf(params.webContentsId) : key === null ? undefined : browserRegistry.get(key);
+                if (!element) {
                     return;
                 }
-                const state = useBrowser.getState().byKey[key];
+                const state = key === null ? undefined : useBrowser.getState().byKey[key];
                 const rect = element.getBoundingClientRect();
                 // The camera's zoom, read back from what the host was drawn at.
                 const zoom = element.offsetWidth > 0 ? rect.width / element.offsetWidth : 1;
@@ -46,7 +48,9 @@ export function BrowserContextMenu() {
                         `[browser-menu] click ${params.x},${params.y} host ${rect.left},${rect.top} zoom ${zoom} page ${point.guest.x},${point.guest.y}`
                     );
                 }
-                const built = buildBrowserMenu({ ...params, canGoBack: state?.canGoBack ?? false, canGoForward: state?.canGoForward ?? false });
+                const built = preview
+                    ? buildPreviewMenu(params)
+                    : buildBrowserMenu({ ...params, canGoBack: state?.canGoBack ?? false, canGoForward: state?.canGoForward ?? false });
                 if (built.length === 0) {
                     return;
                 }
@@ -80,7 +84,9 @@ export function BrowserContextMenu() {
             case 'back':
             case 'forward':
             case 'reload':
-                drivePage(splitKey(current.key).id, action.kind);
+                if (current.key !== null) {
+                    drivePage(splitKey(current.key).id, action.kind);
+                }
                 return;
             case 'open-beside':
                 openLinkBeside(action.url, current.webContentsId);
@@ -94,6 +100,9 @@ export function BrowserContextMenu() {
             // The guest's own copy, which keeps what a plain string would lose.
             case 'copy-selection':
                 ask('copy');
+                return;
+            case 'select-all':
+                ask('select-all');
                 return;
             case 'copy-image':
                 ask('copy-image', current.guest);

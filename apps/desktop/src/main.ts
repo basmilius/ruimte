@@ -497,6 +497,9 @@ const guestDevTools = (id: number, at?: { x: number; y: number }): void => {
     devtoolsWindows.set(id, window);
 };
 
+/* Which guest a right-click came from, so the client draws a preview's menu without a page's history. */
+type GuestKind = 'browser' | 'preview';
+
 /* What the client may ask the shell to do on a guest page. Mirrors `apps/client/src/desktop/bridge.ts`. */
 interface BrowserContextAction {
     webContentsId: number;
@@ -522,7 +525,7 @@ const menuLabel = (text: string): string => {
  * platform recognizes, so every row that has one uses it, and the rows macOS appends itself are
  * not in the template.
  */
-const editableGuestMenu = (contents: Electron.WebContents, params: Electron.ContextMenuParams): void => {
+const editableGuestMenu = (contents: Electron.WebContents, params: Electron.ContextMenuParams, inspectable: boolean): void => {
     const template: Electron.MenuItemConstructorOptions[] = [];
     for (const word of params.dictionarySuggestions.slice(0, SPELLING_SUGGESTIONS)) {
         template.push({ label: word, click: () => contents.replaceMisspelling(word) });
@@ -551,7 +554,9 @@ const editableGuestMenu = (contents: Electron.WebContents, params: Electron.Cont
             { label: 'Search with Google', click: () => void shell.openExternal(`${SEARCH_URL}${encodeURIComponent(params.selectionText)}`) }
         );
     }
-    template.push({ type: 'separator' }, { label: 'Inspect element', click: () => guestDevTools(contents.id, { x: params.x, y: params.y }) });
+    if (inspectable) {
+        template.push({ type: 'separator' }, { label: 'Inspect element', click: () => guestDevTools(contents.id, { x: params.x, y: params.y }) });
+    }
     /*
      * The frame is the one thing that makes AutoFill appear: without it Electron pops a plain menu
      * and macOS appends none of its own rows (AutoFill, Writing Tools, Services). It is null once
@@ -563,19 +568,20 @@ const editableGuestMenu = (contents: Electron.WebContents, params: Electron.Cont
 };
 
 /*
- * A right-click inside a browser node's page. Electron ships no menu for web content (Chromium's own
- * belongs to the Chrome browser) and a native one reads as another program's, so the client draws
- * it: the shell says what the click landed on and nothing more. An editable field is the exception
- * and never leaves the shell, because what the platform adds to a native menu there is worth more
- * than a menu in the app's own style.
+ * A right-click inside a browser node's page or an HTML preview. Electron ships no menu for web
+ * content (Chromium's own belongs to the Chrome browser) and a native one reads as another
+ * program's, so the client draws it: the shell says what the click landed on and nothing more. An
+ * editable field is the exception and never leaves the shell, because what the platform adds to a
+ * native menu there is worth more than a menu in the app's own style.
  */
-const guestContextMenu = (contents: Electron.WebContents, params: Electron.ContextMenuParams): void => {
+const guestContextMenu = (contents: Electron.WebContents, params: Electron.ContextMenuParams, guest: GuestKind): void => {
     if (params.isEditable) {
-        editableGuestMenu(contents, params);
+        editableGuestMenu(contents, params, guest === 'browser');
         return;
     }
     mainWindow?.webContents.send('browser:context-menu', {
         webContentsId: contents.id,
+        guest,
         x: params.x,
         y: params.y,
         linkURL: params.linkURL,
@@ -594,21 +600,29 @@ const guestContextMenu = (contents: Electron.WebContents, params: Electron.Conte
     });
 };
 
+/* A sealed preview only reads: nothing it is asked to do may download, inspect or leave for the system browser. */
+const PREVIEW_ACTIONS = new Set(['copy', 'select-all', 'copy-image']);
+
 /*
  * The row the person picked, for the part of it the renderer cannot reach: the guest's own copy, a
  * download, the inspector and the system browser. The editing rows are not here, because an
- * editable field never reaches the client. Only a guest of the browser partition takes one, the
- * same guard the menu itself has.
+ * editable field never reaches the client. Only a guest the menu came from takes one.
  */
 ipcMain.on('browser:context-action', (_event, request: BrowserContextAction) => {
     const contents = webContents.fromId(request.webContentsId);
-    if (!contents || contents.isDestroyed() || !isBrowserGuest(contents)) {
+    if (!contents || contents.isDestroyed()) {
+        return;
+    }
+    if (!isBrowserGuest(contents) && !(isPreviewGuest(contents) && PREVIEW_ACTIONS.has(request.action))) {
         return;
     }
     const payload = request.payload ?? {};
     switch (request.action) {
         case 'copy':
             contents.copy();
+            return;
+        case 'select-all':
+            contents.selectAll();
             return;
         case 'copy-image':
             contents.copyImageAt(payload.x ?? 0, payload.y ?? 0);
@@ -1254,11 +1268,13 @@ if (!app.requestSingleInstanceLock()) {
         }
         if (isPreviewGuest(contents)) {
             routePreviewLinks(contents);
+            contents.on('context-menu', (_e, params) => guestContextMenu(contents, params, 'preview'));
+            return;
         }
         if (!isBrowserGuest(contents)) {
             return;
         }
-        contents.on('context-menu', (_e, params) => guestContextMenu(contents, params));
+        contents.on('context-menu', (_e, params) => guestContextMenu(contents, params, 'browser'));
     });
 
     app.on('second-instance', () => {

@@ -30,6 +30,9 @@ export type {
  */
 export interface BrowserContextParams {
     webContentsId: number;
+    /* An HTML file's preview, which has no history and only reads. Missing from a shell older than
+       the preview's menu. */
+    guest?: 'browser' | 'preview';
     /* Where the click landed, in the window's coordinates. Chromium maps a guest's point into the embedder before the event leaves. */
     x: number;
     y: number;
@@ -44,7 +47,7 @@ export interface BrowserContextParams {
 }
 
 /* What only the shell can carry out on a guest page, once the client knows which row was picked. */
-export type BrowserShellAction = 'copy' | 'copy-image' | 'save-image' | 'inspect' | 'open-external';
+export type BrowserShellAction = 'copy' | 'select-all' | 'copy-image' | 'save-image' | 'inspect' | 'open-external';
 
 export interface BrowserContextAction {
     webContentsId: number;

@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { ArrowLeft, ArrowRight, Code, Copy, Download, ExternalLink, Globe, Image, Link, RotateCw, Search, Type } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Code, Copy, Download, ExternalLink, Globe, Image, Link, RotateCw, Scan, Search, Type } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { BrowserContextParams } from '@/desktop/bridge';
 
@@ -23,6 +23,7 @@ export type BrowserMenuAction =
     | { kind: 'copy-text'; text: string }
     | { kind: 'open-external'; url: string }
     | { kind: 'copy-selection' }
+    | { kind: 'select-all' }
     | { kind: 'copy-image' }
     | { kind: 'save-image'; url: string }
     | { kind: 'inspect' };
@@ -104,5 +105,37 @@ export const buildBrowserMenu = (input: BrowserMenuInput): BrowserMenuItem[][] =
     }
 
     groups.push([{ id: 'inspect', label: i18next.t('browser:menu.inspect'), icon: Code, action: { kind: 'inspect' } }]);
+    return groups;
+};
+
+/*
+ * The rows behind a right-click in an HTML file's preview. A preview has no history and nothing in
+ * it may leave for the network, so it only copies, selects and hands a web link to a browser node.
+ */
+export const buildPreviewMenu = (input: BrowserContextParams): BrowserMenuItem[][] => {
+    if (input.isEditable) {
+        return [];
+    }
+
+    const groups: BrowserMenuItem[][] = [];
+
+    if (input.linkURL !== '') {
+        const url = input.linkURL;
+        const link: BrowserMenuItem[] = [];
+        if (isWebUrl(url)) {
+            link.push({ id: 'link-node', label: i18next.t('browser:menu.link.openInNode'), icon: Globe, action: { kind: 'open-beside', url } });
+        }
+        link.push({ id: 'link-address', label: i18next.t('browser:menu.link.copyAddress'), icon: Link, action: { kind: 'copy-text', text: url } });
+        groups.push(link);
+    }
+
+    if (input.mediaType === 'image' && input.srcURL !== '') {
+        groups.push([{ id: 'image-copy', label: i18next.t('browser:menu.image.copy'), icon: Image, action: { kind: 'copy-image' } }]);
+    }
+
+    groups.push([
+        { id: 'copy', label: i18next.t('common:action.copy'), icon: Copy, disabled: !input.editFlags.canCopy, action: { kind: 'copy-selection' } },
+        { id: 'select-all', label: i18next.t('common:action.selectAll'), icon: Scan, action: { kind: 'select-all' } }
+    ]);
     return groups;
 };

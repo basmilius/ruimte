@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Code, Eye, FileWarning } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
 import { focusCellOfView, watchGuestFocus } from '@/browser/guest-focus';
+import { registerPreviewGuest } from '@/browser/preview-guests';
 import { isDesktop } from '@/desktop/bridge';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
@@ -128,8 +129,10 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
         parent.appendChild(element);
         page.current = element;
         const offFocus = cell === null ? null : watchGuestFocus(element, () => focusCellOfView(cell));
+        const offMenu = registerPreviewGuest(element);
         return () => {
             offFocus?.();
+            offMenu();
             page.current = null;
             element.remove();
         };
