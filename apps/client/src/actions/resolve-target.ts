@@ -1,7 +1,8 @@
 import { ActionRefusal, type ActionInput, type ActionOutput } from '@ruimte/actions';
 import { isCanvasView, isOpenableView, isUnknownNode, isUnknownView, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { openVoiceProjects, projectAgents } from '@/actions/inspection-actions';
+import { projectAgents } from '@/actions/inspection-actions';
+import { listedProjects } from '@/actions/project-actions';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { focusedCanvas, liveCanvas, type CanvasState } from '@/state/canvas';
 import { activeViewOf, type DocumentState } from '@/state/document';
@@ -155,14 +156,19 @@ export const resolveTarget = (document: StoreApi<DocumentState>, input: ActionIn
             return qualified.status === 'found' ? qualified : named(name, targets);
         });
     }
-    const projects = openVoiceProjects();
+    const projects = listedProjects();
     const projectTargets = (rows: typeof projects): Target[] =>
         rows.map((row) => ({ id: row.projectId, name: row.name, kind: 'project', viewId: null, view: null, endpointId: row.endpointId, machine: row.machine }));
+    // A project in use wins over one under Recent that shares its name.
+    const inUseFirst = (rows: typeof projects) => (name: string) => {
+        const open = named(name, projectTargets(rows.filter((row) => !row.recent)));
+        return open.status === 'missing' ? named(name, projectTargets(rows)) : open;
+    };
     if (names === null) {
         return current(target, projectTargets(projects.filter((row) => row.active)));
     }
     if (machine === null) {
-        return byName(target, names, (name) => named(name, projectTargets(projects)));
+        return byName(target, names, inUseFirst(projects));
     }
     const machines: Target[] = [...new Map(projects.map((row) => [row.endpointId, row.machine])).entries()].map(([endpointId, label]) => ({
         id: endpointId,
@@ -183,6 +189,5 @@ export const resolveTarget = (document: StoreApi<DocumentState>, input: ActionIn
             missing: matched.status === 'missing' ? [machine] : []
         };
     }
-    const there = projectTargets(projects.filter((row) => row.endpointId === matched.value.id));
-    return byName(target, names, (name) => named(name, there));
+    return byName(target, names, inUseFirst(projects.filter((row) => row.endpointId === matched.value.id)));
 };

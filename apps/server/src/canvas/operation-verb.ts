@@ -33,9 +33,33 @@ const getSub = defineActionVerb('operation', {
     }
 });
 
+const NEEDS_CANCEL_ID = 'operation cancel needs the id of an operation, such as agent.start:<id>';
+
+const cancelSub = defineActionVerb('operation', {
+    name: 'cancel',
+    action: 'operation.cancel',
+    usage: '<id>',
+    params: [{ syntax: '<id>', need: 'required', field: 'operationId', more: 'agent.start:<id> after agent, team.start:<id>,<id> after team' }],
+    detail: [
+        'prints\toperation\tid\tstatus\tdetail\tone line per agent it started, the detail starting with the id of its node',
+        'status\tcancelled\tover\tleft\tcancelled when a chat stopped its turn, over when nothing ran, left when it goes on',
+        'left\tA start still owed runs anyway, and a terminal agent keeps running: nothing sends a signal a person did not press',
+        'stays\tThe chats, their threads and their tasks stay; nothing is rolled back',
+        'who\tOnly an operation you started'
+    ],
+    positionals: z.tuple([z.string({ error: NEEDS_CANCEL_ID }).min(1, NEEDS_CANCEL_ID)], {
+        error: (issue) => (issue.code === 'too_big' ? 'operation cancel takes one id and nothing else' : NEEDS_CANCEL_ID)
+    }),
+    flags: z.object({}),
+    async run({ positionals: [id] }, call) {
+        const cancelled = await runAction(call, 'operation.cancel', { operationId: id });
+        return cancelled.operations.map((line) => ['operation', line.operationId, line.status, field(line.detail)].join('\t'));
+    }
+});
+
 export const operationVerb = defineNoun({
     name: 'operation',
-    summary: 'Follows what agent and team started, since starting is not succeeding',
+    summary: 'Follows or cancels what agent and team started, since starting is not succeeding',
     detail: ['operations\tagent and team answer at once with what they made, while the agents go on working; an operation is where that stands now'],
-    actions: [getSub]
+    actions: [getSub, cancelSub]
 });

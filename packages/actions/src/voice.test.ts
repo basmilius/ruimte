@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ACTION_DEFINITIONS, VOICE_CONTROL_TOOL, VOICE_TOOL_ACTIONS, VOICE_TOOL_DEFINITIONS, type ActionName } from './index.ts';
+import { ACTION_DEFINITIONS, ACTION_DOMAINS, VOICE_CONTROL_TOOL, VOICE_TOOL_ACTIONS, VOICE_TOOL_DEFINITIONS, voiceToolsFor, type ActionName } from './index.ts';
 
 const reached = [...VOICE_TOOL_ACTIONS.values()].flat();
 
@@ -104,5 +104,18 @@ describe('Voice tools', () => {
             type: ['array', 'null'],
             items: { type: 'object', additionalProperties: false, required: ['kind', 'x', 'y', 'w', 'h', 'text', 'color'] }
         });
+    });
+
+    test('a subset carries the tools of its domains in catalog order, and always the control tool', () => {
+        expect(voiceToolsFor([]).map((tool) => tool.name)).toEqual([VOICE_CONTROL_TOOL]);
+        expect(voiceToolsFor(['machine', 'workspace']).map((tool) => tool.name)).toEqual(['inspect_workspace', 'inspect_machine', VOICE_CONTROL_TOOL]);
+        expect(voiceToolsFor(ACTION_DOMAINS)).toEqual([...VOICE_TOOL_DEFINITIONS]);
+    });
+
+    test('a person-only field stays out, and so does an action only a person or an agent runs', () => {
+        const projects = VOICE_TOOL_DEFINITIONS.find((tool) => tool.name === 'manage_projects')!;
+        expect(Object.keys(projects.parameters.properties)).not.toContain('image');
+        expect(projects.parameters.properties.action?.enum).not.toContain('project.delete');
+        expect(VOICE_TOOL_DEFINITIONS.find((tool) => tool.name === 'inspect_machine')!.parameters.properties.action?.enum).not.toContain('process.signal');
     });
 });

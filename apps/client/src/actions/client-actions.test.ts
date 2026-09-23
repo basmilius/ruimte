@@ -1,11 +1,24 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { MAX_TITLE_LENGTH, type ActionInput, type ActionRegistry } from '@ruimte/actions';
-import type { ProjectCanvasView, ProjectDocument, ProviderInfo } from '@ruimte/contracts';
-import { clientActions, createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
+import type { ProjectCanvasView, ProjectDocument, ProjectSummary, ProviderInfo } from '@ruimte/contracts';
+import { clientActions, createClientActionRegistry, PERSON_ACTION_CALL, selectAllAction, VOICE_ACTION_CALL } from './client-actions';
 import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
 import { useDocument } from '@/state/document';
 import { defaultDrawings } from '@/state/drawing';
+import { useProject } from '@/state/project';
+
+const PROJECT: ProjectSummary = {
+    projectId: 'atlas',
+    name: 'Atlas',
+    color: '#000',
+    folder: '/repo',
+    lastOpenedAt: 1,
+    closedAt: null,
+    available: true,
+    icon: { kind: 'initial', value: 'A' },
+    nameSource: 'chosen'
+};
 
 const main: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] };
 
@@ -163,11 +176,18 @@ describe('client actions', () => {
         expect(personal).toContain('link.create');
         expect(personal).toContain('drawing.export');
         expect(personal).toContain('diagram.export');
+        expect(personal).toContain('project.create');
+        expect(personal).toContain('project.delete');
+        expect(personal).toContain('project.updateSettings');
+        expect(personal).toContain('process.signal');
         expect(clientActions.catalog(VOICE_ACTION_CALL).map((entry) => entry.name)).toEqual([
             'agents.inspect',
             'agent.activity',
-            'projects.list-open',
+            'project.list',
             'project.switch',
+            'project.close',
+            'project.setAppearance',
+            'project.readSettings',
             'workspace.inspect',
             'target.resolve',
             'view.focus',
@@ -197,6 +217,7 @@ describe('client actions', () => {
             'split.create',
             'split.close',
             'split.focus',
+            'split.placeView',
             'terminal.clear',
             'chat.send',
             'chat.clear',
@@ -219,6 +240,7 @@ describe('client actions', () => {
             'chat.dismissQuestion',
             'terminal.stop',
             'terminal.resumeAgent',
+            'view.setIcon',
             'node.update',
             'plan.list',
             'plan.read',
@@ -231,6 +253,7 @@ describe('client actions', () => {
             'browser.forward',
             'browser.reload',
             'browser.stop',
+            'operation.cancel',
             'git.status',
             'git.diff',
             'git.log',
@@ -280,7 +303,12 @@ describe('client actions', () => {
             'diagram.read',
             'diagram.updateNode',
             'diagram.resetPosition',
-            'diagram.copy'
+            'diagram.copy',
+            'process.list',
+            'process.alerts',
+            'process.dismissAlert',
+            'usage.summary',
+            'usage.limits'
         ]);
     });
 
@@ -932,6 +960,38 @@ describe('client actions', () => {
             expect(canvas().layouts).toEqual([saved]);
         });
 
+        test('select all names text too, and a store that is no canvas editor selects in place', async () => {
+            canvas().addNode('note', { x: 0, y: 0 }, { title: 'Plan' });
+            canvas().addText({ x: 10, y: 10 });
+            const [text] = Object.keys(canvas().texts);
+            canvas().select([]);
+            selectAllAction(defaultCanvases.of('main'));
+            await Promise.resolve();
+            expect(canvas().selection).toEqual([...canvas().order, text!]);
+            expect(await clientActions.execute('canvas.select', { viewId: 'main', nodeIds: [text!] }, VOICE_ACTION_CALL)).toMatchObject({
+                output: { nodeIds: [text], nodes: [''] }
+            });
+            expect(await clientActions.execute('canvas.select', { viewId: 'main', nodeIds: ['nothing'] }, VOICE_ACTION_CALL)).toMatchObject({
+                error: { code: 'unknown-node' }
+            });
+        });
+
+        test('marks a view with a picked icon, takes the mark away with null, and undo gives the old one back', async () => {
+            const marked = await clientActions.execute('view.setIcon', { viewId: 'release', icon: 'rocket' }, VOICE_ACTION_CALL);
+            expect(marked).toMatchObject({ status: 'completed', output: { viewId: 'release', kind: 'canvas', icon: { kind: 'lucide', value: 'rocket' } } });
+            expect(useDocument.getState().views[1]).toMatchObject({ icon: { kind: 'lucide', value: 'rocket' } });
+            expect(await clientActions.execute('view.setIcon', { viewId: 'release', icon: 'no-such-icon' }, VOICE_ACTION_CALL)).toMatchObject({
+                error: { code: 'unknown-icon' }
+            });
+            const cleared = await clientActions.execute('view.setIcon', { viewId: 'release', icon: null }, PERSON_ACTION_CALL);
+            if (cleared.status !== 'completed' || !cleared.undoToken) {
+                throw new Error('Expected the mark to go');
+            }
+            expect(useDocument.getState().views[1]).toMatchObject({ icon: undefined });
+            expect(await clientActions.undo(cleared.undoToken, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed' });
+            expect(useDocument.getState().views[1]).toMatchObject({ icon: { kind: 'lucide', value: 'rocket' } });
+        });
+
         test('locks one gesture or all four', async () => {
             expect(await clientActions.execute('canvas.setLocks', { viewId: 'main', locked: true, gestures: ['move'] }, VOICE_ACTION_CALL)).toMatchObject({
                 output: { locks: { pan: false, zoom: false, move: true, resize: false } }
@@ -963,6 +1023,67 @@ describe('client actions', () => {
             });
             expect(useDocument.getState().views.some((view) => view.id === 'release')).toBe(true);
             expect(await clientActions.execute('split.close', { viewId: null }, VOICE_ACTION_CALL)).toMatchObject({ error: { code: 'last-cell' } });
+        });
+
+        test('places a view against the edge of a named cell, and workspace.inspect names the cells', async () => {
+            expect(
+                await clientActions.execute('split.placeView', { viewId: 'release', paths: null, cellViewId: 'main', zone: 'down' }, VOICE_ACTION_CALL)
+            ).toMatchObject({
+                status: 'completed',
+                output: { viewId: 'release', view: 'Release', cellViewId: 'main', zone: 'down', created: [] }
+            });
+            expect(await clientActions.execute('workspace.inspect', {}, VOICE_ACTION_CALL)).toMatchObject({
+                output: {
+                    cells: [
+                        { viewId: 'main', view: 'Main', column: 0, cell: 0, focused: false },
+                        { viewId: 'release', view: 'Release', column: 0, cell: 1, focused: true }
+                    ]
+                }
+            });
+            expect(
+                await clientActions.execute('split.placeView', { viewId: 'release', paths: null, cellViewId: 'release', zone: 'left' }, VOICE_ACTION_CALL)
+            ).toMatchObject({
+                error: { code: 'no-room' }
+            });
+            expect(
+                await clientActions.execute('split.placeView', { viewId: 'release', paths: null, cellViewId: 'gone', zone: 'left' }, VOICE_ACTION_CALL)
+            ).toMatchObject({
+                error: { code: 'view-not-shown' }
+            });
+        });
+
+        test('dropped files each become a view and the first takes the place; Voice stays inside the project folder', async () => {
+            useProject.setState({ current: { ...PROJECT, folder: '/repo' } });
+            try {
+                const outside = await clientActions.execute(
+                    'split.placeView',
+                    { viewId: null, paths: ['/elsewhere/notes.md'], cellViewId: null, zone: 'right' },
+                    VOICE_ACTION_CALL
+                );
+                expect(outside).toMatchObject({ error: { code: 'outside-project' } });
+                expect(useDocument.getState().views).toHaveLength(2);
+                const placed = await clientActions.execute(
+                    'split.placeView',
+                    { viewId: null, paths: ['/repo/a.ts', '/elsewhere/b.ts'], cellViewId: null, zone: 'right' },
+                    PERSON_ACTION_CALL
+                );
+                if (placed.status !== 'completed') {
+                    throw new Error('Expected the files to be placed');
+                }
+                expect(placed.output.created).toHaveLength(2);
+                expect(
+                    useDocument
+                        .getState()
+                        .views.filter((view) => view.kind === 'file')
+                        .map((view) => (view.kind === 'file' ? view.path : null))
+                ).toEqual(['a.ts', '/elsewhere/b.ts']);
+                expect(useDocument.getState().layout?.columns.map((column) => column.cells.map((cell) => cell.viewId))).toEqual([
+                    ['main'],
+                    [placed.output.created[0]]
+                ]);
+            } finally {
+                useProject.setState({ current: null });
+            }
         });
     });
 

@@ -1,8 +1,10 @@
 import { contentActions, type ContentMachine } from '@/actions/content-actions';
-import { asksFirst, asRefusal, developerActions, type DeveloperMachine } from '@/actions/developer-actions';
-import { filesActions, type FilesMachine } from '@/actions/files-actions';
+import { asksFirst, asRefusal, developerActions, GIT_OPERATION, type DeveloperMachine } from '@/actions/developer-actions';
+import { filesActions, projectPathOf, type FilesMachine } from '@/actions/files-actions';
 import { inspectionActions } from '@/actions/inspection-actions';
+import { machineActions, type MachineReach } from '@/actions/machine-actions';
 import { pageActions, type PageMachine } from '@/actions/page-actions';
+import { projectActions, type ProjectMachine } from '@/actions/project-actions';
 import { sessionActions, sessionTitle, type SessionMachine } from '@/actions/session-actions';
 import { resolveTarget } from '@/actions/resolve-target';
 import { ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionCall, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
@@ -19,9 +21,12 @@ import {
     type AgentKind,
     type DeviceReference,
     type NodeTitleSource,
+    type ProjectIconChoice,
     type ProjectNode,
     type ProjectView,
-    type ProviderInfo
+    type ProviderInfo,
+    PROJECT_ICON_NAMES,
+    viewIconOf
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { addAgentView, agentNodeOptions, type AgentSession, type AgentTarget } from '@/agents/nodes';
@@ -42,7 +47,7 @@ import {
 import type { PromptClients } from '@/prompts/logic/subjects';
 import { FILES_VIEW_ID } from '@/shell/files-view';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
-import { canSplit, cellAt, cellCount, focusedViewId, freeViewFor, isSameCell, locateView, type SplitDirection } from '@/shell/split';
+import { canSplit, cellAt, cellCount, focusedViewId, freeViewFor, isSameCell, locateView, type SplitDirection, type SplitZone } from '@/shell/split';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { defaultCanvases, focusedCanvas, liveCanvas, NODE_SIZE, type AddNodeOptions, type CanvasState, type Locks, type NodeKind } from '@/state/canvas';
 import { useChats } from '@/state/chats';
@@ -190,6 +195,23 @@ const lastCanvasOf = (state: DocumentState): (ProjectView & { kind: 'canvas' }) 
 const cellName = (state: DocumentState, viewId: string): string =>
     viewId === FILES_VIEW_ID ? 'Files' : (state.views.find((view) => view.id === viewId)?.name ?? viewId);
 
+/* The cells of the grid column by column, each named by the view standing in it. */
+const cellsOf = (state: DocumentState): ActionOutput<'workspace.inspect'>['cells'] => {
+    const layout = state.layout;
+    if (layout === null) {
+        return [];
+    }
+    return layout.columns.flatMap((column, columnIndex) =>
+        column.cells.map((cell, cellIndex) => ({
+            viewId: cell.viewId,
+            view: cellName(state, cell.viewId),
+            column: columnIndex,
+            cell: cellIndex,
+            focused: isSameCell(layout.focus, { column: columnIndex, cell: cellIndex })
+        }))
+    );
+};
+
 const linesOf = (canvas: CanvasState, nodeId: string): number => canvas.edges.filter((edge) => edge.from === nodeId || edge.to === nodeId).length;
 
 const linesRemoved = (lines: number): string => `${lines} ${lines === 1 ? 'line' : 'lines'} drawn to it will be removed.`;
@@ -312,6 +334,8 @@ export interface ClientActionMachine {
     content: Partial<ContentMachine>;
     files: Partial<FilesMachine>;
     pages: Partial<PageMachine>;
+    projects: Partial<ProjectMachine>;
+    machine: Partial<MachineReach>;
 }
 
 const LIVE_MACHINE: ClientActionMachine = {
@@ -325,11 +349,13 @@ const LIVE_MACHINE: ClientActionMachine = {
     sessions: {},
     content: {},
     files: {},
-    pages: {}
+    pages: {},
+    projects: {},
+    machine: {}
 };
 
 export const createClientActionRegistry = (document: StoreApi<DocumentState>, machine: Partial<ClientActionMachine> = {}): ActionRegistry<void> => {
-    const { sendChat, clearChat, clearTerminal, providers, copyViewContent, viewDeletion, developer, sessions, content, files, pages } = {
+    const { sendChat, clearChat, clearTerminal, providers, copyViewContent, viewDeletion, developer, sessions, content, files, pages, projects } = {
         ...LIVE_MACHINE,
         ...machine
     };
@@ -340,6 +366,8 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
         ...contentActions(document, content),
         ...filesActions(files),
         ...pageActions(document, pages),
+        ...projectActions(document, projects),
+        ...machineActions(machine.machine),
         'target.resolve': (input) => ({ output: resolveTarget(document, input) }),
         'workspace.inspect': () => {
             const state = document.getState();
@@ -361,6 +389,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                         name: view.name ?? view.id,
                         kind: kindOf(view)
                     })),
+                    cells: cellsOf(state),
                     canvas:
                         active && current
                             ? {
@@ -618,13 +647,13 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
         },
         'canvas.select': ({ viewId, nodeIds }) => {
             const { view, canvas } = canvasOnScreen(document, viewId);
-            const nodes = nodeIds.map((nodeId) => canvas.nodes[nodeId]);
-            const missing = nodeIds.find((_nodeId, index) => nodes[index] === undefined);
+            const names = nodeIds.map((id) => canvas.nodes[id]?.title ?? canvas.texts[id]?.text);
+            const missing = nodeIds.find((_id, index) => names[index] === undefined);
             if (missing) {
-                throw new ActionRefusal('unknown-node', `No node with id “${missing}” exists on “${view.name}”.`);
+                throw new ActionRefusal('unknown-node', `No node or text with id “${missing}” exists on “${view.name}”.`);
             }
-            canvas.select(nodeIds);
-            return { output: { viewId, view: view.name, nodeIds, nodes: nodes.map((node) => node!.title) } };
+            canvas.select([...nodeIds]);
+            return { output: { viewId, view: view.name, nodeIds, nodes: names.map((name) => name!) } };
         },
         'node.delete': async ({ viewId, nodeIds }, { confirmed }) => {
             const { view, canvas } = canvasOnScreen(document, viewId);
@@ -977,6 +1006,35 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                       })
             };
         },
+        'view.setIcon': ({ viewId, icon }) => {
+            const state = document.getState();
+            const view = state.views.find((candidate) => candidate.id === viewId);
+            if (!view) {
+                throw unknownView(viewId);
+            }
+            if (!isOpenableView(view) || isUnknownView(view)) {
+                throw new ActionRefusal('not-markable', `“${view.name ?? viewId}” divides the sidebar and has no room for a mark.`);
+            }
+            if (icon !== null && !(PROJECT_ICON_NAMES as readonly string[]).includes(icon)) {
+                throw new ActionRefusal('unknown-icon', `“${icon}” is not one of the Lucide names the picker has.`);
+            }
+            const previous = viewIconOf(view);
+            const next: ProjectIconChoice | null = icon === null ? null : { kind: 'lucide', value: icon as ProjectIconChoice['value'] };
+            state.setViewIcon(viewId, next);
+            const iconOf = (): ProjectIconChoice | null => {
+                const current = document.getState().views.find((candidate) => candidate.id === viewId);
+                return current ? viewIconOf(current) : null;
+            };
+            return {
+                output: { viewId, kind: kindOf(view), icon: next },
+                undo: () => {
+                    if (iconOf()?.value !== next?.value) {
+                        throw new ActionRefusal('stale-undo', `The mark of “${view.name ?? viewId}” changed again since.`);
+                    }
+                    document.getState().setViewIcon(viewId, previous);
+                }
+            };
+        },
         'layout.save': ({ viewId, name }, { confirmed }) => {
             const { view, canvas } = canvasOnScreen(document, viewId);
             const previous = canvas.layouts.find((layout) => layout.name === name) ?? null;
@@ -1096,6 +1154,38 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             }
             return { output: { viewId, view: cellName(state, viewId), changed: !isSameCell(before, after.focus) } };
         },
+        'split.placeView': ({ viewId, paths, cellViewId, zone }, call) => {
+            const state = document.getState();
+            const layout = state.layout;
+            if (layout === null) {
+                throw new ActionRefusal('no-grid', 'No view is open.');
+            }
+            if ((viewId === null) === (paths === null)) {
+                throw new ActionRefusal('view-or-files', 'Name a view or files, one of the two.');
+            }
+            const at = cellViewId === null ? layout.focus : locateView(layout, cellViewId);
+            const standing = at === null ? null : cellAt(layout, at);
+            if (at === null || standing === null) {
+                throw new ActionRefusal('view-not-shown', `“${cellName(state, cellViewId ?? '')}” does not stand in a cell.`);
+            }
+            if (viewId !== null) {
+                const view = state.views.find((candidate) => candidate.id === viewId);
+                if (viewId !== FILES_VIEW_ID && (!view || !isOpenableView(view))) {
+                    throw unknownView(viewId);
+                }
+            }
+            const folder = useProject.getState().current?.folder ?? null;
+            // Every path is checked before the first view is made, so a refusal leaves the sidebar as it was.
+            const stored = (paths ?? []).map((path) => storedPathOf(folder, projectPathOf(folder, path, call.actor.kind)));
+            if (!canSplit(layout, at, zone, viewId)) {
+                throw new ActionRefusal('no-room', 'The grid has no room there, or the view already stands in that cell.');
+            }
+            // A file of its own, not a tab: every path becomes a view the sidebar lists, and the first takes the place.
+            const created = stored.map((path) => state.addFileView(basenameOf(path), path, false));
+            const target = viewId ?? created[0]!;
+            document.getState().dropViewAt(target, at, zone);
+            return { output: { viewId: target, view: cellName(document.getState(), target), cellViewId: standing.viewId, zone, created } };
+        },
         'terminal.clear': ({ terminalId }, { confirmed }) => {
             const terminal = sessionTitle(document, terminalId, 'terminal');
             if (terminal === null) {
@@ -1210,6 +1300,19 @@ export const performAsPerson = async <Name extends ActionName>(name: Name, input
         throw new ActionRefusal('confirmation-required', `“${name}” asked a person for a confirmation their own dialog should have given.`);
     }
     return result.output;
+};
+
+/* `performAsPerson` for an action whose question the person's own dialog already answered. */
+export const performConfirmedAsPerson = async <Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name>> => {
+    const asked = await clientActions.execute(name, input, PERSON_ACTION_CALL);
+    const result = asked.status === 'needs_confirmation' ? await clientActions.confirm(asked.confirmationToken, true, PERSON_ACTION_CALL) : asked;
+    if (result.status === 'failed') {
+        throw new ActionRefusal(result.error.code, result.error.message, result.error.details);
+    }
+    if (result.status === 'needs_confirmation') {
+        throw new ActionRefusal('confirmation-loop', `“${name}” asked a second time.`);
+    }
+    return result.output as ActionOutput<Name>;
 };
 
 /* The prompt cards answer as the person whose click it was, through the actions Voice asks for too. */
@@ -1469,6 +1572,50 @@ export const closeCellAction = (viewId: string | null = null): void => {
 
 export const focusCellAction = (direction: SplitDirection): void => {
     void runAsPerson('split.focus', { direction });
+};
+
+/* A drop on a cell: `cellViewId` is the view standing in the cell it landed on. */
+export const placeViewAction = (viewId: string, cellViewId: string, zone: SplitZone): void => {
+    void runAsPerson('split.placeView', { viewId, paths: null, cellViewId, zone });
+};
+
+export const placeFilesAction = (paths: readonly string[], cellViewId: string, zone: SplitZone): void => {
+    if (paths.length > 0) {
+        void runAsPerson('split.placeView', { viewId: null, paths: [...paths], cellViewId, zone });
+    }
+};
+
+/*
+ * Everything on the canvas, text included. Like a delete, a store that is not the canvas's own editor
+ * (a canvas shown inside another view) selects in place.
+ */
+export const selectAllAction = (store: StoreApi<CanvasState>): void => {
+    const canvas = store.getState();
+    const ids = [...canvas.order, ...Object.keys(canvas.texts)];
+    if (canvas.viewId !== null && defaultCanvases.peek(canvas.viewId) === store && ids.length > 0) {
+        void runAsPerson('canvas.select', { viewId: canvas.viewId, nodeIds: ids });
+        return;
+    }
+    canvas.select(ids);
+};
+
+/* The switch screen says how an open goes, so a refusal here stays quiet like every other person's action. */
+export const openProjectAction = (endpointId: string, projectId: string): void => {
+    void runAsPerson('project.switch', { endpointId, projectId });
+};
+
+export const openFolderAction = (endpointId: string, folder: string, createFolder: boolean): void => {
+    void runAsPerson('project.create', { endpointId, folder, createFolder });
+};
+
+/* The cancel button of a git run: the run is named by the id its progress streams under. */
+export const cancelGitRunAction = (runId: string): void => {
+    void runAsPerson('operation.cancel', { operationId: `${GIT_OPERATION}${runId}` });
+};
+
+/* Null takes the mark away. */
+export const setViewIconAction = (viewId: string, icon: ProjectIconChoice | null): void => {
+    void runAsPerson('view.setIcon', { viewId, icon: icon?.value ?? null });
 };
 
 /* A person's key or menu row is the answer, as a terminal's own Cmd+K always was. */

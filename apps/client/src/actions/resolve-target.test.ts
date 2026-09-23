@@ -119,7 +119,7 @@ describe('resolveTarget', () => {
         expect(resolve({ target: 'agent', names: ['Research (Release)'] }).found).toMatchObject([{ id: 'release-chat', viewId: 'release' }]);
     });
 
-    test('a project resolves among open projects, narrowed by machine', () => {
+    test('a project resolves among the listed ones, in use before Recent, narrowed by machine', () => {
         const summary = (projectId: string, name: string, closedAt: number | null): ProjectSummary => ({
             projectId,
             name,
@@ -146,6 +146,10 @@ describe('resolveTarget', () => {
         });
         expect(resolve({ target: 'project', names: ['Flux'] }).ambiguous[0]?.candidates).toHaveLength(2);
         expect(resolve({ target: 'project', names: ['Flux'], machine: 'laptop' }).found).toMatchObject([{ id: 'p2', endpointId: 'two', machine: 'Laptop' }]);
-        expect(resolve({ target: 'project', names: ['Closed'] }).missing).toEqual(['Closed']);
+        expect(resolve({ target: 'project', names: ['Closed'] }).found).toMatchObject([{ id: 'p3' }]);
+        useProjectList.setState({
+            projects: [...useProjectList.getState().projects, { endpointId: 'two', summary: summary('p4', 'Flux', 2) }]
+        });
+        expect(resolve({ target: 'project', names: ['Flux'], machine: 'laptop' }).found).toMatchObject([{ id: 'p2' }]);
     });
 });

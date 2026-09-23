@@ -1,15 +1,12 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
-import { isCanvasView, isRecentProject, type AgentStatus } from '@ruimte/contracts';
+import { isCanvasView, type AgentStatus } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { agentActivity } from '@/actions/agent-activity';
-import type { openProject } from '@/project/open';
 import { chatWorking, sessionWorking } from '@/state/agent-work';
 import { focusedCanvas, liveCanvas } from '@/state/canvas';
 import { activeViewOf, type DocumentState } from '@/state/document';
-import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { useProjectList } from '@/state/project-list';
 import { transportFor } from '@/transport';
 import { chatClientFor } from '@/transport/connections';
 
@@ -40,23 +37,7 @@ export function projectAgents(document: StoreApi<DocumentState>) {
     });
 }
 
-export function openVoiceProjects() {
-    const current = useProject.getState();
-    return useProjectList
-        .getState()
-        .projects.filter((row) => !isRecentProject(row.summary))
-        .map(({ endpointId, summary }) => ({
-            endpointId,
-            projectId: summary.projectId,
-            name: summary.name,
-            machine: useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? endpointId,
-            active: current.currentEndpointId === endpointId && current.current?.projectId === summary.projectId,
-            available: summary.available
-        }));
-}
-
 interface InspectionDependencies {
-    switchProject: typeof openProject;
     transport: typeof transportFor;
 }
 
@@ -119,22 +100,6 @@ export function inspectionActions(document: StoreApi<DocumentState>, dependencie
                 throw new ActionRefusal('tool-not-found', 'That tool call is not in the available recent history. Inspect recent activity first.');
             }
             return { output: { agent: target.name, supported: true, ...activity, truncated: activity.truncated || snapshot.history?.cursor != null } };
-        },
-        'projects.list-open': () => ({ output: { projects: openVoiceProjects() } }),
-        'project.switch': async ({ endpointId, projectId }) => {
-            const target = openVoiceProjects().find((row) => row.endpointId === endpointId && row.projectId === projectId);
-            if (!target || !target.available) {
-                throw new ActionRefusal('project-unavailable', 'Choose an available project from the open project list.');
-            }
-            const { openProject, projectSwitch } = await import('@/project/open');
-            if (!['idle', 'failed'].includes(projectSwitch.store.getState().kind)) {
-                throw new ActionRefusal('project-switching', 'Another project switch is in progress. Wait for it to finish.');
-            }
-            const outcome = await (dependencies.switchProject ?? openProject)(endpointId, projectId);
-            if (outcome !== 'done') {
-                throw new ActionRefusal('project-switch-failed', `Project switch ${outcome}. Do not claim the target is open.`);
-            }
-            return { output: { project: target.name, endpointId, projectId } };
         }
     };
 }

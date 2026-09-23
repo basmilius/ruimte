@@ -101,7 +101,7 @@ const iconSub = defineActionVerb('view', {
     flags: z.object({}),
     async run({ positionals: [id, value] }, call) {
         const marked = await runAction(call, 'view.setIcon', { viewId: id, icon: value });
-        return [`${id}\t${marked.kind}\t${marked.icon.kind}\t${field(marked.icon.value)}`];
+        return [`${id}\t${marked.kind}\tlucide\t${field(marked.icon?.value ?? value)}`];
     }
 });
 

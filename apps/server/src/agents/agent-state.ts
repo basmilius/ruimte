@@ -7,7 +7,7 @@ import type { AgentLineageStore } from './lineage.ts';
 export interface AgentStateSources {
     outbox: Pick<OutboxStore, 'list'>;
     lineage: Pick<AgentLineageStore, 'endedAt'>;
-    chats: Pick<ChatManager, 'get' | 'hasStored'>;
+    chats: Pick<ChatManager, 'get' | 'hasStored' | 'cancel'>;
     sessions: Pick<SessionManager, 'get'>;
 }
 
@@ -35,5 +35,13 @@ export const agentStates = (sources: AgentStateSources): AgentStateHost => ({
         }
         // A chat nobody has loaded is idle: its thread is on disk and a turn opens on it.
         return (await sources.chats.hasStored(nodeId)) ? 'idle' : 'none';
+    },
+    cancelTurn: (nodeId) => {
+        const status = sources.chats.get(nodeId)?.info.status;
+        if (status !== 'running' && status !== 'needs-you') {
+            return false;
+        }
+        sources.chats.cancel(nodeId);
+        return true;
     }
 });

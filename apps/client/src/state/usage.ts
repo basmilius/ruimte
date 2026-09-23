@@ -53,7 +53,7 @@ const chosen = (state: Preferences): Preferences => ({ period: state.period, met
 const pad = (value: number): string => String(value).padStart(2, '0');
 
 /* The viewer's own calendar day; the daemon may stand in another zone and buckets in this one. */
-const dayOf = (date: Date): string => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+export const dayOf = (date: Date): string => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
 /*
  * What a period asks for. Today counts from local midnight in hours, the way the commit log already

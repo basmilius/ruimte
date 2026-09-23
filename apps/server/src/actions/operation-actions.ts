@@ -1,6 +1,6 @@
 import { OPERATION_ACTIONS, type ActionHandlers, type ActionOutput, type OperationStatus } from '@ruimte/actions';
 import type { Task } from '@ruimte/contracts';
-import { VerbRefusal, type AgentState, type CanvasHost } from '../canvas/verb.ts';
+import { VerbRefusal, type AgentState, type AgentStateHost, type CanvasHost } from '../canvas/verb.ts';
 import type { ServerActionContext } from './context.ts';
 
 type OperationAction = (typeof OPERATION_ACTIONS)[number];
@@ -76,6 +76,23 @@ const overall = (statuses: readonly OperationStatus[]): OperationStatus => {
     return statuses.every((status) => status === 'cancelled') ? 'cancelled' : 'completed';
 };
 
+type CancelLine = ActionOutput<'operation.cancel'>['operations'][number];
+
+/* What a cancel does to one node a start made: only a chat's turn stops, and a terminal is left to a person. */
+const cancelNode = async (agents: AgentStateHost, operationId: string, nodeId: string): Promise<CancelLine> => {
+    const state = await agents.stateOf(nodeId);
+    if (agents.cancelTurn(nodeId)) {
+        return { operationId, status: 'cancelled', detail: `${nodeId}: its turn stopped unfinished; the chat, its thread and its task stay` };
+    }
+    if (state === 'owed') {
+        return { operationId, status: 'left', detail: `${nodeId}: its start is owed and runs next, and a cancel does not take a start back` };
+    }
+    if (state === 'running' || state === 'needs-you') {
+        return { operationId, status: 'left', detail: `${nodeId}: a terminal agent keeps running, since nothing sends it a signal a person did not press` };
+    }
+    return { operationId, status: 'over', detail: `${nodeId}: nothing runs in it now` };
+};
+
 export const operationActions: ActionHandlers<ServerActionContext> = {
     'operation.get': async ({ operationId }, { actor, context }) => {
         const { host } = context;
@@ -112,5 +129,36 @@ export const operationActions: ActionHandlers<ServerActionContext> = {
         return {
             output: { operationId, action: parsed.action, status: overall(known.map((row) => row.status)), agents: known }
         };
+    },
+    'operation.cancel': async ({ operationId }, { actor, context }) => {
+        const { host } = context;
+        const parsed = operationId === null ? null : parseOperationId(operationId);
+        if (operationId === null || !parsed) {
+            throw new VerbRefusal('unknown-operation', `${operationId ?? 'nothing'} is not an operation of yours; agent and team answer with one`, [
+                ...OPERATION_FORMS
+            ]);
+        }
+        const agents = host.agents;
+        if (agents === undefined) {
+            throw new VerbRefusal('no-operations', 'This machine cannot tell what runs in an agent node');
+        }
+        const lines: CancelLine[] = [];
+        let yours = 0;
+        for (const nodeId of parsed.nodeIds) {
+            const placed = host.locate(nodeId) !== null;
+            if (startTask(host, actor.id, nodeId) === undefined && host.madeBy(nodeId) !== actor.id) {
+                if (placed) {
+                    throw new VerbRefusal('not-yours', `${nodeId} is not an agent you opened, so ${operationId} is not yours to cancel`);
+                }
+                lines.push({ operationId, status: 'over', detail: `${nodeId}: the node is gone` });
+                continue;
+            }
+            yours += 1;
+            lines.push(placed ? await cancelNode(agents, operationId, nodeId) : { operationId, status: 'over', detail: `${nodeId}: the node is gone` });
+        }
+        if (yours === 0) {
+            throw new VerbRefusal('unknown-operation', `${operationId} names no agent you opened that is still here`, [...OPERATION_FORMS]);
+        }
+        return { output: { operations: lines } };
     }
 };

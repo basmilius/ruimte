@@ -51,8 +51,7 @@ const hasParentStep = (path: string): boolean => path.split(/[\\/]/).includes('.
  * a view can show; anyone else stays inside the project folder, since a read hands the bytes to a
  * model outside this machine.
  */
-const resolvedPath = (machine: FilesMachine, path: string, actor: ActionActorKind): string => {
-    const folder = machine.folder();
+export const projectPathOf = (folder: string | null, path: string, actor: ActionActorKind): string => {
     const absolute = isAbsolutePath(path) ? path : folder === null ? null : absoluteOf(folder, path);
     if (absolute === null) {
         throw new ActionRefusal('no-folder', 'This project has no folder, so a path has to be absolute.');
@@ -62,6 +61,8 @@ const resolvedPath = (machine: FilesMachine, path: string, actor: ActionActorKin
     }
     return absolute;
 };
+
+const resolvedPath = (machine: FilesMachine, path: string, actor: ActionActorKind): string => projectPathOf(machine.folder(), path, actor);
 
 /*
  * What a person does with the files of a project, as actions: the files panel, its search, find in

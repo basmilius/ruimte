@@ -23,12 +23,15 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
         name: 'inspect_workspace',
         description: 'Read the current project, its views, the active canvas and its selection, or resolve spoken names to the ids every other tool takes.'
     },
-    views: { name: 'manage_views', description: 'Focus, create, rename, duplicate or delete views, or bring a view onto the canvas.' },
+    views: { name: 'manage_views', description: 'Focus, create, rename, mark, duplicate or delete views, or bring a view onto the canvas.' },
     canvas: {
         name: 'manage_canvas',
         description: 'Create, focus, rename, select, group, move or delete nodes on the active canvas, and control its camera, history and locks.'
     },
-    layout: { name: 'manage_layout', description: 'Save, apply or delete layouts of the active canvas, and split, close or move between the cells on screen.' },
+    layout: {
+        name: 'manage_layout',
+        description: 'Save, apply or delete layouts of the active canvas, and split, close, fill or move between the cells of the grid on screen.'
+    },
     communicate: { name: 'communicate', description: 'Send a direct prompt to, read or clear an AI Chat, or read or clear a terminal.' },
     sessions: {
         name: 'run_sessions',
@@ -37,11 +40,14 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
     },
     plans: { name: 'manage_plans', description: 'Read the plans of an AI Chat, set the state of its steps and write a note on a step.' },
     agents: { name: 'inspect_agents', description: 'Read the status of the agents in this project and the tool calls of an AI Chat.' },
-    projects: { name: 'manage_projects', description: 'List the projects open in the project navigation or switch to one of them.' },
+    projects: {
+        name: 'manage_projects',
+        description: 'List the projects in use and under Recent, open or close one, rename it or change its icon, and read its settings.'
+    },
     developer: {
         name: 'manage_git',
         description:
-            'Read and change the git repositories and worktrees of this project: status, diffs, history, branches, staging, commits, fetch, pull, push, merges, stashes, pull requests and worktrees. Repositories are named by the label git.status gives them.'
+            'Read and change the git repositories and worktrees of this project: status, diffs, history, branches, staging, commits, fetch, pull, push, merges, stashes, pull requests and worktrees, and cancel a git run of yours that still goes. Repositories are named by the label git.status gives them.'
     },
     files: {
         name: 'browse_files',
@@ -57,6 +63,11 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
         name: 'browse_pages',
         description:
             'Drive the page of a browser node or view by its address only: read where it stands, go to an address, go back or forward, reload or stop loading. Nothing here clicks, types or scrolls in a page.'
+    },
+    machine: {
+        name: 'inspect_machine',
+        description:
+            'Read what runs on the machine of this project and the warnings about it, put a warning away, and read what the AI CLIs used and how far their plan windows are. Nothing here stops or signals a process.'
     }
 };
 
@@ -226,4 +237,12 @@ export const VOICE_TOOL_ACTIONS: ReadonlyMap<string, readonly ActionName[]> = ne
     DOMAIN_ACTIONS.map(({ domain, actions }) => [DOMAIN_TOOLS[domain].name, actions])
 );
 
-export const VOICE_TOOL_DEFINITIONS: readonly VoiceToolDefinition[] = [...DOMAIN_ACTIONS.map(({ domain, actions }) => toolOf(domain, actions)), CONTROL_TOOL];
+const DOMAIN_DEFINITIONS = DOMAIN_ACTIONS.map(({ domain, actions }) => ({ domain, tool: toolOf(domain, actions) }));
+
+export const VOICE_TOOL_DEFINITIONS: readonly VoiceToolDefinition[] = [...DOMAIN_DEFINITIONS.map(({ tool }) => tool), CONTROL_TOOL];
+
+/* The tools of these domains and the control tool; every call is still checked by the registry, whatever was sent. */
+export const voiceToolsFor = (domains: readonly ActionDomain[]): VoiceToolDefinition[] => [
+    ...DOMAIN_DEFINITIONS.filter(({ domain }) => domains.includes(domain)).map(({ tool }) => tool),
+    CONTROL_TOOL
+];

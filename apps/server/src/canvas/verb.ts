@@ -94,6 +94,8 @@ export type AgentState = 'owed' | 'ended' | 'none' | AgentStatus;
 
 export interface AgentStateHost {
     stateOf(nodeId: string): Promise<AgentState>;
+    /* Stops the turn a chat node is working on; false when it is no chat or has no turn going. */
+    cancelTurn(nodeId: string): boolean;
 }
 
 /*

@@ -129,7 +129,7 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
         });
     },
     'view.setIcon': async ({ viewId, icon: name }, { context }) => {
-        const icon = iconChoice(name);
+        const icon = name === null ? null : iconChoice(name);
         return context.host.mutate(context.place.projectId, (content) => {
             const view = viewNamed(content, viewId, 'view icon');
             if (isDividerView(view)) {
@@ -138,7 +138,7 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
             const views = withViewIcon(content.views, viewId, icon);
             return {
                 content: views === null ? null : { ...content, views },
-                result: { output: { viewId, kind: kindOf(view), icon: { kind: 'lucide' as const, value: icon.value } } }
+                result: { output: { viewId, kind: kindOf(view), icon: icon === null ? null : { kind: 'lucide' as const, value: icon.value } } }
             };
         });
     },

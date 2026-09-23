@@ -10,7 +10,7 @@ import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useSettings } from '@/state/settings';
-import { executeVoiceTool } from '@/voice/tools';
+import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
 
 const main: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] };
 
@@ -79,7 +79,7 @@ describe('Voice domain tools', () => {
         expect(cancelled.output.ok).toBe(false);
     });
 
-    test('switches only between open projects, by the ids a resolve returns', async () => {
+    test('lists projects in use and under Recent, and resolves a name to one in use before one under Recent', async () => {
         const summary = (projectId: string, name: string, closedAt: number | null): ProjectSummary => ({
             projectId,
             name,
@@ -98,13 +98,13 @@ describe('Voice domain tools', () => {
                 { endpointId: 'one', summary: summary('p3', 'Closed', 1) }
             ]
         });
-        const listed = await run('manage_projects', { action: 'projects.list-open' });
+        const listed = await run('manage_projects', { action: 'project.list' });
         expect(listed.output.ok).toBe(true);
-        expect(listed.output.projects).toHaveLength(2);
+        expect(listed.output.projects).toHaveLength(3);
         const ambiguous = await run('inspect_workspace', { action: 'target.resolve', target: 'project', names: ['Flux'] });
         expect(ambiguous.output).toMatchObject({ ok: true, found: [], ambiguous: [{ name: 'Flux', candidates: [{ id: 'p1' }, { id: 'p2' }] }] });
-        const closed = await run('manage_projects', { action: 'project.switch', endpointId: 'one', projectId: 'p3' });
-        expect(closed.output).toMatchObject({ ok: false, code: 'project-unavailable' });
+        const recent = await run('inspect_workspace', { action: 'target.resolve', target: 'project', names: ['Closed'] });
+        expect(recent.output).toMatchObject({ ok: true, found: [{ id: 'p3' }] });
     });
 
     test('offline agent status is unknown rather than idle or successful', async () => {
@@ -317,5 +317,12 @@ describe('Voice domain tools', () => {
             ],
             truncated: true
         });
+    });
+
+    test('only a cancel runs beside the queue, since it is for the run the queue waits on', () => {
+        expect(bypassesQueue('manage_git', JSON.stringify({ action: 'operation.cancel', operationId: null }))).toBe(true);
+        expect(bypassesQueue('manage_git', JSON.stringify({ action: 'git.push', repository: null }))).toBe(false);
+        expect(bypassesQueue('manage_views', JSON.stringify({ action: 'operation.cancel' }))).toBe(false);
+        expect(bypassesQueue('manage_git', 'not json')).toBe(false);
     });
 });

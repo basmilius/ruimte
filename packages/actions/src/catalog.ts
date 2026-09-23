@@ -39,9 +39,14 @@ import {
     PlanSchema,
     PLAN_LIMITS,
     PlanStepStateSchema,
+    ProcessAlertKindSchema,
+    ProcessGroupKindSchema,
+    ProcessSignalSchema,
+    ProjectSettingsSchema,
     RuntimeModeSchema,
     TaskSchema,
     UNKNOWN_KIND,
+    UsageProviderSchema,
     WorktreeSchema
 } from '@ruimte/contracts';
 import { z } from 'zod';
@@ -64,7 +69,8 @@ export const ACTION_DOMAINS = [
     'developer',
     'files',
     'content',
-    'pages'
+    'pages',
+    'machine'
 ] as const;
 export type ActionDomain = (typeof ACTION_DOMAINS)[number];
 
@@ -264,6 +270,11 @@ const gitRunsOutput = z.object({
 const pullStrategy = forActors(PERSON, z.enum(['merge', 'rebase'])).describe('How a branch that moved on both sides comes together');
 const PERSON_VOICE_AND_AGENT: readonly ActionActorKind[] = ['person', 'voice', 'agent'];
 
+const projectMachine = z.string().min(1).describe('The machine, by the endpointId project.list gives');
+const listedProjectId = z.string().min(1).describe('The project, by the projectId project.list gives');
+
+const usageDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
 export const TARGET_KINDS = ['view', 'node', 'chat', 'agent', 'project'] as const;
 const resolvedTarget = z.object({
     id: z.string(),
@@ -328,9 +339,9 @@ export const ACTION_DEFINITIONS = {
             )
         })
     },
-    'projects.list-open': {
-        title: 'List open projects',
-        description: 'Lists projects in use in the project navigation, excluding Recent.',
+    'project.list': {
+        title: 'List projects',
+        description: 'Lists the projects of every machine this window knows: the ones in use, and the ones under Recent that a person closed.',
         effect: 'read',
         domain: 'projects',
         actors: CLIENT_ACTORS,
@@ -342,6 +353,8 @@ export const ACTION_DEFINITIONS = {
                     projectId: z.string(),
                     name: z.string(),
                     machine: z.string(),
+                    folder: z.string(),
+                    recent: z.boolean(),
                     active: z.boolean(),
                     available: z.boolean()
                 })
@@ -349,17 +362,91 @@ export const ACTION_DEFINITIONS = {
         })
     },
     'project.switch': {
-        title: 'Switch open project',
-        description: 'Switches this window to an existing open project.',
+        title: 'Open project',
+        description: 'Shows a project of the list in this window. One under Recent comes back into use.',
         effect: 'local',
         domain: 'projects',
-        actors: ['person', 'voice'] as readonly ActionActorKind[],
-        input: z.object({ endpointId: z.string().min(1), projectId: z.string().min(1) }),
+        actors: PERSON_AND_VOICE,
+        input: z.object({ endpointId: projectMachine, projectId: listedProjectId }),
         output: z.object({ project: z.string(), endpointId: z.string(), projectId: z.string() })
+    },
+    'project.close': {
+        title: 'Close project',
+        description:
+            'Puts a project of the list under Recent in this window, after confirmation. Its sessions end only when no other client still has it open; the confirmation says which.',
+        effect: 'shared',
+        domain: 'projects',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ endpointId: projectMachine, projectId: listedProjectId }),
+        output: z.object({
+            project: z.string(),
+            endpointId: z.string(),
+            projectId: z.string(),
+            // Null when the machine could not be asked, so only this window let go of it.
+            sessions: z.number().int().nullable(),
+            otherClients: z.number().int().nullable()
+        })
+    },
+    'project.create': {
+        title: 'Open folder as project',
+        description: 'Opens a folder on a machine as a project in this window, and makes the folder first when asked to.',
+        effect: 'shared',
+        domain: 'projects',
+        actors: PERSON,
+        input: z.object({
+            endpointId: projectMachine,
+            folder: z.string().min(1).describe('An absolute path on that machine'),
+            createFolder: z.boolean().nullable()
+        }),
+        output: z.object({ project: z.string(), endpointId: z.string(), folder: z.string() })
+    },
+    'project.delete': {
+        title: 'Delete project',
+        description: 'Removes a project from its machine after confirmation. A folder keeps every file but, when asked, its canvas file.',
+        effect: 'shared',
+        domain: 'projects',
+        actors: PERSON,
+        input: z.object({ endpointId: projectMachine, projectId: listedProjectId, removeFiles: z.boolean().nullable() }),
+        output: z.object({ project: z.string(), endpointId: z.string(), projectId: z.string() })
+    },
+    'project.setAppearance': {
+        title: 'Change project name or icon',
+        description: 'Renames a project of the list, or gives it a Lucide icon from the set the picker has, or folder for what the folder itself declares.',
+        effect: 'shared',
+        domain: 'projects',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            endpointId: projectMachine,
+            projectId: listedProjectId,
+            name: givenName.nullable(),
+            icon: z.string().min(1).nullable().describe('A Lucide name, or folder'),
+            image: forActors(PERSON, z.object({ mime: z.string().min(1), base64: z.string().min(1) })).describe(
+                'An image the icon becomes, written into the folder'
+            )
+        }),
+        output: z.object({ project: z.string(), endpointId: z.string(), projectId: z.string(), icon: z.string() })
+    },
+    'project.readSettings': {
+        title: 'Read project settings',
+        description: 'Reads the settings file of the project in this window: which paths every new worktree links in.',
+        effect: 'read',
+        domain: 'projects',
+        actors: PERSON_AND_VOICE,
+        input: z.object({}),
+        output: ProjectSettingsSchema
+    },
+    'project.updateSettings': {
+        title: 'Change project settings',
+        description: 'Writes the settings it names into the settings file of the project in this window and keeps every other key.',
+        effect: 'shared',
+        domain: 'projects',
+        actors: PERSON,
+        input: z.object({ settings: ProjectSettingsSchema }),
+        output: ProjectSettingsSchema
     },
     'workspace.inspect': {
         title: 'Inspect workspace',
-        description: 'Reads the current project, active view, openable views, active canvas nodes and selection.',
+        description: 'Reads the current project, active view, openable views, the cells of the split grid on screen, active canvas nodes and selection.',
         effect: 'read',
         domain: 'workspace',
         actors: CLIENT_ACTORS,
@@ -380,6 +467,8 @@ export const ACTION_DEFINITIONS = {
                     kind: ActionViewKindSchema
                 })
             ),
+            // Column by column, top to bottom; a cell is named by the view standing in it.
+            cells: z.array(z.object({ viewId, view: z.string(), column: z.number().int(), cell: z.number().int(), focused: z.boolean() })),
             canvas: z
                 .object({
                     viewId,
@@ -405,7 +494,7 @@ export const ACTION_DEFINITIONS = {
     'target.resolve': {
         title: 'Resolve names',
         description:
-            'Turns spoken or typed names of views, nodes on the active canvas, AI Chats, agents or open projects into ids. A name that fits more than one comes back under ambiguous with every candidate, never as the first of them. Without names it returns the current ones: the active view, the nodes in scope (the selection unless a scope is given), the active or selected AI Chat, the selected agent or the active project. Scope and nodeKind narrow nodes, machine narrows projects.',
+            'Turns spoken or typed names of views, nodes on the active canvas, AI Chats, agents or projects (a project in use before one under Recent) into ids. A name that fits more than one comes back under ambiguous with every candidate, never as the first of them. Without names it returns the current ones: the active view, the nodes in scope (the selection unless a scope is given), the active or selected AI Chat, the selected agent or the active project. Scope and nodeKind narrow nodes, machine narrows projects.',
         effect: 'read',
         domain: 'workspace',
         actors: PERSON_AND_VOICE,
@@ -583,7 +672,7 @@ export const ACTION_DEFINITIONS = {
     },
     'canvas.select': {
         title: 'Select canvas nodes',
-        description: 'Replaces the active canvas selection with specific nodes.',
+        description: 'Replaces the active canvas selection with specific nodes and text elements, all named in nodeIds.',
         effect: 'local',
         domain: 'canvas',
         actors: CLIENT_ACTORS,
@@ -592,6 +681,7 @@ export const ACTION_DEFINITIONS = {
             viewId,
             view: viewName,
             nodeIds: z.array(z.string().min(1)),
+            // A text element reads as its text.
             nodes: z.array(z.string())
         })
     },
@@ -807,6 +897,21 @@ export const ACTION_DEFINITIONS = {
         actors: PERSON_AND_VOICE,
         input: z.object({ direction: z.enum(['left', 'right', 'up', 'down']) }),
         output: z.object({ viewId, view: z.string(), changed: z.boolean() })
+    },
+    'split.placeView': {
+        title: 'Place view in grid',
+        description:
+            'Puts a view, or files that each become a file view of their own, against an edge of a cell of the grid, which splits it, or in its center, which takes the cell. A view already on screen moves there, and the one it replaces in the center moves to where it came from.',
+        effect: 'local',
+        domain: 'layout',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            viewId: viewId.nullable().describe('A view of the project'),
+            paths: z.array(filePath).min(1).nullable().describe('Files instead of a view; the first takes the place'),
+            cellViewId: viewId.nullable().describe('The cell, by the view standing in it as workspace.inspect lists the cells; null for the focused cell'),
+            zone: z.enum(['left', 'right', 'up', 'down', 'center'])
+        }),
+        output: z.object({ viewId, view: z.string(), cellViewId: viewId, zone: z.string(), created: z.array(viewId) })
     },
     'terminal.clear': {
         title: 'Clear terminal',
@@ -1147,12 +1252,12 @@ export const ACTION_DEFINITIONS = {
     },
     'view.setIcon': {
         title: 'Mark view',
-        description: 'Gives a view a mark of its own from the Lucide names the picker has.',
+        description: 'Gives a view a mark of its own from the Lucide names the picker has, or takes its mark away with null.',
         effect: 'shared',
         domain: 'views',
-        actors: AGENT,
-        input: z.object({ viewId, icon: z.string().min(1).describe('A Lucide name from the set the picker has') }),
-        output: z.object({ viewId, kind: ActionViewKindSchema, icon: z.object({ kind: z.literal('lucide'), value: z.string() }) })
+        actors: PERSON_VOICE_AND_AGENT,
+        input: z.object({ viewId, icon: z.string().min(1).nullable().describe('A Lucide name from the set the picker has') }),
+        output: z.object({ viewId, kind: ActionViewKindSchema, icon: z.object({ kind: z.literal('lucide'), value: z.string() }).nullable() })
     },
     'view.move': {
         title: 'Move view',
@@ -1664,6 +1769,26 @@ export const ACTION_DEFINITIONS = {
             action: z.enum(OPERATION_ACTIONS),
             status: OperationStatusSchema,
             agents: z.array(z.object({ nodeId, status: OperationStatusSchema, taskId: z.string().nullable(), detail: z.string() }))
+        })
+    },
+    'operation.cancel': {
+        title: 'Cancel an operation',
+        description:
+            'Stops an operation of your own that still runs: a git run, or the turns an agent or team start set going. Nothing is rolled back; each line says what is left.',
+        agentDescription:
+            'Stops the turns an agent or team you started is working on. The chats and their tasks stay, a terminal agent is left running, and nothing is rolled back; each line says what is left.',
+        effect: 'shared',
+        domain: 'developer',
+        actors: PERSON_VOICE_AND_AGENT,
+        input: z.object({
+            operationId: z
+                .string()
+                .min(1)
+                .nullable()
+                .describe('git:<run> for a git run, agent.start:<id> or team.start:<id>,<id> for a start; null for every git run of yours still going')
+        }),
+        output: z.object({
+            operations: z.array(z.object({ operationId: z.string(), status: z.enum(['cancelled', 'over', 'left']), detail: z.string() }))
         })
     },
     'git.status': {
@@ -2405,6 +2530,114 @@ export const ACTION_DEFINITIONS = {
         actors: PERSON,
         input: z.object({ viewId: diagramView, format: imageFormat }),
         output: z.object({ viewId, view: z.string(), format: z.string() })
+    },
+    'process.list': {
+        title: 'Read processes',
+        description:
+            'Reads what runs on the machine of this project while its processes panel measures it: the machine as a whole and a group per node, with its busiest processes.',
+        effect: 'read',
+        domain: 'machine',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ limit: z.number().int().min(1).max(20).nullable().describe('Processes per group; 5 without it') }),
+        output: z.object({
+            at: z.number(),
+            cpu: z.number().nullable().describe('Percent of all cores'),
+            memoryUsed: z.number().nullable().describe('Bytes'),
+            memoryTotal: z.number(),
+            groups: z.array(
+                z.object({
+                    kind: ProcessGroupKindSchema,
+                    nodeId: z.string().nullable(),
+                    name: z.string(),
+                    cpu: z.number().nullable().describe('Percent of one core'),
+                    memory: z.number().nullable(),
+                    processes: z.array(z.object({ pid: z.number().int(), name: z.string(), cpu: z.number().nullable(), memory: z.number().nullable() })),
+                    more: z.number().int()
+                })
+            )
+        })
+    },
+    'process.alerts': {
+        title: 'Read process warnings',
+        description:
+            'Reads the warnings the machine of this project raised about what runs in it: an agent gone silent, still busy after its turn, a process eating memory, an agent whose process is gone, an orphan left behind, or a hung usage probe.',
+        effect: 'read',
+        domain: 'machine',
+        actors: PERSON_AND_VOICE,
+        input: z.object({}),
+        output: z.object({
+            alerts: z.array(
+                z.object({
+                    alertId: z.string(),
+                    kind: ProcessAlertKindSchema,
+                    nodeId: z.string().nullable(),
+                    node: z.string().nullable(),
+                    process: z.string().nullable(),
+                    since: z.number(),
+                    value: z.number().nullable().describe('Percent of one core for busy, bytes for memory')
+                })
+            )
+        })
+    },
+    'process.dismissAlert': {
+        title: 'Dismiss process warning',
+        description: 'Puts a warning away on the machine; the process it is about keeps running.',
+        effect: 'shared',
+        domain: 'machine',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ alertId: z.string().min(1).describe('The warning, by the alertId process.alerts gives') }),
+        output: z.object({ alertId: z.string(), kind: ProcessAlertKindSchema })
+    },
+    'process.signal': {
+        title: 'Signal process',
+        description: 'Sends a process on the machine SIGINT, SIGTERM or, after confirmation, SIGKILL. A pid that now names another process is refused.',
+        effect: 'external',
+        domain: 'machine',
+        actors: PERSON,
+        input: z.object({ pid: z.number().int().positive(), startTime: z.number(), name: z.string(), signal: ProcessSignalSchema }),
+        output: z.object({ pid: z.number().int(), name: z.string(), signal: ProcessSignalSchema })
+    },
+    'usage.summary': {
+        title: 'Read AI usage',
+        description:
+            'Reads what the AI CLIs on the machine of this project used over a stretch of days, from their own transcripts: tokens, cost where a price is known, and the models and projects that used most.',
+        effect: 'read',
+        domain: 'machine',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            from: usageDay.nullable().describe('The first day, YYYY-MM-DD; seven days back without it'),
+            to: usageDay.nullable().describe('The last day, YYYY-MM-DD; today without it')
+        }),
+        output: z.object({
+            from: z.string(),
+            to: z.string(),
+            tokens: z.number().int(),
+            // Null when no model used in the stretch has a known price, which is not the same as free.
+            costUsd: z.number().nullable(),
+            sessions: z.number().int(),
+            providers: z.array(z.object({ provider: UsageProviderSchema, tokens: z.number().int(), costUsd: z.number().nullable() })),
+            models: z.array(z.object({ provider: UsageProviderSchema, model: z.string(), tokens: z.number().int(), costUsd: z.number().nullable() })),
+            projects: z.array(z.object({ name: z.string(), tokens: z.number().int(), costUsd: z.number() }))
+        })
+    },
+    'usage.limits': {
+        title: 'Read plan limits',
+        description: 'Reads how far the plan windows of the AI CLIs on the machine of this project are used, as the CLIs report them.',
+        effect: 'read',
+        domain: 'machine',
+        actors: PERSON_AND_VOICE,
+        input: z.object({}),
+        output: z.object({
+            providers: z.array(
+                z.object({
+                    provider: UsageProviderSchema,
+                    plan: z.string().nullable(),
+                    checkedAt: z.number(),
+                    unavailable: z.string().nullable(),
+                    windows: z.array(z.object({ label: z.string(), kind: z.string(), usedPercent: z.number(), resetsAt: z.number().nullable() }))
+                })
+            )
+        })
     }
 } as const;
 

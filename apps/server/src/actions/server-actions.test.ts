@@ -340,7 +340,7 @@ describe('the daemon actions', () => {
                 {
                     ...host(),
                     locate: (id: string) => (nodesOnMain().includes(id) ? PLACE : null),
-                    agents: { stateOf: async (id: string) => states[id] ?? 'none' }
+                    agents: { stateOf: async (id: string) => states[id] ?? 'none', cancelTurn: () => false }
                 },
                 PLACE,
                 caller
@@ -369,6 +369,62 @@ describe('the daemon actions', () => {
             status: 'failed',
             error: { code: 'unknown-operation' }
         });
+    });
+
+    test('operation.cancel stops the turn of a chat its caller started, and leaves a terminal agent and an owed start running', async () => {
+        onMain({ id: 'chat-2', kind: 'chat', title: 'Helper', x: 700, y: 0, w: 560, h: 360 });
+        const states: Record<string, AgentState> = { 'chat-2': 'running', 'term-2': 'running' };
+        const stopped: string[] = [];
+        const call = (caller: string) =>
+            serverActionCall(
+                {
+                    ...host(),
+                    locate: (id: string) => (nodesOnMain().includes(id) ? PLACE : null),
+                    agents: {
+                        stateOf: async (id: string) => states[id] ?? 'none',
+                        cancelTurn: (id: string) => {
+                            if (id !== 'chat-2' || states[id] !== 'running') {
+                                return false;
+                            }
+                            stopped.push(id);
+                            return true;
+                        }
+                    }
+                },
+                PLACE,
+                caller
+            );
+        made.set('chat-2', 'term-1');
+        made.set('term-2', 'term-1');
+
+        expect(await serverActions.execute('operation.cancel', { operationId: 'team.start:chat-2,term-2' }, call('term-1'))).toMatchObject({
+            status: 'completed',
+            output: {
+                operations: [
+                    { status: 'cancelled', detail: expect.stringContaining('chat-2') },
+                    { status: 'left', detail: expect.stringContaining('signal a person did not press') }
+                ]
+            }
+        });
+        expect(stopped).toEqual(['chat-2']);
+        states['term-2'] = 'owed';
+        states['chat-2'] = 'idle';
+        expect(await serverActions.execute('operation.cancel', { operationId: 'team.start:chat-2,term-2' }, call('term-1'))).toMatchObject({
+            output: { operations: [{ status: 'over' }, { status: 'left', detail: expect.stringContaining('owed') }] }
+        });
+        expect(await serverActions.execute('operation.cancel', { operationId: 'agent.start:chat-2' }, call('term-9'))).toMatchObject({
+            status: 'failed',
+            error: { code: 'not-yours' }
+        });
+        expect(await serverActions.execute('operation.cancel', { operationId: null }, call('term-1'))).toMatchObject({
+            status: 'failed',
+            error: { code: 'unknown-operation' }
+        });
+        expect(await serverActions.execute('operation.cancel', { operationId: 'git:run-1' }, call('term-1'))).toMatchObject({
+            status: 'failed',
+            error: { code: 'unknown-operation' }
+        });
+        expect(stopped).toEqual(['chat-2']);
     });
 
     test('a browser page nobody holds is an answer and not an error, and only a line lets the caller drive it', async () => {

@@ -1,4 +1,13 @@
-import { ActionRefusal, type ActionCall, type ActionHandlers, type ActionOutput } from '@ruimte/actions';
+import {
+    ACTION_DEFINITIONS,
+    ActionRefusal,
+    type ActionActor,
+    type ActionCall,
+    type ActionHandler,
+    type ActionHandlers,
+    type ActionName,
+    type ActionOutput
+} from '@ruimte/actions';
 import {
     isCanvasView,
     type GitActionKind,
@@ -51,6 +60,11 @@ type GitRun = ActionOutput<'git.publishBranch'>;
 type GitRuns = ActionOutput<'git.push'>;
 type Call = ActionCall<void> & { confirmed: boolean };
 
+/* What operation.cancel names a git run by: the id its progress streams under. */
+export const GIT_OPERATION = 'git:';
+
+const sameActor = (left: ActionActor, right: ActionActor): boolean => left.kind === right.kind && left.id === right.id;
+
 /* A person's own dialogs already asked; everyone else answers the action's question first. */
 export const asksFirst = (call: Call): boolean => !call.confirmed && call.actor.kind !== 'person';
 
@@ -101,6 +115,7 @@ const filesLine = (paths: readonly string[]): string => {
  */
 export function developerActions(document: StoreApi<DocumentState>, overrides: Partial<DeveloperMachine> = {}): ActionHandlers<void> {
     const machine: DeveloperMachine = { ...LIVE_MACHINE, ...overrides };
+    const running = new Map<string, ActionActor>();
 
     const connected = (): Requester => {
         const transport = machine.transport();
@@ -211,7 +226,7 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
         const runs: GitRuns['runs'] = [];
         for (const checkout of checkouts) {
             try {
-                runs.push({ ...(await runKind(checkout, kind, extraOf(checkout), single ? run : null)), error: null });
+                runs.push({ ...(await runKind(checkout, kind, extraOf(checkout), run)), error: null });
             } catch (error: unknown) {
                 if (single) {
                     throw error;
@@ -250,7 +265,7 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
         };
     };
 
-    return {
+    const handlers: ActionHandlers<void> = {
         'git.status': async ({ repository }, call) => {
             const repos = await allRepos();
             const checkouts = repository == null ? visibleRepos(repos, machine.hiddenRepos()) : [await checkoutOf(repository, call)];
@@ -694,6 +709,55 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
             const worktree = await worktreeNamed(branch, false);
             const result = await ask('git.worktree-remove', { repo: projectFolder(), path: worktree.path, ...(force === true ? { force: true } : {}) });
             return { output: { branch, branchDeleted: result.branchDeleted ?? null, branchCommit: result.branchCommit ?? null } };
+        },
+        'operation.cancel': async ({ operationId }, call) => {
+            const mine = [...running].filter(([, actor]) => sameActor(actor, call.actor)).map(([run]) => run);
+            if (operationId !== null && !operationId.startsWith(GIT_OPERATION)) {
+                throw new ActionRefusal(
+                    'unknown-operation',
+                    `${operationId} is not a git run of this window; an agent or team start is its agent's to cancel.`
+                );
+            }
+            const run = operationId?.slice(GIT_OPERATION.length) ?? null;
+            if (run !== null && call.actor.kind !== 'person' && !mine.includes(run)) {
+                throw new ActionRefusal('not-yours', `${operationId} is not a git run you started.`);
+            }
+            const runs = run === null ? mine : [run];
+            const operations = [];
+            for (const each of runs) {
+                const going = running.has(each);
+                await ask('git.cancel', { actionId: each });
+                operations.push({
+                    operationId: `${GIT_OPERATION}${each}`,
+                    status: going ? ('cancelled' as const) : ('over' as const),
+                    detail: going
+                        ? 'git stopped where it stood. Nothing is rolled back: what already reached a remote or a branch stays.'
+                        : 'It was no longer running.'
+                });
+            }
+            return { output: { operations } };
         }
     };
+
+    /*
+     * Every git run goes out under an id, so it can be cancelled while it goes. Whoever gave none gets
+     * one here, and the run is remembered under its caller until it answers.
+     */
+    const tracked =
+        <Name extends ActionName>(handler: ActionHandler<void, Name>): ActionHandler<void, Name> =>
+        async (input, call) => {
+            const run = (input as { run?: string | null }).run ?? machine.runId();
+            running.set(run, call.actor);
+            try {
+                return await handler({ ...input, run }, call);
+            } finally {
+                running.delete(run);
+            }
+        };
+    return Object.fromEntries(
+        Object.entries(handlers).map(([name, handler]) => [
+            name,
+            'run' in ACTION_DEFINITIONS[name as ActionName].input.shape ? tracked(handler as ActionHandler<void, ActionName>) : handler
+        ])
+    ) as ActionHandlers<void>;
 }

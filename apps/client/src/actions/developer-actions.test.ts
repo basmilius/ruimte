@@ -267,7 +267,7 @@ describe('git actions for Voice', () => {
         expect(questionOf(asked)).toContain('Commit “fix” in “atlas”?');
         expect(questionOf(asked)).toContain('atlas on main: a.ts.');
         await confirm(registry, asked);
-        expect(of('git.action')).toEqual([{ cwd: FOLDER, actionId: 'run-1', kind: 'commit', subject: 'fix', stageAll: false }]);
+        expect(of('git.action')).toEqual([{ cwd: FOLDER, actionId: 'run-2', kind: 'commit', subject: 'fix', stageAll: false }]);
     });
 
     test('checkout of a clean tree switches at once; a changed tree asks and stashes first', async () => {
@@ -279,7 +279,7 @@ describe('git actions for Voice', () => {
         const asked = await dirty.registry.execute('git.checkout', { repository: 'atlas', branch: 'dev' }, VOICE_ACTION_CALL);
         expect(questionOf(asked)).toContain('1 changed file on main: a.ts');
         await dirty.registry.confirm((asked as { confirmationToken: string }).confirmationToken, true, VOICE_ACTION_CALL);
-        expect(dirty.of('git.action')).toEqual([{ cwd: FOLDER, actionId: 'run-1', kind: 'checkout', ref: 'dev', stash: true }]);
+        expect(dirty.of('git.action')).toEqual([{ cwd: FOLDER, actionId: 'run-2', kind: 'checkout', ref: 'dev', stash: true }]);
     });
 
     test('a merge that stops with conflicts is not a failure: the files come back', async () => {
@@ -316,7 +316,7 @@ describe('git actions for Voice', () => {
         const asked = await registry.execute('git.operation', { repository: 'atlas', step: 'abort' }, VOICE_ACTION_CALL);
         expect(questionOf(asked)).toContain('Take back the merge in atlas?');
         await confirm(registry, asked);
-        expect(of('git.operation')).toEqual([{ cwd: FOLDER, actionId: 'run-1', action: 'abort' }]);
+        expect(of('git.operation')).toEqual([{ cwd: FOLDER, actionId: 'run-2', action: 'abort' }]);
     });
 
     test('a pull request asks first, naming the branch it publishes', async () => {
@@ -327,7 +327,7 @@ describe('git actions for Voice', () => {
         const asked = await registry.execute('git.createPullRequest', { repository: 'atlas', title: 'Lexer', body: null }, VOICE_ACTION_CALL);
         expect(questionOf(asked)).toContain('feature is published to origin first');
         expect(await confirm(registry, asked)).toMatchObject({ output: { url: 'https://example.test/pr/1' } });
-        expect(of('git.action')).toEqual([{ cwd: FOLDER, actionId: 'run-1', kind: 'create-pr', subject: 'Lexer' }]);
+        expect(of('git.action')).toEqual([{ cwd: FOLDER, actionId: 'run-2', kind: 'create-pr', subject: 'Lexer' }]);
     });
 });
 
@@ -363,7 +363,7 @@ describe('worktree actions for Voice', () => {
             {
                 repo: FOLDER,
                 path: '/home/.ruimte/worktrees/lexer',
-                actionId: 'run-1',
+                actionId: 'run-2',
                 strategy: 'squash',
                 subject: 'Lexer: work of the agent',
                 commitFirst: true
@@ -377,5 +377,48 @@ describe('worktree actions for Voice', () => {
         expect(questionOf(asked)).toContain('Create a worktree on docs?');
         expect(await confirm(registry, asked)).toMatchObject({ output: { created: true } });
         expect(of('git.worktree-add')).toEqual([{ repo: FOLDER, branch: 'docs', projectId: 'atlas' }]);
+    });
+
+    describe('cancelling a git run', () => {
+        test('Voice cancels only a run it started, while it goes, and says nothing is rolled back', async () => {
+            let release: () => void = () => undefined;
+            let asked: () => void = () => undefined;
+            const running = new Promise<void>((resolve) => {
+                asked = resolve;
+            });
+            const { registry, of } = fake({
+                'git.action': (payload) =>
+                    new Promise((resolve) => {
+                        release = () => resolve({ actionId: payload.actionId, summary: 'Fetched.', output: '' });
+                        asked();
+                    }),
+                'git.cancel': () => ({})
+            });
+            const fetching = registry.execute('git.fetch', { repository: 'atlas' }, VOICE_ACTION_CALL);
+            await running;
+            expect(await registry.execute('operation.cancel', { operationId: 'git:someone-else' }, VOICE_ACTION_CALL)).toMatchObject({
+                error: { code: 'not-yours' }
+            });
+            expect(await registry.execute('operation.cancel', { operationId: 'agent.start:chat-1' }, VOICE_ACTION_CALL)).toMatchObject({
+                error: { code: 'unknown-operation' }
+            });
+            const cancelled = await registry.execute('operation.cancel', { operationId: null }, VOICE_ACTION_CALL);
+            expect(cancelled).toMatchObject({
+                status: 'completed',
+                output: { operations: [{ operationId: 'git:run-1', status: 'cancelled', detail: expect.stringContaining('Nothing is rolled back') }] }
+            });
+            expect(of('git.cancel')).toEqual([{ actionId: 'run-1' }]);
+            release();
+            await fetching;
+            expect(await registry.execute('operation.cancel', { operationId: null }, VOICE_ACTION_CALL)).toMatchObject({ output: { operations: [] } });
+        });
+
+        test('a person cancels the run of the panel by the id its progress streams under', async () => {
+            const { registry, of } = fake({ 'git.cancel': () => ({}) });
+            expect(await registry.execute('operation.cancel', { operationId: 'git:panel-7' }, PERSON_ACTION_CALL)).toMatchObject({
+                output: { operations: [{ operationId: 'git:panel-7', status: 'over' }] }
+            });
+            expect(of('git.cancel')).toEqual([{ actionId: 'panel-7' }]);
+        });
     });
 });
