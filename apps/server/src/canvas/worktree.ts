@@ -5,7 +5,7 @@ import { errorText } from '../error-text.ts';
 export const WORKTREE_LINES: readonly string[] = [
     "worktree\tEach agent gets a git worktree of its own under the machine's worktrees folder, on a new branch from HEAD, and starts in it; two agents editing the same file never overwrite each other",
     'worktree\tThe branch is named after the task or the title, with -2, -3 when that name is taken; the turn diff of each agent shows only its own worktree',
-    'worktree\tNothing removes a worktree on its own; ruimte-context worktree merge brings the work of an agent you opened back and removes its worktree once merged'
+    'worktree\tNothing removes a worktree on its own; ruimte-context worktree merge brings the work of an agent you opened back, and the worktree and its branch stay until a person removes them'
 ];
 
 /* A branch name out of a title: lower case, only what every ref takes, and never empty. */

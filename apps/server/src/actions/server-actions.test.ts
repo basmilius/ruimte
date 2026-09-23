@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ActionInput } from '@ruimte/actions';
+import { MAX_NOTICE_LENGTH, MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
 import type { ProjectContent, ProjectNode, Task } from '@ruimte/contracts';
 import type { Notice } from '../context/notices.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { AgentState, CanvasHost } from '../canvas/verb.ts';
 import { PlanStore } from '../plans/plan-store.ts';
 import { ProjectError } from '../projects/project-store.ts';
 import { serverActionCall } from './context.ts';
@@ -256,6 +256,86 @@ describe('the daemon actions', () => {
         const set = await serverActions.execute('plan.setStepState', { planId: null, stepIds: ['look'], state: 'done', note: null, next: null }, as('chat-1'));
         expect(set).toMatchObject({ status: 'failed', error: { code: 'person-only' } });
         expect(await serverActions.execute('plan.list', {}, as('term-1'))).toMatchObject({ status: 'failed', error: { code: 'plan-needs-chat' } });
+    });
+
+    test('the lengths a CLI flag held are held for every call of the action', async () => {
+        lineOnMain('term-1', 'term-2');
+        expect(await serverActions.execute('agent.notify', { nodeId: 'term-2', text: 'x'.repeat(MAX_NOTICE_LENGTH + 1) }, agent())).toMatchObject({
+            status: 'failed',
+            error: { code: 'invalid-input' }
+        });
+        expect(
+            await serverActions.execute(
+                'link.create',
+                { viewId: 'main', from: null, to: ['term-2'], label: 'L'.repeat(MAX_TITLE_LENGTH + 1), role: null },
+                agent()
+            )
+        ).toMatchObject({ status: 'failed', error: { code: 'invalid-input' } });
+        expect(notices).toEqual([]);
+    });
+
+    test("agent.start and team.start are an agent's alone", async () => {
+        const voice = { ...agent(), actor: { kind: 'voice' as const, id: 'voice' } };
+        const start = {
+            provider: 'claude' as const,
+            terminal: false,
+            prompt: null,
+            promptFile: null,
+            cwd: null,
+            reads: null,
+            viewId: null,
+            beside: null,
+            group: null,
+            title: null,
+            task: null,
+            model: null,
+            mode: null,
+            worktree: false,
+            branch: null
+        };
+        expect(await serverActions.execute('agent.start', start, voice)).toMatchObject({ status: 'failed', error: { code: 'forbidden-action' } });
+        expect(await serverActions.execute('worktree.merge', { branch: 'lexer', strategy: 'merge', message: null }, voice)).toMatchObject({
+            status: 'failed',
+            error: { code: 'forbidden-action' }
+        });
+    });
+
+    test('operation.get reads a start off what runs in its node, and only for the one who started it', async () => {
+        const states: Record<string, AgentState> = { 'term-2': 'needs-you' };
+        const call = (caller: string) =>
+            serverActionCall(
+                {
+                    ...host(),
+                    locate: (id: string) => (nodesOnMain().includes(id) ? PLACE : null),
+                    agents: { stateOf: async (id: string) => states[id] ?? 'none' }
+                },
+                PLACE,
+                caller
+            );
+        made.set('term-2', 'term-1');
+
+        expect(await serverActions.execute('operation.get', { operationId: 'agent.start:term-2' }, call('term-1'))).toMatchObject({
+            status: 'completed',
+            output: { action: 'agent.start', status: 'running', agents: [{ nodeId: 'term-2', status: 'running', taskId: null }] }
+        });
+        for (const [state, status] of [
+            ['error', 'failed'],
+            ['ended', 'cancelled'],
+            ['exited', 'completed'],
+            ['owed', 'queued'],
+            ['none', 'failed']
+        ] as const) {
+            states['term-2'] = state;
+            expect(await serverActions.execute('operation.get', { operationId: 'agent.start:term-2' }, call('term-1'))).toMatchObject({ output: { status } });
+        }
+        expect(await serverActions.execute('operation.get', { operationId: 'agent.start:term-2' }, call('term-9'))).toMatchObject({
+            status: 'failed',
+            error: { code: 'not-yours' }
+        });
+        expect(await serverActions.execute('operation.get', { operationId: 'node.create:term-2' }, call('term-1'))).toMatchObject({
+            status: 'failed',
+            error: { code: 'unknown-operation' }
+        });
     });
 
     test('a browser page nobody holds is an answer and not an error, and only a line lets the caller drive it', async () => {

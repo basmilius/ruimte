@@ -1,33 +1,17 @@
-import { randomBytes } from 'node:crypto';
-import { NODE_SIZE, type AgentKind, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
+import { MAX_PROMPT_LENGTH, MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 import { z } from 'zod';
-import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
-import { modelFlag, modelLines, selectionForOpening } from './model.ts';
-import { providerFor } from '../providers/registry.ts';
-import { AGENT_KINDS, agentNode, chatKinds, nameOf, terminalMode } from './agent-verb.ts';
-import { DEPTH_LIMIT_LINES, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH, depthForOpening } from './depth.ts';
-import { MODE_LINES, modeFlag, modeForOpening } from './mode.ts';
-import { readsFlag, readsIds, readsLines } from './link-verb.ts';
-import { MAX_CANVAS_NODES, canvasFull, newId, nodesNamed } from './nodes.ts';
-import { placeFree, placeTeam, TEAM_COLUMNS } from './placement.ts';
-import { checkCwd } from './project-paths.ts';
-import { TASK_LINES, nextLine, taskBrief } from './task-verbs.ts';
-import { MAX_TASK_PROMPT_LENGTH, requireChatParent } from './tasks.ts';
-import {
-    DRY_RUN_PREVIEW,
-    MAX_TITLE_LENGTH,
-    OPENING_OFF_CANVAS,
-    TITLE_LINE,
-    VerbRefusal,
-    canvasFor,
-    defineVerb,
-    field,
-    lengthOf,
-    newNode,
-    placeOf,
-    titleField
-} from './verb.ts';
-import { WORKTREE_LINES, branchSlug, branchesForWorktrees, freeBranch, makeWorktrees } from './worktree.ts';
+import { defineStandaloneActionVerb, runAction } from './action-verb.ts';
+import { AGENT_KINDS, chatKinds } from './agents.ts';
+import { DEPTH_LIMIT_LINES, MAX_TEAM_DEPTH } from './depth.ts';
+import { readsFlag, readsLines } from './link-verb.ts';
+import { MODE_LINES, modeFlag } from './mode.ts';
+import { modelFlag, modelLines } from './model.ts';
+import { MAX_CANVAS_NODES, idList } from './nodes.ts';
+import { TEAM_COLUMNS } from './placement.ts';
+import { TASK_LINES, nextLine } from './task-verbs.ts';
+import { MAX_TASK_PROMPT_LENGTH } from './tasks.ts';
+import { DRY_RUN_PREVIEW, MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, field, lengthOf, titleField } from './verb.ts';
+import { WORKTREE_LINES } from './worktree.ts';
 
 /* As many as one caller may have open at once, so a single team can fill that allowance and no more. */
 export const MAX_ROLES = MAX_OPENED_PER_CALLER;
@@ -70,8 +54,6 @@ const ROLES_LINES: readonly string[] = [
 ];
 
 const TEAM_DETAIL: readonly string[] = [
-    `flag\t--label L\trequired\tThe name of the group the agents land in, at most ${MAX_TITLE_LENGTH} characters`,
-    `flag\t--roles J\trequired\tThe roles as JSON, ${ROLES_SHAPE}`,
     ...ROLES_LINES,
     'json\tA prompt is a JSON string, so a line break in it is \\n of JSON itself and nothing is escaped twice',
     `quoting\tThe JSON goes in single quotes, so an apostrophe in a prompt ends the quote early: write it as '\\'' or as \\u0027 inside the JSON string`,
@@ -79,13 +61,6 @@ const TEAM_DETAIL: readonly string[] = [
     'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles, with the id of its task last under --task; the title is what tells two rows of one CLI apart',
     'prints\treads\tid\tfrom\tto\tone line per --reads node per role, under the roles: the line drawn from that node into that agent',
     'prints\tnext\tthe last line under --task, saying what to do while the tasks run',
-    'flag\t--cwd P\toptional\tThe directory every agent starts in; a directory per role is --worktree',
-    'flag\t--reads A,B\toptional\tNodes every role can read from its first turn, by id, separated by commas: a line is drawn from each of them into each role',
-    'flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context view list lists them. Without it the view you are in, when that is a canvas',
-    'flag\t--mode M\toptional\tThe permission mode every role runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own',
-    'flag\t--worktree\tno value\tStarts every role in a git worktree of its own, on a new branch named after the role; not together with --cwd',
-    `flag\t--task\tno value\tGives every role a task titled after the role, which its prompt describes; you are woken once, with the results of all roles, when the last of them settles; each prompt at most ${MAX_TASK_PROMPT_LENGTH} characters`,
-    `flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field of every line is dry-run and the last names the edge it would draw, as <from> -> <the role's title>; every role is checked before any is made, and ${DRY_RUN_PREVIEW}`,
     'edges\tOne edge per role, from you into that agent, so each of them can read you with ruimte-context read; a line only joins two nodes of one canvas',
     'edges\tOne way only: you do not read them through it, and the roles do not read each other',
     "edges\tWithout --task, ruimte-context link new --to <the role's id> draws the line back, which is how you read what a role has done; its id is the first field of that role's row",
@@ -105,6 +80,7 @@ const TEAM_DETAIL: readonly string[] = [
     ...MODE_LINES,
     ...WORKTREE_LINES,
     `depth\tA role lands at depth ${MAX_TEAM_DEPTH}: it may open a single agent of its own with agent, and a team of its own is refused`,
+    'operation\tStarting is not succeeding: ruimte-context operation get team.start:<id>,<id> with the ids of the roles in the order they were printed says how the team goes, role by role',
     'note\tThe machine starts every agent right away, whether or not anyone has its canvas open; a client that shows one later joins what runs'
 ];
 
@@ -138,12 +114,35 @@ const parseRoles = (raw: string): Role[] => {
     return parsed.data;
 };
 
-const kindOf = (role: Role): 'chat' | 'terminal' => (role.terminal !== true && providerFor(role.provider).capabilities.chat ? 'chat' : 'terminal');
-
-export const teamVerb = defineVerb({
+export const teamVerb = defineStandaloneActionVerb({
     name: 'team',
+    action: 'team.start',
     usage: `--label L --roles '${ROLES_SHAPE}' [--view V] [--cwd P] [--reads A,B] [--task] [--mode M] [--worktree] [--dry-run]`,
-    summary: `Opens up to ${MAX_ROLES} agents at once in a group, each with an edge from you into it when you are a node on that canvas`,
+    params: [
+        { syntax: '--label L', need: 'required', field: 'label', text: `The name of the group the agents land in, at most ${MAX_TITLE_LENGTH} characters` },
+        { syntax: '--roles J', need: 'required', field: 'roles', text: `The roles as JSON, ${ROLES_SHAPE}` },
+        { syntax: '--cwd P', need: 'optional', field: 'cwd', more: 'a directory per role is --worktree' },
+        {
+            syntax: '--reads A,B',
+            need: 'optional',
+            field: 'reads',
+            text: 'Nodes every role can read from its first turn, by id, separated by commas: a line is drawn from each of them into each role'
+        },
+        {
+            syntax: '--view V',
+            need: 'optional',
+            field: 'viewId',
+            more: 'ruimte-context view list lists them. Without it the view you are in, when that is a canvas'
+        },
+        { syntax: '--mode M', need: 'optional', field: 'mode' },
+        { syntax: '--worktree', need: 'no value', field: 'worktree', more: 'not together with --cwd' },
+        { syntax: '--task', need: 'no value', field: 'task', more: `each prompt at most ${MAX_TASK_PROMPT_LENGTH} characters` },
+        {
+            syntax: '--dry-run',
+            need: 'no value',
+            text: `Checks everything and makes nothing; the first field of every line is dry-run and the last names the edge it would draw, as <from> -> <the role's title>; every role is checked before any is made, and ${DRY_RUN_PREVIEW}`
+        }
+    ],
     detail: TEAM_DETAIL,
     dryRun: true,
     switches: ['task', 'worktree'],
@@ -157,213 +156,56 @@ export const teamVerb = defineVerb({
         mode: modeFlag
     }),
     async run({ flags, switches, dryRun }, call) {
-        const place = placeOf(call);
         const roles = parseRoles(flags.roles);
-        const selections = roles.map((role, index) => {
-            try {
-                return selectionForOpening(role.provider, kindOf(role) === 'chat', role.model);
-            } catch (e) {
-                if (e instanceof VerbRefusal) {
-                    throw new VerbRefusal(e.code, `role ${index} (model): ${e.message}`, e.lines);
-                }
-                throw e;
-            }
-        });
         const tasked = switches.has('task');
-        const long = tasked ? roles.findIndex((role) => role.prompt.length > MAX_TASK_PROMPT_LENGTH) : -1;
-        if (long !== -1) {
-            throw new VerbRefusal(
-                'prompt-too-long',
-                `role ${long} (prompt): ${roles[long]!.prompt.length} characters, and a task takes at most ${MAX_TASK_PROMPT_LENGTH}, since the child is also told how to report back`
-            );
+        const started = await runAction(
+            call,
+            'team.start',
+            {
+                label: flags.label,
+                roles: roles.map((role) => ({
+                    title: role.title,
+                    prompt: role.prompt,
+                    provider: role.provider,
+                    model: role.model ?? null,
+                    terminal: role.terminal === true
+                })),
+                cwd: flags.cwd ?? null,
+                reads: flags.reads === undefined ? null : idList(flags.reads, '--reads'),
+                viewId: flags.view ?? null,
+                mode: flags.mode ?? null,
+                worktree: switches.has('worktree'),
+                task: tasked
+            },
+            dryRun
+        );
+        const { group } = started;
+        const edgeOf = (edge: (typeof started.agents)[number]['edge']): string =>
+            edge === null ? '-' : dryRun ? `${edge.from} -> ${edge.to}` : (edge.edgeId ?? '-');
+        if (dryRun) {
+            return [
+                ['dry-run', 'group', field(group.title), group.viewId, '-', '-'].join('\t'),
+                ...started.agents.map((agent) =>
+                    ['dry-run', agent.kind, field(agent.title), group.viewId, agent.provider, edgeOf(agent.edge), ...(tasked ? ['<new task>'] : [])].join('\t')
+                ),
+                ...started.reads.map((line) => ['dry-run', 'reads', `${line.from} -> ${line.to}`].join('\t'))
+            ];
         }
-        const depth = depthForOpening(call, 'team', roles.length);
-        const ceiling = modeForOpening(call, flags.mode);
-        const readIds = readsIds(flags.reads);
-        const inWorktrees = switches.has('worktree');
-        if (inWorktrees && flags.cwd !== undefined) {
-            throw new VerbRefusal('worktree-and-cwd', '--worktree and --cwd both say where the agents start; give one of them');
-        }
-
-        const installed = await call.host.installedAgents();
-        const missing = roles.findIndex((role) => !installed.includes(role.provider));
-        if (missing !== -1) {
-            const kind = roles[missing]!.provider;
-            throw new VerbRefusal(
-                'cli-not-installed',
-                `role ${missing} (${kind}): ${nameOf(kind)} is not installed on this machine`,
-                installed.length === 0
-                    ? ['note\tNo agent CLI is installed on this machine']
-                    : installed.map((candidate: AgentKind) => `cli\t${candidate}\t${nameOf(candidate)}`)
-            );
-        }
-
-        // Everything that touches the disk or git runs before the lock, so a slow repository holds up no save.
-        const cwd = flags.cwd === undefined ? undefined : await checkCwd(place.folder, flags.cwd, (folder) => call.host.worktreePaths(folder));
-        const roleCwds: Array<string | undefined> = roles.map(() => cwd);
-        let undoWorktrees = async (): Promise<void> => undefined;
-        if (inWorktrees) {
-            const taken = await branchesForWorktrees(call, place.folder);
-            const branches = roles.map((role) => {
-                const branch = freeBranch(branchSlug(role.title), taken);
-                taken.add(branch);
-                return branch;
-            });
-            if (!dryRun) {
-                const made = await makeWorktrees(call, { folder: place.folder!, projectId: place.projectId }, branches);
-                made.worktrees.forEach((worktree, index) => {
-                    roleCwds[index] = worktree.path;
-                });
-                undoWorktrees = made.undo;
-            }
-        }
-        const modes = roles.map((role) => (kindOf(role) === 'chat' ? flags.mode : terminalMode(call, flags.mode, ceiling)));
-
-        return call.host
-            .mutate(place.projectId, async (content) => {
-                if (tasked) {
-                    requireChatParent(content, call.caller);
-                }
-                const canvas = canvasFor(content, place, flags.view, OPENING_OFF_CANVAS);
-                // The group counts too, which is the one node a caller does not name in --roles.
-                if (canvas.nodes.length + roles.length + 1 > MAX_CANVAS_NODES) {
-                    throw canvasFull(canvas, roles.length + 1);
-                }
-
-                const read = nodesNamed(content, canvas, readIds, { cannot: 'no line can run from it into the agents this opens' });
-                const layout = placeTeam(roles.map((role) => NODE_SIZE[kindOf(role)]));
-                const caller = canvas.nodes.find((node) => node.id === call.caller) ?? null;
-                const origin = placeFree(canvas.nodes, layout.frame, caller);
-                const label = flags.label;
-
-                if (dryRun) {
-                    return {
-                        content: null,
-                        result: [
-                            ['dry-run', 'group', field(label), canvas.id, '-', '-'].join('\t'),
-                            ...roles.map((role) =>
-                                [
-                                    'dry-run',
-                                    kindOf(role),
-                                    field(role.title),
-                                    canvas.id,
-                                    role.provider,
-                                    // The ends rather than the word "edge", and the role rather than a placeholder every
-                                    // row would share: the direction and the plan are what to read before anything is made.
-                                    caller ? `${caller.id} -> ${newNode(field(role.title))}` : '-',
-                                    ...(tasked ? ['<new task>'] : [])
-                                ].join('\t')
-                            ),
-                            ...roles.flatMap((role) => read.map((node) => ['dry-run', 'reads', `${node.id} -> ${newNode(field(role.title))}`].join('\t')))
-                        ]
-                    };
-                }
-
-                const taken: string[] = [];
-                const mint = (prefix: string): string => {
-                    const id = newId(prefix, content, taken);
-                    taken.push(id);
-                    return id;
-                };
-
-                /* A group that is not collapsed holds whatever has its center inside the frame, the same
-               rule the client reads membership by, so there is no memberIds to fill in here. */
-                const groupId = mint('group');
-                const group: ProjectNode = { id: groupId, kind: 'group', title: label, ...origin };
-                const nodes: ProjectNode[] = [group];
-                const edges: ProjectEdge[] = [];
-                const lines = [[groupId, 'group', field(label), canvas.id, '-', '-'].join('\t')];
-                const reading: string[] = [];
-                const made: Array<{ id: string; title: string; prompt: string; chat: boolean; provider: AgentKind; line: number; index: number }> = [];
-
-                for (const [index, role] of roles.entries()) {
-                    const chat = kindOf(role) === 'chat';
-                    const rect = layout.rects[index]!;
-                    const id = mint(chat ? 'chat' : 'terminal');
-                    nodes.push(
-                        agentNode({
-                            id,
-                            chat,
-                            kind: role.provider,
-                            title: role.title,
-                            rect: { ...rect, x: origin.x + rect.x, y: origin.y + rect.y },
-                            cwd: roleCwds[index],
-                            ...(modes[index] === undefined ? {} : { runtimeMode: modes[index] })
-                        })
-                    );
-                    let edgeId = '-';
-                    if (caller) {
-                        edgeId = mint('edge');
-                        edges.push({ id: edgeId, from: caller.id, to: id, label: 'context' });
-                    }
-                    for (const source of read) {
-                        /* Your own line is the one every role already gets: naming yourself in --reads
-                           is that line reported again, never a second one beside it. */
-                        if (caller && source.id === caller.id) {
-                            reading.push(['reads', edgeId, source.id, id].join('\t'));
-                            continue;
-                        }
-                        const readEdgeId = mint('edge');
-                        edges.push({ id: readEdgeId, from: source.id, to: id, label: 'context' });
-                        reading.push(['reads', readEdgeId, source.id, id].join('\t'));
-                    }
-                    made.push({ id, title: role.title, prompt: role.prompt, chat, provider: role.provider, line: lines.length, index });
-                    lines.push([id, chat ? 'chat' : 'terminal', field(role.title), canvas.id, role.provider, edgeId].join('\t'));
-                }
-
-                lines.push(...reading);
-                if (tasked) {
-                    lines.push(nextLine(true));
-                }
-
-                return {
-                    landed: async () => {
-                        const batchId = tasked ? `batch-${randomBytes(6).toString('hex')}` : undefined;
-                        // Every task before any agent starts, so a role that is done at once never finds its team complete without the others.
-                        for (const { id, title, prompt, line, index } of made) {
-                            await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
-                            const roleCwd = roleCwds[index];
-                            if (inWorktrees && roleCwd !== undefined) {
-                                await call.host.claimWorktree(place.folder!, roleCwd, id);
-                            }
-                            if (batchId !== undefined) {
-                                const task = await call.host.tasks.open({
-                                    projectId: place.projectId,
-                                    parentId: call.caller,
-                                    childId: id,
-                                    title,
-                                    prompt,
-                                    batchId
-                                });
-                                lines[line] = `${lines[line]}\t${task.id}`;
-                            }
-                        }
-                        for (const { id, prompt, chat, provider, index } of made) {
-                            await call.host.holdPrompt(place.projectId, id, tasked ? `${prompt}${taskBrief(chat)}` : prompt);
-                            await call.host.startAgent({
-                                projectId: place.projectId,
-                                nodeId: id,
-                                openedBy: call.caller,
-                                node: chat ? 'chat' : 'terminal',
-                                provider,
-                                ...(selections[index] ? { selection: selections[index] } : {}),
-                                cwd: roleCwds[index] ?? place.folder,
-                                ...(modes[index] === undefined ? {} : { runtimeMode: modes[index] })
-                            });
-                        }
-                    },
-                    content: {
-                        ...content,
-                        views: content.views.map((view) =>
-                            view.id === canvas.id ? { ...canvas, nodes: [...canvas.nodes, ...nodes], edges: [...canvas.edges, ...edges] } : view
-                        )
-                    },
-                    result: lines
-                };
-            })
-            .catch(async (e: unknown) => {
-                await undoWorktrees();
-                throw e;
-            });
+        return [
+            [group.nodeId, 'group', field(group.title), group.viewId, '-', '-'].join('\t'),
+            ...started.agents.map((agent) =>
+                [
+                    agent.nodeId,
+                    agent.kind,
+                    field(agent.title),
+                    group.viewId,
+                    agent.provider,
+                    edgeOf(agent.edge),
+                    ...(agent.taskId === null ? [] : [agent.taskId])
+                ].join('\t')
+            ),
+            ...started.reads.map((line) => ['reads', line.edgeId ?? '-', line.from, line.to].join('\t')),
+            ...(tasked ? [nextLine(true)] : [])
+        ];
     }
 });

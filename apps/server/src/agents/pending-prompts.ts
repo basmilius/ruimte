@@ -2,14 +2,7 @@ import { join } from 'node:path';
 import { RecordDirectory } from '../record-directory.ts';
 import { z } from 'zod';
 
-/*
- * The longest first prompt a verb takes. A terminal agent is started by a line the daemon types
- * into a shell that has not read a byte yet, so that line waits in the tty's canonical buffer
- * (four kilobytes on Linux, eight on macOS) until the shell gets to it, and a line past that is
- * silently cut off. A kickoff prompt of a page fits well under it; anything longer belongs in a
- * file the agent is told to read.
- */
-export const MAX_PROMPT_LENGTH = 2000;
+export { MAX_PROMPT_LENGTH } from '@ruimte/actions';
 
 const PendingPromptSchema = z.object({
     projectId: z.string().min(1),

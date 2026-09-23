@@ -20,7 +20,7 @@ import {
     type ProjectEdge,
     type Worktree
 } from '@ruimte/contracts';
-import { agentNode, nameOf } from '../canvas/agent-verb.ts';
+import { agentNode, nameOf } from '../canvas/agents.ts';
 import { MAX_CANVAS_NODES, newId } from '../canvas/nodes.ts';
 import { placeFree } from '../canvas/placement.ts';
 import { narrowerMode } from '../canvas/mode.ts';

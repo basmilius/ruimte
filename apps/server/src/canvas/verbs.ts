@@ -12,6 +12,7 @@ import { groupAction } from './group-verb.ts';
 import { linkDeleteAction, linkListAction, linkNewAction } from './link-verb.ts';
 import { notifyVerb } from './notify-verb.ts';
 import { openAction } from './open-verb.ts';
+import { operationVerb } from './operation-verb.ts';
 import { planVerb } from './plan-verb.ts';
 import { renameAction } from './rename-verb.ts';
 import { doneVerb, taskListAction, taskNewAction } from './task-verbs.ts';
@@ -220,7 +221,8 @@ export const VERBS: readonly VerbEntry[] = [
     viewNoun,
     taskNoun,
     planVerb,
-    worktreeVerb
+    worktreeVerb,
+    operationVerb
 ];
 
 export const verbNamed = (name: string): VerbEntry | undefined => VERBS.find((verb) => verb.name === name);

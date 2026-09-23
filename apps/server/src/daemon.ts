@@ -92,6 +92,7 @@ import { Checkpoints } from './git/checkpoints.ts';
 import { GitStatusWatcher } from './git/status-watcher.ts';
 import { worktreeAgents } from './git/worktree-agents.ts';
 import { worktreeHost } from './git/worktree-host.ts';
+import { agentStates } from './agents/agent-state.ts';
 import { WorktreeMerge } from './git/worktree-merge.ts';
 import { Worktrees } from './git/worktrees.ts';
 import { ProcessMonitor } from './processes/monitor.ts';
@@ -379,6 +380,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         removeWorktree: (folder: string, path: string) => worktrees.remove(folder, path),
         worktrees: worktreeHost(worktrees, merges),
         browsers: new BrowserDriver(config.home, browsers, browserPages),
+        agents: agentStates({ outbox, lineage, chats, sessions: manager }),
         depthOf: (nodeId: string) => lineage.depthOf(nodeId),
         openedCount: (callerId: string) => lineage.openedCount(callerId),
         recordMade: (record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean }) => lineage.put(record),

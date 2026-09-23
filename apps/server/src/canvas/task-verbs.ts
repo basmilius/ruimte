@@ -4,18 +4,7 @@ import { MAX_RESULT_LENGTH, MAX_TASK_PROMPT_LENGTH, taskLine } from './tasks.ts'
 import { unescapeText } from './text-escapes.ts';
 import { MAX_TITLE_LENGTH, titleField } from './verb.ts';
 
-export { MAX_TASK_PROMPT_LENGTH } from './tasks.ts';
-
-/*
- * The line a child reads under its prompt. A chat child's last answer is its result, and naming done
- * there made every child call it anyway. A terminal child has no answer the daemon can take, so it
- * calls done; the quoting advice is there because Codex's allow rule cannot parse `$'...'` or a
- * heredoc, which runs the call sandboxed and asks the person for approval.
- */
-export const taskBrief = (chat: boolean): string =>
-    chat
-        ? '\n\n(This is a task from the agent that opened you. End this turn with the result as your last message; that is reported back to it, so no ruimte-context call is needed.)'
-        : "\n\n(This is a task from the agent that opened you. When it is finished, run ruimte-context done --result '...' and write a line break as \\n inside those plain single quotes; if you exit without it, the task fails.)";
+export { MAX_TASK_PROMPT_LENGTH, taskBrief } from './tasks.ts';
 
 export const TASK_LINES: readonly string[] = [
     'task\tWith --task the prompt is the assignment and T its title; only a chat may give one, since only a chat can be woken with the result',

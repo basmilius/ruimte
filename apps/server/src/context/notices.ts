@@ -5,11 +5,7 @@ import type { AgentInfo } from '@ruimte/contracts';
 import { takesHookContext } from '../agents/hooks.ts';
 import { errorText } from '../error-text.ts';
 
-/*
- * A message is a line or two an agent reads in front of its next turn, not a document. Anything
- * longer belongs in a note on the canvas, which the agent can be linked to and read whole.
- */
-export const MAX_NOTICE_LENGTH = 500;
+export { MAX_NOTICE_LENGTH } from '@ruimte/actions';
 
 // Per receiver. Past this the oldest goes: an agent in a loop must not fill a queue nobody reads.
 export const MAX_NOTICES = 10;

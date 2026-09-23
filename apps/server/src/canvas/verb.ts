@@ -1,6 +1,7 @@
 import {
     isCanvasView,
     type AgentKind,
+    type AgentStatus,
     type BrowserDriveAction,
     type DiagramContent,
     type GitDiffResult,
@@ -13,6 +14,7 @@ import {
     type WorktreeMergePayload,
     type WorktreeMergeResult
 } from '@ruimte/contracts';
+import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { z } from 'zod';
 import type { DriveOutcome, ShotOutcome } from '../browser/drive.ts';
 import type { NoticeDelivery, Notice } from '../context/notices.ts';
@@ -80,6 +82,18 @@ export interface CanvasHost {
     worktrees?: WorktreeHost;
     /* Driving the page under a browser node, wherever that page is open; absent on a host without one. */
     browsers?: BrowserDriveHost;
+    /* What runs in an agent node now, which is what an operation of `agent` or `team` is read from. */
+    agents?: AgentStateHost;
+}
+
+/*
+ * What runs in an agent node as far as the daemon knows it: a start still owed in the outbox, the
+ * status its hooks or its chat report, ended along with the node that opened it, or nothing at all.
+ */
+export type AgentState = 'owed' | 'ended' | 'none' | AgentStatus;
+
+export interface AgentStateHost {
+    stateOf(nodeId: string): Promise<AgentState>;
 }
 
 /*
@@ -330,13 +344,7 @@ export const placeOf = (call: VerbCall): IndexedPlace => {
     return place;
 };
 
-/*
- * What a name on the canvas fits in: a node title, the label of a group, the word on a line. Past
- * this it is not a name any more but a paragraph in a header, in every list that prints it and in
- * the sidebar. Nothing about it is unique: two nodes may carry the same title, since an id is what
- * names a node and a title is what a person reads.
- */
-export const MAX_TITLE_LENGTH = 120;
+export { MAX_TITLE_LENGTH } from '@ruimte/actions';
 
 /* How much came in, for a refusal that counts: zod hands its error function the input it rejected. */
 export const lengthOf = (input: unknown): number => {

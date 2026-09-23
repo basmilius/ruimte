@@ -1,16 +1,11 @@
+import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 import { VerbRefusal, type VerbCall } from './verb.ts';
 
 // Teams stop at depth 1 to prevent exponential fan-out; single helpers may reach depth 2.
 export const MAX_AGENT_DEPTH = 2;
 export const MAX_TEAM_DEPTH = 1;
 
-/*
- * The agent nodes one caller may have open at a time. The canvas cap of 500 nodes is the ceiling of
- * the drawing, far past the point where a person would notice a loop; this is the narrow one, and it
- * is per caller rather than per project because a person opening agents of their own should never be
- * the one who runs out. It counts nodes that still exist, so removing them frees the count.
- */
-export const MAX_OPENED_PER_CALLER = 16;
+export { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 
 const depthLines = (mine: number): string[] => [
     `depth\tyou\t${mine}`,

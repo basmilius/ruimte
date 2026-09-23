@@ -1,4 +1,5 @@
 import type { AgentKind, ServerFrame } from '@ruimte/contracts';
+import { agentStates } from '../agents/agent-state.ts';
 import { AgentLineageStore } from '../agents/lineage.ts';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
@@ -236,7 +237,8 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         },
         writeDiagram: () => Promise.reject(new Error('not used here')),
         tasks: wiring.host,
-        plans
+        plans,
+        agents: agentStates({ outbox, lineage, chats, sessions })
     };
 
     const dispatcher = new Dispatcher();

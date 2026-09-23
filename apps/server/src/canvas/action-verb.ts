@@ -16,16 +16,17 @@ const linesOf = (details: unknown): string[] => (Array.isArray(details) && detai
  */
 export const runAction = async <Name extends ActionName>(call: VerbCall, name: Name, input: ActionInput<Name>, dryRun = false): Promise<ActionOutput<Name>> => {
     const result = await serverActions.execute(name, input, serverActionCall(call.host, placeOf(call), call.caller, dryRun));
-    if (result.status === 'completed') {
-        return result.output;
-    }
     if (result.status === 'needs_confirmation') {
         throw new VerbRefusal('confirmation-required', `${name} asks for a confirmation an agent cannot give`);
     }
-    if (FAILURES.has(result.error.code)) {
-        throw new Error(result.error.message);
+    if (result.status === 'failed') {
+        if (FAILURES.has(result.error.code)) {
+            throw new Error(result.error.message);
+        }
+        throw new VerbRefusal(result.error.code, result.error.message, linesOf(result.error.details));
     }
-    throw new VerbRefusal(result.error.code, result.error.message, linesOf(result.error.details));
+    // An action that goes on after its answer has already made what the verb prints.
+    return result.output;
 };
 
 /*
