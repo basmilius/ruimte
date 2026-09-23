@@ -345,6 +345,64 @@ describe('stopping', () => {
     });
 });
 
+describe('starting a terminal over', () => {
+    const ended = (agent?: SessionState['agent']): Partial<SessionMachine> & { restarts: { terminalId: string; resume: string | null }[] } => {
+        const restarts: { terminalId: string; resume: string | null }[] = [];
+        return {
+            restarts,
+            terminal: () => ({ attached: true, exited: 0, ...(agent === undefined ? {} : { agent }) }) as SessionState,
+            terminalHost: () => ({ provider: 'claude', runtimeMode: 'auto-accept-edits' }),
+            restartTerminal: async (terminalId, resume) => {
+                restarts.push({ terminalId, resume });
+            }
+        };
+    };
+    const exitedAgent = { kind: 'claude', agentSessionId: 'cli-session-7', status: 'exited', live: false } as unknown as SessionState['agent'];
+
+    test('a person restarts an ended shell at once, and Voice first says which CLI starts again', async () => {
+        const machine = ended();
+        const { registry } = fake({}, machine);
+        expect(await registry.execute('terminal.restart', { terminalId: 'term' }, PERSON_ACTION_CALL)).toMatchObject({
+            status: 'completed',
+            output: { terminalId: 'term', terminal: 'Build' }
+        });
+        expect(machine.restarts).toEqual([{ terminalId: 'term', resume: null }]);
+
+        const asked = await registry.execute('terminal.restart', { terminalId: 'term' }, VOICE_ACTION_CALL);
+        expect(consequences(asked)).toContain('Restart “Build”?');
+        expect(consequences(asked)).toContain('Claude Code starts again on a new session, in auto-accept-edits mode.');
+        expect(machine.restarts).toHaveLength(1);
+        await confirm(registry, asked);
+        expect(machine.restarts).toHaveLength(2);
+    });
+
+    test('a shell that still runs, or one this window never drew, is not restarted', async () => {
+        const { registry } = fake();
+        expect(await registry.execute('terminal.restart', { terminalId: 'term' }, PERSON_ACTION_CALL)).toMatchObject({ error: { code: 'still-running' } });
+        const unseen = fake({}, { terminal: () => null });
+        expect(await unseen.registry.execute('terminal.restart', { terminalId: 'term' }, PERSON_ACTION_CALL)).toMatchObject({
+            error: { code: 'terminal-not-open' }
+        });
+    });
+
+    test('resume goes on in the running shell, and in a fresh one with the session of the CLI that went down with it', async () => {
+        const running = fake();
+        expect(await running.registry.execute('terminal.resumeAgent', { terminalId: 'term' }, VOICE_ACTION_CALL)).toMatchObject({ status: 'completed' });
+        expect(running.of('agent.resume')).toEqual([{ sessionId: 'term' }]);
+
+        const machine = ended(exitedAgent);
+        const { registry, of } = fake({}, machine);
+        expect(await registry.execute('terminal.resumeAgent', { terminalId: 'term' }, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed' });
+        expect(machine.restarts).toEqual([{ terminalId: 'term', resume: 'cli-session-7' }]);
+        expect(of('agent.resume')).toEqual([]);
+
+        const nothing = fake({}, ended());
+        expect(await nothing.registry.execute('terminal.resumeAgent', { terminalId: 'term' }, PERSON_ACTION_CALL)).toMatchObject({
+            error: { code: 'nothing-to-resume' }
+        });
+    });
+});
+
 describe('answering', () => {
     test('Voice repeats every answer in the confirmation before it is sent', async () => {
         const { registry, of } = fake();

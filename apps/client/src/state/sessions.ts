@@ -29,17 +29,21 @@ export interface SessionSink {
 
 interface SessionsStore {
     byKey: SessionsByKey;
+    /* How often each terminal was started over; its body rebuilds around the fresh session on every step, so a count never goes back. */
+    restarts: Record<string, number>;
     setAttached(key: string, attached: boolean): void;
     setExited(key: string, exitCode: number | undefined): void;
     setAgent(key: string, agent: AgentInfo | null): void;
     setApprovals(key: string, approvals: ApprovalRequest[]): void;
     forget(key: string): void;
+    restart(key: string): void;
     /* Drops one machine's rows. Its sessions keep running; this client is done looking at them. */
     clear(endpointId: string): void;
 }
 
 export const useSessions = create<SessionsStore>((set) => ({
     byKey: {},
+    restarts: {},
     setAttached(key, attached) {
         set((s) => {
             const current = s.byKey[key];
@@ -73,6 +77,9 @@ export const useSessions = create<SessionsStore>((set) => ({
             return { byKey: next };
         });
     },
+    restart(key) {
+        set((s) => ({ restarts: { ...s.restarts, [key]: (s.restarts[key] ?? 0) + 1 } }));
+    },
     clear(endpointId) {
         set((s) => ({ byKey: dropEndpoint(s.byKey, endpointId) }));
     }
@@ -86,6 +93,12 @@ export const sessionSinkFor = (endpointId: string): SessionSink => ({
     setApprovals: (nodeId, approvals) => useSessions.getState().setApprovals(endpointKey(endpointId, nodeId), approvals),
     forget: (nodeId) => useSessions.getState().forget(endpointKey(endpointId, nodeId))
 });
+
+/* How often a terminal on the machine in scope was started over. */
+export const useSessionRestarts = (nodeId: string): number => {
+    const endpointId = useEndpointId();
+    return useSessions((s) => s.restarts[endpointKey(endpointId, nodeId)] ?? 0);
+};
 
 /* One node's session on the machine in scope. The selector keeps a render tied to the field it reads. */
 export const useSessionRow = <T>(nodeId: string, select: (row: SessionState | undefined) => T): T => {

@@ -31,6 +31,7 @@ import {
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
+import { revisionConflictMessage } from '@ruimte/actions';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watch-seam.ts';
@@ -557,17 +558,30 @@ export class ProjectStore {
         return this.locked(async () => (await this.readCurrent(projectId)).content);
     }
 
+    /* The rev of the document on disk, which a caller that decided on it names again with its write. */
+    revision(projectId: string): Promise<number> {
+        return this.locked(async () => (await this.readCurrent(projectId)).rev);
+    }
+
     /*
      * Applies a change to the document on disk, whether a client has the project open or not: an
      * agent keeps working after the person switched away, and `project.release` let go of the file
-     * then. Throwing from `apply` writes nothing.
+     * then. Throwing from `apply` writes nothing, and neither does a document that moved past
+     * `expectedRev`, which is checked under the same lock the write takes.
      */
-    mutate<T>(projectId: string, apply: (content: ProjectContent) => ProjectMutation<T> | Promise<ProjectMutation<T>>): Promise<T> {
-        return this.locked(() => this.mutateUnlocked(projectId, apply));
+    mutate<T>(projectId: string, apply: (content: ProjectContent) => ProjectMutation<T> | Promise<ProjectMutation<T>>, expectedRev?: number): Promise<T> {
+        return this.locked(() => this.mutateUnlocked(projectId, apply, expectedRev));
     }
 
-    private async mutateUnlocked<T>(projectId: string, apply: (content: ProjectContent) => ProjectMutation<T> | Promise<ProjectMutation<T>>): Promise<T> {
+    private async mutateUnlocked<T>(
+        projectId: string,
+        apply: (content: ProjectContent) => ProjectMutation<T> | Promise<ProjectMutation<T>>,
+        expectedRev?: number
+    ): Promise<T> {
         const { entry, path, rev, content, shared } = await this.readCurrent(projectId);
+        if (expectedRev !== undefined && expectedRev !== rev) {
+            throw new ProjectError('rev-conflict', revisionConflictMessage('The project', expectedRev, rev));
+        }
         const mutation = await apply(content);
         if (mutation.content === null) {
             return mutation.result;

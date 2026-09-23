@@ -166,7 +166,8 @@ const boot = async (): Promise<Daemon> => {
     const host: CanvasHost = {
         locate: (id) => store.index.locate(id),
         read: (id) => store.read(id),
-        mutate: (id, apply) => store.mutate(id, apply),
+        revision: (id) => store.revision(id),
+        mutate: (id, apply, expectedRev) => store.mutate(id, apply, expectedRev),
         worktreePaths: async () => [],
         installedAgents: async () => ['claude', 'codex'],
         holdPrompt: (id, nodeId, prompt) => prompts.put(id, nodeId, prompt),

@@ -1,6 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import type { z } from 'zod';
-import { ACTION_DEFINITIONS, ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionCall, type ActionName } from './index.ts';
+import {
+    ACTION_DEFINITIONS,
+    ActionRefusal,
+    ActionRegistry,
+    MAX_TITLE_LENGTH,
+    REVISION_CONFLICT,
+    revisionConflict,
+    type ActionCall,
+    type ActionName
+} from './index.ts';
 
 interface Context {
     name: string;
@@ -36,6 +45,51 @@ describe('ActionRegistry', () => {
             operationId: 'focus:board'
         });
         expect(await registry.execute('view.focus', { viewId: 'board' }, { ...call(), dryRun: true })).toMatchObject({ status: 'completed', dryRun: true });
+    });
+
+    test('holds a write to the revision it was decided on, keeps it through a confirmation, and lets a read pass', async () => {
+        let revision = 4;
+        const registry = new ActionRegistry<Context>(
+            {
+                'view.rename': ({ viewId, name }, action) =>
+                    action.confirmed || action.actor.kind === 'person'
+                        ? { output: { viewId, kind: 'canvas', previousName: 'Board', name, changed: true } }
+                        : { confirmation: { title: 'Rename?', consequences: [] } },
+                'view.focus': ({ viewId }, { context }) => ({ output: { viewId, view: context.name, kind: 'canvas', changed: false } })
+            },
+            {
+                checkRevision: (_name, _input, action) => {
+                    if (action.expectedRevision !== revision) {
+                        throw revisionConflict('The board', action.expectedRevision, revision);
+                    }
+                }
+            }
+        );
+        const rename = { viewId: 'board', name: 'Plan' };
+
+        expect(await registry.execute('view.rename', rename, { ...call(), expectedRevision: 4 })).toMatchObject({ status: 'completed' });
+        expect(await registry.execute('view.rename', rename, { ...call(), expectedRevision: 3 })).toMatchObject({
+            status: 'failed',
+            error: { code: REVISION_CONFLICT, message: 'The board is at revision 4, and this call was decided on 3; read it again and decide anew.' }
+        });
+        expect(await registry.execute('view.focus', { viewId: 'board' }, { ...call(), expectedRevision: 3 })).toMatchObject({ status: 'completed' });
+
+        const waiting = await registry.execute('view.rename', rename, { ...call('voice'), expectedRevision: 4 });
+        if (waiting.status !== 'needs_confirmation') {
+            throw new Error('expected a confirmation');
+        }
+        revision = 5;
+        expect(await registry.confirm(waiting.confirmationToken, true, call('voice'))).toMatchObject({ status: 'failed', error: { code: REVISION_CONFLICT } });
+    });
+
+    test('refuses a revision it has no way to check rather than write past it', async () => {
+        const registry = new ActionRegistry<Context>({
+            'view.rename': ({ viewId, name }) => ({ output: { viewId, kind: 'canvas', previousName: 'Board', name, changed: true } })
+        });
+        expect(await registry.execute('view.rename', { viewId: 'board', name: 'Plan' }, { ...call(), expectedRevision: 1 })).toMatchObject({
+            status: 'failed',
+            error: { code: 'no-revision' }
+        });
     });
 
     test('validates input and normalizes domain refusals', async () => {

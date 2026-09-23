@@ -1,9 +1,10 @@
 import { ACTION_DEFINITIONS, actionDescription, fieldDescription, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
 import type { z } from 'zod';
 import { serverActionCall } from '../actions/context.ts';
+import { PROJECT_WRITES } from '../actions/revision.ts';
 import { serverActions } from '../actions/server-actions.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { VerbRefusal, canvasLines, defineAction, defineVerb, placeOf, type Action, type Verb, type VerbCall } from './verb.ts';
+import { REVISION_LINE, VerbRefusal, canvasLines, defineAction, defineVerb, placeOf, type Action, type Verb, type VerbCall } from './verb.ts';
 
 /* What the daemon's registry answers when a handler failed outright rather than refused. */
 const FAILURES: ReadonlySet<string> = new Set(['action-failed', 'invalid-output']);
@@ -15,7 +16,7 @@ const linesOf = (details: unknown): string[] => (Array.isArray(details) && detai
  * prints: a refusal under the action's own code, or a plain error for a handler that broke.
  */
 export const runAction = async <Name extends ActionName>(call: VerbCall, name: Name, input: ActionInput<Name>, dryRun = false): Promise<ActionOutput<Name>> => {
-    const result = await serverActions.execute(name, input, serverActionCall(call.host, placeOf(call), call.caller, dryRun));
+    const result = await serverActions.execute(name, input, serverActionCall(call.host, placeOf(call), call.caller, dryRun, call.expectedRevision));
     if (result.status === 'needs_confirmation') {
         throw new VerbRefusal('confirmation-required', `${name} asks for a confirmation an agent cannot give`);
     }
@@ -88,10 +89,11 @@ const paramLine = <Name extends ActionName>(action: Name, param: ActionParam<Nam
     return `${param.syntax.startsWith('-') ? 'flag' : 'argument'}\t${param.syntax}\t${param.need}\t${text}`;
 };
 
-/* What `help` says about a verb that runs a catalog action, read off the definition. */
+/* What `help` says about a verb that runs a catalog action, read off the definition; a write to the project file takes `--revision`. */
 const actionHelp = <Name extends ActionName>(spec: Pick<ActionVerbSpec<Name, z.ZodType, z.ZodObject>, 'action' | 'note' | 'params' | 'detail'>) => ({
     summary: [actionDescription(spec.action, 'agent'), spec.note].filter((part): part is string => part !== undefined).join(' '),
-    detail: [...spec.params.map((param) => paramLine(spec.action, param)), ...spec.detail]
+    detail: [...spec.params.map((param) => paramLine(spec.action, param)), ...(PROJECT_WRITES.has(spec.action) ? [REVISION_LINE] : []), ...spec.detail],
+    revision: PROJECT_WRITES.has(spec.action)
 });
 
 /*

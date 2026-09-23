@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { canvasIdFor, defineActionVerb, runAction } from './action-verb.ts';
 import { MAX_LINKS } from './links.ts';
 import { idList } from './nodes.ts';
-import { MAX_TITLE_LENGTH, SCOPE_LINE, VerbRefusal, field, placeOf, titleField } from './verb.ts';
+import { MAX_TITLE_LENGTH, REVISION_ROW, SCOPE_LINE, VerbRefusal, field, placeOf, titleField } from './verb.ts';
 
 export { MAX_LINKS } from './links.ts';
 
@@ -103,14 +103,15 @@ export const linkListAction = defineActionVerb('link', {
         'direction\tA line runs from the first id into the second; into an agent node that is what makes the first readable to it, and never the other way round',
         'both ways\tTwo agents that read each other are two lines, one each way; ruimte-context link new draws the second',
         'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
-        'note\tA canvas with no lines on it prints nothing at all',
+        'note\tA canvas with no lines on it prints only the revision row',
+        REVISION_ROW,
         SCOPE_LINE
     ],
     positionals: z.tuple([], { error: 'link list takes no arguments, only flags' }),
     flags: z.object({ view: z.string().min(1, '--view needs the id of a canvas').optional() }),
     async run({ flags }, call) {
         const listed = await runAction(call, 'link.list', { viewId: await canvasIdFor(call, placeOf(call), flags.view) });
-        return listed.edges.map((edge) => [edge.edgeId, edge.from, edge.to, field(edge.label ?? '')].join('\t'));
+        return [...listed.edges.map((edge) => [edge.edgeId, edge.from, edge.to, field(edge.label ?? '')].join('\t')), `revision\t${listed.revision}`];
     }
 });
 

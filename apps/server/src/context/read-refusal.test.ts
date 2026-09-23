@@ -1,6 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import type { ContextSource, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
-import { refuseRead } from './read-refusal.ts';
+import { refusalRows } from '../refusal.ts';
+import { readRefusal } from './read-refusal.ts';
+
+/* The refusal as the CLI prints it, which is what these sentences are written for. */
+const refuseRead = (...args: Parameters<typeof readRefusal>): string => {
+    const { code, message, lines } = readRefusal(...args);
+    return refusalRows(code, message, lines);
+};
 
 const node = (id: string, kind: ProjectNode['kind'], extra: Partial<ProjectNode> = {}): ProjectNode => ({
     id,
@@ -25,7 +32,7 @@ const canvas: ProjectCanvasView = {
     layouts: []
 };
 
-describe('refuseRead', () => {
+describe('readRefusal', () => {
     test('a line that runs the other way says so, and names the call that draws it back', () => {
         const refusal = refuseRead('chat-1', 'terminal-a', [], canvas);
         const [first, second] = refusal.split('\n');

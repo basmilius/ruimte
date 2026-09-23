@@ -185,11 +185,16 @@ afterEach(async () => {
 const host = (): CanvasHost => ({
     locate: (id) => store.index.locate(id),
     read: (id) => store.read(id),
-    mutate: (id, apply) =>
-        store.mutate(id, async (current) => {
-            const mutation = await apply(current);
-            return breakWrites && mutation.content ? { ...mutation, content: withRepeatedId(mutation.content) } : mutation;
-        }),
+    revision: (id) => store.revision(id),
+    mutate: (id, apply, expectedRev) =>
+        store.mutate(
+            id,
+            async (current) => {
+                const mutation = await apply(current);
+                return breakWrites && mutation.content ? { ...mutation, content: withRepeatedId(mutation.content) } : mutation;
+            },
+            expectedRev
+        ),
     worktreePaths: async () => worktrees,
     branchesOf: async () => branches,
     addWorktree: async (_folder, branch) => {
@@ -284,7 +289,7 @@ const made = async (name: string, argv: string[] = [], token = 'term'): Promise<
 const deleteColumn = async (token = 'term'): Promise<Record<string, string>> =>
     Object.fromEntries(
         (await post('view', ['list'], token)).lines
-            .filter((line) => !line.startsWith('self\t'))
+            .filter((line) => !line.startsWith('self\t') && !line.startsWith('revision\t'))
             .map((line) => line.split('\t'))
             .map(([id, , , may]) => [id!, may!])
     );
@@ -293,7 +298,7 @@ const deleteColumn = async (token = 'term'): Promise<Record<string, string>> =>
 const deleteWhy = async (token = 'term'): Promise<Record<string, string>> =>
     Object.fromEntries(
         (await post('view', ['list'], token)).lines
-            .filter((line) => !line.startsWith('self\t'))
+            .filter((line) => !line.startsWith('self\t') && !line.startsWith('revision\t'))
             .map((line) => line.split('\t'))
             .map(([id, , , , why]) => [id!, why!])
     );
@@ -430,7 +435,7 @@ describe('help', () => {
             'detail',
             'refusal'
         ]);
-        expect(lines[2]).toBe('verb\tread\t<id> [--tail N] [--subagent T]\tPrints one linked source, whole or its last N lines');
+        expect(lines[2]).toBe('verb\tread\t<id> [--tail N] [--subagent T]\tPrints one linked source, whole or its last lines.');
         expect(lines).toContain(
             'noun\tnode\tlist|new|edit|rename|delete|group|arrange\tLists, adds, writes in, renames, removes, frames and lays out the nodes of a canvas'
         );
@@ -692,7 +697,7 @@ describe('refusals', () => {
                 verb: 'node new',
                 argv: ['note', '--cmd', 'ls'],
                 code: 'unknown-flag',
-                message: '--cmd is not one of --title, --text, --url, --path, --source, --cwd, --view, --beside, --dry-run'
+                message: '--cmd is not one of --title, --text, --url, --path, --source, --cwd, --view, --beside, --revision, --dry-run'
             },
             { verb: 'view list', argv: ['--view', 'main'], code: 'unknown-flag', message: '--view is not a flag here; this verb takes none' },
             {
@@ -813,11 +818,16 @@ describe('scoping', () => {
     test('a node on a canvas works on that canvas by default', async () => {
         const { status, lines } = await post('node', ['list']);
         expect(status).toBe(200);
-        expect(lines).toEqual(['term-1\tterminal\tshell\t0\t0\t560\t360\t', 'note-1\tnote\tPlan with a tab\t0\t601\t320\t240\t', 'self\tterm-1']);
+        expect(lines).toEqual([
+            'term-1\tterminal\tshell\t0\t0\t560\t360\t',
+            'note-1\tnote\tPlan with a tab\t0\t601\t320\t240\t',
+            'self\tterm-1',
+            'revision\t1'
+        ]);
     });
 
     test('--view picks another canvas, where the caller is nobody', async () => {
-        expect(await post('node', ['list', '--view', 'board'])).toEqual({ status: 200, lines: ['self\t-\tnone of these nodes is you'] });
+        expect(await post('node', ['list', '--view', 'board'])).toEqual({ status: 200, lines: ['self\t-\tnone of these nodes is you', 'revision\t1'] });
     });
 
     test('a chat that is a view of its own needs --view, and hears which canvases there are', async () => {
@@ -847,10 +857,11 @@ describe('view list', () => {
             'board\tcanvas\tBoard\tno\ta person made it',
             'chat-1\tchat\tPlanner\tno\ta person made it',
             'sketch-1\tdrawing\tSketch\tno\ta person made it',
-            // The last row is the view the caller stands in, which it can read nowhere else.
-            'self\tmain'
+            // The view the caller stands in, which it can read nowhere else.
+            'self\tmain',
+            'revision\t1'
         ]);
-        expect((await post('view', ['list'], 'chat')).lines.at(-1)).toBe('self\tchat-1');
+        expect((await post('view', ['list'], 'chat')).lines.at(-2)).toBe('self\tchat-1');
     });
 
     test('the last column is whether view delete would remove that view for the caller', async () => {
@@ -891,20 +902,54 @@ describe('link list', () => {
         const { status, lines } = await post('link', ['list']);
         expect(status).toBe(200);
         const edges = (await canvasOnDisk()).edges;
-        expect(lines).toEqual(edges.map((edge) => [edge.id, edge.from, edge.to, edge.label ?? ''].join('\t')));
+        expect(lines).toEqual([...edges.map((edge) => [edge.id, edge.from, edge.to, edge.label ?? ''].join('\t')), 'revision\t2']);
         expect(lines[0]!.split('\t').slice(1)).toEqual(['term-1', 'note-1', 'plan']);
     });
 
-    test('a canvas with no lines on it prints nothing, and --view says which canvas', async () => {
-        expect((await post('link', ['list'])).lines).toEqual([]);
-        expect((await post('link', ['list', '--view', 'board'])).lines).toEqual([]);
+    test('a canvas with no lines on it prints only the revision, and --view says which canvas', async () => {
+        expect((await post('link', ['list'])).lines).toEqual(['revision\t1']);
+        expect((await post('link', ['list', '--view', 'board'])).lines).toEqual(['revision\t1']);
         expect((await post('link', ['list', '--view', 'sketch-1'])).lines[0]).toBe('refused\tnot-a-canvas\tsketch-1 is not a canvas of this project');
-        expect((await post('link', ['list', '--view', 'main'], 'chat')).lines).toEqual([]);
+        expect((await post('link', ['list', '--view', 'main'], 'chat')).lines).toEqual(['revision\t1']);
         expect((await post('link', ['list'], 'chat')).lines[0]).toStartWith('refused\tview-required\t');
     });
 
     test('reads only, so it takes no --dry-run', async () => {
         expect((await post('link', ['list', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
+    });
+});
+
+describe('--revision', () => {
+    const revisionOf = (lines: string[]): number => Number(lines.at(-1)!.split('\t')[1]);
+
+    test('a write decided on the revision a list printed goes through, and one decided before a change refuses and writes nothing', async () => {
+        const decided = revisionOf((await post('node', ['list'])).lines);
+        const first = await post('node', ['new', 'note', '--text', 'one', '--revision', String(decided)]);
+        expect(first.status).toBe(200);
+        const stale = await post('node', ['new', 'note', '--text', 'two', '--revision', String(decided)]);
+        expect(stale.lines[0]).toBe(
+            `refused\trev-conflict\tThe project is at revision ${decided + 1}, and this call was decided on ${decided}; read it again and decide anew.`
+        );
+        expect((await canvasOnDisk()).nodes.filter((node) => node.kind === 'note')).toHaveLength(2);
+        expect((await onDisk()).rev).toBe(decided + 1);
+    });
+
+    test('a dry run checks it too, and a start refuses before it makes anything', async () => {
+        const decided = revisionOf((await post('view', ['list'])).lines);
+        await post('node', ['new', 'note']);
+        expect((await post('node', ['new', 'note', '--dry-run', '--revision', String(decided)])).lines[0]).toStartWith('refused\trev-conflict\t');
+        expect((await post('agent', ['claude', '--worktree', '--revision', String(decided)])).lines[0]).toStartWith('refused\trev-conflict\t');
+        expect(madeWorktrees).toEqual([]);
+    });
+
+    test('takes only a whole number, and only on a verb that writes the project file', async () => {
+        expect((await post('node', ['rename', 'note-1', '--title', 'Plan', '--revision', 'latest'])).lines[0]).toStartWith(
+            'refused\tbad-arguments\t--revision takes'
+        );
+        expect((await post('node', ['list', '--revision', '1'])).lines[0]).toStartWith('refused\tunknown-flag\t');
+        expect((await post('plan', ['read', '--revision', '1'])).lines[0]).toStartWith('refused\tunknown-flag\t');
+        expect((await post('help', ['node', 'new'])).lines.some((line) => line.startsWith('flag\t--revision N\toptional\t'))).toBe(true);
+        expect((await post('help', ['node', 'list'])).lines.some((line) => line.startsWith('revision\t'))).toBe(true);
     });
 });
 

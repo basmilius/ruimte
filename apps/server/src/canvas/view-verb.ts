@@ -1,7 +1,7 @@
 import { PROJECT_ICON_NAMES } from '@ruimte/contracts';
 import { z } from 'zod';
 import { defineActionVerb, runAction } from './action-verb.ts';
-import { TITLE_LINE, VerbRefusal, field, titleField, type Action } from './verb.ts';
+import { REVISION_ROW, TITLE_LINE, VerbRefusal, field, titleField, type Action } from './verb.ts';
 import { MAX_PROJECT_VIEWS, VIEW_KINDS, viewKindsFor } from './views.ts';
 
 export { MAX_PROJECT_VIEWS, VIEW_KINDS } from './views.ts';
@@ -179,15 +179,20 @@ const listSub = defineActionVerb('view', {
         `kinds\t${VIEW_KINDS.join('\t')}`,
         'delete\tyes or no: whether ruimte-context view delete would remove that view for you, with the reason beside it',
         'why\tyours, this machine frees every view, a person made it, <id> made it, or you are in it',
-        'self\tThe last row is self and the id of the view you are in',
+        'self\tThe row after the views is self and the id of the view you are in',
+        REVISION_ROW,
         'note\tA separator is a line in the sidebar and has an empty name',
         'see\truimte-context help view\tmaking a view, renaming it, marking it, moving it, removing it'
     ],
     positionals: z.tuple([], { error: 'view list takes no arguments' }),
     flags: z.object({}),
     async run(_input, call) {
-        const { views, self } = await runAction(call, 'view.list', {});
-        return [...views.map((view) => `${view.viewId}\t${view.kind}\t${field(view.name)}\t${view.deletable ? 'yes' : 'no'}\t${view.why}`), `self\t${self}`];
+        const { views, self, revision } = await runAction(call, 'view.list', {});
+        return [
+            ...views.map((view) => `${view.viewId}\t${view.kind}\t${field(view.name)}\t${view.deletable ? 'yes' : 'no'}\t${view.why}`),
+            `self\t${self}`,
+            `revision\t${revision}`
+        ];
     }
 });
 

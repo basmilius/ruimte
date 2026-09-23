@@ -4,7 +4,9 @@ import {
     ChatAttachmentUploadsSchema,
     ChatBackgroundTaskSchema,
     ChatCheckpointDiffSchema,
+    ChatSubagentSourceSchema,
     ChatSubagentStatusSchema,
+    ContextSourceSchema,
     DeviceReferenceSchema,
     DiagramDirectionSchema,
     DiagramShapeSchema,
@@ -33,6 +35,7 @@ import {
     GitStatusSchema,
     ModelSelectionSchema,
     NodeKindSchema,
+    NOTE_COLOR_NAMES,
     PROJECT_VIEW_KINDS,
     PlanChecksSchema,
     PlanKindSchema,
@@ -91,6 +94,8 @@ export const ActionCreatableCanvasNodeKindSchema = z.enum(CREATABLE_CANVAS_NODE_
 const viewId = z.string().min(1);
 const viewName = z.string().trim().min(1);
 const nodeId = z.string().min(1);
+/* How often the document read has been written: a write that names it refuses once the document moved on. */
+const revision = z.number().int().min(0);
 /*
  * A name a caller gives: a title, the name of a view or a layout, a group label, the word on a line.
  * Every input a person types one in holds the same limit, so a name never fails only once it is sent.
@@ -453,6 +458,8 @@ export const ACTION_DEFINITIONS = {
         input: z.object({}),
         output: z.object({
             project: z.string(),
+            // Of the project file, as this window last saved or read it.
+            revision,
             activeView: z
                 .object({
                     id: viewId,
@@ -1230,7 +1237,18 @@ export const ACTION_DEFINITIONS = {
     },
     'terminal.resumeAgent': {
         title: 'Resume terminal agent',
-        description: 'Starts the agent CLI that ran in a terminal again in the same shell, on its own session, when it went down without ending.',
+        description:
+            'Starts the agent CLI that ran in a terminal again on its own session, when it went down without ending: in the same shell while that runs, in a fresh one when the shell ended with it.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ terminalId: terminalTarget }),
+        output: terminalNamed
+    },
+    'terminal.restart': {
+        title: 'Restart terminal',
+        description:
+            'Starts a fresh shell in a terminal whose shell ended, running the command the terminal was made with again. Its scrollback starts empty; resuming an agent session is terminal.resumeAgent.',
         effect: 'external',
         domain: 'sessions',
         actors: PERSON_AND_VOICE,
@@ -1247,7 +1265,9 @@ export const ACTION_DEFINITIONS = {
         output: z.object({
             views: z.array(z.object({ viewId, kind: ActionViewKindSchema, name: z.string(), deletable: z.boolean(), why: z.string() })),
             // The view the caller is in: the canvas it is a node on, or its own id when it is a view.
-            self: z.string()
+            self: z.string(),
+            // Of the project file.
+            revision
         })
     },
     'view.setIcon': {
@@ -1290,7 +1310,9 @@ export const ACTION_DEFINITIONS = {
                 })
             ),
             // The caller when it is one of these nodes.
-            self: z.string().nullable()
+            self: z.string().nullable(),
+            // Of the project file.
+            revision
         })
     },
     'node.update': {
@@ -1307,6 +1329,15 @@ export const ACTION_DEFINITIONS = {
             append: z.boolean().describe('Adds the text as a line under what is there instead of replacing the body')
         }),
         output: z.object({ viewId, nodeId, lines: z.number().int(), characters: z.number().int(), changed: z.boolean() })
+    },
+    'note.setColor': {
+        title: 'Color a note',
+        description: 'Gives a note on a canvas on screen another paper color.',
+        effect: 'shared',
+        domain: 'content',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ viewId, nodeId: nodeId.describe('The note, by id'), color: z.enum(NOTE_COLOR_NAMES) }),
+        output: z.object({ viewId, nodeId, color: z.enum(NOTE_COLOR_NAMES), previousColor: z.string(), changed: z.boolean() })
     },
     'node.arrange': {
         title: 'Arrange canvas nodes',
@@ -1334,7 +1365,8 @@ export const ACTION_DEFINITIONS = {
         domain: 'canvas',
         actors: AGENT,
         input: z.object({ viewId }),
-        output: z.object({ viewId, edges: z.array(z.object({ edgeId: z.string(), from: nodeId, to: nodeId, label: z.string().nullable() })) })
+        // The revision is that of the project file.
+        output: z.object({ viewId, edges: z.array(z.object({ edgeId: z.string(), from: nodeId, to: nodeId, label: z.string().nullable() })), revision })
     },
     'link.create': {
         title: 'Draw canvas lines',
@@ -1671,6 +1703,37 @@ export const ACTION_DEFINITIONS = {
             // On this machine, outside the project folder; null when nobody has the page open.
             path: z.string().nullable()
         })
+    },
+    'context.list': {
+        title: 'List linked context',
+        description: 'Lists the context a person linked to this session: the id, kind and title of each source.',
+        effect: 'read',
+        domain: 'communicate',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({ sources: z.array(ContextSourceSchema.pick({ id: true, kind: true, title: true })) })
+    },
+    'context.read': {
+        title: 'Read linked context',
+        description: 'Prints one linked source, whole or its last lines.',
+        effect: 'read',
+        domain: 'communicate',
+        actors: AGENT,
+        input: z.object({
+            sourceId: z
+                .string()
+                .min(1)
+                .describe('The id of a source, as context.list gives it; a drawing or diagram also takes the id of the linked node that shows it'),
+            tail: z.number().int().min(1).nullable().describe('Only the last this many lines; without it the whole source'),
+            subagent: z
+                .string()
+                .min(1)
+                .nullable()
+                .describe(
+                    `The whole conversation of one subagent of a linked chat instead of the chat, read from ${ChatSubagentSourceSchema.options.join(' or ')}`
+                )
+        }),
+        output: z.object({ text: z.string() })
     },
     'agent.start': {
         title: 'Start an agent',
@@ -2360,7 +2423,9 @@ export const ACTION_DEFINITIONS = {
                 })
             ),
             selected: z.array(z.string()),
-            truncated: z.boolean()
+            truncated: z.boolean(),
+            // Of the drawing's own file, as this window last saved or read it.
+            revision
         })
     },
     'drawing.addElements': {
@@ -2486,7 +2551,9 @@ export const ACTION_DEFINITIONS = {
                 })
             ),
             groups: z.array(z.object({ id: z.string(), label: z.string(), wraps: z.array(z.string()) })),
-            edges: z.array(z.object({ from: z.string(), to: z.string(), label: z.string().nullable() }))
+            edges: z.array(z.object({ from: z.string(), to: z.string(), label: z.string().nullable() })),
+            // Of the diagram's own file, as this window last saved or read it.
+            revision
         })
     },
     'diagram.updateNode': {

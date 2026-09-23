@@ -36,7 +36,7 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
     sessions: {
         name: 'run_sessions',
         description:
-            'Run the AI Chats and terminals of this project: read what a chat waits on, stop a turn, a sub-agent, a background task or a terminal, handle queued messages, answer a question in the user’s words, compact, change the model, fork, summarize a fork, read what a turn changed or what a sub-agent wrote, and resume a terminal agent. Approvals are the user’s to answer in the app.'
+            'Run the AI Chats and terminals of this project: read what a chat waits on, stop a turn, a sub-agent, a background task or a terminal, handle queued messages, answer a question in the user’s words, compact, change the model, fork, summarize a fork, read what a turn changed or what a sub-agent wrote, resume a terminal agent, and restart a terminal whose shell ended. Approvals are the user’s to answer in the app.'
     },
     plans: { name: 'manage_plans', description: 'Read the plans of an AI Chat, set the state of its steps and write a note on a step.' },
     agents: { name: 'inspect_agents', description: 'Read the status of the agents in this project and the tool calls of an AI Chat.' },
@@ -57,7 +57,7 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
     content: {
         name: 'edit_content',
         description:
-            'Read and change what notes, drawings and diagrams on screen hold: write in a note, draw, change, move, delete, duplicate, reorder or lock drawing elements, rename or recolor diagram nodes, replace a whole drawing or diagram, or copy one to the clipboard. Undo brings a change back while the view stays open.'
+            'Read and change what notes, drawings and diagrams on screen hold: write in a note or change its color, draw, change, move, delete, duplicate, reorder or lock drawing elements, rename or recolor diagram nodes, replace a whole drawing or diagram, or copy one to the clipboard. Undo brings a change back while the view stays open.'
     },
     pages: {
         name: 'browse_pages',

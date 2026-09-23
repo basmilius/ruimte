@@ -7,7 +7,17 @@ import { pageActions, type PageMachine } from '@/actions/page-actions';
 import { projectActions, type ProjectMachine } from '@/actions/project-actions';
 import { sessionActions, sessionTitle, type SessionMachine } from '@/actions/session-actions';
 import { resolveTarget } from '@/actions/resolve-target';
-import { ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionCall, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
+import { checkClientRevision } from '@/actions/revision';
+import {
+    ActionRefusal,
+    ActionRegistry,
+    MAX_TITLE_LENGTH,
+    type ActionCall,
+    type ActionHandlers,
+    type ActionInput,
+    type ActionName,
+    type ActionOutput
+} from '@ruimte/actions';
 import {
     canShareView,
     isCanvasView,
@@ -21,6 +31,7 @@ import {
     type AgentKind,
     type DeviceReference,
     type NodeTitleSource,
+    type NoteColor,
     type ProjectIconChoice,
     type ProjectNode,
     type ProjectView,
@@ -359,7 +370,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
         ...LIVE_MACHINE,
         ...machine
     };
-    return new ActionRegistry<void>({
+    const handlers: ActionHandlers<void> = {
         ...inspectionActions(document),
         ...developerActions(document, developer),
         ...sessionActions(document, sessions),
@@ -377,6 +388,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             return {
                 output: {
                     project: useProject.getState().current?.name ?? 'Untitled project',
+                    revision: useProject.getState().rev,
                     activeView: active
                         ? {
                               id: active.id,
@@ -1257,7 +1269,8 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             }
             return { output: { chatId, chat, ...recentChatMessages(state.items, state.order, limit ?? 20) } };
         }
-    });
+    };
+    return new ActionRegistry<void>(handlers, { checkRevision: checkClientRevision });
 };
 
 export const clientActions = createClientActionRegistry(useDocument);
@@ -1427,6 +1440,12 @@ export const duplicateNodeAction = (viewId: string | null, nodeId: string): void
 export const renameNodeAction = (viewId: string | null, nodeId: string, name: string): void => {
     if (viewId !== null) {
         void runAsPerson('node.rename', { viewId, nodeId, name });
+    }
+};
+
+export const colorNoteAction = (viewId: string | null, nodeId: string, color: NoteColor): void => {
+    if (viewId !== null) {
+        void runAsPerson('note.setColor', { viewId, nodeId, color });
     }
 };
 
@@ -1621,4 +1640,13 @@ export const setViewIconAction = (viewId: string, icon: ProjectIconChoice | null
 /* A person's key or menu row is the answer, as a terminal's own Cmd+K always was. */
 export const clearTerminalAction = (terminalId: string): void => {
     void runConfirmedAsPerson('terminal.clear', { terminalId });
+};
+
+/* The body rebuilds its terminal once the fresh session is asked for; the action only asks. */
+export const restartTerminalAction = (terminalId: string): void => {
+    void runAsPerson('terminal.restart', { terminalId });
+};
+
+export const resumeTerminalAgentAction = (terminalId: string): void => {
+    void runAsPerson('terminal.resumeAgent', { terminalId });
 };

@@ -1,6 +1,7 @@
 import {
     isCanvasView,
     type AgentKind,
+    type ContextSource,
     type AgentStatus,
     type BrowserDriveAction,
     type DiagramContent,
@@ -35,7 +36,10 @@ export class VerbRefusal extends CodedError {}
 export interface CanvasHost {
     locate(id: string): IndexedPlace | null;
     read(projectId: string): Promise<ProjectContent>;
-    mutate<T>(projectId: string, apply: (content: ProjectContent) => ProjectMutation<T> | Promise<ProjectMutation<T>>): Promise<T>;
+    /* The rev of the project file; read it before the content, so a write in between only makes it older. */
+    revision(projectId: string): Promise<number>;
+    /* A document that moved past `expectedRev` refuses with `rev-conflict` and writes nothing. */
+    mutate<T>(projectId: string, apply: (content: ProjectContent) => ProjectMutation<T> | Promise<ProjectMutation<T>>, expectedRev?: number): Promise<T>;
     /* The worktrees of the repository the folder is in; empty when it is not in one. */
     worktreePaths(folder: string): Promise<string[]>;
     /* The local branches of the repository the folder is in; null when it is in none. */
@@ -84,6 +88,14 @@ export interface CanvasHost {
     browsers?: BrowserDriveHost;
     /* What runs in an agent node now, which is what an operation of `agent` or `team` is read from. */
     agents?: AgentStateHost;
+    /* What a person linked into a session, which `list` and `read` answer with. */
+    context?: ContextHost;
+}
+
+export interface ContextHost {
+    list(targetId: string): Pick<ContextSource, 'id' | 'kind' | 'title'>[];
+    /* One linked source as text; a source it cannot answer throws a `CodedError` that says why. */
+    read(targetId: string, sourceId: string, tail: number | null, subagent: string | null): Promise<string>;
 }
 
 /*
@@ -151,6 +163,8 @@ export interface VerbCall {
     /* The session or chat id the bearer token speaks for. */
     caller: string;
     host: CanvasHost;
+    /* What `--revision` named: the rev of the project file the caller read before it decided on this write. */
+    expectedRevision?: number;
 }
 
 export interface VerbHelp {
@@ -188,7 +202,7 @@ export interface Noun {
     run(argv: readonly string[], call: VerbCall): Promise<string[]>;
 }
 
-/* A word `ruimte-context` answers itself through `GET /context`; in the registry only so `help` names it. */
+/* A word the CLI asks `GET /context` for, which runs `context.list` or `context.read`; here so `help` names it. */
 export interface ContextVerb extends VerbHelp {
     served: 'context';
 }
@@ -200,6 +214,14 @@ export const SCOPE_LINE =
     'scope\tlist and read are what a person linked into this session; node, link, browser, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you';
 
 export const DRY_RUN_FLAG = 'dry-run';
+
+export const REVISION_FLAG = 'revision';
+
+/* What `help` says of the last row of every list of the project file. */
+export const REVISION_ROW = `revision\tThe last row is revision and the revision of the project file; --${REVISION_FLAG} on a write that follows refuses it once the project moved on`;
+
+/* What `help` says of `--revision` on every verb that writes the project file. */
+export const REVISION_LINE = `flag\t--${REVISION_FLAG} N\toptional\tThe revision of the project a list printed, which this call was decided on; refused with rev-conflict and nothing written once the project moved on`;
 
 /* Agents dry-run every call before the real one to be safe, which doubles what each costs them. */
 export const DRY_RUN_PREVIEW = 'a refused call makes nothing either, so it is only a preview and never needed for safety';
@@ -226,6 +248,8 @@ interface ArgsSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> {
     switches?: readonly string[];
     /* Whether this makes something and can therefore be asked to validate and stop. */
     dryRun?: boolean;
+    /* Whether this writes the project file and so takes the revision it was decided on. */
+    revision?: boolean;
     run(input: { positionals: z.infer<Positionals>; flags: z.infer<Flags>; switches: ReadonlySet<string>; dryRun: boolean }, call: VerbCall): Promise<string[]>;
 }
 
@@ -235,7 +259,7 @@ interface VerbSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> ext
 const usageLinesOf = (name: string, usage: string): string[] => [`usage\t${name}\t${usage}`, `detail\truimte-context help ${name}`];
 
 const flagsOf = (spec: ArgsSpec<z.ZodType, z.ZodObject>): { values: string[]; switches: string[] } => ({
-    values: Object.keys(spec.flags.shape),
+    values: [...Object.keys(spec.flags.shape), ...(spec.revision === true ? [REVISION_FLAG] : [])],
     switches: [...(spec.switches ?? []), ...(spec.dryRun === true ? [DRY_RUN_FLAG] : [])]
 });
 
@@ -264,11 +288,18 @@ const runArgs = async <Positionals extends z.ZodType, Flags extends z.ZodObject>
     if (!positionals.success) {
         throw new VerbRefusal('bad-arguments', issueMessage(positionals.error, 'argument'), usageLines);
     }
-    const flags = spec.flags.safeParse(parsed.flags);
+    const { [REVISION_FLAG]: revision, ...given } = parsed.flags;
+    const flags = spec.flags.safeParse(given);
     if (!flags.success) {
         throw new VerbRefusal('bad-arguments', issueMessage(flags.error, 'flag'), usageLines);
     }
-    return spec.run({ positionals: positionals.data, flags: flags.data, switches: parsed.switches, dryRun: parsed.switches.has(DRY_RUN_FLAG) }, call);
+    if (revision !== undefined && !/^\d+$/.test(revision)) {
+        throw new VerbRefusal('bad-arguments', `--${REVISION_FLAG} takes the whole number a list printed as revision`, usageLines);
+    }
+    return spec.run(
+        { positionals: positionals.data, flags: flags.data, switches: parsed.switches, dryRun: parsed.switches.has(DRY_RUN_FLAG) },
+        revision === undefined ? call : { ...call, expectedRevision: Number(revision) }
+    );
 };
 
 /* What a verb and an action share: the synopsis beside the schemas its arguments are checked against. */

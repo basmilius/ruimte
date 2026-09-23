@@ -97,6 +97,7 @@ const placeName = (container: ProjectNode | undefined): string => (container ===
 
 export const nodeActions: ActionHandlers<ServerActionContext> = {
     'node.list': async ({ viewId }, { actor, context }) => {
+        const revision = await context.host.revision(context.place.projectId);
         const canvas = canvasNamed(await context.host.read(context.place.projectId), viewId);
         const containers = containersOf(canvas.nodes);
         return {
@@ -112,7 +113,8 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                     h: node.h,
                     groupId: containers.get(node.id)?.id ?? null
                 })),
-                self: canvas.nodes.some((node) => node.id === actor.id) ? actor.id : null
+                self: canvas.nodes.some((node) => node.id === actor.id) ? actor.id : null,
+                revision
             }
         };
     },

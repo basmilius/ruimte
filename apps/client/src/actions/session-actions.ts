@@ -22,7 +22,7 @@ import { agentsEndedWith } from '@/agents/end-children';
 import { forkRefusal, lastSettledTurn, summaryRefusal } from '@/chat/logic/fork';
 import { recentSubagentMessages } from '@/chat/recent-messages';
 import { stopOf, subagentTitle } from '@/chat/subagent-list';
-import { readNodeHost, updateHost } from '@/nodes/node-host';
+import { readNodeHost, updateHost, type NodeHost } from '@/nodes/node-host';
 import { PlanClient } from '@/plan/plan-client';
 import { showViewWhenItLands } from '@/project/views';
 import { revealWhenItLands } from '@/state/canvas';
@@ -33,7 +33,7 @@ import { usePlans } from '@/state/plans';
 import { providersOf } from '@/state/providers';
 import { useSessions, type SessionState } from '@/state/sessions';
 import { screenOf } from '@/terminal/registry';
-import { chatClient, machineFor } from '@/transport/connections';
+import { chatClient, machineFor, sessionClient } from '@/transport/connections';
 import type { Transport } from '@/transport/transport';
 
 type Requester = Pick<Transport, 'request'>;
@@ -57,6 +57,13 @@ export interface SessionMachine {
     plans(chatId: string): readonly Plan[];
     applyPlan(chatId: string, planId: string, ops: PlanPersonOp[]): Promise<Plan>;
     revealFork(result: ChatForkResult): void;
+    /* What a terminal was made to run: its command, or the CLI and the mode of a terminal agent. */
+    terminalHost(terminalId: string): Pick<NodeHost, 'command' | 'provider' | 'runtimeMode'> | null;
+    /*
+     * Ends what is left of a terminal's session and has its body start a fresh one, with the agent
+     * session `resume` names going on in it. The body rebuilds its terminal; this only asks for it.
+     */
+    restartTerminal(terminalId: string, resume: string | null): Promise<void>;
 }
 
 const endpointTransport = (): Requester | null => machineFor(currentEndpointId())?.transport ?? null;
@@ -89,6 +96,19 @@ const LIVE_MACHINE: SessionMachine = {
         } else {
             revealWhenItLands(result.viewId, result.nodeId);
         }
+    },
+    terminalHost: (terminalId) => readNodeHost(terminalId),
+    restartTerminal: async (terminalId, resume) => {
+        // On the node, so it survives a reload; the daemon turns it into the CLI's own resume line.
+        if (resume !== null) {
+            updateHost(terminalId, { resume });
+        }
+        try {
+            await sessionClient.kill(terminalId);
+        } catch {
+            // Already gone on the machine; a fresh session is all that matters.
+        }
+        useSessions.getState().restart(endpointKey(currentEndpointId(), terminalId));
     }
 };
 
@@ -133,6 +153,17 @@ const threadOf = (row: ChatState): ChatItem[] => row.order.flatMap((id) => (row.
 
 const pendingQuestion = (row: ChatState | null, match: (item: ChatQuestionItem) => boolean): ChatQuestionItem | null =>
     row === null ? null : (threadOf(row).find((item): item is ChatQuestionItem => item.kind === 'question' && item.state === 'pending' && match(item)) ?? null);
+
+/* What the fresh shell of a restarted terminal runs, which is what Voice asks about first: an agent CLI on a new session is a start. */
+const startsAgain = (host: Pick<NodeHost, 'command' | 'provider' | 'runtimeMode'> | null, providerName: string | null): string => {
+    if (host?.provider) {
+        return `${providerName ?? host.provider} starts again on a new session${host.runtimeMode ? `, in ${host.runtimeMode} mode` : ''}.`;
+    }
+    if (host?.command) {
+        return `It runs “${host.command}” again.`;
+    }
+    return 'A fresh shell starts.';
+};
 
 const quotedList = (items: readonly string[]): string => (items.length === 0 ? 'none' : items.map((item) => `“${item}”`).join(', '));
 
@@ -659,7 +690,38 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
         },
         'terminal.resumeAgent': async ({ terminalId }, call) => {
             const terminal = terminalNamed(terminalId, call);
-            await ask('agent.resume', { sessionId: terminalId });
+            const state = machine.terminal(terminalId);
+            if (state?.exited === undefined) {
+                await ask('agent.resume', { sessionId: terminalId });
+                return { output: { terminalId, terminal } };
+            }
+            // The CLI went down with the shell without its hooks reporting an end, so its session is still there to go on with.
+            if (state.agent?.status !== 'exited') {
+                throw new ActionRefusal('nothing-to-resume', `No agent session of “${terminal}” is left to resume; terminal.restart starts a fresh shell.`);
+            }
+            await machine.restartTerminal(terminalId, state.agent.agentSessionId);
+            return { output: { terminalId, terminal } };
+        },
+        'terminal.restart': async ({ terminalId }, call) => {
+            const terminal = terminalNamed(terminalId, call);
+            const state = machine.terminal(terminalId);
+            if (state === null) {
+                throw new ActionRefusal('terminal-not-open', `Open “${terminal}” before restarting it; this window has not drawn it yet.`);
+            }
+            if (state.exited === undefined) {
+                throw new ActionRefusal('still-running', `The shell of “${terminal}” still runs; only an ended shell starts over.`);
+            }
+            if (asksFirst(call)) {
+                const launch = machine.terminalHost(terminalId);
+                const providerName = machine.providers().find((provider) => provider.kind === launch?.provider)?.name ?? null;
+                return {
+                    confirmation: {
+                        title: `Restart “${terminal}”?`,
+                        consequences: [startsAgain(launch, providerName), 'The scrollback of the ended shell is gone.']
+                    }
+                };
+            }
+            await machine.restartTerminal(terminalId, null);
             return { output: { terminalId, terminal } };
         },
         'plan.list': ({ chatId }, call) => ({ output: { plans: machine.plans(chatOfPlan(chatId, call)).toReversed() } }),

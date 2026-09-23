@@ -1,6 +1,21 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
+import type { CanvasHost } from '../canvas/verb.ts';
+import { handleContextRequest } from './context-route.ts';
 import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
+
+/* The route in front of a store, for a caller no project places: `list` and `read` never ask where it stands. */
+const route = (context: ContextStore) => (path: string, token?: string) => {
+    const url = new URL(`http://127.0.0.1${path}`);
+    const host = {
+        locate: () => null,
+        context: { list: (id: string) => context.list(id), read: context.answer.bind(context) }
+    } as Partial<CanvasHost> as CanvasHost;
+    return handleContextRequest(new Request(url, { headers: token ? { authorization: `Bearer ${token}` } : {} }), url.pathname, {
+        targetForToken: (given) => (given === 'tok' ? 'agent' : null),
+        host
+    });
+};
 
 const items: ChatItem[] = [
     { id: 'u', kind: 'user', createdAt: 1, turnId: 't', text: 'fix the bug' },
@@ -79,14 +94,10 @@ const store = new ContextStore({
     drawingElements: async (id) => (id === 'view-1' ? drawing : null),
     // Only the agent of the project that holds it reads the diagram, which is what the daemon's reader does too.
     diagramDocument: async (targetId, id) => (targetId === 'agent' && id === 'flow-1' ? diagram : null),
-    canvasOf: (targetId) => (targetId === 'agent' ? canvas : null),
-    targetForToken: (token) => (token === 'tok' ? 'agent' : null)
+    canvasOf: (targetId) => (targetId === 'agent' ? canvas : null)
 });
 
-const get = (path: string, token?: string) => {
-    const url = new URL(`http://127.0.0.1${path}`);
-    return store.handle(new Request(url, { headers: token ? { authorization: `Bearer ${token}` } : {} }), url.pathname);
-};
+const get = route(store);
 
 describe('ContextStore', () => {
     test('a file answers its path and a line telling the agent to read it itself', async () => {
@@ -222,8 +233,7 @@ describe('ContextStore', () => {
             chatItems: (id) => (id === 'chat' ? items : null),
             chatPlans: async (id) => (id === 'chat' ? [plan] : []),
             drawingElements: async () => null,
-            diagramDocument: async () => null,
-            targetForToken: () => null
+            diagramDocument: async () => null
         });
         const whole = await withPlans.read('agent', 'chat');
         expect(whole).toStartWith('Plan "Ship it" (plan-1, steps, rev 2): 1 of 1 done');
@@ -335,14 +345,10 @@ describe('a subagent of a linked chat', () => {
             ];
         },
         drawingElements: async () => null,
-        diagramDocument: async () => null,
-        targetForToken: (token) => (token === 'tok' ? 'agent' : null)
+        diagramDocument: async () => null
     });
 
-    const ask = (path: string) => {
-        const url = new URL(`http://127.0.0.1${path}`);
-        return subagentStore.handle(new Request(url, { headers: { authorization: 'Bearer tok' } }), url.pathname);
-    };
+    const ask = (path: string) => route(subagentStore)(path, 'tok');
 
     test('--subagent prints that conversation through the chat it belongs to, and --tail counts its lines', async () => {
         expect(await (await ask('/context/chat?subagent=toolu_1')).text()).toBe('## User\n\nSurvey the docs\n\n## Assistant\n\nA guide is missing.');

@@ -1,3 +1,4 @@
+import { actionDescription } from '@ruimte/actions';
 import { ChatSubagentSourceSchema, ContextSourceSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
@@ -128,7 +129,7 @@ const listVerb: ContextVerb = {
     served: 'context',
     name: 'list',
     usage: '',
-    summary: 'Lists the context linked to this session: id, kind, title (also what ruimte-context prints without a verb)',
+    summary: `${actionDescription('context.list', 'agent')} Also what ruimte-context prints without a verb.`,
     detail: [
         'prints\tid\tkind\ttitle\tone line per linked source, nothing when the person linked none',
         `kinds\t${ContextSourceSchema.shape.kind.options.join('\t')}\ta note and a text on the canvas both arrive as text`,
@@ -142,7 +143,7 @@ const readVerb: ContextVerb = {
     served: 'context',
     name: 'read',
     usage: '<id> [--tail N] [--subagent T]',
-    summary: 'Prints one linked source, whole or its last N lines',
+    summary: actionDescription('context.read', 'agent'),
     detail: [
         'argument\t<id>\trequired\tThe id of a source, from ruimte-context list; a drawing or diagram also takes the id of the linked node that shows it',
         'flag\t--tail N\toptional\tOnly the last N lines, N a positive whole number; without it the whole source',

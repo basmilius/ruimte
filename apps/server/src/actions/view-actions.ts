@@ -35,6 +35,7 @@ const kindOf = (view: ProjectView): ActionOutput<'view.focus'>['kind'] => (isUnk
 
 export const viewActions: ActionHandlers<ServerActionContext> = {
     'view.list': async (_input, { actor, context }) => {
+        const revision = await context.host.revision(context.place.projectId);
         const content = await context.host.read(context.place.projectId);
         const anyView = context.host.agentsDeleteAnyView();
         return {
@@ -43,7 +44,8 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
                     const { may, why } = deleteReason(view, { caller: actor.id, place: context.place, anyView });
                     return { viewId: view.id, kind: kindOf(view), name: view.name ?? '', deletable: may, why };
                 }),
-                self: context.place.canvasId ?? actor.id
+                self: context.place.canvasId ?? actor.id,
+                revision
             }
         };
     },

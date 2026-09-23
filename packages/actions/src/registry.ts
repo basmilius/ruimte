@@ -11,6 +11,11 @@ export interface ActionCall<Context> {
     context: Context;
     /* Validate everything and change nothing; only an action the registry lists under `previews` takes it. */
     dryRun?: boolean;
+    /*
+     * The revision of the document the caller read before it decided on this write. A write refuses
+     * with `rev-conflict` once that document moved on; a read or a local action ignores it.
+     */
+    expectedRevision?: number;
 }
 
 export interface ActionConfirmation {
@@ -107,6 +112,8 @@ interface PendingAction {
     name: ActionName;
     input: unknown;
     actor: ActionActor;
+    // Checked again when the answer comes, since the document can move while someone decides.
+    expectedRevision: number | undefined;
 }
 
 interface UndoAction<Context> {
@@ -120,11 +127,31 @@ const TOKEN_LIMIT = 100;
 /* A refusal an executor's own error type carries, such as a coded error of the daemon; null for a plain failure. */
 export type ActionRefusalOf = (error: unknown) => { code: string; message: string; details?: unknown } | null;
 
-export interface ActionRegistryOptions {
+/*
+ * Compares `call.expectedRevision` with the revision of the document this action writes, and throws
+ * `revisionConflict` when it moved on. Throws an `ActionRefusal` of its own for an action whose
+ * document has no revision here.
+ */
+export type ActionRevisionCheck<Context> = (name: ActionName, input: unknown, call: ActionCall<Context> & { expectedRevision: number }) => MaybePromise<void>;
+
+export interface ActionRegistryOptions<Context = unknown> {
     /* The actions whose handler honors `dryRun`; any other refuses a dry run rather than run for real. */
     previews?: readonly ActionName[];
     refusalOf?: ActionRefusalOf;
+    /* Without one, a write that names a revision refuses: nothing here could tell that it still holds. */
+    checkRevision?: ActionRevisionCheck<Context>;
 }
+
+export const REVISION_CONFLICT = 'rev-conflict';
+
+export const revisionConflictMessage = (document: string, expected: number, current: number): string =>
+    `${document} is at revision ${current}, and this call was decided on ${expected}; read it again and decide anew.`;
+
+/* The refusal of a write decided on a revision the document has moved on from. */
+export const revisionConflict = (document: string, expected: number, current: number): ActionRefusal =>
+    new ActionRefusal(REVISION_CONFLICT, revisionConflictMessage(document, expected, current));
+
+const WRITES: ReadonlySet<string> = new Set(['shared', 'external']);
 
 const sameActor = (left: ActionActor, right: ActionActor): boolean => left.kind === right.kind && left.id === right.id;
 
@@ -162,11 +189,13 @@ export class ActionRegistry<Context> {
     readonly #undo = new Map<string, UndoAction<Context>>();
     readonly #previews: ReadonlySet<ActionName>;
     readonly #refusalOf: ActionRefusalOf | undefined;
+    readonly #checkRevision: ActionRevisionCheck<Context> | undefined;
 
-    constructor(handlers: ActionHandlers<Context>, options: ActionRegistryOptions = {}) {
+    constructor(handlers: ActionHandlers<Context>, options: ActionRegistryOptions<Context> = {}) {
         this.#handlers = handlers;
         this.#previews = new Set(options.previews ?? []);
         this.#refusalOf = options.refusalOf;
+        this.#checkRevision = options.checkRevision;
     }
 
     catalog(call: ActionCall<Context>): ActionCapability[] {
@@ -200,7 +229,7 @@ export class ActionRegistry<Context> {
         if (!approved) {
             return failure(pending.name, 'confirmation-declined', 'The action was not performed.');
         }
-        return this.#execute(pending.name, pending.input, call, true);
+        return this.#execute(pending.name, pending.input, { ...call, expectedRevision: pending.expectedRevision }, true);
     }
 
     async undo(token: string, call: ActionCall<Context>): Promise<ActionControlResult> {
@@ -241,6 +270,13 @@ export class ActionRegistry<Context> {
             return failure(name, 'forbidden-field', `The ${call.actor.kind} actor may not give “${forbidden[0]}” to “${name}”.`);
         }
         try {
+            const expectedRevision = call.expectedRevision;
+            if (expectedRevision !== undefined && WRITES.has(definition.effect)) {
+                if (!this.#checkRevision) {
+                    return failure(name, 'no-revision', `“${name}” cannot check a revision here, so it refuses one rather than write past it.`);
+                }
+                await this.#checkRevision(name, parsed.data, { ...call, expectedRevision });
+            }
             const handled = await handler(parsed.data as ActionInput<Name>, {
                 ...call,
                 confirmed
@@ -256,7 +292,8 @@ export class ActionRegistry<Context> {
                 remember(this.#pending, confirmationToken, {
                     name,
                     input: parsed.data,
-                    actor: call.actor
+                    actor: call.actor,
+                    expectedRevision: call.expectedRevision
                 });
                 return {
                     status: 'needs_confirmation',

@@ -15,6 +15,7 @@ import {
 import type { StoreApi } from 'zustand';
 import { z } from 'zod';
 import { asksFirst } from '@/actions/developer-actions';
+import { DEFAULT_NOTE_COLOR } from '@/canvas/note-colors';
 import { diagramPng, diagramSvg } from '@/diagram/export';
 import { drawingClipboardText, drawingPng, drawingSvg, download, exportFileName, exportTargets } from '@/drawing/export';
 import { lineElement, noteElement, shapeElement, textElement } from '@/drawing/gestures';
@@ -284,16 +285,41 @@ export function contentActions(document: StoreApi<DocumentState>, overrides: Par
                 }
             };
         },
+        'note.setColor': ({ viewId, nodeId, color }) => {
+            const { view } = noteOf(viewId, nodeId);
+            const canvas = isOnScreen(document.getState(), viewId) ? liveCanvas(viewId) : null;
+            if (canvas === null) {
+                throw new ActionRefusal('inactive-canvas', `Open “${view.name}” before coloring its notes.`);
+            }
+            const previousColor = canvas.nodes[nodeId]?.color ?? DEFAULT_NOTE_COLOR;
+            const output = { viewId, nodeId, color, previousColor, changed: color !== previousColor };
+            if (!output.changed) {
+                return { output };
+            }
+            const depth = canvas.past.length;
+            canvas.updateNode(nodeId, { color }, true);
+            return {
+                output,
+                undo: () => {
+                    const current: CanvasState | null = liveCanvas(viewId);
+                    if (current === null || current.past.length !== depth + 1 || current.nodes[nodeId]?.color !== color) {
+                        throw new ActionRefusal('stale-undo', 'The canvas changed after the note was colored, so it cannot be safely undone here.');
+                    }
+                    current.undo();
+                }
+            };
+        },
         'drawing.read': ({ viewId }) => {
             const { view, store } = drawing(viewId);
-            const { elements, selection } = store.getState();
+            const { elements, selection, rev } = store.getState();
             return {
                 output: {
                     viewId,
                     view: view.name ?? viewId,
                     elements: elements.slice(-MAX_READ_ELEMENTS).map(summaryOf),
                     selected: [...selection],
-                    truncated: elements.length > MAX_READ_ELEMENTS
+                    truncated: elements.length > MAX_READ_ELEMENTS,
+                    revision: rev
                 }
             };
         },
@@ -480,11 +506,12 @@ export function contentActions(document: StoreApi<DocumentState>, overrides: Par
         },
         'diagram.read': ({ viewId }) => {
             const { view, store } = diagram(viewId);
-            const { content } = store.getState();
+            const { content, rev } = store.getState();
             return {
                 output: {
                     viewId,
                     view: view.name ?? viewId,
+                    revision: rev,
                     title: content.meta.title,
                     direction: content.meta.direction,
                     nodes: content.nodes.map((node) => ({

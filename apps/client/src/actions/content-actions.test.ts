@@ -7,6 +7,7 @@ import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
 import { useDocument } from '@/state/document';
 import { defaultDrawings } from '@/state/drawing';
+import { useProject } from '@/state/project';
 
 const main: ProjectCanvasView = {
     kind: 'canvas',
@@ -138,6 +139,73 @@ describe('notes', () => {
         expect(await registry.execute('node.update', { viewId: 'main', nodeId: 'shell', text: 'ls', append: false }, VOICE_ACTION_CALL)).toMatchObject({
             status: 'failed',
             error: { code: 'not-a-note' }
+        });
+    });
+});
+
+describe('note colors', () => {
+    test('Voice gives a note another paper, undo brings the old one back, and a terminal has none', async () => {
+        const { registry } = fakes();
+        const colored = completed(await registry.execute('note.setColor', { viewId: 'main', nodeId: 'memo', color: 'blue' }, VOICE_ACTION_CALL));
+        expect(colored.output).toEqual({ viewId: 'main', nodeId: 'memo', color: 'blue', previousColor: 'yellow', changed: true });
+        expect(canvas().nodes.memo?.color).toBe('blue');
+        expect(await registry.undo(colored.undoToken!, VOICE_ACTION_CALL)).toMatchObject({ status: 'completed' });
+        expect(canvas().nodes.memo?.color).toBeUndefined();
+
+        const same = completed(await registry.execute('note.setColor', { viewId: 'main', nodeId: 'memo', color: 'yellow' }, PERSON_ACTION_CALL));
+        expect(same.output.changed).toBe(false);
+        expect(same.undoToken).toBeUndefined();
+        expect(await registry.execute('note.setColor', { viewId: 'main', nodeId: 'shell', color: 'blue' }, PERSON_ACTION_CALL)).toMatchObject({
+            error: { code: 'not-a-note' }
+        });
+        expect(await registry.execute('note.setColor', { viewId: 'main', nodeId: 'memo', color: 'teal' }, PERSON_ACTION_CALL)).toMatchObject({
+            error: { code: 'invalid-input' }
+        });
+    });
+
+    test('an undo after the canvas moved on is refused and keeps the color', async () => {
+        const { registry } = fakes();
+        const colored = completed(await registry.execute('note.setColor', { viewId: 'main', nodeId: 'memo', color: 'pink' }, VOICE_ACTION_CALL));
+        canvas().updateNode('memo', { body: 'Later' }, true);
+        expect(await registry.undo(colored.undoToken!, VOICE_ACTION_CALL)).toMatchObject({ error: { code: 'stale-undo' } });
+        expect(canvas().nodes.memo?.color).toBe('pink');
+    });
+});
+
+describe('revisions', () => {
+    afterEach(() => {
+        useProject.setState({ rev: 0, dirty: false });
+    });
+
+    test('a read reports the rev of the file it read, and a write decided on it goes through while one decided before a change refuses', async () => {
+        const { registry } = fakes();
+        useProject.setState({ rev: 7, dirty: false });
+        expect(completed(await registry.execute('workspace.inspect', {}, VOICE_ACTION_CALL)).output.revision).toBe(7);
+        const write = { viewId: 'main', nodeId: 'memo', text: 'Plan', append: false };
+        expect(await registry.execute('node.update', write, { ...VOICE_ACTION_CALL, expectedRevision: 6 })).toMatchObject({ error: { code: 'rev-conflict' } });
+        expect(canvas().nodes.memo?.body).toBe('Buy milk');
+        expect(await registry.execute('node.update', write, { ...VOICE_ACTION_CALL, expectedRevision: 7 })).toMatchObject({ status: 'completed' });
+
+        // An edit on screen that is not saved yet moved the project past the rev it still names.
+        useProject.setState({ dirty: true });
+        expect(
+            await registry.execute('node.rename', { viewId: 'main', nodeId: 'memo', name: 'Todo' }, { ...VOICE_ACTION_CALL, expectedRevision: 7 })
+        ).toMatchObject({
+            error: { code: 'rev-conflict' }
+        });
+    });
+
+    test('a drawing holds a write to its own file, and what has no revision here refuses one', async () => {
+        showDrawing();
+        const { registry } = fakes();
+        expect(completed(await registry.execute('drawing.read', { viewId: drawingId }, VOICE_ACTION_CALL)).output.revision).toBe(2);
+        const remove = { viewId: drawingId, elementIds: ['a'] };
+        expect(await registry.execute('drawing.deleteElements', remove, { ...PERSON_ACTION_CALL, expectedRevision: 1 })).toMatchObject({
+            error: { code: 'rev-conflict' }
+        });
+        expect(await registry.execute('drawing.deleteElements', remove, { ...PERSON_ACTION_CALL, expectedRevision: 2 })).toMatchObject({ status: 'completed' });
+        expect(await registry.execute('git.stage', { repository: 'repo', paths: ['a.ts'] }, { ...PERSON_ACTION_CALL, expectedRevision: 2 })).toMatchObject({
+            error: { code: 'no-revision' }
         });
     });
 });

@@ -12,11 +12,13 @@ const pickId = (edge: ProjectEdge): string => edge.id;
 
 export const linkActions: ActionHandlers<ServerActionContext> = {
     'link.list': async ({ viewId }, { context }) => {
+        const revision = await context.host.revision(context.place.projectId);
         const canvas = canvasNamed(await context.host.read(context.place.projectId), viewId);
         return {
             output: {
                 viewId: canvas.id,
-                edges: canvas.edges.map((edge) => ({ edgeId: edge.id, from: edge.from, to: edge.to, label: edge.label ?? null }))
+                edges: canvas.edges.map((edge) => ({ edgeId: edge.id, from: edge.from, to: edge.to, label: edge.label ?? null })),
+                revision
             }
         };
     },

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MAX_NOTICE_LENGTH, MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
 import type { ProjectContent, ProjectNode, Task } from '@ruimte/contracts';
+import { SubagentUnreadable } from '../context/context-store.ts';
 import type { Notice } from '../context/notices.ts';
 import type { AgentState, CanvasHost } from '../canvas/verb.ts';
 import { PlanStore } from '../plans/plan-store.ts';
@@ -17,6 +18,9 @@ let content: ProjectContent;
 let made: Map<string, string>;
 let ended: string[];
 let conflict: boolean;
+let rev: number;
+// Stands for a write that lands between the check before an action and its own write.
+let writtenMeanwhile: boolean;
 let notices: Omit<Notice, 'createdAt'>[];
 let tasks: Task[];
 let settled: string[];
@@ -27,13 +31,29 @@ let home: string;
 const host = (): CanvasHost =>
     ({
         read: async () => content,
-        mutate: async (_projectId, apply) => {
-            if (conflict) {
+        revision: async () => (writtenMeanwhile ? rev - 1 : rev),
+        mutate: async (_projectId, apply, expectedRev) => {
+            if (conflict || (expectedRev !== undefined && expectedRev !== rev)) {
                 throw new ProjectError('rev-conflict', 'The project changed since it was read');
             }
             const mutation = await apply(content);
-            content = mutation.content ?? content;
+            if (mutation.content !== null) {
+                content = mutation.content;
+                rev += 1;
+            }
             return mutation.result;
+        },
+        context: {
+            list: (targetId: string) => (targetId === 'term-1' ? [{ id: 'note-1', kind: 'text' as const, title: 'Plan' }] : []),
+            read: async (targetId: string, sourceId: string, tail: number | null, subagent: string | null) => {
+                if (targetId !== 'term-1' || sourceId !== 'note-1') {
+                    throw new ProjectError('project-not-found', 'not used here');
+                }
+                if (subagent !== null) {
+                    throw new SubagentUnreadable('note-1 is a text, and only a chat has subagents');
+                }
+                return tail === null ? 'one\ntwo' : 'two';
+            }
         },
         recordMade: async (record) => {
             made.set(record.nodeId, record.openedBy);
@@ -118,6 +138,8 @@ beforeEach(async () => {
     made = new Map();
     ended = [];
     conflict = false;
+    rev = 1;
+    writtenMeanwhile = false;
     notices = [];
     tasks = [];
     settled = [];
@@ -436,5 +458,58 @@ describe('the daemon actions', () => {
             status: 'completed',
             output: { nodeId: 'web-1', open: false, page: null, error: null }
         });
+    });
+
+    test('a write decided on the revision it read goes through, and one decided before a change refuses and changes nothing', async () => {
+        const listed = await serverActions.execute('node.list', { viewId: 'main' }, agent());
+        expect(listed).toMatchObject({ status: 'completed', output: { revision: 1 } });
+        const decided = serverActionCall(host(), PLACE, 'term-1', false, 1);
+        expect(await serverActions.execute('node.create', note(), decided)).toMatchObject({ status: 'completed' });
+        expect(await serverActions.execute('node.create', note(), decided)).toMatchObject({
+            status: 'failed',
+            error: { code: 'rev-conflict', message: 'The project is at revision 2, and this call was decided on 1; read it again and decide anew.' }
+        });
+        expect(nodesOnMain()).toHaveLength(3);
+        // A read has nothing to hold, so a revision on it changes nothing.
+        expect(await serverActions.execute('link.list', { viewId: 'main' }, decided)).toMatchObject({ status: 'completed', output: { revision: 2 } });
+    });
+
+    test('the first write holds the revision under its own lock, so a write that lands after the check still refuses', async () => {
+        writtenMeanwhile = true;
+        expect(await serverActions.execute('node.create', note(), serverActionCall(host(), PLACE, 'term-1', false, 0))).toMatchObject({
+            status: 'failed',
+            error: { code: 'rev-conflict' }
+        });
+        expect(nodesOnMain()).toEqual(['term-1', 'term-2']);
+    });
+
+    test('a write to anything but the project file refuses a revision rather than ignore it', async () => {
+        expect(
+            await serverActions.execute(
+                'plan.create',
+                { document: null, markdown: '- [ ] Ship', title: null, kind: null, checks: null },
+                serverActionCall(host(), PLACE, 'term-1', false, 1)
+            )
+        ).toMatchObject({
+            status: 'failed',
+            error: { code: 'no-revision' }
+        });
+    });
+
+    test('context.list and context.read answer what is linked into the caller, even one no project places', async () => {
+        const unplaced = serverActionCall(host(), null, 'term-1');
+        expect(await serverActions.execute('context.list', {}, unplaced)).toEqual({
+            status: 'completed',
+            action: 'context.list',
+            output: { sources: [{ id: 'note-1', kind: 'text', title: 'Plan' }] }
+        });
+        expect(await serverActions.execute('context.read', { sourceId: 'note-1', tail: 1, subagent: null }, unplaced)).toMatchObject({
+            output: { text: 'two' }
+        });
+        expect(await serverActions.execute('context.read', { sourceId: 'note-1', tail: null, subagent: 'toolu_1' }, unplaced)).toMatchObject({
+            status: 'failed',
+            error: { code: 'unknown-subagent', message: 'note-1 is a text, and only a chat has subagents' }
+        });
+        expect(await serverActions.execute('node.list', { viewId: 'main' }, unplaced)).toMatchObject({ status: 'failed', error: { code: 'not-in-project' } });
     });
 });

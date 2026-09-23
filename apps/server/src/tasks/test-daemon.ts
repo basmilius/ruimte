@@ -170,7 +170,8 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
     const host: CanvasHost = {
         locate: (id) => store.index.locate(id),
         read: (id) => store.read(id),
-        mutate: (id, apply) => store.mutate(id, apply),
+        revision: (id) => store.revision(id),
+        mutate: (id, apply, expectedRev) => store.mutate(id, apply, expectedRev),
         worktreePaths: async (folder) => (worktrees ? (await worktrees.list(folder).catch(() => [])).map((worktree) => worktree.path) : []),
         installedAgents: async () => installed,
         holdPrompt: (id, nodeId, prompt) => prompts.put(id, nodeId, prompt),

@@ -60,6 +60,7 @@ import { AttachmentStore } from './chat/attachment-store.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas/canvas-route.ts';
 import { ChatManager } from './chat/chat-manager.ts';
 import { hookContext } from './context/context-note.ts';
+import { handleContextRequest } from './context/context-route.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from './context/notices.ts';
 import { turnFromMessage } from './context/deliver-message.ts';
@@ -212,8 +213,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             const place = projects.index.locate(targetId);
             return place ? diagrams.read(place.projectId, viewId) : null;
         },
-        canvasOf: (targetId) => projects.index.canvasOf(targetId),
-        targetForToken
+        canvasOf: (targetId) => projects.index.canvasOf(targetId)
     });
     const outboxLink = new OutboxLink({ outbox, projectOf: (id) => projects.index.locate(id)?.projectId ?? null });
     const attachments = new AttachmentStore(config.home);
@@ -363,6 +363,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const canvasHost = {
         locate: (id: string) => projects.index.locate(id),
         read: (projectId: string) => projects.read(projectId),
+        revision: (projectId: string) => projects.revision(projectId),
         mutate: projects.mutate.bind(projects),
         worktreePaths: (folder: string) =>
             worktrees
@@ -381,6 +382,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         worktrees: worktreeHost(worktrees, merges),
         browsers: new BrowserDriver(config.home, browsers, browserPages),
         agents: agentStates({ outbox, lineage, chats, sessions: manager }),
+        context: {
+            list: (targetId: string) => context.list(targetId),
+            read: (targetId: string, sourceId: string, tail: number | null, subagent: string | null) => context.answer(targetId, sourceId, tail, subagent)
+        },
         depthOf: (nodeId: string) => lineage.depthOf(nodeId),
         openedCount: (callerId: string) => lineage.openedCount(callerId),
         recordMade: (record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean }) => lineage.put(record),
@@ -801,7 +806,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname === CONTEXT_PATH || url.pathname.startsWith(`${CONTEXT_PATH}/`)) {
-                return context.handle(request, url.pathname);
+                return handleContextRequest(request, url.pathname, { targetForToken, host: canvasHost });
             }
 
             if (config.serve) {

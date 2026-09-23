@@ -1,7 +1,8 @@
 import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import { renderPlanText } from '@ruimte/plan';
 import { contextChangeNote } from './context-note.ts';
-import { refuseRead } from './read-refusal.ts';
+import { CodedError } from '../coded-error.ts';
+import { readRefusal } from './read-refusal.ts';
 import { renderPage } from './context-browser.ts';
 import { renderDevice } from './context-device.ts';
 import { renderDiagram } from './context-diagram.ts';
@@ -18,8 +19,15 @@ const lastLines = (text: string, count: number): string => {
     return lines.slice(Math.max(0, lines.length - count)).join('\n');
 };
 
+/* A read that found nothing to answer, under the code and the sentence that say why. */
+export class ContextRefusal extends CodedError {}
+
 /* A `--subagent` read that cannot be answered, with the sentence that says why. */
-export class SubagentUnreadable extends Error {}
+export class SubagentUnreadable extends ContextRefusal {
+    constructor(message: string) {
+        super('unknown-subagent', message);
+    }
+}
 
 interface ContextReaders {
     /* What the agent under this id may read, derived from the project documents the daemon knows. */
@@ -43,8 +51,6 @@ interface ContextReaders {
     /* The canvas this agent is a node on, for saying why a read of a neighbor is refused; null when
        it is a view of its own, or when no known project places it. */
     canvasOf?(targetId: string): ProjectCanvasView | null;
-    /* The target a bearer token speaks for: a terminal session or a chat. */
-    targetForToken(token: string): string | null;
 }
 
 /* The first line of a subagent's report that says something, which is all a line about it has room for. */
@@ -225,44 +231,16 @@ export class ContextStore {
         return tail === null ? transcript : lastLines(transcript, tail);
     }
 
-    /* `GET /context` lists, `GET /context/<id>[?tail=N][&subagent=T]` reads; the bearer token names the agent asking. */
-    async handle(request: Request, pathname: string): Promise<Response> {
-        if (request.method !== 'GET') {
-            return new Response('Method not allowed', { status: 405 });
-        }
-        const header = request.headers.get('authorization') ?? '';
-        const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
-        const targetId = token ? this.readers.targetForToken(token) : null;
-        if (!targetId) {
-            return new Response('Unknown token', { status: 401 });
-        }
-        const rest = pathname.slice(CONTEXT_PATH.length).replace(/^\//, '');
-        if (rest === '') {
-            return Response.json({ sources: this.list(targetId) });
-        }
-        const query = new URL(request.url).searchParams;
-        const asked = query.get('tail');
-        const tail = asked === null ? null : Number(asked);
-        if (tail !== null && (!Number.isInteger(tail) || tail < 1)) {
-            return new Response('tail takes a positive whole number of lines', { status: 400 });
-        }
-        const sourceId = decodeURIComponent(rest);
-        let text: string | null;
-        try {
-            text = await this.read(targetId, sourceId, tail, query.get('subagent') || null);
-        } catch (e) {
-            if (e instanceof SubagentUnreadable) {
-                // 422 rather than 404: the source is linked, what is missing is the subagent inside it.
-                return new Response(e.message, { status: 422 });
-            }
-            throw e;
-        }
+    /*
+     * One source as text, or a refusal that says why there is none. Only this side has the canvas the
+     * id may be a node on, so a line drawn the other way round reads apart from an id nobody drew.
+     */
+    async answer(targetId: string, sourceId: string, tail: number | null, subagent: string | null): Promise<string> {
+        const text = await this.read(targetId, sourceId, tail, subagent);
         if (text === null) {
-            /* Why, rather than only no: a line drawn the other way round is on the canvas, which the
-               CLI never sees, so the sentence it prints under `refused` is written here. */
-            const refusal = refuseRead(targetId, sourceId, this.readers.sources(targetId), this.readers.canvasOf?.(targetId) ?? null);
-            return new Response(refusal, { status: 404 });
+            const { code, message, lines } = readRefusal(targetId, sourceId, this.readers.sources(targetId), this.readers.canvasOf?.(targetId) ?? null);
+            throw new ContextRefusal(code, message, lines);
         }
-        return new Response(text, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+        return text;
     }
 }

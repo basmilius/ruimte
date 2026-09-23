@@ -10,7 +10,7 @@ const REMOTE = 'Xk3p';
 const node = (id: string, kind: CanvasNode['kind']): Pick<CanvasNode, 'id' | 'kind' | 'status'> => ({ id, kind, status: undefined });
 
 beforeEach(() => {
-    useSessions.setState({ byKey: {} });
+    useSessions.setState({ byKey: {}, restarts: {} });
     useChats.setState({ byKey: {} });
 });
 
@@ -94,5 +94,18 @@ describe('the approvals of a node', () => {
     test('never make a row for a node nobody tracks', () => {
         sessionSinkFor(LOCAL).setApprovals('t1', []);
         expect(useSessions.getState().byKey).toEqual({});
+    });
+});
+
+describe('restarts', () => {
+    test('count up per terminal and machine, and outlive the row a kill forgets and a machine that is dropped', () => {
+        const key = endpointKey(LOCAL, 't1');
+        sessionSinkFor(LOCAL).setExited('t1', 0);
+        useSessions.getState().restart(key);
+        sessionSinkFor(LOCAL).forget('t1');
+        useSessions.getState().restart(key);
+        useSessions.getState().clear(LOCAL);
+        expect(useSessions.getState().restarts[key]).toBe(2);
+        expect(useSessions.getState().restarts[endpointKey(REMOTE, 't1')]).toBeUndefined();
     });
 });

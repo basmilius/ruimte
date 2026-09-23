@@ -130,6 +130,14 @@ export const NODE_ACCENT_NAMES = [
 
 export type NodeAccent = (typeof NODE_ACCENT_NAMES)[number];
 
+/*
+ * The paper a note can take, its default first. Shared for the same reason as the accents: the
+ * client paints them and an action refuses any other. A note in the file keeps whatever it names.
+ */
+export const NOTE_COLOR_NAMES = ['yellow', 'green', 'blue', 'pink', 'gray'] as const;
+
+export type NoteColor = (typeof NOTE_COLOR_NAMES)[number];
+
 /* What a node of each kind is called before anything names it. */
 export const DEFAULT_TITLES: Record<NodeKind, string> = {
     terminal: 'Terminal',
