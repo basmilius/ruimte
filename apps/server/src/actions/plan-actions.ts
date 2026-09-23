@@ -116,7 +116,7 @@ export const planActions: ActionHandlers<ServerActionContext> = {
     },
     'plan.setStepState': async ({ planId, stepIds, state, note, next }, { actor, context }) =>
         changed(
-            await applyOps(actor, context, planId, [{ op: 'set', ids: stepIds, state, ...(note === null ? {} : { note }), ...(next === null ? {} : { next }) }])
+            await applyOps(actor, context, planId, [{ op: 'set', ids: stepIds, state, ...(note === null ? {} : { note }), ...(next == null ? {} : { next }) }])
         ),
     'plan.addNote': async ({ planId, stepId, text }, { actor, context }) => changed(await applyOps(actor, context, planId, [{ op: 'note', id: stepId, text }])),
     'plan.addItem': async ({ planId, type, title, description, under, after, checks, itemId }, { actor, context }) => {

@@ -272,7 +272,11 @@ describe('Voice domain tools', () => {
         });
         try {
             const result = await run('communicate', { action: 'chat.send', chatId, prompt: 'Give a motivating quote', notify_on_completion: true });
-            expect(send).toHaveBeenCalledWith('chat.send', { chatId, prompt: 'Give a motivating quote' }, VOICE_ACTION_CALL);
+            expect(send).toHaveBeenCalledWith(
+                'chat.send',
+                { chatId, prompt: 'Give a motivating quote', mentions: null, skills: null, attachments: null },
+                VOICE_ACTION_CALL
+            );
             expect(result.output).toMatchObject({ ok: true, message: 'Submitted the prompt in “Chat Test”.' });
             expect(result.action).toMatchObject({ kind: 'chat', label: 'Prompted AI Chat', detail: 'Chat Test: Give a motivating quote' });
             expect(result.followUp).toMatchObject({ key: endpointKey(currentEndpointId(), chatId), chat: 'Chat Test', turnId: 'turn-1' });

@@ -1,20 +1,16 @@
 import i18next from 'i18next';
 import { create } from 'zustand';
-import { isCanvasView, type Plan } from '@ruimte/contracts';
+import { isCanvasView, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { planToMarkdown } from '@ruimte/plan';
-import { focusNodeAction } from '@/actions/client-actions';
+import { focusNodeAction, performAsPerson } from '@/actions/client-actions';
 import { offerDraft } from '@/chat/drafts';
-import { PlanClient } from '@/plan/plan-client';
 import { foldableIds, resultsText, revealOptions, type PlanFilter } from '@/plan/plan-view';
 import { revealNode, showView } from '@/project/views';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
-import { machineFor } from '@/transport/connections';
 import { copyText } from '@/ui/clipboard';
-
-export const planClient = new PlanClient((endpointId) => machineFor(endpointId)?.transport ?? null);
 
 interface PlanViewPrefs {
     filter: PlanFilter;
@@ -125,4 +121,24 @@ export const sendResultsToChat = (chatId: string, plan: Plan): void => {
     }
     offerDraft(chatId, text);
     focusChat(chatId);
+};
+
+/* The tick already showed; a refusal put the plan back, and this says why. */
+const notChanged = (error: unknown): void => {
+    useToasts
+        .getState()
+        .show({ kind: 'error', title: i18next.t('plan:toast.notChanged'), description: error instanceof Error ? error.message : String(error) });
+};
+
+export const setPlanStepsAction = (chatId: string, planId: string, stepIds: string[], state: PlanStepState): void => {
+    performAsPerson('plan.setStepState', { chatId, planId, stepIds, state, note: null }).catch(notChanged);
+};
+
+export const notePlanStepAction = (chatId: string, planId: string, stepId: string, text: string): void => {
+    performAsPerson('plan.addNote', { chatId, planId, stepId, text }).catch(notChanged);
+};
+
+/* Null lifts the lock of every step of the plan. */
+export const unlockPlanStepsAction = (chatId: string, planId: string, stepIds: string[] | null): void => {
+    performAsPerson('plan.unlock', { chatId, planId, stepIds }).catch(notChanged);
 };

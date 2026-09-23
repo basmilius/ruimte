@@ -29,7 +29,13 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
         description: 'Create, focus, rename, select, group, move or delete nodes on the active canvas, and control its camera, history and locks.'
     },
     layout: { name: 'manage_layout', description: 'Save, apply or delete layouts of the active canvas, and split, close or move between the cells on screen.' },
-    communicate: { name: 'communicate', description: 'Send a direct prompt to, read or clear an AI Chat, or clear a terminal.' },
+    communicate: { name: 'communicate', description: 'Send a direct prompt to, read or clear an AI Chat, or read or clear a terminal.' },
+    sessions: {
+        name: 'run_sessions',
+        description:
+            'Run the AI Chats and terminals of this project: read what a chat waits on, stop a turn, a sub-agent, a background task or a terminal, handle queued messages, answer a question in the user’s words, compact, change the model, fork, summarize a fork, read what a turn changed or what a sub-agent wrote, and resume a terminal agent. Approvals are the user’s to answer in the app.'
+    },
+    plans: { name: 'manage_plans', description: 'Read the plans of an AI Chat, set the state of its steps and write a note on a step.' },
     agents: { name: 'inspect_agents', description: 'Read the status of the agents in this project and the tool calls of an AI Chat.' },
     projects: { name: 'manage_projects', description: 'List the projects open in the project navigation or switch to one of them.' },
     developer: {

@@ -1,6 +1,10 @@
 import {
     AgentKindSchema,
     AgentStatusSchema,
+    ChatAttachmentUploadsSchema,
+    ChatBackgroundTaskSchema,
+    ChatCheckpointDiffSchema,
+    ChatSubagentStatusSchema,
     DeviceReferenceSchema,
     GitConflictResultSchema,
     GitConflictsResultSchema,
@@ -12,6 +16,7 @@ import {
     GitResolveAiResultSchema,
     GitResolveResultSchema,
     GitStatusSchema,
+    ModelSelectionSchema,
     NodeKindSchema,
     PROJECT_VIEW_KINDS,
     PlanChecksSchema,
@@ -31,7 +36,7 @@ export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as 
 export const ActionActorKindSchema = z.enum(ACTION_ACTOR_KINDS);
 
 /* What an action is about. Voice gets one tool per domain, so this is also how its tools are cut. */
-export const ACTION_DOMAINS = ['workspace', 'views', 'canvas', 'layout', 'communicate', 'agents', 'projects', 'developer'] as const;
+export const ACTION_DOMAINS = ['workspace', 'views', 'canvas', 'layout', 'communicate', 'sessions', 'plans', 'agents', 'projects', 'developer'] as const;
 export type ActionDomain = (typeof ACTION_DOMAINS)[number];
 
 /* Every kind a project knows, plus the one a newer Ruimte made. An action may name a view this version cannot open. */
@@ -115,6 +120,21 @@ const planChanged = z.object({
     // Steps that got their first sub-step, so their own state is gone and follows from their sub-steps.
     dropped: z.array(z.string())
 });
+
+/* A person and Voice name the chat a plan belongs to; an agent's plan is always that of its own chat. */
+const planChat = forActors(PERSON_AND_VOICE, z.string().min(1)).describe('The AI Chat whose plans these are');
+
+const chatTarget = z.string().min(1).describe('The AI Chat view or node, by id');
+const terminalTarget = z.string().min(1).describe('The terminal view or node, by id');
+const chatNamed = z.object({ chatId: z.string(), chat: z.string() });
+const terminalNamed = z.object({ terminalId: z.string(), terminal: z.string() });
+const modelOptions = z.record(z.string(), z.union([z.string(), z.boolean()]));
+/* The composer hands over the whole selection it built; anyone else names the model and one option. */
+const modelSelection = forActors(PERSON, ModelSelectionSchema).describe('The whole model selection, options and all');
+const questionAnswers = z
+    .array(z.object({ questionId: z.string().min(1), answer: z.string().trim().min(1).describe("The answer, in the user's own words") }))
+    .min(1);
+const recentMessages = z.array(z.object({ role: z.enum(['user', 'assistant']), text: z.string(), createdAt: z.number() }));
 
 const browserNode = nodeId.describe('The browser node, by id');
 const browserOutcome = z.object({
@@ -733,7 +753,11 @@ export const ACTION_DEFINITIONS = {
         actors: CLIENT_ACTORS,
         input: z.object({
             chatId: z.string().min(1),
-            prompt: z.string().trim().min(1)
+            // Not trimmed here: the composer sends what was typed, and a message of attachments alone has no text.
+            prompt: z.string(),
+            mentions: forActors(PERSON, z.array(z.string().min(1)).max(64)).describe('Paths picked with @'),
+            skills: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Skills picked with $'),
+            attachments: forActors(PERSON, ChatAttachmentUploadsSchema).describe('Files dropped or pasted into the composer')
         }),
         output: z.object({
             chatId: z.string().min(1),
@@ -748,7 +772,11 @@ export const ACTION_DEFINITIONS = {
         effect: 'external',
         domain: 'communicate',
         actors: ['person', 'voice'] as readonly ActionActorKind[],
-        input: z.object({ chatId: z.string().min(1) }),
+        input: z.object({
+            chatId: z.string().min(1),
+            // The composer clears without it first, so a turn in the way comes back as chat-busy and the person is asked.
+            force: forActors(PERSON, z.boolean()).describe('Stops a running turn instead of refusing')
+        }),
         output: z.object({ chatId: z.string().min(1), chat: z.string() })
     },
     'chat.read': {
@@ -770,6 +798,266 @@ export const ACTION_DEFINITIONS = {
             ),
             truncated: z.boolean()
         })
+    },
+    'terminal.read': {
+        title: 'Read terminal output',
+        description: 'Reads the last lines on the screen and in the scrollback of a terminal that is open in this window. A null lines reads the last 40.',
+        effect: 'read',
+        domain: 'communicate',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ terminalId: terminalTarget, lines: z.number().int().min(1).max(200).nullable() }),
+        output: terminalNamed.extend({ lines: z.array(z.string()), truncated: z.boolean(), exited: z.boolean() })
+    },
+    'chat.inspect': {
+        title: 'Inspect AI Chat',
+        description:
+            'Reads what an AI Chat runs on and what waits in it: CLI, model and options, permission mode, whether a turn runs, queued messages, questions and approvals waiting for the user, sub-agents, background tasks, the last finished turn and where a fork came from. The thread itself is only known while the chat is open in this window.',
+        effect: 'read',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ chatId: chatTarget }),
+        output: chatNamed.extend({
+            provider: AgentKindSchema,
+            model: z.string(),
+            options: modelOptions,
+            runtimeMode: RuntimeModeSchema,
+            status: AgentStatusSchema,
+            working: z.boolean(),
+            // False when nobody in this window has the thread open, so the lists below the queue are empty.
+            open: z.boolean(),
+            queue: z.array(z.object({ messageId: z.string(), text: z.string() })),
+            questions: z.array(
+                z.object({
+                    requestId: z.string(),
+                    itemId: z.string(),
+                    // The CLI goes on while it waits, so the question may also be dismissed.
+                    optional: z.boolean(),
+                    questions: z.array(
+                        z.object({ questionId: z.string(), header: z.string(), question: z.string(), choices: z.array(z.string()), multiSelect: z.boolean() })
+                    )
+                })
+            ),
+            approvals: z.array(z.object({ requestId: z.string(), tool: z.string(), description: z.string().nullable() })),
+            subagents: z.array(z.object({ toolUseId: z.string(), title: z.string(), status: ChatSubagentStatusSchema, stoppable: z.boolean() })),
+            tasks: z.array(
+                z.object({ taskId: z.string(), kind: ChatBackgroundTaskSchema.shape.kind, description: z.string(), command: z.string().nullable() })
+            ),
+            lastTurnId: z.string().nullable(),
+            forkOf: z.object({ chatId: z.string(), turnId: z.string() }).nullable()
+        })
+    },
+    'chat.stopTurn': {
+        title: 'Stop AI Chat turn',
+        description:
+            'Stops the turn an AI Chat is in, after confirmation. What the turn wrote and changed so far stays, but the turn is not finished. With subagents it also ends the agents the chat opened.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            chatId: chatTarget,
+            subagents: z.boolean().describe('Also ends the agents this chat opened and marks its CLI’s own sub-agents stopped')
+        }),
+        output: chatNamed.extend({ subagents: z.boolean() })
+    },
+    'chat.unqueue': {
+        title: 'Take back a queued message',
+        description: 'Takes a message that waits for the running turn out of the queue of an AI Chat, unsent.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ chatId: chatTarget, messageId: z.string().min(1).describe('The queued message, by the id chat.inspect gives it') }),
+        output: chatNamed.extend({ messageId: z.string(), text: z.string() })
+    },
+    'chat.sendNow': {
+        title: 'Send a queued message now',
+        description: 'Stops the running turn of an AI Chat and sends this queued message first.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ chatId: chatTarget, messageId: z.string().min(1).describe('The queued message, by the id chat.inspect gives it') }),
+        output: chatNamed.extend({ messageId: z.string(), text: z.string() })
+    },
+    'chat.compact': {
+        title: 'Compact AI Chat',
+        description: 'Has the CLI of an AI Chat compact its conversation into a summary, which frees context. Not while a turn runs.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ chatId: chatTarget }),
+        output: chatNamed
+    },
+    'chat.configure': {
+        title: 'Configure AI Chat',
+        description:
+            'Changes the model of an AI Chat to another of its own CLI, or one option of the model such as reasoning effort, by the ids the provider lists. The CLI takes it from the next message on.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            chatId: chatTarget,
+            model: z.string().trim().min(1).nullable().describe('A model slug of the chat’s CLI; null keeps the model'),
+            option: z
+                .object({ id: z.string().min(1), value: z.string().min(1).describe('A choice id, or true or false for an on and off option') })
+                .nullable()
+                .describe('One option of the model to set; null leaves the options'),
+            // Widening what a chat may do without asking is a person's call alone.
+            runtimeMode: forActors(PERSON, RuntimeModeSchema).describe('The permission mode'),
+            selection: modelSelection
+        }),
+        output: chatNamed.extend({ provider: AgentKindSchema, model: z.string(), options: modelOptions, runtimeMode: RuntimeModeSchema })
+    },
+    'chat.setProvider': {
+        title: 'Switch AI Chat CLI',
+        description: 'Points an AI Chat that has not started yet at another installed CLI. A chat that started keeps its CLI.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            chatId: chatTarget,
+            provider: AgentKindSchema.describe('The CLI the chat runs'),
+            model: z.string().trim().min(1).nullable().describe('A model slug of that CLI; null takes its default'),
+            selection: modelSelection
+        }),
+        output: chatNamed.extend({ provider: AgentKindSchema })
+    },
+    'chat.fork': {
+        title: 'Fork AI Chat',
+        description:
+            'Starts a new AI Chat beside this one that goes on after one of its turns, with the history up to it. Without a turn it goes on after the last finished one; with a branch it works in a new worktree on that branch, after confirmation.',
+        effect: 'shared',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            chatId: chatTarget,
+            turnId: z.string().min(1).nullable().describe('The turn it goes on after, by id'),
+            title: givenName.nullable().describe('The title of the fork'),
+            branch: z.string().trim().min(1).nullable().describe('A new worktree on this branch; null works in the original’s folder'),
+            asView: forActors(PERSON, z.boolean()).describe('Makes a chat view of a fork of a node'),
+            filesAfterTurn: forActors(PERSON, z.boolean()).describe('Puts the files in the worktree as they were after the turn'),
+            provider: forActors(PERSON, AgentKindSchema).describe('Another CLI to go on with'),
+            selection: modelSelection
+        }),
+        output: z.object({ chatId: z.string(), nodeId: z.string(), viewId: z.string(), chat: z.string(), branch: z.string().nullable() })
+    },
+    'chat.summarize': {
+        title: 'Summarize a fork',
+        description:
+            'Has a fork write in a turn of its own what it did, which goes to the chat it was forked from as a note once that turn ends. Not while a turn runs.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ chatId: chatTarget.describe('The fork, by id') }),
+        output: chatNamed.extend({ turnId: z.string(), original: z.string() })
+    },
+    'chat.turnDiff': {
+        title: 'Read what a turn changed',
+        description: 'Reads the files a turn of an AI Chat changed against the checkpoint it started from, with a diff per file.',
+        effect: 'read',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ chatId: chatTarget, turnId: z.string().min(1).describe('The turn, by id') }),
+        // Null when the turn has no checkpoint: no repository, or git could not be read.
+        output: z.object({ chatId: z.string(), turnId: z.string(), diff: ChatCheckpointDiffSchema.nullable() })
+    },
+    'chat.readSubagent': {
+        title: 'Read a sub-agent',
+        description:
+            'Reads a limited recent excerpt of what a sub-agent of an AI Chat wrote and was asked, without reasoning or tool output. A null limit reads the last 20 messages.',
+        effect: 'read',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            chatId: chatTarget,
+            toolUseId: z.string().min(1).describe('The sub-agent, by the id chat.inspect gives it'),
+            limit: z.number().int().min(1).max(20).nullable()
+        }),
+        output: z.object({ chatId: z.string(), toolUseId: z.string(), live: z.boolean(), messages: recentMessages, truncated: z.boolean() })
+    },
+    'chat.stopSubagent': {
+        title: 'Stop a sub-agent',
+        description:
+            'Stops a running sub-agent of an AI Chat after confirmation: an agent opened with a task is ended and its task cancelled, one of the CLI’s own is only marked stopped once the turn is over.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ chatId: chatTarget, toolUseId: z.string().min(1).describe('The sub-agent, by the id chat.inspect gives it') }),
+        output: chatNamed.extend({ toolUseId: z.string(), subagent: z.string() })
+    },
+    'chat.stopTask': {
+        title: 'Stop a background task',
+        description: 'Stops a command or monitor an AI Chat keeps running beside its turns, after confirmation.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ chatId: chatTarget, taskId: z.string().min(1).describe('The background task, by the id chat.inspect gives it') }),
+        output: chatNamed.extend({ taskId: z.string(), task: z.string() })
+    },
+    'chat.answer': {
+        title: 'Answer an agent’s question',
+        description:
+            'Answers a question an AI Chat asked the user, every question of it at once, after a confirmation that repeats the answers. Pass the user’s own words, never an answer of your own.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            chatId: chatTarget,
+            requestId: z.string().min(1).describe('The question, by the id chat.inspect gives it'),
+            answers: questionAnswers
+        }),
+        output: chatNamed.extend({ requestId: z.string() })
+    },
+    'chat.dismissQuestion': {
+        title: 'Dismiss an optional question',
+        description: 'Leaves an optional question of an AI Chat unanswered, after confirmation. The agent is not told and goes on as it was.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ chatId: chatTarget, itemId: z.string().min(1).describe('The question, by the itemId chat.inspect gives it') }),
+        output: chatNamed.extend({ itemId: z.string() })
+    },
+    'chat.approve': {
+        title: 'Answer a tool approval',
+        description: 'Allows or denies a tool call an AI Chat waits on.',
+        effect: 'external',
+        domain: 'sessions',
+        // Letting a tool run is the person's own call; Voice only says that one waits.
+        actors: PERSON,
+        input: z.object({
+            chatId: chatTarget,
+            requestId: z.string().min(1),
+            decision: z.enum(['allow', 'allow-always', 'deny']),
+            message: z.string().nullable().describe('Why it was denied, for the agent')
+        }),
+        output: chatNamed.extend({ requestId: z.string() })
+    },
+    'terminal.answerApproval': {
+        title: 'Answer a terminal approval',
+        description: 'Answers a permission request the agent in a terminal waits on with one of the choices it offered.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON,
+        input: z.object({ terminalId: terminalTarget, requestId: z.string().min(1), choiceId: z.string().min(1) }),
+        // False when it was settled already: another client, the CLI's own prompt or its time ran out.
+        output: terminalNamed.extend({ accepted: z.boolean() })
+    },
+    'terminal.stop': {
+        title: 'Stop terminal session',
+        description:
+            'Ends the shell of a terminal and everything running in it, after confirmation. The node stays and offers a restart; the scrollback and the agent session to resume are gone.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ terminalId: terminalTarget }),
+        output: terminalNamed
+    },
+    'terminal.resumeAgent': {
+        title: 'Resume terminal agent',
+        description: 'Starts the agent CLI that ran in a terminal again in the same shell, on its own session, when it went down without ending.',
+        effect: 'external',
+        domain: 'sessions',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ terminalId: terminalTarget }),
+        output: terminalNamed
     },
     'view.list': {
         title: 'List views',
@@ -969,21 +1257,22 @@ export const ACTION_DEFINITIONS = {
     },
     'plan.list': {
         title: 'List plans',
-        description: 'Lists every plan of this chat, oldest first.',
+        description: 'Lists every plan of an AI Chat, oldest first.',
+        agentDescription: 'Lists every plan of this chat, oldest first.',
         effect: 'read',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({}),
+        domain: 'plans',
+        actors: PERSON_VOICE_AND_AGENT,
+        input: z.object({ chatId: planChat }),
         output: z.object({ plans: z.array(PlanSchema) })
     },
     'plan.read': {
         title: 'Read a plan',
-        description: 'Reads the newest plan of this chat, or the one named, with every item and its id.',
+        description: 'Reads the newest plan of an AI Chat, or the one named, with every item and its id.',
         agentDescription: 'Prints the newest plan of this chat as text, with every id in brackets; after a compaction this is how you find the ids again.',
         effect: 'read',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({ planId }),
+        domain: 'plans',
+        actors: PERSON_VOICE_AND_AGENT,
+        input: z.object({ chatId: planChat, planId }),
         output: z.object({
             // Null when this chat has no plan at all.
             plan: PlanSchema.nullable(),
@@ -994,7 +1283,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Make a plan',
         description: 'Makes a plan for this chat from a JSON document or a Markdown task list.',
         effect: 'shared',
-        domain: 'agents',
+        domain: 'plans',
         actors: AGENT,
         input: z.object({
             document: z.string().nullable().describe('The plan as one JSON object, { meta, items }'),
@@ -1007,33 +1296,52 @@ export const ACTION_DEFINITIONS = {
     },
     'plan.setStepState': {
         title: 'Set plan steps',
-        description: 'Sets the state of one or more steps in one rev; with next the step you move on to becomes active in the same rev.',
+        description:
+            'Sets the state of one or more steps of a plan, such as done when the user ticks it off. A step only the user checks, or one the agent checks until the user unlocks it, is refused.',
+        agentDescription: 'Sets the state of one or more steps in one rev; with next the step you move on to becomes active in the same rev.',
         effect: 'shared',
-        domain: 'agents',
-        actors: AGENT,
+        domain: 'plans',
+        actors: PERSON_VOICE_AND_AGENT,
         input: z.object({
+            chatId: planChat,
             planId,
             stepIds: z.array(z.string().min(1)).min(1).describe('One or more steps without sub-steps, by id'),
             state: PlanStepStateSchema,
             note: z.string().nullable().describe('A note on each of the steps; an empty one clears it'),
-            next: z.string().min(1).nullable().describe('The step that becomes active in the same rev')
+            // Moving the work on is the agent's; packages/plan refuses it from a person.
+            next: agentField(z.string().min(1)).describe('The step that becomes active in the same rev')
         }),
         output: planChanged
     },
     'plan.addNote': {
         title: 'Note a plan step',
-        description: 'Writes the note of a step, also one a person set; an empty text clears it.',
+        description: 'Writes the note of a step; an empty text clears it.',
+        agentDescription: 'Writes the note of a step, also one a person set; an empty text clears it.',
         effect: 'shared',
-        domain: 'agents',
-        actors: AGENT,
-        input: z.object({ planId, stepId: z.string().min(1).describe('The step, by id'), text: z.string().describe('The note') }),
+        domain: 'plans',
+        actors: PERSON_VOICE_AND_AGENT,
+        input: z.object({ chatId: planChat, planId, stepId: z.string().min(1).describe('The step, by id'), text: z.string().describe('The note') }),
+        output: planChanged
+    },
+    'plan.unlock': {
+        title: 'Unlock plan steps',
+        description: 'Lets anyone check steps that only the agent checked until now; without steps every one of the plan.',
+        effect: 'shared',
+        domain: 'plans',
+        // Unlocking widens who may check a step, which is the person's alone.
+        actors: PERSON,
+        input: z.object({
+            chatId: z.string().min(1),
+            planId,
+            stepIds: z.array(z.string().min(1)).min(1).nullable().describe('The steps, by id; null for every step')
+        }),
         output: planChanged
     },
     'plan.addItem': {
         title: 'Add a plan item',
         description: 'Adds a step, text block or section to a plan.',
         effect: 'shared',
-        domain: 'agents',
+        domain: 'plans',
         actors: AGENT,
         input: z.object({
             planId,
@@ -1051,7 +1359,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Edit a plan item',
         description: 'Changes the title, description or checks of an item.',
         effect: 'shared',
-        domain: 'agents',
+        domain: 'plans',
         actors: AGENT,
         input: z.object({
             planId,
@@ -1066,7 +1374,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Move a plan item',
         description: 'Moves an item, with everything under it, to another place in the plan.',
         effect: 'shared',
-        domain: 'agents',
+        domain: 'plans',
         actors: AGENT,
         input: z.object({
             planId,
@@ -1080,7 +1388,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Remove a plan item',
         description: 'Removes an item and everything under it; refused when a person set a state in it.',
         effect: 'shared',
-        domain: 'agents',
+        domain: 'plans',
         actors: AGENT,
         input: z.object({ planId, itemId: z.string().min(1).describe('The item, by id') }),
         output: planChanged
@@ -1089,7 +1397,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Set plan status',
         description: 'Sets the line under the title about what happens now or next; an empty text clears it.',
         effect: 'shared',
-        domain: 'agents',
+        domain: 'plans',
         actors: AGENT,
         input: z.object({ planId, text: z.string().describe('One short sentence, such as Fixing the focus bug in the grid') }),
         output: planChanged
@@ -1098,7 +1406,7 @@ export const ACTION_DEFINITIONS = {
         title: 'Delete a plan',
         description: 'Removes a whole plan of this chat.',
         effect: 'shared',
-        domain: 'agents',
+        domain: 'plans',
         actors: AGENT,
         input: z.object({ planId: z.string().min(1).describe('The plan by id; never the newest by default, since this cannot be undone') }),
         output: z.object({ planId: z.string(), title: z.string() })

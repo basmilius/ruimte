@@ -66,4 +66,23 @@ describe('Voice tools', () => {
         expect(git.parameters.properties.step?.enum).toEqual(['abort', null]);
         expect(git.parameters.properties.strategy?.enum).toEqual(['merge', 'squash', null]);
     });
+
+    test('chats, terminals and plans leave out what only a person decides: approvals, the permission mode, unlocking and what the composer attaches', () => {
+        const tool = (name: string) => VOICE_TOOL_DEFINITIONS.find((definition) => definition.name === name)!;
+        const reachable = VOICE_TOOL_DEFINITIONS.flatMap((definition) => (definition.parameters.properties.action?.enum as string[] | undefined) ?? []);
+        for (const action of ['chat.approve', 'terminal.answerApproval', 'plan.unlock', 'plan.setStatus']) {
+            expect(reachable).not.toContain(action);
+        }
+        for (const field of ['runtimeMode', 'selection', 'asView', 'filesAfterTurn']) {
+            expect(tool('run_sessions').parameters.properties).not.toHaveProperty(field);
+        }
+        for (const field of ['force', 'mentions', 'skills', 'attachments']) {
+            expect(tool('communicate').parameters.properties).not.toHaveProperty(field);
+        }
+        expect(tool('manage_plans').parameters.properties).not.toHaveProperty('next');
+        expect(tool('run_sessions').parameters.properties.answers).toMatchObject({
+            type: ['array', 'null'],
+            items: { type: 'object', required: ['questionId', 'answer'], additionalProperties: false }
+        });
+    });
 });

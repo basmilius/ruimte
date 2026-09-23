@@ -119,15 +119,12 @@ describe('the plans of a machine', () => {
 });
 
 describe('a person changing a plan', () => {
-    const failures: string[] = [];
     const sink: PlanWriteSink = {
         current: (endpointId, chatId, planId) => plansOf(endpointId, chatId).find((plan) => plan.id === planId),
-        put: (endpointId, chatId, plan) => usePlans.getState().putPlan(endpointId, chatId, plan),
-        failed: (message) => failures.push(message)
+        put: (endpointId, chatId, plan) => usePlans.getState().putPlan(endpointId, chatId, plan)
     };
 
     beforeEach(() => {
-        failures.length = 0;
         transport.status = 'open';
         transport.listed = [{ chatId: 'chat-a', plan: planOf('p', '2026-09-16T10:00:00Z') }];
         usePlans.getState().setMachinePlans('local', transport.listed);
@@ -139,25 +136,23 @@ describe('a person changing a plan', () => {
             sink,
             () => '2026-09-16T12:00:00Z'
         );
-        const done = client.setState('local', 'chat-a', 'p', ['one'], 'done');
+        const done = client.apply('local', 'chat-a', 'p', [{ op: 'set', ids: ['one'], state: 'done' }]);
         const shown = plansOf('local', 'chat-a')[0]!;
         expect(shown.items[0]).toMatchObject({ state: 'done', by: 'person', at: '2026-09-16T12:00:00Z' });
-        expect(await done).toBe(true);
+        expect((await done).id).toBe('p');
         expect(transport.applied).toEqual([{ chatId: 'chat-a', planId: 'p', ops: [{ op: 'set', ids: ['one'], state: 'done' }] }]);
     });
 
     test('a step only the agent checks is refused here, without asking the machine', async () => {
         const client = new PlanClient(() => transport, sink);
-        expect(await client.setState('local', 'chat-a', 'p', ['locked'], 'done')).toBe(false);
+        await expect(client.apply('local', 'chat-a', 'p', [{ op: 'set', ids: ['locked'], state: 'done' }])).rejects.toMatchObject({ code: 'step-locked' });
         expect(transport.applied).toEqual([]);
-        expect(failures).toHaveLength(1);
     });
 
     test('a refusal from the machine puts the plan back', async () => {
         transport.refuseApply = true;
         const client = new PlanClient(() => transport, sink);
-        expect(await client.setState('local', 'chat-a', 'p', ['one'], 'done')).toBe(false);
+        await expect(client.apply('local', 'chat-a', 'p', [{ op: 'set', ids: ['one'], state: 'done' }])).rejects.toThrow('Only the agent checks "one"');
         expect(plansOf('local', 'chat-a')[0]!.items[0]).not.toHaveProperty('state');
-        expect(failures).toEqual(['Only the agent checks "one"']);
     });
 });

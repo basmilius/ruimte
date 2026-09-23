@@ -8,7 +8,16 @@ import { allSteps, effectiveChecks } from '@ruimte/plan';
 import { forkOriginIn } from '@/chat/logic/fork';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { ActiveStepButton } from '@/plan/ActiveStepButton';
-import { collapseAll, copyPlanMarkdown, expandAll, focusChat, planClient, planViewKey, sendResultsToChat, usePlanViewPrefs } from '@/plan/plan-actions';
+import {
+    collapseAll,
+    copyPlanMarkdown,
+    expandAll,
+    focusChat,
+    planViewKey,
+    sendResultsToChat,
+    unlockPlanStepsAction,
+    usePlanViewPrefs
+} from '@/plan/plan-actions';
 import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/plan/plan-panel-watch';
 import { PlanList } from '@/plan/PlanList';
 import { resultsText, type PlanFilter } from '@/plan/plan-view';
@@ -170,11 +179,7 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                             <Icon icon={Send} size={14} /> {t('planPanel.sendResults')}
                         </Menu.Item>
                         <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item
-                            className="menu-item"
-                            disabled={!hasLockedStep(plan)}
-                            onClick={() => void planClient.unlock(endpointId, chatId, plan.id, 'all')}
-                        >
+                        <Menu.Item className="menu-item" disabled={!hasLockedStep(plan)} onClick={() => unlockPlanStepsAction(chatId, plan.id, null)}>
                             <Icon icon={LockOpen} size={14} /> {t('planPanel.unlockAll')}
                         </Menu.Item>
                     </MenuPopup>

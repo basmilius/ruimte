@@ -36,6 +36,13 @@ export const registerTerminal = (endpointId: string, nodeId: string, term: Termi
 
 export const lastScreenOf = (endpointId: string, nodeId: string): string[] => lastScreens.get(endpointKey(endpointId, nodeId)) ?? [];
 
+/* What a terminal shows now, or showed when it was last on screen; null for one this window never drew. */
+export const screenOf = (endpointId: string, nodeId: string): string[] | null => {
+    const key = endpointKey(endpointId, nodeId);
+    const term = live.get(key);
+    return term ? screenLines(term) : (lastScreens.get(key) ?? null);
+};
+
 export const forgetScreen = (endpointId: string, nodeId: string): void => {
     lastScreens.delete(endpointKey(endpointId, nodeId));
 };

@@ -1,5 +1,6 @@
-import { developerActions, type DeveloperMachine } from '@/actions/developer-actions';
+import { asksFirst, asRefusal, developerActions, type DeveloperMachine } from '@/actions/developer-actions';
 import { inspectionActions } from '@/actions/inspection-actions';
+import { sessionActions, sessionTitle, type SessionMachine } from '@/actions/session-actions';
 import { resolveTarget } from '@/actions/resolve-target';
 import { ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionCall, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
 import {
@@ -24,6 +25,7 @@ import { addAgentView, agentNodeOptions, type AgentSession, type AgentTarget } f
 import { LOCK_KEYS } from '@/canvas/locks';
 import { toWorld, type Point } from '@/canvas/math';
 import { nearestFreeNodeRect } from '@/canvas/place-node';
+import type { ChatSendExtras } from '@/chat/chat-client';
 import { recentChatMessages } from '@/chat/recent-messages';
 import {
     liveViewDeletion,
@@ -34,6 +36,7 @@ import {
     type ViewDeletionFacts,
     type ViewDeletionMachine
 } from '@/project/view-deletion';
+import type { PromptClients } from '@/prompts/logic/subjects';
 import { FILES_VIEW_ID } from '@/shell/files-view';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { canSplit, cellAt, cellCount, focusedViewId, freeViewFor, isSameCell, locateView, type SplitDirection } from '@/shell/split';
@@ -174,22 +177,6 @@ const historyUndo =
         }
     };
 
-/* Read from the exported views, so a node on any canvas on screen counts with what its editor holds. */
-const sessionTitle = (document: StoreApi<DocumentState>, id: string, kind: 'chat' | 'terminal'): string | null => {
-    for (const view of document.getState().exportViews()) {
-        if (view.kind === kind && view.id === id) {
-            return view.name;
-        }
-        if (isCanvasView(view)) {
-            const node = view.nodes.find((candidate) => candidate.id === id && candidate.kind === kind);
-            if (node) {
-                return node.title;
-            }
-        }
-    }
-    return null;
-};
-
 const unknownView = (viewId: string): ActionRefusal => new ActionRefusal('unknown-view', `No view with id “${viewId}” exists in this project.`);
 
 /* The canvas a view becomes a node on: the one that was up last, else the first there is. */
@@ -309,7 +296,8 @@ const refuseResumeWithout = (resume: string | null | undefined, provider: AgentK
 };
 
 export interface ClientActionMachine {
-    clearChat(chatId: string): Promise<void>;
+    sendChat(chatId: string, text: string, extras: ChatSendExtras): Promise<{ queued: boolean; turnId?: string }>;
+    clearChat(chatId: string, force: boolean): Promise<void>;
     clearTerminal(terminalId: string): void;
     /* The agent CLIs of the machine the project runs on. */
     providers(): readonly ProviderInfo[];
@@ -317,22 +305,26 @@ export interface ClientActionMachine {
     copyViewContent(kind: 'drawing' | 'diagram', from: string, to: string): void;
     viewDeletion: ViewDeletionMachine;
     developer: Partial<DeveloperMachine>;
+    sessions: Partial<SessionMachine>;
 }
 
 const LIVE_MACHINE: ClientActionMachine = {
-    clearChat: (chatId) => chatClient.clear(chatId, true),
+    sendChat: (chatId, text, extras) => chatClient.send(chatId, text, extras),
+    clearChat: (chatId, force) => chatClient.clear(chatId, force),
     clearTerminal: (terminalId) => sessionClient.clear(terminalId),
     providers: () => providersOf(currentEndpointId()).providers,
     copyViewContent: (kind, from, to) => void (kind === 'drawing' ? drawingClient.copy(from, to) : diagramClient.copy(from, to)),
     viewDeletion: liveViewDeletion,
-    developer: {}
+    developer: {},
+    sessions: {}
 };
 
 export const createClientActionRegistry = (document: StoreApi<DocumentState>, machine: Partial<ClientActionMachine> = {}): ActionRegistry<void> => {
-    const { clearChat, clearTerminal, providers, copyViewContent, viewDeletion, developer } = { ...LIVE_MACHINE, ...machine };
+    const { sendChat, clearChat, clearTerminal, providers, copyViewContent, viewDeletion, developer, sessions } = { ...LIVE_MACHINE, ...machine };
     return new ActionRegistry<void>({
         ...inspectionActions(document),
         ...developerActions(document, developer),
+        ...sessionActions(document, sessions),
         'target.resolve': (input) => ({ output: resolveTarget(document, input) }),
         'workspace.inspect': () => {
             const state = document.getState();
@@ -1105,20 +1097,32 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             clearTerminal(terminalId);
             return { output: { terminalId, terminal } };
         },
-        'chat.send': async ({ chatId, prompt }) => {
+        'chat.send': async ({ chatId, prompt, mentions, skills, attachments }, call) => {
             const chat = sessionTitle(document, chatId, 'chat');
             if (!chat) {
                 throw new ActionRefusal('unknown-chat', `No AI Chat with id “${chatId}” exists in this project.`);
             }
-            const submitted = await chatClient.send(chatId, prompt);
-            return { output: { chatId, chat, ...submitted } };
+            const text = call.actor.kind === 'person' ? prompt : prompt.trim();
+            if (text.trim() === '' && (attachments ?? []).length === 0) {
+                throw new ActionRefusal('empty-prompt', 'A message needs text or an attachment.');
+            }
+            try {
+                const submitted = await sendChat(chatId, text, {
+                    ...(mentions == null ? {} : { mentions }),
+                    ...(skills == null ? {} : { skills }),
+                    ...(attachments == null ? {} : { attachments })
+                });
+                return { output: { chatId, chat, ...submitted } };
+            } catch (error: unknown) {
+                throw asRefusal(error);
+            }
         },
-        'chat.clear': async ({ chatId }, { confirmed }) => {
+        'chat.clear': async ({ chatId, force }, call) => {
             const chat = sessionTitle(document, chatId, 'chat');
             if (!chat) {
                 throw new ActionRefusal('unknown-chat', 'This AI Chat no longer exists in the current project.');
             }
-            if (!confirmed) {
+            if (asksFirst(call)) {
                 return {
                     confirmation: {
                         title: `Clear AI Chat “${chat}”?`,
@@ -1129,7 +1133,12 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                     }
                 };
             }
-            await clearChat(chatId);
+            try {
+                // Anyone but a person already said yes to stopping a turn in the way; a person's composer asks on chat-busy.
+                await clearChat(chatId, call.actor.kind === 'person' ? force === true : true);
+            } catch (error: unknown) {
+                throw asRefusal(error);
+            }
             return { output: { chatId, chat } };
         },
         'chat.read': ({ chatId, limit }) => {
@@ -1186,6 +1195,29 @@ export const performAsPerson = async <Name extends ActionName>(name: Name, input
         throw new ActionRefusal('confirmation-required', `“${name}” asked a person for a confirmation their own dialog should have given.`);
     }
     return result.output;
+};
+
+/* The prompt cards answer as the person whose click it was, through the actions Voice asks for too. */
+export const PERSON_PROMPT_CLIENTS: PromptClients = {
+    chat: {
+        approve: async (chatId, requestId, decision, message) => {
+            await performAsPerson('chat.approve', { chatId, requestId, decision, message: message ?? null });
+        },
+        answer: async (chatId, requestId, answers) => {
+            await performAsPerson('chat.answer', {
+                chatId,
+                requestId,
+                answers: Object.entries(answers).map(([questionId, answer]) => ({ questionId, answer }))
+            });
+        },
+        dismiss: async (chatId, itemId) => {
+            await performAsPerson('chat.dismissQuestion', { chatId, itemId });
+        }
+    },
+    sessions: {
+        answerApproval: async (terminalId, requestId, choiceId) =>
+            (await performAsPerson('terminal.answerApproval', { terminalId, requestId, choiceId })).accepted
+    }
 };
 
 const activeViewId = (): string | null => useDocument.getState().activeViewId;

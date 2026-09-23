@@ -27,7 +27,7 @@ import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { effectiveChecks, planProgress } from '@ruimte/plan';
 import { Markdown } from '@/chat/ui/Markdown';
 import { formatMoment } from '@/format/datetime';
-import { collapsedOf, planClient, planViewKey, usePlanReveal, usePlanViewPrefs } from '@/plan/plan-actions';
+import { collapsedOf, notePlanStepAction, planViewKey, setPlanStepsAction, unlockPlanStepsAction, usePlanReveal, usePlanViewPrefs } from '@/plan/plan-actions';
 import { usePlanAgent } from '@/plan/plan-agent';
 import {
     asksForNote,
@@ -145,9 +145,9 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
         plan,
         agent,
         working,
-        setState: (ids, state) => void planClient.setState(endpointId, chatId, plan.id, ids, state),
-        saveNote: (id, text) => void planClient.note(endpointId, chatId, plan.id, id, text),
-        unlock: (id) => void planClient.unlock(endpointId, chatId, plan.id, [id]),
+        setState: (ids, state) => setPlanStepsAction(chatId, plan.id, ids, state),
+        saveNote: (id, text) => notePlanStepAction(chatId, plan.id, id, text),
+        unlock: (id) => unlockPlanStepsAction(chatId, plan.id, [id]),
         toggle: (id) => usePlanViewPrefs.getState().toggleCollapsed(planKey, id),
         editingNote,
         setEditingNote,

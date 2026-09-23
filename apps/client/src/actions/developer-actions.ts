@@ -52,7 +52,7 @@ type GitRuns = ActionOutput<'git.push'>;
 type Call = ActionCall<void> & { confirmed: boolean };
 
 /* A person's own dialogs already asked; everyone else answers the action's question first. */
-const asksFirst = (call: Call): boolean => !call.confirmed && call.actor.kind !== 'person';
+export const asksFirst = (call: Call): boolean => !call.confirmed && call.actor.kind !== 'person';
 
 const isAbsolutePath = (value: string): boolean => /^(\/|[A-Za-z]:[\\/])/.test(value);
 
@@ -76,7 +76,7 @@ const runOutput = (checkout: Checkout, result: GitActionResult): GitRun => ({
 });
 
 /* The daemon's refusal keeps its code, so a caller can still tell a diverged branch from a failure. */
-const asRefusal = (error: unknown): unknown => (error instanceof TransportError ? new ActionRefusal(error.code, error.message) : error);
+export const asRefusal = (error: unknown): unknown => (error instanceof TransportError ? new ActionRefusal(error.code, error.message) : error);
 
 /* Where a branch stands in words: which one, and the remote it goes to. */
 const branchOf = (status: GitStatus): string => status.branch ?? 'a detached HEAD';
