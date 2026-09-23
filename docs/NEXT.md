@@ -49,22 +49,22 @@ larger ones becomes a GitHub issue when it starts.
    a question in a finished turn stays outside its fold, since it explains the answer below it, and
    after Stop an empty composer offers "Continue" in place of the send button.
 9. **The action registry** (`packages/actions`): one typed layer under everything a person can do,
-   so voice, the UI, shortcuts, the palette and `ruimte-context` become adapters on the same
-   execution. The registry and its catalog stand, with the palette, the menus, the shortcuts, the
-   sidebar, the view dialogs, the git panel, the conflict overlay, the worktree dialogs, the chat
-   composer, the prompt cards, the fork dialog, the plan panel, the files panel and the file menus,
-   find in files, a drawing's keys, menu and dock, a diagram's dock and editors, a browser page's
-   bar and menu, the voice tools (generated from the catalog) and every `ruimte-context` verb but
-   `help`, `list` and `read` on it (the daemon's handlers in `apps/server/src/actions`). Which
-   actor may run what is decided per action; the report's "Wie mag wat" has the tables: Git, chats
-   and terminals, and files, content and browser. `agent.start`
-   and `team.start` answer `running` with an operation id, which `operation.get`
-   (`ruimte-context operation get`) reads off the outbox, the tasks and the agent's own state, with
-   no store of its own. Left: operation events for a client, `operation.cancel` (a git run is still
-   cancelled with `git.cancel`), a person's agent start on the registry, the domains after files,
-   content and browser in "Wie mag wat" (panels, settings, usage, devices), Restart and Resume
-   under an ended shell (they rebuild the node's xterm), a note's color, and a file dropped on a
-   cell of the grid, which no action can place since none names a cell. The binding table in 10
+   so voice, the UI, shortcuts, the palette and `ruimte-context` are adapters on the same
+   execution. Every action in the product runs on it, with the palette, the menus, the shortcuts,
+   the sidebar, the grid, the project menu and the start screen, the view dialogs, the git panel,
+   the conflict overlay, the worktree dialogs, the chat composer, the prompt cards, the fork dialog,
+   the plan panel, the processes panel, the files panel and the file menus, find in files, a
+   drawing's keys, menu and dock, a diagram's dock and editors, a browser page's bar and menu, the
+   voice tools (generated from the catalog) and every `ruimte-context` verb but `help`, `list` and
+   `read` (the daemon's handlers in `apps/server/src/actions`). Which actor may run what is decided
+   per action; the report's "Wie mag wat" has the tables, and what stays outside it on purpose
+   (pairing, machines, accounts, updates, secrets, local chrome, gestures and plumbing). Voice gets
+   only the domains a project needs, fixed per session (`apps/client/src/voice/domains.ts`).
+   `agent.start` and `team.start` answer `running` with an operation id that `operation.get`
+   follows and `operation.cancel` stops; a git run of this window is cancelled as `git:<run>`.
+   Left: `expectedRevision`, a person's agent start on the registry, the app settings and devices
+   in "Wie mag wat", Restart and Resume under an ended shell (they rebuild the node's xterm), a
+   note's color, and measuring tool choice, target errors and latency. The binding table in 10
    hangs on it.
 10. **Settings and keyboard**: one binding table with `when` contexts, read by the handlers and the
     Keyboard pane (which lists them read-only today), then overrides with press-to-record, conflict
