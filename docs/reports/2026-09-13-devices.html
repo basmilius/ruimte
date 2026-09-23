@@ -119,9 +119,6 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 .bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
 .skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
 .skip:focus { top: 16px; }
-.prompt-box { position: relative; }
-.prompt-box pre { white-space: pre-wrap; font-size: 13px; line-height: 1.55; padding-top: 56px; }
-.prompt-box button { position: absolute; top: 8px; right: 8px; }
 .diagram .label-small { font-size: 13px; fill: var(--muted); }
 @media screen and (prefers-color-scheme: dark) {
   :root {
@@ -179,269 +176,47 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   pre { white-space: pre-wrap; overflow-wrap: anywhere; }
   .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
 }
-@media print {
-  .prompt-box button { display: none; }
-  .prompt-box pre { padding-top: 18px; }
-}
 </style>
 </head>
 <body>
-<a class="skip" href="#advies">Naar de inhoud</a>
+<a class="skip" href="#stand">Naar de inhoud</a>
 <header>
-  <p class="eyebrow">RUIMTE / ONDERZOEK EN UITVOERING / BIJGEWERKT 23 SEPTEMBER 2026</p>
+  <p class="eyebrow">RUIMTE / STATUS / BIJGEWERKT 23 SEPTEMBER 2026</p>
   <h1>Devices in Ruimte</h1>
-  <p class="intro">iOS-simulators en fysieke iPhones draaien op één <code>DeviceManager</code>, één <code>LiveStreamHub</code> en één canvasdecoder. Android is de volgende backend. Deze versie legt vast wat daarvoor al in de code klaarligt, wat nog iOS-vormig is en in welke volgorde Android erbij komt.</p>
-  <p class="status">iOS en Android gebouwd; Android wacht op acceptatie in de Electron-app</p>
-  <p class="caption">Gebaseerd op <code>main</code> bij <code>cf74fd01</code> (23 september); de devicecode is sinds <code>377648ab</code> ongewijzigd. <span class="badge confirmed">Geverifieerd</span> betekent: gecontroleerd in code, test of lokale CLI. <span class="badge info">Afgeleid</span> betekent: nog niet uitgevoerd.</p>
+  <p class="intro">iOS-simulators, iPhones, Android-emulators en Android-telefoons draaien op één <code>DeviceManager</code>, één <code>LiveStreamHub</code> en één videodecoder in de client. Dit rapport beschrijft wat er staat, wat gemeten is en wat nog getest moet worden.</p>
+  <p class="status">iOS en Android gebouwd; beide wachten op acceptatie op echte hardware en in de Electron-app</p>
+  <p class="caption">Gebaseerd op <code>main</code> na <code>1f8a3d4e</code>. <span class="badge confirmed">Geverifieerd</span> betekent: gecontroleerd in code, test of lokale CLI. <span class="badge warning">Open</span> betekent: nog niet in de app of op hardware gezien.</p>
   <nav aria-label="Inhoud">
-    <a href="#advies">Advies</a>
-    <a href="#gebouwd">Android gebouwd</a>
-    <a href="#staat">Huidige staat</a>
-    <a href="#klaar">Wat Android al heeft</a>
-    <a href="#gaten">Wat nog iOS-vormig is</a>
-    <a href="#stroom">Beeld</a>
-    <a href="#bediening">Bediening</a>
-    <a href="#lifecycle">Discovery en lifecycle</a>
-    <a href="#tools">Tools</a>
+    <a href="#stand">Stand</a>
     <a href="#architectuur">Architectuur</a>
-    <a href="#fasen">Fasen</a>
+    <a href="#ios">iOS</a>
+    <a href="#android">Android</a>
+    <a href="#bediening">Bediening</a>
+    <a href="#tools">Tools</a>
     <a href="#beslissingen">Beslissingen</a>
-    <a href="#risicos">Risico's</a>
-    <a href="#startprompt">Werkvolgorde</a>
+    <a href="#open">Open en risico's</a>
     <a href="#bronnen">Bronnen</a>
   </nav>
 </header>
 <main>
 
-<section id="advies" class="recommendation">
-  <h2>Advies</h2>
-  <p>Bouw Android als één backend <code>android</code> naast de twee iOS-backends. Hij vindt emulators met <code>emulator -list-avds</code> en draaiende toestellen met <code>adb devices -l</code>. Beeld en input lopen via een exact gepinde scrcpy-server die de daemon met <code>adb push</code> op het toestel zet. De daemon spreekt het scrcpy-protocol zelf in TypeScript over twee TCP-sockets achter <code>adb forward</code>. Er is geen Rust-helper nodig, dus Android werkt op macOS en op Linux.</p>
-  <p>De open vraag uit de vorige versie (MSE of omzetten naar MJPEG) is door de iOS-bouw beantwoord. De client decodeert al HEVC met WebCodecs achter een verwisselbare <code>FrameDecoder</code>. Android levert H.264 via dezelfde route: een tweede videodecoder, geen <code>&lt;video&gt;</code>-element, geen ffmpeg op de daemon.</p>
-  <p>De eerste Android-versie is feature complete: stroom, bediening, lifecycle en de tools-flyout, met elke iOS-tool die op Android bestaat. De meeste Android-code is nieuw aan de daemonkant. In de client en de contracts zitten zes plekken die nu iOS aannemen. Die staan hieronder per bestand.</p>
+<section id="stand" class="recommendation">
+  <h2>Stand</h2>
+  <p>Vier soorten device staan in één lijst en openen in het panel, als view of als canvas-node. Het project bewaart een <code>DeviceReference</code> met platform, soort, naam en runtime, nooit een lokale id. Elke machine zoekt die referentie opnieuw op.</p>
+  <p>Een device kondigt zelf aan welke knoppen, tools en permissies het heeft. De client toont alleen wat is aangekondigd en neemt niets meer aan op grond van het platform. De lege staat van het panel noemt de toolchain die ontbreekt, zoals Xcode of de Android SDK.</p>
   <div class="stats">
-    <div><strong>1</strong><span>Android-AVD op deze Mac (Pixel 9 Pro, API 35, arm64)</span></div>
-    <div><strong>6</strong><span>plekken in client en contracts die nu iOS aannemen</span></div>
-    <div><strong>59</strong><span>devicetests groen op <code>377648ab</code></span></div>
+    <div><strong>3</strong><span>backends: <code>simctl</code>, <code>coredevice</code> en <code>android</code></span></div>
+    <div><strong>2,1 s</strong><span>van starten tot <code>sys.boot_completed</code> op de lokale AVD, vanaf de snapshot</span></div>
+    <div><strong>4495</strong><span>tests groen, plus de integratietest tegen de lokale AVD</span></div>
   </div>
-  <p><span class="badge confirmed">Toolchain lokaal</span> <code>adb</code> 1.0.41 (platform-tools 36.0.0) staat op PATH. <code>emulator</code> 36.2.12 staat alleen in <code>$ANDROID_HOME/emulator</code> en niet op PATH. De SDK zit op een eigen plek, <code>~/Development/Environment/android-sdk</code>, en niet op de standaardplek <code>~/Library/Android/sdk</code>. Een backend die alleen PATH of de standaardplek kent, vindt op deze Mac dus geen emulator.</p>
-  <p><span class="badge confirmed">Besloten 13 september</span> Android komt direct na de iOS-MVP. <code>platform: 'android'</code> staat sinds fase 1 in de contracts.</p>
-</section>
-
-<section id="gebouwd">
-  <h2>Android gebouwd op 23 september</h2>
-  <p>Android staat op main in vijf commits. De contracts zitten in <code>b7b46472</code> en <code>f1b85bec</code>, de server in <code>fc35d047</code> en de client in <code>bfe0baaa</code> en <code>1f8a3d4e</code>. <code>bun run check</code> is groen, net als 4495 tests en de integratietest tegen de lokale AVD.</p>
-  <div class="table">
-    <table>
-      <caption>Spike op de Pixel 9 Pro-AVD, API 35, via de videosocket van scrcpy 4.1</caption>
-      <thead><tr><th scope="col">Codec</th><th scope="col">Beeld</th><th scope="col">Eerste frame</th><th scope="col">fps bij slepen</th><th scope="col">Bitrate</th></tr></thead>
-      <tbody>
-        <tr><td>H.264</td><td>916 × 2048</td><td>270 ms</td><td>23</td><td>3,3 Mbit/s</td></tr>
-        <tr><td>H.264, <code>max_size=1280</code></td><td>572 × 1280</td><td>265 ms</td><td>25</td><td>2,3 Mbit/s</td></tr>
-        <tr><td>H.265</td><td>228 × 512</td><td>265 ms</td><td>26</td><td>1,3 Mbit/s</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>De emulator heeft alleen software-encoders. Die voor H.265 schaalt het beeld terug naar 228 × 512, dus Android streamt H.264 op volle grootte. Tijdens een sleepbeweging gebruikt het emulatorproces rond 950% CPU, in rust rond 10%. Hoeveel daarvan de encoder is, heb ik niet apart gemeten.</p>
-  <p>Stoppen via de console duurt 3,6 s. Starten vanaf de snapshot duurt 2,1 s tot <code>sys.boot_completed</code>. De emulator krijgt een eigen sessie en blijft draaien als de daemon herstart.</p>
-  <h3>Wat de bouw besliste</h3>
-  <ul>
-    <li>De server is scrcpy 4.1, gepind op SHA-256. Een build neemt hem met zijn licentie mee in <code>native/</code>, ook in de npm-pakketten. Een dev-checkout haalt hem bij eerste gebruik op in <code>apps/server/.native</code>.</li>
-    <li>De server wist bij het starten zijn eigen jar. Daarom pusht elke sessie een kopie met de <code>scid</code> in de naam. Met één vaste naam wiste een vorige sessie de jar van de volgende.</li>
-    <li>Een client noemt bij <code>device.open</code> de formaten die hij tekent. Een oudere client krijgt <code>device-format-unsupported</code> in plaats van H.264-frames die hij niet kan valideren.</li>
-    <li>Knoppen, tools en permissies zijn lijsten strings in de capabilities. Een client houdt wat hij kent. Een nieuwe waarde breekt een oudere client dus niet. Zonder lijst gelden de oude iOS-standaarden.</li>
-    <li>Moet een HTTP-stroom een videoframe laten vallen, dan slaat hij over tot het volgende keyframe en vraagt de bron er een. Een kijker die bij een lopende stroom aansluit, vraagt er ook een. Anders wacht hij tot tien seconden, want zo vaak maakt de encoder een keyframe.</li>
-    <li>Show Borders zet <code>debug.layout</code>. API 35 weigert de verversing via <code>service call activity</code>, dus de randen verschijnen pas in schermen die daarna openen.</li>
-    <li>Draaien wisselt tussen staand en liggend. Links of rechts maakt op Android geen verschil.</li>
-    <li>Een emulator kan een nep-locatie niet wissen. Wissen is daarom een eigen tool, <code>clearLocation</code>, die Android niet aankondigt.</li>
-    <li>Herinneringen en Face ID bestaan niet op Android. De andere permissies vertaalt de backend per API-niveau naar runtime-permissies. Een app vraagt vaak maar een deel ervan, dus één geslaagde <code>pm grant</code> is genoeg.</li>
-  </ul>
-  <p><span class="badge warning">Nog te doen</span> Acceptatie in de Electron-app: starten, openen, tikken, slepen, Home, Back, draaien, elke tool, een canvas-node en stoppen. Een fysiek Android-toestel en Linux met KVM zijn nog niet getest.</p>
-</section>
-
-<section id="staat">
-  <h2>Huidige staat van iOS</h2>
-  <div class="split">
-    <div class="panel">
-      <h3>Simulator <span class="badge confirmed">gebouwd</span></h3>
-      <p><code>IosSimulatorBackend</code> leest <code>xcrun simctl</code>. Capture en input draaien in een helperproces dat alleen <code>serve-sim-native.node</code> (<code>serve-sim@0.1.46</code>) laadt en over file descriptor 3 praat. JPEG gaat zonder base64 naar de hub. Lokaal gemeten 17,4 fps en 851 ms tot het eerste frame op een iPhone 18 Pro. De tools-flyout loopt via getypeerde <code>device.detail</code> en <code>device.action</code>.</p>
-    </div>
-    <div class="panel">
-      <h3>Fysiek iOS <span class="badge confirmed">gebouwd</span></h3>
-      <p><code>IosPhysicalBackend</code> vindt toestellen met <code>xcrun devicectl</code>. <code>apps/ios-device-bridge</code> leest de CoreDevice Display Stream draadloos via <code>remoted</code> en levert Annex B-HEVC. Input loopt via Universal HID, Indigo HID en Device Control. Zonder bridge valt Ruimte terug op read-only screenshots.</p>
-    </div>
-  </div>
-  <p>Panel, view en canvas-node delen <code>DeviceStream</code>. Het project bewaart een <code>DeviceReference</code> (platform, soort, naam, runtime), nooit een lokale id. De client zoekt die referentie op elke machine opnieuw op.</p>
-
-  <h3>Veranderd sinds 18 september</h3>
-  <ul>
-    <li><code>b27ce3ee</code> Browser en devices sturen frames nu via dezelfde <code>FrameFanout</code> (<code>apps/server/src/streams/frame-fanout.ts</code>).</li>
-    <li><code>23c070f3</code> Een devicesessie eindigt zodra de laatste client verdwijnt (<code>detachAll</code>).</li>
-    <li><code>d2c64f6a</code> en <code>84bd5684</code> Clients per onderdeel staan in één <code>ClientSinks</code>. <code>DeviceError</code> erft van <code>CodedError</code> en kent een vaste lijst codes in <code>DEVICE_ERROR_CODES</code>.</li>
-    <li><code>7bd95185</code> De client tekent elke live stream vanuit <code>transport/live-stream.ts</code>, met de decoder als parameter. <code>hevc-decoder.ts</code> is de eerste zo'n decoder.</li>
-    <li><code>7947beda</code> De HEVC-decoder wacht op een keyframe en laat deltaframes vallen als de wachtrij volloopt (<code>HevcDecoderGate</code>).</li>
-    <li><code>ef82684b</code> Een device is een contextbron. <code>renderDevice</code> geeft platform, soort, runtime, state en ids, en zegt het als het device op deze machine ontbreekt.</li>
-    <li><code>e21e991d</code> De interface is tweetalig. De Android-groepen in het panel hebben al Engelse en Nederlandse labels.</li>
-  </ul>
-  <p><span class="badge confirmed">Toesteltest open</span> Stream en bediening van een fysieke iPhone samen in panel, view en canvas wachten nog op een live test. Hetzelfde geldt voor LAN-bandbreedte, twee echte kijkers en herstel na een helpercrash. Die acceptatie blokkeert Android niet.</p>
-</section>
-
-<section id="klaar">
-  <h2>Wat Android al heeft</h2>
-  <ul>
-    <li><span class="badge confirmed">Contracts</span> <code>DevicePlatformSchema</code> kent <code>android</code>. <code>DeviceInfo</code>, <code>DeviceReference</code>, <code>device.frame</code> en elke request dragen <code>platform</code> en <code>backendId</code>.</li>
-    <li><span class="badge confirmed">Routing</span> <code>DeviceManager</code> routeert op <code>backendId</code> en controleert het platform. <code>list()</code> gebruikt <code>Promise.allSettled</code>, dus een ontbrekende SDK verbergt de iOS-lijst niet. Lifecycle, detail en action zijn optioneel per backend.</li>
-    <li><span class="badge confirmed">Capabilities</span> De UI toont starten, stoppen, openen en input op basis van <code>capabilities</code>, niet op basis van het platform.</li>
-    <li><span class="badge confirmed">Framepad</span> <code>LiveStreamHub</code>, de HTTP-framing, <code>FrameFanout</code> en de eventfallback zijn domeinneutraal. Een source zegt zelf zijn formaat.</li>
-    <li><span class="badge confirmed">Client</span> <code>FrameDecoder</code> is de naad voor een nieuwe codec. Keyframe-gating, <code>VideoDecoder</code>-herstel en tekenen op canvas bestaan al voor HEVC.</li>
-    <li><span class="badge confirmed">Project en context</span> View-kind, node-kind, sidebar, voice-labels en <code>renderDevice</code> zijn platformneutraal. Onbekende kinds blijven behouden bij schrijven.</li>
-    <li><span class="badge confirmed">Panel</span> De groepering kent al <code>runningAndroid</code>, <code>androidEmulators</code> en <code>androidDevices</code>, met een Smartphone-icoon voor Android.</li>
-    <li><span class="badge confirmed">Tools</span> <code>device.detail</code> en <code>device.action</code> zijn al platformneutraal getypeerd. Alle instellingen in <code>DeviceSettings</code> zijn optioneel, dus een backend kan een deel teruggeven.</li>
-    <li><span class="badge confirmed">Invoer</span> Pointer, multipointer, bottom-edge, trackpad-drag en pinch zijn genormaliseerd op 0 tot 1. Dat past één op één op scrcpy's touchbericht.</li>
-  </ul>
-</section>
-
-<section id="gaten">
-  <h2>Wat nog iOS-vormig is</h2>
-  <div class="table">
-    <table class="wide">
-      <caption>Zes plekken die voor Android moeten veranderen</caption>
-      <thead><tr><th scope="col">Plek</th><th scope="col">Nu</th><th scope="col">Voor Android</th></tr></thead>
-      <tbody>
-        <tr><td><code>apps/server/src/daemon.ts</code></td><td>Backends alleen op <code>darwin</code>; Linux krijgt een lege lijst.</td><td>Android-backend op macOS en Linux registreren.</td></tr>
-        <tr><td><code>shell/panels/DevicesPanel.tsx</code></td><td><code>platform !== 'darwin'</code> toont <code>macOnly</code>. De tools-flyout staat aan voor elke <code>kind === 'simulator'</code>.</td><td>Lege staat per ontbrekende toolchain, niet per OS. De flyout volgt wat de backend aankondigt.</td></tr>
-        <tr><td><code>packages/contracts/src/device.ts</code>, knoppen</td><td><code>home</code>, <code>swipeHome</code>, <code>appSwitcher</code>, <code>lock</code>, <code>siri</code>.</td><td><code>back</code> ontbreekt. Welke knoppen een device heeft, moet de UI uit de capabilities lezen.</td></tr>
-        <tr><td><code>device.ts</code>, <code>live-stream.ts</code> (contracts en server), <code>DeviceStream.tsx</code></td><td>Formaat is <code>jpeg | hevc</code>, met één contenttype per formaat.</td><td><code>h264</code> met een eigen contenttype, of scrcpy om H.265 vragen (zie <a href="#stroom">Beeld</a>).</td></tr>
-        <tr><td><code>devices/manager.ts</code></td><td>Foutteksten noemen alleen simulators (<code>Start the simulator before opening it</code>). <code>DEVICE_ERROR_CODES</code> kent alleen simctl, devicectl en de helper.</td><td>Codes voor adb, emulator en scrcpy. Teksten die ook voor een emulator en een toestel kloppen.</td></tr>
-        <tr><td><code>devices/DeviceToolsPanel.tsx</code>, <code>DevicePermissionSchema</code></td><td>Elke rij staat er altijd: Liquid Glass, Reduce Transparency, testpush. Permissies en app-id zijn iOS-namen.</td><td>Alleen de aangekondigde tools tonen. Permissies en labels per platform.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p><span class="badge confirmed">iPhone-app</span> De gegenereerde Swift-modellen bevatten de deviceschema's, maar geen Swift-code buiten <code>Generated</code> gebruikt ze. Een contractwijziging vraagt dus alleen <code>generate:swift</code> en een groene <code>bun run check</code>.</p>
-  <p><span class="badge warning">Wire-regel</span> De wire krijgt alleen optionele velden, nieuwe requests en nieuwe events. <code>back</code> in de knoppen en <code>h264</code> in <code>format</code> zijn nieuwe enumwaarden. De harde regel geldt voor chat- en pushpayloads, maar een oudere client die een H.264-frame als event krijgt, faalt op validatie. Een optioneel capabilityveld per device houdt dat heel. De client toont dan alleen wat de daemon aankondigt.</p>
-</section>
-
-<section id="stroom">
-  <h2>Beeld</h2>
-  <p>scrcpy levert een ruwe videostroom. Na een kop met devicenaam en codec (id, breedte, hoogte) volgt per pakket een kop van 12 bytes met pts, config- en keyframevlaggen en lengte. De server kiest de codec met <code>video_codec=h264|h265|av1</code>. <span class="badge info">Afgeleid uit de protocolbeschrijving</span></p>
-  <div class="split">
-    <div class="panel">
-      <h3>H.264 (voorstel)</h3>
-      <p>scrcpy's standaard, en elke Android-encoder heeft hem. De client krijgt een tweede <code>FrameDecoder</code> met een <code>avc1</code>-codecstring uit de SPS. Keyframes herken je aan NAL-type 5 in plaats van 16 tot 23. Het beste is de HEVC-decoder te veralgemenen tot één videodecoder met codec en keyframetest als parameter. Kost een formaatwaarde, een contenttype en een capability.</p>
-    </div>
-    <div class="panel">
-      <h3>H.265</h3>
-      <p>Hergebruikt de hele HEVC-route zonder één clientwijziging. Of de emulatorimages en toestellen een bruikbare HEVC-encoder hebben, is niet gemeten. Een software-encoder op de emulator kost CPU op de Mac. <span class="badge info">Afgeleid</span></p>
-    </div>
-  </div>
-  <p>De spike start met H.265 op de lokale Pixel 9 Pro-AVD. Levert die vloeiend beeld, dan kan de eerste versie zonder formaatwijziging. H.264 is de route voor toestellen zonder HEVC-encoder en blijft het voorstel voor de eerste release.</p>
-  <p>WebCodecs vraagt een secure context. De desktop-app, <code>localhost</code> en de station hebben die. Een client over gewone HTTP op het LAN ziet geen beeld, precies zoals nu bij een fysieke iPhone; de decoder meldt dan <code>noDecoder</code>. Een JPEG-omzetting op de daemon voor die client staat niet op het plan.</p>
-  <p>Een rotatie of een resolutiewissel start de encoder opnieuw met een nieuw configpakket. De afmetingen van een frame komen dan uit de nieuwe SPS, niet uit de eerste codeckop. <span class="badge info">Afgeleid</span></p>
-</section>
-
-<section id="bediening">
-  <h2>Bediening</h2>
-  <p>scrcpy's controlsocket neemt touch, scroll, keycodes, tekst en draaien aan. Tekst valt buiten de eerste versie; de rest gaat erin.</p>
-  <div class="table">
-    <table class="wide">
-      <caption>Van het huidige inputcontract naar scrcpy-controlberichten</caption>
-      <thead><tr><th scope="col">Ruimte-input</th><th scope="col">Android</th><th scope="col">Opmerking</th></tr></thead>
-      <tbody>
-        <tr><td><code>pointer</code></td><td>touch-event, pointer-id 0</td><td>Genormaliseerd naar schermpixels van het laatste frame.</td></tr>
-        <tr><td><code>multiPointer</code></td><td>twee touch-events, pointer-ids 0 en 1</td><td>Pinch werkt zoals op iOS.</td></tr>
-        <tr><td><code>pointer</code> met <code>edge: 'bottom'</code></td><td>gewone touch</td><td>Gebarennavigatie reageert op een swipe vanaf de rand; geen markering nodig.</td></tr>
-        <tr><td><code>scroll</code></td><td>scroll-event</td><td>Kan echt scrollen in plaats van een touch-drag. Keuze bij de bouw.</td></tr>
-        <tr><td><code>button: home</code></td><td><code>KEYCODE_HOME</code></td><td></td></tr>
-        <tr><td><code>button: appSwitcher</code></td><td><code>KEYCODE_APP_SWITCH</code></td><td>Recents.</td></tr>
-        <tr><td><code>button: lock</code></td><td><code>KEYCODE_POWER</code></td><td></td></tr>
-        <tr><td><code>button: siri</code></td><td><code>KEYCODE_ASSIST</code></td><td>Label per platform.</td></tr>
-        <tr><td><code>button: swipeHome</code></td><td>touchreeks vanaf de onderrand</td><td>Of weglaten; Home doet hetzelfde.</td></tr>
-        <tr><td>ontbreekt: <code>back</code></td><td><code>KEYCODE_BACK</code></td><td>De belangrijkste Android-knop.</td></tr>
-        <tr><td><code>rotate</code></td><td>rotate-device</td><td>Draait het scherm, niet het toestel.</td></tr>
-        <tr><td>ontbreekt: tekst</td><td>inject-text en keycodes</td><td>Later; vraagt focus in view en node.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>Berichtnamen en velden zijn <span class="badge info">Afgeleid</span> uit de scrcpy-bron. Het protocol wordt vanaf de documentatie opnieuw geschreven; er gaat geen scrcpy-clientcode over.</p>
-</section>
-
-<section id="lifecycle">
-  <h2>Discovery en lifecycle</h2>
-  <h3>De SDK vinden</h3>
-  <p>Een verpakte app start de daemon als service met alleen <code>RUIMTE_HOME</code>, <code>PATH</code> van de loginshell en <code>RUIMTE_SERVICE</code> (<code>packages/service/src/platform.ts</code>). <code>ANDROID_HOME</code> komt daar niet mee. Zoek daarom in deze volgorde:</p>
-  <ol>
-    <li><code>ANDROID_HOME</code> of <code>ANDROID_SDK_ROOT</code> als die er toch zijn;</li>
-    <li>de SDK waar <code>adb</code> op PATH in staat (<code>realpath</code>, twee mappen omhoog), wat op deze Mac de SDK vindt;</li>
-    <li><code>~/Library/Android/sdk</code> op macOS en <code>~/Android/Sdk</code> op Linux.</li>
-  </ol>
-  <p>Zonder <code>adb</code> zegt het panel dat de Android SDK ontbreekt. Zonder <code>emulator</code> verschijnen alleen aangesloten toestellen.</p>
-
-  <h3>Identiteit</h3>
-  <p>De referentie in het project moet hetzelfde zijn als de emulator draait en als hij uit staat, anders verliest een view zijn device bij het opstarten.</p>
-  <div class="table">
-    <table>
-      <thead><tr><th scope="col">Veld</th><th scope="col">Emulator</th><th scope="col">Toestel</th></tr></thead>
-      <tbody>
-        <tr><td><code>deviceId</code></td><td>AVD-naam (<code>Pixel_9_Pro_API_35</code>), ook als hij draait</td><td>adb-serial</td></tr>
-        <tr><td><code>name</code></td><td><code>avd.ini.displayname</code> uit <code>config.ini</code> (<code>Pixel 9 Pro API 35</code>)</td><td><code>ro.product.model</code></td></tr>
-        <tr><td><code>runtime</code></td><td>API-niveau uit <code>image.sysdir.1</code> of <code>target</code></td><td>API-niveau uit <code>ro.build.version.sdk</code></td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>Het API-niveau is de enige bron die in beide staten gelijk is. Een versienaam als "Android 15" vraagt een vertaaltabel en kan alleen in de weergave staan. De backend koppelt een draaiende <code>emulator-5554</code> aan zijn AVD met <code>adb -s &lt;serial&gt; emu avd name</code>. <span class="badge confirmed">AVD-velden lokaal gelezen</span></p>
-
-  <h3>Starten en stoppen</h3>
-  <ul>
-    <li>Starten is <code>emulator -avd &lt;naam&gt; -no-window</code>, losgekoppeld van de daemon zodat een daemonherstart de emulator laat draaien.</li>
-    <li>De state is <code>transitioning</code> tot <code>getprop sys.boot_completed</code> 1 geeft. Een cold boot duurt tientallen seconden. <span class="badge info">Afgeleid</span></li>
-    <li>Stoppen is <code>adb -s &lt;serial&gt; emu kill</code>. Een toestel krijgt geen start- of stopknop, net als een fysieke iPhone.</li>
-    <li>De client leest de lijst iedere seconde zolang een devicepanel, view of node zichtbaar is. Voor Android zijn dat meerdere adb-aanroepen per device. De backend houdt daarom het AVD-lijstje en de <code>getprop</code>-antwoorden vast tot <code>adb devices</code> verandert.</li>
-  </ul>
-
-  <h3>scrcpy-server</h3>
-  <p>De jar komt met een exacte versie en checksum mee naast de binary in <code>native/</code>, zoals de serve-sim-addon nu (<code>apps/server/scripts/compile.ts</code>). Bij openen pusht de daemon hem naar <code>/data/local/tmp</code>, zet <code>adb forward</code> op een eigen <code>scid</code>, start de server met <code>app_process</code> en verbindt eerst de video- en dan de controlsocket. De server weigert elke client met een andere versie. Apache-2.0 vraagt licentie en NOTICE in de distributie.</p>
-</section>
-
-<section id="tools">
-  <h2>Tools</h2>
-  <p><span class="badge confirmed">Besloten 23 september</span> Android krijgt in de eerste versie de tools-flyout, zodat een Android-device net zo compleet is als een iOS-simulator. Elke tool loopt als bestaande <code>device.action</code> naar de daemon, en <code>device.detail</code> leest de bevestigde waarden daarna terug, net als op iOS.</p>
-  <p>De adb-commando's in deze tabel zijn <span class="badge info">Afgeleid</span> en nog niet uitgevoerd. De spike controleert ze op de lokale AVD.</p>
-  <div class="table">
-    <table class="wide">
-      <caption>De iOS-tools en hun Android-tegenhanger</caption>
-      <thead><tr><th scope="col">Tool</th><th scope="col">Zetten</th><th scope="col">Teruglezen</th><th scope="col">Waar</th></tr></thead>
-      <tbody>
-        <tr><td>Appearance</td><td><code>cmd uimode night yes|no</code></td><td><code>cmd uimode night</code></td><td>emulator en toestel</td></tr>
-        <tr><td>Tekstgrootte</td><td><code>settings put system font_scale</code> met 0,85, 1,0, 1,15 en 1,3</td><td><code>settings get system font_scale</code>, naar de dichtstbijzijnde stap</td><td>emulator en toestel</td></tr>
-        <tr><td>Reduce Motion</td><td>de drie <code>*_animation_scale</code>-waarden in <code>settings global</code> op 0 of 1</td><td>idem</td><td>emulator en toestel</td></tr>
-        <tr><td>Increase Contrast</td><td><code>settings put secure high_text_contrast_enabled</code></td><td>idem</td><td>emulator en toestel</td></tr>
-        <tr><td>Kleurfilters</td><td><code>accessibility_display_daltonizer</code> en <code>accessibility_display_daltonizer_enabled</code> in <code>settings secure</code></td><td>idem</td><td>emulator en toestel</td></tr>
-        <tr><td>Show Borders</td><td><code>setprop debug.layout true|false</code> plus een verversing van de UI</td><td><code>getprop debug.layout</code></td><td>emulator en toestel</td></tr>
-        <tr><td>VoiceOver</td><td>TalkBack via <code>enabled_accessibility_services</code></td><td>idem</td><td>alleen als het image TalkBack heeft; een image zonder Google Play heeft hem vaak niet</td></tr>
-        <tr><td>Locatie</td><td><code>adb emu geo fix &lt;lon&gt; &lt;lat&gt;</code></td><td>niet uit te lezen; de flyout houdt de laatst gezette waarde</td><td>alleen emulator</td></tr>
-        <tr><td>Permissies</td><td><code>pm grant</code>, <code>pm revoke</code>; reset via revoke en <code>pm clear-permission-flags</code></td><td>per actie</td><td>emulator en toestel</td></tr>
-        <tr><td>URL openen</td><td><code>am start -a android.intent.action.VIEW -d &lt;url&gt;</code></td><td></td><td>emulator en toestel</td></tr>
-        <tr><td>App starten en stoppen</td><td><code>monkey -p &lt;pakket&gt; -c android.intent.category.LAUNCHER 1</code>, <code>am force-stop</code></td><td></td><td>emulator en toestel</td></tr>
-        <tr><td>Reduce Transparency, Liquid Glass</td><td colspan="2">bestaat niet op Android</td><td>verborgen</td></tr>
-        <tr><td>Testpush</td><td colspan="2">geen lokale route; een echte push loopt via FCM en een serversleutel</td><td>verborgen</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h3>Wat dat vraagt van contracts en client</h3>
-  <ul>
-    <li>Een optioneel veld <code>tools</code> in <code>DeviceCapabilities</code> noemt de acties en instellingen die een device aankan. De flyout toont alleen die rijen en staat aan zodra de lijst niet leeg is, in plaats van bij <code>kind === 'simulator'</code>. iOS-simulators kondigen hun huidige set aan, zodat daar niets verandert.</li>
-    <li><code>DevicePermissionSchema</code> heeft iOS-namen. De meeste hebben een Android-tegenhanger (camera, microfoon, foto's, contacten, agenda, locatie, beweging, mediabibliotheek). Herinneringen en Face ID hebben die niet. De backend vertaalt de naam en de flyout toont per platform alleen wat bestaat.</li>
-    <li>Op Android is de app-id een pakketnaam in plaats van een bundle-id. Het veld blijft hetzelfde; placeholder en label verschillen per platform, in <code>en</code> en <code>nl</code>.</li>
-    <li>Op een toestel bestaat nep-locatie alleen via een mock-app. De flyout verbergt locatie daar, via dezelfde <code>tools</code>-lijst.</li>
-  </ul>
-  <p>De backend krijgt <code>detail</code> en <code>action</code>, met één runner voor <code>adb -s &lt;serial&gt; shell</code> en argumentarrays, zodat de tests een nep-runner gebruiken zoals bij <code>simctl</code>.</p>
+  <p><span class="badge warning">Open</span> Niemand heeft Android nog in de Electron-app bediend. Voor een fysieke iPhone ontbreekt nog de live test van stroom en bediening samen in panel, view en canvas.</p>
 </section>
 
 <section id="architectuur">
   <h2>Architectuur</h2>
   <svg class="diagram" width="960" viewBox="0 0 960 400" role="img" aria-labelledby="arch-title arch-desc">
     <title id="arch-title">Architectuur met Android</title>
-    <desc id="arch-desc">De client leest frames via de live-streamroute of via events en stuurt input over de requestverbinding. De DeviceManager routeert naar drie backends: de simulatorhelper, de iOS-device-bridge en de nieuwe Android-backend, die via adb forward met een scrcpy-server op het toestel praat.</desc>
+    <desc id="arch-desc">De client leest frames via de live-streamroute of via events en stuurt input over de requestverbinding. De DeviceManager routeert naar drie backends: de simulatorhelper, de iOS-device-bridge en de Android-backend, die via adb forward met een scrcpy-server op het toestel praat.</desc>
     <defs><marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="arrow" d="M0 0L10 5L0 10z"/></marker></defs>
     <rect class="node" x="20" y="135" width="220" height="130" rx="14"/>
     <text x="130" y="175" text-anchor="middle" font-weight="600">Client</text>
@@ -471,143 +246,160 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
     <path class="edge" d="M590 240L720 330" marker-start="url(#arrowhead)" marker-end="url(#arrowhead)"/>
     <text x="640" y="305" text-anchor="middle" class="label-small">TCP</text>
   </svg>
-  <p>De iOS-routes gebruiken een helperproces omdat native code en private frameworks de daemon kunnen laten crashen of stdout vervuilen. Android heeft geen native code in de daemon. De scrcpy-verbinding is gewoon TCP, dus <code>AndroidScrcpySource</code> kan in het daemonproces leven en rechtstreeks <code>DeviceSource</code> implementeren. Een crash van de server op het toestel sluit alleen de sockets.</p>
-  <p>Voorgestelde bestanden in <code>apps/server/src/devices</code>: <code>android-sdk.ts</code> voor paden en de adb-runner, <code>android.ts</code> voor discovery, lifecycle en tools, <code>scrcpy-protocol.ts</code> voor pure framing en controlberichten, en <code>scrcpy-source.ts</code> voor push, forward en sockets. De adb-runner krijgt argumentarrays, net als <code>SimctlRunner</code>, zodat tests een nep-runner injecteren.</p>
-  <p class="note">De emulator heeft ook een eigen gRPC-poort met screenshotstroom en input, en een WebRTC-route. Die werken alleen op een emulator. scrcpy dekt emulator en toestel met één pad, daarom valt de keuze daarop.</p>
+  <p>De iOS-routes lopen via een helperproces, omdat native code en private frameworks de daemon kunnen laten crashen. Android heeft geen native code in de daemon. <code>ScrcpySource</code> praat gewoon TCP met een server op het toestel, achter <code>adb forward</code> op loopback. Crasht die server, dan sluiten alleen de sockets.</p>
+  <p>Elk frame noemt zijn formaat: JPEG van de simulator, HEVC van een iPhone, H.264 van Android. De client tekent JPEG direct en stuurt HEVC en H.264 door één WebCodecs-decoder (<code>apps/client/src/devices/video-decoder.ts</code>). Die wacht op een keyframe en begint opnieuw zodra het formaat of de framegrootte verandert, zoals na draaien.</p>
+  <p>Een client noemt bij <code>device.open</code> de formaten die hij tekent. Een oudere client krijgt <code>device-format-unsupported</code> in plaats van frames die hij niet kan valideren.</p>
+  <p>Moet een HTTP-stroom een videoframe laten vallen, dan slaat hij over tot het volgende keyframe en vraagt de bron er een. Een kijker die bij een lopende stroom aansluit, vraagt er ook een. Anders wacht hij tot tien seconden, want zo vaak maakt de Android-encoder een keyframe.</p>
 </section>
 
-<section id="fasen">
-  <h2>Fasen voor Android</h2>
-  <ol class="steps">
-    <li class="step"><div>
-      <h3>Spike op de lokale AVD <span class="badge confirmed">gebouwd</span></h3>
-      <p>Start <code>Pixel_9_Pro_API_35</code>, push een gepinde scrcpy-server, open de videosocket en schrijf de ruwe pakketten weg. Meet H.265 en H.264: tijd tot eerste frame, fps, bytes per frame en CPU van de emulator. Stuur één tik en één Home over de controlsocket. Probeer de adb-commando's uit de toolstabel één keer met de hand.</p>
-      <p><strong>Uitkomst:</strong> de codec voor de eerste versie, de scrcpy-versie die gepind wordt en een bevestigde toolstabel.</p>
-    </div></li>
-    <li class="step"><div>
-      <h3>Contracts <span class="badge confirmed">gebouwd</span></h3>
-      <p>Optionele capabilities voor knoppen en tools. <code>back</code> in de knoppen. Bij H.264 ook <code>h264</code> in <code>format</code> en een contenttype. Nieuwe foutcodes in <code>DEVICE_ERROR_CODES</code>. Swift opnieuw genereren.</p>
-    </div></li>
-    <li class="step"><div>
-      <h3>Backend: SDK, discovery en lifecycle <span class="badge confirmed">gebouwd</span></h3>
-      <p><code>android-sdk.ts</code> en <code>android.ts</code> met een nep-runner in de tests. AVD's en toestellen in één lijst, stabiele referenties, starten zonder venster, stoppen en de cache voor de lijst van iedere seconde. Registratie in <code>daemon.ts</code> op macOS en Linux.</p>
-    </div></li>
-    <li class="step"><div>
-      <h3>Stroom en input <span class="badge confirmed">gebouwd</span></h3>
-      <p><code>scrcpy-protocol.ts</code> met pure tests voor de framing en de controlberichten. <code>scrcpy-source.ts</code> met push, forward, sockets en opruimen bij de laatste kijker. De jar gaat via <code>compile.ts</code> naar <code>native/</code>. Een integratietest tegen een echte emulator hoort in <code>*.integration.test.ts</code>.</p>
-    </div></li>
-    <li class="step"><div>
-      <h3>Tools <span class="badge confirmed">gebouwd</span></h3>
-      <p><code>detail</code> en <code>action</code> in de Android-backend volgens de tabel bij <a href="#tools">Tools</a>, met tests op een nep-runner. De iOS-simulatorbackend kondigt zijn huidige tools aan, zodat de flyout daar gelijk blijft.</p>
-    </div></li>
-    <li class="step"><div>
-      <h3>Client <span class="badge confirmed">gebouwd</span></h3>
-      <p>Bij H.264 de HEVC-decoder veralgemenen. Panel: lege staat per ontbrekende toolchain in plaats van <code>macOnly</code>, Back in de devicebalk en de nodeheader, labels per platform. Flyout: alleen aangekondigde tools, permissies en app-id per platform, na elke actie de bevestigde waarden teruglezen. Teksten in <code>en</code> en <code>nl</code>.</p>
-    </div></li>
-    <li class="step"><div>
-      <h3>Daarna <span class="badge info">later</span></h3>
-      <p>Tekstinput, een fysiek Android-toestel accepteren, en Linux accepteren op een machine met KVM.</p>
-    </div></li>
-  </ol>
+<section id="ios">
+  <h2>iOS</h2>
+  <div class="split">
+    <div class="panel">
+      <h3>Simulator <span class="badge confirmed">gebouwd</span></h3>
+      <p><code>IosSimulatorBackend</code> leest <code>xcrun simctl</code>. Capture en input draaien in een helperproces dat <code>serve-sim-native.node</code> laadt en over file descriptor 3 praat. Lokaal gemeten: 17,4 fps en 851 ms tot het eerste frame op een iPhone 18 Pro. De backend kondigt alle tools aan.</p>
+    </div>
+    <div class="panel">
+      <h3>iPhone <span class="badge confirmed">gebouwd</span></h3>
+      <p><code>IosPhysicalBackend</code> vindt toestellen met <code>xcrun devicectl</code>. <code>apps/ios-device-bridge</code> leest de CoreDevice Display Stream draadloos via <code>remoted</code> en levert Annex B-HEVC. Input loopt via CoreDevice HID. Zonder bridge valt Ruimte terug op screenshots zonder bediening.</p>
+    </div>
+  </div>
+</section>
+
+<section id="android">
+  <h2>Android</h2>
+  <p>De backend <code>android</code> (<code>apps/server/src/devices/android.ts</code>) draait op macOS en Linux.</p>
+  <h3>De SDK vinden</h3>
+  <p>Een daemon die als service draait, krijgt de PATH van de loginshell maar geen <code>ANDROID_HOME</code>. <code>android-sdk.ts</code> zoekt daarom in deze volgorde: <code>ANDROID_HOME</code> en <code>ANDROID_SDK_ROOT</code>, dan de SDK rond de <code>adb</code> op PATH, dan <code>~/Library/Android/sdk</code> of <code>~/Android/Sdk</code>. Op deze Mac vindt de tweede stap <code>~/Development/Environment/android-sdk</code>. Zonder <code>emulator</code> verschijnen alleen telefoons.</p>
+  <h3>Identiteit</h3>
+  <div class="table">
+    <table>
+      <thead><tr><th scope="col">Veld</th><th scope="col">Emulator</th><th scope="col">Telefoon</th></tr></thead>
+      <tbody>
+        <tr><td><code>deviceId</code></td><td>AVD-naam, ook als hij draait</td><td>adb-serial</td></tr>
+        <tr><td><code>name</code></td><td><code>avd.ini.displayname</code> uit <code>config.ini</code></td><td><code>ro.product.model</code></td></tr>
+        <tr><td><code>runtime</code></td><td><code>API 35</code>, uit het system image</td><td><code>API 34</code>, uit <code>ro.build.version.sdk</code></td></tr>
+        <tr><td>state</td><td>uit, bezig tot <code>sys.boot_completed</code>, aan</td><td>aan, of uit met een <code>reason</code> zoals <code>unauthorized</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>De client vraagt de lijst elke seconde. Per ronde kost dat één <code>adb devices -l</code>. De AVD-naam van een draaiende emulator en wat een toestel over zichzelf zegt, onthoudt de backend tot adb het toestel kwijt is.</p>
+  <h3>Starten en stoppen</h3>
+  <p>Starten is <code>emulator -avd &lt;naam&gt; -port &lt;vrije poort&gt; -no-window -no-boot-anim</code> in een eigen sessie, met de uitvoer in een bestand. De emulator blijft draaien als de daemon herstart. Stopt hij tijdens het starten, dan toont het panel de foutregels uit dat bestand en geen hangende start. Stoppen is <code>adb emu kill</code>, gemeten 3,6 s. Een telefoon krijgt geen start- of stopknop.</p>
+  <h3>Beeld</h3>
+  <div class="table">
+    <table>
+      <caption>Spike op de Pixel 9 Pro-AVD, API 35</caption>
+      <thead><tr><th scope="col">Codec</th><th scope="col">Beeld</th><th scope="col">Eerste frame</th><th scope="col">fps bij slepen</th><th scope="col">Bitrate</th></tr></thead>
+      <tbody>
+        <tr><td>H.264</td><td>916 × 2048</td><td>270 ms</td><td>23</td><td>3,3 Mbit/s</td></tr>
+        <tr><td>H.264, <code>max_size=1280</code></td><td>572 × 1280</td><td>265 ms</td><td>25</td><td>2,3 Mbit/s</td></tr>
+        <tr><td>H.265</td><td>228 × 512</td><td>265 ms</td><td>26</td><td>1,3 Mbit/s</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>De emulator heeft alleen software-encoders. Die voor H.265 schaalt het beeld terug naar 228 × 512, dus Android streamt H.264 op volle grootte. Tijdens een sleepbeweging gebruikt het emulatorproces rond 950% CPU, in rust rond 10%. Het aandeel van de encoder is niet apart gemeten.</p>
+  <p>De server op het toestel is scrcpy 4.1, gepind op SHA-256. <code>scrcpy-protocol.ts</code> schrijft het protocol opnieuw in TypeScript, met eigen tests. De server wist bij het starten zijn eigen jar, dus elke sessie pusht een kopie met de <code>scid</code> in de naam. De configuratiepakketten (SPS en PPS) staan voor elk keyframe, zodat een decoder bij elk keyframe kan beginnen.</p>
+  <p>Een build neemt de server en zijn Apache-2.0-licentie mee in <code>native/</code>, ook in de npm-pakketten. Een dev-checkout haalt hem bij eerste gebruik op in <code>apps/server/.native</code>.</p>
+</section>
+
+<section id="bediening">
+  <h2>Bediening</h2>
+  <div class="table">
+    <table class="wide">
+      <caption>Van het inputcontract naar Android</caption>
+      <thead><tr><th scope="col">Ruimte-input</th><th scope="col">Android</th><th scope="col">Opmerking</th></tr></thead>
+      <tbody>
+        <tr><td><code>pointer</code></td><td>touch, pointer-id 0</td><td>In pixels van het laatste frame. Een swipe vanaf de onderrand werkt als gewone touch.</td></tr>
+        <tr><td><code>multiPointer</code></td><td>twee touches, pointer-ids 0 en 1</td><td>Pinch werkt zoals op iOS.</td></tr>
+        <tr><td><code>scroll</code></td><td>scroll-event</td><td>De client stuurt trackpadbewegingen nu als sleep.</td></tr>
+        <tr><td><code>back</code>, <code>home</code></td><td><code>KEYCODE_BACK</code>, <code>KEYCODE_HOME</code></td><td>Back staat alleen in de balk als een device hem aankondigt.</td></tr>
+        <tr><td><code>appSwitcher</code>, <code>lock</code>, <code>siri</code></td><td><code>KEYCODE_APP_SWITCH</code>, <code>KEYCODE_POWER</code>, <code>KEYCODE_ASSIST</code></td><td>Op Android heten ze Recent apps, Power en Assistant.</td></tr>
+        <tr><td><code>rotate</code></td><td>rotate-device</td><td>Wisselt tussen staand en liggend; de richting maakt niet uit.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Tekstinput zit er op geen van beide platforms in. Typen vraagt eerst een focusmodel in view en node.</p>
+</section>
+
+<section id="tools">
+  <h2>Tools</h2>
+  <p>Elke tool is een <code>device.action</code>. Daarna leest <code>device.detail</code> de bevestigde waarden terug. De flyout toont alleen de tools in <code>capabilities.tools</code> en de permissies in <code>capabilities.permissions</code>. Een daemon zonder die lijsten geeft een iOS-simulator alle tools en de rest geen.</p>
+  <div class="table">
+    <table class="wide">
+      <caption>Android-tools, alle op 23 september uitgevoerd op de lokale AVD</caption>
+      <thead><tr><th scope="col">Tool</th><th scope="col">Android</th><th scope="col">Waar</th></tr></thead>
+      <tbody>
+        <tr><td>Appearance</td><td><code>cmd uimode night</code></td><td>emulator en telefoon</td></tr>
+        <tr><td>Tekstgrootte</td><td><code>font_scale</code> 0,85, 1,0, 1,15 of 1,3</td><td>emulator en telefoon</td></tr>
+        <tr><td>Reduce Motion</td><td>de drie <code>*_animation_scale</code>-waarden op 0 of 1</td><td>emulator en telefoon</td></tr>
+        <tr><td>Increase Contrast</td><td><code>high_text_contrast_enabled</code></td><td>emulator en telefoon</td></tr>
+        <tr><td>Kleurfilters</td><td><code>accessibility_display_daltonizer</code> 0, 11, 12 of 13</td><td>emulator en telefoon</td></tr>
+        <tr><td>Show Borders</td><td><code>setprop debug.layout</code></td><td>Alleen schermen die daarna openen. API 35 weigert de verversing via <code>service call activity</code>.</td></tr>
+        <tr><td>VoiceOver</td><td>TalkBack in <code>enabled_accessibility_services</code></td><td>alleen als het image TalkBack heeft</td></tr>
+        <tr><td>Locatie</td><td><code>adb emu geo fix</code></td><td>Alleen emulator. Wissen bestaat daar niet, dus <code>clearLocation</code> ontbreekt.</td></tr>
+        <tr><td>Permissies</td><td><code>pm grant</code>, <code>pm revoke</code>, reset met <code>clear-permission-flags</code></td><td>Per API-niveau naar runtime-permissies. Herinneringen en Face ID ontbreken.</td></tr>
+        <tr><td>URL, app starten en stoppen</td><td><code>am start</code>, <code>monkey</code>, <code>am force-stop</code></td><td>emulator en telefoon; het app-id is een pakketnaam</td></tr>
+        <tr><td>Reduce Transparency, Liquid Glass, testpush</td><td>bestaan niet</td><td>niet aangekondigd</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>De backend quote elk argument voor de <code>sh</code> op het toestel en weigert een app-id dat geen pakketnaam is.</p>
 </section>
 
 <section id="beslissingen">
   <h2>Beslissingen</h2>
-  <h3>Genomen</h3>
   <ol>
-    <li><span class="badge confirmed">18 september</span> Browser en devices delen één framepad. Elk frame noemt zijn formaat.</li>
-    <li><span class="badge confirmed">Helperspike</span> De iOS-simulatorengine is <code>serve-sim@0.1.46</code>, meegeleverd naast de binary.</li>
-    <li><span class="badge confirmed">18 september</span> Geen lokale id in <code>project.json</code>. Een ontbrekend device wordt gemeld en niet stil vervangen.</li>
-    <li><span class="badge confirmed">18 september</span> Fysieke iPhones gebruiken HEVC en CoreDevice HID via de Rust-bridge.</li>
-    <li><span class="badge confirmed">18 september</span> Het panel is de standaardviewer; view en node zijn plaatsingsopties.</li>
-    <li><span class="badge confirmed">13 september</span> Geen iOS-toetsenbord in de eerste versie.</li>
-    <li><span class="badge confirmed">13 september</span> Android direct na de iOS-MVP.</li>
+    <li><span class="badge confirmed">13 september</span> Android direct na de iOS-MVP. Geen iOS-toetsenbord in de eerste versie.</li>
+    <li><span class="badge confirmed">18 september</span> Browser en devices delen één framepad, en elk frame noemt zijn formaat. Geen lokale id in <code>project.json</code>; een ontbrekend device wordt gemeld en niet stil vervangen. Het panel is de standaardviewer, view en node zijn plaatsingsopties.</li>
     <li><span class="badge confirmed">Door de iOS-bouw</span> Een videocodec gaat via WebCodecs naar canvas. MSE en MJPEG-omzetting op de daemon vallen af.</li>
-    <li><span class="badge confirmed">23 september</span> Ruimte start een emulator zonder eigen venster.</li>
-    <li><span class="badge confirmed">23 september</span> Geen toetsenbord in de eerste Android-versie; typen vraagt eerst een focusmodel in view en node.</li>
-    <li><span class="badge confirmed">23 september</span> De eerste Android-versie heeft de tools-flyout, met elke iOS-tool die op Android bestaat.</li>
-    <li><span class="badge confirmed">23 september</span> Fysieke Android-toestellen verschijnen meteen, want het pad is hetzelfde.</li>
-    <li><span class="badge confirmed">23 september</span> Agents lezen een device als contextbron; bedienen door een agent is een aparte fase met een eigen toestemming.</li>
-    <li><span class="badge confirmed">Spike, 23 september</span> Android streamt H.264 op volle grootte. H.265 valt af, want de emulator schaalt het terug naar 228 × 512.</li>
-  </ol>
-  <h3>Nog open</h3>
-  <ol>
-    <li><strong>Acceptatie.</strong> Android in de Electron-app, daarna een fysiek toestel en Linux met KVM.</li>
+    <li><span class="badge confirmed">23 september</span> Ruimte start een emulator zonder eigen venster. Geen Android-toetsenbord in de eerste versie. De tools-flyout zit erin, met elke iOS-tool die op Android bestaat. Telefoons verschijnen meteen.</li>
+    <li><span class="badge confirmed">23 september</span> Agents lezen een device als contextbron. Bedienen door een agent is een aparte fase met een eigen toestemming.</li>
+    <li><span class="badge confirmed">Spike, 23 september</span> Android streamt H.264 op volle grootte, via scrcpy 4.1 en zonder helperproces.</li>
+    <li><span class="badge confirmed">Bouw, 23 september</span> Knoppen, tools en permissies zijn lijsten strings in de capabilities. Een client houdt wat hij kent, dus een nieuwe waarde breekt een oudere client niet.</li>
   </ol>
 </section>
 
-<section id="risicos">
-  <h2>Risico's</h2>
+<section id="open">
+  <h2>Open en risico's</h2>
+  <h3>Nog te testen</h3>
   <ul>
-    <li>scrcpy-server en de client in de daemon moeten dezelfde versie hebben. Pin de jar met checksum en test elke upgrade.</li>
-    <li>Het protocol van scrcpy is intern en verandert tussen grote versies. Houd de framing in één puur bestand met eigen tests.</li>
-    <li>Een service-daemon kent <code>ANDROID_HOME</code> niet. De zoekvolgorde hierboven dekt deze Mac; zeg in het panel wat er ontbreekt.</li>
-    <li>De lijst van iedere seconde kost zonder cache meerdere adb-processen per device.</li>
-    <li>Instellingen via <code>settings</code> en <code>setprop</code> verschillen per API-niveau en fabrikant. Een tool die niet bevestigd terugleest, verdwijnt voor dat device uit de <code>tools</code>-lijst in plaats van stil te falen.</li>
-    <li>Een emulator op Linux zonder KVM is traag of start niet. Het panel moet dat als fout tonen en niet als hangende start. <span class="badge info">Afgeleid</span></li>
-    <li>Een fysiek toestel vraagt USB-debugging en een bevestiging op het toestel. Een <code>unauthorized</code>-regel uit <code>adb devices</code> is een state met uitleg, geen fout.</li>
-    <li>Clients over gewone HTTP hebben geen WebCodecs en zien dus geen Android-beeld, net als bij een fysieke iPhone.</li>
-    <li>Blijvend voor iOS: SimulatorKit, Indigo HID en de CoreDevice-protocollen zijn privé en veranderen per Xcode- en iOS-release.</li>
-    <li>Stel nooit een helper of een geforwarde poort buiten loopback bloot. <code>adb forward</code> luistert op localhost; elke route naar een client gaat door de bestaande geauthenticeerde verbinding.</li>
+    <li>Android in de Electron-app: starten, openen, tikken, slepen, Home, Back, draaien, elke tool, een canvas-node en stoppen.</li>
+    <li>Een fysieke Android-telefoon, inclusief de <code>unauthorized</code>-staat.</li>
+    <li>Linux met KVM. Zonder KVM moet het panel de fout tonen die de emulator geeft.</li>
+    <li>Een fysieke iPhone: stroom en bediening samen, LAN-bandbreedte, twee echte kijkers en herstel na een helpercrash.</li>
   </ul>
-</section>
-
-<section id="startprompt">
-  <h2>Werkvolgorde</h2>
-  <p>Start zodra het editorwerk in <code>packages/editor</code> op main staat.</p>
-  <div class="prompt-box">
-    <button type="button" id="copy-prompt">Kopieer</button>
-<pre><code id="prompt-text">Android-emulatorsupport in Ruimte, feature complete, volgens docs/reports/2026-09-13-devices.html.
-
-1. Spike: start de AVD Pixel_9_Pro_API_35, push een gepinde scrcpy-server, lees de videosocket en meet H.265 en H.264 (eerste frame, fps, bytes, CPU). Stuur één tik en Home. Probeer de adb-commando's uit de toolstabel. Leg codec, versie en werkende tools vast.
-2. Contracts: optionele capabilities voor knoppen en tools (welke acties en instellingen een device aankan), back in de knoppen, eventueel h264 in format met een eigen contenttype, nieuwe foutcodes. Genereer Swift opnieuw.
-3. Server: android-sdk.ts (SDK zoeken via ANDROID_HOME, ANDROID_SDK_ROOT, realpath van adb, standaardmappen) en android.ts (AVD's en adb-toestellen, stabiele referentie met AVD-naam en API-niveau, starten zonder venster, emu kill, cache voor de lijst). Tests met een nep-runner.
-4. Server: scrcpy-protocol.ts (pure framing en controlberichten, eigen tests) en scrcpy-source.ts (push, forward, sockets, opruimen). Jar met checksum via compile.ts naar native/. Registratie in daemon.ts op macOS en Linux.
-5. Server: detail en action in de Android-backend (appearance, tekstgrootte, Reduce Motion, Increase Contrast, kleurfilters, Show Borders, TalkBack, locatie op de emulator, permissies, URL, app starten en stoppen). De iOS-simulator kondigt zijn huidige tools aan. Tests met een nep-runner.
-6. Client: videodecoder veralgemenen als H.264 nodig is, lege staat per toolchain in plaats van macOnly, Back in devicebalk en nodeheader, tools-flyout op de tools-capability met permissies en app-id per platform, teksten in en en nl.
-7. bun run format en bun run check. Accepteer daarna in de Electron-app: starten, openen, tikken, slepen, Home, Back, draaien, elke tool, canvas-node en stoppen.
-
-Buiten de eerste versie: tekstinput, agentbediening.</code></pre>
-  </div>
+  <h3>Later</h3>
+  <ul>
+    <li>Tekstinput, na een focusmodel in view en node.</li>
+    <li>Bedienen door een agent, met een eigen toestemming.</li>
+  </ul>
+  <h3>Risico's</h3>
+  <ul>
+    <li>Het scrcpy-protocol is intern en verandert tussen versies. Een upgrade betekent een nieuwe pin en de tests van <code>scrcpy-protocol.ts</code> opnieuw langs de protocolbeschrijving.</li>
+    <li>Instellingen via <code>settings</code> en <code>setprop</code> verschillen per API-niveau en fabrikant. Alleen API 35 op de emulator is geprobeerd.</li>
+    <li>Een client over gewone HTTP op het LAN heeft geen WebCodecs en ziet geen beeld van een iPhone of een Android-device. De decoder meldt dan <code>noDecoder</code>.</li>
+    <li>Het direct-kanaal stuurt frames als events en slaat na een verloren frame niet over naar een keyframe. Tot het volgende keyframe kan het beeld daar vervormd zijn.</li>
+    <li>SimulatorKit, Indigo HID en de CoreDevice-protocollen zijn privé en veranderen per Xcode- en iOS-release.</li>
+    <li>Geen helper of geforwarde poort luistert buiten loopback. Elke route naar een client gaat door de geauthenticeerde verbinding.</li>
+  </ul>
 </section>
 
 <section id="bronnen">
   <h2>Bronnen</h2>
   <ul>
-    <li><a href="https://github.com/Genymobile/scrcpy">Genymobile/scrcpy</a>, met <code>doc/develop.md</code> voor het server-client-protocol, de socketvolgorde en de controlberichten.</li>
+    <li><a href="https://github.com/Genymobile/scrcpy">Genymobile/scrcpy</a> v4.1, met <code>doc/develop.md</code> voor de sockets, de videopakketten en de controlberichten, en <code>ControlMessageReaderTest.java</code> voor de bytes per bericht.</li>
     <li><a href="https://developer.android.com/tools/adb">Android Debug Bridge</a> en <a href="https://developer.android.com/studio/run/emulator-commandline">de emulator vanaf de commandline</a>.</li>
-    <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API">WebCodecs API</a> en de <code>avc1</code>-codecstring uit de H.264-SPS.</li>
-    <li><a href="https://github.com/google/android-emulator-webrtc">google/android-emulator-webrtc</a>, voor de gRPC- en WebRTC-route van de emulator.</li>
-    <li><a href="https://github.com/EvanBacon/serve-sim">EvanBacon/serve-sim</a>, npm <code>serve-sim@0.1.46</code>, commit <code>39958d0</code>.</li>
+    <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API">WebCodecs API</a> en de <code>avc1</code>-codecstring uit RFC 6381.</li>
+    <li><a href="https://github.com/EvanBacon/serve-sim">EvanBacon/serve-sim</a>, npm <code>serve-sim@0.1.46</code>.</li>
     <li><a href="https://github.com/jkcoxson/idevice">jkcoxson/idevice</a> en de <a href="https://idevice.wiki/docs/service-reference/coredevice/display-stream/">CoreDevice Display Stream-documentatie</a>.</li>
-    <li><a href="https://github.com/JaviSoto/device-hub-ios">JaviSoto/device-hub-ios</a>, <a href="https://github.com/madsmtm/objc2/tree/main/crates/block2">block2</a>.</li>
-    <li><a href="https://github.com/expo/expo-device-hub">expo/expo-device-hub</a> (<code>e11d963</code>), <a href="https://github.com/jiunshinn/serve-emul">jiunshinn/serve-emul</a> (<code>4becbbe</code>), <a href="https://github.com/callstack/agent-device">callstack/agent-device</a> (<code>973b74c</code>).</li>
-    <li><a href="https://github.com/pingdotgg/t3code/blob/main/apps/web/src/components/device/DeviceToolsPanel.tsx">pingdotgg/t3code: DeviceToolsPanel</a>, geraadpleegd op 18 september voor de iOS-tools.</li>
-    <li>Lokaal op 23 september: <code>adb version</code>, <code>emulator -version</code>, <code>emulator -list-avds</code>, <code>~/.android/avd/Pixel_9_Pro_API_35.avd/config.ini</code>, macOS arm64.</li>
-    <li>In de code: <code>apps/server/src/devices</code>, <code>apps/server/src/streams</code>, <code>apps/client/src/devices</code>, <code>apps/client/src/shell/panels/DevicesPanel.tsx</code>, <code>packages/contracts/src/device.ts</code> en <code>live-stream.ts</code>, <code>packages/service/src/platform.ts</code>.</li>
+    <li>In de code: <code>apps/server/src/devices</code>, <code>apps/server/src/streams</code>, <code>apps/client/src/devices</code>, <code>apps/client/src/shell/panels/DevicesPanel.tsx</code>, <code>packages/contracts/src/device.ts</code> en <code>live-stream.ts</code>.</li>
   </ul>
 </section>
 
 </main>
 <footer>
-  <p>Bijgewerkt op 23 september tegen <code>main</code> bij <code>cf74fd01</code>. Geverifieerd: de devicecode in server, client en contracts, de 59 devicetests, de iOS-backends en hun registratie, de service-omgeving en de lokale Android-toolchain met één AVD. Besloten op 23 september: emulator zonder venster, geen Android-toetsenbord, tools in de eerste versie en fysieke toestellen meteen zichtbaar. Daarna gebouwd en gemeten op dezelfde dag: de spike, starten en stoppen, stroom en input tegen de lokale AVD, en elke Android-tool. Niet getest: de Electron-app, een fysiek Android-toestel en Linux.</p>
+  <p>Bijgewerkt op 23 september na de Android-bouw, tegen <code>main</code> na <code>1f8a3d4e</code>. Geverifieerd: de spike, starten en stoppen, stroom en input via de integratietest, elke Android-tool op de lokale AVD, <code>bun run check</code> en de volledige testrun. Niet getest: de Electron-app, een fysieke Android-telefoon, Linux en een fysieke iPhone in panel, view en canvas samen.</p>
 </footer>
-<script>
-{
-    const button = document.getElementById('copy-prompt');
-    const text = document.getElementById('prompt-text');
-    button.addEventListener('click', async () => {
-        try {
-            await navigator.clipboard.writeText(text.textContent);
-            button.textContent = 'Gekopieerd';
-        } catch {
-            button.textContent = 'Kopiëren mislukt';
-        }
-        setTimeout(() => {
-            button.textContent = 'Kopieer';
-        }, 2000);
-    });
-}
-</script>
 </body>
 </html>
