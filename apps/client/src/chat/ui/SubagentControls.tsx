@@ -1,8 +1,8 @@
 import { Fragment, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Bot, ChevronRight, X } from 'lucide-react';
-import { breadcrumbOf, isOnList, MAIN_AGENT, toggleList, trailTo, useOpenableSubagents, useSubagentTrail } from '@/chat/subagent-view';
+import { ChevronRight, X } from 'lucide-react';
+import { breadcrumbOf, MAIN_AGENT, trailTo, useOpenableSubagents, useSubagentTrail } from '@/chat/subagent-view';
 import { SubagentStopButton } from '@/chat/ui/SubagentStopButton';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -10,8 +10,7 @@ import { Tooltip } from '@/ui/Tooltip';
 const CRUMB_LINK = 'truncate text-text-muted hover:text-text';
 
 /*
- * The chat's own title where the bar draws it. While the list or a sub-agent stands in the chat's
- * place it is the first crumb of the way down, so pressing it goes back to the main agent.
+ * The chat's own title where the bar draws it. While a sub-agent stands in the chat's place it is the first crumb of the way down, so pressing it goes back to the main agent.
  */
 export function SubagentTitleCrumb({ chatId, className, children }: { chatId: string; className?: string; children: ReactNode }) {
     const { trail, show } = useSubagentTrail(chatId);
@@ -38,10 +37,8 @@ export function SubagentBreadcrumb({ chatId, title, className }: { chatId: strin
         return null;
     }
     const steps = breadcrumbOf(trail);
-    const last = trail.at(-1);
     // Only a row of the chat's own thread can be stopped; a grandchild belongs to the sub-agent that opened it.
-    const ownRow = last?.kind === 'agent' && (trail.length === 1 || trail.at(-2)?.kind === 'list');
-    const shown = ownRow ? subagents.find((item) => last.kind === 'agent' && item.toolUseId === last.toolUseId) : undefined;
+    const shown = trail.length === 1 ? subagents.find((item) => item.toolUseId === trail[0]!.toolUseId) : undefined;
     return (
         <nav aria-label={t('subagents.title')} className={clsx('flex min-w-0 items-center gap-1 text-xs', className)}>
             {title !== undefined && (
@@ -57,12 +54,7 @@ export function SubagentBreadcrumb({ chatId, title, className }: { chatId: strin
                             {step.label}
                         </span>
                     ) : (
-                        <button
-                            type="button"
-                            // The list keeps its short name whole; the sub-agents between it and the one on screen give way.
-                            className={clsx(CRUMB_LINK, step.kind === 'list' ? 'shrink-0' : 'min-w-0 shrink')}
-                            onClick={() => show(trailTo(trail, step.depth))}
-                        >
+                        <button type="button" className={clsx(CRUMB_LINK, 'min-w-0 shrink')} onClick={() => show(trailTo(trail, step.depth))}>
                             {step.label}
                         </button>
                     )}
@@ -75,22 +67,5 @@ export function SubagentBreadcrumb({ chatId, title, className }: { chatId: strin
                 </button>
             </Tooltip>
         </nav>
-    );
-}
-
-/* Puts the list of the chat's sub-agents, its CLI's own and the tasks it gave other nodes, in the chat's place. */
-export function SubagentButton({ chatId }: { chatId: string }) {
-    const { t } = useTranslation('chat');
-    const subagents = useOpenableSubagents(chatId);
-    const { trail, show } = useSubagentTrail(chatId);
-    if (subagents.length === 0) {
-        return null;
-    }
-    return (
-        <Tooltip label={t('subagents.title')} name>
-            <button type="button" className="icon-btn h-7 w-7" aria-pressed={isOnList(trail)} onClick={() => show(toggleList(trail))}>
-                <Icon icon={Bot} size={16} />
-            </button>
-        </Tooltip>
     );
 }

@@ -244,8 +244,11 @@
     "shells_other": "{{count}} shells",
     "monitors_one": "{{count}} monitor",
     "monitors_other": "{{count}} monitors",
-    "openSubagents": "Toon de sub-agents",
-    "background": "Draait op de achtergrond",
+    "took": {
+      "done": "klaar in {{duration}}",
+      "failed": "mislukt na {{duration}}",
+      "cancelled": "geannuleerd na {{duration}}"
+    },
     "shell": "Shell",
     "monitor": "Monitor",
     "stop": "Stoppen",
@@ -258,9 +261,6 @@
     },
     "title": "Sub-agents",
     "backToMain": "Terug naar de main agent",
-    "empty": "Deze chat heeft geen sub-agents om te openen.",
-    "active": "Bezig",
-    "done": "Klaar",
     "loading": "Gesprek laden...",
     "loadEarlier": "Eerdere laden",
     "loadingEarlier": "Laden...",

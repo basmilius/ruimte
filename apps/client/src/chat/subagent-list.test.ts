@@ -1,21 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ChatSubagentItem, ChatToolItem, Task } from '@ruimte/contracts';
-import { formatClock, formatDayClock } from '@/format/datetime';
-import {
-    composerStopLabel,
-    composerStopOf,
-    entryTimeOf,
-    latestPreview,
-    needsTail,
-    previewFor,
-    previewOfItem,
-    sectionSubagents,
-    statusWordOf,
-    stopOf,
-    subagentTitle,
-    taskIdOf,
-    threadWorkBy
-} from './subagent-list';
+import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
+import { composerStopLabel, composerStopOf, entryTimeOf, flyoutSubagents, statusWordOf, stopOf, subagentTitle, summaryWordOf, taskIdOf } from './subagent-list';
 
 const subagent = (id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem => ({
     id,
@@ -38,28 +23,7 @@ const subagent = (id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubage
     ...patch
 });
 
-const tool = (id: string, name: string, input: unknown, parentToolUseId: string | null = null): ChatToolItem => ({
-    id,
-    kind: 'tool',
-    createdAt: 0,
-    turnId: null,
-    toolUseId: `use_${id}`,
-    name,
-    input,
-    output: null,
-    state: 'running',
-    parentToolUseId
-});
-
-const reply = (id: string, text: string, parentToolUseId: string | null = null): ChatItem => ({
-    id,
-    kind: 'assistant',
-    createdAt: 0,
-    turnId: null,
-    text,
-    streaming: false,
-    parentToolUseId
-});
+const message = (id: string): ChatItem => ({ id, kind: 'user', createdAt: 0, turnId: null, text: id });
 
 const note = (id: string): ChatItem => ({ id, kind: 'note', createdAt: 0, turnId: null, level: 'info', text: id });
 
@@ -78,30 +42,25 @@ const task = (status: Task['status']): Task => ({
 });
 
 describe('subagent list', () => {
-    test('running ones are active and everything that settled is done, in thread order while none has a time', () => {
-        const a = subagent('a', { status: 'done' });
-        const b = subagent('b');
-        const c = subagent('c', { status: 'failed' });
-        const d = subagent('d');
-        expect(sectionSubagents([a, b, c, d])).toEqual({ active: [b, d], done: [a, c] });
-        expect(sectionSubagents([b])).toEqual({ active: [b], done: [] });
+    test('the flyout lists what runs and what settled since the last message, in thread order', () => {
+        const early = subagent('early', { status: 'done', turnId: 'turn-1' });
+        const background = subagent('background', { turnId: 'turn-1', background: true });
+        const sibling = subagent('sibling', { status: 'done', turnId: 'turn-1' });
+        const older = subagent('older', { status: 'done', turnId: 'turn-2' });
+        const survey = subagent('survey', { status: 'done', turnId: 'turn-3' });
+        const task = subagent('task', { origin: 'ruimte', childId: 'node-1', turnId: 'turn-3', status: 'failed' });
+        const structure: Record<string, ChatItem> = { early, background, sibling, older, survey, task, u1: message('u1'), u2: message('u2'), n: note('n') };
+        const order = ['u1', 'early', 'background', 'sibling', 'older', 'u2', 'survey', 'n', 'task'];
+        expect(flyoutSubagents(order, structure)).toEqual([early, background, sibling, survey, task]);
+        expect(flyoutSubagents([...order, 'u3'], { ...structure, u3: message('u3') })).toEqual([early, background, sibling]);
+        expect(flyoutSubagents(['survey', 'task'], structure)).toEqual([survey, task]);
     });
 
-    test('each section puts the most recently updated entry on top, and entries without a time below in thread order', () => {
-        const early = subagent('early', { status: 'done', finishedAt: 100 });
-        const late = subagent('late', { status: 'failed', finishedAt: 300 });
-        const unknown = subagent('unknown', { status: 'done', finishedAt: null });
-        const alsoUnknown = subagent('also', { status: 'done', finishedAt: null });
-        const quiet = subagent('quiet', { startedAt: 50 });
-        const busy = subagent('busy', { startedAt: 10 });
-        const fresh = subagent('fresh', { startedAt: 200 });
-        const unstarted = subagent('unstarted', { startedAt: 0 });
-        // The latest step the thread kept of `busy` is newer than every start.
-        const work = new Map([['toolu_busy', [tool('1', 'Bash', { command: 'ls' }, 'toolu_busy')].map((step) => ({ ...step, createdAt: 400 }))]]);
-        expect(sectionSubagents([unknown, early, unstarted, quiet, late, alsoUnknown, busy, fresh], work)).toEqual({
-            active: [busy, fresh, quiet, unstarted],
-            done: [late, early, unknown, alsoUnknown]
-        });
+    test('the badge shows work in progress first, then a failure, then a cancel, and done only when all are', () => {
+        expect(summaryWordOf(['done', 'failed', 'running'])).toBe('running');
+        expect(summaryWordOf(['done', 'cancelled', 'failed'])).toBe('failed');
+        expect(summaryWordOf(['done', 'cancelled'])).toBe('cancelled');
+        expect(summaryWordOf(['done', 'done'])).toBe('done');
     });
 
     test('a cancelled task says so, where the row itself only knows it failed', () => {
@@ -119,100 +78,6 @@ describe('subagent list', () => {
         expect(subagentTitle(subagent('a', { description: '', summary: 'Looking around' }))).toBe('Looking around');
         expect(subagentTitle(subagent('a', { description: '', subagentType: 'Explore' }))).toBe('Explore');
         expect(subagentTitle(subagent('a', { description: '' }))).toBe('Sub-agent');
-    });
-
-    test('a tool call previews as its name and the summary the timeline gives it, a reply as its text on one line', () => {
-        expect(previewOfItem(tool('1', 'Bash', { command: 'bun test', description: 'Run the tests' }))).toEqual({
-            kind: 'tool',
-            name: 'Bash',
-            detail: 'Run the tests'
-        });
-        expect(previewOfItem(tool('2', 'Read', { file_path: '/src/a.ts' }))).toEqual({ kind: 'tool', name: 'Read', detail: '/src/a.ts' });
-        expect(previewOfItem(reply('3', '## Found\n\nThree   places.'))).toEqual({ kind: 'text', text: 'Found Three places.' });
-        expect(previewOfItem(reply('4', '   '))).toBeNull();
-        expect(previewOfItem(note('5'))).toBeNull();
-        expect(previewOfItem(subagent('g', { description: 'Deeper' }))).toEqual({ kind: 'tool', name: 'Agent', detail: 'Deeper' });
-    });
-
-    test('the latest preview skips what has nothing to say', () => {
-        expect(latestPreview([tool('1', 'Grep', { pattern: 'foo' }), reply('2', 'Done looking'), note('3')])).toEqual({ kind: 'text', text: 'Done looking' });
-        expect(latestPreview([note('1')])).toBeNull();
-    });
-
-    test('the work the thread kept is gathered per sub-agent in thread order', () => {
-        const structure: Record<string, ChatItem> = {
-            a: subagent('a'),
-            t1: tool('t1', 'Read', {}, 'toolu_a'),
-            main: reply('main', 'Main agent text'),
-            t2: tool('t2', 'Grep', {}, 'toolu_b'),
-            r1: reply('r1', 'Sub text', 'toolu_a')
-        };
-        const work = threadWorkBy(['a', 't1', 'main', 't2', 'r1'], structure);
-        expect(work.get('toolu_a')?.map((item) => item.id)).toEqual(['t1', 'r1']);
-        expect(work.get('toolu_b')?.map((item) => item.id)).toEqual(['t2']);
-        expect(work.has('')).toBe(false);
-    });
-
-    test('only a running sub-agent whose latest step the thread lacks reads the tail', () => {
-        const work = [tool('1', 'Read', {}, 'toolu_a')];
-        expect(needsTail(subagent('a'), work, false)).toBe(false);
-        expect(needsTail(subagent('a'), [], false)).toBe(true);
-        expect(needsTail(subagent('a', { itemsTruncated: true }), work, false)).toBe(true);
-        expect(needsTail(subagent('a', { status: 'done' }), [], false)).toBe(false);
-        // A machine that refused reading has nothing to give a row without a pointer.
-        expect(needsTail(subagent('a'), [], true)).toBe(false);
-        expect(needsTail(subagent('a', { native: { agentId: 'x' } }), [], true)).toBe(true);
-    });
-
-    test('a running sub-agent previews the thread first, then the tail, then what the CLI last reported', () => {
-        const work = [tool('1', 'Read', { file_path: '/a.ts' }, 'toolu_a')];
-        const tail = [tool('9', 'Bash', { command: 'ls' })];
-        expect(previewFor(subagent('a'), work, tail)).toEqual({ kind: 'tool', name: 'Read', detail: '/a.ts' });
-        expect(previewFor(subagent('a', { itemsTruncated: true }), work, tail)).toEqual({ kind: 'tool', name: 'Bash', detail: 'ls' });
-        expect(previewFor(subagent('a', { itemsTruncated: true, lastTool: 'Grep', summary: 'Searching' }), work, null)).toEqual({
-            kind: 'tool',
-            name: 'Grep',
-            detail: 'Searching'
-        });
-        expect(previewFor(subagent('a', { summary: 'agent-1: running' }), [], null)).toEqual({ kind: 'text', text: 'agent-1: running' });
-        expect(previewFor(subagent('a'), [], [])).toBeNull();
-    });
-
-    test('a settled sub-agent previews its report, then its last step, then its summary, and never a tail', () => {
-        const work = [reply('1', 'Partial', 'toolu_a')];
-        const tail = [tool('9', 'Bash', { command: 'ls' })];
-        expect(previewFor(subagent('a', { status: 'done', result: 'The **report**\nin full' }), work, tail)).toEqual({
-            kind: 'text',
-            text: 'The report in full'
-        });
-        expect(previewFor(subagent('a', { status: 'failed' }), work, tail)).toEqual({ kind: 'text', text: 'Partial' });
-        expect(previewFor(subagent('a', { status: 'failed', summary: 'Stopped' }), [], tail)).toEqual({ kind: 'text', text: 'Stopped' });
-        expect(previewFor(subagent('a', { status: 'done' }), [], tail)).toBeNull();
-    });
-
-    test("a report handed back with SubagentHandback is shown instead of Claude Code's notice that it went elsewhere", () => {
-        const notice =
-            'This agent\'s report was delivered to you as a message from "a6bd7450917db5fe0" (its SubagentHandback call). Read it there; it is not repeated here.';
-        const handback = tool('2', 'SubagentHandback', { message: '## Review\n\nBoth fixes **hold**.' }, 'toolu_a');
-        const after = reply('3', 'The report is above.', 'toolu_a');
-        const settled = subagent('a', {
-            status: 'done',
-            result: notice,
-            summary: 'This agent\'s report was delivered to you as a message from "a6bd7450917db5fe0"..'
-        });
-        expect(previewFor(settled, [tool('1', 'Read', { file_path: '/a.ts' }, 'toolu_a'), handback, after], null)).toEqual({
-            kind: 'text',
-            text: 'Review Both fixes hold.'
-        });
-        // Read from the conversation when the thread kept too little of it.
-        expect(needsTail(settled, [], false)).toBe(true);
-        expect(previewFor(settled, [], [handback, after])).toEqual({ kind: 'text', text: 'Review Both fixes hold.' });
-        // Without a handback the notice is skipped for the last real step, and says nothing on its own.
-        expect(previewFor(settled, [after], null)).toEqual({ kind: 'text', text: 'The report is above.' });
-        expect(previewFor(settled, [], [tool('9', 'Bash', { command: 'ls' })])).toEqual({ kind: 'tool', name: 'Bash', detail: 'ls' });
-        expect(previewFor(settled, [], null)).toBeNull();
-        // An ordinary report still needs nothing more.
-        expect(needsTail(subagent('a', { status: 'done', result: 'Done.' }), [], false)).toBe(false);
     });
 });
 
@@ -235,7 +100,6 @@ describe('stopping an active entry', () => {
 });
 
 describe('the time on the right of an entry', () => {
-    // Local noon, so a day boundary in the test's own time zone is hours away.
     const noon = new Date(2026, 8, 16, 12, 0, 0).getTime();
 
     test('a running entry counts from its start, in seconds, minutes and hours', () => {
@@ -243,24 +107,23 @@ describe('the time on the right of an entry', () => {
         expect(entryTimeOf(subagent('a', { startedAt: noon - 134_000 }), null, noon)).toBe('2m 14s');
         expect(entryTimeOf(subagent('a', { startedAt: noon - 3_780_000 }), null, noon)).toBe('1h 3m');
         expect(entryTimeOf(subagent('a', { startedAt: noon - 7_200_000 }), null, noon)).toBe('2h');
-        expect(entryTimeOf(subagent('a', { startedAt: 0 }), null, noon)).toBeNull();
+        expect(entryTimeOf(subagent('a', { startedAt: 0 }), null, noon)).toBe('');
     });
 
-    test('a settled entry says when it ended, with the date once that was not today, and nothing without an end', () => {
-        const ended = new Date(2026, 8, 16, 11, 2).getTime();
-        expect(entryTimeOf(subagent('a', { status: 'done', finishedAt: ended }), null, noon)).toBe(formatClock(ended));
-        const yesterday = new Date(2026, 8, 15, 23, 40).getTime();
-        expect(entryTimeOf(subagent('a', { status: 'failed', finishedAt: yesterday }), null, noon)).toBe(formatDayClock(yesterday));
-        expect(entryTimeOf(subagent('a', { status: 'done', finishedAt: null }), null, noon)).toBeNull();
+    test('a settled entry says how long it took, and only its state without both ends', () => {
+        expect(entryTimeOf(subagent('a', { status: 'done', startedAt: noon - 42_000, finishedAt: noon }), null, noon)).toBe('done in 42s');
+        expect(entryTimeOf(subagent('a', { status: 'failed', startedAt: noon - 72_000, finishedAt: noon }), null, noon)).toBe('failed after 1m 12s');
+        expect(entryTimeOf(subagent('a', { status: 'done', startedAt: noon, finishedAt: null }), null, noon)).toBe('done');
+        expect(entryTimeOf(subagent('a', { status: 'done', startedAt: 0, finishedAt: noon }), null, noon)).toBe('done');
     });
 
-    test("a task's own record gives its times", () => {
+    test("a task's own record gives its times and says it was cancelled", () => {
         const given = noon - 65_000;
-        const task = { createdAt: given, settledAt: null } as unknown as Task;
+        const task = { createdAt: given, settledAt: null, status: 'open' } as unknown as Task;
         const row = subagent('t', { origin: 'ruimte', childId: 'node-1', startedAt: noon - 1_000 });
         expect(entryTimeOf(row, task, noon)).toBe('1m 5s');
-        const settledAt = noon - 30_000;
-        expect(entryTimeOf({ ...row, status: 'failed', finishedAt: null }, { ...task, settledAt } as Task, noon)).toBe(formatClock(settledAt));
+        const settled = { ...task, settledAt: noon - 30_000, status: 'cancelled' } as Task;
+        expect(entryTimeOf({ ...row, status: 'failed', finishedAt: null }, settled, noon)).toBe('cancelled after 35s');
     });
 });
 

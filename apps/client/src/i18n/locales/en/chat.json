@@ -244,8 +244,11 @@
     "shells_other": "{{count}} shells",
     "monitors_one": "{{count}} monitor",
     "monitors_other": "{{count}} monitors",
-    "openSubagents": "Show the sub-agents",
-    "background": "Running in the background",
+    "took": {
+      "done": "done in {{duration}}",
+      "failed": "failed after {{duration}}",
+      "cancelled": "cancelled after {{duration}}"
+    },
     "shell": "Shell",
     "monitor": "Monitor",
     "stop": "Stop",
@@ -258,9 +261,6 @@
     },
     "title": "Sub-agents",
     "backToMain": "Back to the main agent",
-    "empty": "This chat has no sub-agents to open.",
-    "active": "Active",
-    "done": "Done",
     "loading": "Loading the conversation...",
     "loadEarlier": "Load earlier",
     "loadingEarlier": "Loading...",

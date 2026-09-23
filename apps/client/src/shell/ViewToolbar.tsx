@@ -6,10 +6,10 @@ import { isFilesView, type CellView } from '@/shell/files-view';
 import { useCellView } from '@/shell/use-cell-view';
 import { FileTabs } from '@/shell/panels/FileTabs';
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@/chat/runtime-modes';
-import { useHasSubagentControls, useSubagentTrail } from '@/chat/subagent-view';
+import { useSubagentTrail } from '@/chat/subagent-view';
 import { ForkPill } from '@/chat/ui/ForkPill';
 import { PlanPill } from '@/plan/PlanPill';
-import { SubagentBreadcrumb, SubagentButton } from '@/chat/ui/SubagentControls';
+import { SubagentBreadcrumb } from '@/chat/ui/SubagentControls';
 import { useChatRow } from '@/state/chats';
 import { BrowserToolbar } from '@/nodes/BrowserBody';
 import { DeviceToolbar } from '@/devices/DeviceBody';
@@ -17,7 +17,6 @@ import { useNodeHost, type NodeHost } from '@/nodes/node-host';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useDocument } from '@/state/document';
 import { useHasPlans } from '@/state/plans';
-import { BTN_GROUP } from '@/ui/classes';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -29,11 +28,14 @@ const modeOf = (host: NodeHost | null): RuntimeMode | undefined => RUNTIME_MODES
 /* The id a hook that only knows the document may be asked about; a canvas has its own store and the files are in neither. */
 const hostIdOf = (view: CellView | null): string => (view !== null && view.kind !== 'canvas' && !isFilesView(view) ? view.id : '');
 
+/* Whether a chat view shows a sub-agent in its place, where its title turns into the first crumb and needs no separator after it. */
+export const useShowsSubagents = (view: CellView | null): boolean => useSubagentTrail(view?.kind === 'chat' ? view.id : '').trail.length > 0;
+
 /* Whether a view has content for the bar, which is what the separators around it wait for. */
 export const useHasViewToolbar = (view: CellView | null): boolean => {
     const host = useNodeHost(hostIdOf(view));
     const dictationEnabled = useDictation((state) => state.model?.enabled === true);
-    const subagents = useHasSubagentControls(view?.kind === 'chat' ? view.id : '');
+    const subagents = useShowsSubagents(view);
     const forked = useIsFork(view);
     const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
     // The tabs are the files' toolbar, so the cell always has one, even with nothing open.
@@ -73,9 +75,6 @@ export const useViewToolbarLeads = (view: CellView | null): boolean => {
 
 const useIsFork = (view: CellView | null): boolean => useChatRow(view?.kind === 'chat' ? view.id : '', (row) => row?.info.forkOf !== undefined);
 
-/* Whether a chat view shows its sub-agents in its place, where its title turns into the first crumb and needs no separator after it. */
-export const useShowsSubagents = (view: CellView | null): boolean => useSubagentTrail(view?.kind === 'chat' ? view.id : '').trail.length > 0;
-
 /* The view the window's toolbar speaks for: the one in the focused cell. */
 export const useToolbarView = (): CellView | null => useCellView(useDocument((s) => s.activeViewId));
 
@@ -93,7 +92,7 @@ export function ViewToolbar({
     const host = useNodeHost(hostIdOf(view));
     const { mount } = useFileToolbarSlot();
     const dictationEnabled = useDictation((state) => state.model?.enabled === true);
-    const hasSubagents = useHasSubagentControls(view?.kind === 'chat' ? view.id : '');
+    const hasSubagents = useShowsSubagents(view);
     const forked = useIsFork(view);
     const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
 
@@ -137,11 +136,6 @@ export function ViewToolbar({
                 {hasSubagents && <SubagentBreadcrumb chatId={view.id} title={chatTitle} className="grow" />}
                 {forked && <ForkPill chatId={view.id} />}
                 {planned && <PlanPill chatId={view.id} />}
-                {hasSubagents && (
-                    <div className={`${BTN_GROUP} ml-auto shrink-0`}>
-                        <SubagentButton chatId={view.id} />
-                    </div>
-                )}
             </div>
         );
     }

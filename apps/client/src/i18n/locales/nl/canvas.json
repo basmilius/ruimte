@@ -228,7 +228,6 @@
     "openFailed": "De chat kon niet worden geopend",
     "retargetFailed": "De provider kon niet worden gewijzigd",
     "sendFailed": "Het bericht kon niet worden verstuurd",
-    "subagentsFailed": "De sub-agents konden niet worden getekend",
     "conversationFailed": "Dit gesprek kon niet worden getekend"
   },
   "browser": {

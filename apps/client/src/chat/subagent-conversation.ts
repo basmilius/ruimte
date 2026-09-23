@@ -68,7 +68,6 @@ export class SubagentConversation {
     private readonly chatId: string;
     private readonly toolUseId: string;
     private readonly onChange: (state: SubagentConversationState) => void;
-    private readonly pageSize: number;
     private readonly unsubscribe: Array<() => void> = [];
     private state: SubagentConversationState = INITIAL_CONVERSATION;
     private disposed = false;
@@ -76,15 +75,8 @@ export class SubagentConversation {
     private queue: Promise<void> = Promise.resolve();
     private refreshWaiting = false;
 
-    constructor(
-        transport: Transport,
-        chatId: string,
-        toolUseId: string,
-        onChange: (state: SubagentConversationState) => void,
-        pageSize: number = SUBAGENT_PAGE
-    ) {
+    constructor(transport: Transport, chatId: string, toolUseId: string, onChange: (state: SubagentConversationState) => void) {
         this.transport = transport;
-        this.pageSize = pageSize;
         this.chatId = chatId;
         this.toolUseId = toolUseId;
         this.onChange = onChange;
@@ -159,7 +151,7 @@ export class SubagentConversation {
 
     private async readNewest(watch: boolean): Promise<void> {
         try {
-            const page = await this.ask({ limit: this.pageSize, ...(watch ? { watch: true } : {}) });
+            const page = await this.ask({ limit: SUBAGENT_PAGE, ...(watch ? { watch: true } : {}) });
             const merged = mergeNewest(this.state.items, this.state.cursor, page.items, page.history.cursor);
             this.set({ status: 'ready', items: merged.items, cursor: merged.cursor, live: page.live, error: null });
         } catch (error) {

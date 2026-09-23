@@ -1,62 +1,7 @@
 import i18next from 'i18next';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
-import { isHandbackNotice, lastHandbackReport } from '@/chat/logic/handback';
-import { stripMarkdown } from '@/chat/logic/timeline-copy';
-import { toolSummary } from '@/chat/logic/tools';
-import { canOpenSubagent } from '@/chat/subagent-view';
-import { formatMoment } from '@/format/datetime';
 import { formatElapsedShort } from '@/format/duration';
 import type { StatusWord } from '@/ui/status-look';
-
-/* The latest thing a sub-agent did, as its entry in the list says it: a tool call, or text it wrote. */
-export type SubagentPreview = { kind: 'tool'; name: string; detail: string } | { kind: 'text'; text: string };
-
-export interface SubagentSections {
-    active: ChatSubagentItem[];
-    done: ChatSubagentItem[];
-}
-
-// An entry shows two lines at most, so a report of many kilobytes is never flattened whole.
-const PREVIEW_CHARS = 400;
-
-const oneLine = (text: string): string => text.slice(0, PREVIEW_CHARS).replace(/\s+/g, ' ').trim();
-
-/* A reply is markdown, and the entry draws it as the plain text the thread would render it to. */
-const prose = (text: string): string => oneLine(stripMarkdown(text.slice(0, PREVIEW_CHARS)));
-
-/* When an entry last moved: the latest step the thread kept of a running one, else its start; the end of a settled one. */
-const updatedAt = (item: ChatSubagentItem, work: readonly ChatItem[]): number | null => {
-    if (item.status !== 'running') {
-        return item.finishedAt !== null && item.finishedAt > 0 ? item.finishedAt : null;
-    }
-    const latest = work.reduce((newest, step) => Math.max(newest, step.createdAt), 0);
-    const at = Math.max(latest, item.startedAt);
-    return at > 0 ? at : null;
-};
-
-/* Newest first; an entry that knows no time goes below the rest, in the order the thread has them. */
-const newestFirst = (items: ChatSubagentItem[], work: ReadonlyMap<string, readonly ChatItem[]>): ChatSubagentItem[] => {
-    const timed = items.map((item, index) => ({ item, index, at: updatedAt(item, work.get(item.toolUseId) ?? []) }));
-    timed.sort((left, right) => {
-        if (left.at === null || right.at === null) {
-            return left.at === right.at ? left.index - right.index : left.at === null ? 1 : -1;
-        }
-        return right.at - left.at || left.index - right.index;
-    });
-    return timed.map((entry) => entry.item);
-};
-
-/* Running on top and everything that settled below it, the most recently updated first in each. */
-export const sectionSubagents = (items: readonly ChatSubagentItem[], work: ReadonlyMap<string, readonly ChatItem[]> = new Map()): SubagentSections => ({
-    active: newestFirst(
-        items.filter((item) => item.status === 'running'),
-        work
-    ),
-    done: newestFirst(
-        items.filter((item) => item.status !== 'running'),
-        work
-    )
-});
 
 export const subagentTitle = (item: ChatSubagentItem): string => item.description || item.summary || item.subagentType || i18next.t('chat:rows.subagent.label');
 
@@ -67,90 +12,41 @@ export const taskIdOf = (item: ChatSubagentItem): string | null => (item.origin 
 export const statusWordOf = (item: ChatSubagentItem, task: Task | null): StatusWord =>
     item.status === 'failed' && task?.status === 'cancelled' ? 'cancelled' : item.status;
 
-export const previewOfItem = (item: ChatItem): SubagentPreview | null => {
-    switch (item.kind) {
-        case 'tool':
-            return { kind: 'tool', name: item.name, detail: oneLine(toolSummary(item.name, item.input) || item.progress?.description || '') };
-        case 'assistant': {
-            const text = prose(item.text);
-            return text === '' ? null : { kind: 'text', text };
-        }
-        case 'subagent':
-            return {
-                kind: 'tool',
-                name: item.origin === 'ruimte' ? i18next.t('chat:rows.subagent.task') : i18next.t('chat:rows.reply.agent'),
-                detail: oneLine(item.description)
-            };
-        default:
-            return null;
-    }
-};
-
-export const latestPreview = (items: readonly ChatItem[]): SubagentPreview | null => {
-    for (let i = items.length - 1; i >= 0; i--) {
-        const preview = previewOfItem(items[i]!);
-        if (preview !== null) {
-            return preview;
-        }
-    }
-    return null;
-};
-
-/* What of every sub-agent's own work the parent's thread kept, by the call that opened it, in thread order. */
-export const threadWorkBy = (order: readonly string[], structure: Record<string, ChatItem>): Map<string, ChatItem[]> => {
-    const work = new Map<string, ChatItem[]>();
-    for (const id of order) {
-        const item = structure[id];
-        if ((item?.kind === 'tool' || item?.kind === 'assistant') && item.parentToolUseId) {
-            const list = work.get(item.parentToolUseId) ?? [];
-            list.push(item);
-            work.set(item.parentToolUseId, list);
-        }
-    }
-    return work;
-};
-
-/* The thread kept the beginning of a sub-agent that did too much, so only a thread that kept all of it has the latest. */
-const threadHasLatest = (item: ChatSubagentItem, work: readonly ChatItem[]): boolean => !item.itemsTruncated && work.length > 0;
-
 /*
- * Whether the list reads the newest end of the conversation from the machine: only for a sub-agent
- * still at work whose latest step the parent's thread does not hold, which is a task (its work is
- * in another node's thread), a Codex agent, and a Claude agent past what the thread keeps.
+ * What the flyout over the composer lists: every sub-agent still at work, and the ones that settled
+ * since the last message, so a finished batch stays until the next message is sent. A settled one
+ * from before that message stays too while a sibling of its turn still runs. Older ones are only in
+ * the thread.
  */
-export const needsTail = (item: ChatSubagentItem, work: readonly ChatItem[], machineRefused: boolean): boolean =>
-    (item.status === 'running' || reportIsNotice(item, work)) && !threadHasLatest(item, work) && canOpenSubagent(item, machineRefused);
+export const flyoutSubagents = (order: readonly string[], structure: Readonly<Record<string, ChatItem>>): ChatSubagentItem[] => {
+    const lastMessage = order.findLastIndex((id) => structure[id]?.kind === 'user');
+    const items = order.flatMap((id, index) => {
+        const item = structure[id];
+        return item?.kind === 'subagent' ? [{ item, index }] : [];
+    });
+    const turns = new Set(items.flatMap(({ item }) => (item.status === 'running' && item.turnId !== null ? [item.turnId] : [])));
+    return items
+        .filter(({ item, index }) => item.status === 'running' || index > lastMessage || (item.turnId !== null && turns.has(item.turnId)))
+        .map(({ item }) => item);
+};
 
-/* A settled agent whose only word is the notice that its report went elsewhere, with no handed-back report to show. */
-const reportIsNotice = (item: ChatSubagentItem, work: readonly ChatItem[]): boolean =>
-    lastHandbackReport(work) === null && isHandbackNotice(item.result ?? item.summary);
+/* The one state the badge shows for all of them: work in progress first, then whatever went wrong. */
+export const summaryWordOf = (words: readonly StatusWord[]): StatusWord =>
+    (['running', 'failed', 'cancelled'] as const).find((word) => words.includes(word)) ?? 'done';
 
-export const previewFor = (item: ChatSubagentItem, work: readonly ChatItem[], tail: readonly ChatItem[] | null): SubagentPreview | null => {
-    const fromThread = threadHasLatest(item, work) ? latestPreview(work) : null;
+/* The time on the right of an entry: how long it has run so far, or how long it took once it settled. */
+export const entryTimeOf = (item: ChatSubagentItem, task: Task | null, now: number): string => {
+    // A task's own record says when it was given and settled; the row copies those, but may lag behind it.
+    const startedAt = task?.createdAt ?? item.startedAt;
+    const finishedAt = task === null ? item.finishedAt : (task.settledAt ?? item.finishedAt);
+    const word = statusWordOf(item, task);
     if (item.status === 'running') {
-        const latest = fromThread ?? (tail === null ? null : latestPreview(tail));
-        if (latest !== null) {
-            return latest;
-        }
-        if (item.lastTool) {
-            return { kind: 'tool', name: item.lastTool, detail: oneLine(item.summary ?? '') };
-        }
-        return item.summary ? { kind: 'text', text: oneLine(item.summary) } : null;
+        return startedAt > 0 ? formatElapsedShort(now - startedAt) : '';
     }
-    // A report handed back with `SubagentHandback` is the real one; the result then only says where it went.
-    const handedBack = lastHandbackReport(work) ?? (tail === null ? null : lastHandbackReport(tail));
-    if (handedBack !== null) {
-        return { kind: 'text', text: prose(handedBack) };
+    if (startedAt <= 0 || finishedAt === null || finishedAt < startedAt) {
+        return i18next.t(`common:status.${word}`);
     }
-    // Whatever it wrote last before it settled is the report the row keeps.
-    const notice = isHandbackNotice(item.result ?? item.summary);
-    const report = notice ? '' : prose(item.result ?? '');
-    if (report !== '') {
-        return { kind: 'text', text: report };
-    }
-    // Only a notice sends the entry to the conversation's newest end for its last real step.
-    const latest = fromThread ?? (notice && tail !== null ? latestPreview(tail) : null);
-    return latest ?? (item.summary && !isHandbackNotice(item.summary) ? { kind: 'text', text: oneLine(item.summary) } : null);
+    return i18next.t(`chat:activity.took.${word}`, { duration: formatElapsedShort(finishedAt - startedAt) });
 };
 
 /*
@@ -171,20 +67,6 @@ export const stopOf = (item: ChatSubagentItem, turnRunning: boolean): SubagentSt
 };
 
 export const stopLabel = (stop: SubagentStop): string => (stop === 'task' ? i18next.t('chat:subagents.stop.task') : i18next.t('chat:subagents.stop.mark'));
-
-/* The time on the right of an entry: how long it has run so far, or when it ended, with the date once that was not today. */
-export const entryTimeOf = (item: ChatSubagentItem, task: Task | null, now: number): string | null => {
-    // A task's own record says when it was given and settled; the row copies those, but may lag behind it.
-    const startedAt = task?.createdAt ?? item.startedAt;
-    const finishedAt = task === null ? item.finishedAt : (task.settledAt ?? item.finishedAt);
-    if (item.status === 'running') {
-        return startedAt > 0 ? formatElapsedShort(now - startedAt) : null;
-    }
-    if (finishedAt === null || finishedAt <= 0) {
-        return null;
-    }
-    return formatMoment(finishedAt, now);
-};
 
 /*
  * What the composer's Stop does. A plain click stops the turn alone, as it always has; Shift also ends

@@ -7,19 +7,15 @@ import { useChatRow } from '@/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
 
 /* One conversation on the way down from the chat: the call that opened it and what that call called it. */
-export interface SubagentCrumb {
+export interface SubagentStep {
     toolUseId: string;
     description: string;
 }
-
-/* A step on the way down: the list of the chat's sub-agents, or one conversation. */
-export type SubagentStep = { kind: 'list' } | ({ kind: 'agent' } & SubagentCrumb);
 
 /* From the chat down to what is on screen, which is the last step; empty is the main agent. */
 export type SubagentTrail = readonly SubagentStep[];
 
 export interface BreadcrumbStep {
-    kind: SubagentStep['kind'];
     label: string;
     /* How many steps of the trail stay when this crumb is picked; the chat's own title is 0. */
     depth: number;
@@ -28,40 +24,27 @@ export interface BreadcrumbStep {
 
 export const MAIN_AGENT: SubagentTrail = [];
 
-export const SUBAGENT_LIST: SubagentStep = { kind: 'list' };
-
 const NO_ITEMS: readonly string[] = [];
 
-export const crumbOf = (item: ChatSubagentItem): SubagentStep => ({ kind: 'agent', toolUseId: item.toolUseId, description: item.description });
+export const crumbOf = (item: ChatSubagentItem): SubagentStep => ({ toolUseId: item.toolUseId, description: item.description });
 
-const stepLabel = (step: SubagentStep): string =>
-    step.kind === 'list' ? i18next.t('chat:subagents.title') : step.description || i18next.t('chat:rows.subagent.label');
+const stepLabel = (step: SubagentStep): string => step.description || i18next.t('chat:rows.subagent.label');
 
-/* A row in the main agent's thread opens its conversation straight away, without the list above it. */
+/* A row in the main agent's thread or an entry of the flyout opens its conversation straight away. */
 export const openFromMain = (step: SubagentStep): SubagentTrail => [step];
 
-export const openList = (): SubagentTrail => [SUBAGENT_LIST];
-
-/* An entry of the list keeps the list one level up, so going back returns to it. */
-export const openFromList = (step: SubagentStep): SubagentTrail => [SUBAGENT_LIST, step];
-
 export const openBelow = (trail: SubagentTrail, step: SubagentStep): SubagentTrail => [...trail, step];
-
-export const isOnList = (trail: SubagentTrail): boolean => trail.length === 1 && trail[0]!.kind === 'list';
-
-/* What the sub-agents button does: the list from anywhere, and back to the main agent from the list itself. */
-export const toggleList = (trail: SubagentTrail): SubagentTrail => (isOnList(trail) ? MAIN_AGENT : openList());
 
 export const trailTo = (trail: SubagentTrail, depth: number): SubagentTrail => (depth <= 0 ? MAIN_AGENT : trail.slice(0, depth));
 
 export const stepBack = (trail: SubagentTrail): SubagentTrail => trailTo(trail, trail.length - 1);
 
-/* A sub-agent's conversation is read back and the list is only a way in, so there is nobody to write to. */
+/* A sub-agent's conversation is read back, so there is nobody to write to. */
 export const showsComposer = (trail: SubagentTrail): boolean => trail.length === 0;
 
 /* The crumbs after the chat's own title, which the bar draws as the first crumb and the way back. */
 export const breadcrumbOf = (trail: SubagentTrail): BreadcrumbStep[] =>
-    trail.map((step, index) => ({ kind: step.kind, label: stepLabel(step), depth: index + 1, current: index === trail.length - 1 }));
+    trail.map((step, index) => ({ label: stepLabel(step), depth: index + 1, current: index === trail.length - 1 }));
 
 /* A row without a pointer of its own can only be opened by a machine that answers `chat.subagent` for it. */
 export const canOpenSubagent = (item: ChatSubagentItem, machineRefused: boolean): boolean => item.native !== undefined || !machineRefused;
@@ -120,11 +103,4 @@ export const useOpenableSubagents = (chatId: string): ChatSubagentItem[] => {
     const order = useChatRow(chatId, (row) => row?.order);
     const structure = useChatRow(chatId, (row) => row?.structure);
     return useMemo(() => (structure === undefined ? [] : openableSubagents(order ?? NO_ITEMS, structure, refused)), [order, structure, refused]);
-};
-
-/* Whether a chat has anything for the sub-agent controls: a subagent to pick, or the list or one already on screen. */
-export const useHasSubagentControls = (chatId: string): boolean => {
-    const subagents = useOpenableSubagents(chatId);
-    const { trail } = useSubagentTrail(chatId);
-    return subagents.length > 0 || trail.length > 0;
 };

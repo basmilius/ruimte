@@ -9,7 +9,6 @@ import { defaultProvider, readChatPreferences, selectionFor } from '@/chat/prefe
 import { showsComposer, useSubagentTrail } from '@/chat/subagent-view';
 import { deriveNodeTitle } from '@/chat/title';
 import { Composer } from '@/chat/ui/Composer';
-import { SubagentList } from '@/chat/ui/SubagentList';
 import { SubagentTimeline } from '@/chat/ui/SubagentTimeline';
 import { Timeline } from '@/chat/ui/Timeline';
 import { useChatRow } from '@/state/chats';
@@ -118,15 +117,9 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
                     </div>
                     {shown && (
                         <div className="absolute inset-0 flex flex-col bg-surface">
-                            {shown.kind === 'list' ? (
-                                <ErrorBoundary key="list" label={t('chat.subagentsFailed')} resetKeys={['list']}>
-                                    <SubagentList chatId={id} />
-                                </ErrorBoundary>
-                            ) : (
-                                <ErrorBoundary key={shown.toolUseId} label={t('chat.conversationFailed')} resetKeys={[shown.toolUseId]}>
-                                    <SubagentTimeline chatId={id} toolUseId={shown.toolUseId} />
-                                </ErrorBoundary>
-                            )}
+                            <ErrorBoundary key={shown.toolUseId} label={t('chat.conversationFailed')} resetKeys={[shown.toolUseId]}>
+                                <SubagentTimeline chatId={id} toolUseId={shown.toolUseId} />
+                            </ErrorBoundary>
                         </div>
                     )}
                 </DiffPool>

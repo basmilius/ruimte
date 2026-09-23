@@ -50,7 +50,7 @@ import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { ForkPill } from '@/chat/ui/ForkPill';
 import { PlanPill } from '@/plan/PlanPill';
-import { SubagentBreadcrumb, SubagentButton, SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
+import { SubagentBreadcrumb, SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
 import { useSubagentTrail } from '@/chat/subagent-view';
 import { BrowserBody } from '@/nodes/BrowserBody';
 import { DeviceBody, DevicePlate, DeviceToolbar } from '@/devices/DeviceBody';
@@ -352,7 +352,6 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     {node.kind === 'file' && <span ref={setFileControls} className={`${BTN_GROUP} shrink-0`} />}
                     {node.kind === 'device' && <DeviceToolbar id={id} />}
                     <div className={`${BTN_GROUP} shrink-0`}>
-                        {node.kind === 'chat' && <SubagentButton chatId={id} />}
                         <Tooltip label={t('node.zoomTo')} name>
                             <button className="icon-btn h-7 w-7" onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
                                 <Icon icon={Maximize2} size={16} />

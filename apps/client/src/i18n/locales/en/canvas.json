@@ -228,7 +228,6 @@
     "openFailed": "The chat could not be opened",
     "retargetFailed": "The provider could not be changed",
     "sendFailed": "The message could not be sent",
-    "subagentsFailed": "The sub-agents failed to render",
     "conversationFailed": "This conversation failed to render"
   },
   "browser": {
