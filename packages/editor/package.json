@@ -1,0 +1,22 @@
+{
+  "name": "@ruimte/editor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fake": "./src/fake.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@shikijs/monaco": "^4.4.3",
+    "monaco-editor": "^0.56.0",
+    "shiki": "^4.4.3"
+  }
+}
