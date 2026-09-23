@@ -291,7 +291,8 @@ const runArgs = async <Positionals extends z.ZodType, Flags extends z.ZodObject>
     const { values, switches } = flagsOf(spec);
     const parsed = parseArgv(argv, values, switches);
     if (!parsed.ok) {
-        if (parsed.code === 'unknown-flag' && argv.some((word) => word === `--${DRY_RUN_FLAG}` || word.startsWith(`--${DRY_RUN_FLAG}=`))) {
+        const dryRunAsked = argv.some((word) => word === `--${DRY_RUN_FLAG}` || word.startsWith(`--${DRY_RUN_FLAG}=`));
+        if (parsed.code === 'unknown-flag' && spec.dryRun !== true && dryRunAsked) {
             throw new VerbRefusal(
                 'no-dry-run',
                 `${name} takes no --${DRY_RUN_FLAG}; only the verbs that make something do`,

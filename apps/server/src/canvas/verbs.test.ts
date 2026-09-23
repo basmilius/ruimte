@@ -1974,6 +1974,19 @@ describe('--dry-run', () => {
         ]);
         expect((await post('link', ['new', '--to', 'note-1', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
     });
+
+    test('a verb that takes the flag refuses an unknown one beside it as unknown, not as a dry run it would do', async () => {
+        for (const [verb, args] of [
+            ['node', ['new', 'note', '--bogus', 'y', '--dry-run']],
+            ['node', ['new', 'note', '--dry-run', '--bogus', 'y']],
+            ['agent', ['claude', '--bogus', 'y', '--dry-run']]
+        ] as const) {
+            const { status, lines } = await post(verb, [...args]);
+            expect(status).toBe(422);
+            expect(lines[0]).toStartWith('refused\tunknown-flag\t--bogus is not one of ');
+        }
+        expect((await onDisk()).rev).toBe(1);
+    });
 });
 
 describe('view new', () => {
