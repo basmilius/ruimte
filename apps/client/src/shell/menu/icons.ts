@@ -6,6 +6,7 @@ import {
     ArrowLeft,
     ArrowRight,
     ArrowUp,
+    ChartSpline,
     Braces,
     ChevronsLeft,
     ChevronsRight,
@@ -154,6 +155,7 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     prompts: Inbox,
     'panel-processes': Activity,
     usage: Gauge,
+    models: ChartSpline,
     'settings-machines': Server,
     'release-notes': ScrollText,
     'settings-keyboard': Keyboard

@@ -294,6 +294,7 @@ export const menuModel = (context: MenuContext): MenuSpec => {
             separator,
             ...only(workspace, command('panel-processes', t('processes'), { checked: context.panel === 'processes' })),
             command('usage', t('usage')),
+            command('models', t('compareModels')),
             command('settings-machines', t('machines')),
             ...only(desktop && apple, separator, role('front', t('front')))
         ]

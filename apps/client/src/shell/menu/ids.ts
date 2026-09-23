@@ -20,6 +20,7 @@ export const MENU_ACTION_IDS = [
     'focus-down',
     'prompts',
     'release-notes',
+    'models',
     'view-fork',
     'view-open-in-chat',
     'view-open-in-terminal',

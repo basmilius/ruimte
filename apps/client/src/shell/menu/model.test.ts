@@ -161,6 +161,17 @@ describe('the menus', () => {
         expect(menu(spec, 'Window').some((node) => node.kind === 'command' && node.id === 'panel-processes' && node.checked === true)).toBe(true);
     });
 
+    test('Compare Models sits in Window right under Usage, on the start screen and in a workspace, and not in the palette', () => {
+        for (const spec of EVERY_CONTEXT.map(menuModel)) {
+            const ids = menu(spec, 'Window').flatMap((node) => (node.kind === 'command' ? [node.id] : []));
+            expect(ids[ids.indexOf('usage') + 1]).toBe('models');
+            expect(find(spec, 'models')?.accelerator).toBeUndefined();
+            expect(find(spec, 'models')?.keys).toBeUndefined();
+        }
+        expect(isPaletteId('models')).toBe(false);
+        expect(readFileSync(join(import.meta.dir, '..', 'commands.ts'), 'utf8')).not.toContain("id: 'models'");
+    });
+
     test('each kind has its own rows, and every kind ends on its settings and its delete', () => {
         const drawing = commandIds(menuModel(context({ view: 'drawing' })));
         expect(drawing).toContain('drawing-save-png');
