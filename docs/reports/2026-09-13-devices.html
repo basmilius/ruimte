@@ -191,10 +191,11 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   <p class="eyebrow">RUIMTE / ONDERZOEK EN UITVOERING / BIJGEWERKT 23 SEPTEMBER 2026</p>
   <h1>Devices in Ruimte</h1>
   <p class="intro">iOS-simulators en fysieke iPhones draaien op één <code>DeviceManager</code>, één <code>LiveStreamHub</code> en één canvasdecoder. Android is de volgende backend. Deze versie legt vast wat daarvoor al in de code klaarligt, wat nog iOS-vormig is en in welke volgorde Android erbij komt.</p>
-  <p class="status">iOS gebouwd; Android voorbereid en besloten, bouw start na het editorwerk</p>
+  <p class="status">iOS en Android gebouwd; Android wacht op acceptatie in de Electron-app</p>
   <p class="caption">Gebaseerd op <code>main</code> bij <code>cf74fd01</code> (23 september); de devicecode is sinds <code>377648ab</code> ongewijzigd. <span class="badge confirmed">Geverifieerd</span> betekent: gecontroleerd in code, test of lokale CLI. <span class="badge info">Afgeleid</span> betekent: nog niet uitgevoerd.</p>
   <nav aria-label="Inhoud">
     <a href="#advies">Advies</a>
+    <a href="#gebouwd">Android gebouwd</a>
     <a href="#staat">Huidige staat</a>
     <a href="#klaar">Wat Android al heeft</a>
     <a href="#gaten">Wat nog iOS-vormig is</a>
@@ -224,6 +225,37 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   </div>
   <p><span class="badge confirmed">Toolchain lokaal</span> <code>adb</code> 1.0.41 (platform-tools 36.0.0) staat op PATH. <code>emulator</code> 36.2.12 staat alleen in <code>$ANDROID_HOME/emulator</code> en niet op PATH. De SDK zit op een eigen plek, <code>~/Development/Environment/android-sdk</code>, en niet op de standaardplek <code>~/Library/Android/sdk</code>. Een backend die alleen PATH of de standaardplek kent, vindt op deze Mac dus geen emulator.</p>
   <p><span class="badge confirmed">Besloten 13 september</span> Android komt direct na de iOS-MVP. <code>platform: 'android'</code> staat sinds fase 1 in de contracts.</p>
+</section>
+
+<section id="gebouwd">
+  <h2>Android gebouwd op 23 september</h2>
+  <p>Android staat op main in vijf commits. De contracts zitten in <code>b7b46472</code> en <code>f1b85bec</code>, de server in <code>fc35d047</code> en de client in <code>bfe0baaa</code> en <code>1f8a3d4e</code>. <code>bun run check</code> is groen, net als 4495 tests en de integratietest tegen de lokale AVD.</p>
+  <div class="table">
+    <table>
+      <caption>Spike op de Pixel 9 Pro-AVD, API 35, via de videosocket van scrcpy 4.1</caption>
+      <thead><tr><th scope="col">Codec</th><th scope="col">Beeld</th><th scope="col">Eerste frame</th><th scope="col">fps bij slepen</th><th scope="col">Bitrate</th></tr></thead>
+      <tbody>
+        <tr><td>H.264</td><td>916 × 2048</td><td>270 ms</td><td>23</td><td>3,3 Mbit/s</td></tr>
+        <tr><td>H.264, <code>max_size=1280</code></td><td>572 × 1280</td><td>265 ms</td><td>25</td><td>2,3 Mbit/s</td></tr>
+        <tr><td>H.265</td><td>228 × 512</td><td>265 ms</td><td>26</td><td>1,3 Mbit/s</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>De emulator heeft alleen software-encoders. Die voor H.265 schaalt het beeld terug naar 228 × 512, dus Android streamt H.264 op volle grootte. Tijdens een sleepbeweging gebruikt het emulatorproces rond 950% CPU, in rust rond 10%. Hoeveel daarvan de encoder is, heb ik niet apart gemeten.</p>
+  <p>Stoppen via de console duurt 3,6 s. Starten vanaf de snapshot duurt 2,1 s tot <code>sys.boot_completed</code>. De emulator krijgt een eigen sessie en blijft draaien als de daemon herstart.</p>
+  <h3>Wat de bouw besliste</h3>
+  <ul>
+    <li>De server is scrcpy 4.1, gepind op SHA-256. Een build neemt hem met zijn licentie mee in <code>native/</code>, ook in de npm-pakketten. Een dev-checkout haalt hem bij eerste gebruik op in <code>apps/server/.native</code>.</li>
+    <li>De server wist bij het starten zijn eigen jar. Daarom pusht elke sessie een kopie met de <code>scid</code> in de naam. Met één vaste naam wiste een vorige sessie de jar van de volgende.</li>
+    <li>Een client noemt bij <code>device.open</code> de formaten die hij tekent. Een oudere client krijgt <code>device-format-unsupported</code> in plaats van H.264-frames die hij niet kan valideren.</li>
+    <li>Knoppen, tools en permissies zijn lijsten strings in de capabilities. Een client houdt wat hij kent. Een nieuwe waarde breekt een oudere client dus niet. Zonder lijst gelden de oude iOS-standaarden.</li>
+    <li>Moet een HTTP-stroom een videoframe laten vallen, dan slaat hij over tot het volgende keyframe en vraagt de bron er een. Een kijker die bij een lopende stroom aansluit, vraagt er ook een. Anders wacht hij tot tien seconden, want zo vaak maakt de encoder een keyframe.</li>
+    <li>Show Borders zet <code>debug.layout</code>. API 35 weigert de verversing via <code>service call activity</code>, dus de randen verschijnen pas in schermen die daarna openen.</li>
+    <li>Draaien wisselt tussen staand en liggend. Links of rechts maakt op Android geen verschil.</li>
+    <li>Een emulator kan een nep-locatie niet wissen. Wissen is daarom een eigen tool, <code>clearLocation</code>, die Android niet aankondigt.</li>
+    <li>Herinneringen en Face ID bestaan niet op Android. De andere permissies vertaalt de backend per API-niveau naar runtime-permissies. Een app vraagt vaak maar een deel ervan, dus één geslaagde <code>pm grant</code> is genoeg.</li>
+  </ul>
+  <p><span class="badge warning">Nog te doen</span> Acceptatie in de Electron-app: starten, openen, tikken, slepen, Home, Back, draaien, elke tool, een canvas-node en stoppen. Een fysiek Android-toestel en Linux met KVM zijn nog niet getest.</p>
 </section>
 
 <section id="staat">
@@ -448,28 +480,28 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   <h2>Fasen voor Android</h2>
   <ol class="steps">
     <li class="step"><div>
-      <h3>Spike op de lokale AVD <span class="badge info">te doen</span></h3>
+      <h3>Spike op de lokale AVD <span class="badge confirmed">gebouwd</span></h3>
       <p>Start <code>Pixel_9_Pro_API_35</code>, push een gepinde scrcpy-server, open de videosocket en schrijf de ruwe pakketten weg. Meet H.265 en H.264: tijd tot eerste frame, fps, bytes per frame en CPU van de emulator. Stuur één tik en één Home over de controlsocket. Probeer de adb-commando's uit de toolstabel één keer met de hand.</p>
       <p><strong>Uitkomst:</strong> de codec voor de eerste versie, de scrcpy-versie die gepind wordt en een bevestigde toolstabel.</p>
     </div></li>
     <li class="step"><div>
-      <h3>Contracts <span class="badge info">te doen</span></h3>
+      <h3>Contracts <span class="badge confirmed">gebouwd</span></h3>
       <p>Optionele capabilities voor knoppen en tools. <code>back</code> in de knoppen. Bij H.264 ook <code>h264</code> in <code>format</code> en een contenttype. Nieuwe foutcodes in <code>DEVICE_ERROR_CODES</code>. Swift opnieuw genereren.</p>
     </div></li>
     <li class="step"><div>
-      <h3>Backend: SDK, discovery en lifecycle <span class="badge info">te doen</span></h3>
+      <h3>Backend: SDK, discovery en lifecycle <span class="badge confirmed">gebouwd</span></h3>
       <p><code>android-sdk.ts</code> en <code>android.ts</code> met een nep-runner in de tests. AVD's en toestellen in één lijst, stabiele referenties, starten zonder venster, stoppen en de cache voor de lijst van iedere seconde. Registratie in <code>daemon.ts</code> op macOS en Linux.</p>
     </div></li>
     <li class="step"><div>
-      <h3>Stroom en input <span class="badge info">te doen</span></h3>
+      <h3>Stroom en input <span class="badge confirmed">gebouwd</span></h3>
       <p><code>scrcpy-protocol.ts</code> met pure tests voor de framing en de controlberichten. <code>scrcpy-source.ts</code> met push, forward, sockets en opruimen bij de laatste kijker. De jar gaat via <code>compile.ts</code> naar <code>native/</code>. Een integratietest tegen een echte emulator hoort in <code>*.integration.test.ts</code>.</p>
     </div></li>
     <li class="step"><div>
-      <h3>Tools <span class="badge info">te doen</span></h3>
+      <h3>Tools <span class="badge confirmed">gebouwd</span></h3>
       <p><code>detail</code> en <code>action</code> in de Android-backend volgens de tabel bij <a href="#tools">Tools</a>, met tests op een nep-runner. De iOS-simulatorbackend kondigt zijn huidige tools aan, zodat de flyout daar gelijk blijft.</p>
     </div></li>
     <li class="step"><div>
-      <h3>Client <span class="badge info">te doen</span></h3>
+      <h3>Client <span class="badge confirmed">gebouwd</span></h3>
       <p>Bij H.264 de HEVC-decoder veralgemenen. Panel: lege staat per ontbrekende toolchain in plaats van <code>macOnly</code>, Back in de devicebalk en de nodeheader, labels per platform. Flyout: alleen aangekondigde tools, permissies en app-id per platform, na elke actie de bevestigde waarden teruglezen. Teksten in <code>en</code> en <code>nl</code>.</p>
     </div></li>
     <li class="step"><div>
@@ -496,10 +528,11 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
     <li><span class="badge confirmed">23 september</span> De eerste Android-versie heeft de tools-flyout, met elke iOS-tool die op Android bestaat.</li>
     <li><span class="badge confirmed">23 september</span> Fysieke Android-toestellen verschijnen meteen, want het pad is hetzelfde.</li>
     <li><span class="badge confirmed">23 september</span> Agents lezen een device als contextbron; bedienen door een agent is een aparte fase met een eigen toestemming.</li>
+    <li><span class="badge confirmed">Spike, 23 september</span> Android streamt H.264 op volle grootte. H.265 valt af, want de emulator schaalt het terug naar 228 × 512.</li>
   </ol>
   <h3>Nog open</h3>
   <ol>
-    <li><strong>Codec.</strong> Beslist door de spike. Voorstel: H.264 met een optionele capability, zodat een oudere client geen frame krijgt dat hij niet kent. H.265 alleen als de AVD er vloeiend beeld mee levert.</li>
+    <li><strong>Acceptatie.</strong> Android in de Electron-app, daarna een fysiek toestel en Linux met KVM.</li>
   </ol>
 </section>
 
@@ -557,7 +590,7 @@ Buiten de eerste versie: tekstinput, agentbediening.</code></pre>
 
 </main>
 <footer>
-  <p>Bijgewerkt op 23 september tegen <code>main</code> bij <code>cf74fd01</code>. Geverifieerd: de devicecode in server, client en contracts, de 59 devicetests, de iOS-backends en hun registratie, de service-omgeving en de lokale Android-toolchain met één AVD. Besloten op 23 september: emulator zonder venster, geen Android-toetsenbord, tools in de eerste versie en fysieke toestellen meteen zichtbaar. Niet uitgevoerd: alles wat scrcpy, de emulatorlifecycle en de Android-tools betreft. Android is nog niet gebouwd.</p>
+  <p>Bijgewerkt op 23 september tegen <code>main</code> bij <code>cf74fd01</code>. Geverifieerd: de devicecode in server, client en contracts, de 59 devicetests, de iOS-backends en hun registratie, de service-omgeving en de lokale Android-toolchain met één AVD. Besloten op 23 september: emulator zonder venster, geen Android-toetsenbord, tools in de eerste versie en fysieke toestellen meteen zichtbaar. Daarna gebouwd en gemeten op dezelfde dag: de spike, starten en stoppen, stroom en input tegen de lokale AVD, en elke Android-tool. Niet getest: de Electron-app, een fysiek Android-toestel en Linux.</p>
 </footer>
 <script>
 {
