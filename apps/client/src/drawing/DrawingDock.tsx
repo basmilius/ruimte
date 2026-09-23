@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { DRAWING_COLORS, type DrawingColor } from '@ruimte/contracts';
+import { fitAction, historyAction } from '@/actions/client-actions';
 import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
 import { useDrawing, useDrawingStore, type DrawingStyle, type DrawingTool } from '@/state/drawing';
 import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
@@ -102,6 +103,7 @@ function RadioRow({ label, value }: { label: string; value: string | number }) {
 export function DrawingDock() {
     const { t } = useTranslation('drawing');
     const drawingStore = useDrawingStore();
+    const viewId = useDrawing((s) => s.viewId);
     const { tool, toolLocked, style, zoom, hasSelection, canUndo, canRedo, anyLocked, exportBackground, empty } = useDrawing(
         useShallow((s) => ({
             tool: s.tool,
@@ -243,7 +245,7 @@ export function DrawingDock() {
                 }}
                 shortcuts={DRAWING_SHORTCUTS}
                 onZoomTo={(next) => drawingStore.getState().zoomTo(next)}
-                onFitAll={() => drawingStore.getState().fitAll()}
+                onFitAll={() => fitAction(viewId)}
                 selection={{
                     label: t('zoom.selection'),
                     shortcut: DRAWING_SHORTCUTS.zoomSelection,
@@ -296,12 +298,12 @@ export function DrawingDock() {
                     </Menu.Portal>
                 </Menu.Root>
                 <Tooltip label={t('common:action.undo')} kbd={DRAWING_SHORTCUTS.undo} name>
-                    <button className="icon-btn" disabled={!canUndo} onClick={() => drawingStore.getState().undo()}>
+                    <button className="icon-btn" disabled={!canUndo} onClick={() => historyAction('undo', viewId)}>
                         <Icon icon={Undo2} size={16} />
                     </button>
                 </Tooltip>
                 <Tooltip label={t('common:action.redo')} kbd={DRAWING_SHORTCUTS.redo} name>
-                    <button className="icon-btn" disabled={!canRedo} onClick={() => drawingStore.getState().redo()}>
+                    <button className="icon-btn" disabled={!canRedo} onClick={() => historyAction('redo', viewId)}>
                         <Icon icon={Redo2} size={16} />
                     </button>
                 </Tooltip>

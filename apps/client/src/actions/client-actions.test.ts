@@ -378,6 +378,69 @@ describe('client actions', () => {
         });
     });
 
+    describe('a canvas on no cell', () => {
+        const release: ProjectCanvasView = {
+            kind: 'canvas',
+            id: 'release',
+            name: 'Release',
+            nodes: [{ id: 'helper', kind: 'chat', title: 'Helper', titleSource: 'auto', x: 0, y: 0, w: 400, h: 300 }],
+            texts: [],
+            edges: [],
+            layouts: []
+        };
+        const stored = () => {
+            const view = useDocument.getState().views.find((candidate) => candidate.id === 'release');
+            return view?.kind === 'canvas' ? view.nodes[0] : undefined;
+        };
+
+        beforeEach(() => {
+            useDocument.getState().load({ ...document, views: [main, release] }, { activeViewId: 'main', views: {} });
+        });
+
+        test('a rename is written into the stored view, and undo gives back the name and who gave it', async () => {
+            const edits = useDocument.getState().edits;
+            const result = await clientActions.execute('node.rename', { viewId: 'release', nodeId: 'helper', name: 'Reviewer' }, PERSON_ACTION_CALL);
+            expect(result).toMatchObject({ status: 'completed', output: { previousName: 'Helper', name: 'Reviewer', changed: true } });
+            expect(stored()).toMatchObject({ title: 'Reviewer', titleSource: 'user' });
+            expect(useDocument.getState().edits).toBe(edits + 1);
+            expect(defaultCanvases.peek('release')).toBeNull();
+            if (result.status !== 'completed' || !result.undoToken) {
+                throw new Error('Expected a completed rename with an undo');
+            }
+            expect(await clientActions.undo(result.undoToken, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed' });
+            expect(stored()).toMatchObject({ title: 'Helper', titleSource: 'auto' });
+        });
+
+        test('undo refuses once the stored node carries another name', async () => {
+            const result = await clientActions.execute('node.rename', { viewId: 'release', nodeId: 'helper', name: 'Reviewer' }, PERSON_ACTION_CALL);
+            if (result.status !== 'completed' || !result.undoToken) {
+                throw new Error('Expected a completed rename with an undo');
+            }
+            useDocument.getState().renameNodeOnView('release', 'helper', 'Critic');
+            expect(await clientActions.undo(result.undoToken, PERSON_ACTION_CALL)).toMatchObject({ status: 'failed', error: { code: 'stale-undo' } });
+            expect(stored()).toMatchObject({ title: 'Critic', titleSource: 'user' });
+        });
+
+        test('a rename to the name it already has claims no edit', async () => {
+            await clientActions.execute('node.rename', { viewId: 'release', nodeId: 'helper', name: 'Reviewer' }, PERSON_ACTION_CALL);
+            const edits = useDocument.getState().edits;
+            const again = await clientActions.execute('node.rename', { viewId: 'release', nodeId: 'helper', name: 'Reviewer' }, PERSON_ACTION_CALL);
+            expect(again).toMatchObject({ status: 'completed', output: { changed: false } });
+            expect(useDocument.getState().edits).toBe(edits);
+        });
+
+        test('what needs a camera or a selection is still refused', async () => {
+            expect(await clientActions.execute('node.focus', { viewId: 'release', nodeId: 'helper' }, VOICE_ACTION_CALL)).toMatchObject({
+                status: 'failed',
+                error: { code: 'inactive-canvas' }
+            });
+            expect(await clientActions.execute('canvas.select', { viewId: 'release', nodeIds: ['helper'] }, VOICE_ACTION_CALL)).toMatchObject({
+                status: 'failed',
+                error: { code: 'inactive-canvas' }
+            });
+        });
+    });
+
     describe('making views', () => {
         const registry = () => createClientActionRegistry(useDocument, { providers: () => [claude, codex] });
 

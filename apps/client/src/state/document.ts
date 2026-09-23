@@ -8,6 +8,7 @@ import {
     isDrawingView,
     isOpenableView,
     isSessionView,
+    isUnknownNode,
     withDuplicatedView,
     withMovedView,
     withNodeAsView,
@@ -147,6 +148,8 @@ export interface DocumentState {
     moveView(id: string, toIndex: number): void;
     /* Moves a node from the canvas it sits on to another canvas view, keeping its id and its session. */
     moveNodeToView(nodeId: string, viewId: string): void;
+    /* A rename needs no editor: a canvas on no cell has the name written into the view kept here. */
+    renameNodeOnView(viewId: string, nodeId: string, title: string, source?: NodeTitleSource | null): void;
     /* Changes what a standalone view carries (its folder, its page) without touching the list. */
     updateStandalone(id: string, patch: Partial<StandaloneNode> & { url?: string }): void;
     /* Lifts a node off its canvas into a view of its own, id and session included. */
@@ -174,6 +177,27 @@ export type StandaloneRequest =
     | { kind: 'chat' | 'terminal'; name: string; id?: string; node: StandaloneNode }
     | { kind: 'browser'; name: string; id?: string; url: string }
     | { kind: 'device'; name: string; id?: string; device: DeviceReference };
+
+/* Null when the name and its source are already there, so a blur that keeps the name claims no edit. */
+const withRenamedNode = (
+    views: readonly ProjectView[],
+    viewId: string,
+    nodeId: string,
+    title: string,
+    source: NodeTitleSource | null
+): ProjectView[] | null => {
+    const view = views.find((candidate) => candidate.id === viewId);
+    if (!view || !isCanvasView(view)) {
+        return null;
+    }
+    const node = view.nodes.find((candidate) => candidate.id === nodeId);
+    if (!node || isUnknownNode(node) || (node.title === title && (node.titleSource ?? null) === source)) {
+        return null;
+    }
+    const renamed = { ...node, title, titleSource: source ?? undefined };
+    const nodes = view.nodes.map((candidate) => (candidate.id === nodeId ? renamed : candidate));
+    return views.map((candidate) => (candidate.id === viewId ? { ...view, nodes } : candidate));
+};
 
 /*
  * The editors of the project, handed in rather than imported, so a test with stores of its own moves
@@ -647,6 +671,15 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                     const after = moved.views.find((view) => view.id === source.id);
                     editor.getState().loadView(after && isCanvasView(after) ? after : null, { camera: editor.getState().viewCamera(), focusedNodeId: null });
                 }
+            },
+
+            renameNodeOnView(viewId, nodeId, title, source = 'user') {
+                const editor = peers.canvases.peek(viewId);
+                if (editor) {
+                    editor.getState().renameNode(nodeId, title, source);
+                    return;
+                }
+                write(withRenamedNode(get().views, viewId, nodeId, title, source));
             },
 
             updateStandalone(id, patch) {

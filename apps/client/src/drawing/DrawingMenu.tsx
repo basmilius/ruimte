@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { ArrowDownToLine, ArrowUpToLine, ClipboardPaste, Copy, Lock, LockOpen, Maximize, Redo2, Scan, Scissors, Trash, Undo2 } from 'lucide-react';
+import { fitAction, historyAction } from '@/actions/client-actions';
 import { copyDrawingElements, readDrawingElements } from '@/drawing/export';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { useDrawing, useDrawingStore } from '@/state/drawing';
@@ -16,6 +17,7 @@ import { Kbd } from '@/ui/Kbd';
 export function DrawingMenuPopup() {
     const { t } = useTranslation('drawing');
     const store = useDrawingStore();
+    const viewId = useDrawing((s) => s.viewId);
     const selection = useDrawing((s) => s.selection.length);
     const elements = useDrawing((s) => s.elements.length);
     const canUndo = useDrawing((s) => s.past.length > 0);
@@ -37,10 +39,10 @@ export function DrawingMenuPopup() {
         <ContextMenu.Portal>
             <ContextMenu.Positioner className="z-(--z-popup)">
                 <ContextMenu.Popup className="menu-popup">
-                    <ContextMenu.Item className="menu-item" disabled={!canUndo} onClick={() => store.getState().undo()}>
+                    <ContextMenu.Item className="menu-item" disabled={!canUndo} onClick={() => historyAction('undo', viewId)}>
                         <Icon icon={Undo2} size={14} /> {t('common:action.undo')} <Kbd shortcut={DRAWING_SHORTCUTS.undo} />
                     </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" disabled={!canRedo} onClick={() => store.getState().redo()}>
+                    <ContextMenu.Item className="menu-item" disabled={!canRedo} onClick={() => historyAction('redo', viewId)}>
                         <Icon icon={Redo2} size={14} /> {t('common:action.redo')} <Kbd shortcut={DRAWING_SHORTCUTS.redo} />
                     </ContextMenu.Item>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
@@ -75,7 +77,7 @@ export function DrawingMenuPopup() {
                     <ContextMenu.Item className="menu-item" disabled={elements === 0} onClick={() => store.getState().selectAll()}>
                         <Icon icon={Scan} size={14} /> {t('common:action.selectAll')} <Kbd shortcut={DRAWING_SHORTCUTS.selectAll} />
                     </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" disabled={elements === 0} onClick={() => store.getState().fitAll()}>
+                    <ContextMenu.Item className="menu-item" disabled={elements === 0} onClick={() => fitAction(viewId)}>
                         <Icon icon={Maximize} size={14} /> {t('zoom.fitEverything')} <Kbd shortcut={DRAWING_SHORTCUTS.fitAll} />
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" disabled={!has} onClick={() => store.getState().zoomToSelection()}>

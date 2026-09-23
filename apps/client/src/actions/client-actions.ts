@@ -66,6 +66,18 @@ const canvasOnScreen = (document: StoreApi<DocumentState>, viewId: string): { vi
 /* What a canvas holds after a change, since the state read before it is a snapshot. */
 const canvasNow = (document: StoreApi<DocumentState>, viewId: string): CanvasState => canvasOnScreen(document, viewId).canvas;
 
+/* A name needs no editor, so a rename also reaches a canvas on no cell, through the view the document keeps. */
+const nodeToName = (document: StoreApi<DocumentState>, viewId: string, nodeId: string): ProjectNode | undefined => {
+    const view = document
+        .getState()
+        .exportViews()
+        .find((candidate) => candidate.id === viewId);
+    if (!view || !isCanvasView(view)) {
+        throw new ActionRefusal('unknown-view', `No canvas view with id “${viewId}” exists in this project.`);
+    }
+    return view.nodes.find((node) => node.id === nodeId);
+};
+
 type CreatableViewKind = ActionInput<'view.create'>['kind'];
 type CreatableNodeKind = ActionInput<'node.create'>['kind'];
 
@@ -454,15 +466,14 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             };
         },
         'node.rename': ({ viewId, nodeId, name }) => {
-            const { canvas } = canvasOnScreen(document, viewId);
-            const node = canvas.nodes[nodeId];
+            const node = nodeToName(document, viewId, nodeId);
             if (!node || isUnknownNode(node)) {
                 throw new ActionRefusal('unknown-node', `No renameable node with id “${nodeId}” exists on this canvas.`);
             }
             const previousName = node.title;
             const previousSource = node.titleSource ?? null;
-            canvas.renameNode(nodeId, name);
-            const changed = canvasNow(document, viewId).nodes[nodeId]?.title === name && (previousName !== name || previousSource !== 'user');
+            document.getState().renameNodeOnView(viewId, nodeId, name);
+            const changed = nodeToName(document, viewId, nodeId)?.title === name && (previousName !== name || previousSource !== 'user');
             return {
                 output: {
                     viewId,
@@ -475,11 +486,11 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 ...(changed
                     ? {
                           undo: () => {
-                              const current = canvasNow(document, viewId).nodes[nodeId];
+                              const current = nodeToName(document, viewId, nodeId);
                               if (!current || current.title !== name || current.titleSource !== 'user') {
                                   throw new ActionRefusal('stale-undo', `“${name}” is no longer the current name of this node.`);
                               }
-                              canvasNow(document, viewId).renameNode(nodeId, previousName, previousSource);
+                              document.getState().renameNodeOnView(viewId, nodeId, previousName, previousSource);
                           }
                       }
                     : {})
@@ -1150,8 +1161,7 @@ export const deleteNodesAction = (store: StoreApi<CanvasState>, ids: readonly st
     canvas.deleteSelected();
 };
 
-export const fitAction = (): void => {
-    const viewId = activeViewId();
+export const fitAction = (viewId: string | null = activeViewId()): void => {
     if (viewId !== null) {
         void runAsPerson('canvas.fit', { viewId });
     }
@@ -1207,8 +1217,7 @@ export const groupSelectionAction = (): void => {
     void runAsPerson('group.create', { viewId, nodeIds });
 };
 
-export const historyAction = (step: 'undo' | 'redo'): void => {
-    const viewId = activeViewId();
+export const historyAction = (step: 'undo' | 'redo', viewId: string | null = activeViewId()): void => {
     if (viewId === null) {
         return;
     }

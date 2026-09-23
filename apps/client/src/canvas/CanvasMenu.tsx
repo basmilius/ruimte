@@ -64,7 +64,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     >
                         <Icon icon={Scan} size={14} /> {t('common:action.selectAll')} <Kbd shortcut={CANVAS_SHORTCUTS.selectAll} />
                     </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={fitAction}>
+                    <ContextMenu.Item className="menu-item" onClick={() => fitAction()}>
                         <Icon icon={Maximize} size={14} /> {t('canvasMenu.zoomToFit')} <Kbd shortcut={CANVAS_SHORTCUTS.fitAll} />
                     </ContextMenu.Item>
                 </ContextMenu.Popup>

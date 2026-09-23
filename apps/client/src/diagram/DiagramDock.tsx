@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Copy, Download, MoreHorizontal, Redo2, Undo2 } from 'lucide-react';
+import { fitAction, historyAction } from '@/actions/client-actions';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { copyDiagramPng, copyDiagramSvg, saveDiagramPng, saveDiagramSvg } from '@/diagram/export';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
@@ -18,6 +19,7 @@ import { ZoomControls } from '@/ui/ZoomControls';
 export function DiagramDock() {
     const { t } = useTranslation('drawing');
     const store = useDiagramStore();
+    const viewId = useDiagram((s) => s.viewId);
     const zoom = useDiagram((s) => s.camera.zoom);
     const empty = useDiagram((s) => s.content.nodes.length === 0);
     const canUndo = useDiagram((s) => s.past.length > 0);
@@ -37,7 +39,7 @@ export function DiagramDock() {
                 }}
                 shortcuts={CANVAS_SHORTCUTS}
                 onZoomTo={(next) => store.getState().zoomTo(next)}
-                onFitAll={() => store.getState().fitAll()}
+                onFitAll={() => fitAction(viewId)}
             />
 
             <Separator />
@@ -70,12 +72,12 @@ export function DiagramDock() {
                     </Menu.Portal>
                 </Menu.Root>
                 <Tooltip label={t('common:action.undo')} kbd={CANVAS_SHORTCUTS.undo} name>
-                    <button className="icon-btn" disabled={!canUndo} onClick={() => store.getState().undo()}>
+                    <button className="icon-btn" disabled={!canUndo} onClick={() => historyAction('undo', viewId)}>
                         <Icon icon={Undo2} size={16} />
                     </button>
                 </Tooltip>
                 <Tooltip label={t('common:action.redo')} kbd={CANVAS_SHORTCUTS.redo} name>
-                    <button className="icon-btn" disabled={!canRedo} onClick={() => store.getState().redo()}>
+                    <button className="icon-btn" disabled={!canRedo} onClick={() => historyAction('redo', viewId)}>
                         <Icon icon={Redo2} size={16} />
                     </button>
                 </Tooltip>

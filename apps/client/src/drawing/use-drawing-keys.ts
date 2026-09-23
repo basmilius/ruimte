@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
+import { fitAction, historyAction } from '@/actions/client-actions';
 import { GRID } from '@/canvas/math';
 import { isApplePlatform } from '@/desktop/bridge';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
@@ -93,11 +94,7 @@ export const useDrawingKeys = (store: StoreApi<DrawingState>, active: boolean): 
             }
             if (is(DRAWING_SHORTCUTS.undo) || is(DRAWING_SHORTCUTS.redo)) {
                 e.preventDefault();
-                if (is(DRAWING_SHORTCUTS.redo)) {
-                    state.redo();
-                } else {
-                    state.undo();
-                }
+                historyAction(is(DRAWING_SHORTCUTS.redo) ? 'redo' : 'undo', state.viewId);
                 return;
             }
             if (is(DRAWING_SHORTCUTS.selectAll)) {
@@ -152,7 +149,7 @@ export const useDrawingKeys = (store: StoreApi<DrawingState>, active: boolean): 
             }
             if (is(DRAWING_SHORTCUTS.fitAll)) {
                 e.preventDefault();
-                state.fitAll();
+                fitAction(state.viewId);
                 return;
             }
             if (is(DRAWING_SHORTCUTS.zoomSelection)) {
