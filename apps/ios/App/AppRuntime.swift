@@ -264,7 +264,7 @@ final class AppRuntime {
 
     private func publishWidgetMachines() {
         UsageWidgetStore.setMachines(machines.map { UsageWidgetMachine(id: $0.id, name: $0.name) })
-        WidgetCenter.shared.reloadTimelines(ofKind: UsageWidgetStore.kind)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// For a background refresh, which has no scene of its own to let connections open.

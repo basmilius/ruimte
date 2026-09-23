@@ -5,19 +5,64 @@ import WidgetKit
 
 struct UsageWidget: Widget {
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: UsageWidgetStore.kind, intent: UsageWidgetIntent.self, provider: UsageTimeline()) {
-            entry in
-            UsageWidgetView(entry: entry)
-        }
-        .configurationDisplayName("Usage")
-        .description("Usage limits and today's cost of one machine.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        usageConfiguration(
+            provider: nil, intent: UsageWidgetIntent.self, name: "Usage",
+            description: "Usage limits and today's cost of one machine.")
     }
 }
 
-struct UsageWidgetIntent: WidgetConfigurationIntent {
+struct ClaudeUsageWidget: Widget {
+    var body: some WidgetConfiguration {
+        usageConfiguration(
+            provider: "claude", intent: ClaudeUsageWidgetIntent.self, name: "Claude usage",
+            description: "Claude limits and today's cost of one machine.")
+    }
+}
+
+struct CodexUsageWidget: Widget {
+    var body: some WidgetConfiguration {
+        usageConfiguration(
+            provider: "codex", intent: CodexUsageWidgetIntent.self, name: "Codex usage",
+            description: "Codex limits and today's cost of one machine.")
+    }
+}
+
+/// The usage of one machine, over every provider or, given one, over that provider alone. WidgetKit on iOS 27.2 trapped
+/// on a second widget that shared the first one's intent and built its name, so each brings its own intent and literal.
+@MainActor private func usageConfiguration<Intent: UsageConfigurationIntent>(
+    provider: String?, intent: Intent.Type, name: LocalizedStringKey, description: LocalizedStringKey
+) -> some WidgetConfiguration {
+    AppIntentConfiguration(
+        kind: UsageWidgetStore.kind(provider: provider), intent: intent, provider: UsageTimeline<Intent>()
+    ) { entry in
+        UsageWidgetView(entry: entry, provider: provider)
+    }
+    .configurationDisplayName(name)
+    .description(description)
+    .supportedFamilies([.systemSmall, .systemMedium])
+}
+
+protocol UsageConfigurationIntent: WidgetConfigurationIntent {
+    var machine: UsageMachineEntity? { get }
+}
+
+struct UsageWidgetIntent: UsageConfigurationIntent {
     static let title: LocalizedStringResource = "Usage"
     static let description = IntentDescription("Usage limits and today's cost of one machine.")
+
+    @Parameter(title: "Machine") var machine: UsageMachineEntity?
+}
+
+struct ClaudeUsageWidgetIntent: UsageConfigurationIntent {
+    static let title: LocalizedStringResource = "Claude usage"
+    static let description = IntentDescription("Claude limits and today's cost of one machine.")
+
+    @Parameter(title: "Machine") var machine: UsageMachineEntity?
+}
+
+struct CodexUsageWidgetIntent: UsageConfigurationIntent {
+    static let title: LocalizedStringResource = "Codex usage"
+    static let description = IntentDescription("Codex limits and today's cost of one machine.")
 
     @Parameter(title: "Machine") var machine: UsageMachineEntity?
 }
@@ -67,21 +112,24 @@ struct UsageEntry: TimelineEntry {
                             .init(kind: "session", label: "Session", used: 0.42, resetsAt: nil),
                             .init(kind: "weekly", label: "Weekly", used: 0.71, resetsAt: nil),
                             .init(kind: "weekly", label: "Weekly · Opus", used: 0.18, resetsAt: nil),
-                        ])
+                        ]),
+                    .init(kind: "codex", windows: [.init(kind: "weekly", label: "Weekly", used: 0.35, resetsAt: nil)]),
                 ], updatedAt: now,
-                cost: .init(day: UsageWidgetSnapshot.day(of: now), usd: 12.34, rate: nil, fetchedAt: now)))
+                cost: .init(
+                    day: UsageWidgetSnapshot.day(of: now), usd: 15.44, usdByProvider: ["claude": 12.34, "codex": 3.1],
+                    rate: nil, fetchedAt: now)))
     }
 }
 
-struct UsageTimeline: AppIntentTimelineProvider {
+struct UsageTimeline<Intent: UsageConfigurationIntent>: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> UsageEntry { .sample }
 
-    func snapshot(for configuration: UsageWidgetIntent, in context: Context) async -> UsageEntry {
+    func snapshot(for configuration: Intent, in context: Context) async -> UsageEntry {
         let current = entry(for: configuration, at: .now)
         return context.isPreview && current.snapshot == nil ? .sample : current
     }
 
-    func timeline(for configuration: UsageWidgetIntent, in context: Context) async -> Timeline<UsageEntry> {
+    func timeline(for configuration: Intent, in context: Context) async -> Timeline<UsageEntry> {
         let now = Date.now
         let current = entry(for: configuration, at: now)
         // A window that resets or a day that turns changes what the widget says, whether the app runs or not.
@@ -92,7 +140,7 @@ struct UsageTimeline: AppIntentTimelineProvider {
         return Timeline(entries: [current] + later, policy: .atEnd)
     }
 
-    private func entry(for configuration: UsageWidgetIntent, at date: Date) -> UsageEntry {
+    private func entry(for configuration: Intent, at date: Date) -> UsageEntry {
         let machines = UsageWidgetStore.machines()
         let id = configuration.machine?.id ?? machines.first?.id
         let machine = machines.first { $0.id == id }
@@ -111,11 +159,16 @@ private struct UsageRow: Identifiable {
 
 struct UsageWidgetView: View {
     let entry: UsageEntry
+    let provider: String?
     @Environment(\.widgetFamily) private var family
     @Environment(\.locale) private var locale
 
     var body: some View {
-        content.containerBackground(.background, for: .widget)
+        let theme = UsageTheme(provider: provider)
+        content
+            .fontDesign(theme.fontDesign)
+            .environment(\.usageTheme, theme)
+            .containerBackground(for: .widget) { UsageBackdrop(theme: theme) }
     }
 
     @ViewBuilder private var content: some View {
@@ -146,7 +199,7 @@ struct UsageWidgetView: View {
         if weeklies.isEmpty {
             message("No weekly limit reported.")
         } else {
-            ForEach(weeklies) { UsageBarRow(row: $0) }
+            ForEach(weeklies) { UsageBarRow(row: $0, marked: provider == nil) }
         }
     }
 
@@ -159,7 +212,7 @@ struct UsageWidgetView: View {
             HStack(alignment: .center, spacing: 16) {
                 if let session { UsageRing(row: session).padding(.top, 6) }
                 VStack(alignment: .leading, spacing: 10) {
-                    ForEach(weeklies) { UsageBarRow(row: $0) }
+                    ForEach(weeklies) { UsageBarRow(row: $0, marked: provider == nil) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -167,7 +220,8 @@ struct UsageWidgetView: View {
     }
 
     private func header(_ machine: UsageWidgetMachine) -> some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(spacing: 6) {
+            if let provider { ProviderMark(provider: provider, size: 12) }
             Text(machine.name).font(.caption.weight(.semibold)).lineLimit(1)
             Spacer(minLength: 4)
             if let updatedAt = entry.snapshot?.updatedAt {
@@ -190,7 +244,9 @@ struct UsageWidgetView: View {
 
     /// The windows of one kind, shared evenly between the providers that report one.
     private func rows(_ snapshot: UsageWidgetSnapshot, kind: String, limit: Int) -> [UsageRow] {
-        let providers = snapshot.providers.filter { $0.windows.contains { $0.kind == kind } }
+        let providers = snapshot.providers.filter { reported in
+            (provider == nil || reported.kind == provider) && reported.windows.contains { $0.kind == kind }
+        }
         let each = max(1, limit / max(1, providers.count))
         let rows = providers.flatMap { provider in
             provider.windows.filter { $0.kind == kind }.prefix(each).map { window in
@@ -205,19 +261,21 @@ struct UsageWidgetView: View {
         return Array(rows.prefix(limit))
     }
 
-    /// The provider's name for "Weekly", which every weekly row would repeat, and name plus model for "Weekly · Opus".
-    private func title(provider: String, label: String) -> String {
+    /// "Weekly · Opus" reads as the model alone. Over every provider the provider's name stands in for "Weekly",
+    /// which every weekly row would repeat; in one provider's widget the header already names it.
+    private func title(provider kind: String, label: String) -> String {
         let model = label.hasPrefix("Weekly · ") ? String(label.dropFirst("Weekly · ".count)) : nil
-        return [provider.capitalized, model].compactMap { $0 }.joined(separator: " · ")
+        if provider != nil { return model ?? label }
+        return [kind.capitalized, model].compactMap { $0 }.joined(separator: " · ")
     }
 
     private func todayCost(_ snapshot: UsageWidgetSnapshot) -> String? {
         guard let cost = snapshot.cost, cost.day == UsageWidgetSnapshot.day(of: entry.date) else { return nil }
-        return UsageMoneyFormatter(locale: locale, rate: cost.rate).string(usd: cost.usd)
+        let usd: Double?
+        if let provider { usd = cost.usdByProvider.map { $0[provider] ?? 0 } } else { usd = cost.usd }
+        return usd.map { UsageMoneyFormatter(locale: locale, rate: cost.rate).string(usd: $0) }
     }
 }
-
-private func usageTint(_ used: Double) -> Color { used >= 0.9 ? .red : .primary }
 
 private func usagePercent(_ used: Double) -> Text {
     Text(used, format: .percent.precision(.fractionLength(0)))
@@ -225,47 +283,77 @@ private func usagePercent(_ used: Double) -> Text {
 
 private struct UsageBarRow: View {
     let row: UsageRow
+    let marked: Bool
+    @Environment(\.usageTheme) private var theme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                ProviderMark(provider: row.provider, size: 12)
+                if marked { ProviderMark(provider: row.provider, size: 12) }
                 Text(row.title).foregroundStyle(.secondary).lineLimit(1)
                 Spacer(minLength: 0)
                 usagePercent(row.used).fontWeight(.semibold).monospacedDigit()
             }
             .font(.caption)
-            ProgressView(value: min(max(row.used, 0), 1)).tint(usageTint(row.used))
+            if theme.segmented {
+                SegmentedBar(value: row.used, tint: theme.tint(row.used))
+            } else {
+                ProgressView(value: min(max(row.used, 0), 1)).tint(theme.tint(row.used))
+            }
         }
         .accessibilityElement(children: .combine)
     }
 }
 
+private struct SegmentedBar: View {
+    private static let segments = 20
+    let value: Double
+    let tint: Color
+
+    var body: some View {
+        let filled = Int((min(max(value, 0), 1) * Double(Self.segments)).rounded())
+        HStack(spacing: 2) {
+            ForEach(0..<Self.segments, id: \.self) { index in
+                Rectangle().fill(index < filled ? tint : tint.opacity(0.15))
+            }
+        }
+        .frame(height: 5)
+    }
+}
+
 private struct UsageRing: View {
     let row: UsageRow
+    @Environment(\.usageTheme) private var theme
 
     var body: some View {
         ZStack {
-            Circle().stroke(.quaternary, lineWidth: 7)
+            Circle().stroke(.quaternary, style: stroke)
             Circle()
                 .trim(from: 0, to: min(max(row.used, 0), 1))
-                .stroke(usageTint(row.used), style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                .stroke(theme.tint(row.used), style: stroke)
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 0) {
                 usagePercent(row.used).font(.headline).monospacedDigit()
-                Text(row.label).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
+                Text(row.label).font(.system(size: 10, design: theme.fontDesign)).foregroundStyle(.secondary).lineLimit(
+                    1
+                ).minimumScaleFactor(0.7)
             }
             .padding(.horizontal, 10)
         }
         .frame(width: 68, height: 68)
         .accessibilityElement(children: .combine)
     }
+
+    private var stroke: StrokeStyle {
+        theme.segmented ? StrokeStyle(lineWidth: 7, dash: [3, 2]) : StrokeStyle(lineWidth: 7, lineCap: .round)
+    }
 }
 
-/// The provider's word mark from the desktop's `ProviderLogo`, drawn in the text color like every other glyph here.
+/// The provider's word mark from the desktop's `ProviderLogo`, in the theme's color.
 private struct ProviderMark: View {
     let provider: String
     let size: CGFloat
+    @Environment(\.usageTheme) private var theme
 
     var body: some View {
         Image(provider == "codex" ? "CodexMark" : "ClaudeMark")
@@ -273,7 +361,7 @@ private struct ProviderMark: View {
             .resizable()
             .scaledToFit()
             .frame(width: size, height: size)
-            .foregroundStyle(.primary)
+            .foregroundStyle(theme.mark)
             .accessibilityLabel(provider.capitalized)
     }
 }

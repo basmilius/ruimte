@@ -49,6 +49,7 @@
 		3FF11289E9C9D97393BA9DEC /* AttentionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97203F1CB27A45176505F61D /* AttentionStoreTests.swift */; };
 		4172BE8EE5D1461A015D9A93 /* GitDiffPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF6EAE616EB81DCA19EC6BAA /* GitDiffPage.swift */; };
 		41C3D20B7971939ABCAF2C24 /* DrawingAuthoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = C62961727B814F8C43E406CD /* DrawingAuthoring.swift */; };
+		43331CB8A5C3827AFBBB9861 /* UsageBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB727CEBF3E354FC9409B25 /* UsageBackdrop.swift */; };
 		438099B9E0FC7A723C6A0E0A /* RuimteWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64C8B5258669EC5003FA9AB /* RuimteWidgets.swift */; };
 		4438A2B4A36F68A2F9BF3268 /* GitRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDD0B866219FA2F1AA2DEED9 /* GitRepositories.swift */; };
 		451BCDFFE5D34B03207983C4 /* MobileStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8954363C79663F275CDF04A /* MobileStyle.swift */; };
@@ -97,6 +98,7 @@
 		8EFCC45B72659B70390CA954 /* CanvasStartGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945C01FE70408377BA62088E /* CanvasStartGrid.swift */; };
 		8FBF9616B86A2B2A55B482B8 /* ModelNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEB994628819F6232CF05AF3 /* ModelNameTests.swift */; };
 		902C7797057362CD5310734B /* RuntimeStartupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF0183BD88185DD4301FC7B9 /* RuntimeStartupTests.swift */; };
+		90B29B32520400F3DF1801A9 /* UsageTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C93464A87752188B15F2F555 /* UsageTheme.swift */; };
 		93687A4E25E26ACA4330A642 /* ChatDraftSyntax.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F5AB9F07A9DA47A43714BB /* ChatDraftSyntax.swift */; };
 		93B147F9D1DC4B6DFF986E91 /* RuimteNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3DED45634E156A5B8CE75374 /* RuimteNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		994370BF753F1907C78FE8EE /* DrawingEditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 492DA55F2EB18352FC26B750 /* DrawingEditorModel.swift */; };
@@ -237,6 +239,7 @@
 		28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhaseZeroTests.swift; sourceTree = "<group>"; };
 		29EB1C15C9B520845CD3BB82 /* ChatPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPresentationTests.swift; sourceTree = "<group>"; };
 		2C204ABF7BF115B3485C914E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2DB727CEBF3E354FC9409B25 /* UsageBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageBackdrop.swift; sourceTree = "<group>"; };
 		2F0CACBC269A20D7663C70E5 /* TaskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStore.swift; sourceTree = "<group>"; };
 		2FE979AE94BE836D3CC07590 /* ChatMessageIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageIndex.swift; sourceTree = "<group>"; };
 		304CEEF36115BF171DA6E1FC /* MobileByteCountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileByteCountTests.swift; sourceTree = "<group>"; };
@@ -316,6 +319,7 @@
 		BF96EC87E6B24E01AC048549 /* ChatPromptStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPromptStateTests.swift; sourceTree = "<group>"; };
 		C62961727B814F8C43E406CD /* DrawingAuthoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingAuthoring.swift; sourceTree = "<group>"; };
 		C65C2B371130F2E65C92BBD2 /* Ruimte.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ruimte.entitlements; sourceTree = "<group>"; };
+		C93464A87752188B15F2F555 /* UsageTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTheme.swift; sourceTree = "<group>"; };
 		CA006750F3FAD76E2C565AD3 /* LastProjectTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastProjectTests.swift; sourceTree = "<group>"; };
 		CA401CA82CE41046F457D507 /* MachineProjectsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineProjectsPage.swift; sourceTree = "<group>"; };
 		CF0183BD88185DD4301FC7B9 /* RuntimeStartupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeStartupTests.swift; sourceTree = "<group>"; };
@@ -473,6 +477,8 @@
 				7FABC4BE334FDFA06C4FC1B6 /* Info.plist */,
 				9B79DEDEC6E3DBF60AE5EA23 /* RuimteActivityWidget.swift */,
 				A64C8B5258669EC5003FA9AB /* RuimteWidgets.swift */,
+				2DB727CEBF3E354FC9409B25 /* UsageBackdrop.swift */,
+				C93464A87752188B15F2F555 /* UsageTheme.swift */,
 				3A2764A51BCE359F3B4CCA36 /* UsageWidget.swift */,
 			);
 			path = ActivityWidget;
@@ -916,6 +922,8 @@
 			files = (
 				9E88FFD2A389FE45658CA72E /* RuimteActivityWidget.swift in Sources */,
 				438099B9E0FC7A723C6A0E0A /* RuimteWidgets.swift in Sources */,
+				43331CB8A5C3827AFBBB9861 /* UsageBackdrop.swift in Sources */,
+				90B29B32520400F3DF1801A9 /* UsageTheme.swift in Sources */,
 				DBAB23D19384984149C8E454 /* UsageWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

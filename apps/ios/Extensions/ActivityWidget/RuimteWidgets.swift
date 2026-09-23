@@ -5,5 +5,7 @@ import WidgetKit
     var body: some Widget {
         RuimteActivityWidget()
         UsageWidget()
+        ClaudeUsageWidget()
+        CodexUsageWidget()
     }
 }

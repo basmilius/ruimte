@@ -82,13 +82,17 @@ final class UsageWidgetRecorder {
                 "timeZone": .string(TimeZone.current.identifier),
             ])
             if let summary = try? await client.request(WireRequest.usageSummary.rawValue, payload: payload) {
-                let usd = summary.list("models").reduce(0) { $0 + $1.number("costUsd") }
-                snapshot.cost = UsageWidgetSnapshot.Cost(day: day, usd: usd, rate: summary["rate"], fetchedAt: now)
+                let models = summary.list("models")
+                let byProvider = Dictionary(
+                    models.map { ($0.text("provider"), $0.number("costUsd")) }, uniquingKeysWith: +)
+                snapshot.cost = UsageWidgetSnapshot.Cost(
+                    day: day, usd: models.reduce(0) { $0 + $1.number("costUsd") }, usdByProvider: byProvider,
+                    rate: summary["rate"], fetchedAt: now)
             }
         }
         guard !Task.isCancelled else { return }
         UsageWidgetStore.save(snapshot, machineID: machineID)
-        WidgetCenter.shared.reloadTimelines(ofKind: UsageWidgetStore.kind)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private static func providers(_ limits: JSONValue) -> [UsageWidgetSnapshot.Provider] {

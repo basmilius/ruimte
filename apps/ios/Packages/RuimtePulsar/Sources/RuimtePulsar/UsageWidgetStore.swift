@@ -43,12 +43,17 @@ public struct UsageWidgetSnapshot: Codable, Sendable, Equatable {
         /// The day the amount is of, from `day(of:)`; on any other day it says nothing about today.
         public let day: String
         public let usd: Double
+        /// Nil in a snapshot written before the cost was kept per provider.
+        public let usdByProvider: [String: Double]?
         public let rate: JSONValue?
         public let fetchedAt: Date
 
-        public init(day: String, usd: Double, rate: JSONValue?, fetchedAt: Date) {
+        public init(
+            day: String, usd: Double, usdByProvider: [String: Double]? = nil, rate: JSONValue?, fetchedAt: Date
+        ) {
             self.day = day
             self.usd = usd
+            self.usdByProvider = usdByProvider
             self.rate = rate
             self.fetchedAt = fetchedAt
         }
@@ -73,6 +78,9 @@ public struct UsageWidgetSnapshot: Codable, Sendable, Equatable {
 /// The widgets' side of the app group: the machines a widget can pick and the last snapshot of each.
 public enum UsageWidgetStore {
     public static let kind = "app.ruimte.usage"
+
+    /// The widget kind of one provider's widget, or of the widget over every provider for nil.
+    public static func kind(provider: String?) -> String { provider.map { "\(kind).\($0)" } ?? kind }
     private static let machinesKey = "usage-widget.machines"
     private static let snapshotsKey = "usage-widget.snapshots"
 
