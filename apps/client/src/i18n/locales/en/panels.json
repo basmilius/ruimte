@@ -126,11 +126,40 @@
     },
     "view": {
       "preview": "Preview",
-      "source": "Source"
+      "source": "Source",
+      "previewAfterSave": "Preview shows once the changes are saved"
     },
     "markdown": {
       "frontmatter": "Frontmatter",
       "invalidFrontmatter": "Frontmatter could not be read as YAML. The original text is shown below."
+    },
+    "edit": {
+      "start": "Edit",
+      "stop": "Stop editing",
+      "outsideProject": "Only files in this project and its worktrees can be edited",
+      "ruimteState": "Ruimte keeps its own state here, so it is not edited by hand",
+      "plain": "Files over {{lines}} lines are not edited here",
+      "touch": "Editing needs a mouse or a trackpad",
+      "zoom": "Zoom in to edit",
+      "loadFailed": "The editor did not load",
+      "failed": "The editor failed"
+    },
+    "draft": {
+      "changedOnDisk": "The file changed on disk",
+      "reload": "Reload",
+      "overwrite": "Overwrite",
+      "failed": "Not saved. {{reason}}",
+      "notConnected": "The machine is not connected.",
+      "saveFailed": "The machine did not save the file.",
+      "notText": "The file is not text any more."
+    },
+    "unsaved": {
+      "mark": "Unsaved changes",
+      "title_one": "Close {{name}} without saving?",
+      "title_other": "Close {{count}} files without saving?",
+      "description_one": "The changes could not be saved. Closing drops them.",
+      "description_other": "The changes could not be saved. Closing drops them.",
+      "confirm": "Close without saving"
     }
   },
   "files": {

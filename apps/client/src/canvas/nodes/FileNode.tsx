@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EDIT_MIN_ZOOM, FileNodeGateContext } from '@/shell/panels/edit-gate';
 import { FileSurface } from '@/shell/panels/FileSurface';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useCanvas } from '@/state/canvas';
@@ -23,9 +25,16 @@ export function FilePlate({ id }: { id: string }) {
 
 /*
  * A file on the canvas. The node holds a path and nothing else: the bytes belong to the file
- * system, so two nodes on one file are two independent readers with nothing between them.
+ * system, and an edit belongs to the one draft of that file every surface shares
+ * (`state/text-drafts.ts`), so two nodes on one file never write over each other.
  */
-export function FileNode({ id }: { id: string }) {
+export function FileNode({ id, focused }: { id: string; focused: boolean }) {
     const path = useCanvas((s) => s.nodes[id]?.path ?? null);
-    return <FileSurface path={path} on="node" />;
+    const zoomedOut = useCanvas((s) => s.camera.zoom < EDIT_MIN_ZOOM);
+    const gate = useMemo(() => ({ zoomedOut, focused }), [zoomedOut, focused]);
+    return (
+        <FileNodeGateContext.Provider value={gate}>
+            <FileSurface path={path} on="node" />
+        </FileNodeGateContext.Provider>
+    );
 }

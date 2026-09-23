@@ -207,7 +207,8 @@
     "label": "Diagram"
   },
   "file": {
-    "none": "Geen bestand"
+    "none": "Geen bestand",
+    "unsaved": "Niet-opgeslagen wijzigingen"
   },
   "unknown": {
     "needsNewer": "Deze node vraagt om een nieuwere versie van Ruimte"

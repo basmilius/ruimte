@@ -62,6 +62,7 @@ import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { FileIcon } from '@/ui/FileIcon';
 import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
+import { useUnsavedStoredPath } from '@/shell/panels/use-unsaved';
 import { resetTitle } from '@/nodes/node-host';
 import { Icon } from '@/ui/Icon';
 
@@ -205,6 +206,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
     const groupWorktrees = useGroupWorktrees(node?.kind === 'group' && !node.worktree ? id : null);
     const hidden = useCanvas((s) => s.hidden.has(id));
     const browserTitle = useBrowserDisplayTitle(id, node?.title ?? '', node?.titleSource);
+    const unsavedFile = useUnsavedStoredPath(node?.kind === 'file' ? (node.path ?? null) : null);
 
     if (!node || hidden) {
         return null;
@@ -339,6 +341,11 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     {task && !renaming && <TaskMark task={task} />}
                     {unseen && !renaming && <UnseenMark />}
                     {!renaming && <ProcessAlertMark alerts={processAlerts} />}
+                    {unsavedFile && (
+                        <Tooltip label={t('file.unsaved')}>
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted" />
+                        </Tooltip>
+                    )}
                     {node.kind === 'file' && <span ref={setFileControls} className={`${BTN_GROUP} shrink-0`} />}
                     {node.kind === 'device' && <DeviceToolbar id={id} />}
                     <div className={`${BTN_GROUP} shrink-0`}>
@@ -381,7 +388,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                             {node.kind === 'file' &&
                                 (live && readable ? (
                                     <FileToolbarSlotProvider value={toolbarSlot}>
-                                        <FileNode id={id} />
+                                        <FileNode id={id} focused={takesKeyboard} />
                                     </FileToolbarSlotProvider>
                                 ) : (
                                     <FilePlate id={id} />

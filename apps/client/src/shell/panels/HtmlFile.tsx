@@ -10,6 +10,8 @@ import { localFileUrl } from '@/shell/panels/file-url';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { htmlPreviewDocument } from '@/shell/panels/html-preview';
 import { useEndpoints } from '@/state/endpoints';
+import { useEndpointId } from '@/state/keys';
+import { useUnsaved } from '@/state/text-drafts';
 import { CellViewContext } from '@/state/workspace-stores';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
@@ -72,7 +74,10 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
     const { t } = useTranslation('panels');
     const onThisMachine = useEndpoints((state) => state.endpoints.find((endpoint) => endpoint.id === state.activeId)?.reachability === 'loopback');
     const nativePreview = isDesktop() && onThisMachine;
-    const [view, setView] = useState<HtmlView>('preview');
+    const [chosen, setView] = useState<HtmlView>('preview');
+    // The preview draws what is on disk, so a file with unsaved changes stays in the editor until they are saved.
+    const unsaved = useUnsaved(useEndpointId(), path);
+    const view = unsaved ? 'source' : chosen;
     const [loading, setLoading] = useState(nativePreview);
     const [error, setError] = useState<string | null>(null);
     const transport = useTransport();
@@ -150,7 +155,13 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
 
     const controls = (
         <div className={BTN_GROUP}>
-            <FileToolbarToggle icon={Eye} label={t('file.view.preview')} active={view === 'preview'} onClick={() => setView('preview')} />
+            <FileToolbarToggle
+                icon={Eye}
+                label={unsaved ? t('file.view.previewAfterSave') : t('file.view.preview')}
+                active={view === 'preview'}
+                disabled={unsaved}
+                onClick={() => setView('preview')}
+            />
             <FileToolbarToggle icon={Code} label={t('file.view.source')} active={view === 'source'} onClick={() => setView('source')} />
         </div>
     );
@@ -158,7 +169,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             {view === 'source' ? (
-                <CodeFile name={name} read={read} toolbarExtra={controls} />
+                <CodeFile path={path} read={read} toolbarExtra={controls} />
             ) : (
                 <FileToolbar>
                     {controls}

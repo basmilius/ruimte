@@ -57,12 +57,14 @@ what this rule exists to prevent.
 Stay English, as a verb as well as a noun: commit, stage, unstage, push, pull, fetch, merge, rebase,
 stash, revert, checkout, branch, remote, diff, worktree, repository, canvas, node, chat, terminal,
 agent, sub-agent, prompt, token, turn, thread, fork, hook, build, deploy, log, input, output,
-sandbox, cache. A verb takes a Dutch ending where the sentence asks for one (gecommit, gemerged,
+sandbox, cache, editor. A verb takes a Dutch ending where the sentence asks for one (gecommit, gemerged,
 gepusht), and a label is the bare term (`Commit`, `Stage & Commit`, `Push`).
 
 Translate the everyday words around them: view is weergave, panel is paneel, drawing is tekening,
 file is bestand, folder is map, settings are instellingen, usage is verbruik, session is sessie,
-save is opslaan, delete is verwijderen, close is sluiten, cancel is annuleren, search is zoeken.
+save is opslaan, delete is verwijderen, close is sluiten, cancel is annuleren, search is zoeken,
+edit is bewerken, reload is opnieuw laden, overwrite is overschrijven, unsaved changes are
+niet-opgeslagen wijzigingen.
 
 No em dashes or en dashes, in either language.
 

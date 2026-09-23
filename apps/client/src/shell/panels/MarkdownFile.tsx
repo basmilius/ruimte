@@ -8,27 +8,38 @@ import { FileLinkContext } from '@/shell/panels/file-links';
 import { FileScroll } from '@/shell/panels/FileScroll';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { DisabledWrapToggle, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { useEndpointId } from '@/state/keys';
+import { useUnsaved } from '@/state/text-drafts';
 import { BTN_GROUP } from '@/ui/classes';
 import { Separator } from '@/ui/Separator';
 
 type MarkdownView = 'preview' | 'source';
 
 /*
- * A markdown file the way it is meant to be read, with the source a click away. Both views share one
- * toolbar, so the switch does not move when it is used.
+ * A markdown file the way it is meant to be read, with the source a click away and editable. Both
+ * views share one toolbar, so the switch does not move when it is used.
  */
-export function MarkdownFile({ path, name, read }: { path: string; name: string; read: FsReadText }) {
+export function MarkdownFile({ path, read }: { path: string; read: FsReadText }) {
     const { t } = useTranslation('panels');
-    const [view, setView] = useState<MarkdownView>('preview');
+    const [chosen, setView] = useState<MarkdownView>('preview');
+    // The preview draws what is on disk, so a file with unsaved changes stays in the editor until they are saved.
+    const unsaved = useUnsaved(useEndpointId(), path);
+    const view = unsaved ? 'source' : chosen;
     const toggle = (
         <div className={BTN_GROUP}>
-            <FileToolbarToggle icon={Eye} label={t('file.view.preview')} active={view === 'preview'} onClick={() => setView('preview')} />
+            <FileToolbarToggle
+                icon={Eye}
+                label={unsaved ? t('file.view.previewAfterSave') : t('file.view.preview')}
+                active={view === 'preview'}
+                disabled={unsaved}
+                onClick={() => setView('preview')}
+            />
             <FileToolbarToggle icon={Code} label={t('file.view.source')} active={view === 'source'} onClick={() => setView('source')} />
         </div>
     );
 
     if (view === 'source') {
-        return <CodeFile name={name} read={read} toolbarExtra={toggle} />;
+        return <CodeFile path={path} read={read} toolbarExtra={toggle} />;
     }
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">

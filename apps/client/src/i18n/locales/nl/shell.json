@@ -27,7 +27,8 @@
             "offline": "Niet verbonden",
             "error": "Projectoverzicht kon niet worden geladen",
             "unsupported": "Werk Ruimte op deze machine bij om de projecten te tonen"
-        }
+        },
+        "unsavedFile": "Niet-opgeslagen wijzigingen"
     },
     "panel": {
         "fallback": "Paneel",

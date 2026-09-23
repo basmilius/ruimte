@@ -126,11 +126,40 @@
     },
     "view": {
       "preview": "Voorbeeld",
-      "source": "Broncode"
+      "source": "Broncode",
+      "previewAfterSave": "Het voorbeeld verschijnt zodra de wijzigingen zijn opgeslagen"
     },
     "markdown": {
       "frontmatter": "Frontmatter",
       "invalidFrontmatter": "De frontmatter kon niet als YAML worden gelezen. Hieronder staat de oorspronkelijke tekst."
+    },
+    "edit": {
+      "start": "Bewerken",
+      "stop": "Stoppen met bewerken",
+      "outsideProject": "Alleen bestanden in dit project en zijn worktrees kun je bewerken",
+      "ruimteState": "Hier bewaart Ruimte zijn eigen staat, die bewerk je niet met de hand",
+      "plain": "Bestanden van meer dan {{lines}} regels bewerk je hier niet",
+      "touch": "Bewerken vraagt om een muis of een trackpad",
+      "zoom": "Zoom in om te bewerken",
+      "loadFailed": "De editor is niet geladen",
+      "failed": "De editor liep vast"
+    },
+    "draft": {
+      "changedOnDisk": "Het bestand is op schijf veranderd",
+      "reload": "Opnieuw laden",
+      "overwrite": "Overschrijven",
+      "failed": "Niet opgeslagen. {{reason}}",
+      "notConnected": "De machine is niet verbonden.",
+      "saveFailed": "De machine heeft het bestand niet opgeslagen.",
+      "notText": "Het bestand is geen tekst meer."
+    },
+    "unsaved": {
+      "mark": "Niet-opgeslagen wijzigingen",
+      "title_one": "{{name}} sluiten zonder op te slaan?",
+      "title_other": "{{count}} bestanden sluiten zonder op te slaan?",
+      "description_one": "De wijzigingen konden niet worden opgeslagen. Sluiten gooit ze weg.",
+      "description_other": "De wijzigingen konden niet worden opgeslagen. Sluiten gooit ze weg.",
+      "confirm": "Sluiten zonder opslaan"
     }
   },
   "files": {

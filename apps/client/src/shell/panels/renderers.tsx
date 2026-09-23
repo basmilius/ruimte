@@ -29,7 +29,7 @@ export const TEXT_RENDERERS: readonly TextFileRenderer[] = [
     {
         id: 'markdown',
         match: (name) => isMarkdownName(name),
-        render: (props) => <MarkdownFile path={props.path} name={props.name} read={props.read} />
+        render: (props) => <MarkdownFile path={props.path} read={props.read} />
     },
     {
         id: 'html',
@@ -42,7 +42,7 @@ export const TEXT_RENDERERS: readonly TextFileRenderer[] = [
 export const renderFile = ({ path, name, read }: FileRendererProps): React.JSX.Element => {
     if (read.kind === 'text') {
         const renderer = TEXT_RENDERERS.find((entry) => entry.match(name));
-        return renderer ? renderer.render({ path, name, read }) : <CodeFile name={name} read={read} />;
+        return renderer ? renderer.render({ path, name, read }) : <CodeFile path={path} read={read} />;
     }
     if (read.kind === 'binary' && isImageMime(read.mime)) {
         return <ImageFile path={path} name={name} read={read} />;

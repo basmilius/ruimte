@@ -207,7 +207,8 @@
     "label": "Diagram"
   },
   "file": {
-    "none": "No file"
+    "none": "No file",
+    "unsaved": "Unsaved changes"
   },
   "unknown": {
     "needsNewer": "This node needs a newer version of Ruimte"

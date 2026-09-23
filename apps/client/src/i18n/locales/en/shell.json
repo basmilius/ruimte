@@ -27,7 +27,8 @@
             "offline": "Not connected",
             "error": "Could not load project overview",
             "unsupported": "Update Ruimte on this machine to show its projects"
-        }
+        },
+        "unsavedFile": "Unsaved changes"
     },
     "panel": {
         "fallback": "Panel",
