@@ -579,6 +579,12 @@ export const ChatQueuePayloadSchema = z.object({
 });
 export type ChatQueuePayload = z.infer<typeof ChatQueuePayloadSchema>;
 
+// The message as it left the queue. An older daemon answers `{}` and refuses one it no longer holds.
+export const ChatUnqueueResultSchema = z.object({
+    message: ChatQueuedMessageSchema.optional()
+});
+export type ChatUnqueueResult = z.infer<typeof ChatUnqueueResultSchema>;
+
 export const ChatApprovePayloadSchema = z.object({
     chatId: ChatIdSchema,
     requestId: z.string().min(1),

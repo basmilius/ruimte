@@ -5,9 +5,11 @@ import {
     CHAT_ATTACHMENTS_MAX_BYTES,
     CHAT_ATTACHMENTS_MAX_COUNT,
     CHAT_ATTACHMENT_MAX_BYTES,
+    type ChatAttachment,
     type ChatAttachmentUpload
 } from '@ruimte/contracts';
 import { formatBytes as bytesOf } from '@/format/number';
+import { readResource, type ReadPiece } from '@/transport/byte-transfer';
 
 interface IncomingFile {
     name: string;
@@ -76,6 +78,17 @@ export const readAttachments = async (files: File[]): Promise<ChatAttachmentUplo
             data: await readAsBase64(file)
         }))
     );
+
+/* Files the machine already stored for a chat, back as uploads the composer can hold again. */
+export const readStoredAttachments = async (read: ReadPiece, chatId: string, stored: readonly ChatAttachment[]): Promise<ChatAttachmentUpload[]> => {
+    const files = await Promise.all(
+        stored.map(
+            async (attachment) =>
+                new File([await readResource(read, { kind: 'attachment', chatId, attachmentId: attachment.id })], attachment.name, { type: attachment.mime })
+        )
+    );
+    return readAttachments(files);
+};
 
 /* A preview of a file the composer still holds; the bytes have not reached the daemon yet. */
 export const uploadPreviewUrl = (upload: ChatAttachmentUpload): string => `data:${upload.mime};base64,${upload.data}`;

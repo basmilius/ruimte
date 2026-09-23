@@ -359,8 +359,8 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
             if (!message && call.actor.kind !== 'person') {
                 throw new ActionRefusal('not-queued', `No message ${messageId} waits in the queue of “${chat}”.`);
             }
-            await ask('chat.unqueue', { chatId, messageId });
-            return { output: { chatId, chat, messageId, text: message?.text ?? '' } };
+            const taken = await ask('chat.unqueue', { chatId, messageId });
+            return { output: { chatId, chat, messageId, text: taken.message?.text ?? message?.text ?? '' } };
         },
         'chat.sendNow': async ({ chatId, messageId }, call) => {
             const chat = chatNamed(chatId, call);

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ChatAttachmentUpload } from '@ruimte/contracts';
+import { checkAttachmentLimits, uploadBytes } from '@/chat/attachments';
 import { persistedJson } from '@/chat/persisted-json';
 
 const STORAGE_KEY = 'ruimte.chat.drafts';
@@ -65,6 +66,29 @@ export const writeDraft = (chatId: string, draft: ChatDraft): void => {
 
 /* Text handed to a draft from outside the composer goes under what was already typed, never over it. */
 export const joinDraftText = (current: string, added: string): string => (current.trim() === '' ? added : `${current.replace(/\s+$/, '')}\n\n${added}`);
+
+const union = (first: readonly string[], second: readonly string[]): string[] => [...first, ...second.filter((entry) => !first.includes(entry))];
+
+/*
+ * A queued message taken back to edit goes above what was typed since. Its files join the draft's as
+ * far as the limits let them, and the rest come back rejected, the way a dropped file would.
+ */
+export const takeBackIntoDraft = (current: ChatDraft, taken: ChatDraft): { draft: ChatDraft; rejected: Array<{ name: string; reason: string }> } => {
+    const checked = checkAttachmentLimits(
+        current.attachments.length,
+        taken.attachments.map((upload) => ({ name: upload.name, mime: upload.mime, bytes: uploadBytes(upload), upload })),
+        current.attachments.reduce((bytes, upload) => bytes + uploadBytes(upload), 0)
+    );
+    return {
+        draft: {
+            text: current.text.trim() === '' ? taken.text : joinDraftText(taken.text, current.text),
+            mentions: union(taken.mentions, current.mentions),
+            skills: union(taken.skills, current.skills),
+            attachments: [...checked.accepted.map((entry) => entry.upload), ...current.attachments]
+        },
+        rejected: checked.rejected
+    };
+};
 
 type DraftTaker = (text: string) => void;
 

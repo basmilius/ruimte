@@ -62,12 +62,7 @@ export const registerChatHandlers = (
         translate(() => manager.send(payload.chatId, payload.text, { mentions: payload.mentions, skills: payload.skills }, payload.attachments))
     );
 
-    dispatcher.register('chat.unqueue', (payload) =>
-        translate(() => {
-            manager.unqueue(payload.chatId, payload.messageId);
-            return {};
-        })
-    );
+    dispatcher.register('chat.unqueue', (payload) => translate(() => ({ message: manager.unqueue(payload.chatId, payload.messageId) })));
 
     dispatcher.register('chat.sendNow', (payload) =>
         translate(() => {

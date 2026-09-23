@@ -539,6 +539,31 @@ describe('ChatManager', () => {
         await retire(reloaded);
     });
 
+    test('a queued message taken back to edit comes back whole, and one that already went out comes back as nothing', async () => {
+        await manager.create({ chatId: 'chat-q4', cwd: home });
+        manager.attach('chat-q4', 'c1');
+        await manager.send('chat-q4', 'slow');
+        const upload = { name: 'note.txt', mime: 'text/plain', data: Buffer.from('hello').toString('base64') };
+        await manager.send('chat-q4', 'see @src/a.ts', { mentions: ['src/a.ts'], skills: ['review'] }, [upload]);
+        await manager.send('chat-q4', 'next');
+        const [edited, sent] = recorder.info!.queue!;
+        const session = manager.get('chat-q4')!;
+
+        expect(session.unqueue(edited!.id)).toMatchObject({
+            id: edited!.id,
+            text: 'see @src/a.ts',
+            mentions: ['src/a.ts'],
+            skills: ['review'],
+            attachments: [{ name: 'note.txt', mime: 'text/plain', size: 5 }]
+        });
+        expect(recorder.info?.queue?.map((message) => message.text)).toEqual(['next']);
+
+        session.sendNow(sent!.id);
+        await recorder.until(() => recorder.ofKind('user').some((item) => item.text === 'next'));
+        expect(session.unqueue(sent!.id)).toBeNull();
+        expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['slow', 'next']);
+    });
+
     test('send now stops the running turn and puts that message first', async () => {
         await manager.create({ chatId: 'chat-q3', cwd: home });
         manager.attach('chat-q3', 'c1');

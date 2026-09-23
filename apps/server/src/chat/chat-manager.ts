@@ -16,6 +16,7 @@ import type {
     ChatEvent,
     ChatInfo,
     ChatItem,
+    ChatQueuedMessage,
     ChatSkill,
     ChatSubagentPayload,
     ChatSubagentResult,
@@ -653,10 +654,12 @@ export class ChatManager {
         return null;
     }
 
-    unqueue(chatId: string, messageId: string): void {
-        if (!this.require(chatId).unqueue(messageId)) {
+    unqueue(chatId: string, messageId: string): ChatQueuedMessage {
+        const message = this.require(chatId).unqueue(messageId);
+        if (!message) {
             throw new ChatError('request-not-found', `No queued message ${messageId} in chat ${chatId}`);
         }
+        return message;
     }
 
     sendNow(chatId: string, messageId: string): void {

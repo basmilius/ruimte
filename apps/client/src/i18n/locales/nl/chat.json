@@ -222,6 +222,8 @@
     "queue": {
       "attachments_one": "{{count}} bijlage",
       "attachments_other": "{{count}} bijlagen",
+      "alreadySent": "Dat bericht was al verstuurd",
+      "editFailed": "Het bericht kon niet worden teruggehaald om te bewerken",
       "sendNow": "Nu versturen"
     },
     "removeAttachment": "{{name}} verwijderen",

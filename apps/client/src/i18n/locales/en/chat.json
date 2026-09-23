@@ -222,6 +222,8 @@
     "queue": {
       "attachments_one": "{{count}} attachment",
       "attachments_other": "{{count}} attachments",
+      "alreadySent": "That message was already sent",
+      "editFailed": "The message could not be taken back to edit",
       "sendNow": "Send now"
     },
     "removeAttachment": "Remove {{name}}",

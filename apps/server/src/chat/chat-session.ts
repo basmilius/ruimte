@@ -193,14 +193,15 @@ export class ChatSession {
         return { queued: false, turnId };
     }
 
-    /* Drops a queued message; false when nothing waits under that id. */
-    unqueue(messageId: string): boolean {
+    /* Drops a queued message and hands it back; null when nothing waits under that id, as once it went out. */
+    unqueue(messageId: string): ChatQueuedMessage | null {
         const queue = this.queue;
-        if (!queue.some((message) => message.id === messageId)) {
-            return false;
+        const message = queue.find((entry) => entry.id === messageId);
+        if (!message) {
+            return null;
         }
-        this.setQueue(queue.filter((message) => message.id !== messageId));
-        return true;
+        this.setQueue(queue.filter((entry) => entry.id !== messageId));
+        return message;
     }
 
     /* Puts a queued message first and stops the turn in its way; the settle sends it. */

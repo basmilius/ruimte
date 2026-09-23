@@ -7,14 +7,26 @@ import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import clsx from 'clsx';
-import { ArrowUp, ChevronDown, Clock, Copy, FastForward, Paperclip, Plus, Square, SquareSlash, X, Zap } from 'lucide-react';
+import { ArrowUp, ChevronDown, Clock, Copy, FastForward, Paperclip, Pencil, Plus, Square, SquareSlash, X, Zap } from 'lucide-react';
 import { ActionRefusal } from '@ruimte/actions';
-import type { AgentKind, ChatApprovalItem, ChatInfo, ChatItem, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type {
+    AgentKind,
+    ChatApprovalItem,
+    ChatAttachmentUpload,
+    ChatInfo,
+    ChatItem,
+    ChatQueuedMessage,
+    ChatQuestionItem,
+    ChatSkill,
+    ModelInfo,
+    ModelSelection,
+    RuntimeMode
+} from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import { askBeforeStoppingSubagents } from '@/agents/end-children';
 import { chatClient, type ChatSendExtras } from '@/chat';
-import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, uploadBytes } from '@/chat/attachments';
-import { EMPTY_DRAFT, isEmptyDraft, joinDraftText, readDraft, takeDraftOffers, writeDraft, type ChatDraft } from '@/chat/drafts';
+import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, readStoredAttachments, uploadBytes } from '@/chat/attachments';
+import { EMPTY_DRAFT, isEmptyDraft, joinDraftText, readDraft, takeBackIntoDraft, takeDraftOffers, writeDraft, type ChatDraft } from '@/chat/drafts';
 import {
     MENTION_DRAG_TYPE,
     findMentionQuery,
@@ -48,6 +60,7 @@ import { formatNumber } from '@/format/number';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useProviders } from '@/state/providers';
+import { useToasts } from '@/state/toasts';
 import { isShellShortcut } from '@/terminal/keymap';
 import { transportFor } from '@/transport';
 import { Button } from '@/ui/Button';
@@ -143,8 +156,11 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const [dragging, setDragging] = useState(false);
     const [modelPickerOpen, setModelPickerOpen] = useState(false);
     const [confirmClear, setConfirmClear] = useState(false);
+    const [takingBack, setTakingBack] = useState<string | null>(null);
     const endpointId = useEndpointId();
     const inputRef = useRef<ComposerInputHandle>(null);
+    // Taking a queued message back waits on the machine, and what was typed meanwhile is what it merges with.
+    const draftRef = useRef(draft);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [dictationToolbar, setDictationToolbar] = useState<HTMLDivElement | null>(null);
     // A paste event says nothing about the keys behind it, so the key that asked for text inline is remembered here.
@@ -199,6 +215,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     }, [focused]);
 
     useEffect(() => {
+        draftRef.current = draft;
         writeDraft(chatId, draft);
     }, [chatId, draft]);
 
@@ -516,6 +533,64 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
         setDraft((current) => ({ ...current, text: prompt.text, mentions: [...prompt.mentions], skills: [...prompt.skills] }));
         setHistoryIndex(null);
         inputRef.current?.focus();
+    };
+
+    /*
+     * The files come back from the machine before the message leaves the queue, since the machine only
+     * serves a file some message still holds. The machine's refusal is what says it already went out.
+     */
+    const takeBack = async (message: ChatQueuedMessage): Promise<void> => {
+        if (takingBack !== null) {
+            return;
+        }
+        const failed = (e: unknown): void => {
+            useToasts.getState().show({ kind: 'error', title: t('composer.queue.editFailed'), description: e instanceof Error ? e.message : String(e) });
+        };
+        const readFiles = async (): Promise<ChatAttachmentUpload[]> => {
+            const stored = message.attachments ?? [];
+            const transport = transportFor(endpointId);
+            if (stored.length === 0) {
+                return [];
+            }
+            if (transport === null) {
+                throw new Error(t('composer.placeholder.disconnected'));
+            }
+            return readStoredAttachments((piece) => transport.request('bytes.read', piece), chatId, stored);
+        };
+        setTakingBack(message.id);
+        try {
+            let uploads: ChatAttachmentUpload[];
+            try {
+                uploads = await readFiles();
+            } catch (e) {
+                failed(e);
+                return;
+            }
+            try {
+                await performAsPerson('chat.unqueue', { chatId, messageId: message.id });
+            } catch (e) {
+                if (e instanceof ActionRefusal && e.code === 'request-not-found') {
+                    useToasts.getState().show({ kind: 'error', title: t('composer.queue.alreadySent') });
+                } else {
+                    failed(e);
+                }
+                return;
+            }
+            const merged = takeBackIntoDraft(draftRef.current, {
+                text: message.text,
+                mentions: message.mentions ?? [],
+                skills: message.skills ?? [],
+                attachments: uploads
+            });
+            setDraft(merged.draft);
+            if (merged.rejected[0]) {
+                setNotice(t('composer.notice.rejected', { name: merged.rejected[0].name, reason: merged.rejected[0].reason }));
+            }
+            setHistoryIndex(null);
+            inputRef.current?.focus();
+        } finally {
+            setTakingBack(null);
+        }
     };
 
     /* Cmd+S puts the draft away and clears the box; on an empty box the same key takes the last one back. */
@@ -879,6 +954,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                             {queue.map((message) => {
                                 const sendNow = (): void => void performAsPerson('chat.sendNow', { chatId, messageId: message.id }).catch(() => undefined);
                                 const unqueue = (): void => void performAsPerson('chat.unqueue', { chatId, messageId: message.id }).catch(() => undefined);
+                                const edit = (): void => void takeBack(message);
                                 return (
                                     <ContextMenu.Root key={message.id}>
                                         <ContextMenu.Trigger className="group/queued flex items-center gap-2 rounded-md px-1.5 py-1 text-xs text-text-muted">
@@ -894,6 +970,11 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                                                         <Icon icon={FastForward} size={12} />
                                                     </button>
                                                 </Tooltip>
+                                                <Tooltip label={t('common:action.edit')} name>
+                                                    <button className="icon-btn h-5 w-5 rounded" disabled={takingBack !== null} onClick={edit}>
+                                                        <Icon icon={Pencil} size={12} />
+                                                    </button>
+                                                </Tooltip>
                                                 <Tooltip label={t('common:action.remove')} name>
                                                     <button className="icon-btn h-5 w-5 rounded" onClick={unqueue}>
                                                         <Icon icon={X} size={12} />
@@ -906,6 +987,9 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                                                 <ContextMenu.Popup className="menu-popup">
                                                     <ContextMenu.Item className="menu-item" onClick={sendNow}>
                                                         <Icon icon={FastForward} size={14} /> {t('composer.queue.sendNow')}
+                                                    </ContextMenu.Item>
+                                                    <ContextMenu.Item className="menu-item" disabled={takingBack !== null} onClick={edit}>
+                                                        <Icon icon={Pencil} size={14} /> {t('common:action.edit')}
                                                     </ContextMenu.Item>
                                                     <ContextMenu.Item
                                                         className="menu-item"
