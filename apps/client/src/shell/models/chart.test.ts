@@ -1,5 +1,18 @@
 import { describe, expect, test } from 'bun:test';
-import { chartModels, costAxis, frontier, intelligenceAxis, modelColors, movePoint, spreadLabels, type ChartModel } from '@/shell/models/chart';
+import {
+    chartModels,
+    costAxis,
+    frontier,
+    intelligenceAxis,
+    MARK_SHAPES,
+    markPath,
+    modelMarks,
+    movePoint,
+    nearestPoint,
+    overlaps,
+    placeLabels,
+    type ChartModel
+} from '@/shell/models/chart';
 
 const point = (costPerTask: number, intelligence: number) => ({ costPerTask, intelligence });
 
@@ -53,13 +66,19 @@ describe('the axes', () => {
     });
 });
 
-describe('the colors', () => {
-    test('give every current model of a provider a step of its own, legacy ones after them', () => {
-        const colors = modelColors([model('old', 'claude', true), model('opus', 'claude'), model('sonnet', 'claude'), model('sol', 'codex')]);
-        expect(colors.get('opus')).toBe('var(--chart-claude-1)');
-        expect(colors.get('sonnet')).toBe('var(--chart-claude-2)');
-        expect(colors.get('old')).toBe('var(--chart-claude-3)');
-        expect(colors.get('sol')).toBe('var(--chart-codex-1)');
+describe('the marks', () => {
+    test("give every model its provider's color and a shape of its own within that provider, legacy ones after them", () => {
+        const marks = modelMarks([model('old', 'claude', true), model('opus', 'claude'), model('sonnet', 'claude'), model('sol', 'codex')]);
+        expect(marks.get('opus')).toEqual({ color: 'var(--chart-claude)', shape: 'circle' });
+        expect(marks.get('sonnet')).toEqual({ color: 'var(--chart-claude)', shape: 'square' });
+        expect(marks.get('old')).toEqual({ color: 'var(--chart-claude)', shape: 'triangle' });
+        expect(marks.get('sol')).toEqual({ color: 'var(--chart-codex)', shape: 'circle' });
+    });
+
+    test('draw every shape as one closed path', () => {
+        for (const shape of MARK_SHAPES) {
+            expect(markPath(shape, 10, 10, 4)).toMatch(/^M.* Z$/);
+        }
     });
 
     test('leave out a provider this client has no color for', () => {
@@ -67,10 +86,59 @@ describe('the colors', () => {
     });
 });
 
-describe('the labels at the end of the lines', () => {
-    test('move apart while keeping their order and the plot', () => {
-        expect(spreadLabels([100, 102, 300], 14, 0, 400)).toEqual([100, 114, 300]);
-        expect(spreadLabels([398, 396], 14, 0, 400)).toEqual([400, 386]);
+describe('the labels of the lines', () => {
+    const bounds = { left: 0, top: 0, right: 400, bottom: 300 };
+
+    test('sit beside and above the last point when nothing is in the way', () => {
+        const [place] = placeLabels(
+            [
+                [
+                    { x: 100, y: 200 },
+                    { x: 200, y: 100 }
+                ]
+            ],
+            [60],
+            bounds
+        );
+        expect(place).toMatchObject({ x: 210, y: 90, anchor: 'start' });
+    });
+
+    test('stay inside the chart', () => {
+        const [place] = placeLabels(
+            [
+                [
+                    { x: 100, y: 200 },
+                    { x: 390, y: 100 }
+                ]
+            ],
+            [60],
+            bounds
+        );
+        expect(place!.box.right).toBeLessThanOrEqual(bounds.right);
+    });
+
+    test('never land on a label placed before them', () => {
+        const places = placeLabels([[{ x: 300, y: 100 }], [{ x: 290, y: 104 }]], [60, 60], bounds);
+        const [first, second] = places.map((place) => place!.box);
+        expect(overlaps(first!, second!)).toBe(false);
+    });
+
+    test('leave a line without points out', () => {
+        expect(placeLabels([[]], [60], bounds)).toEqual([null]);
+    });
+});
+
+describe('the pointer', () => {
+    test('finds the closest point within reach', () => {
+        const lines = [
+            [
+                { x: 10, y: 10 },
+                { x: 50, y: 50 }
+            ],
+            [{ x: 58, y: 50 }]
+        ];
+        expect(nearestPoint(lines, 55, 50, 20)).toEqual({ line: 1, index: 0 });
+        expect(nearestPoint(lines, 200, 200, 20)).toBeNull();
     });
 });
 

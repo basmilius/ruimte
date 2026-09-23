@@ -581,7 +581,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 
     <h3>Gedrag</h3>
     <ul>
-      <li>Wijzen naar een punt of er met het toetsenbord op staan toont dezelfde kaart met model, denkniveau, index en kosten. De kaart volgt het eigen patroon van <code>UsageChart</code>, want <code>Tooltip</code> is voor knoppen. Pijltjes lopen langs de niveaus van een lijn, pijl omhoog en omlaag naar de volgende lijn.</li>
+      <li>Wijzen naar een punt of er met het toetsenbord op staan trekt gestippelde hulplijnen in de kleur van het model naar beide assen en zet de index en de kosten op de assen. De naam en het denkniveau staan boven het punt; labels die daaronder vallen, wijken. Er is geen kaart. De pointer hoeft een punt niet precies te raken: het dichtstbijzijnde punt binnen 24 px antwoordt. Pijltjes lopen langs de niveaus van een lijn, pijl omhoog en omlaag naar de volgende lijn.</li>
       <li>De lijst rechts is de legenda. Wijzen naar een model licht zijn lijn op en dimt de rest, en klikken zet een model aan of uit. Legacy-modellen staan standaard uit. Een model zonder meting staat grijs in de lijst met <em>Not measured</em>.</li>
       <li>De kostenas is standaard logaritmisch, en een schakelaar kiest lineair. De keuze hoort bij de client en onthouden is niet nodig.</li>
       <li>Onder de lijnen ligt een band over de punten die door geen ander punt verslagen worden. Die band rekent een pure functie uit, met een test ernaast.</li>
@@ -592,7 +592,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 
     <h3>Regels van het project die hier gelden</h3>
     <ul>
-      <li>Kleuren komen uit tokens. <code>--chart-claude</code> en <code>--chart-codex</code> bestaan al per provider. Zes lijnen vragen een stap in lichtheid per model binnen de tint van zijn provider, als nieuwe tokens in <code>styles.css</code> voor licht en donker. Een label aan het eind van elke lijn maakt het onderscheid, niet de kleur alleen.</li>
+      <li>Kleuren komen uit tokens. <code>--chart-claude</code> en <code>--chart-codex</code> bestaan al per provider. Elk model krijgt de kleur van zijn provider en een eigen vorm voor zijn punten. Elke lijn draagt zijn naam op de plek met de minste botsingen, bij voorkeur bij zijn laatste punt (<code>placeLabels</code> in <code>shell/models/chart.ts</code>). Dat maakt het onderscheid, niet de kleur alleen.</li>
       <li>Kosten, indexen en datums gaan door <code>apps/client/src/format</code>. Kosten van $0,004 tot $7,63 vragen significante cijfers in plaats van twee decimalen.</li>
       <li>Teksten staan in een eigen namespace in het Engels en het Nederlands. <em>Intelligence Index</em> en <em>Coding Index</em> zijn namen en blijven onvertaald.</li>
       <li>Alleen de vier lettergroottes uit <code>@theme</code>. Assen en rasterlijnen gebruiken de randkleur en nooit het accent.</li>
@@ -602,7 +602,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
     <h3>Hoe het gebouwd is</h3>
     <p>De overlay staat in <code>apps/client/src/shell/models</code>: <code>ModelsDialog.tsx</code>, <code>ModelsChart.tsx</code>, <code>ModelsLegend.tsx</code> en de pure delen in <code>chart.ts</code> (band, assen, kleuren, labels, pijltjes), met een test ernaast. Waar de bouw iets vastlegt dat hierboven open bleef:</p>
     <ul>
-      <li>Elke provider heeft vijf lichtheidsstappen, <code>--chart-claude-1</code> tot <code>-5</code> en <code>--chart-codex-1</code> tot <code>-5</code>. De actuele modellen krijgen eerst een stap, legacy-modellen daarna; een legacy-model kan een stap delen met een actueel, en het label aan het eind van zijn lijn maakt het verschil.</li>
+      <li>Na de eerste test in de app op 23 september vervallen de lichtheidsstappen. Een model tekent in <code>--chart-claude</code> of <code>--chart-codex</code>, met per provider een vorm uit acht (<code>MARK_SHAPES</code> in <code>shell/models/chart.ts</code>): cirkel, vierkant, driehoek, ruit, ster, omgekeerde driehoek, zeshoek en kruis. De actuele modellen krijgen eerst een vorm, legacy-modellen daarna.</li>
       <li>De band heeft een eigen token, <code>--chart-frontier</code>: inkt met een lage alpha en niet het accent dat de schets in dit rapport gebruikt.</li>
       <li>De legenda groepeert per provider onder zijn logo, met de band en de schakelaar voor legacy-modellen eronder.</li>
       <li>Kosten gaan door <code>formatUsdSignificant</code> in <code>format/number.ts</code>, drie significante cijfers.</li>
@@ -719,7 +719,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
         <h3>De overlay</h3>
         <p><span class="badge confirmed">Klaar</span> <code>0b5d844f</code>. Licht, donker en beide talen nog te zien in de app.</p>
         <p><code>modelsOpen</code> in <code>useUi</code>, het omhulsel naast <code>UsageDialog</code>, de grafiek, de legenda, de band en de voet.</p>
-        <p>Klaar als <code>setModelsOpen(true)</code> de overlay opent op het startscherm en in een workspace, de as standaard logaritmisch is, muis en toetsenbord dezelfde kaart tonen, de lege staat verschijnt als de Worker niet antwoordt, en de overlay klopt in licht en donker en in beide talen. <code>bun run format</code>, <code>bun run check</code> en <code>bun run test</code> slagen.</p>
+        <p>Klaar als <code>setModelsOpen(true)</code> de overlay opent op het startscherm en in een workspace, de as standaard logaritmisch is, muis en toetsenbord dezelfde hulplijnen tonen, de lege staat verschijnt als de Worker niet antwoordt, en de overlay klopt in licht en donker en in beide talen. <code>bun run format</code>, <code>bun run check</code> en <code>bun run test</code> slagen.</p>
       </div></li>
       <li class="step"><div>
         <h3>De menubalk</h3>

@@ -22,10 +22,6 @@
     "frontier": "Not beaten on both axes",
     "nothingShown": "Turn on a model in the list to draw it."
   },
-  "card": {
-    "intelligence": "Intelligence Index",
-    "cost": "Cost per task"
-  },
   "legend": {
     "label": "Models",
     "notMeasured": "Not measured",

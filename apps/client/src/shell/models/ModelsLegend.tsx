@@ -2,14 +2,14 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { UsageProvider } from '@ruimte/contracts';
 import { Toggle } from '@/shell/settings/controls';
-import type { ChartModel } from '@/shell/models/chart';
+import { markPath, type ChartModel, type ModelMark } from '@/shell/models/chart';
 import { PROVIDER_LABELS } from '@/shell/usage/format';
 import { ProviderLogo } from '@/ui/ProviderLogo';
 
 interface ModelsLegendProps {
     /* Every model the list shows, legacy ones only while they are asked for. */
     models: readonly ChartModel[];
-    colors: ReadonlyMap<string, string>;
+    marks: ReadonlyMap<string, ModelMark>;
     hidden: ReadonlySet<string>;
     showLegacy: boolean;
     onToggle(id: string): void;
@@ -20,7 +20,7 @@ interface ModelsLegendProps {
 const PROVIDER_ORDER: readonly UsageProvider[] = ['claude', 'codex'];
 
 /* The list beside the chart is its legend: pointing at a model lights its line, a click draws it or takes it away. */
-export function ModelsLegend({ models, colors, hidden, showLegacy, onToggle, onHighlight, onShowLegacy }: ModelsLegendProps) {
+export function ModelsLegend({ models, marks, hidden, showLegacy, onToggle, onHighlight, onShowLegacy }: ModelsLegendProps) {
     const { t } = useTranslation('models');
     return (
         <div className="flex min-h-0 flex-col gap-3">
@@ -39,24 +39,30 @@ export function ModelsLegend({ models, colors, hidden, showLegacy, onToggle, onH
                             {own.map((model) => {
                                 const measured = model.points.length > 0;
                                 const shown = measured && !hidden.has(model.id);
-                                const color = colors.get(model.id) ?? 'var(--text-muted)';
+                                const mark = marks.get(model.id);
+                                const color = measured ? (mark?.color ?? 'var(--text-muted)') : 'var(--border-strong)';
                                 return (
                                     <button
                                         key={model.id}
                                         type="button"
                                         aria-pressed={shown}
                                         disabled={!measured}
-                                        className="flex h-7 items-center gap-2 rounded-md px-2 text-left text-xs enabled:hover:bg-surface-sunken"
+                                        className="flex h-7 items-center gap-2 rounded-md px-2 text-left text-xs enabled:hover:bg-surface-hover"
                                         onClick={() => onToggle(model.id)}
                                         onPointerEnter={() => shown && onHighlight(model.id)}
                                         onPointerLeave={() => onHighlight(null)}
                                         onFocus={() => shown && onHighlight(model.id)}
                                         onBlur={() => onHighlight(null)}
                                     >
-                                        <span
-                                            className="size-2.5 shrink-0 rounded-full border-2"
-                                            style={{ borderColor: measured ? color : 'var(--border-strong)', background: shown ? color : 'transparent' }}
-                                        />
+                                        <svg width={12} height={12} className="shrink-0" aria-hidden>
+                                            <path
+                                                d={markPath(mark?.shape ?? 'circle', 6, 6, 3.5)}
+                                                fill={shown ? color : 'none'}
+                                                stroke={color}
+                                                strokeWidth={1.5}
+                                                strokeLinejoin="round"
+                                            />
+                                        </svg>
                                         <span className={clsx('min-w-0 grow truncate', shown ? 'text-text' : 'text-text-muted')}>{model.name}</span>
                                         {!measured && <span className="shrink-0 text-text-faint">{t('legend.notMeasured')}</span>}
                                     </button>

@@ -22,10 +22,6 @@
     "frontier": "Niet verslagen op beide assen",
     "nothingShown": "Zet een model in de lijst aan om het te tekenen."
   },
-  "card": {
-    "intelligence": "Intelligence Index",
-    "cost": "Kosten per taak"
-  },
   "legend": {
     "label": "Modellen",
     "notMeasured": "Niet gemeten",

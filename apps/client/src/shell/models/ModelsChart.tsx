@@ -3,27 +3,42 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { BenchmarkPoint } from '@ruimte/pulsar';
 import { formatDecimal, formatUsdSignificant } from '@/format/number';
-import { costAxis, frontier, intelligenceAxis, movePoint, spreadLabels, type ChartModel, type CostScale, type PointAt } from '@/shell/models/chart';
+import {
+    boxOf,
+    costAxis,
+    frontier,
+    intelligenceAxis,
+    LABEL_HEIGHT,
+    markPath,
+    movePoint,
+    nearestPoint,
+    overlaps,
+    placeLabels,
+    type ChartModel,
+    type CostScale,
+    type ModelMark,
+    type PointAt
+} from '@/shell/models/chart';
 import { EmptyState } from '@/ui/EmptyState';
-import { FLOAT } from '@/ui/classes';
-import { ProviderLogo } from '@/ui/ProviderLogo';
 import { useMeasuredWidth } from '@/ui/useMeasuredWidth';
 
 interface ModelsChartProps {
     /* The models that are switched on and measured, in the order of the list beside the chart. */
     models: readonly ChartModel[];
-    colors: ReadonlyMap<string, string>;
+    marks: ReadonlyMap<string, ModelMark>;
     scale: CostScale;
     /* The model the list points at; every other line steps back. */
     highlighted: string | null;
 }
 
 const HEIGHT = 400;
-const PAD = { left: 40, right: 136, top: 32, bottom: 36 };
-const CARD_WIDTH = 216;
-const LABEL_GAP = 16;
+const PAD = { left: 40, right: 16, top: 32, bottom: 36 };
 /* A line the list does not point at still has to be seen, just not read first. */
 const DIMMED = 0.2;
+/* How far from a point the pointer may be and still answer for it. */
+const REACH = 24;
+/* A text over a line stays readable when the ground is drawn around its letters first. */
+const HALO = { stroke: 'var(--surface-raised)', strokeWidth: 4, strokeLinejoin: 'round', paintOrder: 'stroke' } as const;
 
 interface Placed extends BenchmarkPoint {
     line: number;
@@ -34,12 +49,23 @@ interface Placed extends BenchmarkPoint {
 
 const keyOf = (at: PointAt): string => `${at.line}:${at.index}`;
 
+const measuring = typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d');
+
+/* The width of a label before it is drawn, so the labels can be placed around each other. */
+const textWidth = (text: string, weight: number): number => {
+    if (measuring === null) {
+        return text.length * 7;
+    }
+    measuring.font = `${weight} 12px ${getComputedStyle(document.body).fontFamily}`;
+    return measuring.measureText(text).width;
+};
+
 /*
  * The Intelligence Index against the cost per task, a line per model through its efforts and a band
- * under the points nothing beats. Drawn in real pixels, like the usage chart. Every point takes the
- * focus, so the card that answers a pointer answers the keyboard too.
+ * under the points nothing beats. The point nearest the pointer draws guides to both axes and its
+ * values on them; every point also takes the focus, so the keyboard reads the same.
  */
-export function ModelsChart({ models, colors, scale, highlighted }: ModelsChartProps) {
+export function ModelsChart({ models, marks, scale, highlighted }: ModelsChartProps) {
     const { t } = useTranslation('models');
     const describedBy = useId();
     const [measure, width] = useMeasuredWidth();
@@ -47,30 +73,45 @@ export function ModelsChart({ models, colors, scale, highlighted }: ModelsChartP
     const [focused, setFocused] = useState<PointAt | null>(null);
     const nodes = useRef(new Map<string, SVGGElement>());
 
-    const all = useMemo(() => models.flatMap((model) => model.points), [models]);
-    const xAxis = costAxis(
-        all.map((point) => point.costPerTask),
-        scale
-    );
-    const yAxis = intelligenceAxis(all.map((point) => point.intelligence));
     const plotWidth = Math.max(0, width - PAD.left - PAD.right);
     const plotHeight = HEIGHT - PAD.top - PAD.bottom;
+    const bottom = PAD.top + plotHeight;
+
+    const { xAxis, yAxis, lines } = useMemo(() => {
+        const all = models.flatMap((model) => model.points);
+        const costs = costAxis(
+            all.map((point) => point.costPerTask),
+            scale
+        );
+        const intelligence = intelligenceAxis(all.map((point) => point.intelligence));
+        const placed: Placed[][] = models.map((model, line) =>
+            model.points.map((point, index) => ({
+                ...point,
+                line,
+                index,
+                x: Math.round(PAD.left + costs.at(point.costPerTask) * plotWidth),
+                y: Math.round(PAD.top + (1 - intelligence.at(point.intelligence)) * plotHeight)
+            }))
+        );
+        return { xAxis: costs, yAxis: intelligence, lines: placed };
+    }, [models, scale, plotWidth, plotHeight]);
+    const places = useMemo(
+        () =>
+            placeLabels(
+                lines,
+                models.map((model) => textWidth(model.name, 400)),
+                { left: PAD.left, top: 4, right: width - 4, bottom }
+            ),
+        [lines, models, width, bottom]
+    );
+
     const xOf = (cost: number): number => Math.round(PAD.left + xAxis.at(cost) * plotWidth);
     const yOf = (intelligence: number): number => Math.round(PAD.top + (1 - yAxis.at(intelligence)) * plotHeight);
-
-    const lines: Placed[][] = models.map((model, line) =>
-        model.points.map((point, index) => ({ ...point, line, index, x: xOf(point.costPerTask), y: yOf(point.intelligence) }))
-    );
     const band = frontier(lines.flat());
-    const labelYs = spreadLabels(
-        lines.map((points) => points.at(-1)?.y ?? 0),
-        LABEL_GAP,
-        PAD.top,
-        PAD.top + plotHeight
-    );
     const shown = hovered ?? focused;
     const active = shown === null ? null : (lines[shown.line]?.[shown.index] ?? null);
     const activeModel = active === null ? null : models[active.line]!;
+    const activeColor = activeModel === null ? null : (marks.get(activeModel.id)?.color ?? 'var(--text-muted)');
     const tabbable = focused !== null && lines[focused.line]?.[focused.index] ? focused : { line: 0, index: 0 };
 
     const effortLabel = (effort: string): string => t(`efforts.${effort}`, { defaultValue: effort });
@@ -95,6 +136,26 @@ export function ModelsChart({ models, colors, scale, highlighted }: ModelsChartP
               });
     };
 
+    /* The name of the point that answers sits over it, or under it against the top, and never past a side. */
+    const callout = (() => {
+        if (active === null || activeModel === null) {
+            return null;
+        }
+        const text = `${activeModel.name} · ${effortLabel(active.effort)}`;
+        const half = textWidth(text, 500) / 2;
+        const x = Math.min(Math.max(active.x, PAD.left + half), width - 4 - half);
+        const y = active.y - 18 - LABEL_HEIGHT / 2 < 4 ? active.y + 20 : active.y - 18;
+        return { text, x, y, box: boxOf(x, y, 'middle', half * 2) };
+    })();
+
+    const onPointerMove = (e: React.PointerEvent<SVGSVGElement>): void => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const next = nearestPoint(lines, e.clientX - rect.left, e.clientY - rect.top, REACH);
+        if (next?.line !== hovered?.line || next?.index !== hovered?.index) {
+            setHovered(next);
+        }
+    };
+
     const onKeyDown = (e: React.KeyboardEvent<SVGGElement>, at: PointAt): void => {
         const next = movePoint(
             lines.map((points) => points.length),
@@ -108,21 +169,31 @@ export function ModelsChart({ models, colors, scale, highlighted }: ModelsChartP
         nodes.current.get(keyOf(next))?.focus();
     };
 
-    /* Beside the point, on the side with room, and never past the top or the bottom of the plot. */
-    const cardLeft = active === null ? 0 : active.x + 14 + CARD_WIDTH > width ? active.x - 14 - CARD_WIDTH : active.x + 14;
-    const cardTop = active === null ? 0 : Math.min(Math.max(0, active.y - 40), HEIGHT - 104);
+    /* The line that answers draws last, so it sits on top of the lines it crosses. */
+    const order = models.map((_, line) => line).sort((one, other) => Number(one === active?.line) - Number(other === active?.line));
 
     return (
         <div ref={measure} className="relative select-none" style={{ height: HEIGHT }}>
-            <svg width={width} height={HEIGHT} role="group" aria-label={t('chart.label')} aria-describedby={describedBy}>
+            <svg
+                width={width}
+                height={HEIGHT}
+                role="group"
+                aria-label={t('chart.label')}
+                aria-describedby={describedBy}
+                style={{ cursor: hovered === null ? undefined : 'crosshair' }}
+                onPointerMove={onPointerMove}
+                onPointerLeave={() => setHovered(null)}
+            >
                 {yAxis.ticks.map((tick) => {
                     const y = yOf(tick) + 0.5;
                     return (
                         <g key={`y${tick}`}>
                             <line x1={PAD.left} x2={PAD.left + plotWidth} y1={y} y2={y} stroke="var(--border)" strokeWidth={1} />
-                            <text x={PAD.left - 8} y={y} textAnchor="end" dominantBaseline="middle" className="fill-text-faint text-xs tabular-nums">
-                                {formatDecimal(tick)}
-                            </text>
+                            {(active === null || Math.abs(y - active.y) > LABEL_HEIGHT) && (
+                                <text x={PAD.left - 8} y={y} textAnchor="end" dominantBaseline="middle" className="fill-text-faint text-xs tabular-nums">
+                                    {formatDecimal(tick)}
+                                </text>
+                            )}
                         </g>
                     );
                 })}
@@ -130,10 +201,12 @@ export function ModelsChart({ models, colors, scale, highlighted }: ModelsChartP
                     const x = xOf(tick) + 0.5;
                     return (
                         <g key={`x${tick}`}>
-                            <line x1={x} x2={x} y1={PAD.top} y2={PAD.top + plotHeight} stroke="var(--border-soft)" strokeWidth={1} />
-                            <text x={x} y={PAD.top + plotHeight + 16} textAnchor="middle" className="fill-text-faint text-xs tabular-nums">
-                                {formatUsdSignificant(tick)}
-                            </text>
+                            <line x1={x} x2={x} y1={PAD.top} y2={bottom} stroke="var(--border-soft)" strokeWidth={1} />
+                            {(active === null || Math.abs(x - active.x) > 40) && (
+                                <text x={x} y={bottom + 16} textAnchor="middle" className="fill-text-faint text-xs tabular-nums">
+                                    {formatUsdSignificant(tick)}
+                                </text>
+                            )}
                         </g>
                     );
                 })}
@@ -153,11 +226,24 @@ export function ModelsChart({ models, colors, scale, highlighted }: ModelsChartP
                         strokeLinejoin="round"
                     />
                 )}
-                {models.map((model, line) => {
+                {active !== null && activeColor !== null && (
+                    <path
+                        d={`M${PAD.left} ${active.y + 0.5} H${active.x} M${active.x + 0.5} ${active.y} V${bottom}`}
+                        fill="none"
+                        stroke={activeColor}
+                        strokeWidth={1}
+                        strokeDasharray="3 3"
+                        opacity={0.8}
+                    />
+                )}
+                {order.map((line) => {
+                    const model = models[line]!;
                     const points = lines[line]!;
-                    const color = colors.get(model.id) ?? 'var(--text-muted)';
+                    const mark = marks.get(model.id);
+                    const color = mark?.color ?? 'var(--text-muted)';
                     const dimmed = highlighted !== null && highlighted !== model.id;
-                    const last = points.at(-1);
+                    const place = places[line];
+                    const labelShown = place && line !== active?.line && (callout === null || !overlaps(place.box, callout.box));
                     return (
                         <g key={model.id} opacity={dimmed ? DIMMED : 1}>
                             {points.length > 1 && (
@@ -173,6 +259,7 @@ export function ModelsChart({ models, colors, scale, highlighted }: ModelsChartP
                                 const at = { line, index: point.index };
                                 const isTabbable = tabbable.line === line && tabbable.index === point.index;
                                 const isFocused = focused?.line === line && focused.index === point.index;
+                                const isActive = active?.line === line && active.index === point.index;
                                 return (
                                     <g
                                         key={point.effort}
@@ -190,21 +277,27 @@ export function ModelsChart({ models, colors, scale, highlighted }: ModelsChartP
                                         onFocus={() => setFocused(at)}
                                         onBlur={() => setFocused(null)}
                                         onKeyDown={(e) => onKeyDown(e, at)}
-                                        onPointerEnter={() => setHovered(at)}
-                                        onPointerLeave={() => setHovered(null)}
                                     >
-                                        <circle cx={point.x} cy={point.y} r={10} fill="transparent" />
-                                        {isFocused && <circle cx={point.x} cy={point.y} r={7} fill="none" stroke="var(--text)" strokeWidth={2} />}
-                                        <circle cx={point.x} cy={point.y} r={4} fill={color} stroke="var(--surface-raised)" strokeWidth={2} />
+                                        {isFocused && <circle cx={point.x} cy={point.y} r={10} fill="none" stroke="var(--text)" strokeWidth={2} />}
+                                        <path
+                                            d={markPath(mark?.shape ?? 'circle', point.x, point.y, isActive ? 5.5 : 4)}
+                                            fill={color}
+                                            stroke="var(--surface-raised)"
+                                            strokeWidth={1.5}
+                                            strokeLinejoin="round"
+                                            paintOrder="stroke"
+                                        />
                                     </g>
                                 );
                             })}
-                            {last && (
+                            {place && labelShown && (
                                 <text
-                                    x={last.x + 10}
-                                    y={labelYs[line]}
+                                    x={place.x}
+                                    y={place.y}
+                                    textAnchor={place.anchor}
                                     dominantBaseline="middle"
                                     className={clsx('text-xs', highlighted === model.id ? 'fill-text' : 'fill-text-muted')}
+                                    {...HALO}
                                 >
                                     {model.name}
                                 </text>
@@ -212,32 +305,24 @@ export function ModelsChart({ models, colors, scale, highlighted }: ModelsChartP
                         </g>
                     );
                 })}
+                {active !== null && activeColor !== null && callout !== null && (
+                    <g aria-hidden fill={activeColor} className="text-xs font-medium tabular-nums" {...HALO}>
+                        <text x={callout.x} y={callout.y} textAnchor="middle" dominantBaseline="middle">
+                            {callout.text}
+                        </text>
+                        <text x={PAD.left - 8} y={active.y} textAnchor="end" dominantBaseline="middle">
+                            {formatDecimal(active.intelligence)}
+                        </text>
+                        <text x={active.x} y={bottom + 16} textAnchor="middle">
+                            {formatUsdSignificant(active.costPerTask)}
+                        </text>
+                    </g>
+                )}
             </svg>
             <p id={describedBy} className="sr-only">
                 {models.map(rangeOf).join(' ')}
             </p>
             {models.length === 0 && <EmptyState className="pointer-events-none absolute inset-0">{t('chart.nothingShown')}</EmptyState>}
-            {active !== null && activeModel !== null && (
-                <div
-                    aria-hidden
-                    className={clsx(FLOAT, 'pointer-events-none absolute rounded-lg p-2 text-xs')}
-                    style={{ left: cardLeft, top: cardTop, width: CARD_WIDTH }}
-                >
-                    <p className="flex items-center gap-1.5 font-medium text-text">
-                        <ProviderLogo provider={activeModel.provider} size={12} className="text-text-muted" />
-                        <span className="min-w-0 truncate">{activeModel.name}</span>
-                    </p>
-                    <p className="mb-1 text-text-muted">{effortLabel(active.effort)}</p>
-                    <p className="flex items-center gap-1.5 text-text-muted">
-                        {t('card.intelligence')}
-                        <span className="ml-auto tabular-nums text-text">{formatDecimal(active.intelligence)}</span>
-                    </p>
-                    <p className="flex items-center gap-1.5 text-text-muted">
-                        {t('card.cost')}
-                        <span className="ml-auto tabular-nums text-text">{formatUsdSignificant(active.costPerTask)}</span>
-                    </p>
-                </div>
-            )}
         </div>
     );
 }

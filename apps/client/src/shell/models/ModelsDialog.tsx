@@ -6,7 +6,7 @@ import { ChartSpline, X } from 'lucide-react';
 import { AddressBookRequestError, type ModelBenchmarksResult } from '@ruimte/pulsar';
 import { formatNumber } from '@/format/number';
 import { publicAddressBook } from '@/pulsar/account';
-import { chartModels, modelColors, type CostScale } from '@/shell/models/chart';
+import { chartModels, modelMarks, type CostScale } from '@/shell/models/chart';
 import { ModelsChart } from '@/shell/models/ModelsChart';
 import { ModelsLegend } from '@/shell/models/ModelsLegend';
 import { Segmented, Skeleton } from '@/shell/settings/controls';
@@ -74,7 +74,7 @@ const useBenchmarks = (): [load: Load, retry: () => void] => {
 function Comparison({ result, receivedAt, scale }: { result: ModelBenchmarksResult; receivedAt: number; scale: CostScale }) {
     const { t } = useTranslation('models');
     const models = useMemo(() => chartModels(result.models), [result]);
-    const colors = useMemo(() => modelColors(models), [models]);
+    const marks = useMemo(() => modelMarks(models), [models]);
     const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
     const [showLegacy, setShowLegacy] = useState(false);
     const [highlighted, setHighlighted] = useState<string | null>(null);
@@ -93,10 +93,10 @@ function Comparison({ result, receivedAt, scale }: { result: ModelBenchmarksResu
     return (
         <>
             <div className="grid min-h-0 grow grid-cols-[1fr_16rem] gap-6 overflow-y-auto px-6 pt-4 pb-4 max-[960px]:px-4">
-                <ModelsChart models={drawn} colors={colors} scale={scale} highlighted={drawn.some((model) => model.id === highlighted) ? highlighted : null} />
+                <ModelsChart models={drawn} marks={marks} scale={scale} highlighted={drawn.some((model) => model.id === highlighted) ? highlighted : null} />
                 <ModelsLegend
                     models={listed}
-                    colors={colors}
+                    marks={marks}
                     hidden={hidden}
                     showLegacy={showLegacy}
                     onToggle={toggle}
