@@ -4,7 +4,7 @@ import type { StoreApi } from 'zustand';
 import { agentActivity } from '@/actions/agent-activity';
 import type { openProject } from '@/project/open';
 import { chatWorking, sessionWorking } from '@/state/agent-work';
-import { focusedCanvas } from '@/state/canvas';
+import { focusedCanvas, liveCanvas } from '@/state/canvas';
 import { activeViewOf, type DocumentState } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId } from '@/state/keys';
@@ -24,7 +24,9 @@ export function projectAgents(document: StoreApi<DocumentState>) {
         if (!isCanvasView(view)) {
             return [];
         }
-        const nodes = view.id === active?.id && canvas ? Object.values(canvas.nodes) : view.nodes;
+        // Every canvas on screen, since an action reaches a canvas in any cell and its editor is newer.
+        const live = liveCanvas(view.id);
+        const nodes = live === null ? view.nodes : Object.values(live.nodes);
         return nodes
             .filter((node) => node.kind === 'chat' || node.kind === 'terminal')
             .map((node) => ({

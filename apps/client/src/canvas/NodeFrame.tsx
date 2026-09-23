@@ -21,7 +21,7 @@ import {
     Terminal,
     X
 } from 'lucide-react';
-import { focusNodeAction } from '@/actions/client-actions';
+import { focusNodeAction, renameNodeAction } from '@/actions/client-actions';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { TaskMark } from '@/tasks/TaskMark';
@@ -137,7 +137,7 @@ function Title({ id, title, editing, muted, onDone }: { id: string; title: strin
                 const next = e.currentTarget.value.trim();
                 // An empty field is not a name: it hands the node back to whatever named it before.
                 if (next) {
-                    canvasStore.getState().renameNode(id, next);
+                    renameNodeAction(canvasStore.getState().viewId, id, next);
                 } else {
                     resetTitle(id);
                 }

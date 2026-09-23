@@ -24,6 +24,7 @@ import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/pr
 import { useSubagentView } from '@/chat/subagent-view';
 import { stepTimelineMessage } from '@/chat/timeline-scroll';
 import { focusedCanvas } from '@/state/canvas';
+import { focusedDiagram } from '@/state/diagram';
 import { transportFor } from '@/transport';
 import { activeViewOf, useDocument } from '@/state/document';
 import { FILES_VIEW_ID } from '@/shell/files-view';
@@ -251,15 +252,30 @@ export const useCanvasShortcuts = (): void => {
                 useUi.getState().togglePanel();
                 return;
             }
-            /* A diagram has an undo of its own and nothing else a key reaches; a drawing binds its keys
-               in its view, since a drawing has the keyboard the way a terminal has it. */
+            /* A diagram has an undo and a camera of its own and nothing else a key reaches; a drawing binds
+               its keys in its view, since a drawing has the keyboard the way a terminal has it. */
             const active = activeViewOf(useDocument.getState());
-            if (active !== null && isDiagramView(active) && (is(CANVAS_SHORTCUTS.undo) || is(CANVAS_SHORTCUTS.redo))) {
+            const diagramKeys = [
+                CANVAS_SHORTCUTS.undo,
+                CANVAS_SHORTCUTS.redo,
+                CANVAS_SHORTCUTS.fitAll,
+                CANVAS_SHORTCUTS.zoomSelection,
+                CANVAS_SHORTCUTS.zoomReset
+            ];
+            if (active !== null && isDiagramView(active) && diagramKeys.some(is)) {
                 if (isTypingTarget(e.target) || isInFloatingLayer(e.target) || useUi.getState().settings.open) {
                     return;
                 }
                 e.preventDefault();
-                historyAction(is(CANVAS_SHORTCUTS.redo) ? 'redo' : 'undo');
+                if (is(CANVAS_SHORTCUTS.undo) || is(CANVAS_SHORTCUTS.redo)) {
+                    historyAction(is(CANVAS_SHORTCUTS.redo) ? 'redo' : 'undo');
+                } else if (is(CANVAS_SHORTCUTS.fitAll)) {
+                    fitAction();
+                } else if (is(CANVAS_SHORTCUTS.zoomSelection)) {
+                    focusedDiagram().getState().zoomToSelection();
+                } else {
+                    focusedDiagram().getState().zoomTo(1);
+                }
                 return;
             }
             // A dialog owns the keyboard while it is up; Backspace there must not delete nodes. Nor may

@@ -319,6 +319,65 @@ describe('client actions', () => {
         defaultDiagrams.release(viewId);
     });
 
+    describe('a view in another cell', () => {
+        /* Main stays on screen on the left while the focus moves to Release beside it. */
+        const splitToRelease = () => {
+            useDocument.getState().splitFocused('right', 'release');
+            expect(useDocument.getState().activeViewId).toBe('release');
+            expect(defaultCanvases.peek('main')).not.toBeNull();
+        };
+
+        test('an action reaches a canvas on screen in a cell without the focus', async () => {
+            splitToRelease();
+            const result = await createNode(clientActions, { kind: 'note', title: 'Beside' });
+            expect(result).toMatchObject({ status: 'completed', output: { viewId: 'main', view: 'Main', node: 'Beside' } });
+            if (result.status !== 'completed' || !result.undoToken) {
+                throw new Error('Expected a completed create with an undo');
+            }
+            expect(canvas().nodes[result.output.nodeId]).toMatchObject({ title: 'Beside' });
+            expect(Object.keys(defaultCanvases.of('release').getState().nodes)).toEqual([]);
+            expect(await clientActions.undo(result.undoToken, VOICE_ACTION_CALL)).toMatchObject({ status: 'completed' });
+            expect(canvas().nodes[result.output.nodeId]).toBeUndefined();
+        });
+
+        test('fitting a canvas beside the focus moves its camera and leaves the focused one alone', async () => {
+            splitToRelease();
+            canvas().addNode('note', { x: 3000, y: 2000 });
+            canvas().setViewport({ w: 1000, h: 800 });
+            canvas().setCamera({ x: 0, y: 0, zoom: 1 });
+            const focused = defaultCanvases.of('release').getState().camera;
+            expect(await clientActions.execute('canvas.fit', { viewId: 'main' }, VOICE_ACTION_CALL)).toMatchObject({ status: 'completed' });
+            expect(canvas().camera).not.toEqual({ x: 0, y: 0, zoom: 1 });
+            expect(defaultCanvases.of('release').getState().camera).toEqual(focused);
+        });
+
+        test('a view that is on no cell at all is still refused', async () => {
+            expect(await createNode(clientActions, { viewId: 'release', kind: 'note' })).toMatchObject({
+                status: 'failed',
+                error: { code: 'inactive-canvas' }
+            });
+            expect(await clientActions.execute('canvas.fit', { viewId: 'release' }, VOICE_ACTION_CALL)).toMatchObject({
+                status: 'failed',
+                error: { code: 'inactive-view' }
+            });
+        });
+
+        test('a rename that lands after the focus moved to another cell keeps the new name, with one undo', async () => {
+            const nodeId = canvas().addNode('note', { x: 0, y: 0 }, { title: 'Draft' })!;
+            // The press in the other cell comes before the blur that ends the rename.
+            splitToRelease();
+            const result = await clientActions.execute('node.rename', { viewId: 'main', nodeId, name: 'Plan' }, PERSON_ACTION_CALL);
+            expect(result).toMatchObject({ status: 'completed', output: { previousName: 'Draft', name: 'Plan', changed: true } });
+            expect(canvas().nodes[nodeId]).toMatchObject({ title: 'Plan', titleSource: 'user' });
+            if (result.status !== 'completed' || !result.undoToken) {
+                throw new Error('Expected a completed rename with an undo');
+            }
+            expect(await clientActions.undo(result.undoToken, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed' });
+            expect(canvas().nodes[nodeId]?.title).toBe('Draft');
+            expect(await clientActions.undo(result.undoToken, PERSON_ACTION_CALL)).toMatchObject({ status: 'failed', error: { code: 'unknown-undo' } });
+        });
+    });
+
     describe('making views', () => {
         const registry = () => createClientActionRegistry(useDocument, { providers: () => [claude, codex] });
 

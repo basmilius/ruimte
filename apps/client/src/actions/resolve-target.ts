@@ -3,7 +3,7 @@ import { isCanvasView, isOpenableView, isUnknownNode, isUnknownView, type Projec
 import type { StoreApi } from 'zustand';
 import { openVoiceProjects, projectAgents } from '@/actions/inspection-actions';
 import { sightOf, visibleNodes } from '@/state/attention';
-import { focusedCanvas, type CanvasState } from '@/state/canvas';
+import { focusedCanvas, liveCanvas, type CanvasState } from '@/state/canvas';
 import { activeViewOf, type DocumentState } from '@/state/document';
 
 type Resolved = ActionOutput<'target.resolve'>;
@@ -126,7 +126,8 @@ export const resolveTarget = (document: StoreApi<DocumentState>, input: ActionIn
             if (!isCanvasView(view)) {
                 return [];
             }
-            const nodes = view.id === active?.id && canvas ? Object.values(canvas.nodes) : view.nodes;
+            const live = liveCanvas(view.id);
+            const nodes = live === null ? view.nodes : Object.values(live.nodes);
             return nodes.filter((node) => node.kind === 'chat').map((node) => nodeTarget(node, view));
         });
         return byName(target, names, (name) => named(name, chats));

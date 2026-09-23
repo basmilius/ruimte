@@ -36,11 +36,11 @@ import { FILES_VIEW_ID } from '@/shell/files-view';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { canSplit, cellAt, cellCount, focusedViewId, freeViewFor, isSameCell, locateView, type SplitDirection } from '@/shell/split';
 import { sightOf, visibleNodes } from '@/state/attention';
-import { focusedCanvas, NODE_SIZE, type AddNodeOptions, type CanvasState, type Locks, type NodeKind } from '@/state/canvas';
+import { defaultCanvases, focusedCanvas, liveCanvas, NODE_SIZE, type AddNodeOptions, type CanvasState, type Locks, type NodeKind } from '@/state/canvas';
 import { useChats } from '@/state/chats';
-import { focusedDiagram } from '@/state/diagram';
+import { liveDiagram } from '@/state/diagram';
 import { activeViewOf, useDocument, viewOfNode, type DocumentState } from '@/state/document';
-import { focusedDrawing } from '@/state/drawing';
+import { liveDrawing } from '@/state/drawing';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { providersOf } from '@/state/providers';
@@ -49,13 +49,22 @@ import { chatClient, diagramClient, drawingClient, sessionClient } from '@/trans
 const kindOf = (view: ProjectView): ActionOutput<'view.focus'>['kind'] => (isUnknownView(view) ? 'unknown' : view.kind);
 const kindOfNode = (node: ProjectNode): ActionOutput<'node.focus'>['kind'] => (isUnknownNode(node) ? 'unknown' : node.kind);
 
-const activeCanvas = (document: StoreApi<DocumentState>, viewId: string): { view: ProjectView & { kind: 'canvas' }; canvas: CanvasState } => {
-    const view = activeViewOf(document.getState());
-    if (!view || !isCanvasView(view) || view.id !== viewId) {
+/* A view in any cell of the grid. Only a view on screen has an editor, and so anything to act on. */
+const isOnScreen = (state: DocumentState, viewId: string): boolean => state.layout !== null && locateView(state.layout, viewId) !== null;
+
+/* The focus says nothing here: a blur that lands after a press in another cell still means the canvas it left. */
+const canvasOnScreen = (document: StoreApi<DocumentState>, viewId: string): { view: ProjectView & { kind: 'canvas' }; canvas: CanvasState } => {
+    const state = document.getState();
+    const view = state.views.find((candidate) => candidate.id === viewId);
+    const canvas = isOnScreen(state, viewId) ? liveCanvas(viewId) : null;
+    if (!view || !isCanvasView(view) || canvas === null) {
         throw new ActionRefusal('inactive-canvas', 'Open the target canvas before changing its nodes.');
     }
-    return { view, canvas: focusedCanvas().getState() };
+    return { view, canvas };
 };
+
+/* What a canvas holds after a change, since the state read before it is a snapshot. */
+const canvasNow = (document: StoreApi<DocumentState>, viewId: string): CanvasState => canvasOnScreen(document, viewId).canvas;
 
 type CreatableViewKind = ActionInput<'view.create'>['kind'];
 type CreatableNodeKind = ActionInput<'node.create'>['kind'];
@@ -96,14 +105,19 @@ const addNodeInFreeSpace = (canvas: CanvasState, kind: NodeKind, options: AddNod
     return canvas.addNode(kind, { x: placed.x + placed.w / 2, y: placed.y + placed.h / 2 }, options);
 };
 
-/* The editor of the view on screen: a canvas, a drawing and a diagram each keep their own history and camera. */
-const activeEditor = (document: StoreApi<DocumentState>, viewId: string, doing: string) => {
-    const view = activeViewOf(document.getState());
-    if (!view || view.id !== viewId || !(isCanvasView(view) || isDrawingView(view) || isDiagramView(view))) {
-        throw new ActionRefusal('inactive-view', `Open the target canvas, drawing or diagram before ${doing}.`);
+/* The editor of a view on screen: a canvas, a drawing and a diagram each keep their own history and camera. */
+const editorOnScreen = (document: StoreApi<DocumentState>, viewId: string, doing: string) => {
+    const state = document.getState();
+    const view = state.views.find((candidate) => candidate.id === viewId);
+    const refusal = () => new ActionRefusal('inactive-view', `Open the target canvas, drawing or diagram before ${doing}.`);
+    if (!view || !(isCanvasView(view) || isDrawingView(view) || isDiagramView(view))) {
+        throw refusal();
     }
-    const editor = isCanvasView(view) ? focusedCanvas() : isDrawingView(view) ? focusedDrawing() : focusedDiagram();
-    return { view, editor: () => editor.getState() };
+    const live = isCanvasView(view) ? liveCanvas : isDrawingView(view) ? liveDrawing : liveDiagram;
+    if (!isOnScreen(state, viewId) || live(viewId) === null) {
+        throw refusal();
+    }
+    return { view, editor: () => live(viewId)! };
 };
 
 const listed = (items: readonly string[]): string => (items.length === 1 ? items[0]! : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`);
@@ -116,7 +130,7 @@ const hasNode =
         canvas.nodes[id] !== undefined;
 
 const historyUndo = (viewId: string, expectedDepth: number, stillThere?: (canvas: CanvasState) => boolean) => () => {
-    const current = activeCanvas(useDocument, viewId).canvas;
+    const current = canvasNow(useDocument, viewId);
     if (current.past.length !== expectedDepth || (stillThere && !stillThere(current))) {
         throw new ActionRefusal('stale-undo', 'The canvas changed after this action, so it cannot be safely undone here.');
     }
@@ -423,7 +437,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             return { output: { viewId, view: view.name ?? viewId, kind: kindOf(view) } };
         },
         'node.focus': ({ viewId, nodeId }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             const node = canvas.nodes[nodeId];
             if (!node) {
                 throw new ActionRefusal('unknown-node', `No node with id “${nodeId}” exists on “${view.name}”.`);
@@ -440,7 +454,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             };
         },
         'node.rename': ({ viewId, nodeId, name }) => {
-            const { canvas } = activeCanvas(document, viewId);
+            const { canvas } = canvasOnScreen(document, viewId);
             const node = canvas.nodes[nodeId];
             if (!node || isUnknownNode(node)) {
                 throw new ActionRefusal('unknown-node', `No renameable node with id “${nodeId}” exists on this canvas.`);
@@ -448,7 +462,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             const previousName = node.title;
             const previousSource = node.titleSource ?? null;
             canvas.renameNode(nodeId, name);
-            const changed = focusedCanvas().getState().nodes[nodeId]?.title === name && (previousName !== name || previousSource !== 'user');
+            const changed = canvasNow(document, viewId).nodes[nodeId]?.title === name && (previousName !== name || previousSource !== 'user');
             return {
                 output: {
                     viewId,
@@ -461,18 +475,18 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 ...(changed
                     ? {
                           undo: () => {
-                              const current = activeCanvas(document, viewId).canvas.nodes[nodeId];
+                              const current = canvasNow(document, viewId).nodes[nodeId];
                               if (!current || current.title !== name || current.titleSource !== 'user') {
                                   throw new ActionRefusal('stale-undo', `“${name}” is no longer the current name of this node.`);
                               }
-                              focusedCanvas().getState().renameNode(nodeId, previousName, previousSource);
+                              canvasNow(document, viewId).renameNode(nodeId, previousName, previousSource);
                           }
                       }
                     : {})
             };
         },
         'node.create': ({ viewId, kind, title, content, url, command, path, provider, at }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             const agent = agentFor(providers(), kind, provider, command);
             if (kind === 'file' && path === null) {
                 throw new ActionRefusal('missing-path', 'Name the file a file node shows.');
@@ -496,9 +510,9 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 throw new ActionRefusal('node-create-failed', `Ruimte could not create the ${kind} node.`);
             }
             if (kind === 'note' && content !== null) {
-                focusedCanvas().getState().updateNode(nodeId, { body: content });
+                canvasNow(document, viewId).updateNode(nodeId, { body: content });
             }
-            const node = focusedCanvas().getState().nodes[nodeId]!;
+            const node = canvasNow(document, viewId).nodes[nodeId]!;
             return {
                 output: {
                     viewId,
@@ -511,15 +525,15 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             };
         },
         'node.duplicate': ({ viewId, nodeId }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             const source = canvas.nodes[nodeId];
             if (!source || isUnknownNode(source)) {
                 throw new ActionRefusal('unknown-node', `No duplicable node with id “${nodeId}” exists on this canvas.`);
             }
             const depth = canvas.past.length;
             canvas.duplicateNode(nodeId);
-            const copyId = focusedCanvas().getState().selection[0];
-            const copy = copyId ? focusedCanvas().getState().nodes[copyId] : undefined;
+            const copyId = canvasNow(document, viewId).selection[0];
+            const copy = copyId ? canvasNow(document, viewId).nodes[copyId] : undefined;
             if (!copy) {
                 throw new ActionRefusal('node-duplicate-failed', `Ruimte could not duplicate “${source.title}”.`);
             }
@@ -536,7 +550,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             };
         },
         'canvas.select': ({ viewId, nodeIds }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             const nodes = nodeIds.map((nodeId) => canvas.nodes[nodeId]);
             const missing = nodeIds.find((_nodeId, index) => nodes[index] === undefined);
             if (missing) {
@@ -546,7 +560,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             return { output: { viewId, view: view.name, nodeIds, nodes: nodes.map((node) => node!.title) } };
         },
         'node.delete': async ({ viewId, nodeIds }, { confirmed }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             const nodes = nodeIds.map((nodeId) => canvas.nodes[nodeId]);
             const missing = nodeIds.find((_nodeId, index) => nodes[index] === undefined);
             if (missing) {
@@ -576,7 +590,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 );
             }
             // Saving waits on the machine, and the canvas may have moved on in the meantime.
-            const current = activeCanvas(document, viewId).canvas;
+            const current = canvasNow(document, viewId);
             if (nodeIds.some((nodeId) => current.nodes[nodeId] === undefined)) {
                 throw new ActionRefusal('unknown-node', `${nodeIds.length === 1 ? what : 'A node to delete'} is no longer on “${view.name}”.`);
             }
@@ -589,7 +603,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             };
         },
         'group.create': ({ viewId, nodeIds }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             const missing = nodeIds.find((id) => !canvas.nodes[id]);
             if (missing) {
                 throw new ActionRefusal('unknown-node', `No node with id “${missing}” exists on this canvas.`);
@@ -606,28 +620,28 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             };
         },
         'canvas.fit': ({ viewId }) => {
-            const { view, editor } = activeEditor(document, viewId, 'fitting it in view');
+            const { view, editor } = editorOnScreen(document, viewId, 'fitting it in view');
             editor().fitAll();
             return { output: { viewId, view: view.name } };
         },
         'history.undo': ({ viewId }) => {
-            const { view, editor } = activeEditor(document, viewId, 'undoing or redoing a change in it');
+            const { view, editor } = editorOnScreen(document, viewId, 'undoing or redoing a change in it');
             const before = editor().past.length;
             editor().undo();
             return { output: { viewId, view: view.name, changed: editor().past.length !== before } };
         },
         'history.redo': ({ viewId }) => {
-            const { view, editor } = activeEditor(document, viewId, 'undoing or redoing a change in it');
+            const { view, editor } = editorOnScreen(document, viewId, 'undoing or redoing a change in it');
             const before = editor().future.length;
             editor().redo();
             return { output: { viewId, view: view.name, changed: editor().future.length !== before } };
         },
         'canvasText.create': ({ viewId, text, at }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             const depth = canvas.past.length;
             const textId = canvas.addText(at ?? centerWorld(canvas));
             if (text !== null) {
-                const written = focusedCanvas().getState();
+                const written = canvasNow(document, viewId);
                 written.updateText(textId, text);
                 written.setEditingText(null);
             }
@@ -637,7 +651,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             };
         },
         'node.promoteToView': ({ viewId, nodeId }, { confirmed }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             const node = canvas.nodes[nodeId];
             if (!node) {
                 throw new ActionRefusal('unknown-node', `No node with id “${nodeId}” exists on “${view.name}”.`);
@@ -668,7 +682,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             };
         },
         'node.moveToView': ({ viewId, nodeId, targetViewId }, { confirmed }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             const node = canvas.nodes[nodeId];
             if (!node) {
                 throw new ActionRefusal('unknown-node', `No node with id “${nodeId}” exists on “${view.name}”.`);
@@ -784,13 +798,13 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 throw new ActionRefusal('no-canvas', 'This project has no canvas to show the view on.');
             }
             state.showView(target.id);
-            const { canvas } = activeCanvas(document, target.id);
+            const { canvas } = canvasOnScreen(document, target.id);
             const depth = canvas.past.length;
             const nodeId = canvas.addNode(view.kind, centerWorld(canvas), { title: view.name, viewId });
             if (nodeId === null) {
                 throw new ActionRefusal('node-create-failed', `Ruimte could not show “${view.name}” on “${target.name}”.`);
             }
-            focusedCanvas().getState().goToNode(nodeId);
+            canvasNow(document, target.id).goToNode(nodeId);
             return {
                 output: { viewId, view: view.name, canvasViewId: target.id, canvas: target.name, nodeId },
                 undo: historyUndo(target.id, depth + 1, hasNode(nodeId))
@@ -825,7 +839,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             };
         },
         'layout.save': ({ viewId, name }, { confirmed }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             const previous = canvas.layouts.find((layout) => layout.name === name) ?? null;
             if (previous !== null && !confirmed) {
                 return {
@@ -836,13 +850,11 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 };
             }
             canvas.saveLayout(name);
-            const saved = focusedCanvas()
-                .getState()
-                .layouts.find((layout) => layout.name === name);
+            const saved = canvasNow(document, viewId).layouts.find((layout) => layout.name === name);
             return {
                 output: { viewId, view: view.name, name, replaced: previous !== null },
                 undo: () => {
-                    const current = activeCanvas(document, viewId).canvas;
+                    const current = canvasNow(document, viewId);
                     if (current.layouts.find((layout) => layout.name === name) !== saved) {
                         throw new ActionRefusal('stale-undo', `The layout “${name}” changed after this action.`);
                     }
@@ -855,7 +867,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             };
         },
         'layout.apply': ({ viewId, name }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             if (!canvas.layouts.some((layout) => layout.name === name)) {
                 throw new ActionRefusal('unknown-layout', `“${view.name}” has no layout saved as “${name}”.`);
             }
@@ -864,7 +876,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             return { output: { viewId, view: view.name, name }, undo: historyUndo(viewId, depth + 1) };
         },
         'layout.delete': ({ viewId, name }, { confirmed }) => {
-            const { view, canvas } = activeCanvas(document, viewId);
+            const { view, canvas } = canvasOnScreen(document, viewId);
             const layout = canvas.layouts.find((candidate) => candidate.name === name);
             if (!layout) {
                 throw new ActionRefusal('unknown-layout', `“${view.name}” has no layout saved as “${name}”.`);
@@ -878,7 +890,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             return {
                 output: { viewId, view: view.name, name },
                 undo: () => {
-                    const current = activeCanvas(document, viewId).canvas;
+                    const current = canvasNow(document, viewId);
                     if (current.layouts.some((candidate) => candidate.name === name)) {
                         throw new ActionRefusal('stale-undo', `A layout called “${name}” was saved again after this action.`);
                     }
@@ -887,13 +899,14 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             };
         },
         'canvas.setLocks': ({ viewId, locked, gestures }) => {
-            const { view } = activeCanvas(document, viewId);
+            const { view } = canvasOnScreen(document, viewId);
             for (const key of gestures ?? LOCK_KEYS) {
-                if (focusedCanvas().getState().locks[key] !== locked) {
-                    focusedCanvas().getState().toggleLock(key);
+                const current = canvasNow(document, viewId);
+                if (current.locks[key] !== locked) {
+                    current.toggleLock(key);
                 }
             }
-            const locks: Locks = focusedCanvas().getState().locks;
+            const locks: Locks = canvasNow(document, viewId).locks;
             return { output: { viewId, view: view.name, locks: { ...locks } } };
         },
         'split.create': ({ direction, viewId }) => {
@@ -1124,13 +1137,12 @@ export const moveNodeToViewAction = (nodeId: string, targetViewId: string): void
 };
 
 /*
- * The action names nodes on the canvas in focus and nothing else. A pick that also holds text or a
- * line, or that stands on a canvas outside the focus, goes to its own store in one step, so a single
- * undo still brings all of it back.
+ * The action names nodes and nothing else. A pick that also holds text or a line goes to its own store
+ * in one step, so a single undo still brings all of it back.
  */
 export const deleteNodesAction = (store: StoreApi<CanvasState>, ids: readonly string[]): void => {
     const canvas = store.getState();
-    if (canvas.viewId !== null && store === focusedCanvas() && ids.length > 0 && ids.every((id) => canvas.nodes[id] !== undefined)) {
+    if (canvas.viewId !== null && defaultCanvases.peek(canvas.viewId) === store && ids.length > 0 && ids.every((id) => canvas.nodes[id] !== undefined)) {
         void runConfirmedAsPerson('node.delete', { viewId: canvas.viewId, nodeIds: [...ids] });
         return;
     }

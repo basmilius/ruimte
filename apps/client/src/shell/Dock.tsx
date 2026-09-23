@@ -29,8 +29,8 @@ import { ZoomControls } from '@/ui/ZoomControls';
 export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) => void }) {
     const { t } = useTranslation(['shell', 'common']);
     const dictationEnabled = useDictation((state) => state.model?.enabled === true);
-    /* The canvas under this dock. It is drawn in the focused cell only, which is also the one canvas
-       the actions behind adding a node and fitting can reach. */
+    /* The canvas under this dock. It is drawn in the focused cell only, which is the canvas the
+       actions behind adding a node and fitting are sent to. */
     const canvasStore = useCanvasStore();
     /* A project whose views all went has no canvas either, and these controls would act on one nothing saves. */
     const onCanvas = useDocument((s) => {
