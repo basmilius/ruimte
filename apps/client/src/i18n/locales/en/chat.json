@@ -51,8 +51,16 @@
   "contextMeter": {
     "aria": "{{percent}}% of the context used",
     "title": "Context",
-    "used": "used",
-    "usedOf": "of {{window}} used · {{percent}}%",
+    "of": "{{used}} of {{window}}",
+    "used": "{{tokens}} used",
+    "percentUsed": "{{percent}} used",
+    "estimate": "≈{{tokens}}",
+    "parts": {
+      "toolOutput": "Tool output",
+      "filesRead": "Files read",
+      "conversation": "Conversation",
+      "system": "System"
+    },
     "compactNow": "Compact now"
   },
   "rows": {

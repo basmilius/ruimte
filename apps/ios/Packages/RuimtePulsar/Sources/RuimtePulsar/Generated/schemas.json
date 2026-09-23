@@ -8387,6 +8387,37 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
+          },
+          "breakdown": {
+            "type": "object",
+            "properties": {
+              "toolOutput": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "filesRead": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "conversation": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "system": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "toolOutput",
+              "filesRead",
+              "conversation",
+              "system"
+            ]
           }
         },
         "required": [
@@ -9636,6 +9667,37 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
+              },
+              "breakdown": {
+                "type": "object",
+                "properties": {
+                  "toolOutput": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "filesRead": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "conversation": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "system": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "toolOutput",
+                  "filesRead",
+                  "conversation",
+                  "system"
+                ]
               }
             },
             "required": [
@@ -12631,6 +12693,37 @@
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 9007199254740991
+                        },
+                        "breakdown": {
+                          "type": "object",
+                          "properties": {
+                            "toolOutput": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "filesRead": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "conversation": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "system": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "toolOutput",
+                            "filesRead",
+                            "conversation",
+                            "system"
+                          ]
                         }
                       },
                       "required": [
@@ -12934,6 +13027,37 @@
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 9007199254740991
+                        },
+                        "breakdown": {
+                          "type": "object",
+                          "properties": {
+                            "toolOutput": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "filesRead": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "conversation": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "system": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "toolOutput",
+                            "filesRead",
+                            "conversation",
+                            "system"
+                          ]
                         }
                       },
                       "required": [
@@ -14492,6 +14616,37 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
+          },
+          "breakdown": {
+            "type": "object",
+            "properties": {
+              "toolOutput": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "filesRead": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "conversation": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "system": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "toolOutput",
+              "filesRead",
+              "conversation",
+              "system"
+            ]
           }
         },
         "required": [
@@ -15064,6 +15219,37 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
+              },
+              "breakdown": {
+                "type": "object",
+                "properties": {
+                  "toolOutput": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "filesRead": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "conversation": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "system": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "toolOutput",
+                  "filesRead",
+                  "conversation",
+                  "system"
+                ]
               }
             },
             "required": [
@@ -30199,6 +30385,37 @@
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 9007199254740991
+                },
+                "breakdown": {
+                  "type": "object",
+                  "properties": {
+                    "toolOutput": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "filesRead": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "conversation": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "system": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "toolOutput",
+                    "filesRead",
+                    "conversation",
+                    "system"
+                  ]
                 }
               },
               "required": [
@@ -32774,6 +32991,37 @@
                         "type": "integer",
                         "minimum": 0,
                         "maximum": 9007199254740991
+                      },
+                      "breakdown": {
+                        "type": "object",
+                        "properties": {
+                          "toolOutput": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "filesRead": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "conversation": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "system": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "toolOutput",
+                          "filesRead",
+                          "conversation",
+                          "system"
+                        ]
                       }
                     },
                     "required": [
@@ -33077,6 +33325,37 @@
                         "type": "integer",
                         "minimum": 0,
                         "maximum": 9007199254740991
+                      },
+                      "breakdown": {
+                        "type": "object",
+                        "properties": {
+                          "toolOutput": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "filesRead": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "conversation": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "system": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "toolOutput",
+                          "filesRead",
+                          "conversation",
+                          "system"
+                        ]
                       }
                     },
                     "required": [
@@ -34273,6 +34552,37 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
+              },
+              "breakdown": {
+                "type": "object",
+                "properties": {
+                  "toolOutput": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "filesRead": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "conversation": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "system": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "toolOutput",
+                  "filesRead",
+                  "conversation",
+                  "system"
+                ]
               }
             },
             "required": [

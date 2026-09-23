@@ -51,8 +51,16 @@
   "contextMeter": {
     "aria": "{{percent}}% van de context gebruikt",
     "title": "Context",
-    "used": "gebruikt",
-    "usedOf": "van {{window}} gebruikt · {{percent}}%",
+    "of": "{{used}} van {{window}}",
+    "used": "{{tokens}} gebruikt",
+    "percentUsed": "{{percent}} gebruikt",
+    "estimate": "≈{{tokens}}",
+    "parts": {
+      "toolOutput": "Tool-output",
+      "filesRead": "Gelezen bestanden",
+      "conversation": "Gesprek",
+      "system": "Systeem"
+    },
     "compactNow": "Nu comprimeren"
   },
   "rows": {

@@ -334,7 +334,7 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
         running: false,
         activeTurnId: null,
         // The turns before the cut are what fixes a chat to its CLI; what they cost stays the original's.
-        usage: { ...info.usage, contextWindow: start.contextWindow, contextTokens: 0, costUsd: 0, turns: cut.number },
+        usage: { ...info.usage, contextWindow: start.contextWindow, contextTokens: 0, breakdown: undefined, costUsd: 0, turns: cut.number },
         forkOf: { chatId: payload.chatId, turnId: turn.id, at: now },
         createdAt: now
     };

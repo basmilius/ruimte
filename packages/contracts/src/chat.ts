@@ -7,12 +7,23 @@ import { ModelSelectionSchema, RuntimeModeSchema } from './model.ts';
 export const ChatIdSchema = z.string().min(1);
 export type ChatId = z.infer<typeof ChatIdSchema>;
 
+// The daemon's estimate of what `contextTokens` is made of, scaled to add up to it; `system` is whatever the thread cannot account for.
+export const ChatContextBreakdownSchema = z.object({
+    toolOutput: z.number().int().nonnegative(),
+    filesRead: z.number().int().nonnegative(),
+    conversation: z.number().int().nonnegative(),
+    system: z.number().int().nonnegative()
+});
+export type ChatContextBreakdown = z.infer<typeof ChatContextBreakdownSchema>;
+
 export const ChatUsageSchema = z.object({
     // Tokens the last request carried, which is what the model saw as its context.
     contextTokens: z.number().int().nonnegative(),
     contextWindow: z.number().int().positive().nullable(),
     costUsd: z.number().nonnegative(),
-    turns: z.number().int().nonnegative()
+    turns: z.number().int().nonnegative(),
+    // Absent while nothing is in the context yet, and from a daemon that does not estimate.
+    breakdown: ChatContextBreakdownSchema.optional()
 });
 export type ChatUsage = z.infer<typeof ChatUsageSchema>;
 

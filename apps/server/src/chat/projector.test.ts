@@ -177,6 +177,19 @@ describe('ThreadProjector', () => {
         expect(thread.list().at(-1)).toMatchObject({ kind: 'compaction', preTokens: 5000 });
     });
 
+    test('usage estimates what the context holds and starts over after a compaction', () => {
+        const { thread, project } = setup();
+        project({ type: 'tool.started', ref: 'toolu_1', name: 'Read', input: { file_path: 'a.ts' }, parentRef: null });
+        project({ type: 'tool.done', ref: 'toolu_1', output: 'x'.repeat(40_000), state: 'done' });
+        project({ type: 'usage', contextTokens: 30_000 });
+        const before = thread.info.usage.breakdown!;
+        expect(before.filesRead).toBeGreaterThan(before.toolOutput + before.conversation);
+        expect(before.filesRead + before.toolOutput + before.conversation + before.system).toBe(30_000);
+        project({ type: 'compaction', preTokens: 30_000 });
+        project({ type: 'usage', contextTokens: 8000 });
+        expect(thread.info.usage.breakdown).toEqual({ filesRead: 0, toolOutput: 0, conversation: 0, system: 8000 });
+    });
+
     test('turn.done closes the turn with what it cost, settles what was open and counts the turn', () => {
         const { thread, project } = setup();
         project({ type: 'text.delta', ref: 'msg_1:t0', text: 'half' });

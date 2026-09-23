@@ -366,7 +366,12 @@ export class ChatSession {
                 background: [],
                 slashCommands: [],
                 // The next CLI starts on the current pick, so the window the one that just went reported is not its.
-                usage: { ...usage, contextTokens: 0, contextWindow: this.options.provider.catalog.contextWindowFor(this.thread.info.selection) }
+                usage: {
+                    ...usage,
+                    contextTokens: 0,
+                    contextWindow: this.options.provider.catalog.contextWindowFor(this.thread.info.selection),
+                    breakdown: undefined
+                }
             })
         ]);
     }

@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
@@ -19,8 +18,9 @@ import {
 import type { AgentKind, ChatUsage, ModelInfo, ModelOptionDescriptor, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { modelName, shortModelName } from '@/agents/model-name';
+import { CONTEXT_OPTION, contextFraction, contextSegments, orderOptions, type ContextPart } from '@/chat/logic/context-usage';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
-import { formatTokens } from '@/format/number';
+import { formatPercent, formatTokens } from '@/format/number';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -35,7 +35,13 @@ const MODE_ICONS: Record<RuntimeMode, LucideIcon> = {
 // More choices than this do not fit beside the label, so they go in a submenu of their own.
 const INLINE_CHOICES = 3;
 
-const CONTEXT_OPTION = 'contextWindow';
+const PART_COLORS: Record<ContextPart, string> = {
+    toolOutput: 'bg-chart-context-tools',
+    filesRead: 'bg-chart-context-files',
+    conversation: 'bg-chart-context-conversation',
+    system: 'bg-chart-context-system'
+};
+
 const RING_RADIUS = 5;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
@@ -71,8 +77,6 @@ const optionSummary = (option: ModelOptionDescriptor, selection: ModelSelection)
 const optionIcon = (option: ModelOptionDescriptor): LucideIcon =>
     option.type === 'boolean' ? Gauge : option.id === CONTEXT_OPTION ? Activity : SlidersHorizontal;
 
-const contextFraction = (usage: ChatUsage): number => (usage.contextWindow ? Math.min(1, usage.contextTokens / usage.contextWindow) : 0);
-
 const contextTone = (fraction: number): string => (fraction >= 0.9 ? 'text-status-error' : fraction >= 0.7 ? 'text-status-needs-you' : 'text-text');
 
 // A radio group holds one string, so a model is named by its provider and its slug together.
@@ -101,13 +105,14 @@ export function RunSettings({
     const owner = providers.find((entry) => entry.kind === provider);
     const current = modelName(selection.model, owner?.models);
     const short = shortModelName(current, owner?.models);
-    const options = model?.options ?? [];
+    const options = orderOptions(model?.options ?? []);
     const summary = options.flatMap((option) => {
         const label = optionSummary(option, selection);
         return label === null ? [] : [{ id: option.id, label, ring: option.id === CONTEXT_OPTION }];
     });
     // A CLI without a context choice still fills one, so the ring stands on its own next to the size.
-    const standaloneContext = !options.some((option) => option.id === CONTEXT_OPTION) && Boolean(usage.contextWindow);
+    const hasContextOption = options.some((option) => option.id === CONTEXT_OPTION);
+    const standaloneContext = !hasContextOption && Boolean(usage.contextWindow);
     if (standaloneContext) {
         summary.push({ id: CONTEXT_OPTION, label: formatTokens(usage.contextWindow ?? 0), ring: true });
     }
@@ -117,7 +122,6 @@ export function RunSettings({
     const chosenLegacy = owner?.models.find((row) => row.legacy && row.slug === selection.model);
     const chosenModel = modelValue(provider, selection.model);
     const fullAccess = runtimeMode === 'full-access';
-    const contextUsage = <ContextUsage usage={usage} disabled={compactDisabled} onCompact={onCompact} />;
 
     const chooseModel = (value: string): void => {
         const slash = value.indexOf('/');
@@ -250,18 +254,13 @@ export function RunSettings({
                             </Menu.Portal>
                         </Menu.SubmenuRoot>
                         {options.map((option) => (
-                            <OptionRow key={option.id} option={option} selection={selection} onChange={(value) => onOption(option.id, value)}>
-                                {option.id === CONTEXT_OPTION && contextUsage}
-                            </OptionRow>
+                            <OptionRow key={option.id} option={option} selection={selection} onChange={(value) => onOption(option.id, value)} />
                         ))}
-                        {standaloneContext && (
-                            <div className="flex flex-col gap-2 px-2.5 py-1.5 text-sm text-text-muted">
-                                <span className="flex items-center gap-2.5">
-                                    <Icon icon={Activity} size={14} className="shrink-0 text-text-faint" />
-                                    {t('contextMeter.title')}
-                                </span>
-                                {contextUsage}
-                            </div>
+                        {(hasContextOption || standaloneContext) && (
+                            <>
+                                <Menu.Separator className={MENU_SEPARATOR} />
+                                <ContextUsage usage={usage} disabled={compactDisabled} onCompact={onCompact} />
+                            </>
                         )}
                     </Menu.Popup>
                 </Menu.Positioner>
@@ -291,13 +290,21 @@ function ContextRing({ usage }: { usage: ChatUsage }) {
     );
 }
 
-/* The numbers behind the ring, and the one thing to do about a full context. */
+/* How full the context is and what fills it, and the one thing to do about a full context. */
 function ContextUsage({ usage, disabled, onCompact }: { usage: ChatUsage; disabled: boolean; onCompact(): void }) {
     const { t } = useTranslation('chat');
     const fraction = contextFraction(usage);
     const percent = Math.round(fraction * 100);
+    const segments = contextSegments(usage);
+    const used = formatTokens(usage.contextTokens);
     return (
-        <>
+        <Menu.Group className="flex flex-col gap-2 px-2.5 py-1.5">
+            <div className="flex items-center gap-2">
+                <Menu.GroupLabel className="min-w-0 grow truncate text-sm font-medium text-text">{t('contextMeter.title')}</Menu.GroupLabel>
+                <span className={clsx('shrink-0 text-xs tabular-nums', fraction >= 0.7 ? contextTone(fraction) : 'text-text-faint')}>
+                    {usage.contextWindow ? t('contextMeter.of', { used, window: formatTokens(usage.contextWindow) }) : t('contextMeter.used', { tokens: used })}
+                </span>
+            </div>
             {usage.contextWindow ? (
                 <div
                     role="meter"
@@ -305,15 +312,37 @@ function ContextUsage({ usage, disabled, onCompact }: { usage: ChatUsage; disabl
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-label={t('contextMeter.aria', { percent })}
-                    className="h-1.5 overflow-hidden rounded-full bg-surface-sunken"
+                    className="flex h-1.5 overflow-hidden rounded-full bg-surface-sunken"
                 >
-                    <div className={clsx('h-full rounded-full bg-current', contextTone(fraction))} style={{ width: `${percent}%` }} />
+                    {segments ? (
+                        segments.map((segment) => (
+                            <div
+                                key={segment.part}
+                                className={clsx('h-full shrink-0', PART_COLORS[segment.part])}
+                                style={{ width: `${segment.fraction * 100}%` }}
+                            />
+                        ))
+                    ) : (
+                        <div className={clsx('h-full rounded-full bg-current', contextTone(fraction))} style={{ width: `${percent}%` }} />
+                    )}
                 </div>
             ) : null}
+            {segments && (
+                <div className="flex flex-col gap-0.5 text-xs">
+                    {segments.map((segment) => (
+                        <div key={segment.part} className="flex items-center gap-2">
+                            <span aria-hidden="true" className={clsx('size-2 shrink-0 rounded-xs', PART_COLORS[segment.part])} />
+                            <span className="min-w-0 grow truncate text-text-muted">{t(`contextMeter.parts.${segment.part}`)}</span>
+                            <span className="shrink-0 text-text-faint tabular-nums">
+                                {t('contextMeter.estimate', { tokens: formatTokens(segment.tokens) })}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
             <div className="flex items-center gap-2 text-xs text-text-faint tabular-nums">
                 <span className="min-w-0 grow truncate">
-                    <span className="text-text">{formatTokens(usage.contextTokens)}</span>{' '}
-                    {usage.contextWindow ? t('contextMeter.usedOf', { window: formatTokens(usage.contextWindow), percent }) : t('contextMeter.used')}
+                    {usage.contextWindow ? t('contextMeter.percentUsed', { percent: formatPercent(fraction * 100) }) : null}
                 </span>
                 <Menu.Item
                     className="flex shrink-0 cursor-default items-center gap-0.5 rounded font-medium text-accent outline-none data-disabled:opacity-40 data-highlighted:underline"
@@ -324,25 +353,15 @@ function ContextUsage({ usage, disabled, onCompact }: { usage: ChatUsage; disabl
                     <Icon icon={ChevronRight} size={12} />
                 </Menu.Item>
             </div>
-        </>
+        </Menu.Group>
     );
 }
 
 /*
  * One of the model's own knobs: a few choices side by side, more of them in a submenu, a switch for
- * a boolean. Children go under it. Every choice is a menu item, so the arrow keys reach it.
+ * a boolean. Every choice is a menu item, so the arrow keys reach it.
  */
-function OptionRow({
-    option,
-    selection,
-    onChange,
-    children
-}: {
-    option: ModelOptionDescriptor;
-    selection: ModelSelection;
-    onChange(value: string | boolean): void;
-    children?: ReactNode;
-}) {
+function OptionRow({ option, selection, onChange }: { option: ModelOptionDescriptor; selection: ModelSelection; onChange(value: string | boolean): void }) {
     const icon = <Icon icon={optionIcon(option)} size={14} className="shrink-0 text-text-faint" />;
     if (option.type === 'boolean') {
         const checked = (selection.options[option.id] ?? option.defaultValue) === true;
@@ -402,31 +421,28 @@ function OptionRow({
         );
     }
     return (
-        <div className="flex flex-col gap-2 px-2.5 py-1.5 text-sm text-text-muted">
-            <div className="flex items-center gap-2.5">
-                {icon}
-                <span className="min-w-0 grow truncate">{option.label}</span>
-                <Menu.RadioGroup
-                    value={value}
-                    onValueChange={(next: string) => onChange(next)}
-                    aria-label={option.label}
-                    className="flex gap-0.5 rounded-md bg-surface-sunken p-0.5"
-                >
-                    {option.choices.map((choice) => (
-                        <Menu.RadioItem
-                            key={choice.id}
-                            value={choice.id}
-                            className={clsx(
-                                'flex h-6 cursor-default items-center rounded px-2 text-xs outline-none',
-                                choice.id === value ? 'bg-surface-active text-text' : 'text-text-muted data-highlighted:text-text'
-                            )}
-                        >
-                            {choice.label}
-                        </Menu.RadioItem>
-                    ))}
-                </Menu.RadioGroup>
-            </div>
-            {children}
+        <div className="flex items-center gap-2.5 px-2.5 py-1.5 text-sm text-text-muted">
+            {icon}
+            <span className="min-w-0 grow truncate">{option.label}</span>
+            <Menu.RadioGroup
+                value={value}
+                onValueChange={(next: string) => onChange(next)}
+                aria-label={option.label}
+                className="flex gap-0.5 rounded-md bg-surface-sunken p-0.5"
+            >
+                {option.choices.map((choice) => (
+                    <Menu.RadioItem
+                        key={choice.id}
+                        value={choice.id}
+                        className={clsx(
+                            'flex h-6 cursor-default items-center rounded px-2 text-xs outline-none',
+                            choice.id === value ? 'bg-surface-active text-text' : 'text-text-muted data-highlighted:text-text'
+                        )}
+                    >
+                        {choice.label}
+                    </Menu.RadioItem>
+                ))}
+            </Menu.RadioGroup>
         </div>
     );
 }

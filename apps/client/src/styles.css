@@ -129,6 +129,11 @@
     --chart-copilot: #64748b;
     /* The band under the points no other point beats; ink at a low alpha, never the accent. */
     --chart-frontier: rgb(0 0 0 / 0.07);
+    /* What a chat's context holds, one color per part; the rest is the system's and stays gray. */
+    --chart-context-tools: #4d7ce6;
+    --chart-context-files: #9a63e0;
+    --chart-context-conversation: #2f9e5a;
+    --chart-context-system: var(--text-faint);
     /* The ten colors a drawing may name. The file holds the name, never the value, so a sketch
        reads in both themes and follows the accent when it asks for it. */
     --draw-ink: var(--text);
@@ -264,6 +269,10 @@
     --chart-gemini: #60a5fa;
     --chart-copilot: #94a3b8;
     --chart-frontier: rgb(255 255 255 / 0.08);
+    --chart-context-tools: #8aa7f5;
+    --chart-context-files: #b98af3;
+    --chart-context-conversation: #6dd08b;
+    --chart-context-system: var(--text-faint);
     --draw-red: #ff7b72;
     --draw-orange: #ffa657;
     --draw-yellow: #e3b341;
@@ -389,6 +398,10 @@
     --color-chart-codex: var(--chart-codex);
     --color-chart-gemini: var(--chart-gemini);
     --color-chart-copilot: var(--chart-copilot);
+    --color-chart-context-tools: var(--chart-context-tools);
+    --color-chart-context-files: var(--chart-context-files);
+    --color-chart-context-conversation: var(--chart-context-conversation);
+    --color-chart-context-system: var(--chart-context-system);
     --color-draw-ink: var(--draw-ink);
     --color-draw-muted: var(--draw-muted);
     --color-draw-accent: var(--draw-accent);

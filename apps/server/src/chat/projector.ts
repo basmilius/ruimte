@@ -1,5 +1,6 @@
 import type { ChatBackgroundTask, ChatEvent, ChatItem, ChatSubagentItem, ChatSubagentUsage, ChatToolItem, ChatToolProgress } from '@ruimte/contracts';
 import type { BackendEvent } from './backend.ts';
+import { estimateContextBreakdown } from './context-breakdown.ts';
 import type { ChatThread } from './thread.ts';
 
 /*
@@ -265,17 +266,20 @@ export class ThreadProjector {
                 }
                 break;
             }
-            case 'usage':
+            case 'usage': {
+                const contextTokens = event.contextTokens ?? info.usage.contextTokens;
                 events.push(
                     this.thread.patchInfo({
                         usage: {
                             ...info.usage,
-                            contextTokens: event.contextTokens ?? info.usage.contextTokens,
-                            contextWindow: event.contextWindow ?? info.usage.contextWindow
+                            contextTokens,
+                            contextWindow: event.contextWindow ?? info.usage.contextWindow,
+                            breakdown: contextTokens > 0 ? estimateContextBreakdown(this.thread.list(), contextTokens) : undefined
                         }
                     })
                 );
                 break;
+            }
             case 'compaction':
                 events.push(
                     this.thread.upsert({
