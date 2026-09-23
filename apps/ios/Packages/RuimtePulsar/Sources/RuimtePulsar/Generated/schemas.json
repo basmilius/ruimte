@@ -25311,6 +25311,43 @@
       }
     ]
   },
+  "request.fs.write.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "text": {
+        "type": "string"
+      },
+      "expectedMtime": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "path",
+      "text",
+      "expectedMtime"
+    ]
+  },
+  "request.fs.write.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "size": {
+        "type": "number"
+      },
+      "mtime": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "size",
+      "mtime"
+    ]
+  },
   "request.fs.watch.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

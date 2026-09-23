@@ -481,7 +481,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
         }
     });
-    registerFsHandlers(dispatcher, folders);
+    registerFsHandlers(dispatcher, folders, async (clientId) => ({
+        folders: await projects.heldFolders(clientId),
+        worktreesOf: canvasHost.worktreePaths,
+        worktreesRoot: worktrees.root
+    }));
     registerBytesHandlers(dispatcher, {
         attachment: (chatId, id) => chats.attachment(chatId, id),
         projectIcon: (projectId, theme) => projects.iconFile(projectId, theme),

@@ -94,7 +94,9 @@ import {
     FsRevealPayloadSchema,
     FsSearchPayloadSchema,
     FsSearchResultSchema,
-    FsWatchPayloadSchema
+    FsWatchPayloadSchema,
+    FsWritePayloadSchema,
+    FsWriteResultSchema
 } from './fs.ts';
 import {
     GitActionPayloadSchema,
@@ -354,6 +356,7 @@ export const REQUEST_SCHEMAS = {
     'fs.grep': { payload: FsGrepPayloadSchema, result: FsGrepResultSchema },
     'fs.list': { payload: FsListPayloadSchema, result: FsListResultSchema },
     'fs.read': { payload: FsReadPayloadSchema, result: FsReadResultSchema },
+    'fs.write': { payload: FsWritePayloadSchema, result: FsWriteResultSchema },
     'fs.watch': { payload: FsWatchPayloadSchema, result: EmptySchema },
     'fs.unwatch': { payload: FsWatchPayloadSchema, result: EmptySchema },
     'bytes.read': { payload: BytesReadPayloadSchema, result: BytesReadResultSchema },

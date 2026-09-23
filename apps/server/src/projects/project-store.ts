@@ -314,6 +314,12 @@ export class ProjectStore {
         }
     }
 
+    /* The folders of the projects this client has on screen, which is as far as a save from it may reach. */
+    async heldFolders(clientId: string): Promise<string[]> {
+        const held = new Set(this.holds.projectsOf(clientId));
+        return (await this.loadRegistry()).filter((entry) => held.has(entry.projectId)).map((entry) => entry.folder);
+    }
+
     /* What closing would do, for the confirmation that asks before it. */
     closing(clientId: string, projectId: string): ProjectClosingResult {
         const otherClients = this.holds.others(clientId, projectId);

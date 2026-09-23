@@ -6,8 +6,9 @@ import { revealInFileManager } from '../fs/reveal.ts';
 import { grepFiles } from '../fs/grep.ts';
 import { searchFiles } from '../fs/search.ts';
 import type { FolderWatcher } from '../fs/watch.ts';
+import { writeTextFile, type WriteBoundary } from '../fs/write.ts';
 
-export const registerFsHandlers = (dispatcher: Dispatcher, watcher: FolderWatcher): void => {
+export const registerFsHandlers = (dispatcher: Dispatcher, watcher: FolderWatcher, boundaryOf: (clientId: string) => Promise<WriteBoundary>): void => {
     dispatcher.register('fs.browse', (payload) => translate(() => browseDirectories(payload.partialPath, payload.cwd, { hidden: payload.hidden })));
 
     dispatcher.register('fs.search', (payload) => searchFiles(payload.cwd, payload.query, payload.limit));
@@ -26,6 +27,10 @@ export const registerFsHandlers = (dispatcher: Dispatcher, watcher: FolderWatche
     dispatcher.register('fs.list', (payload) => translate(() => listDirectory(payload.path, { depth: payload.depth, hidden: payload.hidden })));
 
     dispatcher.register('fs.read', (payload) => translate(() => readFile(payload.path)));
+
+    dispatcher.register('fs.write', (payload, client) =>
+        translate(async () => writeTextFile(payload.path, payload.text, payload.expectedMtime, await boundaryOf(client.id)))
+    );
 
     dispatcher.register('fs.watch', async (payload, client) => {
         await watcher.watch(client.id, payload.path);

@@ -126,12 +126,21 @@ export const languageOf = (name: string): string | undefined => {
 
 const baseName = (path: string): string => path.split(/[/\\]/).pop() ?? path;
 
+// The device and inode say which file was looked at, so a write can tell that file from one swapped in under its name.
+export interface FileStat {
+    path: string;
+    size: number;
+    mtime: number;
+    dev: number;
+    ino: number;
+}
+
 /*
  * The path a read may touch. Absolute the way `fs.list` answers one, and never a symlink: a listing
  * is never walked into one either, so a link inside a folder cannot hand the viewer a file that
  * folder does not hold.
  */
-const statFile = async (path: string): Promise<{ path: string; size: number; mtime: number }> => {
+const statFile = async (path: string): Promise<FileStat> => {
     if (path.includes('\0') || !isAbsolute(path)) {
         throw new ReadError('bad-path', 'A file is read by its absolute path');
     }
@@ -146,11 +155,11 @@ const statFile = async (path: string): Promise<{ path: string; size: number; mti
     if (!stats.isFile()) {
         throw new ReadError('not-a-file', 'That path is not a file');
     }
-    return { path: resolved, size: stats.size, mtime: Math.round(stats.mtimeMs) };
+    return { path: resolved, size: stats.size, mtime: Math.round(stats.mtimeMs), dev: stats.dev, ino: stats.ino };
 };
 
-/* What the head of a file says it is, before anything decides to read the rest of it. */
-const inspect = async (path: string): Promise<{ file: { path: string; size: number; mtime: number }; mime: string | null }> => {
+/* What the head of a file says it is, before anything decides to read the rest of it. A null mime is text. */
+export const inspect = async (path: string): Promise<{ file: FileStat; mime: string | null }> => {
     const file = await statFile(path);
     const head = new Uint8Array(await Bun.file(file.path).slice(0, SNIFF_BYTES).arrayBuffer());
     const magic = sniffMime(head);

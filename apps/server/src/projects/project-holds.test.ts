@@ -40,6 +40,17 @@ describe('ProjectHolds', () => {
         expect(holds.others('c3', 'p1')).toBe(2);
     });
 
+    test('the projects one client holds, which is as far as a save from it reaches', () => {
+        const holds = new ProjectHolds();
+        holds.add('c1', 'p1');
+        holds.add('c1', 'p2');
+        holds.add('c2', 'p3');
+        holds.remove('c1', 'p2');
+
+        expect(holds.projectsOf('c1')).toEqual(['p1']);
+        expect(holds.projectsOf('c3')).toEqual([]);
+    });
+
     test('a project a client never held, and a client nothing knows', () => {
         const holds = new ProjectHolds();
         expect(holds.remove('c1', 'p1')).toBe(true);

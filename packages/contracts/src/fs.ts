@@ -187,6 +187,22 @@ export type FsReadTooLarge = z.infer<typeof FsReadTooLargeSchema>;
 export const FsReadResultSchema = z.discriminatedUnion('kind', [FsReadTextSchema, FsReadBinarySchema, FsReadTooLargeSchema]);
 export type FsReadResult = z.infer<typeof FsReadResultSchema>;
 
+/* Saves a file `fs.read` answered as text, in place. The text is held to `FS_READ_MAX_TEXT_BYTES`
+   in UTF-8 bytes, and a file whose mtime is not `expectedMtime` any more is refused as `stale`. */
+export const FsWritePayloadSchema = z.object({
+    path: z.string().min(1),
+    text: z.string(),
+    // The `mtime` the read answered with; overwriting a file that moved is a new write at its fresh mtime.
+    expectedMtime: z.number()
+});
+export type FsWritePayload = z.infer<typeof FsWritePayloadSchema>;
+
+export const FsWriteResultSchema = z.object({
+    size: z.number(),
+    mtime: z.number()
+});
+export type FsWriteResult = z.infer<typeof FsWriteResultSchema>;
+
 // What `GET /fs/file` serves; a read result names one of these before the client asks for the bytes.
 export const FS_IMAGE_MIMES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'] as const;
 

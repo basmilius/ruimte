@@ -31,6 +31,10 @@ export class ProjectHolds {
         return [...(held ?? [])].filter((projectId) => this.holders(projectId) === 0);
     }
 
+    projectsOf(clientId: string): string[] {
+        return [...(this.byClient.get(clientId) ?? [])];
+    }
+
     has(clientId: string, projectId: string): boolean {
         return this.byClient.get(clientId)?.has(projectId) === true;
     }

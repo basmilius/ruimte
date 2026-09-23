@@ -181,6 +181,7 @@
     "fs.grep",
     "fs.list",
     "fs.read",
+    "fs.write",
     "fs.watch",
     "fs.unwatch",
     "bytes.read",
