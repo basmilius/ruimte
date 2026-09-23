@@ -151,9 +151,10 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         <>
                             {leads && !inSubagents && <Separator />}
                             {/* At least as wide as the controls at their smallest, so a bar too narrow
-                            for them overflows, and that is how it knows to fold. The bar centers
-                            what it holds, so a tab strip that runs its full height has to say so. */}
-                            <span ref={actions} className={clsx('flex min-w-min grow items-center', files && 'self-stretch')}>
+                            for them overflows, and that is how it knows to fold. The files never fold,
+                            so their strip may shrink and scroll. The bar centers what it holds, so a
+                            tab strip that runs its full height has to say so. */}
+                            <span ref={actions} className={clsx('flex grow items-center', files ? 'min-w-0 self-stretch' : 'min-w-min')}>
                                 {controls}
                             </span>
                         </>
