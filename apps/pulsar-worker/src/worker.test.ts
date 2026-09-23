@@ -25,7 +25,7 @@ import {
     type ProviderId,
     type SessionResult
 } from '@ruimte/pulsar';
-import { Miniflare } from 'miniflare';
+import { Miniflare, type WorkerOptions } from 'miniflare';
 import { LIMITS, WINDOW_MS, retryAfterSeconds, windowStartOf } from './rate-window.ts';
 
 /*
@@ -76,9 +76,76 @@ const bundle = async (): Promise<string> => {
     return output.text();
 };
 
+/*
+ * The tests reach D1 through a Worker of their own and never through `getD1Database`. Miniflare answers
+ * `prepare` and `bind` there synchronously, and under Bun that answer is sometimes not on the port yet when
+ * it is read, after which every later call reads the answer to the one before.
+ */
+const SQL_PATH = '/__sql';
+const SQL_WORKER = `export default {
+    async fetch(request, env) {
+        const { mode, statements } = await request.json();
+        const prepared = statements.map(({ query, params }) => env.DB.prepare(query).bind(...params));
+        if (mode === 'batch') {
+            await env.DB.batch(prepared);
+            return Response.json(null);
+        }
+        if (mode === 'first') {
+            return Response.json(await prepared[0].first());
+        }
+        if (mode === 'all') {
+            return Response.json((await prepared[0].all()).results);
+        }
+        await prepared[0].run();
+        return Response.json(null);
+    }
+};`;
+
+type Statement = [query: string, ...params: unknown[]];
+
+interface Database {
+    run(...statement: Statement): Promise<void>;
+    first<Row = Record<string, unknown>>(...statement: Statement): Promise<Row | null>;
+    all<Row = Record<string, unknown>>(...statement: Statement): Promise<Row[]>;
+    batch(statements: Statement[]): Promise<void>;
+}
+
+const database = (on: Miniflare): Database => {
+    const send = async (mode: string, statements: Statement[]): Promise<unknown> => {
+        const response = (await on.dispatchFetch(`${PUBLIC_ORIGIN}${SQL_PATH}`, {
+            method: 'POST',
+            body: JSON.stringify({ mode, statements: statements.map(([query, ...params]) => ({ query, params })) })
+        })) as unknown as Response;
+        if (!response.ok) {
+            throw new Error(`The query failed: ${await response.text()}`);
+        }
+        return response.json();
+    };
+    return {
+        run: async (...statement) => {
+            await send('run', [statement]);
+        },
+        first: async <Row>(...statement: Statement) => (await send('first', [statement])) as Row | null,
+        all: async <Row>(...statement: Statement) => (await send('all', [statement])) as Row[],
+        batch: async (statements) => {
+            await send('batch', statements);
+        }
+    };
+};
+
+// The Worker under test comes first, so every request outside the SQL path reaches it.
+const miniflare = (databaseId: string, options: Partial<Pick<WorkerOptions, 'bindings' | 'outboundService'>>): Miniflare => {
+    const shared = { modules: true, compatibilityDate: '2026-08-01', d1Databases: { DB: databaseId } };
+    return new Miniflare({
+        workers: [
+            { name: 'pulsar', script, ...shared, ...options },
+            { name: 'sql', script: SQL_WORKER, routes: [`*${SQL_PATH}`], ...shared }
+        ]
+    });
+};
+
 // Every migration by default; `files` picks some, so a test can seed the database the way an older Worker left it.
-const migrate = async (mf: Miniflare, files?: (file: string) => boolean): Promise<void> => {
-    const db = await mf.getD1Database('DB');
+const migrate = async (on: Miniflare, files?: (file: string) => boolean): Promise<void> => {
     const folder = join(APP_ROOT, 'migrations');
     for (const file of readdirSync(folder)
         .sort()
@@ -87,11 +154,11 @@ const migrate = async (mf: Miniflare, files?: (file: string) => boolean): Promis
             .split('\n')
             .filter((line) => !line.trim().startsWith('--'))
             .join('\n');
-        for (const statement of sql.split(';').map((part) => part.trim())) {
-            if (statement.length > 0) {
-                await db.prepare(statement).run();
-            }
-        }
+        const statements = sql
+            .split(';')
+            .map((part) => part.trim())
+            .filter((statement) => statement.length > 0);
+        await database(on).batch(statements.map((statement): Statement => [statement]));
     }
 };
 
@@ -395,13 +462,14 @@ const errorCode = async (response: Response): Promise<string> => ((await respons
  * clock, so the next window is filled too, in case the minute turns between this and the request.
  */
 const spendLimit = async (bucket: string, limit: number): Promise<void> => {
-    const db = await mf.getD1Database('DB');
     const now = Date.now();
     for (const windowStart of [now - (now % WINDOW_MS), now - (now % WINDOW_MS) + WINDOW_MS]) {
-        await db
-            .prepare('INSERT INTO rate_limit (bucket, window_start, count) VALUES (?1, ?2, ?3) ON CONFLICT (bucket, window_start) DO UPDATE SET count = ?3')
-            .bind(bucket, windowStart, limit)
-            .run();
+        await database(mf).run(
+            'INSERT INTO rate_limit (bucket, window_start, count) VALUES (?1, ?2, ?3) ON CONFLICT (bucket, window_start) DO UPDATE SET count = ?3',
+            bucket,
+            windowStart,
+            limit
+        );
     }
 };
 
@@ -414,11 +482,7 @@ const APPLE_BINDINGS = {
 
 beforeAll(async () => {
     script = await bundle();
-    mf = new Miniflare({
-        modules: true,
-        script,
-        compatibilityDate: '2026-08-01',
-        d1Databases: { DB: 'pulsar-test' },
+    mf = miniflare('pulsar-test', {
         bindings: {
             PUBLIC_ORIGIN,
             ALLOWED_ORIGINS: 'https://app.example.com',
@@ -652,8 +716,8 @@ describe('sessions', () => {
 
     test('a session from before the binding has to sign in again', async () => {
         const session = await signIn(2007);
-        const db = await mf.getD1Database('DB');
-        await db.prepare('UPDATE session SET session_key = NULL WHERE refresh_hash = ?1').bind(sha256(session.refreshToken)).run();
+        const db = database(mf);
+        await db.run('UPDATE session SET session_key = NULL WHERE refresh_hash = ?1', sha256(session.refreshToken));
         expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) })).status).toBe(401);
     });
 
@@ -825,13 +889,10 @@ describe('statements', () => {
         expect(verifies(statementPublicKey, message, statement.signature)).toBe(true);
         expect(verifies(machine.publicKey, message, statement.signature)).toBe(false);
 
-        const db = await mf.getD1Database('DB');
-        const log = await db.prepare('SELECT machine_id, device_public_key FROM statement_log WHERE account_id = ?1').bind(session.account.id).all();
-        expect(log.results).toEqual([{ machine_id: 'studio', device_public_key: client.publicKey }]);
-        const device = await db
-            .prepare('SELECT label FROM device WHERE account_id = ?1 AND public_key = ?2')
-            .bind(session.account.id, client.publicKey)
-            .first();
+        const db = database(mf);
+        const log = await db.all('SELECT machine_id, device_public_key FROM statement_log WHERE account_id = ?1', session.account.id);
+        expect(log).toEqual([{ machine_id: 'studio', device_public_key: client.publicKey }]);
+        const device = await db.first('SELECT label FROM device WHERE account_id = ?1 AND public_key = ?2', session.account.id, client.publicKey);
         expect(device).toEqual({ label: 'Test device' });
     });
 
@@ -852,11 +913,8 @@ describe('statements', () => {
         const response = await dispatch('/v1/statements', { method: 'POST', headers: bearer(stranger), body: accessRequest('owned', newKeyPair()) });
         expect(response.status).toBe(404);
         expect(await errorCode(response)).toBe('not-found');
-        const db = await mf.getD1Database('DB');
-        const logged = await db
-            .prepare('SELECT COUNT(*) AS count FROM statement_log WHERE account_id = ?1')
-            .bind(stranger.account.id)
-            .first<{ count: number }>();
+        const db = database(mf);
+        const logged = await db.first<{ count: number }>('SELECT COUNT(*) AS count FROM statement_log WHERE account_id = ?1', stranger.account.id);
         expect(logged?.count).toBe(0);
     });
 
@@ -1017,11 +1075,8 @@ describe('linking a machine with a code', () => {
 
     test('an expired code is refused on the page and said so to the terminal', async () => {
         const link = await start(newKeyPair(), 'expired');
-        const db = await mf.getD1Database('DB');
-        await db
-            .prepare('UPDATE device_link SET expires_at = ?1 WHERE user_code = ?2')
-            .bind(Date.now() - 1, link.userCode.replace('-', ''))
-            .run();
+        const db = database(mf);
+        await db.run('UPDATE device_link SET expires_at = ?1 WHERE user_code = ?2', Date.now() - 1, link.userCode.replace('-', ''));
         expect((await pollStatus(link.deviceCode)).status).toBe('expired');
         expect((await byCode('lookup', await signIn(5006), link.userCode)).status).toBe(404);
         expect((await poll(base64url(randomBytes(32)))).status).toBe(404);
@@ -1109,8 +1164,8 @@ describe('native sign in with Apple', () => {
         expect(attempt.attempt).toMatch(/^[A-Za-z0-9_-]{43}$/);
         expect(attempt.nonce).toMatch(/^[A-Za-z0-9_-]{43}$/);
         expect(attempt.expiresAt).toBeGreaterThan(Date.now());
-        const db = await mf.getD1Database('DB');
-        expect(await db.prepare('SELECT attempt_hash FROM native_apple_login WHERE attempt_hash = ?1').bind(sha256(attempt.attempt)).first()).not.toBeNull();
+        const db = database(mf);
+        expect(await db.first('SELECT attempt_hash FROM native_apple_login WHERE attempt_hash = ?1', sha256(attempt.attempt))).not.toBeNull();
         const response = await complete(credentials(attempt, 'native-shared-subject'));
         expect(response.status).toBe(200);
         expect(response.headers.get('location')).toBeNull();
@@ -1135,11 +1190,11 @@ describe('native sign in with Apple', () => {
     test('expired attempts are spent before Apple is called', async () => {
         const attempt = await start();
         const body = credentials(attempt, 'native-expired');
-        const db = await mf.getD1Database('DB');
-        await db.prepare('UPDATE native_apple_login SET expires_at = 0 WHERE attempt_hash = ?1').bind(sha256(attempt.attempt)).run();
+        const db = database(mf);
+        await db.run('UPDATE native_apple_login SET expires_at = 0 WHERE attempt_hash = ?1', sha256(attempt.attempt));
         expect((await complete(body)).status).toBe(401);
         expect(appleCodes.has(body.authorizationCode)).toBe(true);
-        expect(await db.prepare('SELECT * FROM native_apple_login WHERE attempt_hash = ?1').bind(sha256(attempt.attempt)).first()).toBeNull();
+        expect(await db.first('SELECT * FROM native_apple_login WHERE attempt_hash = ?1', sha256(attempt.attempt))).toBeNull();
     });
 
     test('a token from another attempt cannot be moved to a fresh nonce', async () => {
@@ -1199,8 +1254,8 @@ describe('native sign in with Apple', () => {
             expect(appleCodes.has(body.authorizationCode)).toBe(false);
             expect((await complete(body)).status).toBe(401);
         }
-        const db = await mf.getD1Database('DB');
-        expect(await db.prepare("SELECT * FROM identity WHERE provider = 'apple' AND subject = 'native-invalid-exchange'").first()).toBeNull();
+        const db = database(mf);
+        expect(await db.first("SELECT * FROM identity WHERE provider = 'apple' AND subject = 'native-invalid-exchange'")).toBeNull();
     });
 
     test('native login codes refuse a wrong verifier, redirect or key signature, and expire after a minute', async () => {
@@ -1209,11 +1264,11 @@ describe('native sign in with Apple', () => {
             const response = await complete(credentials(attempt, 'native-code-guards'));
             expect(response.status).toBe(200);
             const { code } = (await response.json()) as { code: string };
-            const db = await mf.getD1Database('DB');
-            const row = await db.prepare('SELECT expires_at FROM login_code WHERE code_hash = ?1').bind(sha256(code)).first<{ expires_at: number }>();
+            const db = database(mf);
+            const row = await db.first<{ expires_at: number }>('SELECT expires_at FROM login_code WHERE code_hash = ?1', sha256(code));
             expect(row!.expires_at).toBeLessThanOrEqual(Date.now() + 60_000);
             if (mode === 'expired') {
-                await db.prepare('UPDATE login_code SET expires_at = 0 WHERE code_hash = ?1').bind(sha256(code)).run();
+                await db.run('UPDATE login_code SET expires_at = 0 WHERE code_hash = ?1', sha256(code));
             }
             const key = newKeyPair();
             const result = await exchange(
@@ -1231,11 +1286,8 @@ describe('native sign in with Apple', () => {
     test('native start applies the existing login IP budget and rejects invalid PKCE challenges', async () => {
         expect((await dispatch('/v1/apple/start', { method: 'POST', body: { codeChallenge: 'short' } })).status).toBe(400);
         const ip = nextIp();
-        const db = await mf.getD1Database('DB');
-        await db
-            .prepare('INSERT INTO rate_limit (bucket, window_start, count) VALUES (?1, ?2, ?3)')
-            .bind(`ip:${ip}:login`, windowStartOf(Date.now()), LIMITS.loginIp)
-            .run();
+        const db = database(mf);
+        await db.run('INSERT INTO rate_limit (bucket, window_start, count) VALUES (?1, ?2, ?3)', `ip:${ip}:login`, windowStartOf(Date.now()), LIMITS.loginIp);
         expect((await dispatch('/v1/apple/start', { method: 'POST', ip, body: { codeChallenge: sha256('x'.repeat(43)) } })).status).toBe(429);
     });
 });
@@ -1280,8 +1332,8 @@ describe('sign in with Apple', () => {
 
     test('a state past its lifetime is refused', async () => {
         const start = await startLogin('apple');
-        const db = await mf.getD1Database('DB');
-        await db.prepare('UPDATE login_attempt SET expires_at = 0 WHERE state_hash = ?1').bind(sha256(start.providerState)).run();
+        const db = database(mf);
+        await db.run('UPDATE login_attempt SET expires_at = 0 WHERE state_hash = ?1', sha256(start.providerState));
         const response = await appleCallback(start, 'apple-1003');
         expect(response.status).toBe(400);
         expect(response.headers.get('location')).toBeNull();
@@ -1321,8 +1373,8 @@ describe('sign in with Apple', () => {
             expect(back.searchParams.get('state')).toBe(start.appState);
             expect(back.searchParams.get('code')).toBeNull();
         }
-        const db = await mf.getD1Database('DB');
-        expect(await db.prepare("SELECT account_id FROM identity WHERE provider = 'apple' AND subject = 'apple-1005'").first()).toBeNull();
+        const db = database(mf);
+        expect(await db.first("SELECT account_id FROM identity WHERE provider = 'apple' AND subject = 'apple-1005'")).toBeNull();
     });
 
     test('a person who cancels at Apple is sent back with access_denied', async () => {
@@ -1341,8 +1393,8 @@ describe('sign in with Apple', () => {
 
 describe('identities', () => {
     test('an account a Worker from before identities made during a deploy gets its identity on the next sign-in', async () => {
-        const db = await mf.getD1Database('DB');
-        await db.prepare("INSERT INTO account (id, provider, subject, login, created_at) VALUES ('window-account', 'github', '7101', 'user-7101', 1)").run();
+        const db = database(mf);
+        await db.run("INSERT INTO account (id, provider, subject, login, created_at) VALUES ('window-account', 'github', '7101', 'user-7101', 1)");
         const session = await signIn(7101);
         expect(session.account.id).toBe('window-account');
         expect((await accountOf(session)).identities.map((identity) => identity.provider)).toEqual(['github']);
@@ -1392,9 +1444,9 @@ describe('identities', () => {
 
     test('a link token past its lifetime, or from a session that signed out, starts nothing', async () => {
         const session = await signIn(7204);
-        const db = await mf.getD1Database('DB');
+        const db = database(mf);
         const expired = await requestLink(session, 'apple');
-        await db.prepare('UPDATE identity_link_request SET expires_at = 0 WHERE token_hash = ?1').bind(sha256(expired)).run();
+        await db.run('UPDATE identity_link_request SET expires_at = 0 WHERE token_hash = ?1', sha256(expired));
         const query = (link: string) =>
             new URLSearchParams({
                 redirect_uri: REDIRECT_URI,
@@ -1492,11 +1544,7 @@ describe('the identity migration', () => {
     let old: Miniflare;
 
     beforeAll(async () => {
-        old = new Miniflare({
-            modules: true,
-            script,
-            compatibilityDate: '2026-08-01',
-            d1Databases: { DB: 'pulsar-migration' },
+        old = miniflare('pulsar-migration', {
             bindings: { PUBLIC_ORIGIN, GITHUB_CLIENT_ID: 'github-client', GITHUB_CLIENT_SECRET: GITHUB_SECRET, ...APPLE_BINDINGS },
             outboundService: outbound
         });
@@ -1508,20 +1556,23 @@ describe('the identity migration', () => {
     });
 
     test('a GitHub account from before keeps its session and machines, and signs in to the same account', async () => {
-        const db = await old.getD1Database('DB');
+        const db = database(old);
         const accessToken = base64url(randomBytes(32));
         const now = Date.now();
         await db.batch([
-            db.prepare("INSERT INTO account (id, provider, subject, login, created_at) VALUES ('before', 'github', '9001', 'user-before', 1)"),
-            db
-                .prepare(
-                    `INSERT INTO session (id, account_id, label, access_hash, access_expires_at, refresh_hash, expires_at, created_at, session_key)
-                     VALUES ('session-before', 'before', 'Old device', ?1, ?2, ?3, ?4, 1, ?5)`
-                )
-                .bind(sha256(accessToken), now + 10 * 60_000, sha256(base64url(randomBytes(32))), now + 24 * 60 * 60_000, newKeyPair().publicKey),
-            db.prepare(
+            ["INSERT INTO account (id, provider, subject, login, created_at) VALUES ('before', 'github', '9001', 'user-before', 1)"],
+            [
+                `INSERT INTO session (id, account_id, label, access_hash, access_expires_at, refresh_hash, expires_at, created_at, session_key)
+                 VALUES ('session-before', 'before', 'Old device', ?1, ?2, ?3, ?4, 1, ?5)`,
+                sha256(accessToken),
+                now + 10 * 60_000,
+                sha256(base64url(randomBytes(32))),
+                now + 24 * 60 * 60_000,
+                newKeyPair().publicKey
+            ],
+            [
                 "INSERT INTO machine (account_id, id, name, icon, public_key, last_seen_at, created_at) VALUES ('before', 'machine-before', 'Old machine', NULL, 'key', 1, 1)"
-            )
+            ]
         ]);
 
         await migrate(old, (file) => file >= '0005');
@@ -1560,18 +1611,8 @@ describe('an address book nobody configured', () => {
     let bare: Miniflare;
 
     beforeAll(async () => {
-        bare = new Miniflare({ modules: true, script, compatibilityDate: '2026-08-01', d1Databases: { DB: 'pulsar-bare' }, bindings: { PUBLIC_ORIGIN } });
-        const db = await bare.getD1Database('DB');
-        for (const statement of readFileSync(join(APP_ROOT, 'migrations/0001_address_book.sql'), 'utf8')
-            .split('\n')
-            .filter((line) => !line.trim().startsWith('--'))
-            .join('\n')
-            .split(';')
-            .map((part) => part.trim())) {
-            if (statement.length > 0) {
-                await db.prepare(statement).run();
-            }
-        }
+        bare = miniflare('pulsar-bare', { bindings: { PUBLIC_ORIGIN } });
+        await migrate(bare, (file) => file === '0001_address_book.sql');
     }, 30_000);
 
     afterAll(async () => {
