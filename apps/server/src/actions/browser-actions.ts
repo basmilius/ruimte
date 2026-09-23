@@ -13,11 +13,32 @@ import { VerbRefusal, field, orNote, type BrowserDriveHost } from '../canvas/ver
 import type { ServerActionContext } from './context.ts';
 
 /* Every browser node this caller may drive, for a refusal that offers what the next call takes. */
-const browserLines = (sources: readonly ContextSource[]): string[] =>
+const browserLines = (sources: readonly ContextSource[], callerCanvas: string | null): string[] =>
     orNote(
         sources.filter((source) => source.kind === 'browser').map((source) => `browser\t${source.id}\t${field(source.title)}\t${field(source.text ?? '')}`),
-        'No browser node is linked to you; ruimte-context link new --to <id> draws the line to one'
+        callerCanvas === null
+            ? 'No browser node is linked to you, and none can be: you are a view of your own, and a line only runs between two nodes of one canvas'
+            : 'No browser node is linked to you; ruimte-context link new --to <id> draws the line to one on your canvas'
     );
+
+/*
+ * What gets a caller a page it may drive. A line only runs between two nodes of one canvas, so for
+ * a page on another canvas that line is no answer, and a page of its own beside it is.
+ */
+const lineLines = (id: string, url: string | undefined, callerCanvas: string | null, pageCanvas: string): string[] => {
+    if (callerCanvas === null) {
+        return [
+            `note\t${id} stands on ${pageCanvas}, and you are a view of your own: a line only runs between two nodes of one canvas, so no page can be linked to you`
+        ];
+    }
+    if (callerCanvas === pageCanvas) {
+        return [`see\truimte-context link new --to ${id}\tdraws it`];
+    }
+    return [
+        `note\t${id} stands on ${pageCanvas} and you on ${callerCanvas}, and a line only runs between two nodes of one canvas`,
+        `see\truimte-context node new browser --url ${url ?? '<url>'}\topens a page of your own on your canvas, with the line to it drawn`
+    ];
+};
 
 /*
  * The node an action works on. A browser node of this project, with a line between it and the
@@ -27,17 +48,22 @@ const targetOf = async ({ host, place }: ServerActionContext, caller: string, id
     const content = await host.read(place.projectId);
     const sources = deriveProjectContextSources(content.views, null).get(caller) ?? [];
     const linked = sources.find((source) => source.id === id);
-    const node = content.views.flatMap((view) => (isCanvasView(view) ? view.nodes : [])).find((candidate) => candidate.id === id);
-    if (!node) {
-        throw new VerbRefusal('unknown-node', `${id} is not a node of this project`, browserLines(sources));
+    const canvas = content.views.filter(isCanvasView).find((view) => view.nodes.some((candidate) => candidate.id === id));
+    const node = canvas?.nodes.find((candidate) => candidate.id === id);
+    if (!canvas || !node) {
+        throw new VerbRefusal('unknown-node', `${id} is not a node of this project`, browserLines(sources, place.canvasId));
     }
     if (node.kind !== 'browser') {
-        throw new VerbRefusal('not-a-browser', `${id} is a ${node.kind} node, and only a browser node has a page to drive`, browserLines(sources));
+        throw new VerbRefusal(
+            'not-a-browser',
+            `${id} is a ${node.kind} node, and only a browser node has a page to drive`,
+            browserLines(sources, place.canvasId)
+        );
     }
     if (!linked) {
         throw new VerbRefusal('not-linked', `No line runs between you and ${id}, and that line is what lets you drive its page`, [
-            `see\truimte-context link new --to ${id}\tdraws it`,
-            ...browserLines(sources)
+            ...lineLines(id, node.url, place.canvasId, canvas.id),
+            ...browserLines(sources, place.canvasId)
         ]);
     }
     return node;

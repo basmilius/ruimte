@@ -3262,6 +3262,27 @@ describe('browser', () => {
         expect(driven).toEqual([]);
     });
 
+    test('a line is the hint only for a page on the canvas of the caller', async () => {
+        const near = (
+            await post('node', ['new', 'browser', '--url', 'https://example.com/near', '--view', 'main', '--beside', 'note-1'], 'chat')
+        ).lines[0]!.split('\t')[0]!;
+        expect((await post('browser', ['state', near])).lines[1]).toBe(`see\truimte-context link new --to ${near}\tdraws it`);
+
+        const far = (await post('node', ['new', 'browser', '--url', 'https://example.com/far', '--view', 'board'])).lines[0]!.split('\t')[0]!;
+        const across = (await post('browser', ['state', far])).lines;
+        expect(across.slice(1, 3)).toEqual([
+            `note\t${far} stands on board and you on main, and a line only runs between two nodes of one canvas`,
+            'see\truimte-context node new browser --url https://example.com/far\topens a page of your own on your canvas, with the line to it drawn'
+        ]);
+        expect(across.some((line) => line.includes(`link new --to ${far}`))).toBe(false);
+
+        const alone = (await post('browser', ['state', far], 'chat')).lines;
+        expect(alone[1]).toBe(
+            `note\t${far} stands on board, and you are a view of your own: a line only runs between two nodes of one canvas, so no page can be linked to you`
+        );
+        expect(alone.some((line) => line.includes('link new'))).toBe(false);
+    });
+
     test('a node that is not a browser, and an id that is no node at all, are refused by name', async () => {
         expect((await post('browser', ['state', 'note-1'])).lines[0]).toBe(
             'refused\tnot-a-browser\tnote-1 is a note node, and only a browser node has a page to drive'
