@@ -22,10 +22,13 @@ import {
     type DeviceLinkStartResult,
     type IdentityLinkStartResult,
     type MachineListResult,
+    type ModelBenchmarksResult,
     type ProviderId,
     type SessionResult
 } from '@ruimte/pulsar';
 import { Miniflare, type WorkerOptions } from 'miniflare';
+import { BENCHMARK_MODELS } from './benchmark-models.ts';
+import { MAX_PAGES } from './benchmarks.ts';
 import { LIMITS, WINDOW_MS, retryAfterSeconds, windowStartOf } from './rate-window.ts';
 
 /*
@@ -1644,5 +1647,151 @@ describe('an address book nobody configured', () => {
         expect(await health.json()).toEqual({ ok: true, statementKey: null, providers: { github: false, apple: false } });
         const providers = (await bare.dispatchFetch(`${PUBLIC_ORIGIN}/v1/providers`)) as unknown as Response;
         expect(await providers.json()).toEqual({ providers: [] });
+    });
+
+    test('says model benchmarks are not configured without the key', async () => {
+        const response = (await bare.dispatchFetch(`${PUBLIC_ORIGIN}/v1/models/benchmarks`)) as unknown as Response;
+        expect(response.status).toBe(503);
+        expect(await errorCode(response)).toBe('not-configured');
+    });
+});
+
+describe('model benchmarks', () => {
+    const BENCHMARKS_CRON = '17 */3 * * *';
+    const API_KEY = 'aa-test-key';
+    const measuredId = (slug: string, effort: string): string => {
+        const id = BENCHMARK_MODELS.find((model) => model.slug === slug)?.efforts.find((entry) => entry.effort === effort)?.id;
+        if (!id) {
+            throw new Error(`${slug} ${effort} has no id in the table`);
+        }
+        return id;
+    };
+
+    // Made up, in the shape the documentation gives, with fields the Worker must never hand on.
+    const measured = (id: string, intelligence: number | null, cost: number | null) => ({
+        id,
+        name: `Model ${id}`,
+        slug: `model-${id}`,
+        release_date: '2026-09-01',
+        model_creator: { id: 'creator', name: 'Creator' },
+        evaluations: { artificial_analysis_intelligence_index: intelligence, artificial_analysis_coding_index: 1, artificial_analysis_agentic_index: null },
+        artificial_analysis_intelligence_index_cost: cost === null ? null : { total_cost: cost * 100, cost_per_task: { total_cost: cost } },
+        pricing: { price_1m_input_tokens: 1, price_1m_output_tokens: 2 },
+        performance: { median_output_tokens_per_second: 3 }
+    });
+    const page = (number: number, hasMore: boolean, data: unknown[]) => ({
+        tier: 'free',
+        intelligence_index_version: '9',
+        pagination: { page: number, page_size: 200, total_pages: 2, has_more: hasMore },
+        data
+    });
+
+    let pages: (unknown | number)[] = [];
+    let asked: { page: string | null; key: string | null }[] = [];
+    let on: Miniflare;
+
+    const artificialAnalysis = async (request: Request): Promise<Response> => {
+        const url = new URL(request.url);
+        if (url.origin + url.pathname !== 'https://artificialanalysis.ai/api/v2/language/models/free') {
+            return new Response(`unexpected outbound request to ${url.href}`, { status: 599 });
+        }
+        asked.push({ page: url.searchParams.get('page'), key: request.headers.get('x-api-key') });
+        const answer = pages[Number(url.searchParams.get('page')) - 1];
+        return typeof answer === 'number' ? new Response('nope', { status: answer }) : Response.json(answer ?? page(99, false, []));
+    };
+
+    const refresh = async (): Promise<void> => {
+        asked = [];
+        await (await on.getWorker('pulsar')).scheduled({ cron: BENCHMARKS_CRON });
+    };
+
+    const read = async (): Promise<Response> => dispatch('/v1/models/benchmarks', { on });
+
+    beforeAll(async () => {
+        on = miniflare('pulsar-benchmarks', { bindings: { PUBLIC_ORIGIN, ARTIFICIAL_ANALYSIS_API_KEY: API_KEY }, outboundService: artificialAnalysis });
+        await migrate(on);
+    }, 30_000);
+
+    afterAll(async () => {
+        await on.dispose();
+    });
+
+    test('says there is nothing yet before the first refresh', async () => {
+        const response = await read();
+        expect(response.status).toBe(503);
+        expect(await errorCode(response)).toBe('no-benchmarks');
+    });
+
+    test('follows every page and hands out only what the chart draws', async () => {
+        pages = [
+            page(1, true, [
+                measured(measuredId('claude-opus-5-5', 'low'), 42.3, 0.55),
+                measured(measuredId('claude-opus-5-5', 'max'), 57.6, 5.98),
+                measured('not-a-model-of-ruimte', 70, 1),
+                { id: 'broken', evaluations: 'nope' }
+            ]),
+            page(2, false, [measured(measuredId('gpt-6-luna', 'low'), 20.9, 0.004), measured(measuredId('gpt-6-luna', 'max'), 37.3, null)])
+        ];
+        await refresh();
+        expect(asked).toEqual([
+            { page: '1', key: API_KEY },
+            { page: '2', key: API_KEY }
+        ]);
+
+        const response = await read();
+        expect(response.status).toBe(200);
+        const result = (await response.json()) as ModelBenchmarksResult;
+        expect(Object.keys(result).sort()).toEqual(['fetchedAt', 'models']);
+        expect(result.models.map((model) => model.id)).toEqual(BENCHMARK_MODELS.map((model) => model.slug));
+        for (const model of result.models) {
+            expect(Object.keys(model).sort()).toEqual(['id', 'legacy', 'name', 'points', 'provider']);
+            for (const point of model.points) {
+                expect(Object.keys(point).sort()).toEqual(['costPerTask', 'effort', 'intelligence']);
+            }
+        }
+        expect(result.models.find((model) => model.id === 'claude-opus-5-5')).toEqual({
+            id: 'claude-opus-5-5',
+            name: 'Claude Opus 5.5',
+            provider: 'claude',
+            legacy: false,
+            points: [
+                { effort: 'low', intelligence: 42.3, costPerTask: 0.55 },
+                { effort: 'max', intelligence: 57.6, costPerTask: 5.98 }
+            ]
+        });
+        // The max of Luna has an index without a cost, so it is no point.
+        expect(result.models.find((model) => model.id === 'gpt-6-luna')?.points).toEqual([{ effort: 'low', intelligence: 20.9, costPerTask: 0.004 }]);
+        expect(result.models.find((model) => model.id === 'gpt-5.3-codex-spark')?.points).toEqual([]);
+        expect(JSON.stringify(result)).not.toContain('pricing');
+        expect(JSON.stringify(result)).not.toContain('Model ');
+    });
+
+    test('a failed page, an unreadable one or one without a known model leaves the row that is there', async () => {
+        const before = await (await read()).json();
+        for (const broken of [
+            [page(1, true, [measured(measuredId('claude-opus-5-5', 'low'), 1, 1)]), 500],
+            [page(1, false, [measured(measuredId('claude-opus-5-5', 'low'), 1, 1)]).data],
+            [page(1, false, [measured('not-a-model-of-ruimte', 70, 1)])],
+            [429]
+        ]) {
+            pages = broken;
+            await refresh();
+            expect(asked.length).toBeGreaterThan(0);
+            expect(await (await read()).json()).toEqual(before);
+        }
+    });
+
+    test('stops after a bounded number of pages when the answer never ends', async () => {
+        pages = Array.from({ length: MAX_PAGES + 5 }, (_, index) => page(index + 1, true, [measured(measuredId('gpt-6-sol', 'high'), 44, 0.5)]));
+        await refresh();
+        expect(asked).toHaveLength(MAX_PAGES);
+        const result = (await (await read()).json()) as ModelBenchmarksResult;
+        expect(result.models.find((model) => model.id === 'gpt-6-sol')?.points).toEqual([{ effort: 'high', intelligence: 44, costPerTask: 0.5 }]);
+    });
+
+    test('the daily cleanup does not ask Artificial Analysis', async () => {
+        asked = [];
+        await (await on.getWorker('pulsar')).scheduled({ cron: '17 4 * * *' });
+        expect(asked).toEqual([]);
     });
 });

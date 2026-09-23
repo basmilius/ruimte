@@ -182,6 +182,7 @@
       "last-identity",
       "rate-limited",
       "not-configured",
+      "no-benchmarks",
       "internal"
     ]
   },
@@ -205,6 +206,7 @@
               "last-identity",
               "rate-limited",
               "not-configured",
+              "no-benchmarks",
               "internal"
             ]
           },
@@ -221,6 +223,79 @@
     },
     "required": [
       "error"
+    ]
+  },
+  "BenchmarkModelSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "provider": {
+        "type": "string",
+        "maxLength": 32
+      },
+      "legacy": {
+        "type": "boolean"
+      },
+      "points": {
+        "maxItems": 16,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "effort": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "intelligence": {
+              "type": "number"
+            },
+            "costPerTask": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "effort",
+            "intelligence",
+            "costPerTask"
+          ]
+        }
+      }
+    },
+    "required": [
+      "id",
+      "name",
+      "provider",
+      "legacy",
+      "points"
+    ]
+  },
+  "BenchmarkPointSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "effort": {
+        "type": "string",
+        "maxLength": 32
+      },
+      "intelligence": {
+        "type": "number"
+      },
+      "costPerTask": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "effort",
+      "intelligence",
+      "costPerTask"
     ]
   },
   "BrokerUrlSchema": {
@@ -505,6 +580,76 @@
       "publicKey",
       "brokerUrl",
       "lastSeenAt"
+    ]
+  },
+  "ModelBenchmarksResultSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "fetchedAt": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "models": {
+        "maxItems": 64,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "provider": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "legacy": {
+              "type": "boolean"
+            },
+            "points": {
+              "maxItems": 16,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "effort": {
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "intelligence": {
+                    "type": "number"
+                  },
+                  "costPerTask": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "effort",
+                  "intelligence",
+                  "costPerTask"
+                ]
+              }
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "provider",
+            "legacy",
+            "points"
+          ]
+        }
+      }
+    },
+    "required": [
+      "fetchedAt",
+      "models"
     ]
   },
   "NativeAppleCompletePayloadSchema": {

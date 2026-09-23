@@ -7,6 +7,7 @@ in `packages/pulsar/src/statement-key.ts`. The wire shapes live in `packages/pul
 - Worker `ruimte-pulsar`, account `5e565cf9fa55b0eae1f8131903da2ca9`, also on `https://ruimte-pulsar.bas.workers.dev`
 - D1 database `ruimte-pulsar`, migrations in `migrations/`
 - A cron at 04:17 UTC drops expired logins, codes, rate limit windows and dead sessions
+- A cron every three hours (`17 */3 * * *`) reads the model benchmarks of Artificial Analysis into D1
 
 ## Routes
 
@@ -22,6 +23,7 @@ in `packages/pulsar/src/statement-key.ts`. The wire shapes live in `packages/pul
 | `POST /v1/session/refresh`                 | A new access and refresh token, signed with the session key                                |
 | `DELETE /v1/session`                       | Sign out                                                                                   |
 | `GET /v1/providers`                        | The providers that are configured, so a client only offers those                           |
+| `GET /v1/models/benchmarks`                | Intelligence Index and cost per task per model and effort, for the model comparison        |
 | `GET /v1/account`                          | The account and its identities                                                             |
 | `POST /v1/account/link`                    | A single-use link token for the start URL, bound to this session                           |
 | `POST /v1/account/identities`              | The code of a link login with its verifier, from the same session                          |
@@ -51,6 +53,8 @@ APPLE_TEAM_ID=...
 APPLE_KEY_ID=...
 APPLE_CLIENT_ID=...
 APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
+# Optional. Without it `/v1/models/benchmarks` answers 503 `not-configured`.
+ARTIFICIAL_ANALYSIS_API_KEY=...
 PUBLIC_ORIGIN=http://localhost:8787
 ```
 
@@ -101,15 +105,16 @@ loopback listener, `https://station.ruimte.app/pulsar/callback` and the Vite dev
 
 ## Secrets
 
-| Secret                  | What                                                          |
-| ----------------------- | ------------------------------------------------------------- |
-| `STATEMENT_PRIVATE_KEY` | The private half of the statement key, pkcs8 DER in base64url |
-| `GITHUB_CLIENT_ID`      | From the GitHub OAuth app                                     |
-| `GITHUB_CLIENT_SECRET`  | From the GitHub OAuth app                                     |
-| `APPLE_TEAM_ID`         | The team id of the Apple Developer account, ten characters    |
-| `APPLE_KEY_ID`          | The id of the Sign in with Apple key, ten characters          |
-| `APPLE_PRIVATE_KEY`     | The whole `.p8` file of that key, armor lines included        |
-| `APPLE_CLIENT_ID`       | The Services ID, `app.ruimte.pulsar`                          |
+| Secret                        | What                                                          |
+| ----------------------------- | ------------------------------------------------------------- |
+| `STATEMENT_PRIVATE_KEY`       | The private half of the statement key, pkcs8 DER in base64url |
+| `GITHUB_CLIENT_ID`            | From the GitHub OAuth app                                     |
+| `GITHUB_CLIENT_SECRET`        | From the GitHub OAuth app                                     |
+| `APPLE_TEAM_ID`               | The team id of the Apple Developer account, ten characters    |
+| `APPLE_KEY_ID`                | The id of the Sign in with Apple key, ten characters          |
+| `APPLE_PRIVATE_KEY`           | The whole `.p8` file of that key, armor lines included        |
+| `APPLE_CLIENT_ID`             | The Services ID, `app.ruimte.pulsar`                          |
+| `ARTIFICIAL_ANALYSIS_API_KEY` | The key of the free Data API of Artificial Analysis           |
 
 ```sh
 cd apps/pulsar-worker
@@ -119,6 +124,7 @@ bunx wrangler secret put APPLE_TEAM_ID
 bunx wrangler secret put APPLE_KEY_ID
 bunx wrangler secret put APPLE_CLIENT_ID
 bunx wrangler secret put APPLE_PRIVATE_KEY < ~/.private/AuthKey_XXXXXXXXXX.p8
+bunx wrangler secret put ARTIFICIAL_ANALYSIS_API_KEY
 ```
 
 Without the GitHub pair, `/auth/github/start` answers `503` with `not-configured` and `/health` says
@@ -126,6 +132,23 @@ Without the GitHub pair, `/auth/github/start` answers `503` with `not-configured
 `/v1/providers` leaves it out, and the clients draw no Apple button, so the Worker deploys safely before the
 secrets exist. The private statement key is also kept in `~/.private/ruimte.secrets.env` as
 `PULSAR_STATEMENT_PRIVATE_KEY`.
+
+## Model benchmarks
+
+`GET /v1/models/benchmarks` is public and feeds the model comparison in the app. The Worker reads the free
+Data API of Artificial Analysis (`GET /api/v2/language/models/free`, the key in `x-api-key`, 200 models
+a page, `page` from 1 while `has_more`, at most ten pages) every three hours, so four pages cost 32 of the
+100 requests a day. It keeps one row in D1 with only what the chart draws: per model of Ruimte its id, name,
+provider and whether it is legacy, and per effort the Intelligence Index and the cost per task in USD. The
+terms of that data allow a chart with attribution, not a copy, so no other field of the answer is kept or
+handed out. A page that fails, does not parse or leaves not one known model measured keeps the row that
+is there. Without the key the route answers `503` with `not-configured`, before the first good refresh
+`503` with `no-benchmarks`.
+
+Which model of Artificial Analysis stands for which model and effort of Ruimte is `src/benchmark-models.ts`,
+looked up by id; a test holds it against the manifests in `apps/server/src/providers`. A new model is a row
+there and a deploy of this Worker, not a release of the app. `X-RateLimit-Remaining` and `X-RateLimit-Reset`
+on an answer say how much of the day is left.
 
 ## The GitHub OAuth app
 

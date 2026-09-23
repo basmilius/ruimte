@@ -6,6 +6,7 @@ import {
     AddressBookErrorSchema,
     IdentityLinkStartResultSchema,
     MachineListResultSchema,
+    ModelBenchmarksResultSchema,
     ProvidersResultSchema,
     RegisterMachineResultSchema,
     SessionResultSchema,
@@ -19,6 +20,7 @@ import {
     type ProviderId,
     type Machine,
     type MachineListResult,
+    type ModelBenchmarksResult,
     type RegisterMachinePayload,
     type SessionExchangePayload,
     type SessionRefreshPayload,
@@ -107,6 +109,10 @@ export class AddressBookClient {
 
     async providers(): Promise<string[]> {
         return (await this.call({ method: 'GET', path: '/v1/providers', schema: ProvidersResultSchema })).providers;
+    }
+
+    modelBenchmarks(): Promise<ModelBenchmarksResult> {
+        return this.call({ method: 'GET', path: '/v1/models/benchmarks', schema: ModelBenchmarksResultSchema });
     }
 
     account(accessToken: string): Promise<AccountResult> {

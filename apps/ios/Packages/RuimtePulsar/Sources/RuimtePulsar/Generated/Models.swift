@@ -214,6 +214,7 @@ public enum AddressBookErrorCode: String, CaseIterable, Codable, Sendable, Equat
     case `lastIdentity` = "last-identity"
     case `rateLimited` = "rate-limited"
     case `notConfigured` = "not-configured"
+    case `noBenchmarks` = "no-benchmarks"
     case `internal` = "internal"
 }
 
@@ -264,6 +265,82 @@ public struct AddressBookErrorError: Codable, Sendable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case `code` = "code"
         case `message` = "message"
+    }
+}
+
+public struct BenchmarkModel: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `provider`: String
+    public let `legacy`: Bool
+    public let `points`: [BenchmarkPoint]
+
+    public init(`id`: String, `name`: String, `provider`: String, `legacy`: Bool, `points`: [BenchmarkPoint]) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`provider` = `provider`
+        self.`legacy` = `legacy`
+        self.`points` = `points`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("BenchmarkModelSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `provider` = try container.decode(String.self, forKey: .`provider`)
+        `legacy` = try container.decode(Bool.self, forKey: .`legacy`)
+        `points` = try container.decode([BenchmarkPoint].self, forKey: .`points`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`provider`, forKey: .`provider`)
+        try container.encode(`legacy`, forKey: .`legacy`)
+        try container.encode(`points`, forKey: .`points`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `provider` = "provider"
+        case `legacy` = "legacy"
+        case `points` = "points"
+    }
+}
+
+public struct BenchmarkPoint: Codable, Sendable, Equatable {
+    public let `effort`: String
+    public let `intelligence`: Double
+    public let `costPerTask`: Double
+
+    public init(`effort`: String, `intelligence`: Double, `costPerTask`: Double) {
+        self.`effort` = `effort`
+        self.`intelligence` = `intelligence`
+        self.`costPerTask` = `costPerTask`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("BenchmarkPointSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `effort` = try container.decode(String.self, forKey: .`effort`)
+        `intelligence` = try container.decode(Double.self, forKey: .`intelligence`)
+        `costPerTask` = try container.decode(Double.self, forKey: .`costPerTask`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`effort`, forKey: .`effort`)
+        try container.encode(`intelligence`, forKey: .`intelligence`)
+        try container.encode(`costPerTask`, forKey: .`costPerTask`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `effort` = "effort"
+        case `intelligence` = "intelligence"
+        case `costPerTask` = "costPerTask"
     }
 }
 
@@ -454,6 +531,34 @@ public struct Machine: Codable, Sendable, Equatable {
         case `publicKey` = "publicKey"
         case `brokerUrl` = "brokerUrl"
         case `lastSeenAt` = "lastSeenAt"
+    }
+}
+
+public struct ModelBenchmarksResult: Codable, Sendable, Equatable {
+    public let `fetchedAt`: Int64
+    public let `models`: [BenchmarkModel]
+
+    public init(`fetchedAt`: Int64, `models`: [BenchmarkModel]) {
+        self.`fetchedAt` = `fetchedAt`
+        self.`models` = `models`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("ModelBenchmarksResultSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `fetchedAt` = try container.decode(Int64.self, forKey: .`fetchedAt`)
+        `models` = try container.decode([BenchmarkModel].self, forKey: .`models`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`fetchedAt`, forKey: .`fetchedAt`)
+        try container.encode(`models`, forKey: .`models`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `fetchedAt` = "fetchedAt"
+        case `models` = "models"
     }
 }
 

@@ -16,6 +16,7 @@ const STATUS_OF: Record<AddressBookErrorCode, number> = {
     'last-identity': 409,
     'rate-limited': 429,
     'not-configured': 503,
+    'no-benchmarks': 503,
     internal: 500
 };
 

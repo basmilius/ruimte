@@ -22,7 +22,8 @@
     "APNS_TEAM_ID": "7RGV9KKX87",
     "ALLOWED_ORIGINS": "https://station.ruimte.app"
   },
-  // Expired logins, codes, rate limit windows and dead sessions.
-  "triggers": { "crons": ["17 4 * * *"] },
+  // Expired logins, codes, rate limit windows and dead sessions; and the model benchmarks, every three hours.
+  // `scheduled()` tells them apart by the expression, so a change here is a change in `src/index.ts` too.
+  "triggers": { "crons": ["17 4 * * *", "17 */3 * * *"] },
   "observability": { "enabled": true }
 }

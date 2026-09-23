@@ -173,6 +173,38 @@ export const ProvidersResultSchema = z.object({
 });
 export type ProvidersResult = z.infer<typeof ProvidersResultSchema>;
 
+/*
+ * `GET /v1/models/benchmarks`: the Intelligence Index of Artificial Analysis against its cost per task,
+ * per model of Ruimte and per effort. Only what the comparison chart draws, since the terms of that data
+ * allow a chart and not a copy. Strings rather than enums for the provider and the effort, so a client
+ * older than a new one still reads the rest.
+ */
+export const BenchmarkPointSchema = z.object({
+    // The id of the effort in the model's own manifest, `low` to `max`, or `off` and `thinking` for a switch.
+    effort: z.string().max(32),
+    intelligence: z.number(),
+    // In USD.
+    costPerTask: z.number()
+});
+export type BenchmarkPoint = z.infer<typeof BenchmarkPointSchema>;
+
+export const BenchmarkModelSchema = z.object({
+    // The model's slug in Ruimte.
+    id: z.string().max(64),
+    name: z.string().max(64),
+    provider: z.string().max(32),
+    legacy: z.boolean(),
+    // Empty for a model nobody measured.
+    points: z.array(BenchmarkPointSchema).max(16)
+});
+export type BenchmarkModel = z.infer<typeof BenchmarkModelSchema>;
+
+export const ModelBenchmarksResultSchema = z.object({
+    fetchedAt: z.number().int(),
+    models: z.array(BenchmarkModelSchema).max(64)
+});
+export type ModelBenchmarksResult = z.infer<typeof ModelBenchmarksResultSchema>;
+
 // `POST /v1/account/link`: a signed-in client asks to add another provider to its account.
 export const IdentityLinkStartPayloadSchema = z.object({
     provider: ProviderIdSchema
@@ -306,6 +338,8 @@ export const AddressBookErrorCodeSchema = z.enum([
     'last-identity',
     'rate-limited',
     'not-configured',
+    // The benchmarks were never fetched yet, or never held a model this address book knows.
+    'no-benchmarks',
     'internal'
 ]);
 export type AddressBookErrorCode = z.infer<typeof AddressBookErrorCodeSchema>;

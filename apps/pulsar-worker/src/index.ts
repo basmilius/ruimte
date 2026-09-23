@@ -1,4 +1,5 @@
 import { ProviderIdSchema } from '@ruimte/pulsar';
+import { readBenchmarks, refreshBenchmarks } from './benchmarks.ts';
 import { changePushDevice, registerPushDevice, sendPush } from './push.ts';
 import { statementKeyOf } from './crypto.ts';
 import type { Env } from './env.ts';
@@ -13,6 +14,9 @@ import { completeNativeApple, startNativeApple } from './native-apple.ts';
 
 // Rows past use for this long are dropped by the daily cleanup; the statement log is kept.
 const REVOKED_SESSION_RETENTION_MS = 30 * 24 * 60 * 60_000;
+
+// Four pages every three hours is 32 of the 100 requests a day the free tier allows; hourly would be 96. Mirrors `wrangler.jsonc`.
+const BENCHMARKS_CRON = '17 */3 * * *';
 
 const DEVICE_ROUTES: Record<string, (request: Request, env: Env) => Promise<Response>> = {
     start: startDeviceLink,
@@ -55,6 +59,9 @@ const api = async (request: Request, env: Env, path: string): Promise<Response> 
     }
     if (path === '/v1/providers' && method === 'GET') {
         return listProviders(env);
+    }
+    if (path === '/v1/models/benchmarks' && method === 'GET') {
+        return readBenchmarks(env);
     }
     if (path === '/v1/account' && method === 'GET') {
         return getAccount(request, env);
@@ -152,7 +159,11 @@ export default {
             return failure('internal', 'Something went wrong in the address book');
         }
     },
-    async scheduled(_controller, env) {
+    async scheduled(controller, env) {
+        if (controller.cron === BENCHMARKS_CRON) {
+            await refreshBenchmarks(env);
+            return;
+        }
         const now = Date.now();
         await env.DB.batch([
             env.DB.prepare('DELETE FROM push_activity_start WHERE expires_at <= ?1').bind(now),

@@ -23,4 +23,6 @@ export interface Env {
     STATEMENT_PRIVATE_KEY?: string;
     // Where a person approves a machine's code, when it is not the web client in production.
     DEVICE_LINK_PAGE_URL?: string;
+    // The key of the free Data API of Artificial Analysis. Never logged, never sent anywhere else.
+    ARTIFICIAL_ANALYSIS_API_KEY?: string;
 }
