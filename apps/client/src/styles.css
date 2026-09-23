@@ -908,10 +908,12 @@
         from { background: var(--accent-soft); }
         to { background: transparent; }
     }
-    /* A code theme in settings, drawn on the theme's own background, which shiki sets on the `pre`. */
-    .code-theme-preview { overflow: hidden; }
+    /* A code theme in settings, on the app's code background like the viewer, so shiki's own is dropped.
+       The token is read under the side's own `data-theme`; a utility would resolve it at the root. */
+    .code-theme-preview > [data-theme] { background: var(--term-bg); }
     .code-theme-preview pre {
         margin: 0;
+        background: transparent !important;
         padding: 12px 16px;
         overflow-x: auto;
         font-family: var(--font-mono);

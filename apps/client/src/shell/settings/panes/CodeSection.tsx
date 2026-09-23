@@ -17,8 +17,8 @@ const PREVIEW_CODE = [
     '}'
 ].join('\n');
 
-/* A few lines in a theme, on the theme's own background, so a theme is picked by looking at it. */
-function CodeThemePreview({ theme, label }: { theme: string; label: string }) {
+/* A few lines in a theme, on the code background of the app's side it is for, which is what the viewer and the editor draw it on. */
+function CodeThemePreview({ theme, mode, label }: { theme: string; mode: 'light' | 'dark'; label: string }) {
     const [html, setHtml] = useState<string | null>(null);
 
     useEffect(() => {
@@ -35,29 +35,26 @@ function CodeThemePreview({ theme, label }: { theme: string; label: string }) {
         };
     }, [theme]);
 
-    // The plain lines hold the same height until the highlighted ones arrive, so the pane does not jump.
-    if (html === null) {
-        return (
-            <div className="code-theme-preview rounded-lg border border-border bg-surface-sunken bg-clip-padding" role="img" aria-label={label}>
-                <pre>
-                    <code>
-                        {PREVIEW_CODE.split('\n').map((line, index) => (
-                            <span key={index} className="line">
-                                {line}
-                            </span>
-                        ))}
-                    </code>
-                </pre>
-            </div>
-        );
-    }
     return (
-        <div
-            className="code-theme-preview rounded-lg border border-border bg-clip-padding"
-            role="img"
-            aria-label={label}
-            dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <div className="code-theme-preview overflow-hidden rounded-lg border border-border bg-clip-padding" role="img" aria-label={label}>
+            {/* The side's own tokens, so the light theme is judged on the light background while the app is dark. */}
+            <div data-theme={mode}>
+                {html === null ? (
+                    // The plain lines hold the same height until the highlighted ones arrive, so the pane does not jump.
+                    <pre>
+                        <code>
+                            {PREVIEW_CODE.split('\n').map((line, index) => (
+                                <span key={index} className="line">
+                                    {line}
+                                </span>
+                            ))}
+                        </code>
+                    </pre>
+                ) : (
+                    <div dangerouslySetInnerHTML={{ __html: html }} />
+                )}
+            </div>
+        </div>
     );
 }
 
@@ -88,7 +85,7 @@ export function CodeSection() {
                     />
                 }
             >
-                <CodeThemePreview theme={codeThemeLight} label={previewLabel(lightThemes, codeThemeLight)} />
+                <CodeThemePreview theme={codeThemeLight} mode="light" label={previewLabel(lightThemes, codeThemeLight)} />
             </SettingsRow>
             <SettingsRow
                 label={t('appearance.code.dark.label')}
@@ -103,7 +100,7 @@ export function CodeSection() {
                     />
                 }
             >
-                <CodeThemePreview theme={codeThemeDark} label={previewLabel(darkThemes, codeThemeDark)} />
+                <CodeThemePreview theme={codeThemeDark} mode="dark" label={previewLabel(darkThemes, codeThemeDark)} />
             </SettingsRow>
             <SettingsRow
                 label={t('appearance.code.wrap.label')}
