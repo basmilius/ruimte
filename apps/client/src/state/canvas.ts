@@ -179,7 +179,6 @@ export interface CanvasState extends CameraSlice {
     setEditingText(id: string | null): void;
     deleteSelected(): void;
     toggleLock(key: keyof Locks): void;
-    setAllLocks(locked: boolean): void;
 
     toggleGroupCollapse(id: string): void;
     setGroupWorktree(id: string, worktree: { path: string; branch: string } | null): void;
@@ -544,9 +543,6 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         },
         toggleLock(key) {
             set((s) => ({ locks: { ...s.locks, [key]: !s.locks[key] } }));
-        },
-        setAllLocks(locked) {
-            set({ locks: { pan: locked, zoom: locked, move: locked, resize: locked } });
         },
 
         toggleGroupCollapse(id) {

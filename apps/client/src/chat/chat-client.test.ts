@@ -48,8 +48,6 @@ class FakeTransport implements Transport {
                     items: this.items,
                     ...this.attachResult?.(payload as RequestMap['chat.attach']['payload'])
                 } as RequestMap[T]['result']);
-            case 'chat.configure':
-                return Promise.resolve({ ...info(chatId), runtimeMode: 'auto' } as RequestMap[T]['result']);
             case 'chat.send':
                 return Promise.resolve({ queued: false, turnId: 'turn-test' } as RequestMap[T]['result']);
             case 'chat.list':
@@ -251,31 +249,15 @@ describe('ChatClient', () => {
         expect(sink.resets.map((r) => r.chatId)).toEqual(['a']);
     });
 
-    test('send, cancel, approve, answer, compact and kill map to their requests', async () => {
+    test('send and kill map to their requests', async () => {
         const { transport, sink, client } = setup();
         await client.open('a', {});
         await client.send('a', 'hello');
-        await client.cancel('a');
-        await client.approve('a', 'r1', 'deny', 'no');
-        await client.answer('a', 'r2', { '0': 'Blue' });
-        await client.compact('a');
         await client.kill('a');
         expect(transport.of('chat.send')[0]?.payload).toEqual({ chatId: 'a', text: 'hello' });
-        expect(transport.of('chat.cancel')).toHaveLength(1);
-        expect(transport.of('chat.approve')[0]?.payload).toEqual({ chatId: 'a', requestId: 'r1', decision: 'deny', message: 'no' });
-        expect(transport.of('chat.answer')[0]?.payload).toEqual({ chatId: 'a', requestId: 'r2', answers: { '0': 'Blue' } });
-        expect(transport.of('chat.compact')).toHaveLength(1);
         expect(transport.of('chat.kill')).toHaveLength(1);
         expect(sink.forgotten).toEqual(['a']);
         expect(client.isMounted('a')).toBe(false);
-    });
-
-    test('configure feeds the answered info straight into the store', async () => {
-        const { sink, client } = setup();
-        await client.open('a', {});
-        const info = await client.configure({ chatId: 'a', runtimeMode: 'auto' });
-        expect(info.runtimeMode).toBe('auto');
-        expect(sink.events.at(-1)).toEqual({ chatId: 'a', event: { type: 'info', info } });
     });
 
     test('a status event lands in the store for a chat this window never attached', async () => {

@@ -1,9 +1,6 @@
 import type {
     AgentKind,
     ChatAttachmentUpload,
-    ChatCheckpointDiff,
-    ChatConfigurePayload,
-    ChatInfo,
     ChatAttachResult,
     ChatPreferencesPayload,
     ChatSkill,
@@ -161,15 +158,6 @@ export class ChatClient {
         });
     }
 
-    async unqueue(chatId: string, messageId: string): Promise<void> {
-        await this.transport.request('chat.unqueue', { chatId, messageId });
-    }
-
-    /* Stops the turn in the way and puts this queued message first. */
-    async sendNow(chatId: string, messageId: string): Promise<void> {
-        await this.transport.request('chat.sendNow', { chatId, messageId });
-    }
-
     /* Files under `cwd` that fuzzy-match `query`, for the composer's mention picker. */
     async searchFiles(cwd: string, query: string, limit = 8): Promise<FsSearchResult> {
         return this.transport.request('fs.search', { cwd, query, limit });
@@ -181,43 +169,9 @@ export class ChatClient {
         return skills;
     }
 
-    async compact(chatId: string): Promise<void> {
-        await this.transport.request('chat.compact', { chatId });
-    }
-
     /* Starts the chat over; refused with `chat-busy` while a turn runs, unless `force` stops that turn. */
     async clear(chatId: string, force = false): Promise<void> {
         await this.transport.request('chat.clear', { chatId, ...(force ? { force: true } : {}) });
-    }
-
-    /* Stops the running turn; `subagents` also ends the agents the chat opened and marks its CLI's own sub-agents stopped. */
-    async cancel(chatId: string, subagents = false): Promise<void> {
-        await this.transport.request('chat.cancel', { chatId, ...(subagents ? { subagents: true } : {}) });
-    }
-
-    /* What a turn changed against its checkpoint, for a card whose turn carries no diff yet. */
-    async turnDiff(chatId: string, turnId: string): Promise<ChatCheckpointDiff | null> {
-        const { diff } = await this.transport.request('chat.turnDiff', { chatId, turnId });
-        return diff;
-    }
-
-    async configure(payload: ChatConfigurePayload): Promise<ChatInfo> {
-        const info = await this.transport.request('chat.configure', payload);
-        this.sink.apply(payload.chatId, { type: 'info', info });
-        return info;
-    }
-
-    async approve(chatId: string, requestId: string, decision: 'allow' | 'allow-always' | 'deny', message?: string): Promise<void> {
-        await this.transport.request('chat.approve', { chatId, requestId, decision, message });
-    }
-
-    async answer(chatId: string, requestId: string, answers: Record<string, string>): Promise<void> {
-        await this.transport.request('chat.answer', { chatId, requestId, answers });
-    }
-
-    /* Leaves an asynchronous question alone; the agent is not told and the item settles as dismissed. */
-    async dismiss(chatId: string, itemId: string): Promise<void> {
-        await this.transport.request('chat.dismiss', { chatId, itemId });
     }
 
     async kill(chatId: string): Promise<void> {
