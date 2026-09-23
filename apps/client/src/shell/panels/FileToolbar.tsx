@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import { MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
-import { useFileActions } from '@/shell/panels/file-actions';
+import { useFileActions, type FileActions } from '@/shell/panels/file-actions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
@@ -95,12 +96,41 @@ function FileMenu() {
                 </Menu.Trigger>
             </Tooltip>
             <MenuPopup align="end">
-                {actions.tabKey === undefined ? (
-                    <FileActionItems path={actions.path} on={actions.on} onRefresh={actions.refresh} />
-                ) : (
-                    <FileMenuItems tabKey={actions.tabKey} onRefresh={actions.refresh} />
-                )}
+                <FileMenuRows actions={actions} />
             </MenuPopup>
         </Menu.Root>
+    );
+}
+
+function FileMenuRows({ actions }: { actions: FileActions }) {
+    return actions.tabKey === undefined ? (
+        <FileActionItems path={actions.path} on={actions.on} onRefresh={actions.refresh} />
+    ) : (
+        <FileMenuItems tabKey={actions.tabKey} onRefresh={actions.refresh} />
+    );
+}
+
+/*
+ * The bar's menu behind a right-click on a file that has no text to copy, an image or a video, so
+ * the click there offers what the file can be asked instead of nothing.
+ */
+export function FileContextMenu({ className, children }: { className?: string; children: ReactNode }) {
+    const actions = useFileActions();
+
+    if (!actions) {
+        return <div className={className}>{children}</div>;
+    }
+
+    return (
+        <ContextMenu.Root>
+            <ContextMenu.Trigger className={className}>{children}</ContextMenu.Trigger>
+            <ContextMenu.Portal>
+                <ContextMenu.Positioner className="z-(--z-popup)">
+                    <ContextMenu.Popup className="menu-popup">
+                        <FileMenuRows actions={actions} />
+                    </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+            </ContextMenu.Portal>
+        </ContextMenu.Root>
     );
 }

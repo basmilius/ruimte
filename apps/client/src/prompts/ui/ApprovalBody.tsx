@@ -8,6 +8,7 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { isPrimaryKey } from '@/prompts/logic/keys';
 import type { PromptDraft } from '@/prompts/logic/prompts';
 import { Button } from '@/ui/Button';
+import { TextMenu } from '@/ui/TextMenu';
 
 const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
 const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
@@ -15,10 +16,10 @@ const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
 /* A command in the sunken box a person reads before allowing it, with the folder it runs in when that is known. */
 export function CommandBox({ command, cwd }: { command: string; cwd?: string }) {
     return (
-        <div className="rounded-xl bg-surface-sunken p-3">
-            {cwd !== undefined && <p className="mb-2 break-all font-mono text-xs text-text-muted">{cwd}</p>}
+        <TextMenu className="rounded-xl bg-surface-sunken p-3">
+            {cwd !== undefined && <p className="mb-2 break-all font-mono text-xs text-text-muted select-text">{cwd}</p>}
             <pre className="whitespace-pre-wrap break-words font-mono text-code text-text select-text">{command}</pre>
-        </div>
+        </TextMenu>
     );
 }
 
@@ -57,9 +58,11 @@ function ApprovalDetails({ item }: { item: ChatApprovalItem }) {
             ) : (
                 <details>
                     <summary className="flex h-7 cursor-pointer items-center text-xs text-text-muted">{t('approval.details')}</summary>
-                    <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface-sunken p-3 font-mono text-code text-text select-text">
-                        {JSON.stringify(item.input, null, 2)}
-                    </pre>
+                    <TextMenu>
+                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface-sunken p-3 font-mono text-code text-text select-text">
+                            {JSON.stringify(item.input, null, 2)}
+                        </pre>
+                    </TextMenu>
                 </details>
             )}
         </>

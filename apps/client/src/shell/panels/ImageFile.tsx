@@ -5,7 +5,7 @@ import type { FsReadBinary } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
 import { useMachineUrl } from '@/transport/machine-url';
 import { formatBytes } from '@/shell/panels/file-size';
-import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
@@ -30,7 +30,7 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
                     <FileToolbarToggle icon={Scan} label={t('file.image.actual')} active={zoom === 'full'} onClick={() => setZoom('full')} />
                 </div>
             </FileToolbar>
-            <div className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
+            <FileContextMenu className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
                 {failed || bytes.failure !== null ? (
                     <EmptyState icon={<Icon icon={ImageOff} size={20} />}>
                         {t('file.image.failed', { name, reason: bytes.failure ?? t('file.image.maybeChanged') })}
@@ -46,7 +46,7 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
                         />
                     )
                 )}
-            </div>
+            </FileContextMenu>
             <div className="flex h-7 shrink-0 items-center gap-3 border-t border-border px-2 text-xs text-text-muted select-text">
                 {/* An SVG without a width of its own reports nothing, and 0 x 0 is worse than no line at all. */}
                 {size !== null && size.width > 0 && (

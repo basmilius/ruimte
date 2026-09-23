@@ -4,7 +4,7 @@ import { CornerUpRight, FileVideo } from 'lucide-react';
 import type { FsReadBinary } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
 import { formatBytes } from '@/shell/panels/file-size';
-import { FileToolbar } from '@/shell/panels/FileToolbar';
+import { FileContextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
@@ -36,7 +36,7 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar />
-            <div className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
+            <FileContextMenu className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
                 {failed || bytes.failure !== null ? (
                     <EmptyState
                         className="select-text"
@@ -62,7 +62,7 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
                         />
                     )
                 )}
-            </div>
+            </FileContextMenu>
             <div className="flex h-7 shrink-0 items-center gap-3 border-t border-border px-2 text-xs text-text-muted select-text">
                 {size !== null && size.width > 0 && (
                     <span>
