@@ -165,7 +165,7 @@ export const operationActions: ActionHandlers<ServerActionContext> = {
         const { host } = context;
         const parsed = operationId === null ? null : parseOperationId(operationId);
         if (operationId === null || !parsed) {
-            throw new VerbRefusal('unknown-operation', `${operationId ?? 'nothing'} is not an operation of yours; agent and team answer with one`, [
+            throw new VerbRefusal('unknown-operation', `${operationId ?? 'nothing'} is not an operation id; agent and team answer with one`, [
                 ...OPERATION_FORMS
             ]);
         }

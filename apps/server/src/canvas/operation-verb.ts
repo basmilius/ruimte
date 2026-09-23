@@ -41,7 +41,15 @@ const cancelSub = defineActionVerb('operation', {
     name: 'cancel',
     action: 'operation.cancel',
     usage: '<id>',
-    params: [{ syntax: '<id>', need: 'required', field: 'operationId', more: 'agent.start:<id> after agent, team.start:<id>,<id> after team' }],
+    params: [
+        {
+            syntax: '<id>',
+            need: 'required',
+            field: 'operationId',
+            // The catalog names git runs and null too, which only a person cancels; an agent cancels a start.
+            text: 'The operation to cancel: agent.start:<id> after agent, team.start:<id>,<id> after team'
+        }
+    ],
     detail: [
         'prints\toperation\tid\tstatus\tdetail\tone line per agent it started, the detail starting with the id of its node',
         'status\tcancelled\tover\tleft\tcancelled when a chat was told to stop its turn, over when nothing ran, left when it goes on',
