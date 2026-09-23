@@ -1,4 +1,4 @@
-import { useEffect, useRef, type WheelEvent as ReactWheelEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type WheelEvent as ReactWheelEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { GitCommitHorizontal, GitCompare, Pin, X } from 'lucide-react';
@@ -41,6 +41,30 @@ export function FileTabs() {
     const active = useFiles((s) => s.active);
     const counts = useGit((s) => s.counts);
     const stripRef = useRef<HTMLDivElement>(null);
+    const [edges, setEdges] = useState({ start: false, end: false });
+
+    const measureEdges = useCallback((): void => {
+        const strip = stripRef.current;
+        if (strip === null) {
+            return;
+        }
+        const start = strip.scrollLeft > 0;
+        const end = strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 1;
+        setEdges((current) => (current.start === start && current.end === end ? current : { start, end }));
+    }, []);
+
+    useEffect(() => {
+        const strip = stripRef.current;
+        if (strip === null || typeof ResizeObserver === 'undefined') {
+            return;
+        }
+        const observer = new ResizeObserver(measureEdges);
+        observer.observe(strip);
+        return () => observer.disconnect();
+    }, [measureEdges]);
+
+    // A tab opening, closing or gaining a count changes what overflows without resizing the strip.
+    useLayoutEffect(measureEdges, [measureEdges, tabs, counts]);
 
     useEffect(() => {
         stripRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -56,8 +80,11 @@ export function FileTabs() {
     return (
         <div
             ref={stripRef}
-            className="flex h-full min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="scroll-fade-x flex h-full min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            data-fade-start={edges.start || undefined}
+            data-fade-end={edges.end || undefined}
             onWheel={onWheel}
+            onScroll={measureEdges}
         >
             {tabs.map((tab) => {
                 // A checkout diff is "Changes"; a whole commit uses its hash because no file represents it.
