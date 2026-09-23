@@ -342,6 +342,15 @@ describe('ChatManager with Codex', () => {
         expect(recorder.ofKind('assistant')[0]?.streaming).toBe(false);
     });
 
+    test('a cancel sent before Codex named the turn still interrupts it', async () => {
+        await open('chat-4');
+        await manager.send('chat-4', 'slow');
+        manager.cancel('chat-4');
+        await recorder.until(idle);
+        expect(recorder.ofKind('turn')[0]?.state).toBe('aborted');
+        expect(requests.filter((request) => request.method === 'turn/interrupt')).toHaveLength(1);
+    });
+
     test('configure restarts the app-server with the new settings on the next send and resumes the thread', async () => {
         await open('chat-c');
         await manager.send('chat-c', 'first');

@@ -55,6 +55,10 @@ export class CodexBackend implements ChatBackend {
      */
     private contextPending: string | null = null;
     private imageInputSupported: boolean | null = null;
+    /* A turn asked for that Codex has not named yet; `turn/interrupt` needs that name. */
+    private turnUnnamed = false;
+    /* A stop that came in while the turn was unnamed, sent once `turn/started` names it. */
+    private interruptOwed = false;
 
     constructor(launch: BackendLaunch, host: BackendHost) {
         this.launch = launch;
@@ -143,6 +147,7 @@ export class CodexBackend implements ChatBackend {
         }
         const effort = this.launch.selection.options.effort;
         const tier = codexServiceTier(this.launch.selection);
+        this.turnUnnamed = true;
         this.request('turn/start', {
             threadId: this.threadId,
             input: [...textInput(parts.join('')), ...images.map((attachment) => ({ type: 'localImage', path: attachment.path }))],
@@ -180,6 +185,7 @@ export class CodexBackend implements ChatBackend {
     }
 
     compact(): void {
+        this.turnUnnamed = true;
         this.request('thread/compact/start', { threadId: this.threadId });
     }
 
@@ -210,7 +216,11 @@ export class CodexBackend implements ChatBackend {
 
     interrupt(): void {
         const turnId = this.protocol.turnId;
-        if (!this.transport || !turnId) {
+        if (!this.transport) {
+            return;
+        }
+        if (!turnId) {
+            this.interruptOwed = this.turnUnnamed;
             return;
         }
         void this.transport.request('turn/interrupt', { threadId: this.threadId, turnId }).catch(() => {
@@ -312,6 +322,13 @@ export class CodexBackend implements ChatBackend {
         for (const event of events) {
             this.emit(event);
         }
+        if (this.turnUnnamed && this.protocol.turnId !== null) {
+            this.turnUnnamed = false;
+            if (this.interruptOwed) {
+                this.interruptOwed = false;
+                this.interrupt();
+            }
+        }
     }
 
     private handleExit(transport: CodexTransport, exitCode: number | null): void {
@@ -328,6 +345,11 @@ export class CodexBackend implements ChatBackend {
     }
 
     private emit(event: BackendEvent): void {
+        // A turn that ended or never started leaves no stop for the next one to take.
+        if (event.type === 'turn.done' || event.type === 'failed' || event.type === 'exit') {
+            this.turnUnnamed = false;
+            this.interruptOwed = false;
+        }
         this.host.onEvent(event);
     }
 }
