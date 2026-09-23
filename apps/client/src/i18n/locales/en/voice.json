@@ -76,33 +76,5 @@
         "paste": "Paste into terminal",
         "discard": "Discard",
         "noEnter": "Pastes text without pressing Enter."
-    },
-    "diagnostics": {
-        "title": "Diagnostics",
-        "failedToShow": "Voice diagnostics could not be displayed",
-        "empty": "No Voice requests measured yet.",
-        "requests": "Requests",
-        "requestsValue": "{{requests}}, {{answered}} answered",
-        "sessions": "Sessions",
-        "callsPerRequest": "Tool calls per request",
-        "callsPerRequestValue": "{{average}} on average, {{most}} at most",
-        "failed": "Failed tool calls",
-        "results": "Results other than ok",
-        "targets": "Target lookups",
-        "targetsValue": "{{ambiguous}} ambiguous, {{missing}} missing",
-        "found_one": "{{resolves}} lookup: {{one}} found one, {{several}} several, {{none}} none",
-        "found_other": "{{resolves}} lookups: {{one}} found one, {{several}} several, {{none}} none",
-        "response": "Model response",
-        "call": "Tool call",
-        "answer": "Until the answer",
-        "latency": "median {{median}}, slowest {{slowest}}",
-        "mostUsed": "Most used",
-        "toolsSent": "Tools sent, latest session",
-        "toolsSentValue_one": "{{tools}} tool, {{size}}",
-        "toolsSentValue_other": "{{tools}} tools, {{size}}",
-        "copy": "Copy as JSON",
-        "copied": "Copied",
-        "clear": "Clear",
-        "privacy": "Measured on this computer and never sent. Only names, codes, counts, sizes and durations are kept, for the last {{sessions}} sessions."
     }
 }

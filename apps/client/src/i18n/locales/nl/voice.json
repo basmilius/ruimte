@@ -76,33 +76,5 @@
         "paste": "In terminal plakken",
         "discard": "Weggooien",
         "noEnter": "Plakt tekst zonder op Enter te drukken."
-    },
-    "diagnostics": {
-        "title": "Diagnose",
-        "failedToShow": "De diagnose van Voice kon niet worden weergegeven",
-        "empty": "Nog geen Voice-verzoeken gemeten.",
-        "requests": "Verzoeken",
-        "requestsValue": "{{requests}}, waarvan {{answered}} beantwoord",
-        "sessions": "Sessies",
-        "callsPerRequest": "Tool calls per verzoek",
-        "callsPerRequestValue": "gemiddeld {{average}}, hoogstens {{most}}",
-        "failed": "Mislukte tool calls",
-        "results": "Resultaten anders dan ok",
-        "targets": "Opgezochte doelen",
-        "targetsValue": "{{ambiguous}} dubbelzinnig, {{missing}} niet gevonden",
-        "found_one": "{{resolves}} zoekopdracht: {{one}} vond er één, {{several}} meerdere, {{none}} geen",
-        "found_other": "{{resolves}} zoekopdrachten: {{one}} vond er één, {{several}} meerdere, {{none}} geen",
-        "response": "Antwoord van het model",
-        "call": "Tool call",
-        "answer": "Tot het antwoord",
-        "latency": "mediaan {{median}}, traagste {{slowest}}",
-        "mostUsed": "Meest gebruikt",
-        "toolsSent": "Verstuurde tools, laatste sessie",
-        "toolsSentValue_one": "{{tools}} tool, {{size}}",
-        "toolsSentValue_other": "{{tools}} tools, {{size}}",
-        "copy": "Kopiëren als JSON",
-        "copied": "Gekopieerd",
-        "clear": "Wissen",
-        "privacy": "Gemeten op deze computer en nooit verstuurd. Alleen namen, codes, aantallen, groottes en duur worden bewaard, voor de laatste {{sessions}} sessies."
     }
 }

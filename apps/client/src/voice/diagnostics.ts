@@ -123,17 +123,20 @@ interface OpenCall {
  */
 export class VoiceDiagnosticsRecorder {
     readonly #now: () => number;
-    readonly #changed: (session: VoiceSessionRecord) => void;
+    readonly #ended: (request: VoiceRequestRecord) => void;
     readonly #session: VoiceSessionRecord;
     readonly #requests = new Map<string, OpenRequest>();
     readonly #calls = new Map<string, OpenCall>();
 
-    constructor(domains: readonly ActionDomain[], now: () => number, changed: (session: VoiceSessionRecord) => void) {
+    constructor(domains: readonly ActionDomain[], now: () => number, ended: (request: VoiceRequestRecord) => void) {
         this.#now = now;
-        this.#changed = changed;
+        this.#ended = ended;
         const tools = voiceToolBytes(domains);
         this.#session = { startedAt: now(), domains: [...domains], toolCount: tools.count, toolBytes: tools.bytes, requests: [] };
-        this.#emit();
+    }
+
+    get session(): VoiceSessionRecord {
+        return structuredClone(this.#session);
     }
 
     /* Any event of a delegation; the first one opens the request and, unless one was asked for, a response. */
@@ -153,8 +156,8 @@ export class VoiceDiagnosticsRecorder {
             request.record.status = status === 'completed' ? 'answered' : 'failed';
             request.record.totalMs = now - request.startedAt;
             this.#requests.delete(delegationId);
+            this.#ended(structuredClone(request.record));
         }
-        this.#emit();
     }
 
     responseRequested(delegationId: string): void {
@@ -177,7 +180,6 @@ export class VoiceDiagnosticsRecorder {
         request.responseCalls += 1;
         request.record.calls.push(record);
         this.#calls.set(callId, { record, startedAt: this.#now() });
-        this.#emit();
     }
 
     callFinished(callId: string, output: Record<string, unknown>): void {
@@ -191,25 +193,16 @@ export class VoiceDiagnosticsRecorder {
         if (call.record.action === 'target.resolve' && call.record.result === 'ok') {
             call.record.target = voiceTargetOf(output);
         }
-        this.#emit();
     }
 
     /* The session ended; what still waited on the model never got its answer. */
     finish(): void {
         for (const request of this.#requests.values()) {
             request.record.status = 'unfinished';
+            this.#ended(structuredClone(request.record));
         }
         this.#requests.clear();
         this.#calls.clear();
-        this.#emit();
-    }
-
-    /* Forgets every request so far, the ones still running included, and keeps what the session was sent. */
-    clear(): void {
-        this.#session.requests.length = 0;
-        this.#requests.clear();
-        this.#calls.clear();
-        this.#emit();
     }
 
     #request(delegationId: string): OpenRequest {
@@ -225,9 +218,5 @@ export class VoiceDiagnosticsRecorder {
             this.#session.requests.shift();
         }
         return request;
-    }
-
-    #emit(): void {
-        this.#changed(structuredClone(this.#session));
     }
 }

@@ -20,7 +20,7 @@ import { chatCompletion, type VoiceChatFollowUp } from '@/voice/chat-follow-up';
 import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction, type VoiceActionKind } from '@/voice/state';
 import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
 import { currentVoiceDomains } from '@/voice/domains';
-import { finishVoiceDiagnostics, startVoiceDiagnostics, voiceDiagnosticsObserver } from '@/voice/diagnostics-store';
+import { finishVoiceDiagnostics, startVoiceDiagnostics, voiceDiagnosticsObserver } from '@/voice/diagnostics-log';
 
 let session: LiveSession | null = null;
 let releaseMicrophone: (() => void) | null = null;

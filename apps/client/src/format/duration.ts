@@ -22,12 +22,6 @@ export const formatDuration = (ms: number): string => {
     return `${formatDecimal(minutes / 60)} h`;
 };
 
-/* How long a step took when it is measured in milliseconds: `840 ms`, and `2.4 s` from a second up. */
-export const formatLatency = (ms: number): string => {
-    const rounded = Math.max(0, Math.round(ms));
-    return rounded < SECOND ? `${formatNumber(rounded)} ms` : `${formatDecimal(rounded / SECOND)} s`;
-};
-
 /* How long a window still has, tight enough for the end of a bar: `4d 3h`, `12h 8m`, `9m`. */
 export const formatCountdown = (ms: number): string => {
     const left = Math.max(0, ms);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { formatAgo, formatClockDuration, formatCountdown, formatDuration, formatElapsedShort, formatLatency } from '@/format/duration';
+import { formatAgo, formatClockDuration, formatCountdown, formatDuration, formatElapsedShort } from '@/format/duration';
 import { FORMAT_SYSTEM } from '@/format/regions';
 import { useSettings } from '@/state/settings';
 
@@ -26,16 +26,6 @@ describe('how long something took', () => {
     test('writes its decimal the way the region does', () => {
         inRegion('nl-NL');
         expect(formatDuration(90 * MINUTE)).toBe('1,5 h');
-    });
-});
-
-describe('how long a measured step took', () => {
-    test('reads milliseconds below a second and seconds from there', () => {
-        inRegion('en-US');
-        expect(formatLatency(839.6)).toBe('840 ms');
-        expect(formatLatency(2_400)).toBe('2.4 s');
-        inRegion('nl-NL');
-        expect(formatLatency(2_400)).toBe('2,4 s');
     });
 });
 

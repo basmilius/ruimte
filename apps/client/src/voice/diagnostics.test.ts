@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { voiceToolsFor } from '@ruimte/actions';
-import { VoiceDiagnosticsRecorder, voiceActionOf, voiceResultOf, type VoiceSessionRecord } from '@/voice/diagnostics';
+import { VoiceDiagnosticsRecorder, voiceActionOf, voiceResultOf, type VoiceRequestRecord } from '@/voice/diagnostics';
 
 const clock = () => {
     let time = 1_000;
@@ -14,11 +14,11 @@ const clock = () => {
 
 const recording = () => {
     const time = clock();
-    let latest: VoiceSessionRecord | null = null;
-    const recorder = new VoiceDiagnosticsRecorder(['workspace', 'views'], time.now, (session) => {
-        latest = session;
+    const ended: VoiceRequestRecord[] = [];
+    const recorder = new VoiceDiagnosticsRecorder(['workspace', 'views'], time.now, (request) => {
+        ended.push(request);
     });
-    return { time, recorder, latest: (): VoiceSessionRecord => latest! };
+    return { time, recorder, ended, latest: () => recorder.session };
 };
 
 describe('what a Voice call is recorded as', () => {
@@ -115,11 +115,13 @@ describe('VoiceDiagnosticsRecorder', () => {
         expect(latest().requests[1]!.calls[0]!.result).toBeNull();
     });
 
-    test('clear forgets the requests and keeps what the session was sent', () => {
-        const { recorder, latest } = recording();
+    test('hands over each request once, as it ends', () => {
+        const { recorder, ended } = recording();
+        recorder.responseEvent('d1', 'response.created');
+        expect(ended).toEqual([]);
         recorder.responseEvent('d1', 'response.completed');
-        recorder.clear();
-        expect(latest().requests).toEqual([]);
-        expect(latest().domains).toEqual(['workspace', 'views']);
+        recorder.callStarted('d2', 'c1', 'inspect_workspace', '{"action":"workspace.inspect"}');
+        recorder.finish();
+        expect(ended.map((request) => request.status)).toEqual(['answered', 'unfinished']);
     });
 });
