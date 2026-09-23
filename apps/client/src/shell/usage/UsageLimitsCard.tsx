@@ -1,8 +1,6 @@
 import i18next from 'i18next';
 import { useState, type ReactElement } from 'react';
-import clsx from 'clsx';
 import { PreviewCard } from '@base-ui-components/react/preview-card';
-import { SECTION_LABEL } from '@/ui/classes';
 import { LimitsList } from '@/shell/usage/LimitsList';
 import { useMinute, useUsageLimits } from '@/shell/usage/limits';
 
@@ -28,10 +26,7 @@ export function UsageLimitsCard({ children }: { children: ReactElement<Record<st
             <PreviewCard.Trigger render={children} delay={500} />
             <PreviewCard.Portal>
                 <PreviewCard.Positioner side="top" align="end" sideOffset={8} className="z-(--z-popup)">
-                    <PreviewCard.Popup className="menu-popup w-64 p-3">
-                        <h2 className={clsx(SECTION_LABEL, 'mb-3 block')}>{i18next.t('usage:limits.title')}</h2>
-                        {opened && <CardBody />}
-                    </PreviewCard.Popup>
+                    <PreviewCard.Popup className="menu-popup w-64 p-3">{opened && <CardBody />}</PreviewCard.Popup>
                 </PreviewCard.Positioner>
             </PreviewCard.Portal>
         </PreviewCard.Root>

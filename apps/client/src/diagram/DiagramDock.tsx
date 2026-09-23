@@ -5,7 +5,7 @@ import { fitAction, historyAction } from '@/actions/client-actions';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { copyDiagram, exportDiagram } from '@/diagram/diagram-actions';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
-import { BTN_GROUP, MENU_LABEL } from '@/ui/classes';
+import { BTN_GROUP } from '@/ui/classes';
 import { DockShell } from '@/ui/DockShell';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
@@ -54,7 +54,6 @@ export function DiagramDock() {
                     <Menu.Portal>
                         <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
                             <Menu.Popup className="menu-popup min-w-52">
-                                <div className={MENU_LABEL}>{t('export.diagram')}</div>
                                 <Menu.Item className="menu-item" disabled={empty} onClick={() => copyDiagram(store, 'png')}>
                                     <Icon icon={Copy} size={14} /> {t('export.copyPng')}
                                 </Menu.Item>

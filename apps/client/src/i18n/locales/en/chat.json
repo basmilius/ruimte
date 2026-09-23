@@ -293,8 +293,7 @@
   },
   "pickers": {
     "settings": {
-      "title": "Model and permissions",
-      "model": "Model"
+      "title": "Model and permissions"
     },
     "model": {
       "choose": "Choose model",

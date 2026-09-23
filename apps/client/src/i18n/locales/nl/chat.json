@@ -293,8 +293,7 @@
   },
   "pickers": {
     "settings": {
-      "title": "Model en rechten",
-      "model": "Model"
+      "title": "Model en rechten"
     },
     "model": {
       "choose": "Model kiezen",

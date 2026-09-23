@@ -8,7 +8,7 @@ import { useDeviceList, useResolvedDevice } from '@/devices/state';
 import { DeviceStream } from '@/devices/DeviceStream';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
-import { BTN_GROUP, MENU_LABEL } from '@/ui/classes';
+import { BTN_GROUP } from '@/ui/classes';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -70,7 +70,6 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
                     <Menu.Portal>
                         <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
                             <Menu.Popup className="menu-popup">
-                                <div className={MENU_LABEL}>{t('device.controls.gestures')}</div>
                                 {gestures.map((gesture) => (
                                     <Menu.Item key={gesture.button} className="menu-item" onClick={() => send({ kind: 'button', button: gesture.button })}>
                                         <Icon icon={gesture.icon} size={14} /> {label(gesture.button)}
@@ -90,7 +89,6 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
                 <Menu.Portal>
                     <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
                         <Menu.Popup className="menu-popup">
-                            <div className={MENU_LABEL}>{t('device.controls.rotate')}</div>
                             <Menu.Item className="menu-item" onClick={() => send({ kind: 'rotate', direction: 'left' })}>
                                 <Icon icon={RotateCcw} size={14} /> {t('device.controls.rotateLeft')}
                             </Menu.Item>

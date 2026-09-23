@@ -31,7 +31,7 @@ import { useServer } from '@/state/server';
 import { deviceClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
 import { EMPTY_DEVICE_LIST, useDevices } from '@/devices/state';
-import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { BTN_GROUP, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { SignInMark } from '@/ui/SignInMark';
 import { Tooltip } from '@/ui/Tooltip';
@@ -282,7 +282,6 @@ function DevicePlacementMenu({ device }: { device: DeviceInfo }) {
                 </Menu.Trigger>
             </Tooltip>
             <MenuPopup align="end">
-                <div className={MENU_LABEL}>{t('devices.openDevice')}</div>
                 <DeviceMenuItems device={device} />
             </MenuPopup>
         </Menu.Root>

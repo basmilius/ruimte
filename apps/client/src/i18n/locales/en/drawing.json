@@ -83,7 +83,6 @@
     "label": "Export",
     "selection": "Export the selection",
     "drawing": "Export the drawing",
-    "diagram": "Export the diagram",
     "copyPng": "Copy as PNG",
     "savePng": "Save PNG",
     "copySvg": "Copy as SVG",

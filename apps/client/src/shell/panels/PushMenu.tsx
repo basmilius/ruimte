@@ -4,7 +4,7 @@ import { ArrowUp, ChevronDown } from 'lucide-react';
 import type { GitActionKind } from '@ruimte/contracts';
 import { pushAllButton, type PushButton, type PushEntry } from '@/shell/panels/git-actions';
 import { Button } from '@/ui/Button';
-import { BTN_GROUP, MENU_HINT, MENU_LABEL } from '@/ui/classes';
+import { BTN_GROUP, MENU_HINT } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { MenuPopup } from '@/ui/MenuPopup';
 import { Tooltip } from '@/ui/Tooltip';
@@ -60,7 +60,6 @@ export function PushMenu({ button, active, entries, busy, onPush, onPushAll }: P
                     </Menu.Trigger>
                 </Tooltip>
                 <MenuPopup className="w-72" align="end">
-                    <div className={MENU_LABEL}>{t('git.push.one')}</div>
                     {entries.map((entry) => (
                         <Menu.Item
                             key={entry.cwd}

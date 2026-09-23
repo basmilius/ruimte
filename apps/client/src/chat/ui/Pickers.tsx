@@ -6,7 +6,7 @@ import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo } from '@ruimte
 import { AgentIcon } from '@/agents/AgentIcon';
 import { modelName } from '@/agents/model-name';
 import { forgetStashed, STASH_SHORTCUT, useStash, type StashedPrompt } from '@/chat/stash';
-import { MENU_LABEL, SECTION_LABEL } from '@/ui/classes';
+import { MENU_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
@@ -213,7 +213,6 @@ export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): v
             <Popover.Portal>
                 <Popover.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
                     <Popover.Popup className="picker-popup w-80">
-                        <div className={`${SECTION_LABEL} px-3 pt-2`}>{t('pickers.stash.title')}</div>
                         <div className="max-h-72 overflow-auto p-1">
                             {prompts.map((prompt) => (
                                 <div key={prompt.id} className="group/stash flex items-start gap-1">

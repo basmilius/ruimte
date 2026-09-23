@@ -183,7 +183,6 @@ export function RunSettings({
             <Menu.Portal>
                 <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
                     <Menu.Popup className="menu-popup w-80">
-                        <div className={MENU_LABEL}>{t('pickers.settings.model')}</div>
                         {providers.length === 0 && <div className="px-2.5 py-3 text-xs text-text-faint">{t('pickers.model.noProvider')}</div>}
                         <Menu.RadioGroup value={chosenModel} onValueChange={chooseModel}>
                             {modelGroups(live)}
