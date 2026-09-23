@@ -4,7 +4,16 @@ import { fitAction, historyAction } from '@/actions/client-actions';
 import { GRID } from '@/canvas/math';
 import { isApplePlatform } from '@/desktop/bridge';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
-import { copyDrawingElements, readDrawingElements } from '@/drawing/export';
+import {
+    copyDrawing,
+    cutSelection,
+    deleteSelection,
+    duplicateSelection,
+    moveSelection,
+    pasteInto,
+    reorderSelection,
+    toggleLockSelection
+} from '@/drawing/drawing-actions';
 import type { DrawingState, DrawingTool } from '@/state/drawing';
 import { useUi } from '@/state/ui';
 import { matchesShortcut, type Shortcut } from '@/ui/shortcut';
@@ -104,42 +113,37 @@ export const useDrawingKeys = (store: StoreApi<DrawingState>, active: boolean): 
             }
             if (is(DRAWING_SHORTCUTS.duplicate)) {
                 e.preventDefault();
-                state.duplicateSelected();
+                duplicateSelection(store);
                 return;
             }
             if (is(DRAWING_SHORTCUTS.lock)) {
                 e.preventDefault();
-                state.toggleLockSelected();
+                toggleLockSelection(store);
                 return;
             }
             if (is(DRAWING_SHORTCUTS.copy)) {
                 e.preventDefault();
-                void copyDrawingElements(store);
+                void copyDrawing(store, 'elements');
                 return;
             }
             if (is(DRAWING_SHORTCUTS.cut)) {
                 e.preventDefault();
-                void copyDrawingElements(store).then(() => store.getState().deleteSelected());
+                void cutSelection(store);
                 return;
             }
             if (is(DRAWING_SHORTCUTS.paste)) {
                 e.preventDefault();
-                void navigator.clipboard.readText().then((text) => {
-                    const elements = readDrawingElements(text);
-                    if (elements) {
-                        store.getState().pasteElements(elements);
-                    }
-                });
+                void pasteInto(store);
                 return;
             }
             if (is(DRAWING_SHORTCUTS.bringToFront)) {
                 e.preventDefault();
-                state.bringToFront();
+                reorderSelection(store, 'front');
                 return;
             }
             if (is(DRAWING_SHORTCUTS.sendToBack)) {
                 e.preventDefault();
-                state.sendToBack();
+                reorderSelection(store, 'back');
                 return;
             }
             if (is(DRAWING_SHORTCUTS.zoomReset)) {
@@ -166,7 +170,7 @@ export const useDrawingKeys = (store: StoreApi<DrawingState>, active: boolean): 
             }
             if (e.key === 'Delete' || e.key === 'Backspace') {
                 e.preventDefault();
-                state.deleteSelected();
+                void deleteSelection(store);
                 return;
             }
             if (e.key.startsWith('Arrow')) {
@@ -174,7 +178,7 @@ export const useDrawingKeys = (store: StoreApi<DrawingState>, active: boolean): 
                 const step = e.shiftKey ? GRID : 1;
                 const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
                 const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-                state.moveSelected(dx, dy);
+                moveSelection(store, dx, dy);
                 return;
             }
             if (e.shiftKey) {

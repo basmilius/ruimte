@@ -1,5 +1,8 @@
+import { contentActions, type ContentMachine } from '@/actions/content-actions';
 import { asksFirst, asRefusal, developerActions, type DeveloperMachine } from '@/actions/developer-actions';
+import { filesActions, type FilesMachine } from '@/actions/files-actions';
 import { inspectionActions } from '@/actions/inspection-actions';
+import { pageActions, type PageMachine } from '@/actions/page-actions';
 import { sessionActions, sessionTitle, type SessionMachine } from '@/actions/session-actions';
 import { resolveTarget } from '@/actions/resolve-target';
 import { ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionCall, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
@@ -306,6 +309,9 @@ export interface ClientActionMachine {
     viewDeletion: ViewDeletionMachine;
     developer: Partial<DeveloperMachine>;
     sessions: Partial<SessionMachine>;
+    content: Partial<ContentMachine>;
+    files: Partial<FilesMachine>;
+    pages: Partial<PageMachine>;
 }
 
 const LIVE_MACHINE: ClientActionMachine = {
@@ -316,15 +322,24 @@ const LIVE_MACHINE: ClientActionMachine = {
     copyViewContent: (kind, from, to) => void (kind === 'drawing' ? drawingClient.copy(from, to) : diagramClient.copy(from, to)),
     viewDeletion: liveViewDeletion,
     developer: {},
-    sessions: {}
+    sessions: {},
+    content: {},
+    files: {},
+    pages: {}
 };
 
 export const createClientActionRegistry = (document: StoreApi<DocumentState>, machine: Partial<ClientActionMachine> = {}): ActionRegistry<void> => {
-    const { sendChat, clearChat, clearTerminal, providers, copyViewContent, viewDeletion, developer, sessions } = { ...LIVE_MACHINE, ...machine };
+    const { sendChat, clearChat, clearTerminal, providers, copyViewContent, viewDeletion, developer, sessions, content, files, pages } = {
+        ...LIVE_MACHINE,
+        ...machine
+    };
     return new ActionRegistry<void>({
         ...inspectionActions(document),
         ...developerActions(document, developer),
         ...sessionActions(document, sessions),
+        ...contentActions(document, content),
+        ...filesActions(files),
+        ...pageActions(document, pages),
         'target.resolve': (input) => ({ output: resolveTarget(document, input) }),
         'workspace.inspect': () => {
             const state = document.getState();
@@ -1167,7 +1182,7 @@ export const VOICE_ACTION_CALL: ActionCall<void> = {
 };
 
 /* A person sees what happened on screen, so a refusal stays as quiet as the store call it replaced. */
-const runAsPerson = async <Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name> | null> => {
+export const runAsPerson = async <Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name> | null> => {
     const result = await clientActions.execute(name, input, PERSON_ACTION_CALL);
     return result.status === 'completed' ? result.output : null;
 };

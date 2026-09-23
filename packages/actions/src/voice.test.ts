@@ -85,4 +85,24 @@ describe('Voice tools', () => {
             items: { type: 'object', required: ['questionId', 'answer'], additionalProperties: false }
         });
     });
+
+    test('files, content and pages leave out what only a person does: saving a file, pasting whole elements and search limits', () => {
+        const tool = (name: string) => VOICE_TOOL_DEFINITIONS.find((definition) => definition.name === name)!;
+        const reachable = VOICE_TOOL_DEFINITIONS.flatMap((definition) => (definition.parameters.properties.action?.enum as string[] | undefined) ?? []);
+        for (const action of ['drawing.export', 'diagram.export', 'browser.screenshot']) {
+            expect(reachable).not.toContain(action);
+        }
+        expect(tool('browse_files').parameters.properties).not.toHaveProperty('limit');
+        expect(tool('edit_content').parameters.properties).not.toHaveProperty('copies');
+        expect(tool('edit_content').parameters.properties.format?.enum).toEqual(['png', 'svg', 'elements', 'json', null]);
+        expect(Object.keys(tool('browse_pages').parameters.properties).sort()).toEqual(['action', 'hard', 'nodeId', 'url']);
+        // A nested object is as strict as the tool around it: every field there, each one nullable.
+        expect(tool('edit_content').parameters.properties.style).toMatchObject({
+            anyOf: [{ type: 'object', additionalProperties: false, required: expect.arrayContaining(['stroke', 'textSize']) }, { type: 'null' }]
+        });
+        expect(tool('edit_content').parameters.properties.elements).toMatchObject({
+            type: ['array', 'null'],
+            items: { type: 'object', additionalProperties: false, required: ['kind', 'x', 'y', 'w', 'h', 'text', 'color'] }
+        });
+    });
 });

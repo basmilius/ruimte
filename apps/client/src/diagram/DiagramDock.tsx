@@ -3,7 +3,7 @@ import { Menu } from '@base-ui-components/react/menu';
 import { Copy, Download, MoreHorizontal, Redo2, Undo2 } from 'lucide-react';
 import { fitAction, historyAction } from '@/actions/client-actions';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { copyDiagramPng, copyDiagramSvg, saveDiagramPng, saveDiagramSvg } from '@/diagram/export';
+import { copyDiagram, exportDiagram } from '@/diagram/diagram-actions';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { BTN_GROUP, MENU_LABEL } from '@/ui/classes';
 import { DockShell } from '@/ui/DockShell';
@@ -55,16 +55,16 @@ export function DiagramDock() {
                         <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
                             <Menu.Popup className="menu-popup min-w-52">
                                 <div className={MENU_LABEL}>{t('export.diagram')}</div>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramPng(store)}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => copyDiagram(store, 'png')}>
                                     <Icon icon={Copy} size={14} /> {t('export.copyPng')}
                                 </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramPng(store)}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => exportDiagram(store, 'png')}>
                                     <Icon icon={Download} size={14} /> {t('export.savePng')}
                                 </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramSvg(store)}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => copyDiagram(store, 'svg')}>
                                     <Icon icon={Copy} size={14} /> {t('export.copySvg')}
                                 </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramSvg(store)}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => exportDiagram(store, 'svg')}>
                                     <Icon icon={Download} size={14} /> {t('export.saveSvg')}
                                 </Menu.Item>
                             </Menu.Popup>

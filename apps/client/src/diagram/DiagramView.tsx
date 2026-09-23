@@ -5,13 +5,15 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import { Bot, Braces, FileJson, MoreHorizontal, Pencil, RotateCcw, Sparkles } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+import type { ActionInput } from '@ruimte/actions';
 import { DEFAULT_NODE_TONE } from '@ruimte/diagram';
 import { GRID, type Point } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { DiagramDock } from '@/diagram/DiagramDock';
 import { DiagramScene } from '@/diagram/DiagramScene';
 import { exampleDiagram } from '@/diagram/example';
-import { copyDiagramJson, openDiagramJson } from '@/diagram/export';
+import { runAsPerson } from '@/actions/client-actions';
+import { copyDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { askAgentAboutDiagram } from '@/project/views';
 import { Swatches } from '@/drawing/DrawingDock';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
@@ -65,7 +67,7 @@ function DiagramControls({ viewId }: { viewId: string }) {
                         <Menu.Item className="menu-item" disabled={!hasFolder || !written} onClick={() => openDiagramJson(viewId)}>
                             <Icon icon={FileJson} size={14} /> {t('diagram.openJson')}
                         </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => void copyDiagramJson(store)}>
+                        <Menu.Item className="menu-item" onClick={() => copyDiagram(store, 'json')}>
                             <Icon icon={Braces} size={14} /> {t('diagram.copyJson')}
                         </Menu.Item>
                     </Menu.Popup>
@@ -92,8 +94,9 @@ function RenameField({ id, onDone }: { id: string; onDone: () => void }) {
             return;
         }
         done.current = true;
-        if (value !== null) {
-            store.getState().renameNode(id, value);
+        const viewId = store.getState().viewId;
+        if (value !== null && viewId !== null) {
+            void runAsPerson('diagram.updateNode', { viewId, diagramNodeId: id, label: value, tone: null });
         }
         onDone();
     };
@@ -134,6 +137,12 @@ function NodeMenuPopup({ id, onRename }: { id: string; onRename: () => void }) {
     if (node === null) {
         return null;
     }
+    const run = <Name extends 'diagram.updateNode' | 'diagram.resetPosition'>(name: Name, input: Omit<ActionInput<Name>, 'viewId'>): void => {
+        const viewId = store.getState().viewId;
+        if (viewId !== null) {
+            void runAsPerson(name, { ...input, viewId } as ActionInput<Name>);
+        }
+    };
     return (
         <ContextMenu.Portal>
             <ContextMenu.Positioner className="z-(--z-popup)">
@@ -143,9 +152,13 @@ function NodeMenuPopup({ id, onRename }: { id: string; onRename: () => void }) {
                     </ContextMenu.Item>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <div className={MENU_LABEL}>{t('diagram.tone')}</div>
-                    <Swatches value={node.tone ?? DEFAULT_NODE_TONE} onPick={(tone) => store.getState().setNodeTone(id, tone)} paper />
+                    <Swatches
+                        value={node.tone ?? DEFAULT_NODE_TONE}
+                        onPick={(tone) => run('diagram.updateNode', { diagramNodeId: id, label: null, tone })}
+                        paper
+                    />
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
-                    <ContextMenu.Item className="menu-item" disabled={!node.pos} onClick={() => store.getState().resetPosition(id)}>
+                    <ContextMenu.Item className="menu-item" disabled={!node.pos} onClick={() => run('diagram.resetPosition', { diagramNodeId: id })}>
                         <Icon icon={RotateCcw} size={14} /> {t('diagram.resetPosition')}
                     </ContextMenu.Item>
                 </ContextMenu.Popup>
@@ -187,7 +200,9 @@ function EmptyDiagram({ viewId }: { viewId: string }) {
                     icon={<Icon icon={Sparkles} size={16} />}
                     title={t('diagram.empty.example.title')}
                     description={t('diagram.empty.example.description')}
-                    onClick={() => store.getState().replaceContent(exampleDiagram(store.getState().content.meta.title))}
+                    onClick={() =>
+                        void runAsPerson('diagram.replaceContent', { viewId, document: JSON.stringify(exampleDiagram(store.getState().content.meta.title)) })
+                    }
                 />
             </div>
         </div>

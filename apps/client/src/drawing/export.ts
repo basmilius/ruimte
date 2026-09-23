@@ -74,39 +74,11 @@ export const download = async (blob: Blob, name: string, mime: string): Promise<
     URL.revokeObjectURL(url);
 };
 
-const fileName = (extension: string): string => `drawing-${new Date().toISOString().slice(0, 10)}.${extension}`;
+/* Where an export lands unless the person names it otherwise: what it is and the day it was made. */
+export const exportFileName = (prefix: string, extension: string): string => `${prefix}-${new Date().toISOString().slice(0, 10)}.${extension}`;
 
-export const copyDrawingPng = async (store: DrawingSource): Promise<void> => {
-    const blob = await drawingPng(store);
-    if (blob) {
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-    }
-};
-
-export const saveDrawingPng = async (store: DrawingSource): Promise<void> => {
-    const blob = await drawingPng(store);
-    if (blob) {
-        await download(blob, fileName('png'), 'image/png');
-    }
-};
-
-export const copyDrawingSvg = async (store: DrawingSource): Promise<void> => {
-    await navigator.clipboard.writeText(drawingSvg(store));
-};
-
-export const saveDrawingSvg = async (store: DrawingSource): Promise<void> => {
-    await download(new Blob([drawingSvg(store)], { type: 'image/svg+xml' }), fileName('svg'), 'image/svg+xml');
-};
-
-/* Copies the selection as elements, so a paste in another drawing brings the shapes, not a picture. */
-export const copyDrawingElements = async (store: DrawingSource): Promise<void> => {
-    const { elements, selection } = store.getState();
-    const selected = elements.filter((element) => selection.includes(element.id));
-    if (selected.length === 0) {
-        return;
-    }
-    await navigator.clipboard.writeText(JSON.stringify({ type: CLIPBOARD_TYPE, elements: selected }));
-};
+/* Elements as the clipboard carries them, so a paste in another drawing brings the shapes, not a picture. */
+export const drawingClipboardText = (elements: readonly DrawingElement[]): string => JSON.stringify({ type: CLIPBOARD_TYPE, elements });
 
 /* What a paste finds on the clipboard, or null when it is not a drawing of ours. */
 export const readDrawingElements = (text: string): DrawingElement[] | null => {

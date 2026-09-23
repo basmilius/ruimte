@@ -161,6 +161,8 @@ describe('client actions', () => {
         expect(personal).toContain('view.share');
         expect(personal).toContain('view.move');
         expect(personal).toContain('link.create');
+        expect(personal).toContain('drawing.export');
+        expect(personal).toContain('diagram.export');
         expect(clientActions.catalog(VOICE_ACTION_CALL).map((entry) => entry.name)).toEqual([
             'agents.inspect',
             'agent.activity',
@@ -217,10 +219,18 @@ describe('client actions', () => {
             'chat.dismissQuestion',
             'terminal.stop',
             'terminal.resumeAgent',
+            'node.update',
             'plan.list',
             'plan.read',
             'plan.setStepState',
             'plan.addNote',
+            'diagram.replaceContent',
+            'browser.inspect',
+            'browser.navigate',
+            'browser.back',
+            'browser.forward',
+            'browser.reload',
+            'browser.stop',
             'git.status',
             'git.diff',
             'git.log',
@@ -249,7 +259,28 @@ describe('client actions', () => {
             'worktree.list',
             'worktree.diff',
             'worktree.create',
-            'worktree.merge'
+            'worktree.merge',
+            'file.list',
+            'file.search',
+            'file.grep',
+            'file.read',
+            'file.preview',
+            'file.reveal',
+            'file.copyPath',
+            'note.read',
+            'drawing.read',
+            'drawing.addElements',
+            'drawing.updateElements',
+            'drawing.deleteElements',
+            'drawing.duplicateElements',
+            'drawing.reorderElements',
+            'drawing.lockElements',
+            'drawing.replaceContent',
+            'drawing.copy',
+            'diagram.read',
+            'diagram.updateNode',
+            'diagram.resetPosition',
+            'diagram.copy'
         ]);
     });
 
@@ -321,8 +352,7 @@ describe('client actions', () => {
                 null
             );
         defaultDrawings.focus(viewId);
-        drawing.getState().select(['a']);
-        drawing.getState().deleteSelected();
+        drawing.getState().replaceElements([]);
         expect(await clientActions.execute('history.undo', { viewId }, PERSON_ACTION_CALL)).toMatchObject({
             status: 'completed',
             output: { view: 'Sketch', changed: true }
@@ -363,7 +393,7 @@ describe('client actions', () => {
             .getState()
             .load(viewId, { version: 1, rev: 1, meta: { title: '', direction: 'right' }, nodes: [{ id: 'a', label: 'Client' }], groups: [], edges: [] }, null);
         defaultDiagrams.focus(viewId);
-        diagram.getState().renameNode('a', 'Browser');
+        diagram.getState().replaceContent({ ...diagram.getState().content, nodes: [{ id: 'a', label: 'Browser' }] });
         expect(await clientActions.execute('history.undo', { viewId: 'main' }, PERSON_ACTION_CALL)).toMatchObject({
             status: 'failed',
             error: { code: 'inactive-view' }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { DrawingDocument, DrawingElement } from '@ruimte/contracts';
-import { boundsOf, createDrawingStore, focusedDrawing } from './drawing';
+import { boundsOf, createDrawingStore, focusedDrawing, withStyle } from './drawing';
 
 /* Every test here is about one editor, and with no workspace open that is the module's own. */
 const drawing = () => focusedDrawing().getState();
@@ -113,7 +113,7 @@ describe('history', () => {
     test('undo and redo restore the elements, clear the selection and leave the camera alone', () => {
         const camera = drawing().camera;
         drawing().select(['a']);
-        drawing().deleteSelected();
+        drawing().replaceElements([rect('b', 200)]);
         expect(ids()).toEqual(['b']);
         drawing().undo();
         expect(ids()).toEqual(['a', 'b']);
@@ -124,8 +124,7 @@ describe('history', () => {
     });
 
     test('an edit after an undo clears what could be redone', () => {
-        drawing().select(['a']);
-        drawing().deleteSelected();
+        drawing().replaceElements([rect('b', 200)]);
         drawing().undo();
         expect(drawing().future).toHaveLength(1);
         drawing().addElement(rect('c', 400));
@@ -171,47 +170,12 @@ describe('drawing and erasing', () => {
 });
 
 describe('the selection', () => {
-    test('a locked element cannot be selected, moved or erased', () => {
-        drawing().select(['a']);
-        drawing().toggleLockSelected();
-        expect(drawing().selection).toEqual([]);
+    test('a locked element cannot be selected by hand or by a box', () => {
+        drawing().replaceElements([{ ...rect('a'), locked: true }, rect('b', 200)]);
         drawing().selectAll();
         expect(drawing().selection).toEqual(['b']);
-        drawing().select(['a', 'b']);
-        drawing().deleteSelected();
-        expect(ids()).toEqual(['a']);
-    });
-
-    test('a duplicate lands offset, with a new id and its own seed', () => {
-        drawing().select(['a']);
-        drawing().duplicateSelected();
-        const copy = drawing().elements.at(-1)!;
-        expect(copy.id).not.toBe('a');
-        expect(copy).toMatchObject({ x: 16, y: 16 });
-        expect(drawing().selection).toEqual([copy.id]);
-    });
-
-    test('z-order moves the selection to the front and to the back', () => {
-        drawing().select(['a']);
-        drawing().bringToFront();
-        expect(ids()).toEqual(['b', 'a']);
-        drawing().sendToBack();
-        expect(ids()).toEqual(['a', 'b']);
-    });
-
-    test('a style choice paints the selection and stays for the next element', () => {
-        drawing().select(['a']);
-        drawing().setStyle({ stroke: 'red', strokeWidth: 4 });
-        expect(drawing().elements[0]).toMatchObject({ stroke: 'red', strokeWidth: 4 });
-        expect(drawing().elements[1]).toMatchObject({ stroke: 'ink' });
-        expect(drawing().style).toMatchObject({ stroke: 'red', strokeWidth: 4 });
-    });
-
-    test('a style choice writes only the chosen field, not the color the dock happens to show', () => {
-        drawing().setStyle({ stroke: 'red' });
-        drawing().select(['a']);
-        drawing().setStyle({ strokeWidth: 4 });
-        expect(drawing().elements[0]).toMatchObject({ stroke: 'ink', strokeWidth: 4 });
+        drawing().selectInRect({ x: -10, y: -10, w: 400, h: 100 });
+        expect(drawing().selection).toEqual(['b']);
     });
 });
 
@@ -223,12 +187,12 @@ describe('text', () => {
     });
 
     test('a text keeps its size unless the size itself is chosen', () => {
-        drawing().addElement(text('t1'));
-        drawing().select(['t1']);
-        drawing().setStyle({ stroke: 'blue' });
-        expect(drawing().elements.at(-1)).toMatchObject({ size: 20, stroke: 'blue' });
-        drawing().setStyle({ textSize: 36 });
-        expect(drawing().elements.at(-1)).toMatchObject({ size: 36 });
+        expect(withStyle(text('t1'), { stroke: 'blue' })).toMatchObject({ size: 20, stroke: 'blue' });
+        expect(withStyle(text('t1'), { textSize: 36 })).toMatchObject({ size: 36 });
+    });
+
+    test('a style writes only the chosen field, not the color the dock happens to show', () => {
+        expect(withStyle(rect('a'), { strokeWidth: 4 })).toMatchObject({ stroke: 'ink', strokeWidth: 4 });
     });
 });
 

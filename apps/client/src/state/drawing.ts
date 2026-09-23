@@ -19,7 +19,6 @@ import { cameraOfView, intersects, type Rect } from '@/canvas/math';
 import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
 import { boundsOfElements } from '@ruimte/drawing';
 import { fitTextBox } from '@/drawing/paint';
-import { nextId } from '@/state/canvas';
 
 /* Every tool in the dock, in the order the dock lists them. */
 export type DrawingTool = 'select' | 'hand' | 'rect' | 'diamond' | 'ellipse' | 'arrow' | 'line' | 'freehand' | 'text' | 'note' | 'eraser';
@@ -102,8 +101,6 @@ export interface DrawingState extends CameraSlice {
 
     setTool(tool: DrawingTool): void;
     toggleToolLock(): void;
-    /* A style choice paints the selection and becomes what the next element is drawn with. */
-    setStyle(patch: Partial<DrawingStyle>): void;
     /* After a shape the tool falls back to select, unless it is locked or freehand. */
     settleTool(): void;
 
@@ -118,15 +115,7 @@ export interface DrawingState extends CameraSlice {
     replaceElements(next: DrawingElement[], first?: boolean): void;
     updateElement(id: string, patch: Partial<DrawingElement>, first?: boolean): void;
 
-    deleteSelected(): void;
-    duplicateSelected(): void;
-    /* Elements from the clipboard: they arrive under new ids and seeds, as a duplicate does. */
-    pasteElements(elements: DrawingElement[]): void;
     setExportBackground(on: boolean): void;
-    bringToFront(): void;
-    sendToBack(): void;
-    toggleLockSelected(): void;
-    unlockAll(): void;
 
     setEditingText(id: string | null): void;
     updateText(id: string, text: string): void;
@@ -177,7 +166,7 @@ export const isWritten = (element: DrawingElement): element is DrawingElement & 
 
 /* What a style choice writes onto an element: only the field that was chosen, so picking an
    alignment leaves a color the dock happens to show alone. */
-const withStyle = (element: DrawingElement, patch: Partial<DrawingStyle>): DrawingElement => {
+export const withStyle = (element: DrawingElement, patch: Partial<DrawingStyle>): DrawingElement => {
     const next: DrawingElement = {
         ...element,
         ...(patch.stroke !== undefined ? { stroke: patch.stroke } : {}),
@@ -309,17 +298,6 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
         toggleToolLock() {
             set((state) => ({ toolLocked: !state.toolLocked }));
         },
-        setStyle(patch) {
-            const state = get();
-            const style = { ...state.style, ...patch };
-            const selected = new Set(state.selection);
-            if (selected.size === 0) {
-                set({ style });
-                return;
-            }
-            const elements = state.elements.map((element) => (selected.has(element.id) && !element.locked ? withStyle(element, patch) : element));
-            set({ style, ...changed(state, elements) });
-        },
         settleTool() {
             const { tool, toolLocked } = get();
             // Freehand is the one tool that stays, since a sketch is a run of strokes, not one.
@@ -369,93 +347,9 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
             set(changed(state, elements, first));
         },
 
-        deleteSelected() {
-            const state = get();
-            const selected = new Set(state.selection);
-            const elements = state.elements.filter((element) => !selected.has(element.id) || element.locked);
-            if (elements.length === state.elements.length) {
-                return;
-            }
-            set({ selection: [], editingTextId: null, ...changed(state, elements) });
-        },
-        duplicateSelected() {
-            const state = get();
-            const selected = new Set(state.selection);
-            const copies = state.elements
-                .filter((element) => selected.has(element.id))
-                .map((element) => ({
-                    ...element,
-                    id: nextId('el'),
-                    x: element.x + DUPLICATE_OFFSET,
-                    y: element.y + DUPLICATE_OFFSET,
-                    seed: newSeed()
-                }));
-            if (copies.length === 0) {
-                return;
-            }
-            set({ selection: copies.map((element) => element.id), ...changed(state, [...state.elements, ...copies]) });
-        },
-        pasteElements(elements) {
-            if (elements.length === 0) {
-                return;
-            }
-            const state = get();
-            const copies = elements.map((element) => ({
-                ...element,
-                id: nextId('el'),
-                x: element.x + DUPLICATE_OFFSET,
-                y: element.y + DUPLICATE_OFFSET,
-                seed: newSeed()
-            }));
-            set({ selection: copies.map((element) => element.id), ...changed(state, [...state.elements, ...copies]) });
-        },
         setExportBackground(on) {
             set({ exportBackground: on });
         },
-        bringToFront() {
-            const state = get();
-            const selected = new Set(state.selection);
-            const staying = state.elements.filter((element) => !selected.has(element.id));
-            const moving = state.elements.filter((element) => selected.has(element.id));
-            if (moving.length === 0) {
-                return;
-            }
-            set(changed(state, [...staying, ...moving]));
-        },
-        sendToBack() {
-            const state = get();
-            const selected = new Set(state.selection);
-            const staying = state.elements.filter((element) => !selected.has(element.id));
-            const moving = state.elements.filter((element) => selected.has(element.id));
-            if (moving.length === 0) {
-                return;
-            }
-            set(changed(state, [...moving, ...staying]));
-        },
-        toggleLockSelected() {
-            const state = get();
-            const selected = new Set(state.selection);
-            if (selected.size === 0) {
-                return;
-            }
-            const locking = state.elements.some((element) => selected.has(element.id) && !element.locked);
-            const elements = state.elements.map((element) => (selected.has(element.id) ? { ...element, locked: locking || undefined } : element));
-            // A locked element cannot be picked up again, so the selection lets go of it.
-            set({ selection: locking ? [] : state.selection, ...changed(state, elements) });
-        },
-        unlockAll() {
-            const state = get();
-            if (!state.elements.some((element) => element.locked)) {
-                return;
-            }
-            set(
-                changed(
-                    state,
-                    state.elements.map(({ locked: _locked, ...element }) => element as DrawingElement)
-                )
-            );
-        },
-
         setEditingText(id) {
             set({ editingTextId: id });
         },

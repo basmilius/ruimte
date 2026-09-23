@@ -25,7 +25,7 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 import { DRAWING_COLORS, type DrawingColor } from '@ruimte/contracts';
 import { fitAction, historyAction } from '@/actions/client-actions';
-import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
+import { copyDrawing, exportDrawing, styleSelection, unlockEverything } from '@/drawing/drawing-actions';
 import { useDrawing, useDrawingStore, type DrawingStyle, type DrawingTool } from '@/state/drawing';
 import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { DockShell } from '@/ui/DockShell';
@@ -118,7 +118,7 @@ export function DrawingDock() {
             empty: s.elements.length === 0
         }))
     );
-    const set = (patch: Partial<DrawingStyle>): void => drawingStore.getState().setStyle(patch);
+    const set = (patch: Partial<DrawingStyle>): void => styleSelection(drawingStore, patch);
 
     return (
         <DockShell data-drawing-chrome className="px-4" barClassName="flex-wrap justify-center">
@@ -218,7 +218,7 @@ export function DrawingDock() {
                                 {anyLocked && (
                                     <>
                                         <Menu.Separator className={MENU_SEPARATOR} />
-                                        <Menu.Item className="menu-item" onClick={() => drawingStore.getState().unlockAll()}>
+                                        <Menu.Item className="menu-item" onClick={() => unlockEverything(drawingStore)}>
                                             <span className="grid h-4 w-4 place-items-center">
                                                 <Icon icon={LockOpen} size={14} />
                                             </span>
@@ -267,16 +267,16 @@ export function DrawingDock() {
                         <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
                             <Menu.Popup className="menu-popup min-w-52">
                                 <div className={MENU_LABEL}>{hasSelection ? t('export.selection') : t('export.drawing')}</div>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawingPng(drawingStore)}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawing(drawingStore, 'png')}>
                                     <Icon icon={Copy} size={14} /> {t('export.copyPng')}
                                 </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDrawingPng(drawingStore)}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => exportDrawing(drawingStore, 'png')}>
                                     <Icon icon={Download} size={14} /> {t('export.savePng')}
                                 </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawingSvg(drawingStore)}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawing(drawingStore, 'svg')}>
                                     <Icon icon={Copy} size={14} /> {t('export.copySvg')}
                                 </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDrawingSvg(drawingStore)}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => exportDrawing(drawingStore, 'svg')}>
                                     <Icon icon={Download} size={14} /> {t('export.saveSvg')}
                                 </Menu.Item>
                                 <Menu.Separator className={MENU_SEPARATOR} />

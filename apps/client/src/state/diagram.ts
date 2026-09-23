@@ -1,5 +1,5 @@
 import { createStore, type StoreApi } from 'zustand';
-import { EMPTY_DIAGRAM, type DiagramContent, type DiagramDocument, type DiagramNode, type DrawingColor, type ProjectViewLocal } from '@ruimte/contracts';
+import { EMPTY_DIAGRAM, type DiagramContent, type DiagramDocument, type DiagramNode, type ProjectViewLocal } from '@ruimte/contracts';
 import { layoutOf, type DiagramLayout } from '@ruimte/diagram';
 import { cameraOfView } from '@/canvas/math';
 import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
@@ -27,12 +27,10 @@ export interface DiagramState extends CameraSlice {
     /* Takes the diagram off screen without saving; the client flushes before it calls this. */
     unload(): void;
     exportContent(): DiagramContent;
-    /* A change a person made, as a whole new content; the handles below are the ones the view offers. */
+    /* A change a person made, as a whole new content; a rename and a tone come in this way too. */
     replaceContent(content: DiagramContent): void;
     /* `first` says this is the first step of a drag, which is the one that goes into the history. */
     moveNode(id: string, pos: [number, number], first: boolean): void;
-    renameNode(id: string, label: string): void;
-    setNodeTone(id: string, tone: DrawingColor): void;
     /* Gives a dragged node back to the layout. */
     resetPosition(id: string): void;
     undo(): void;
@@ -158,22 +156,6 @@ export const createDiagramStore = (): StoreApi<DiagramState> =>
             const content = withNode(state.content, id, (node) => (node.pos?.[0] === pos[0] && node.pos[1] === pos[1] ? node : { ...node, pos }));
             if (content !== null) {
                 set(changed(state, content, first));
-            }
-        },
-        renameNode(id, label) {
-            const state = get();
-            // An empty label would leave a box nobody can find again, so it keeps the one it had.
-            const next = label.trim();
-            const content = withNode(state.content, id, (node) => (next === '' || next === node.label ? node : { ...node, label: next }));
-            if (content !== null) {
-                set(changed(state, content));
-            }
-        },
-        setNodeTone(id, tone) {
-            const state = get();
-            const content = withNode(state.content, id, (node) => (node.tone === tone ? node : { ...node, tone }));
-            if (content !== null) {
-                set(changed(state, content));
             }
         },
         resetPosition(id) {

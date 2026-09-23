@@ -16,8 +16,8 @@ import {
 } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
 import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubheaderView } from '@/project/views';
-import { copyDiagramJson, copyDiagramPng, copyDiagramSvg, openDiagramJson, saveDiagramPng, saveDiagramSvg } from '@/diagram/export';
-import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
+import { copyDiagram, exportDiagram, openDiagramJson } from '@/diagram/diagram-actions';
+import { copyDrawing, exportDrawing } from '@/drawing/drawing-actions';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { focusedDrawing } from '@/state/drawing';
@@ -325,27 +325,27 @@ export const appCommands = (): Command[] => {
                             {
                                 id: 'diagram-copy-json',
                                 label: i18next.t('shell:palette.commands.diagramCopyJson'),
-                                run: () => void copyDiagramJson(focusedDiagram())
+                                run: () => copyDiagram(focusedDiagram(), 'json')
                             },
                             {
                                 id: 'diagram-copy-png',
                                 label: i18next.t('shell:palette.commands.diagramCopyPng'),
-                                run: () => void copyDiagramPng(focusedDiagram())
+                                run: () => copyDiagram(focusedDiagram(), 'png')
                             },
                             {
                                 id: 'diagram-save-png',
                                 label: i18next.t('shell:palette.commands.diagramSavePng'),
-                                run: () => void saveDiagramPng(focusedDiagram())
+                                run: () => exportDiagram(focusedDiagram(), 'png')
                             },
                             {
                                 id: 'diagram-copy-svg',
                                 label: i18next.t('shell:palette.commands.diagramCopySvg'),
-                                run: () => void copyDiagramSvg(focusedDiagram())
+                                run: () => copyDiagram(focusedDiagram(), 'svg')
                             },
                             {
                                 id: 'diagram-save-svg',
                                 label: i18next.t('shell:palette.commands.diagramSaveSvg'),
-                                run: () => void saveDiagramSvg(focusedDiagram())
+                                run: () => exportDiagram(focusedDiagram(), 'svg')
                             }
                         ]
                       : []),
@@ -359,22 +359,22 @@ export const appCommands = (): Command[] => {
                             {
                                 id: 'drawing-copy-png',
                                 label: i18next.t('shell:palette.commands.drawingCopyPng'),
-                                run: () => void copyDrawingPng(focusedDrawing())
+                                run: () => void copyDrawing(focusedDrawing(), 'png')
                             },
                             {
                                 id: 'drawing-save-png',
                                 label: i18next.t('shell:palette.commands.drawingSavePng'),
-                                run: () => void saveDrawingPng(focusedDrawing())
+                                run: () => exportDrawing(focusedDrawing(), 'png')
                             },
                             {
                                 id: 'drawing-copy-svg',
                                 label: i18next.t('shell:palette.commands.drawingCopySvg'),
-                                run: () => void copyDrawingSvg(focusedDrawing())
+                                run: () => void copyDrawing(focusedDrawing(), 'svg')
                             },
                             {
                                 id: 'drawing-save-svg',
                                 label: i18next.t('shell:palette.commands.drawingSaveSvg'),
-                                run: () => void saveDrawingSvg(focusedDrawing())
+                                run: () => exportDrawing(focusedDrawing(), 'svg')
                             }
                         ]
                       : [])

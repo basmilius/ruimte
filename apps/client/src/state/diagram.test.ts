@@ -94,24 +94,6 @@ describe('the handles of the diagram store', () => {
         expect(nodeOf(store, 'b').pos).toBeUndefined();
     });
 
-    test('renaming keeps a label with something in it, and an empty one is no change', () => {
-        const store = loaded();
-        store.getState().renameNode('a', '  Browser  ');
-        expect(nodeOf(store, 'a').label).toBe('Browser');
-        store.getState().renameNode('a', '   ');
-        store.getState().renameNode('a', 'Browser');
-        expect(nodeOf(store, 'a').label).toBe('Browser');
-        expect(store.getState().past).toHaveLength(1);
-    });
-
-    test('a tone is a palette name on the node, and picking the same one twice is one change', () => {
-        const store = loaded();
-        store.getState().setNodeTone('a', 'blue');
-        store.getState().setNodeTone('a', 'blue');
-        expect(nodeOf(store, 'a').tone).toBe('blue');
-        expect(store.getState().edits).toBe(1);
-    });
-
     test('resetting a position hands the node back to the layout, and does nothing on a node that has none', () => {
         const store = loaded();
         store.getState().resetPosition('a');
@@ -124,15 +106,14 @@ describe('the handles of the diagram store', () => {
 
     test('undo and redo step through every handle and count as edits, so the client saves them', () => {
         const store = loaded();
-        store.getState().renameNode('a', 'Browser');
-        store.getState().setNodeTone('b', 'green');
+        store.getState().moveNode('a', [40, 40], true);
+        store.getState().resetPosition('a');
         store.getState().undo();
-        expect(nodeOf(store, 'b').tone).toBeUndefined();
-        expect(nodeOf(store, 'a').label).toBe('Browser');
+        expect(nodeOf(store, 'a').pos).toEqual([40, 40]);
         store.getState().undo();
-        expect(nodeOf(store, 'a').label).toBe('Client');
+        expect('pos' in nodeOf(store, 'a')).toBe(false);
         store.getState().redo();
-        expect(nodeOf(store, 'a').label).toBe('Browser');
+        expect(nodeOf(store, 'a').pos).toEqual([40, 40]);
         expect(store.getState().future).toHaveLength(1);
         expect(store.getState().edits).toBe(5);
         // A new change after an undo drops the steps that were ahead of it.
@@ -143,8 +124,7 @@ describe('the handles of the diagram store', () => {
     test('an unknown node id changes nothing', () => {
         const store = loaded();
         store.getState().moveNode('nope', [1, 2], true);
-        store.getState().renameNode('nope', 'x');
-        store.getState().setNodeTone('nope', 'red');
+        store.getState().resetPosition('nope');
         expect(store.getState().edits).toBe(0);
         expect(store.getState().past).toHaveLength(0);
     });
