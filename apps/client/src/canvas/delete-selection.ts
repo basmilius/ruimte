@@ -1,17 +1,20 @@
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { isCanvasView } from '@ruimte/contracts';
+import { isCanvasView, resolveStoredPath } from '@ruimte/contracts';
 import { askBeforeEndingAgents, type PendingEnd } from '@/agents/end-children';
+import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { worktreesLeftBy } from '@/shell/panels/worktree-rows';
 import { useDocument } from '@/state/document';
+import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import type { CanvasState } from '@/state/canvas';
 import type { Transport } from '@/transport/transport';
 
 /*
  * Deletes what is selected on a canvas, the way `deleteSelected` does, but asks first when the chats
- * and terminals going with it opened agents on the machine: those end too. The selection is kept, so
- * the delete that runs after the answer takes what the person picked, not what is selected by then.
+ * and terminals going with it opened agents on the machine: those end too. A file node with unsaved
+ * changes is saved before anything is asked. The selection is kept, so the delete that runs after
+ * the answer takes what the person picked, not what is selected by then.
  */
 export const deleteSelectionAsking = (
     store: StoreApi<CanvasState>,
@@ -50,15 +53,23 @@ export const deleteSelectionAsking = (
             )
         };
     };
-    return askBeforeEndingAgents(
-        transport,
-        sessions,
-        what,
-        () => {
-            const now = store.getState();
-            now.select(picked);
-            now.deleteSelected();
-        },
-        leftBehind
-    );
+    const files = going.flatMap((id) => {
+        const node = nodes[id];
+        return node?.kind === 'file' && node.path ? (resolveStoredPath(folder, node.path) ?? []) : [];
+    });
+    return new Promise((resolve) => {
+        closeAfterSaving(currentEndpointId(), files, () => {
+            void askBeforeEndingAgents(
+                transport,
+                sessions,
+                what,
+                () => {
+                    const now = store.getState();
+                    now.select(picked);
+                    now.deleteSelected();
+                },
+                leftBehind
+            ).finally(resolve);
+        });
+    });
 };

@@ -8,6 +8,8 @@ import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { isCheckoutDiff, useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
+import { endpointKey, useEndpointId } from '@/state/keys';
+import { isUnsavedDraft, useTextDrafts } from '@/state/text-drafts';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -40,6 +42,8 @@ export function FileTabs() {
     const tabs = useFiles((s) => s.tabs);
     const active = useFiles((s) => s.active);
     const counts = useGit((s) => s.counts);
+    const endpointId = useEndpointId();
+    const drafts = useTextDrafts((s) => s.rows);
     const stripRef = useRef<HTMLDivElement>(null);
     const [edges, setEdges] = useState({ start: false, end: false });
 
@@ -91,6 +95,7 @@ export function FileTabs() {
                 const commit = tab.view?.commit;
                 const checkout = isCheckoutDiff(tab.path, tab.view);
                 const count = counts[tab.key];
+                const unsaved = tab.view === undefined && isUnsavedDraft(drafts[endpointKey(endpointId, tab.path)]);
                 const label =
                     commit !== undefined ? commit.slice(0, 7) : checkout ? basenameOf(tab.path) : tab.view ? t('git.tab.changes') : basenameOf(tab.path);
                 const hint =
@@ -134,7 +139,11 @@ export function FileTabs() {
                                         </span>
                                     )}
                                     {/* Out of the row until there is something to mark, so a clean tab keeps the close button 8px from its name. */}
-                                    {tab.dirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted" />}
+                                    {unsaved && (
+                                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted">
+                                            <span className="sr-only">{t('file.unsaved.mark')}</span>
+                                        </span>
+                                    )}
                                 </button>
                             </Tooltip>
                             {tab.pinned && <Icon icon={Pin} size={12} className="shrink-0 text-text-muted" />}

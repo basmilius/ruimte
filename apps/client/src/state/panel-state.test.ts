@@ -24,14 +24,13 @@ const full: PanelsState = {
     planAnchor: { chatId: 'chat-1', planId: 'plan-1', dismissed: true },
     planWidth: 400,
     tabs: [
-        { key: '/repo/readme.md', path: '/repo/readme.md', pinned: true, dirty: false },
-        { key: '/repo/src/main.ts', path: '/repo/src/main.ts', pinned: false, dirty: false },
+        { key: '/repo/readme.md', path: '/repo/readme.md', pinned: true },
+        { key: '/repo/src/main.ts', path: '/repo/src/main.ts', pinned: false },
         {
             key: 'diff:/repo/src/main.ts',
             path: '/repo/src/main.ts',
             view: { kind: 'diff', cwd: '/repo', scope: 'base', staged: false },
-            pinned: false,
-            dirty: false
+            pinned: false
         }
     ],
     active: 'diff:/repo/src/main.ts',

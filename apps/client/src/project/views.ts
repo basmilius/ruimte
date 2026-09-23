@@ -4,9 +4,11 @@ import {
     isCanvasView,
     isDiagramView,
     isDrawingView,
+    isFileView,
     isOpenableView,
     isSessionView,
     MAIN_VIEW_NAME,
+    resolveStoredPath,
     sessionNodesOfView,
     type AgentKind,
     type ProjectView
@@ -16,6 +18,7 @@ import { focusViewAction } from '@/actions/client-actions';
 import { offerDraft } from '@/chat/drafts';
 import { GRID, toWorld, type Point } from '@/canvas/math';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
+import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { viewIdsIn, type SplitDirection } from '@/shell/split';
 import { NODE_SIZE, focusedCanvas, liveCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
@@ -353,9 +356,20 @@ export const putOnCanvas = (viewId: string): boolean => {
     return target ? useDocument.getState().putOnCanvas(viewId, target.id) : false;
 };
 
+/* The files a view shows: itself for a file view, its file nodes for a canvas. */
+const filesOfView = (view: ProjectView, folder: string | null): string[] => {
+    const stored = isFileView(view)
+        ? [view.path]
+        : isCanvasView(view)
+          ? view.nodes.flatMap((node) => (node.kind === 'file' && node.path ? [node.path] : []))
+          : [];
+    return stored.flatMap((path) => resolveStoredPath(folder, path) ?? []);
+};
+
 /*
  * Deleting takes a question when something in the view is still running, and a question of its own
- * when its chats and terminals opened agents that would end with it.
+ * when its chats and terminals opened agents that would end with it. A file it shows with unsaved
+ * changes is saved first (`unsaved-close.ts`).
  */
 export const askDeleteView = (id: string): void => {
     const view = useDocument.getState().views.find((each) => each.id === id);
@@ -369,12 +383,12 @@ export const askDeleteView = (id: string): void => {
             .exportViews()
             .find((each) => each.id === id) ?? view;
     const sessions = sessionNodesOfView(exported).map((node) => node.id);
-    void askBeforeEndingAgents(
-        transportFor(currentEndpointId()),
-        sessions,
-        ('name' in view ? view.name : undefined) ?? i18next.t('project:view.fallbackName'),
-        () => deleteViewAsking(view)
-    );
+    const endpointId = currentEndpointId();
+    closeAfterSaving(endpointId, filesOfView(exported, useProject.getState().current?.folder ?? null), () => {
+        void askBeforeEndingAgents(transportFor(endpointId), sessions, ('name' in view ? view.name : undefined) ?? i18next.t('project:view.fallbackName'), () =>
+            deleteViewAsking(view)
+        );
+    });
 };
 
 const deleteViewAsking = (view: ProjectView): void => {

@@ -32,8 +32,7 @@ export const parsePanels = (stored: ProjectPanels | undefined, defaults: PanelsS
         key: tabKey(tab.path, tab.view),
         path: tab.path,
         ...(tab.view ? { view: tab.view } : {}),
-        pinned: tab.pinned,
-        dirty: false
+        pinned: tab.pinned
     }));
     /* A tab that is not among them would leave the viewer pointing at nothing. */
     const active = tabs.some((tab) => tab.key === stored?.activeTab) ? (stored?.activeTab ?? null) : (tabs[0]?.key ?? null);

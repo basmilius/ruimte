@@ -1,6 +1,9 @@
 import type { GitDiffScope, ProjectFileTabView } from '@ruimte/contracts';
 import { create } from 'zustand';
+import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { useDocument } from '@/state/document';
+import { currentEndpointId } from '@/state/keys';
+import { textDrafts } from '@/state/text-drafts';
 import { useUi } from '@/state/ui';
 
 export type FileTabView = ProjectFileTabView;
@@ -15,8 +18,6 @@ export interface FileTab {
     view?: FileTabView;
     /* A pinned tab survives the limit; double-click on a tab sets it. */
     pinned: boolean;
-    /* Reserved for an editor: the dot's place in the tab is already there. */
-    dirty: boolean;
 }
 
 export interface TabState {
@@ -46,9 +47,10 @@ export const tabKey = (path: string, view?: FileTabView): string => {
 /*
  * A tab per open file, the way a preview tab works in an editor: the oldest unpinned one makes room
  * when the limit is reached. The tab that is open right now is never the one that goes, or opening
- * a file could close the file it just opened.
+ * a file could close the file it just opened, and neither is one `keeps` holds on to, such as a file
+ * with unsaved changes.
  */
-export const openTab = (state: TabState, path: string, limit: number, view?: FileTabView): TabState => {
+export const openTab = (state: TabState, path: string, limit: number, view?: FileTabView, keeps: (tab: FileTab) => boolean = () => false): TabState => {
     const key = tabKey(path, view);
     const open = state.tabs.find((tab) => tab.key === key);
     if (open) {
@@ -62,13 +64,13 @@ export const openTab = (state: TabState, path: string, limit: number, view?: Fil
         const reused = state.tabs.findIndex((tab) => tab.view !== undefined && !tab.pinned);
         if (reused >= 0) {
             const tabs = [...state.tabs];
-            tabs[reused] = { key, path, view, pinned: false, dirty: false };
+            tabs[reused] = { key, path, view, pinned: false };
             return { tabs, active: key };
         }
     }
-    const tabs = [...state.tabs, { key, path, ...(view ? { view } : {}), pinned: false, dirty: false }];
+    const tabs = [...state.tabs, { key, path, ...(view ? { view } : {}), pinned: false }];
     while (tabs.length > Math.max(1, limit)) {
-        const index = tabs.findIndex((tab) => !tab.pinned && tab.key !== key);
+        const index = tabs.findIndex((tab) => !tab.pinned && tab.key !== key && !keeps(tab));
         if (index < 0) {
             break;
         }
@@ -167,21 +169,28 @@ export const useFiles = create<FilesStore>((set, get) => ({
        the cell away again. */
     open(path, limit, view, line) {
         const reveal = line === undefined ? get().revealLine : { key: tabKey(path, view), line, nonce: (get().revealLine?.nonce ?? 0) + 1 };
-        set({ ...openTab(get(), path, limit, view), focusRequest: get().focusRequest + 1, revealLine: reveal });
+        const endpointId = currentEndpointId();
+        const unsaved = (tab: FileTab): boolean => tab.view === undefined && textDrafts.isUnsaved(endpointId, tab.path);
+        set({ ...openTab(get(), path, limit, view, unsaved), focusRequest: get().focusRequest + 1, revealLine: reveal });
         useDocument.getState().showFiles();
     },
+    /* A file with unsaved changes is saved first, and closes once it is (`unsaved-close.ts`). */
     close(key) {
-        const next = closeTab(get(), key);
-        set({
-            ...next,
-            recent: rememberClosed(
-                get().recent,
-                get().tabs.find((tab) => tab.key === key)
-            )
-        });
-        if (next.tabs.length === 0) {
-            useDocument.getState().hideFiles();
-        }
+        const tab = get().tabs.find((entry) => entry.key === key);
+        const closeNow = (): void => {
+            const next = closeTab(get(), key);
+            set({
+                ...next,
+                recent: rememberClosed(
+                    get().recent,
+                    get().tabs.find((entry) => entry.key === key)
+                )
+            });
+            if (next.tabs.length === 0) {
+                useDocument.getState().hideFiles();
+            }
+        };
+        closeAfterSaving(currentEndpointId(), tab === undefined || tab.view !== undefined ? [] : [tab.path], closeNow);
     },
     /* A pinned tab goes with the rest, since the person asked for this one file and nothing else. */
     closeOthers(key) {

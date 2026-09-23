@@ -82,6 +82,7 @@ import { useSidebarGroups } from './sidebar-groups';
 import { useSidebarProjects } from './sidebar-projects';
 import { openSidebarTarget } from './sidebar-navigation';
 import { buildCombinedSidebar, type SidebarRow, type SidebarGroup } from './sidebar-rows';
+import { useUnsavedStoredPath } from '@/shell/panels/use-unsaved';
 
 /* How wide the list is when it is open. The inner column keeps this width while the wrapper
    animates to zero, so nothing reflows on the way out. */
@@ -437,6 +438,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
     const { t } = useTranslation(['shell', 'common']);
     const { view } = row;
     const title = useBrowserDisplayTitle(view.id, view.name, view.titleSource);
+    const unsaved = useUnsavedStoredPath(view.kind === 'file' ? view.path : null, row.target);
     const [renaming, setRenaming] = useState(false);
     if (renaming) {
         return (
@@ -526,6 +528,11 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                 {row.draft && (
                     <Tooltip label={t('sidebar.unsentDraft')}>
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
+                    </Tooltip>
+                )}
+                {unsaved && (
+                    <Tooltip label={t('sidebar.unsavedFile')}>
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted" />
                     </Tooltip>
                 )}
                 {(view.self ? view.self.alert : view.nodes.some((node) => node.alert)) && <ProcessWarningMark />}

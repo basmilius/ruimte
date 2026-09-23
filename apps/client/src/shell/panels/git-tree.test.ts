@@ -102,8 +102,7 @@ describe('activeDiff', () => {
         key: `diff:${path}`,
         path,
         view: { kind: 'diff' as const, cwd, scope: 'worktree' as const, staged: false },
-        pinned: false,
-        dirty: false
+        pinned: false
     });
 
     test('names the change the preview has open, and the checkout it belongs to', () => {
@@ -112,7 +111,7 @@ describe('activeDiff', () => {
     });
 
     test('a file tab, a tab outside its own checkout and no tab at all mark nothing', () => {
-        expect(activeDiff({ key: '/repo/a.ts', path: '/repo/a.ts', pinned: false, dirty: false })).toBeNull();
+        expect(activeDiff({ key: '/repo/a.ts', path: '/repo/a.ts', pinned: false })).toBeNull();
         expect(activeDiff(diff('/elsewhere/a.ts'))).toBeNull();
         expect(activeDiff(undefined)).toBeNull();
     });

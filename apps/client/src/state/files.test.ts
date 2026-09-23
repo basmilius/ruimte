@@ -4,7 +4,7 @@ import { FILES_VIEW_ID } from '@/shell/files-view';
 import { viewIdsIn } from '@/shell/split';
 import { useDocument } from './document.ts';
 
-const tab = (path: string, pinned = false): FileTab => ({ key: path, path, pinned, dirty: false });
+const tab = (path: string, pinned = false): FileTab => ({ key: path, path, pinned });
 
 const state = (paths: string[], active: string | null): TabState => ({ tabs: paths.map((path) => tab(path)), active });
 
@@ -24,6 +24,11 @@ describe('openTab', () => {
     test('a pinned tab stays and the next unpinned one goes', () => {
         const pinned: TabState = { tabs: [tab('a', true), tab('b'), tab('c')], active: 'a' };
         expect(openTab(pinned, 'd', 3).tabs.map((entry) => entry.path)).toEqual(['a', 'c', 'd']);
+    });
+
+    test('a tab with unsaved changes stays the way a pinned one does', () => {
+        const next = openTab(state(['a', 'b', 'c'], 'a'), 'd', 3, undefined, (entry) => entry.path === 'a');
+        expect(next.tabs.map((entry) => entry.path)).toEqual(['a', 'c', 'd']);
     });
 
     test('nothing but pinned tabs means the limit gives way, never a pin', () => {
@@ -137,7 +142,7 @@ describe('pinTab', () => {
 });
 
 describe('the files closed a moment ago', () => {
-    const closed = (path: string, view?: FileTab['view']): FileTab => ({ key: path, path, ...(view ? { view } : {}), pinned: false, dirty: false });
+    const closed = (path: string, view?: FileTab['view']): FileTab => ({ key: path, path, ...(view ? { view } : {}), pinned: false });
 
     test('newest first, each file once, and only as many as the empty preview offers', () => {
         let recent: string[] = [];
