@@ -148,7 +148,11 @@ export const operationActions: ActionHandlers<ServerActionContext> = {
             rows.push({ nodeId, ...read, taskId: task?.id ?? null });
         }
         if (rows.every((row) => row === null)) {
-            throw new VerbRefusal('unknown-operation', `${operationId} names no agent you opened that is still here`, [...OPERATION_FORMS]);
+            throw new VerbRefusal(
+                'unknown-operation',
+                `${operationId} names no agent you opened that is still here; a deleted node without a task is forgotten`,
+                [...OPERATION_FORMS]
+            );
         }
         const known = rows.map(
             (row, index) => row ?? { nodeId: parsed.nodeIds[index]!, status: 'cancelled' as const, taskId: null, detail: 'the node is gone' }
@@ -181,7 +185,11 @@ export const operationActions: ActionHandlers<ServerActionContext> = {
             lines.push(placed ? await cancelNode(agents, operationId, nodeId) : { operationId, status: 'over', detail: `${nodeId}: the node is gone` });
         }
         if (yours === 0) {
-            throw new VerbRefusal('unknown-operation', `${operationId} names no agent you opened that is still here`, [...OPERATION_FORMS]);
+            throw new VerbRefusal(
+                'unknown-operation',
+                `${operationId} names no agent you opened that is still here; a deleted node without a task is forgotten`,
+                [...OPERATION_FORMS]
+            );
         }
         return { output: { operations: lines } };
     }

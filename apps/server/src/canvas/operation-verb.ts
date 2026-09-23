@@ -18,7 +18,8 @@ const getSub = defineActionVerb('operation', {
         'task\tWith a task the task decides: done is completed, failed is failed, and a child a person removed is cancelled; an open task whose turn was stopped is cancelled too',
         'without\tWithout a task the start is over once the agent runs and its first turn ended, which is completed: the start is done, and whether the work itself is done it does not say',
         'stopped\tA chat whose last turn was stopped before it finished, by operation cancel or by a person, is cancelled',
-        'who\tOnly an operation you started; a node that is gone reads as cancelled, and one that is here but no agent that agent or team started is unknown-operation',
+        'who\tOnly an operation you started; one that is here but no agent that agent or team started is unknown-operation',
+        'gone\tA deleted node reads as cancelled while its task is still there; one started without a task is forgotten with its node, so its id is unknown-operation',
         'wake\tA task wakes you with its result anyway, so this is for a look in between and never something to poll'
     ],
     positionals: z.tuple([z.string({ error: NEEDS_ID }).min(1, NEEDS_ID)], {
