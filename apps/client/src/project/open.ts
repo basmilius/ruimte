@@ -3,6 +3,7 @@ import type { ProjectClosingResult, ProjectSummary } from '@ruimte/contracts';
 import { useStore } from 'zustand';
 import { ensureMachine } from '@/endpoint/reach';
 import { dropClientLocal } from '@/project/client-local';
+import { confirmLeavingConflict } from '@/project/leave-conflict';
 import { browserStorage, readLastProject, type LastProjectStorage } from '@/project/last-project';
 import { closeListedProjectLocally, listProjects } from '@/project/list';
 import { closingCount } from '@/project/project-sessions';
@@ -123,7 +124,13 @@ const targetOf = (plan: SwitchPlan): SwitchTarget => ({
 });
 
 /* Every way into a project passes here, so the window can say what it is waiting on. */
-const begin = (plan: SwitchPlan): Promise<SwitchOutcome> => projectSwitch.start(targetOf(plan), () => switchRun(plan));
+const begin = async (plan: SwitchPlan): Promise<SwitchOutcome> => {
+    const stays = plan.kind === 'project' && isOpenHere(plan.endpointId, plan.projectId);
+    if (!stays && !(await confirmLeavingConflict())) {
+        return 'cancelled';
+    }
+    return projectSwitch.start(targetOf(plan), () => switchRun(plan));
+};
 
 /*
  * Opens a project on the machine it belongs to. The only way in: a project id means nothing without
@@ -139,14 +146,20 @@ export const openProject = (endpointId: string, projectId: string): Promise<Swit
 export const openFolderOn = (endpointId: string, folder: string, createFolder = false): Promise<SwitchOutcome> =>
     begin({ kind: 'folder', endpointId, folder, createFolder });
 
-/* Puts the open project away and goes back to the start screen. Its sessions end, and it moves to Recent. */
-export const closeProject = async (): Promise<void> => {
+const putAway = async (): Promise<void> => {
     const workspace = windowWorkspace();
     if (!workspace) {
         return;
     }
     await workspace.connection.projects.closeProject();
     showStart();
+};
+
+/* Puts the open project away and goes back to the start screen. Its sessions end, and it moves to Recent. */
+export const closeProject = async (): Promise<void> => {
+    if (windowWorkspace() && (await confirmLeavingConflict())) {
+        await putAway();
+    }
 };
 
 const isOpenHere = (endpointId: string, projectId: string): boolean => {
@@ -188,8 +201,9 @@ export const closingProject = async (endpointId: string, summary: ProjectSummary
 /* Removes a project from its machine. The open one is closed first, so its sessions end with it. */
 export const deleteProject = async (endpointId: string, projectId: string, removeFiles: boolean): Promise<void> => {
     const { current, currentEndpointId } = useProject.getState();
+    // Deleting takes the unsaved edits of an open conflict with it, which the person already agreed to.
     if (windowWorkspace() && current?.projectId === projectId && currentEndpointId === endpointId) {
-        await closeProject();
+        await putAway();
     }
     const machine = machineFor(endpointId);
     if (!machine) {

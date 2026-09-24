@@ -467,6 +467,32 @@ describe('ProjectClient', () => {
         dispose();
     });
 
+    test('a change from disk while the conflict is open replaces what the dialog offers instead of merging under it', async () => {
+        const { transport, state, client, dispose } = setup();
+        await tick();
+        focusedCanvas().getState().addNode('chat', { x: 0, y: 0 });
+        transport.rev = 12;
+        transport.emit('project.changed', { projectId: 'p1', document: { ...document(12), name: 'renamed' } });
+        await tick(10);
+        expect(state.conflict?.rev).toBe(12);
+
+        // A node an agent added would merge cleanly, and a merge would move the rev under the dialog.
+        transport.rev = 13;
+        transport.emit('project.changed', {
+            projectId: 'p1',
+            document: { ...document(13, [canvasView('main', [{ id: 'agent', kind: 'note', title: 'n', x: 0, y: 0, w: 10, h: 10 }])]), name: 'renamed' }
+        });
+        expect(state.conflict?.rev).toBe(13);
+        expect(state.rev).toBe(3);
+        expect(focusedCanvas().getState().nodes.agent).toBeUndefined();
+
+        await client.resolveConflict('mine');
+        expect(transport.of('project.save').at(-1)?.payload).toMatchObject({ baseRev: 13 });
+        expect(state.rev).toBe(14);
+        expect(state.dirty).toBe(false);
+        dispose();
+    });
+
     test('a node the daemon added lands on a canvas with unsaved edits, and the next save carries the new rev', async () => {
         const { transport, state, client, dispose } = setup();
         await tick();

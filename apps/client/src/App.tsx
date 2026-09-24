@@ -11,6 +11,7 @@ import { LayoutDialog } from '@/shell/LayoutDialog';
 import { ViewDialogs } from '@/shell/ViewDialogs';
 import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
 import { UnsavedCloseDialog } from '@/shell/panels/UnsavedCloseDialog';
+import { LeaveConflictDialog } from '@/shell/LeaveConflictDialog';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { ViewHost } from '@/shell/ViewHost';
 import { ForkDialog } from '@/shell/ForkDialog';
@@ -94,6 +95,7 @@ function WorkspaceShell({ workspace }: { workspace: Workspace }) {
             <ViewDialogs />
             <EndChildrenDialog />
             <UnsavedCloseDialog />
+            <LeaveConflictDialog />
             <WorktreeDialog />
             <RemoveWorktreeDialog />
             <MergeWorktreeDialog />

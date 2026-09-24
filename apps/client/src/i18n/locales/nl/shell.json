@@ -159,6 +159,11 @@
             "diagram": "Het diagram is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had."
         }
     },
+    "leaveConflict": {
+        "title": "Weggaan met niet-opgeslagen bewerkingen?",
+        "description": "Het project is op schijf gewijzigd, dus je bewerkingen zijn niet opgeslagen. Los eerst het conflict op om ze te houden.",
+        "confirm": "Toch weggaan"
+    },
     "viewDialogs": {
         "newBrowser": {
             "title": "Nieuwe browserweergave",

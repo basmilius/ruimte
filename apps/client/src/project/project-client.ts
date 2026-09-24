@@ -564,6 +564,12 @@ export class ProjectClient {
         if (!this.opened || !current || current.projectId !== projectId) {
             return;
         }
+        /* A merge now would move the rev under the open dialog, and "Keep mine" would then write
+           against a rev that is gone. The dialog answers the newest document instead. */
+        if (this.sink.getState().conflict) {
+            this.sink.setConflict(document);
+            return;
+        }
         /* Merged first on a clean screen too. A load swaps every editor out and blanks the canvas
            until it is measured, which a view renamed in another client should not cost. */
         if (this.adopt(document)) {

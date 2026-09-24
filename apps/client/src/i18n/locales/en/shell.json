@@ -159,6 +159,11 @@
             "diagram": "The diagram changed on disk while you had unsaved edits."
         }
     },
+    "leaveConflict": {
+        "title": "Leave with unsaved edits?",
+        "description": "The project changed on disk, so your edits have not been saved. Resolve the conflict first to keep them.",
+        "confirm": "Leave anyway"
+    },
     "viewDialogs": {
         "newBrowser": {
             "title": "New browser view",
