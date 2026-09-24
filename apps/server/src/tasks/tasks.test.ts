@@ -630,6 +630,29 @@ describe('resume at reset', () => {
         expect(wakeTurns(second)).toHaveLength(1);
     });
 
+    test('a task that settles while the lead waits for its reset wakes it after the resume turn, which spends no try', async () => {
+        const daemon = await bootOn();
+        daemon.worker.start();
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        await daemon.chats.send('chat-lead', `limit:${RESET_AT / 1000}`);
+        await daemon.until(() => owedResumes(daemon).length === 1);
+
+        const child = await delegate(daemon, 'Lexer', 'fix the tokenizer', false);
+        await report(daemon, child, 'lexer is done');
+        expect(turnsOf(daemon, 'chat-lead')).toHaveLength(1);
+        expect(daemon.tasks.get(child.taskId)?.wake).toBe('pending');
+        expect(owedResumes(daemon)[0]?.notBefore).toBe(RESET_AT);
+
+        clock.advance(RESET_AT - clock.now());
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done' && turn.taskIds?.includes(child.taskId)));
+        expect(turnsOf(daemon, 'chat-lead').map((turn) => [turn.state, turn.label ?? null, turn.taskIds ?? null])).toEqual([
+            ['error', null, null],
+            ['done', 'Usage limit reset', null],
+            ['done', 'Lexer', [child.taskId]]
+        ]);
+        expect(daemon.tasks.get(child.taskId)?.wake).toBe('sent');
+    });
+
     test('a Codex turn on an overloaded server is tried again after a minute by itself', async () => {
         const daemon = await bootOn(['claude', 'codex']);
         daemon.worker.start();

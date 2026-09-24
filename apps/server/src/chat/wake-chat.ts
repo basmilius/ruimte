@@ -1,7 +1,7 @@
 import type { ChatItem } from '@ruimte/contracts';
 import type { ChatManager } from './chat-manager.ts';
 
-/* A chat the daemon may open a turn in, as the outbox handlers see it: what its thread holds, and the one call that opens one. */
+/* A chat the daemon may open a turn in, as the outbox handlers see it: what its thread holds, and the one call that opens one, false while a turn or an owed resume is in the way. */
 export interface WakeChat {
     items(): ChatItem[];
     wake(wake: { text: string; label: string; note?: string; taskIds: string[]; messageFrom?: string[] }): boolean;
@@ -30,7 +30,8 @@ export const chatOpener =
         return session
             ? {
                   items: () => session.thread.list(),
-                  wake: (wake) => session.wake(wake) !== null
+                  // A turn before the reset would stop on the same limit and spend one of the resume's tries, so it waits for the resume turn.
+                  wake: (wake) => session.info.resumeAt === undefined && session.wake(wake) !== null
               }
             : null;
     };
