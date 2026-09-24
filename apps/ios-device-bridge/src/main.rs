@@ -28,6 +28,8 @@ const MAGIC: [u8; 8] = [0x52, 0x44, 0x45, 0x56, 0x01, 0x00, 0x00, 0x00];
 const CLIENT_SUPPORTED_FEATURES: u64 = 140;
 const CONTROL_MESSAGE_BYTES_MAXIMUM: usize = 64 * 1024;
 const MAX_FRAME_BYTES: usize = 8 * 1024 * 1024;
+/// An HEVC access unit delimiter NAL in Annex-B framing, as `HevcDepacketizer` writes it.
+const ACCESS_UNIT_DELIMITER: [u8; 7] = [0x00, 0x00, 0x00, 0x01, 0x46, 0x01, 0x50];
 
 #[derive(Parser)]
 struct Arguments {
@@ -293,16 +295,13 @@ async fn probe_stream(
         ProbeTransport::Wireless => open_wireless_stream(udid, false).await?,
         ProbeTransport::Usb => open_direct_stream(udid, false).await?,
     };
-    let mut depacketizer = HevcDepacketizer::new();
-    let mut access_unit = Vec::new();
+    let mut assembler = AccessUnitAssembler::default();
     let mut packets = 0_u64;
     let frame = tokio::time::timeout(timeout, async {
         loop {
             let datagram = session.video_udp.recv().await?;
             packets += 1;
-            if let Some(frame) =
-                depacketize_rtp(datagram.as_ref(), &mut depacketizer, &mut access_unit)
-            {
+            if let Some(frame) = assembler.push(datagram.as_ref()).into_iter().next() {
                 return Ok::<Vec<u8>, anyhow::Error>(frame);
             }
         }
@@ -354,8 +353,7 @@ async fn stream_physical_ios(
         .input
         .context("the physical device does not expose its input services")?;
     let mut controls = Box::pin(handle_control_messages(input, input_clients));
-    let mut depacketizer = HevcDepacketizer::new();
-    let mut access_unit = Vec::new();
+    let mut assembler = AccessUnitAssembler::default();
     let mut sequence = 0_u32;
 
     loop {
@@ -369,7 +367,7 @@ async fn stream_physical_ios(
                     Ok(result) => result.context("the display stream closed")?,
                     Err(_) => continue,
                 };
-                publish_rtp(datagram.as_ref(), &mut depacketizer, &mut access_unit, &mut sequence, protocol).await?;
+                publish_rtp(datagram.as_ref(), &mut assembler, &mut sequence, protocol).await?;
             }
         }
     }
@@ -502,28 +500,77 @@ async fn open_wireless_stream(
 
 async fn publish_rtp(
     data: &[u8],
-    depacketizer: &mut HevcDepacketizer,
-    access_unit: &mut Vec<u8>,
+    assembler: &mut AccessUnitAssembler,
     sequence: &mut u32,
     protocol: &mut ProtocolWriter,
 ) -> Result<()> {
-    if let Some(frame) = depacketize_rtp(data, depacketizer, access_unit) {
+    for frame in assembler.push(data) {
         protocol.frame(*sequence, &frame).await?;
         *sequence = sequence.wrapping_add(1);
     }
     Ok(())
 }
 
-fn depacketize_rtp(
-    data: &[u8],
-    depacketizer: &mut HevcDepacketizer,
-    access_unit: &mut Vec<u8>,
-) -> Option<Vec<u8>> {
-    let packet = RtpPacket::parse(data)?;
-    let marker = packet.marker;
-    depacketizer.push(packet.sequence_number, packet.timestamp, packet.payload);
-    access_unit.extend(depacketizer.take_output());
-    (marker && !access_unit.is_empty()).then(|| std::mem::take(access_unit))
+/// Cuts the depacketized Annex-B stream into access units no larger than `MAX_FRAME_BYTES`.
+#[derive(Default)]
+struct AccessUnitAssembler {
+    depacketizer: HevcDepacketizer,
+    pending: Vec<u8>,
+    oversized: bool,
+}
+
+impl AccessUnitAssembler {
+    fn push(&mut self, datagram: &[u8]) -> Vec<Vec<u8>> {
+        let Some(packet) = RtpPacket::parse(datagram) else {
+            return Vec::new();
+        };
+        self.depacketizer
+            .push(packet.sequence_number, packet.timestamp, packet.payload);
+        let output = self.depacketizer.take_output();
+        let mut frames = Vec::new();
+        let mut start = 0;
+        // The depacketizer writes a delimiter wherever the RTP timestamp changes, so a lost
+        // marker packet still ends its access unit at the next one.
+        for boundary in access_unit_delimiters(&output) {
+            self.append(&output[start..boundary]);
+            frames.extend(self.finish());
+            start = boundary;
+        }
+        self.append(&output[start..]);
+        if packet.marker {
+            frames.extend(self.finish());
+        }
+        frames
+    }
+
+    fn append(&mut self, bytes: &[u8]) {
+        if self.oversized {
+            return;
+        }
+        if self.pending.len() + bytes.len() > MAX_FRAME_BYTES {
+            self.oversized = true;
+            self.pending = Vec::new();
+            return;
+        }
+        self.pending.extend_from_slice(bytes);
+    }
+
+    fn finish(&mut self) -> Option<Vec<u8>> {
+        let frame = std::mem::take(&mut self.pending);
+        if std::mem::take(&mut self.oversized) {
+            eprintln!("skipped an encoded frame larger than {MAX_FRAME_BYTES} bytes");
+            return None;
+        }
+        (!frame.is_empty() && frame != ACCESS_UNIT_DELIMITER).then_some(frame)
+    }
+}
+
+fn access_unit_delimiters(stream: &[u8]) -> impl Iterator<Item = usize> + '_ {
+    stream
+        .windows(ACCESS_UNIT_DELIMITER.len())
+        .enumerate()
+        .filter(|(_, window)| *window == ACCESS_UNIT_DELIMITER)
+        .map(|(offset, _)| offset)
 }
 
 async fn connect_input_services(
@@ -765,10 +812,74 @@ async fn negotiate_screen_media(
 #[cfg(test)]
 mod tests {
     use super::{
-        Arguments, Command, DeviceButton, DeviceInput, PointerPhase, normalized_touch_coordinate,
-        touch_state,
+        ACCESS_UNIT_DELIMITER, AccessUnitAssembler, Arguments, Command, DeviceButton, DeviceInput,
+        MAX_FRAME_BYTES, PointerPhase, normalized_touch_coordinate, touch_state,
     };
     use clap::Parser;
+
+    const TRAILING_SLICE_HEADER: [u8; 2] = [0x02, 0x01];
+
+    fn slice(fill: u8, length: usize) -> Vec<u8> {
+        let mut nal = TRAILING_SLICE_HEADER.to_vec();
+        nal.resize(TRAILING_SLICE_HEADER.len() + length, fill);
+        nal
+    }
+
+    fn rtp(sequence: u16, timestamp: u32, marker: bool, payload: &[u8]) -> Vec<u8> {
+        let mut packet = vec![0x80, if marker { 0x80 | 100 } else { 100 }];
+        packet.extend_from_slice(&sequence.to_be_bytes());
+        packet.extend_from_slice(&timestamp.to_be_bytes());
+        packet.extend_from_slice(&[0, 0, 0, 1]);
+        packet.extend_from_slice(payload);
+        packet
+    }
+
+    fn annex_b(nals: &[&[u8]]) -> Vec<u8> {
+        nals.iter()
+            .flat_map(|nal| [&[0x00, 0x00, 0x00, 0x01][..], nal].concat())
+            .collect()
+    }
+
+    #[test]
+    fn a_lost_marker_packet_still_ends_the_access_unit_at_the_next_timestamp() {
+        let mut assembler = AccessUnitAssembler::default();
+        let mut frames = assembler.push(&rtp(0, 0, false, &slice(0x10, 8)));
+        // Sequence 1, the marker packet of the first frame, never arrives. Every later frame is
+        // two packets, so the reorder window gives up on the gap in the middle of a frame.
+        let frame_slices =
+            |frame: u32| (slice(0x20 + frame as u8, 8), slice(0xa0 + frame as u8, 8));
+        for frame in 1..=65_u32 {
+            let (first, second) = frame_slices(frame);
+            let sequence = (frame * 2) as u16;
+            frames.extend(assembler.push(&rtp(sequence, frame * 3000, false, &first)));
+            frames.extend(assembler.push(&rtp(sequence + 1, frame * 3000, true, &second)));
+        }
+
+        let mut expected = vec![annex_b(&[&slice(0x10, 8)])];
+        expected.extend((1..=65_u32).map(|frame| {
+            let (first, second) = frame_slices(frame);
+            [ACCESS_UNIT_DELIMITER.to_vec(), annex_b(&[&first, &second])].concat()
+        }));
+        assert_eq!(frames, expected);
+    }
+
+    #[test]
+    fn an_oversized_frame_is_skipped_and_the_stream_goes_on() {
+        let mut assembler = AccessUnitAssembler::default();
+        let half = slice(0x55, MAX_FRAME_BYTES / 2 + 1);
+        let mut frames = assembler.push(&rtp(0, 0, true, &slice(0x10, 8)));
+        frames.extend(assembler.push(&rtp(1, 3000, false, &half)));
+        frames.extend(assembler.push(&rtp(2, 3000, false, &half)));
+        frames.extend(assembler.push(&rtp(3, 6000, true, &slice(0x30, 8))));
+
+        assert_eq!(
+            frames,
+            vec![
+                annex_b(&[&slice(0x10, 8)]),
+                [ACCESS_UNIT_DELIMITER.to_vec(), annex_b(&[&slice(0x30, 8)])].concat(),
+            ]
+        );
+    }
 
     #[test]
     fn physical_ios_accepts_the_daemon_device_id_after_the_hardware_udid() {
