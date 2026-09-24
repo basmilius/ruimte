@@ -15,6 +15,7 @@ afterAll(() => {
     rmSync(work, { recursive: true, force: true });
 });
 
+// The timeout is a budget for a real build, not a wait: on a cold runner compile.ts builds both Rust helpers.
 test('node runs the launcher, which runs the compiled binary', () => {
     const target = `${process.platform}-${process.arch}`;
     const version = '0.0.0-integration';
@@ -40,4 +41,4 @@ test('node runs the launcher, which runs the compiled binary', () => {
     expect(run.stderr.toString()).toBe('');
     expect(run.stdout.toString().trim()).toBe(version);
     expect(run.exitCode).toBe(0);
-});
+}, 900_000);

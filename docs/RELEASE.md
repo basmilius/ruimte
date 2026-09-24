@@ -123,7 +123,8 @@ update from the moment the release is published, so a release published with emp
 stays out of the app, but not out of the feed: a pushed tag whose release is still a draft already
 appears in `releases.atom`.
 
-The `publish` job publishes the draft once `verify` and every build succeed, as Latest, or as a
+The `publish` job publishes the draft once `verify` (every job of `ci.yml`, run on the tagged commit)
+and every build succeed, as Latest, or as a
 prerelease for a tag with a `-` in it; the build is not downloaded to try the daemon in it first. If a release does turn out broken on start, that is where to look: start
 `Contents/Resources/bin/ruimte` from the arm64 zip with a temporary `RUIMTE_HOME` and another port,
 wait for `/health`, then open a socket with `?protocol=N&token=<local.key>` and check that

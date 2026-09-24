@@ -40,16 +40,12 @@ jobs:
           fi
           gh release create "$GITHUB_REF_NAME" --draft --title "Release ${GITHUB_REF_NAME#v}" --notes-file "$notes"
 
+  # Every job of ci.yml on the tagged commit, alongside packaging. A red one leaves the release a
+  # draft, so no artifact is published before the commit has passed its checks.
   verify:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - run: bun install --frozen-lockfile
-      - run: bun run check
-      - run: bun run test
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
 
   build:
     needs: draft
@@ -117,8 +113,6 @@ jobs:
           rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/cert.p12"
           security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
 
-  # Verification runs alongside packaging. A failure leaves the release as a draft, so no artifact
-  # is published before the commit has passed its checks.
   linux:
     needs: draft
     strategy:
