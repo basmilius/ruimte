@@ -106,7 +106,7 @@
             "description": "Let agents operate the apps on a computer."
         },
         "machines": {
-            "label": "Machines",
+            "label": "Account",
             "description": "Your machines, the account they share, and how each one is reached."
         },
         "about": {
@@ -352,7 +352,7 @@
             "sectionDescription": "Saved per machine. Applies to every client connected to it.",
             "rowLabel": "Agents on {{machine}} may delete any view or node",
             "description": "Off, an agent only deletes views and nodes it created. On, it can delete any view or node in any project there, including yours.",
-            "notConnected": "Not connected. Change this from the machine's dialog under Machines, or while a project on it is open."
+            "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open."
         },
         "defaults": {
             "title": "Defaults for new agents",
@@ -562,7 +562,7 @@
         "enable": "Allow computer use on {{machine}}",
         "failed": "Computer use could not load",
         "machine": {
-            "notConnected": "Not connected. Change this from the machine's dialog under Machines, or while a project on it is open.",
+            "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open.",
             "checking": "Checking…",
             "unsupported": "Computer use is not available for this machine's system yet.",
             "unavailable": "This machine has no Ruimte Computer Use. It comes with the Ruimte desktop app.",
@@ -757,7 +757,7 @@
             "directBroker": "Direct connection through the broker (experimental)"
         },
         "account": {
-            "title": "Account",
+            "title": "Sign-in",
             "description": "Machines on your account open from any client you sign in on.",
             "unavailable": {
                 "label": "Signing in works in the desktop app and at station.ruimte.app.",

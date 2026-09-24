@@ -106,7 +106,7 @@
             "description": "Laat agents de apps op een computer bedienen."
         },
         "machines": {
-            "label": "Machines",
+            "label": "Account",
             "description": "Je machines, het account dat ze delen en hoe elke machine bereikt wordt."
         },
         "about": {
@@ -352,7 +352,7 @@
             "sectionDescription": "Per machine opgeslagen. Geldt voor elke client die ermee verbonden is.",
             "rowLabel": "Agents op {{machine}} mogen elke weergave of node verwijderen",
             "description": "Uit verwijdert een agent alleen weergaven en nodes die hij zelf maakte. Aan mag hij elke weergave en node in elk project daar verwijderen, ook die van jou.",
-            "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Machines, of terwijl er een project op open staat."
+            "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat."
         },
         "defaults": {
             "title": "Standaarden voor nieuwe agents",
@@ -562,7 +562,7 @@
         "enable": "Computer use toestaan op {{machine}}",
         "failed": "Computer use kon niet laden",
         "machine": {
-            "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Machines, of terwijl er een project op open staat.",
+            "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat.",
             "checking": "Controleren…",
             "unsupported": "Computer use is nog niet beschikbaar voor het systeem van deze machine.",
             "unavailable": "Deze machine heeft geen Ruimte Computer Use. Dat zit in de desktop-app van Ruimte.",
@@ -757,7 +757,7 @@
             "directBroker": "Directe verbinding via de broker (experimenteel)"
         },
         "account": {
-            "title": "Account",
+            "title": "Inloggen",
             "description": "Machines op je account open je vanaf elke client waarop je inlogt.",
             "unavailable": {
                 "label": "Inloggen werkt in de desktopapp en op station.ruimte.app.",
