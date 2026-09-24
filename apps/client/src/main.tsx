@@ -26,6 +26,7 @@ import { desktop } from '@/desktop/bridge';
 import { startKeepAwake } from '@/state/keep-awake';
 import { startLastSeen } from '@/state/last-seen-watch';
 import { startInputModality } from '@/ui/modality';
+import { refuseStrayDrops } from '@/canvas/drop';
 import { useTheme } from '@/state/theme';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
 import '@/state/theme';
@@ -59,6 +60,7 @@ startAutoRegistration();
 startRemovalWatch();
 startWakeReconnect(pool);
 startLastSeen();
+refuseStrayDrops(document);
 /* The shell dresses its native chrome and every page it hosts in the theme the client is in. The
    background travels with it, so `styles.css` stays the only place the token is written down. */
 const reportTheme = (): void => {

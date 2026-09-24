@@ -81,3 +81,29 @@ export const dropEffectFor = (effectAllowed: DataTransfer['effectAllowed']): 'co
  */
 export const dropPoints = (at: Point, count: number, step: number): Point[] =>
     Array.from({ length: Math.max(0, count) }, (_unused, index) => ({ x: at.x + index * step, y: at.y }));
+
+/*
+ * Whether the document takes a drag nobody under the pointer claimed. Left alone, a link or a file
+ * dropped there navigates the window away from the app. A text field keeps the text dropped on it,
+ * but a file dropped on one would still navigate.
+ */
+export const catchesStrayDrag = (claimed: boolean, overTextField: boolean, types: readonly string[]): boolean =>
+    !claimed && !(overTextField && !carriesFiles(types));
+
+const isTextField = (target: EventTarget | null): boolean =>
+    target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea') !== null);
+
+/* On the document, so every node's own handler has had the drag first and claimed it if it wanted it. */
+export const refuseStrayDrops = (root: Document): void => {
+    const refuse = (event: DragEvent): void => {
+        if (!catchesStrayDrag(event.defaultPrevented, isTextField(event.target), [...(event.dataTransfer?.types ?? [])])) {
+            return;
+        }
+        event.preventDefault();
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = 'none';
+        }
+    };
+    root.addEventListener('dragover', refuse);
+    root.addEventListener('drop', refuse);
+};

@@ -1,5 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths, finderRefusal, PATHS_DRAG_TYPE, type DragPayload } from '@/canvas/drop';
+import {
+    carriesFiles,
+    carriesPaths,
+    catchesStrayDrag,
+    dropEffectFor,
+    dropPoints,
+    droppedPaths,
+    finderRefusal,
+    PATHS_DRAG_TYPE,
+    type DragPayload
+} from '@/canvas/drop';
 import { MENTION_DRAG_TYPE } from '@/chat/mentions';
 
 const drag = (values: Record<string, string>): DragPayload => ({
@@ -109,5 +119,22 @@ describe('dropPoints', () => {
 
     test('nothing dropped is nowhere to put it', () => {
         expect(dropPoints({ x: 10, y: 20 }, 0, 560)).toEqual([]);
+    });
+});
+
+describe('catchesStrayDrag', () => {
+    test('takes a link or a file nobody claimed, so it cannot navigate the window', () => {
+        expect(catchesStrayDrag(false, false, ['text/uri-list', 'text/plain'])).toBe(true);
+        expect(catchesStrayDrag(false, false, ['Files'])).toBe(true);
+    });
+
+    test('leaves a drag a node claimed to that node', () => {
+        expect(catchesStrayDrag(true, false, ['text/uri-list'])).toBe(false);
+        expect(catchesStrayDrag(true, false, [PATHS_DRAG_TYPE])).toBe(false);
+    });
+
+    test('lets a text field take text, but not a file', () => {
+        expect(catchesStrayDrag(false, true, ['text/uri-list', 'text/plain'])).toBe(false);
+        expect(catchesStrayDrag(false, true, ['Files'])).toBe(true);
     });
 });
