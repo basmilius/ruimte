@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { CircleAlert, LoaderCircle } from 'lucide-react';
@@ -6,34 +6,13 @@ import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { projectSwitch, useProjectSwitch } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import type { SwitchState, SwitchTarget } from '@/project/project-switch';
-import { usePulsarMachines } from '@/pulsar/machines';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
-import { mergeMachines, nameOf, type MachineEntry } from '@/shell/settings/machine-list';
-import { useEndpoints } from '@/state/endpoints';
+import { nameOf } from '@/shell/settings/machine-list';
+import { useMachineEntry } from '@/shell/use-machine-entry';
 import { useEndpointConnection } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
-
-/* A machine as the Machines pane knows it: a paired row, or only the account's record. */
-export const useMachineEntry = (endpointId: string): MachineEntry => {
-    const endpoints = useEndpoints((s) => s.endpoints);
-    const machines = usePulsarMachines((s) => s.machines);
-    return useMemo(
-        () =>
-            mergeMachines({ endpoints, accountMachines: machines, showLocal: true }).find(
-                (entry) => entry.id === endpointId || entry.endpoint?.id === endpointId
-            ) ?? {
-                id: endpointId,
-                endpoint: null,
-                machine: null,
-                local: false,
-                paired: false,
-                onAccount: false
-            },
-        [endpointId, endpoints, machines]
-    );
-};
 
 /* What is being opened, in the words a person picked it by. */
 const titleOf = (target: SwitchTarget, machine: string): string =>

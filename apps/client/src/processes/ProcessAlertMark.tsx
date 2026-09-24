@@ -3,17 +3,9 @@ import clsx from 'clsx';
 import { TriangleAlert } from 'lucide-react';
 import type { ProcessAlert } from '@ruimte/contracts';
 import { alertText } from '@/processes/format';
-import { useProcessAlerts } from '@/state/processes';
-import { useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
-
-/* The warnings about one node, for the mark on its header and on its sidebar row. */
-export const useNodeAlerts = (nodeId: string): ProcessAlert[] => {
-    const alerts = useProcessAlerts(useEndpointId());
-    return alerts.filter((alert) => alert.nodeId === nodeId);
-};
 
 /*
  * The mark a node with a process warning wears. It opens the processes panel, where the warning

@@ -24,7 +24,7 @@ import { ViewHost } from '@/shell/ViewHost';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { useUi } from '@/state/ui';
 import type { Workspace } from '@/transport/connections';
-import { ConnectionProvider } from '@/transport/context';
+import { ConnectionProvider } from '@/transport/ConnectionProvider';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { lazyDialog } from '@/ui/lazy';
 import { stopVoice } from '@/voice/controller';

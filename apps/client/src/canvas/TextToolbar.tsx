@@ -7,7 +7,7 @@ import type { DrawingFont } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { textRect } from '@/canvas/edge-lines';
-import { FONT_STACK } from '@/canvas/TextElementView';
+import { FONT_STACK } from '@/canvas/text-font';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, BTN_GROUP, FLOAT } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';

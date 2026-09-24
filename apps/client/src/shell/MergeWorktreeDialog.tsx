@@ -138,10 +138,7 @@ export function MergeWorktreeDialog() {
     // Stopping is needed for an agent in a turn, and for any agent still open in a worktree that goes afterwards.
     const stopAgent = working.length > 0 || (draft.remove && live.length > 0);
     const blocked =
-        shown === null ||
-        failure !== null ||
-        (loose && !draft.commitFirst) ||
-        (loose && single !== undefined && draft.commitFirst && subject.trim() === '');
+        shown === null || failure !== null || (loose && !draft.commitFirst) || (loose && single !== undefined && draft.commitFirst && subject.trim() === '');
 
     const close = (): void => {
         setReading(null);

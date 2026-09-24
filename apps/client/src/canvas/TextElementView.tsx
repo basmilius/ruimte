@@ -3,21 +3,14 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, Pencil, Trash } from 'lucide-react';
-import type { DrawingFont } from '@ruimte/contracts';
 import { deleteNodesAction } from '@/actions/client-actions';
 import { accentColor } from '@/canvas/accents';
+import { FONT_STACK } from '@/canvas/text-font';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
-
-/* Absent is 'sans', so a label written before there was a choice keeps the face it had. */
-export const FONT_STACK: Record<DrawingFont, string> = {
-    hand: 'var(--font-hand)',
-    sans: 'var(--font-sans)',
-    mono: 'var(--font-mono)'
-};
 
 export const TextElementView = memo(function TextElementView({ id }: { id: string }) {
     const { t } = useTranslation('canvas');

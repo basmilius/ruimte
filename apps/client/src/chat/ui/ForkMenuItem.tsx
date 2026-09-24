@@ -11,17 +11,6 @@ import { DisabledReason } from '@/ui/DisabledReason';
 import { Icon } from '@/ui/Icon';
 
 /*
- * Whether `ForkMenuItem` draws anything at all. A menu that puts a line above the row has to know
- * that before it draws the line, or a chat nobody has written in yet gets two lines against each
- * other. It asks the same two questions the component asks, so the two move together.
- */
-export const useOffersFork = (chatId: string): boolean => {
-    const settled = useChatRow(chatId, (row) => (row ? lastSettledTurn(row.structure, row.order) !== null : false));
-    const forked = useChatRow(chatId, (row) => row?.info.forkOf !== undefined);
-    return settled || forked;
-};
-
-/*
  * "Fork conversation..." in the menu of a chat node or a chat view, offered as a fork after the last
  * turn that ended. A chat that is a fork adds the way back: asking it for a summary for its original, and the
  * original itself.

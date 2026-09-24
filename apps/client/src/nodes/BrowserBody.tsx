@@ -31,6 +31,7 @@ import { useSwipeOverlay } from '@/browser/swipe-overlay';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { useNodeHost } from '@/nodes/node-host';
+import { usePage } from '@/nodes/use-page';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
@@ -38,28 +39,6 @@ import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
 import { formatShortcut, KEY_SHORTCUTS } from '@/ui/shortcut';
-
-/*
- * Keeps one page alive for this client. The view's address starts it; navigation stays in the
- * client runtime. The page itself is a <webview> in the parking layer, never here. A node without
- * an address has no page at all: it shows the splash until something gives it one.
- */
-export const usePage = (id: string): { url: string; available: boolean } => {
-    const host = useNodeHost(id);
-    const savedUrl = host?.url ?? '';
-    const state = useBrowserRow(id, (row) => row);
-    const key = endpointKey(useEndpointId(), id);
-    const available = isDesktop();
-
-    useEffect(() => {
-        if (available && savedUrl !== '') {
-            browserRegistry.ensure(key, savedUrl);
-        }
-        // The page stays when this unmounts (culling, a view switch); only a delete destroys it.
-    }, [key, available, savedUrl]);
-
-    return { url: state?.url ?? savedUrl, available };
-};
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {
