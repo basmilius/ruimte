@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Rust-broker en Rust-terminalkern</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+.prompt pre { white-space: pre-wrap; font-size: 13px; line-height: 1.6; }
+.prompt-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+</style>
+</head>
+<body>
+<a class="skip" href="#opdracht">Ga naar de opdracht</a>
+<header>
+  <p class="eyebrow">Ruimte / Werkrapport / 24 september 2026</p>
+  <h1>Rust-broker en Rust-terminalkern</h1>
+  <p class="intro">Twee losse stukken werk. De Pulsar-broker wordt een Rust-binary op de eigen VPS. De daemon krijgt een Rust-terminalkern achter een naad in <code>Session</code>, als spike naast xterm.</p>
+  <p class="caption">Bron: <code>main</code> op <code>b95126ea</code>. Meting op een Apple M4 Max met 64 GiB, macOS 27.2 en Bun 1.4.0, met <code>@xterm/headless</code> 6.0.0 en <code>@xterm/addon-serialize</code> 0.14.0.</p>
+  <nav aria-label="Inhoud">
+    <a href="#opdracht">Opdracht</a>
+    <a href="#broker">Broker</a>
+    <a href="#terminal">Terminalkern</a>
+    <a href="#meting">Meting</a>
+    <a href="#ontwerp">Ontwerp</a>
+    <a href="#risico">Risico's</a>
+    <a href="#prompts">Startprompt</a>
+  </nav>
+</header>
+<main>
+  <section id="opdracht" class="recommendation">
+    <h2>Opdracht</h2>
+    <div class="table" role="region" aria-label="Opdracht per onderdeel" tabindex="0">
+      <table>
+        <thead><tr><th scope="col">Onderdeel</th><th scope="col">Branch</th><th scope="col">Klaar als</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Rust-broker</th><td><code>rust/pulsar-broker</code></td><td>Dezelfde integratietest is groen tegen de Bun- en de Rust-broker, en Bun, de compile-binary en Rust zijn naast elkaar gemeten.</td></tr>
+          <tr><th scope="row">Rust-terminalkern</th><td><code>spike/terminal-core</code></td><td>De pariteitstest vergelijkt Rust met xterm, beide kernen zijn gemeten, en de uitkomst is getoetst aan de <a href="#grens">beslisgrens</a>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Na de spike volgt de vraag of compacte scrollback het geheugen omlaag brengt. Of SwiftTerm op de iPhone dezelfde schermen laat zien, stelt alleen een toestel vast.</p>
+  </section>
+
+  <section id="broker">
+    <h2>Broker</h2>
+    <p>De broker koppelt een ed25519-sleutel aan een socket, controleert per aankondiging één handtekening en geeft signalen door zonder ze te lezen. Hij bewaart niets. Nu draait hij als systemd-unit met <code>bun</code> uit een git-checkout, <code>MemoryMax=1G</code> en <code>LimitNOFILE=65536</code>. De <a href="../../apps/pulsar-broker/README.md">README</a> beschrijft elk gedrag (frames, close codes, limieten, vlaggen en TURN) en is de specificatie.</p>
+    <ul>
+      <li>Met de rest gedeeld zijn alleen de brokerframes, <code>IceServerSchema</code> en <code>brokerHelloMessage</code>. Voor die laatste staat een fixture in <code>apps/ios/Packages/RuimtePulsar/Tests/RuimtePulsarTests/Fixtures/wire.json</code>.</li>
+      <li>De unittests (<code>broker.test.ts</code>, <code>config.test.ts</code>, <code>turn.test.ts</code>, samen 720 regels) gaan mee naar Rust.</li>
+      <li>De integratietest start de broker nu in-process via <code>startBroker</code>. Hij moet ook tegen een externe URL kunnen draaien.</li>
+      <li>Zolang beide brokers bestaan, staan de Cloudflare-ranges op twee plekken; een test houdt ze gelijk.</li>
+      <li>Het geheugen van de Bun-broker is nog niet gemeten. De meting is geen poort voor de overstap, maar het rapport noemt het als Rust ergens slechter is.</li>
+    </ul>
+  </section>
+
+  <section id="terminal">
+    <h2>Wat de terminalkern nu doet</h2>
+    <p>Elke sessie heeft een <code>Terminal</code> uit <code>@xterm/headless</code> met 10.000 regels scrollback en een <code>SerializeAddon</code> (<code>session.ts:104</code>). Elke byte uit de PTY gaat via een <code>TextDecoder</code> naar die terminal, ook als niemand kijkt (<code>session.ts:375</code>). De PTY blijft bij Bun.</p>
+    <p>Het geserialiseerde scherm is op vijf plekken nodig:</p>
+    <ul>
+      <li><code>snapshotFor</code> bij attach, resync en clear, voor één client (<code>session.ts:188</code>);</li>
+      <li>het snapshotbestand, elke 30 seconden, alleen voor sessies waarvan het scherm veranderde (<code>manager.ts:522</code>);</li>
+      <li>het herstel na een herstart, waarin een oud scherm in een nieuwe terminal wordt afgespeeld (<code>manager.ts:247</code> en <code>:251</code>);</li>
+      <li>platte tekst voor een gekoppelde agent (<code>session.ts:168</code>, <code>daemon.ts:239</code>);</li>
+      <li>de wachtrij van <code>whenParsed</code>, die bestaat omdat xterm asynchroon parst (<code>session.ts:348</code>).</li>
+    </ul>
+    <p class="note">Een nieuwe kern moet dezelfde ANSI-tekst van het scherm opleveren. Die tekst spelen drie partijen af: xterm.js in de desktop-app en op station, SwiftTerm in de iPhone-app, en de volgende daemon bij een herstel. Alle drie moeten er hetzelfde scherm uit halen als uit de live stroom.</p>
+  </section>
+
+  <section id="meting">
+    <h2>Meting van xterm: scrollback is duur, parsen niet</h2>
+    <p>Elke terminal is 120 × 40 met 10.000 regels scrollback. De proef draait zonder shell, daemon of socket, en elke groepsgrootte drie keer in een nieuw proces. De tabel toont medianen.</p>
+    <ul>
+      <li><em>Regels</em>: 10.000 groene regels van 100 tekens met CRLF, 1,06 MiB per terminal. Vult de scrollback helemaal.</li>
+      <li><em>TUI</em>: 2.000 frames die 30 regels op hun plek overschrijven, met cursorsprongen, 256 kleuren, een spinner, CJK en synchronized output. 5,45 MiB per terminal, bijna geen scrollback.</li>
+    </ul>
+    <div class="table" role="region" aria-label="Meetresultaten" tabindex="0">
+      <table class="wide">
+        <caption>Medianen van drie runs. Tijd in ms, geheugen in MiB, parsesnelheid in MiB/s.</caption>
+        <thead><tr><th scope="col">Werklast</th><th scope="col">Terminals</th><th scope="col">Parse</th><th scope="col">RSS per terminal</th><th scope="col">RSS gevuld</th><th scope="col">RSS na snapshot</th><th scope="col">Serialiseren, langste</th><th scope="col">Serialiseren, totaal</th><th scope="col">Platte tekst, totaal</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Regels</th><td>1</td><td>108,7</td><td>4,1</td><td>149,0</td><td>201,1</td><td>25,7</td><td>25,7</td><td>10,8</td></tr>
+          <tr><th scope="row">Regels</th><td>10</td><td>131,9</td><td>16,3</td><td>309,2</td><td>755,8</td><td>26,1</td><td>216,6</td><td>91,6</td></tr>
+          <tr><th scope="row">Regels</th><td>50</td><td>104,0</td><td>20,2</td><td>1.150,8</td><td>3.249,6</td><td>149,3</td><td>1.942,3</td><td>528,5</td></tr>
+          <tr><th scope="row">TUI</th><td>1</td><td>154,9</td><td>2,2</td><td>85,4</td><td>85,4</td><td>0,6</td><td>0,6</td><td>0,3</td></tr>
+          <tr><th scope="row">TUI</th><td>10</td><td>170,4</td><td>1,0</td><td>93,8</td><td>94,2</td><td>0,6</td><td>2,9</td><td>0,6</td></tr>
+          <tr><th scope="row">TUI</th><td>50</td><td>177,5</td><td>1,0</td><td>136,3</td><td>142,1</td><td>0,7</td><td>9,2</td><td>1,7</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul>
+      <li>Parsen kost weinig: bij 170 MiB/s kost een TUI die 1 MiB per seconde schrijft minder dan 1% van een core.</li>
+      <li>Een vol scherm serialiseren blokkeert de event loop 26 ms, bij elke attach en resync. Tien volle terminals openen kost zo ongeveer 260 ms, in stukken van 26 ms. In de groep van 50 liep één serialisatie op tot 149 ms, waarschijnlijk door de garbage collector.</li>
+      <li>Een volle terminal kost 20,2 MiB, waarvan 13,8 MiB de cellen zelf zijn. xterm bewaart 12 bytes per cel (<code>CELL_SIZE = 3</code> maal 32 bits), ook voor de lege rest van een korte regel.</li>
+      <li>Serialiseren maakt veel tijdelijk geheugen: na 50 snapshots staat de RSS op 3,2 GiB, terwijl de tekst zelf 48,6 MiB is.</li>
+    </ul>
+    <p class="caption">Script en ruwe data: <a href="2026-09-24-rust-data/terminal-benchmark.mjs">terminal-benchmark.mjs</a>, <a href="2026-09-24-rust-data/terminal-measurements.jsonl">terminal-measurements.jsonl</a>. Draai het met <code>bun docs/reports/2026-09-24-rust-data/terminal-benchmark.mjs plain|tui 1|10|50</code>.</p>
+
+    <div class="panel">
+      <h3>Geheugen per volle terminal</h3>
+      <p class="caption">Alleen de eerste balk is gemeten. De andere drie zijn rekenvoorbeelden voor 120 kolommen maal 10.040 regels. Alle balken gebruiken een schaal van 0 tot 28 MiB.</p>
+      <div class="bar-label"><span>xterm, gemeten RSS</span><span>20,2 MiB</span></div>
+      <div class="bar" aria-hidden="true"><span style="width:72%"></span></div>
+      <div class="bar-label"><span>xterm, alleen cellen (12 B per cel)</span><span>13,8 MiB</span></div>
+      <div class="bar reference" aria-hidden="true"><span style="width:49%"></span></div>
+      <div class="bar-label"><span><code>alacritty_terminal</code>, alleen cellen (tot 24 B per cel)</span><span>27,6 MiB</span></div>
+      <div class="bar reference" aria-hidden="true"><span style="width:99%"></span></div>
+      <div class="bar-label"><span>Compacte scrollback, voor deze invoer</span><span>ongeveer 1,3 MiB</span></div>
+      <div class="bar reference" aria-hidden="true"><span style="width:5%"></span></div>
+      <p class="caption">Compact betekent: een regel in de scrollback als tekst met stijlblokken in plaats van een volle rij cellen, hier ongeveer 132 bytes per regel. Uitvoer met veel kleurwissels wordt groter. Dit is de vervolgstap als de spike slaagt.</p>
+    </div>
+  </section>
+
+  <section id="ontwerp">
+    <h2>Ontwerp van de Rust-terminalkern</h2>
+    <h3>De naad</h3>
+    <p>Rust vervangt alleen de <code>Terminal</code> en de <code>SerializeAddon</code> in <code>Session</code>, via een interface <code>TerminalScreen</code> met <code>write(bytes)</code>, <code>resize</code>, <code>clear</code>, <code>serialize(scrollback)</code>, <code>plainText</code> en <code>dispose</code>. <code>Session</code> houdt de PTY, de clients, de batching van 16 ms, de kill-escalatie en de boekhouding van <code>snapshotFor</code>.</p>
+    <p>Een Rust-kern parst synchroon, dus <code>whenParsed</code> en <code>parsedWaiters</code> vallen weg. Het scherm wordt genomen op het moment van de aanroep. De PTY levert brokken van hooguit enkele tientallen KiB, dus synchroon parsen blijft kort. Rust leest de bytes direct; de <code>TextDecoder</code> blijft alleen nodig voor de stroom naar de clients.</p>
+
+    <h3>Koppeling en emulator</h3>
+    <p>De kern wordt een N-API-addon met <code>napi-rs</code> 3.13. Hij staat naast het uitvoerbare bestand, zoals <code>serve-sim-native.node</code> nu (<code>native-helper.ts:47</code>), en wordt voor darwin-arm64, linux-x64 en linux-arm64 gebouwd. Als emulator dient <code>alacritty_terminal</code> 0.26. Die heeft modi, alternate screen, brede tekens en reflow, maar geen serializer naar ANSI.</p>
+    <p>Haalt synchroon serialiseren de grens van 5 ms niet, kopieer het raster dan op het moment van de aanroep en serialiseer de kopie op een thread. De output voor die client blijft vastgehouden tot de tekst klaar is. Haalt ook dat het niet, dan is het alternatief binnen Bun: alle xterm-terminals naar een worker-thread. Dat haalt de blokkade weg, maar niet het geheugen.</p>
+
+    <h3>De serializer</h3>
+    <p>De eigen serializer schrijft ANSI die xterm.js en SwiftTerm afspelen tot hetzelfde scherm. Daar horen bij: SGR-kleuren en attributen, de cursor en zijn stijl, de modi (applicatiecursor, bracketed paste, muis, focus), de alternate screen met de hoofdbuffer erachter, en zachte regelafbrekingen. Die laatste zorgen dat een client bij een resize dezelfde regels samenvoegt als de daemon.</p>
+
+    <h3 id="grens">Beslisgrens</h3>
+    <ul>
+      <li>Geen pariteitsverschil boven de basislijn van xterm's eigen rondgang.</li>
+      <li>Serialiseren van een volle terminal blokkeert de event loop hooguit 5 ms, tegen 26 ms nu.</li>
+      <li>RSS per volle terminal is niet hoger dan 20,2 MiB, of het rapport zegt hoeveel hoger en waarom. Met <code>alacritty_terminal</code> is hoger te verwachten.</li>
+    </ul>
+  </section>
+
+  <section id="risico">
+    <h2>Risico's voor pariteit</h2>
+    <ul>
+      <li>Client en daemon gebruiken de standaardbreedtes van xterm.js, Unicode 6: geen van beide laadt een unicode11-addon. <code>alacritty_terminal</code> rekent met <code>unicode-width</code> 0.2. Een emoji of CJK-teken kan daardoor in de daemon een andere kolom krijgen dan in de client, en dan springt het scherm bij attach.</li>
+      <li>Twee emulators voegen afgebroken regels bij een resize niet per se gelijk samen. De fixtures moeten resizes midden in de stroom bevatten.</li>
+      <li>Een herstel moet oude snapshotbestanden onder <code>$RUIMTE_HOME/sessions</code> kunnen lezen, en xterm moet bij een terugval die van Rust kunnen lezen.</li>
+      <li><code>napi-rs</code> zet een panic om in een JavaScript-fout, maar een abort of fout geheugengebruik in <code>unsafe</code>-code neemt de daemon mee, en daarmee elke shell.</li>
+      <li><code>compile.ts</code> bouwt Rust nu alleen voor macOS. De terminalkern is op elk platform nodig, dus alle drie de release-runners hebben cargo nodig, en <code>bun dev</code> een bouwstap.</li>
+      <li>xterm blijft een release lang als terugval achter de vlag en gaat daarna weg. Twee kernen die blijvend naast elkaar bestaan, geven dubbel werk en verschillende schermen.</li>
+    </ul>
+  </section>
+
+  <section id="prompts" class="prompt">
+    <h2>Startprompt</h2>
+    <pre><code id="start-prompt">Je werkt in de Ruimte-monorepo (/Users/bas/Development/Projects/ruimte). Lees eerst CLAUDE.md en docs/reports/2026-09-24-rust.html helemaal.
+
+Opdracht: twee losse Rust-onderdelen in één run.
+A. Een Rust-broker die de Bun-broker in apps/pulsar-broker volledig kan vervangen. Bas kiest bewust voor Rust in dit soort serverarchitectuur. De vraag is dus niet óf, maar of de Rust-broker precies hetzelfde doet en hoe hij zich meet tegen Bun.
+B. Een spike voor een Rust-terminalkern in de daemon, achter een vlag.
+
+Werkwijze
+- Staan docs/reports/2026-09-24-rust.html en docs/reports/2026-09-24-rust-data/ nog niet op main, commit ze dan eerst daar als `docs: add the Rust report`.
+- A en B raken elkaar niet. Werk elk in een eigen worktree, op een eigen branch vanaf main: rust/pulsar-broker en spike/terminal-core. Je mag ze tegelijk door twee subagents laten doen. Geef elk dan de algemene grenzen en zijn eigen deel van deze prompt mee, en houd zelf het overzicht.
+- Het rapport schrijf je zelf, aan het eind, in de hoofdcheckout op main.
+- Commit op de branches. Push niets, deploy niets en raak de VPS niet aan. Ruim de worktrees op zodra de branches af zijn.
+
+Algemene grenzen
+- De wire verandert niet. packages/pulsar en packages/contracts zijn de bron. Bestaande daemons, clients en de iPhone-app werken zonder wijziging met wat je bouwt.
+- Geen git stash, reset, restore of clean. Geen Co-Authored-By of andere attributie in commits. Noem geen andere producten in code, commits of rapporten.
+- Conventional commits in het Engels, American English, 4 spaties, altijd accolades, geen namen van één letter behalve i, e, x en y. Lees .editorconfig. Een comment alleen voor een reden die de code niet laat zien.
+- Rust: edition 2024, een eigen crate per app zoals apps/ios-device-bridge, Cargo.lock ingecheckt, cargo fmt en cargo clippy zonder waarschuwingen.
+- Start de app en zijn dev server niet. Processen voor een meting mogen, op een vrije poort; stop ze zelf.
+- Tests volgen CLAUDE.md: niets in de standaardrun hangt af van echte tijd, een echte shell, een socket of een watcher. Zulke tests gaan in *.integration.test.ts.
+
+Deel A: de Rust-broker (branch rust/pulsar-broker)
+1. Nulmeting. Schrijf een loadscript in TypeScript onder apps/pulsar-broker/bench/ dat N peers laat verbinden, hello en prove doorloopt met echte ed25519-sleutels en de sockets open houdt. Het script neemt een URL, zodat het elke broker kan meten. Meet voor N = 0, 1.000 en 10.000: RSS van het brokerproces, CPU over een heartbeatronde, en de latentie van een relay tussen twee peers (p50 en p99) onder die last. Meet `bun src/main.ts` en een binary uit `bun build --compile`. Drie herhalingen per stand; noteer machine, OS, versies en ulimit.
+2. Bouw de broker in apps/pulsar-broker-rs met tokio. Kies de HTTP- en WebSocketlaag die het eenvoudigst geeft wat nodig is: 421 en 429 met Retry-After vóór de upgrade, protocol-pings, een maximale framegrootte en eigen close codes. Het gedrag is dat van src/broker.ts, src/server.ts, src/config.ts, src/turn.ts en src/cloudflare.ts, en de README is de specificatie:
+   - de frames, de challenge met --name, de close codes 4002, 4003, 4008, 4009 en 4029, en een tweede aankondiging die de eerste vervangt;
+   - de heartbeat en de hello-timeout;
+   - alle rate limits als buckets die gelijkmatig bijvullen;
+   - GET /health met dezelfde velden;
+   - --trust-proxy en --trust-cloudflare;
+   - ice met none, shared-secret (HMAC-SHA1, het secret bij elke vraag opnieuw uit het bestand) en cloudflare (één set credentials tot twee derde van de levensduur);
+   - dezelfde vlaggen, dezelfde PULSAR_BROKER_-variabelen en dezelfde standaardwaarden.
+   Zolang beide brokers bestaan, houdt een test de Cloudflare-ranges in Rust gelijk aan src/cloudflare.ts.
+3. Pariteit. Laat src/broker.integration.test.ts optioneel tegen een externe URL draaien, via een omgevingsvariabele naast startBroker, zodat dezelfde test beide brokers raakt. Neem de gevallen uit broker.test.ts, config.test.ts en turn.test.ts over als Rust-tests, met een geïnjecteerde klok in plaats van echte tijd. Toets brokerHelloMessage tegen de brokerHello-fixture in apps/ios/Packages/RuimtePulsar/Tests/RuimtePulsarTests/Fixtures/wire.json. Draai daarnaast apps/server/scripts/webrtc-probe.ts of een daemon-test die een echte verbinding via de broker opzet, als dat zonder de app kan.
+4. Uitlevering. Een buildscript voor statische Linux-binaries (x86_64 en aarch64, musl). Een systemd-unit in apps/pulsar-broker-rs/deploy/ naast de bestaande, met dezelfde beperkingen (LimitNOFILE, MemoryMax, een eigen gebruiker) maar zonder Bun of checkout. En een README met draaien, vlaggen, uitrollen en overstappen vanaf de Bun-broker. De Bun-broker blijft in de repository tot Bas de VPS omzet.
+5. CI. Een job in .github/workflows/ci.yml die cargo test, fmt en clippy voor de nieuwe crate draait op ubuntu-latest.
+6. Meet de Rust-binary met hetzelfde loadscript, op dezelfde machine, onder dezelfde omstandigheden.
+Klaar voor A: de pariteitstest groen tegen beide brokers, cargo test groen, en de meting van Bun, de compile-binary en Rust naast elkaar. Is Rust ergens slechter, zeg dan waar en waarom. Dat houdt de overstap niet tegen, maar Bas wil het weten.
+
+Deel B: de terminalkern (branch spike/terminal-core)
+1. Naad. Maak in apps/server/src/sessions een interface TerminalScreen (write van bytes, resize, clear, serialize met scrollback, plainText, dispose), met de huidige xterm-code als implementatie, en laat Session die gebruiken. snapshotFor gedraagt zich precies als nu. Alle bestaande tests in apps/server blijven groen.
+2. Fixtures. Neem bytestromen op van echte programma's, met resizes erin: een shell met gekleurde git log, less, vim, top, een agent-CLI in zijn TUI, uitvoer met emoji en CJK, OSC 8-links, de alternate screen, bracketed paste en muismodi. Het opnamescript is een los script of een *.integration.test.ts; de opnames komen als bestanden in de repo.
+3. Pariteitstest. Speel per fixture de bytes af in @xterm/headless; dat is de referentie. Speel dezelfde bytes af in de Rust-kern, serialiseer, en speel die tekst af in een nieuwe @xterm/headless. Vergelijk de twee cel voor cel (teken, breedte, kleuren, attributen), plus cursor, modi, alternate screen en scrollback. De rondgang van xterm's eigen serializer is de basislijn: Rust mag niet meer afwijken dan die.
+4. Rust-crate in apps/terminal-core met napi-rs. Gebruik alacritty_terminal 0.26 als emulator en schrijf een eigen serializer: SGR, cursor, modi, de alternate screen met de hoofdbuffer erachter, en zachte regelafbrekingen, zodat een client bij een resize dezelfde regels samenvoegt. Laat tekenbreedtes overeenkomen met de standaard van xterm.js (Unicode 6; apps/client laadt geen unicode11-addon), of meld precies waar ze afwijken.
+5. Laden. De PTY blijft bij Bun en PtyAdapter verandert niet. xterm blijft de standaard; Rust komt achter RUIMTE_TERMINAL_CORE=rust. Laad de .node uit native/ naast het uitvoerbare bestand, zoals apps/server/src/devices/native-helper.ts dat met serve-sim-native.node doet, en in dev uit de crate. Bouw hem in apps/server/scripts/compile.ts voor darwin-arm64, linux-x64 en linux-arm64. Ontbreekt de addon, dan valt de daemon terug op xterm en logt hij dat één keer.
+6. Meting. Breid docs/reports/2026-09-24-rust-data/terminal-benchmark.mjs uit met een keuze voor de kern en draai beide, met dezelfde groepsgroottes en drie herhalingen. Meet daarnaast de langste blokkade van de event loop bij een attach van tien volle terminals.
+Beslisgrens voor B (voorstel uit het rapport; wijk alleen af met een reden):
+- geen pariteitsverschil boven de basislijn van xterm's eigen rondgang;
+- serialiseren van een volle terminal (10.000 regels) blokkeert de event loop hooguit 5 ms, tegen 26 ms nu;
+- RSS per volle terminal is niet hoger dan de 20,2 MiB van xterm, of het rapport zegt hoeveel hoger en waarom.
+Haalt de spike dit, dan luidt het advies: uitrollen achter de vlag en daarna compacte scrollback onderzoeken. Haalt hij het niet, dan blijft xterm, en zegt het rapport of terminals in een Bun-worker-thread het probleem beter oplossen.
+Klaar voor B: de naad, de crate, de fixtures en de pariteitstest op de branch, en de meting van beide kernen.
+
+Rapport (aan het eind, in de hoofdcheckout op main)
+- Voeg met de html-report-skill twee secties toe aan docs/reports/2026-09-24-rust.html: "Broker: resultaat" en "Terminalkern: spike". Houd de bestaande opmaak aan. Zet tabellen met eenheden erin, en de ruwe data als JSON in docs/reports/2026-09-24-rust-data/.
+- Werk de sectie Opdracht bij als de uitkomst haar verandert. Noem de fixtures die Bas op een iPhone moet openen om SwiftTerm te controleren, en wat er nodig is om de VPS om te zetten.
+- Eén docs-commit op main met alleen het rapport en de data.
+
+Klaar is: beide branches af, met bun run format, bun run check, bun run test en cargo test groen op elk. Het rapport is bijgewerkt en gecommit op main. Je eindbericht noemt per deel de branch, de uitkomst in twee zinnen, en wat je niet kon meten of bouwen, met de reden.</code></pre>
+    <div class="prompt-actions interactive-only" hidden>
+      <button type="button" data-copy="start-prompt">Kopieer prompt</button>
+      <span class="caption" role="status" aria-live="polite"></span>
+    </div>
+  </section>
+</main>
+<footer><p>Ruimte · Rust-broker en Rust-terminalkern · 24 september 2026.</p></footer>
+<script>
+{
+  if (navigator.clipboard) {
+    for (const actions of document.querySelectorAll('.prompt-actions')) {
+      const button = actions.querySelector('button');
+      const state = actions.querySelector('[role="status"]');
+      const prompt = document.getElementById(button.dataset.copy);
+      actions.hidden = false;
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(prompt.textContent);
+          state.textContent = 'Gekopieerd';
+        } catch {
+          state.textContent = 'Kopiëren lukte niet; selecteer de tekst hierboven';
+        }
+      });
+    }
+  }
+}
+</script>
+</body>
+</html>
