@@ -138,6 +138,15 @@ larger ones becomes a GitHub issue when it starts.
     folder per login passed as `CLAUDE_CONFIG_DIR` or `CODEX_HOME` at spawn, the CLI logs in
     itself and Ruimte never writes credentials. The account choice belongs in the local file, not
     in `project.json`.
+21. **Orchestration leftovers** (`docs/reports/2026-09-24-orchestration-upstream.html`). Built: a
+    turn that stops on a usage limit or on overload, with a task that pauses and a resume at the
+    reset a person turns on; a note for a child that waits on input and `ruimte-context answer`;
+    nested Claude subagents and Codex spawned agents as rows; a chat attached with `@`. Open: the
+    phases of a Claude workflow and opening its members wait on one captured stream of a real
+    workflow run, since whether `workflow_progress` is a snapshot or a delta is unknown; a Codex
+    `subAgentActivity` of kind `interacted` is not handled, never seen live; a resume whose CLI dies
+    before the resume records itself ends without its attempt and its note; stashing a draft drops
+    the chats attached to it.
 
 Known gaps to keep in mind: the WebGL budget is a fixed 10 contexts, not a setting and not
 measured against what a given machine really keeps alive; the 30-node performance target is

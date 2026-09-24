@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Orchestratie: wat de rewrite sinds 16 september deed</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.prompt pre { white-space: pre-wrap; font-size: 13px; line-height: 1.6; }
+.prompt-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#kort">Ga naar de samenvatting</a>
+<header>
+  <p class="eyebrow">Ruimte / Onderzoek / 24 september 2026</p>
+  <h1>Orchestratie: wat de rewrite sinds 16 september deed</h1>
+  <p class="intro">De rewrite waar ons ontwerp van 16 september op leunde, is nog steeds niet gemerged. Het model zelf bleef gelijk: run, poging, stap, subagent en gedelegeerde taak. Het werk van de afgelopen acht dagen ging naar fouten aan de randen. Ruimte loopt op de kern niet achter, maar heeft vier gaten die de rewrite nu dicht: limieten van providers, een kind dat op invoer wacht, randgevallen van subagents en een chat als context.</p>
+  <p class="status">Gebouwd op 24 en 25 september; zie <a href="#resultaat">Resultaat</a></p>
+  <p class="caption">Bronnen: de hoofd-PR van de rewrite, de deel-PR's en issues daaronder en de commitlijst van de integratiebranch, gelezen op 24 september 2026. De branch stond op <code>692ad0a8f</code> (23 september). Ruimte is nagekeken op <code>fea139ee</code>. PR-nummers verwijzen naar de repository van de rewrite.</p>
+  <nav aria-label="Inhoud">
+    <a href="#kort">Kort</a>
+    <a href="#resultaat">Resultaat</a>
+    <a href="#stand">Stand</a>
+    <a href="#themas">Per thema</a>
+    <a href="#al-gedekt">Al gedekt</a>
+    <a href="#gaten">Gaten</a>
+    <a href="#voorstel">Voorstel</a>
+    <a href="#niet">Niet overnemen</a>
+    <a href="#vragen">Besluiten</a>
+    <a href="#startprompt">Startprompt</a>
+  </nav>
+</header>
+<main>
+  <section id="kort" class="recommendation">
+    <h2>Kort</h2>
+    <p>Sinds 16 september zijn er 71 deel-PR's in de integratiebranch gemerged en staan er 47 open. Geen daarvan verandert het model. Ze gaan over drie dingen: werk dat na een fout of herstart blijft hangen, subagents met een verkeerde status en limieten van providers. Daarnaast is er veel UI werk en zijn er nieuwe providers bijgekomen.</p>
+    <p>Een deel van die fixes lost problemen op die Ruimte al in het ontwerp heeft vermeden. De rewrite schrapte deze week een plafond van twee wekbeurten per groep kinderen. Door dat plafond werden late resultaten nooit afgeleverd. Ruimte heeft zo'n plafond nooit gehad. Een blokkerende wachtmodus hebben we bewust niet gebouwd, en de diff van een beurt meten we al vanaf het begin van die beurt.</p>
+    <p><strong>Advies:</strong> begin met regressietests voor de randgevallen die de rewrite als bugs vond. Die zijn goedkoop en laten zien of Ruimte dezelfde fouten heeft. Bouw daarna een aparte stand voor een beurt die op een limiet van de provider stopt, met hervatten na de reset. Dat is de grootste winst voor gedelegeerd werk: een kind dat nu zijn limiet raakt, laat zijn taak mislukken. Bas heeft de productkeuzes op 24 september gemaakt; ze staan onder <a href="#vragen">Besluiten</a>. De <a href="#startprompt">startprompt</a> pakt de vier gaten in één run op.</p>
+  </section>
+
+  <section id="resultaat" class="recommendation">
+    <h2>Resultaat</h2>
+    <p class="caption">Gebouwd op 24 en 25 september 2026, van <code>339fd24c</code> tot <code>7d6373cf</code> op main. Voor elke commit waren <code>bun run format</code>, <code>bun run check</code> en <code>bun run test</code> groen, de laatste run met 5438 tests. Alles is gepusht. <code>af0775c2</code> zit ertussen, maar hoort niet bij dit werk. Niets is in de dev-app doorgeklikt; dat staat per stap onder "Proberen".</p>
+    <div class="stats">
+      <div><strong>4 van 4</strong><span>gaten gedicht, workflows alleen deels</span></div>
+      <div><strong>1 van 6</strong><span>regressietests faalde eerst</span></div>
+      <div><strong>2</strong><span>fouten buiten de zes gevonden en opgelost</span></div>
+      <div><strong>&minus;52%</strong><span>groei van rss per ronde in de geheugenmeting</span></div>
+    </div>
+
+    <h3>Twee keuzes die je nog moet bevestigen</h3>
+    <ul>
+      <li><strong>Een chat als context geeft leesrecht binnen het project.</strong> <code>ruimte-context read</code> werkte alleen over een lijn op het canvas. Nu mag een chat een andere chat van hetzelfde project lezen zonder lijn, zodra een bericht van een persoon in zijn eigen thread die chat met <code>@</code> heeft aangehangen. Dat wordt bij elke read opnieuw gecontroleerd. Buiten het project verandert er niets. Het staat in de helptekst van <code>read</code>, maar nog niet in een CLAUDE.md.</li>
+      <li><strong>De knop per chat volgt de machine.</strong> Een chat zonder eigen keuze voor "Resume at reset" doet wat de machine-instelling zegt. De machine-instelling is dus de opt-in, en de knop per chat kan hem alleen voor die chat uitzetten. Anders moet je bij elk kind apart de knop aanzetten.</li>
+    </ul>
+
+    <h3>1. Regressietests</h3>
+    <div class="table">
+      <table class="wide">
+        <caption>De zes scenario's</caption>
+        <thead><tr><th scope="col">Scenario</th><th scope="col">Uitkomst</th><th scope="col">Commit</th></tr></thead>
+        <tbody>
+          <tr><td>Subagentoutput vóór <code>task_started</code></td><td><span class="badge confirmed">slaagde</span> Nieuw fake-commando <code>delegate late:</code>.</td><td><code>339fd24c</code></td></tr>
+          <tr><td>Subagent op de achtergrond na de beurt van de ouder</td><td><span class="badge confirmed">slaagde</span></td><td><code>339fd24c</code></td></tr>
+          <tr><td>Late Codex-snapshot na een afgeronde subagent</td><td><span class="badge danger">faalde</span> De rij bleef klaar. Het late spawn-item kwam wel buiten een beurt binnen en opende een beurt die niemand afsloot, dus de chat bleef op "running" staan. Fix: een <code>tool.started</code> voor een call die al een rij heeft, opent geen beurt meer.</td><td><code>20e7a33c</code></td></tr>
+          <tr><td>Afgerond kind krijgt nieuw werk</td><td><span class="badge confirmed">slaagde</span> In de daemon en in de client.</td><td><code>1be1cd9e</code></td></tr>
+          <tr><td>Vijf kinderen zonder team over drie wekbeurten</td><td><span class="badge confirmed">slaagde</span> Elk resultaat komt precies één keer aan.</td><td><code>abc87c38</code></td></tr>
+          <tr><td>CLI stopt meteen bij hervatten</td><td><span class="badge confirmed">slaagde</span> In twee varianten, waarvan één het echte gedrag van Claude Code 2.1.281 bij een ontbrekende sessie nabootst.</td><td><code>a6ba5c5b</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>2. Limieten en overbelasting</h3>
+    <ul>
+      <li><strong>Herkennen</strong> (<code>440bb39b</code>). Bij Claude Code 2.1.281 is een beurt een limiet als <code>rate_limit_event</code> de status <code>rejected</code> heeft en het resultaat een fout is. Overbelasting herkent de daemon aan <code>error: overloaded</code>, of aan <code>rate_limit</code> zonder afgewezen venster. Bij Codex 0.156.1 is <code>usageLimitExceeded</code> een limiet, met als resettijd het laatste venster dat op 100% stond. <code>serverOverloaded</code> en <code>rateLimitExceeded</code> zijn overbelasting. De beurt krijgt een optioneel veld <code>limit</code>.</li>
+      <li><strong>Pauzeren</strong> (<code>23165872</code>). Stopt een kind op een limiet, dan blijft zijn taak open met <code>paused</code>, en de ouder wordt niet gewekt.</li>
+      <li><strong>Hervatten</strong> (<code>e09729ac</code>). Een outbox-entry <code>resume-limit</code> met een tijd hervat de beurt op de resettijd, of na 1, 5 en 15 minuten bij overbelasting. De entry overleeft een herstart en loopt niet dubbel. Hij vervalt als iemand eerst iets stuurt, als de chat stopt, als een van de schakelaars uitgaat of als de node verdwijnt. De uitzondering op "nooit op een klok" staat in beide CLAUDE.md-bestanden.</li>
+      <li><strong>Client</strong> (<code>612f84f4</code>, <code>26e493e5</code>, <code>7d6373cf</code>). Een pil in de header en een balk boven de composer tonen "Limited until 15:00" met de knop ernaast. De machine-instelling staat onder Settings, Agents. Een gepauzeerde taak toont "paused until 15:00" in de lijst van subagents en in de rij in de thread van de ouder, met een zandloper op de node.</li>
+      <li><strong>Twee gaten na de meting gedicht.</strong> Als een chat een hervatting tegoed heeft, wachten een wekbeurt, een taak en een bericht op die hervatting en kosten ze geen poging (<code>b992268a</code>). Een resettijd die in beeld staat terwijl de entry na een crash ontbreekt, wordt bij het laden opnieuw ingepland (<code>9b72b1c5</code>).</li>
+    </ul>
+
+    <h3>3. Een kind dat op invoer wacht</h3>
+    <p><code>fb10ae20</code>. Wacht een kind met een open taak op een vraag of een approval, dan komt er één notitie in de ouder, met id <code>waiting-&lt;kind&gt;-&lt;request&gt;</code>. De ouder wordt niet gewekt, en na een herstart komt de notitie niet terug. Bij een vraag staat het exacte commando in de notitie: <code>ruimte-context answer &lt;id&gt; &lt;request&gt; --answer …</code>, of <code>--answers</code> met JSON als er meerdere vragen zijn. Het verb weigert met <code>not-yours</code> als het kind van een ander is, met <code>not-a-question</code> bij een approval en met <code>not-pending</code> als de vraag al beantwoord is. Wie het eerst antwoordt, wint. Een login kan de daemon niet van een gewone vraag onderscheiden, dus die krijgt geen eigen soort.</p>
+
+    <h3>4. Een chat als context en de weergave van subagents</h3>
+    <ul>
+      <li><strong>Een chat met <code>@</code></strong> (<code>121f079a</code>). De composer stelt tot vier chats van het project voor, boven de bestanden. Een chip toont de huidige titel. De daemon zet bij het versturen een zin met <code>ruimte-context read &lt;chatId&gt;</code> voor de prompt, en de thread bewaart alleen het id. Een test voert het commando uit die zin uit met de echte CLI.</li>
+      <li><strong>Geneste subagents van Claude</strong> (<code>bd8acbe2</code>). Een kleinkind staat nu ingesprongen onder zijn ouder, met een optioneel <code>parentToolUseId</code>. Zijn eigen frames blijven buiten de thread; die zie je als je de ouder openklikt. De melding van een kleinkind overschrijft de samenvatting van de ouder niet meer. <code>--forward-subagent-text</code> staat bewust uit, omdat je niet kunt zeggen hoeveel output dat oplevert.</li>
+      <li><strong>Subagents van Codex</strong> (<code>579d84b4</code>). <span class="badge danger">fout gevonden</span> Codex 0.156.1 stuurt de hele thread van een subagent over de verbinding van de chat. Ruimte las die mee: de <code>turn/completed</code> van het kind beëindigde de beurt van de ouder te vroeg, en de items van het kind kwamen in de thread van de ouder. De chat negeert nu andere threads. Een rij opent op <code>subAgentActivity</code> <code>started</code> en sluit op <code>completed</code>. Het oude pad sluit alleen nog op de stand van de agent en niet op die van de call. Dit is nagekeken in een echte opname van <code>codex app-server</code>.</li>
+      <li><strong>Workflows van Claude</strong> (<code>b19d1000</code>). <span class="badge warning">deels</span> Een Workflow-rij bleef niet meer staan: hij was al klaar zodra de workflow startte. Nu blijft hij lopen tot de workflow-taak eindigt. De fasen en het openklikken van de leden zijn niet gebouwd. Wat er wel te zien was: in de binary van 2.1.282 heeft <code>task_started</code> het type <code>local_workflow</code>, en <code>task_progress.workflow_progress</code> heeft fasen en agents met index en titel. Op schijf staan de leden in <code>subagents/workflows/wf_&lt;run&gt;/</code>, met <code>workflowPhase</code> en een <code>journal.jsonl</code>, maar zonder <code>toolUseId</code>. Of <code>workflow_progress</code> een snapshot of een delta is, is niet bekend. Daarvoor is één opname nodig van de stream van een echte workflow-run.</li>
+    </ul>
+
+    <h3>5. Geheugen over een lange sessie</h3>
+    <p><code>b756e466</code> voegt <code>bun run --cwd apps/server measure:memory</code> toe; dat valt buiten de standaardrun. De meting draait de testdaemon en de nep-Claude in één proces. Na een warmloop volgen 200 rondes. In elke ronde krijgen vijf kinderen een nieuwe taak met 64 KiB tool-output. Per ronde draait eerst <code>Bun.gc(true)</code>, daarna meet het script heapUsed en rss, en de helling komt uit de kleinste kwadraten.</p>
+    <p><span class="badge confirmed">geen lek</span> De heap groeit met 350 tot 370 KiB per ronde. Dat is de thread die een levende chat in het geheugen houdt, zoals ontworpen: ongeveer 332 KiB JSON per ronde. Na het wissen van alle threads is de heap terug op het niveau van ronde 0. Function, Promise, Set en Map groeien niet.</p>
+    <p><span class="badge warning">gevonden</span> Elke <code>persist()</code> schreef het hele record van een chat opnieuw weg, ongeveer vier keer per taakbeurt. Het aantal geschreven bytes groeide daardoor met het kwadraat van de lengte van de chat. <code>d2bfb797</code> schrijft het record alleen nog bij de eerste write na het laden, als de preambles of de gewiste taken veranderen, en als de log folds: boven 1 MB, na een regel die de schijf miste, bij clear en bij shutdown.</p>
+    <div class="table">
+      <table>
+        <caption>200 rondes, vóór en na <code>d2bfb797</code></caption>
+        <thead><tr><th scope="col">Meting</th><th scope="col">Vóór</th><th scope="col">Na</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Recordwrites</th><td>4517 (15.204 MiB)</td><td>76 (448 MiB)</td></tr>
+          <tr><th scope="row">rss</th><td>157,6 → 593,5 MiB, 2507 KiB per ronde</td><td>130,2 → 361,1 MiB, 1209 KiB per ronde</td></tr>
+          <tr><th scope="row">heapUsed</th><td>24,55 → 98,43 MiB, 372 KiB per ronde</td><td>24,47 → 95,29 MiB, 348 KiB per ronde</td></tr>
+          <tr><th scope="row">Looptijd</th><td>15,3 s</td><td>4,4 s</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Wat open blijft</h3>
+    <ul>
+      <li>De fasen van een workflow en het openklikken van de leden. Die wachten op een opname van een echte run, zie hierboven.</li>
+      <li>Codex <code>subAgentActivity</code> van het soort <code>interacted</code> is niet verwerkt. Het is nooit live gezien.</li>
+      <li>Stopt een CLI al voordat de hervatting zichzelf heeft vastgelegd, dan eindigt de beurt zonder <code>attempt: 2</code> en zonder notitie. Dat is de prijs van een start die opnieuw geprobeerd kan worden.</li>
+      <li>Een concept dat je opzijzet, verliest de chats die eraan hingen. Die opslag geldt voor de hele app, en een chat-id betekent alleen iets binnen één project.</li>
+      <li>Het gat in de checkpoints blijft staan: wat een persoon tijdens een beurt wijzigt, komt in de kaart terecht. Dat is een ontwerpvraag (<code>docs/NEXT.md</code>, punt 3).</li>
+    </ul>
+
+    <h3>Proberen in de dev-app</h3>
+    <ul>
+      <li>Zet Settings, Agents, "Resume after a limit" aan en laat een chat zijn limiet raken. Kijk dan naar de pil, de balk, de tijd en de knop.</li>
+      <li>Laat een lead een kind met <code>--task</code> starten dat een vraag stelt. De lead hoort één notitie te krijgen zonder beurt, en moet de vraag kunnen beantwoorden met het commando uit de notitie.</li>
+      <li>Type in de composer <code>@</code> en kies een andere chat. Hernoem die chat daarna en verstuur het bericht.</li>
+      <li>Vraag een Claude-subagent op de achtergrond om zelf een agent te starten, en vraag Codex om een subagent die <code>sleep 20</code> draait.</li>
+    </ul>
+  </section>
+
+  <section id="stand">
+    <h2>Stand van de rewrite</h2>
+    <div class="stats">
+      <div><strong>71</strong><span>deel-PR's gemerged sinds 16 september</span></div>
+      <div><strong>47</strong><span>deel-PR's open (21 op 15 september)</span></div>
+      <div><strong>165</strong><span>eigen commits met een auteursdatum na 15 september</span></div>
+      <div><strong>1.543</strong><span>bestanden in de hoofd-PR (1.278 op 15 september)</span></div>
+      <div><strong>0</strong><span>keer naar main gemerged</span></div>
+    </div>
+    <p><span class="badge confirmed">geverifieerd</span> De hoofd-PR staat open sinds 27 mei en telt ruim 331.000 toegevoegde regels. De beschrijving noemt hem nog steeds een draft voor review. Op 24 september vroeg iemand in de PR naar een datum. Het antwoord: drie weken geleden was het "hopelijk vandaag".</p>
+    <p><span class="badge">afgeleid</span> PR 12480 laat de oude en de nieuwe versie van de desktop-app naast elkaar draaien. PR 12790 noemt een preview-build van 19 september. Het ziet ernaar uit dat de rewrite als preview naast de stabiele app wordt uitgerold in plaats van in één keer gemerged te worden.</p>
+    <p><span class="badge">afgeleid</span> De commitdatums op de branch zeggen weinig, omdat de branch steeds opnieuw op main wordt gerebased. De tellingen hierboven gebruiken daarom de auteursdatum en de mergedatum van deel-PR's.</p>
+  </section>
+
+  <section id="themas">
+    <h2>Wat er gebeurde, per thema</h2>
+    <p>De bewering in de middelste kolom komt uit de PR-beschrijving; de code van de rewrite is niet gelezen. De rechterkolom is nagekeken in de code van Ruimte.</p>
+    <div class="table">
+      <table class="wide">
+        <caption>Werk aan de rewrite sinds 16 september naast Ruimte op <code>fea139ee</code></caption>
+        <thead><tr><th scope="col">Thema</th><th scope="col">De rewrite</th><th scope="col">Ruimte nu</th></tr></thead>
+        <tbody>
+          <tr>
+            <th scope="row">Resultaten bij de ouder</th>
+            <td>13338 (open) schrapt het plafond van twee wekbeurten per groep kinderen, dat late resultaten liet liggen (issue 12285). 13345 (open) meldt taken die een herstart stopte meteen na de start en niet pas bij de volgende herstart. 11997 (open) begrenst een wachtende delegatie tot 30 à 45 seconden, omdat de tool call anders op zijn timeout stukloopt en dubbel wordt verstuurd.</td>
+            <td>Geen plafond: elke afgeronde taak is de ouder een wekbeurt schuldig, en een team wekt één keer als alles klaar is (<code>tasks/wake-parent.ts</code>). Geen blokkerende wachtmodus. Een beurt die de daemon niet kan hervatten, wordt na 1, 5 en 30 seconden opgegeven en laat een notitie achter bij de ouder.</td>
+          </tr>
+          <tr>
+            <th scope="row">Kind wacht op invoer</th>
+            <td>13343 (open): als een gedelegeerd kind een vraag stelt of om een approval of login vraagt, krijgt de ouder een melding met de taak, het soort blokkade en hoe hij verder kan. Een vraag kan de ouder zelf beantwoorden, een approval en een login alleen de persoon.</td>
+            <td>Alleen de persoon krijgt een attentiemarkering op het kind. De ouder hoort niets en slaapt door tot de taak afrondt. In <code>tasks/</code> komen vragen en approvals niet voor.</td>
+          </tr>
+          <tr>
+            <th scope="row">Native subagents</th>
+            <td>13347 (gemerged) zet Claude-subagenttekst in de thread van de subagent, houdt output vast die vóór <code>task_started</code> binnenkomt en vangt output op van een subagent op de achtergrond nadat de beurt van de ouder al klaar is. 12974 (gemerged) laat een late Codex-snapshot een afgeronde subagent niet meer heropenen. 13438 en 12598 (open) tonen geneste subagents met hun hele keten en Claude-workflows met fasen en leden.</td>
+            <td>Tekst met <code>parent_tool_use_id</code> gaat al naar de rij van de subagent (<code>chat/claude-protocol.ts:349</code>). Het einde komt uit het eigen transcript (<code>chat/subagent-settlement.ts</code>). Output vóór <code>task_started</code> en late snapshots zijn niet getest. Workflows komen in <code>chat/</code> niet voor.</td>
+          </tr>
+          <tr>
+            <th scope="row">Runs die blijven hangen</th>
+            <td>12790, 13113 en 13432 laten een run falen als de sessie van de provider niet opent of de laatste startpoging mislukt. Voorheen bleef zo'n run op <code>starting</code> staan, zonder Stop-knop (issue 13392).</td>
+            <td>Een CLI die niet start, geeft een <code>failed</code>-event dat de beurt beëindigt (<code>chat/chat-session.ts:889</code>). Hervatten na een herstart probeert het drie keer en geeft dan op, met een notitie.</td>
+          </tr>
+          <tr>
+            <th scope="row">Limieten en drukte</th>
+            <td>12677, 12686 en 12687 (gemerged): een beurt die op een limiet stopt, krijgt de stand Limited met de resettijd. Wie dat aanzet, laat de thread na de reset zelf verdergaan, ook zonder verbonden client en na een herstart. 12692 (open) probeert een beurt die op overbelasting stukliep na 1, 5 en 15 minuten opnieuw, via een outbox-entry met een tijd.</td>
+            <td>De daemon leest limietstanden voor het gebruiksoverzicht (<code>rate_limit_event</code> bij Claude, <code>account/rateLimits/updated</code> bij Codex). Een beurt die op een limiet of op overbelasting stopt, is een gewone fout. Een kind met een taak laat die taak dan mislukken.</td>
+          </tr>
+          <tr>
+            <th scope="row">Wisselen van provider</th>
+            <td>12352 (gemerged) vervangt het afkappen van elk bericht op 240 tekens door hele berichten binnen één budget, standaard 16.000 bytes, met mislukte en onderbroken beurten erbij. De rest is leesbaar met een tool. 12226 en 12255 wisselen van provider via de wachtrij. 13123 (open) compacteert eerst als het doel een kleiner contextvenster heeft.</td>
+            <td>Wisselen kan alleen via een fork naar de andere CLI. Die krijgt hele beurten, van nieuw naar oud, binnen 12 KiB (<code>chat/handoff.ts:8</code>), en leest de rest met <code>ruimte-context read</code>.</td>
+          </tr>
+          <tr>
+            <th scope="row">Checkpoints</th>
+            <td>11528 (open) maakt bij het begin van elke beurt een snapshot, zodat wijzigingen tussen twee beurten niet in de diff van de volgende beurt komen. Wijzigingen tijdens een beurt blijven erin. 12338 (open) weigert een restore die overlapt met een andere.</td>
+            <td>Het checkpoint wordt al bij het begin van de beurt genomen, en de prompt wacht erop (<code>chat/chat-session.ts:256</code>). Hetzelfde gat blijft open: wat iemand tijdens een beurt wijzigt, komt in de kaart (<code>docs/NEXT.md</code>, punt 3).</td>
+          </tr>
+          <tr>
+            <th scope="row">Een gesprek als context</th>
+            <td>12296 (gemerged): met <code>@</code> of door slepen hang je een ander gesprek aan een bericht. Alleen de verwijzing gaat mee, en de agent leest het gesprek met een tool. Alleen een verwijzing die een persoon heeft toegevoegd, geeft leesrecht buiten het project.</td>
+            <td>De <code>@</code> in de composer zoekt alleen bestanden (<code>apps/client/src/chat/ui/Composer.tsx:259</code>). Een gesprek als context loopt via een edge op het canvas.</td>
+          </tr>
+          <tr>
+            <th scope="row">Geheugen</th>
+            <td>12345 haalt de payloads van tools uit de wachtrijen voor afronding: 65 naar 49 MiB heap in hun reproductie. Een reeks commits leest het transcript niet meer in zijn geheel. Issue 12584 meldt een server die na één à twee dagen zonder heap zit.</td>
+            <td>d0ca7b55 antwoordt al met een stat in plaats van het hele record te lezen. Een meting over een lange sessie met veel kinderen is er niet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="al-gedekt">
+    <h2>Waar Ruimte al staat</h2>
+    <p>Deze fixes van de rewrite gaan over problemen die in het ontwerp van Ruimte al voorkomen zijn. Er hoeft niets te gebeuren, behalve de tests uit stap 1 van het voorstel.</p>
+    <ul>
+      <li><strong>Geen plafond op wekbeurten.</strong> Issue 12285 beschrijft vijf kinderen waarvan het laatste in een derde golf klaar is en nooit wordt afgeleverd. In Ruimte wekt elke afgeronde taak de ouder, en een team wacht tot iedereen klaar is. Dat is nagekeken in de code en niet getest met dat scenario.</li>
+      <li><strong>Geen blokkerend wachten.</strong> 11997 bestaat omdat wachten binnen één tool call op de timeout van de client stukloopt. In Ruimte beëindigt de ouder zijn beurt en wordt hij gewekt.</li>
+      <li><strong>De diff van een beurt begint bij die beurt.</strong> 11528 bouwt wat Ruimte vanaf het begin deed.</li>
+      <li><strong>Overdracht met hele beurten binnen een budget.</strong> 12352 maakt de overstap die <code>chat/handoff.ts</code> al maakte.</li>
+      <li><strong>Een start die mislukt, beëindigt de beurt.</strong> Een beurt die op <code>starting</code> blijft staan zoals in issue 13392, is in de code niet te vinden. Of het ook klopt als een CLI na een geslaagde hervatting meteen stopt, is niet getest.</li>
+    </ul>
+  </section>
+
+  <section id="gaten">
+    <h2>Gaten, van groot naar klein</h2>
+
+    <h3>Limieten en overbelasting <span class="badge warning">groot</span></h3>
+    <p>Een kind dat halverwege een taak zijn vijfuurslimiet raakt, laat die taak nu mislukken, en de ouder krijgt een mislukt resultaat. Bij lang gedelegeerd werk is dat de meest waarschijnlijke manier waarop een team stukloopt. De rewrite heeft er drie PR's voor gemerged en een vierde open.</p>
+    <p>Voorstel: herken een beurt die op een limiet of op overbelasting stopt aan de signalen van de CLI zelf. Dat mag volgens de productregels, omdat er geen credentials gelezen worden. Toon dan een aparte stand met de resettijd. Zo'n beurt rondt de taak van het kind niet af, want het werk is gepauzeerd en niet mislukt. Hervatten na de reset is een outbox-entry met een tijd, alleen als iemand het aanzet.</p>
+    <p class="note">Hervatten op een tijdstip wringt met twee regels in de code: taken en wekbeurten gaan af op observers en "nooit op een klok" (<code>apps/server/src/outbox/CLAUDE.md</code>), en het canvas is geen scheduler. Besloten: hervatten mag op de klok, alleen als iemand het aanzet (zie <a href="#vragen">Besluiten</a>).</p>
+    <p><strong>Klaar als:</strong> een Claude-kind dat op zijn limiet stopt, de stand Limited met de resettijd toont, zijn taak open houdt en na de reset zelf verdergaat als het aanstaat. Een Codex-beurt die op <code>serverOverloaded</code> stukloopt, wordt minstens één keer vanzelf opnieuw geprobeerd.</p>
+
+    <h3>Een kind dat op invoer wacht <span class="badge warning">middel</span></h3>
+    <p>Stelt een kind een vraag of wacht het op een approval, dan ziet de persoon een markering op dat kind. De ouder weet niets, dus kan hij het ook niet tegen de persoon zeggen of zijn plan aanpassen.</p>
+    <p>Voorstel: schrijf eenmalig per vraag een notitie in de thread van de ouder, met de titel van het kind, het soort blokkade en een verwijzing naar de node. De ouder wordt niet gewekt, zodat er twee redenen blijven om een chat te wekken. Een vraag van een eigen kind mag de ouder beantwoorden met een nieuw verb. Een approval of een login blijft bij de persoon.</p>
+    <p><strong>Klaar als:</strong> een kind met een taak dat om een approval vraagt, precies één notitie in de ouder oplevert, die na een herstart niet terugkomt. Als het kind daarna afrondt, wordt de ouder zoals nu één keer gewekt.</p>
+
+    <h3>Regressietests uit de bugs van de rewrite <span class="badge info">klein tot middel</span></h3>
+    <p>De rewrite vond deze fouten door dagelijks gebruik. Voor elk geval een test met de fake CLI's (<code>chat/fake-claude.ts</code>, <code>chat/fake-codex.ts</code>) laat zien of Ruimte dezelfde fout heeft:</p>
+    <ol>
+      <li>Claude-subagentoutput die vóór <code>task_started</code> binnenkomt, belandt in de rij van de subagent en niet in de thread van de ouder.</li>
+      <li>Een subagent op de achtergrond die doorwerkt nadat de beurt van de ouder klaar is, blijft in zijn eigen rij schrijven.</li>
+      <li>Een Codex-snapshot die binnenkomt nadat een subagent klaar is, heropent hem niet.</li>
+      <li>Een kind dat klaar was en nieuw werk krijgt, staat weer als lopend in de header en telt mee (issue 13331, punt 2).</li>
+      <li>Vijf kinderen van één ouder zonder team, die klaar zijn verspreid over drie wekbeurten: de ouder krijgt alle vijf de resultaten, en geen ervan twee keer (issue 12285).</li>
+      <li>Een CLI die na een herstart bij de hervatting meteen stopt: de beurt eindigt in een fout, de taak mislukt en de ouder wordt één keer gewekt.</li>
+    </ol>
+    <p><strong>Klaar als:</strong> alle zes in de standaard testrun zitten zonder klok of echte shell, en elke test die faalt een fix heeft.</p>
+
+    <h3>Claude-workflows en geneste subagents <span class="badge">middel, onzeker</span></h3>
+    <p>De rewrite toont een workflow van Claude Code als coördinator met fasen, elk met een eigen klok, en leden die als gewone subagents te openen zijn (12598). Geneste subagents krijgen hun hele keten (13438). In Ruimte komen workflows niet voor. Of het ontwerp van 16 september een kleinkind via <code>parentAgentId</code> al toont, is niet nagekeken.</p>
+    <p>Eerst uitzoeken: wat een workflow in de stream en in de transcripten van Claude Code achterlaat, bij de geïnstalleerde versie.</p>
+
+    <h3>Een chat als context in de composer <span class="badge">klein</span></h3>
+    <p>Laat <code>@</code> naast bestanden ook de chats van het project voorstellen. Het bericht krijgt alleen de verwijzing mee, met een zin die zegt dat de agent het gesprek leest met <code>ruimte-context read &lt;id&gt;</code>. Dat blijft binnen het project, dus er komt geen nieuw leesrecht bij.</p>
+    <p><strong>Klaar als:</strong> een chat die met <code>@</code> aan een bericht hangt, als chip met de huidige titel verschijnt en de agent dat gesprek in zijn beurt leest.</p>
+
+    <h3>Geheugen over een lange sessie <span class="badge">klein</span></h3>
+    <p>Meet de heap van de daemon over een dag met een team van vijf kinderen dat telkens opnieuw werk krijgt. Pas daarna is duidelijk of er iets te doen valt.</p>
+  </section>
+
+  <section id="voorstel">
+    <h2>Voorstel in volgorde</h2>
+    <ol class="steps">
+      <li class="step"><div><h3>Regressietests</h3><p>De zes scenario's hierboven, met een fix voor elk scenario dat faalt. Hier zijn geen productkeuzes voor nodig.</p></div></li>
+      <li class="step"><div><h3>Limieten en overbelasting</h3><p>Begin met de stand Limited en een taak die open blijft. Hervatten na de reset en opnieuw proberen na overbelasting komen daarna, op de outbox.</p></div></li>
+      <li class="step"><div><h3>Een kind dat op invoer wacht</h3><p>De notitie in de ouder, zonder wekbeurt, en een verb waarmee de ouder een vraag van zijn eigen kind beantwoordt.</p></div></li>
+      <li class="step"><div><h3>Een chat als context</h3><p>Een klein stuk werk in de client, met één zin in de prompt.</p></div></li>
+      <li class="step"><div><h3>Workflows</h3><p>Eerst uitzoeken wat Claude Code schrijft, dan pas een ontwerp.</p></div></li>
+    </ol>
+  </section>
+
+  <section id="niet">
+    <h2>Niet overnemen</h2>
+    <ul>
+      <li><strong>Van provider wisselen binnen een gesprek</strong> (12226, 12255, 13123). In Ruimte wissel je met een fork naar de andere CLI. Dat houdt één gesprek bij één CLI, en de overdracht is nu al te lezen.</li>
+      <li><strong>Threads automatisch afsluiten</strong> na een gemergde PR of na inactiviteit (12568, 12788). Ruimte kent geen afgesloten stand.</li>
+      <li><strong>Een begrensde wachttijd voor delegatie</strong> (11997). Ruimte wacht niet binnen een tool call.</li>
+      <li><strong>Hervatten alleen op de machine die de run startte</strong> (12879). Hier gaat het om een gekopieerde database. Een ontwikkel-daemon en een geïnstalleerde daemon hebben elk een eigen <code>$RUIMTE_HOME</code>, dus het risico is klein.</li>
+      <li><strong>Terugvallen op een andere provider voor een taak</strong> (11870). Met twee providers en een expliciete <code>--kind</code> is een mislukte start duidelijker dan stilletjes een andere provider kiezen.</li>
+      <li><strong>Een MCP-server voor agents.</strong> De verbs op <code>ruimte-context</code> blijven de enige ingang.</li>
+    </ul>
+  </section>
+
+  <section id="vragen">
+    <h2>Besluiten van 24 september</h2>
+    <p>De vier open vragen uit dit rapport, beantwoord door Bas.</p>
+    <ol>
+      <li><strong>Hervatten na een limiet mag op de klok, als iemand het aanzet.</strong> Er komt een machine-instelling die standaard uit staat, plus een knop per chat. Hervatten na een reset en opnieuw proberen na overbelasting zijn een outbox-entry met een tijd. Dat zijn de enige uitzonderingen op "nooit op een klok".</li>
+      <li><strong>Een wachtend kind levert een notitie op, geen wekbeurt.</strong> De ouder krijgt één notitie per vraag of approval. Er blijven twee dingen die een chat wekken.</li>
+      <li><strong>Een ouder mag een vraag van zijn eigen kind beantwoorden.</strong> Dat gaat via een nieuw verb en geldt alleen voor een vraag. Approvals, logins en andere kaarten blijven bij de persoon.</li>
+      <li><strong>Een taak op een limiet pauzeert.</strong> De taak blijft open en de ouder slaapt door tot het kind na de reset afrondt.</li>
+    </ol>
+  </section>
+
+  <section id="startprompt" class="prompt">
+    <h2>Startprompt</h2>
+    <p>Voor een schone sessie in de map van Ruimte. De prompt pakt de vier gaten in één run op, met de besluiten hierboven, en past daarna toe wat de rest van dit rapport leert.</p>
+    <pre><code id="start-prompt">Je werkt in de Ruimte-monorepo (/Users/bas/Development/Projects/ruimte), op main. Lees eerst helemaal: CLAUDE.md, apps/server/src/outbox/CLAUDE.md, apps/server/src/chat/CLAUDE.md en docs/reports/2026-09-24-orchestration-upstream.html. Het rapport vergelijkt de orchestratie van Ruimte met een rewrite van een ander project. De PR- en issuenummers daarin heb je niet nodig. Neem van dat project geen code over.
+
+Opdracht
+Los de vier gaten uit de sectie "Gaten" van het rapport in één run op, in de volgorde van de stappen hieronder. Pas daarna toe wat de rest van het rapport leert. Bas heeft de productvragen op 24 september beantwoord (sectie "Besluiten") en daaraan verander je niets. Wacht tussen de stappen niet op akkoord. Stop alleen om Bas iets te vragen als een keuze een productregel raakt die hieronder niet besloten is.
+
+Besluiten van Bas
+- Een chat hervatten na een limietreset en een beurt opnieuw proberen na overbelasting mag op de klok, met een outbox-entry die een tijd draagt. Dat mag alleen als iemand het aanzet: er komt een machine-instelling die standaard uit staat, plus een knop per chat.
+- Wacht een kind met een taak op een vraag of een approval, dan komt er per vraag één notitie in de thread van de ouder. De ouder wordt niet gewekt, dus er blijven twee dingen die een chat wekken.
+- Een ouder mag een vraag (een question-item) van een kind dat hij zelf opende beantwoorden, met een nieuw verb. Approvals, logins en elke andere kaart blijven bij de persoon.
+- Stopt een kind op een limiet, dan pauzeert zijn taak. De taak blijft open en de ouder slaapt door tot het kind na de reset afrondt.
+Leg deze besluiten vast bij de productregels in CLAUDE.md. De regel "never a clock" in apps/server/src/outbox/CLAUDE.md krijgt zijn uitzondering. Doe dat in dezelfde commit als de code die het besluit nodig heeft.
+
+Grenzen die altijd gelden
+- De wire krijgt alleen optionele velden, nieuwe requests en nieuwe events. Er komt geen nieuwe waarde bij in ChatTurnItem.state, TaskStatus, Task.wake, een push-alert of een ander chat- of pushpayload, want de iPhone-app valideert chat.attach en chat.history in zijn geheel. "Limited" en "gepauzeerd" worden dus optionele velden en geen nieuwe status: bijvoorbeeld een limit-object met de soort en de resettijd op de turn, en een pausedUntil op de taak. Regenereer de Swift-modellen in dezelfde commit (bun run --cwd packages/contracts generate:swift).
+- De daemon leest geen credentials van een vendor. Herken limieten en overbelasting alleen aan wat de CLI zelf in zijn stream zegt. Leg de vorm van dat signaal naast de geïnstalleerde versies van claude en codex en raad niet. Noem de versie in de test en voeg het signaal toe aan chat/fake-claude.ts en chat/fake-codex.ts.
+- Elk verb loopt via de action registry (packages/actions, apps/server/src/actions) en weigert met refused\t&lt;code&gt;\t&lt;message&gt;. Het antwoordverb werkt alleen voor kinderen die de aanroeper zelf opende (lineage) en alleen voor een question-item in de stand pending, nooit voor een approval of een andere kaart. Het antwoord gaat langs dezelfde weg als chat.answer van een persoon. Een persoon kan altijd ook antwoorden. Wie het eerst antwoordt wint, de ander krijgt een weigering.
+- Wat de daemon tegen een agent afdwingt, staat onder $RUIMTE_HOME en nooit in project.json.
+- Schrijf de tests zoals CLAUDE.md voorschrijft: in de standaardrun geen wandklok, geen echte shell en geen watcher. Gebruik een geïnjecteerde klok (outbox/manual-clock.ts) en de nep-CLI's.
+- UI-tekst komt er in het Engels en het Nederlands (apps/client/src/i18n). Gebruik alleen semantische tokens, en laat getallen en tijden schrijven door apps/client/src/format. Een nieuwe instelling krijgt een plek in de instellingen, en een nieuwe actie in de menuboom en het palet als een persoon hem uitvoert.
+- De iOS-app hoeft niets nieuws te tonen, maar moet blijven werken. bun run check controleert dat de modellen en fixtures kloppen.
+
+Stappen
+1. Regressietests. Schrijf de zes scenario's uit de sectie "Regressietests uit de bugs van de rewrite". Schrijf elke test eerst. Faalt hij, fix dan de oorzaak in een eigen commit. Een test die slaagt, blijft staan.
+2. Limieten en overbelasting.
+   a. Herken per CLI een beurt die op een limiet stopt en een beurt die op overbelasting stukloopt. Zet dat als optioneel veld op de turn, met de resettijd als de CLI die geeft.
+   b. De task-coordinator rondt zo'n beurt niet af als resultaat. De taak krijgt het pauzeveld en de ouder wordt niet gewekt.
+   c. Maak het opt-in, met een machine-instelling (standaard uit) en per chat een knop "Resume at reset". Staat het aan, dan hervat een outbox-entry de beurt op de resettijd. Die entry overleeft een herstart zonder dat hij dubbel loopt. Hij vervalt zodra de persoon eerst iets stuurt, de chat stopt of de node verdwijnt. Voor overbelasting komt dezelfde entry na 1, 5 en 15 minuten. Daarna is het een gewone fout.
+   d. De client toont de stand met de resettijd in de chat en in de header van de node, met de knop erbij.
+   Klaar als: de voorwaarde uit het rapport gehaald is, met een test per CLI en een test die een herstart tussen het schrijven van de entry en de reset overleeft.
+3. Een kind dat op invoer wacht.
+   a. Een observer ziet in een kind met een open taak een nieuw question- of approval-item. Hij zet één notitie voor de ouder in de outbox, met een id die van het request komt, zodat een herstart hem niet herhaalt. De notitie noemt de titel van het kind, het soort blokkade en de node-id, en bij een vraag hoe de ouder hem beantwoordt.
+   b. Het antwoordverb, bijvoorbeeld ruimte-context answer &lt;node&gt; &lt;request&gt;. Kies de naam, de vorm en de helptekst zo dat ze bij de bestaande verbs passen.
+   Klaar als: de voorwaarde uit het rapport gehaald is, plus een test dat een ouder deze drie niet kan beantwoorden: een vraag van een kind van een ander, een approval, en een vraag die al beantwoord is.
+4. Een chat als context, en de weergave van subagents.
+   a. De @ in de composer stelt naast bestanden ook de chats van het project voor. Het bericht krijgt een verwijzing mee, met een zin die de agent zegt het gesprek te lezen met ruimte-context read &lt;id&gt;. De chip toont de huidige titel.
+   b. Zoek uit wat een workflow van Claude Code en een geneste subagent (parentAgentId) in de stream en de transcripten achterlaten, bij de geïnstalleerde versie. Toont Ruimte een kleinkind nog niet onder zijn ouder, bouw dat dan. Bouw fasen van een workflow alleen als de data eenduidig is. Is ze dat niet, schrijf dan op wat je zag en wat ervoor nodig is.
+5. Wat de rest van het rapport leert. Loop de tabel "Wat er gebeurde, per thema" en de sectie "Waar Ruimte al staat" langs, en neem over wat past. Meet in elk geval het geheugen van de daemon over een lange sessie met een team van vijf kinderen dat steeds nieuw werk krijgt. Doe dat met een script onder scripts/ of met een integratietest, niet in de standaardrun. Los op wat die meting vindt. Neem niets over uit de sectie "Niet overnemen".
+
+Werkwijze
+- Onderzoek en implementatie mogen via subagents (opus). Subagents die committen, werken na elkaar of elk in een eigen worktree die je daarna op main zet. Geef elke subagent de grenzen hierboven mee.
+- Gebruik nooit git stash, reset, restore of clean. Bas heeft een stash die moet blijven staan.
+- Commit op main, één onderwerp per commit, conventional commits in het Engels, zonder Co-Authored-By. Noem in commits, code, comments en docs geen ander product, en ook niet de rewrite of zijn PR-nummers.
+- Voor elke commit moeten bun run format, bun run check en bun run test groen zijn. Na een groene check mag je pushen.
+- Controleer een wijziging in de UI in de Electron-dev-app. bun dev draait al; start zelf niets.
+- Werk docs/NEXT.md bij met wat gebouwd is en wat open blijft.
+
+Rapport aan het eind
+- Voeg met de html-report-skill een sectie "Resultaat" toe aan docs/reports/2026-09-24-orchestration-upstream.html. Zet er per stap in wat er gebouwd is, met de commits. Noem welke regressietests faalden en waardoor, wat je bij workflows zag, de meting met eenheden, en wat open bleef met de reden. Doe dat in één docs-commit.
+
+Klaar is: stap 1 tot en met 5 zijn af, bun run format, bun run check en bun run test zijn groen op main, en het rapport is bijgewerkt en gecommit. Geef in je eindbericht per stap twee zinnen, en zeg wat Bas in de dev-app moet proberen.</code></pre>
+    <div class="prompt-actions interactive-only" hidden>
+      <button type="button" data-copy="start-prompt">Kopieer prompt</button>
+      <span class="caption" role="status" aria-live="polite"></span>
+    </div>
+  </section>
+</main>
+<footer><p>Geverifieerd: de stand, de tellingen en de inhoud van de genoemde PR's en issues, uit de beschrijvingen, de metadata en de commitlijst van de integratiebranch. Wat een PR over zijn eigen code zegt, is niet in de code van de rewrite nagekeken. De beweringen over Ruimte zijn nagekeken in de code op <code>fea139ee</code>. Bij het onderzoek niet gedaan: de regressiescenario's draaien, het gedrag van Claude-workflows bekijken en het geheugen meten. Dat gebeurde daarna, zie Resultaat. Het rapport is gerenderd in een brede weergave; de smalle weergave is niet betrouwbaar gecontroleerd.</p></footer>
+<script>
+{
+  if (navigator.clipboard) {
+    for (const actions of document.querySelectorAll('.prompt-actions')) {
+      const button = actions.querySelector('button');
+      const state = actions.querySelector('[role="status"]');
+      const prompt = document.getElementById(button.dataset.copy);
+      actions.hidden = false;
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(prompt.textContent);
+          state.textContent = 'Gekopieerd';
+        } catch {
+          state.textContent = 'Kopiëren lukte niet; selecteer de tekst hierboven';
+        }
+      });
+    }
+  }
+}
+</script>
+</body>
+</html>
