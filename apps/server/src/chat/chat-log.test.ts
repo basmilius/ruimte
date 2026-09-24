@@ -38,6 +38,23 @@ describe('ChatLog', () => {
         expect(parseLog(await readFile(path, 'utf8')).map((line) => line.seq)).toEqual([1]);
     });
 
+    test('a line appended after a torn tail is read back, and so is every line after it', async () => {
+        const first = new ChatLog(path);
+        first.append(delta('a'), 10);
+        first.close();
+        await appendFile(path, '{"seq":2,"at":11,"event":{"type":"del');
+        const lines = parseLog(await readFile(path, 'utf8'));
+        const log = new ChatLog(path, { seq: 1, resetSeq: 0, lines });
+        log.append(delta('b'), 12);
+        log.append(delta('c'), 13);
+        log.close();
+        expect(parseLog(await readFile(path, 'utf8')).map((line) => `${line.seq}:${line.event.type === 'delta' ? line.event.text : ''}`)).toEqual([
+            '1:a',
+            '2:b',
+            '3:c'
+        ]);
+    });
+
     test('answers what came after a seq only while it holds all of it', () => {
         const log = new ChatLog(path, { seq: 4, resetSeq: 0, lines: [] });
         log.append(delta('a'), 1);

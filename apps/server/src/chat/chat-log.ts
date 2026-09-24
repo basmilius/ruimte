@@ -1,4 +1,4 @@
-import { closeSync, mkdirSync, openSync, rmSync, writeSync } from 'node:fs';
+import { closeSync, fstatSync, mkdirSync, openSync, readSync, rmSync, writeSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { ChatEventSchema, type ChatEvent } from '@ruimte/contracts';
 import { z } from 'zod';
@@ -161,8 +161,18 @@ export class ChatLog {
         }
     }
 
+    /* A torn last line from a crash gets its newline first, so the next line does not run into it and get lost with it. */
     private open(path: string): number {
         mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-        return openSync(path, 'a', 0o600);
+        const fd = openSync(path, 'a+', 0o600);
+        const { size } = fstatSync(fd);
+        if (size > 0) {
+            const last = Buffer.alloc(1);
+            readSync(fd, last, 0, 1, size - 1);
+            if (last[0] !== 0x0a) {
+                writeSync(fd, '\n');
+            }
+        }
+        return fd;
     }
 }
