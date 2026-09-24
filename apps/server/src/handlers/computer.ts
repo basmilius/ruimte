@@ -20,4 +20,8 @@ export const registerComputerHandlers = (dispatcher: Dispatcher, computer: Compu
     dispatcher.register('computer.approvals', () => ({ approvals: computer.pendingApprovals() }));
 
     dispatcher.register('computer.answer', async (payload) => ({ accepted: await computer.answer(payload.requestId, payload.choice) }));
+
+    dispatcher.register('computer.grants', () => computer.grants());
+
+    dispatcher.register('computer.revoke', async (payload) => ({ removed: await computer.revoke(payload.bundleId, payload.kind, payload.nodeId) }));
 };

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { AgentStatus, ComputerApproval, ComputerApprovalChoice } from '@ruimte/contracts';
+import type { AgentStatus, ComputerApproval, ComputerApprovalChoice, ComputerThisTimeGrant } from '@ruimte/contracts';
 
 /*
  * How long a verb holds its call while the card is up. Codex ends a shell command after 10 s unless
@@ -63,6 +63,8 @@ export interface ComputerApprovalsOptions {
     /* The run a chat or terminal is on now, or null when it runs no more. */
     runOf: (callerId: string) => string | null;
     publish: (approvals: ComputerApproval[]) => void;
+    /* A grant for always or for this time came or went; `thisTimeGrants` has the list after it. */
+    grantsChanged?: () => void;
     now?: () => number;
     timers?: Timers;
     waitMs?: number;
@@ -85,12 +87,13 @@ export class ComputerApprovals {
     private readonly grants: GrantBook;
     private readonly runOf: (callerId: string) => string | null;
     private readonly publishList: (approvals: ComputerApproval[]) => void;
+    private readonly grantsChanged: () => void;
     private readonly now: () => number;
     private readonly timers: Timers;
     private readonly waitMs: number;
     private readonly cardMs: number;
     private readonly pending = new Map<string, Pending>();
-    private readonly thisTime = new Map<string, { run: string; bundles: Set<string> }>();
+    private readonly thisTime = new Map<string, { run: string; apps: Map<string, ComputerThisTimeGrant> }>();
     private readonly declined = new Map<string, string>();
     private readonly statuses = new Map<string, AgentStatus>();
 
@@ -98,6 +101,7 @@ export class ComputerApprovals {
         this.grants = options.grants;
         this.runOf = options.runOf;
         this.publishList = options.publish;
+        this.grantsChanged = options.grantsChanged ?? (() => undefined);
         this.now = options.now ?? Date.now;
         this.timers = options.timers ?? realTimers;
         this.waitMs = options.waitMs ?? APPROVAL_WAIT_MS;
@@ -110,7 +114,7 @@ export class ComputerApprovals {
             return true;
         }
         const granted = this.thisTime.get(callerId);
-        return granted !== undefined && granted.run === run && granted.bundles.has(bundleId);
+        return granted !== undefined && granted.run === run && granted.apps.has(bundleId);
     }
 
     /* How a caller stands with an app without asking anything: what `apps` prints per app. */
@@ -153,15 +157,17 @@ export class ComputerApprovals {
             return false;
         }
         const [key, pending] = entry;
-        const { nodeId, app } = pending.request;
+        const { nodeId, nodeTitle, projectName, app } = pending.request;
         this.close(key);
         if (choice === 'always') {
             await this.grants.allowAlways(app.bundleId, app.name);
+            this.grantsChanged();
         } else if (choice === 'once') {
             const granted = this.thisTime.get(nodeId);
-            const bundles = granted?.run === pending.run ? granted.bundles : new Set<string>();
-            bundles.add(app.bundleId);
-            this.thisTime.set(nodeId, { run: pending.run, bundles });
+            const apps = granted?.run === pending.run ? granted.apps : new Map<string, ComputerThisTimeGrant>();
+            apps.set(app.bundleId, { name: app.name, bundleId: app.bundleId, at: this.now(), nodeId, nodeTitle, projectName });
+            this.thisTime.set(nodeId, { run: pending.run, apps });
+            this.grantsChanged();
         } else if (pending.waiters.size === 0) {
             this.declined.set(key, pending.run);
         }
@@ -183,9 +189,37 @@ export class ComputerApprovals {
         return [...this.pending.values()].map((pending) => pending.request).sort((a, b) => a.createdAt - b.createdAt);
     }
 
+    /* What agents may operate for this time, without the grants of a run that ended since; oldest first. */
+    thisTimeGrants(): ComputerThisTimeGrant[] {
+        return [...this.thisTime]
+            .filter(([nodeId, granted]) => this.runOf(nodeId) === granted.run)
+            .flatMap(([, granted]) => [...granted.apps.values()])
+            .sort((a, b) => a.at - b.at);
+    }
+
+    /* A person takes back one app for this time, from one agent or from every agent that holds it. */
+    revokeThisTime(bundleId: string, nodeId?: string): boolean {
+        let removed = false;
+        for (const [holder, granted] of this.thisTime) {
+            if ((nodeId === undefined || holder === nodeId) && granted.apps.delete(bundleId)) {
+                removed = true;
+                if (granted.apps.size === 0) {
+                    this.thisTime.delete(holder);
+                }
+            }
+        }
+        if (removed) {
+            this.grantsChanged();
+        }
+        return removed;
+    }
+
     /* Every grant for this time, after a person stopped a session: going on asks again. */
     dropThisTime(): void {
-        this.thisTime.clear();
+        if (this.thisTime.size > 0) {
+            this.thisTime.clear();
+            this.grantsChanged();
+        }
     }
 
     /* What a chat or terminal is doing. A turn that ends takes back what was allowed this time; one allowed between turns lasts through the next. */
@@ -193,14 +227,14 @@ export class ComputerApprovals {
         const before = this.statuses.get(nodeId);
         this.statuses.set(nodeId, status);
         if (inTurn(before) && !inTurn(status)) {
-            this.thisTime.delete(nodeId);
+            this.endThisTime(nodeId);
         }
     }
 
     /* A chat's turn settled, however it went. */
     turnEnded(nodeId: string): void {
         this.agentStatus(nodeId, 'idle');
-        this.thisTime.delete(nodeId);
+        this.endThisTime(nodeId);
     }
 
     /* The agent of a chat or terminal is gone: its cards go at once, instead of when they would have expired. */
@@ -215,7 +249,7 @@ export class ComputerApprovals {
         for (const key of [...this.declined.keys()].filter((candidate) => candidate.startsWith(`${nodeId}\n`))) {
             this.declined.delete(key);
         }
-        this.thisTime.delete(nodeId);
+        this.endThisTime(nodeId);
         this.statuses.delete(nodeId);
         this.publish();
     }
@@ -230,6 +264,12 @@ export class ComputerApprovals {
             waiter('declined');
         }
         this.publish();
+    }
+
+    private endThisTime(nodeId: string): void {
+        if (this.thisTime.delete(nodeId)) {
+            this.grantsChanged();
+        }
     }
 
     private raise(key: string, ask: ApprovalAsk): Pending {

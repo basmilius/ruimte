@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentStatus } from '@ruimte/contracts';
+import type { AgentStatus, ComputerAppGrants } from '@ruimte/contracts';
 import { mkdir, mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -361,6 +361,75 @@ describe('a terminal', () => {
         const { computer } = await computerSetup();
         await computer.apps('chat-1');
         expect(await codeOf(computer.operate('chat-1', 'open', SHELL_APP.bundleId!, {}))).toBe('terminal');
+    });
+});
+
+describe('taking a grant back', () => {
+    const grantEvents = (computer: ComputerSetup['computer']): ComputerAppGrants[] => {
+        const events: ComputerAppGrants[] = [];
+        computer.subscribe('client-1', (event) => {
+            if (event.event === 'computer.grants') {
+                events.push(event.payload);
+            }
+        });
+        return events;
+    };
+
+    test('"always" is listed and taken back, and every client hears each change', async () => {
+        const setup = await computerSetup();
+        const { computer, timers } = setup;
+        const events = grantEvents(computer);
+        const call = computer.operate('chat-1', 'state', 'TextEdit', {});
+        await until(() => computer.pendingApprovals().length === 1);
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'always');
+        await call;
+        const always = [{ bundleId: TEXT_EDIT.bundleId!, name: 'TextEdit', at: timers.now }];
+        expect(computer.grants()).toEqual({ always, terminals: [], thisTime: [] });
+        expect(events.at(-1)?.always).toEqual(always);
+
+        expect(await computer.revoke(TEXT_EDIT.bundleId!, 'always')).toBe(true);
+        expect(events.at(-1)?.always).toEqual([]);
+        const heard = events.length;
+        expect(await computer.revoke(TEXT_EDIT.bundleId!, 'always')).toBe(false);
+        expect(events).toHaveLength(heard);
+        expect(await asksAgain(setup, 'term-1')).toBe(true);
+    });
+
+    test('an app that is no terminal is asked about again, until it runs a shell again', async () => {
+        const { computer, helper } = await computerSetup();
+        const events = grantEvents(computer);
+        expect(await codeOf(computer.operate('chat-1', 'state', 'Shells', {}))).toBe('terminal');
+        expect(events.at(-1)?.terminals.map((entry) => entry.bundleId)).toEqual([SHELL_APP.bundleId!]);
+
+        expect(await computer.revoke(SHELL_APP.bundleId!, 'terminal')).toBe(true);
+        expect(events.at(-1)?.terminals).toEqual([]);
+        helper.apps = [TEXT_EDIT, { ...SHELL_APP, pid: 900 }];
+        expect((await computer.apps('chat-1')).apps.find(({ app }) => app.name === 'Shells')?.access).toBe('ask');
+        helper.apps = [TEXT_EDIT, SHELL_APP];
+        expect((await computer.apps('chat-1')).apps.find(({ app }) => app.name === 'Shells')?.access).toBe('terminal');
+        expect(computer.grants().terminals).toHaveLength(1);
+    });
+
+    test('"this time" is listed with its node, taken from that agent alone, and gone with the turn', async () => {
+        const setup = await computerSetup();
+        const { computer, timers } = setup;
+        const events = grantEvents(computer);
+        computer.observe(chatInfo('chat-1', 'running'));
+        await allowOnce(computer, 'chat-1');
+        expect(computer.grants().thisTime).toEqual([
+            { bundleId: TEXT_EDIT.bundleId!, name: 'TextEdit', at: timers.now, nodeId: 'chat-1', nodeTitle: 'Node chat-1', projectName: 'Ruimte' }
+        ]);
+        expect(events.at(-1)?.thisTime).toHaveLength(1);
+
+        expect(await computer.revoke(TEXT_EDIT.bundleId!, 'thisTime', 'term-1')).toBe(false);
+        expect(await computer.revoke(TEXT_EDIT.bundleId!, 'thisTime', 'chat-1')).toBe(true);
+        expect(events.at(-1)?.thisTime).toEqual([]);
+        expect(await asksAgain(setup, 'chat-1')).toBe(true);
+
+        await allowOnce(computer, 'chat-1');
+        expect(events.at(-1)?.thisTime).toHaveLength(1);
+        computer.observe(turnEnded('chat-1', 'done'));
+        expect(events.at(-1)?.thisTime).toEqual([]);
     });
 });
 

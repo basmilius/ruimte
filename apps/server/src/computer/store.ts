@@ -1,5 +1,6 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { ComputerAppGrants } from '@ruimte/contracts';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import { helperDirectory } from './helper.ts';
@@ -82,6 +83,11 @@ export class ComputerUseStore {
         await this.write(this.grantsPath, this.grants);
     }
 
+    /* A person takes "always" back: agents are asked again for that app. False when it was not allowed. */
+    revokeAlways(bundleId: string): Promise<boolean> {
+        return this.drop('always', bundleId);
+    }
+
     knownTerminal(bundleId: string): boolean {
         return this.grants.terminals.some((entry) => entry.bundleId === bundleId);
     }
@@ -92,6 +98,26 @@ export class ComputerUseStore {
         }
         this.grants = { ...this.grants, terminals: [...this.grants.terminals, { bundleId, name, at: this.now() }] };
         await this.write(this.grantsPath, this.grants);
+    }
+
+    /* A person says the app is no terminal. False when it was not remembered as one. */
+    forgetTerminal(bundleId: string): Promise<boolean> {
+        return this.drop('terminals', bundleId);
+    }
+
+    /* The apps allowed for always and those remembered as terminals, oldest first. */
+    lasting(): Pick<ComputerAppGrants, 'always' | 'terminals'> {
+        return { always: [...this.grants.always], terminals: [...this.grants.terminals] };
+    }
+
+    private async drop(list: keyof Grants, bundleId: string): Promise<boolean> {
+        const kept = this.grants[list].filter((entry) => entry.bundleId !== bundleId);
+        if (kept.length === this.grants[list].length) {
+            return false;
+        }
+        this.grants = { ...this.grants, [list]: kept };
+        await this.write(this.grantsPath, this.grants);
+        return true;
     }
 
     private get settingsPath(): string {

@@ -37,4 +37,23 @@ describe('computer handlers', () => {
         expect(frames.at(-1)).toMatchObject({ ok: true, result: {} });
         expect(JSON.parse(await readFile(join(home, 'computer-use', 'overlay.json'), 'utf8')).pause).toBe('Pauzeren');
     });
+
+    test('lists the grants and takes one back', async () => {
+        const { computer } = await computerSetup();
+        const dispatcher = new Dispatcher();
+        registerComputerHandlers(dispatcher, computer);
+        const frames: ServerFrame[] = [];
+        const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
+        expect(await computer.operate('chat-1', 'state', 'Shells', {}).catch(() => 'refused')).toBe('refused');
+
+        await dispatcher.handle(client, request('computer.grants'));
+        expect(frames.at(-1)).toMatchObject({ ok: true, result: { always: [], terminals: [{ name: 'Shells' }], thisTime: [] } });
+
+        await dispatcher.handle(client, request('computer.revoke', { bundleId: 'com.example.shells', kind: 'terminal' }));
+        expect(frames.at(-1)).toMatchObject({ ok: true, result: { removed: true } });
+        await dispatcher.handle(client, request('computer.revoke', { bundleId: 'com.example.shells', kind: 'terminal' }));
+        expect(frames.at(-1)).toMatchObject({ ok: true, result: { removed: false } });
+        await dispatcher.handle(client, request('computer.revoke', { bundleId: 'com.example.shells', kind: 'forever' }));
+        expect(frames.at(-1)).toMatchObject({ ok: false });
+    });
 });

@@ -29961,6 +29961,148 @@
     "type": "object",
     "properties": {}
   },
+  "request.computer.grants.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.computer.grants.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "always": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "bundleId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "at": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "name",
+            "bundleId",
+            "at"
+          ]
+        }
+      },
+      "terminals": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "bundleId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "at": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "name",
+            "bundleId",
+            "at"
+          ]
+        }
+      },
+      "thisTime": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "bundleId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "at": {
+              "type": "number"
+            },
+            "nodeId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "nodeTitle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "projectName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "bundleId",
+            "at",
+            "nodeId",
+            "nodeTitle",
+            "projectName"
+          ]
+        }
+      }
+    },
+    "required": [
+      "always",
+      "terminals",
+      "thisTime"
+    ]
+  },
+  "request.computer.revoke.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "bundleId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "always",
+          "terminal",
+          "thisTime"
+        ]
+      },
+      "nodeId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "bundleId",
+      "kind"
+    ]
+  },
+  "request.computer.revoke.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "removed": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "removed"
+    ]
+  },
   "request.endpoint.info.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -39954,6 +40096,105 @@
     },
     "required": [
       "approvals"
+    ]
+  },
+  "event.computer.grants": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "always": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "bundleId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "at": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "name",
+            "bundleId",
+            "at"
+          ]
+        }
+      },
+      "terminals": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "bundleId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "at": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "name",
+            "bundleId",
+            "at"
+          ]
+        }
+      },
+      "thisTime": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "bundleId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "at": {
+              "type": "number"
+            },
+            "nodeId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "nodeTitle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "projectName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "bundleId",
+            "at",
+            "nodeId",
+            "nodeTitle",
+            "projectName"
+          ]
+        }
+      }
+    },
+    "required": [
+      "always",
+      "terminals",
+      "thisTime"
     ]
   },
   "event.task.changed": {

@@ -46,6 +46,7 @@ const PHONE: ClientAccess = { reachability: 'lan', sessionId: 'paired-phone' };
 /* A request a person's window sends for each thing only a person decides. */
 const REFUSED: WireRequest[] = [
     { type: 'computer.answer', payload: { requestId: 'card-1', choice: 'always' } },
+    { type: 'computer.revoke', payload: { bundleId: 'com.example.shells', kind: 'terminal' } },
     { type: 'chat.approve', payload: { chatId: 'chat-2', requestId: 'r1', decision: 'allow-always' } },
     { type: 'chat.approve', payload: { chatId: 'chat-1', requestId: 'plan', decision: 'allow' } },
     { type: 'chat.answer', payload: { chatId: 'chat-1', requestId: 'q1', answers: { a: 'yes' } } },
@@ -94,6 +95,7 @@ const ALLOWED: WireRequest[] = [
     { type: 'git.action', payload: { cwd: '/repo', actionId: 'a6', kind: 'pull' } },
     { type: 'git.operation', payload: { cwd: '/repo', actionId: 'a7', action: 'abort' } },
     { type: 'computer.control', payload: { action: 'pause' } },
+    { type: 'computer.grants', payload: {} },
     saved([terminalView('term-1', 'bun dev'), terminalView('term-2')], ['term-1']),
     saved([terminalView('term-1', 'bun dev')]),
     saved([terminalView('term-1')])

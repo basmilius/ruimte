@@ -92,7 +92,7 @@ export const ComputerApprovalsSchema = z.object({
 });
 export type ComputerApprovals = z.infer<typeof ComputerApprovalsSchema>;
 
-/* `once` holds until the agent's turn ends, or the person stops it; `always` holds on this machine until a person takes it back. */
+/* `once` holds until the agent's turn ends, or the person stops it; `always` holds on this machine until a person takes it back (`computer.revoke`). */
 export const ComputerApprovalChoiceSchema = z.enum(['once', 'always', 'deny']);
 export type ComputerApprovalChoice = z.infer<typeof ComputerApprovalChoiceSchema>;
 
@@ -107,3 +107,49 @@ export const ComputerAnswerResultSchema = z.object({
     accepted: z.boolean()
 });
 export type ComputerAnswerResult = z.infer<typeof ComputerAnswerResultSchema>;
+
+/* An app as a person let it in, or as the machine first saw it running shells, and when. */
+export const ComputerAppEntrySchema = z.object({
+    name: z.string(),
+    bundleId: z.string().min(1),
+    at: z.number()
+});
+export type ComputerAppEntry = z.infer<typeof ComputerAppEntrySchema>;
+
+/* An app one agent may operate until its turn ends, named after the card that let it in. */
+export const ComputerThisTimeGrantSchema = ComputerAppEntrySchema.extend({
+    nodeId: z.string().min(1),
+    nodeTitle: z.string().nullable(),
+    projectName: z.string().nullable()
+});
+export type ComputerThisTimeGrant = z.infer<typeof ComputerThisTimeGrantSchema>;
+
+/*
+ * What stands on this machine until a person takes it back: the apps every agent may operate without
+ * asking, the apps refused as terminals whatever was granted, and what agents hold for this time.
+ * Oldest first. Sent whole to every client whenever one of the three changes.
+ */
+export const ComputerAppGrantsSchema = z.object({
+    always: z.array(ComputerAppEntrySchema),
+    terminals: z.array(ComputerAppEntrySchema),
+    thisTime: z.array(ComputerThisTimeGrantSchema)
+});
+export type ComputerAppGrants = z.infer<typeof ComputerAppGrantsSchema>;
+
+/* `terminal` forgets the app was seen running shells; one that runs a shell again is remembered again. */
+export const ComputerRevokeKindSchema = z.enum(['always', 'terminal', 'thisTime']);
+export type ComputerRevokeKind = z.infer<typeof ComputerRevokeKindSchema>;
+
+export const ComputerRevokePayloadSchema = z.object({
+    bundleId: z.string().min(1),
+    kind: ComputerRevokeKindSchema,
+    // Only for `thisTime`: the chat or terminal to take it from; absent takes it from every agent that holds it.
+    nodeId: z.string().min(1).optional()
+});
+export type ComputerRevokePayload = z.infer<typeof ComputerRevokePayloadSchema>;
+
+// False when there was nothing to take back: another client was first, or the turn ended.
+export const ComputerRevokeResultSchema = z.object({
+    removed: z.boolean()
+});
+export type ComputerRevokeResult = z.infer<typeof ComputerRevokeResultSchema>;

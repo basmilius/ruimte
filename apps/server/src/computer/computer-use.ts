@@ -1,7 +1,15 @@
 import { mkdir, readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
-import type { ComputerApproval, ComputerApprovalChoice, ComputerControlAction, ComputerGrant, ComputerUseStatus } from '@ruimte/contracts';
+import type {
+    ComputerAppGrants,
+    ComputerApproval,
+    ComputerApprovalChoice,
+    ComputerControlAction,
+    ComputerGrant,
+    ComputerRevokeKind,
+    ComputerUseStatus
+} from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { CodedError } from '../coded-error.ts';
 import { errorText } from '../error-text.ts';
@@ -209,6 +217,7 @@ export class ComputerUse {
     private clearing: Promise<void> = Promise.resolve();
     private cancelPoll: (() => void) | null = null;
     private current: ComputerUseStatus;
+    private publishedGrants = '';
     // Whether an action of this session went to Ruimte, and since when its actions go elsewhere; both reset with the session.
     private ruimteTargeted = false;
     private awaySince: number | null = null;
@@ -242,6 +251,7 @@ export class ComputerUse {
                 this.sinks.emit({ event: 'computer.approvals', payload: { approvals } });
                 this.presence.approvals(approvals);
             },
+            grantsChanged: () => this.publishGrants(),
             ...(options.now ? { now: options.now } : {}),
             ...(options.timers ? { timers: options.timers } : {}),
             ...(options.waitMs !== undefined ? { waitMs: options.waitMs } : {})
@@ -313,6 +323,22 @@ export class ComputerUse {
 
     answer(requestId: string, choice: ComputerApprovalChoice): Promise<boolean> {
         return this.approvals.answer(requestId, choice);
+    }
+
+    grants(): ComputerAppGrants {
+        return { ...this.store.lasting(), thisTime: this.approvals.thisTimeGrants() };
+    }
+
+    /* A person takes a grant back. The next call of an agent in that app asks again, or is looked at for shells again. */
+    async revoke(bundleId: string, kind: ComputerRevokeKind, nodeId?: string): Promise<boolean> {
+        const removed =
+            kind === 'always'
+                ? await this.store.revokeAlways(bundleId)
+                : kind === 'terminal'
+                  ? await this.store.forgetTerminal(bundleId)
+                  : this.approvals.revokeThisTime(bundleId, nodeId);
+        this.publishGrants();
+        return removed;
     }
 
     /* What the chats and terminals are doing: for the cursor of the agent that holds the session, and for how long "this time" lasts. */
@@ -564,6 +590,7 @@ export class ComputerUse {
             return false;
         }
         await this.store.rememberTerminal(bundleId, name);
+        this.publishGrants();
         return true;
     }
 
@@ -769,6 +796,16 @@ export class ComputerUse {
         }
         this.pollWhileSession();
         return this.current;
+    }
+
+    /* Tells every client the list, once per change, whichever path changed it. */
+    private publishGrants(): void {
+        const grants = this.grants();
+        const text = JSON.stringify(grants);
+        if (text !== this.publishedGrants) {
+            this.publishedGrants = text;
+            this.sinks.emit({ event: 'computer.grants', payload: grants });
+        }
     }
 
     private pollWhileSession(): void {
