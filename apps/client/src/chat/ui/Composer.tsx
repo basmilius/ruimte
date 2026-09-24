@@ -51,7 +51,7 @@ import { chipDecorations } from '@/chat/ui/composer/chips';
 import { enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirection, tabSpaces } from '@/chat/ui/composer/keys';
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
 import { PromptComposer } from '@/chat/ui/PromptComposer';
-import { QuoteThreadContext, selectedAnswerQuote } from '@/chat/ui/quote-selection';
+import { QuoteTakerContext } from '@/chat/ui/quote-selection';
 import { ResumeCompactionDock } from '@/chat/ui/ResumeCompactionDock';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { StashPicker } from '@/chat/ui/Pickers';
@@ -159,11 +159,8 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const [modelPickerOpen, setModelPickerOpen] = useState(false);
     const [confirmClear, setConfirmClear] = useState(false);
     const [takingBack, setTakingBack] = useState<string | null>(null);
-    // A quote nobody typed under yet; the draft holds it from the first keystroke on.
-    const [liveQuote, setLiveQuote] = useState<string | null>(null);
     const endpointId = useEndpointId();
-    const thread = useContext(QuoteThreadContext);
-    const rootRef = useRef<HTMLDivElement>(null);
+    const registerQuoteTaker = useContext(QuoteTakerContext);
     const inputRef = useRef<ComposerInputHandle>(null);
     // Taking a queued message back waits on the machine, and what was typed meanwhile is what it merges with.
     const draftRef = useRef(draft);
@@ -200,7 +197,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const busy = info.activeTurnId !== null;
     const queue = info.queue ?? [];
     const text = draft.text;
-    const quote = draft.quote !== '' ? draft.quote : (liveQuote ?? '');
+    const quote = draft.quote;
     // The CLI announces its session on the first message, so anything before that is still a blank chat.
     const started = info.agentSessionId !== null || info.usage.turns > 0;
     /*
@@ -234,31 +231,14 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
         [chatId]
     );
 
-    /*
-     * The quote follows the selection in an answer until the person types, and from then on only
-     * another selection replaces it. Clicking into this composer to write about it moves the
-     * selection here, which is no reason to drop it.
-     */
-    useEffect(() => {
-        if (thread === null) {
-            return;
-        }
-        const follow = (): void => {
-            const selection = document.getSelection();
-            const anchor = selection?.anchorNode ?? null;
-            if (anchor !== null && rootRef.current?.contains(anchor)) {
-                return;
-            }
-            const selected = selectedAnswerQuote(selection, thread.current);
-            if (draftRef.current.quote === '') {
-                setLiveQuote(selected);
-            } else if (selected !== null) {
+    useEffect(
+        () =>
+            registerQuoteTaker?.((selected) => {
                 setDraft((current) => ({ ...current, quote: selected }));
-            }
-        };
-        document.addEventListener('selectionchange', follow);
-        return () => document.removeEventListener('selectionchange', follow);
-    }, [thread]);
+                inputRef.current?.focus();
+            }),
+        [registerQuoteTaker]
+    );
 
     useEffect(() => {
         if (!notice) {
@@ -370,12 +350,10 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
 
     const clearDraft = (): void => {
         setDraft(EMPTY_DRAFT);
-        setLiveQuote(null);
     };
 
     const removeQuote = (): void => {
         setDraft((current) => ({ ...current, quote: '' }));
-        setLiveQuote(null);
         inputRef.current?.focus();
     };
 
@@ -652,7 +630,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             }
             return;
         }
-        if (stashDraft({ ...draft, quote })) {
+        if (stashDraft(draft)) {
             clearDraft();
             setMention(null);
             setSkillQuery(null);
@@ -859,7 +837,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const attachable = capabilities?.attachments !== false;
 
     return (
-        <div ref={rootRef} className="chat-composer-content pointer-events-none relative z-10 w-full">
+        <div className="chat-composer-content pointer-events-none relative z-10 w-full">
             {/* Only while there is something below the fold. It sits over the composer rather than
                 in the thread, because the composer is the one thing whose height it always clears. */}
             {!atEnd && (
@@ -1109,10 +1087,6 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                         extensions={editorExtensions}
                         onChange={(value, selection, state) => {
                             setText(value);
-                            if (liveQuote !== null) {
-                                setDraft((current) => ({ ...current, quote: liveQuote }));
-                                setLiveQuote(null);
-                            }
                             setMenuIndex(0);
                             trackTriggers(value, selection, state);
                             if (historyIndex !== null && value !== history[historyIndex]?.text) {

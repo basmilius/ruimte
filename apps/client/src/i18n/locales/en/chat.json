@@ -240,6 +240,7 @@
       "sendNow": "Send now"
     },
     "quote": {
+      "add": "Quote",
       "remove": "Remove quote"
     },
     "removeAttachment": "Remove {{name}}",

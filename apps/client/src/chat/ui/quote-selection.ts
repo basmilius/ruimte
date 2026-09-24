@@ -1,11 +1,13 @@
-import { createContext, type RefObject } from 'react';
+import { createContext } from 'react';
 import { quoteOf } from '@/chat/quote';
 
 /* The text of an answer (`rows/MessageRows.tsx`), the only part of a thread a selection quotes from. */
 const ANSWER = '[data-quote-answer]';
 
-/* The thread whose answers the composer below it quotes. A composer outside a thread quotes nothing. */
-export const QuoteThreadContext = createContext<RefObject<HTMLElement | null> | null>(null);
+export type QuoteTaker = (quote: string) => void;
+
+/* Registers the composer below a thread as the one its quote button hands a quote to, until the returned call. */
+export const QuoteTakerContext = createContext<((take: QuoteTaker) => () => void) | null>(null);
 
 const answerAt = (node: Node): Element | null => (node instanceof Element ? node : node.parentElement)?.closest(ANSWER) ?? null;
 

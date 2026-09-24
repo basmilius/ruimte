@@ -240,6 +240,7 @@
       "sendNow": "Nu versturen"
     },
     "quote": {
+      "add": "Citeren",
       "remove": "Citaat verwijderen"
     },
     "removeAttachment": "{{name}} verwijderen",

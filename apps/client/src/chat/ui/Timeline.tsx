@@ -28,7 +28,8 @@ import { MessageActions } from '@/chat/ui/MessageActions';
 import { Scrubber, type CardChat } from '@/chat/ui/Scrubber';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { FOLLOW_THRESHOLD_PX, rowRhythm } from '@/chat/ui/rows/row-rhythm';
-import { QuoteThreadContext } from '@/chat/ui/quote-selection';
+import { QuoteButton } from '@/chat/ui/QuoteButton';
+import { QuoteTakerContext, type QuoteTaker } from '@/chat/ui/quote-selection';
 import { useChatFind } from '@/chat/ui/use-chat-find';
 import { useToggleSet } from '@/chat/ui/useToggleSet';
 import { Row } from '@/chat/ui/rows/Rows';
@@ -116,6 +117,16 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     const fullItems = () => useChats.getState().byKey[endpointKey(endpointId, chatId)]?.items;
     const scrollRef = useRef<HTMLDivElement>(null);
     const threadRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const quoteTakerRef = useRef<QuoteTaker | null>(null);
+    const registerQuoteTaker = useCallback((take: QuoteTaker) => {
+        quoteTakerRef.current = take;
+        return () => {
+            if (quoteTakerRef.current === take) {
+                quoteTakerRef.current = null;
+            }
+        };
+    }, []);
     const followRef = useRef(true);
     const stopFollowing = useCallback(() => {
         followRef.current = false;
@@ -392,7 +403,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                             setTimelineAtEnd(chatId, followRef.current);
                         }}
                     >
-                        <div className="flex min-h-full flex-col">
+                        <div ref={contentRef} className="relative flex min-h-full flex-col">
                             <ContextMenu.Trigger
                                 ref={threadRef}
                                 className="chat-thread flex grow flex-col px-4 pt-4"
@@ -442,12 +453,13 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                     </div>
                                 )}
                             </ContextMenu.Trigger>
+                            <QuoteButton thread={threadRef} frame={contentRef} taker={quoteTakerRef} />
                             <div
                                 ref={composerRef}
                                 className={clsx('relative z-10 shrink-0', composer && 'px-3 pb-3 pt-3')}
                                 style={{ position: stickyComposer ? 'sticky' : 'relative', bottom: 0 }}
                             >
-                                <QuoteThreadContext.Provider value={threadRef}>{composer}</QuoteThreadContext.Provider>
+                                <QuoteTakerContext.Provider value={registerQuoteTaker}>{composer}</QuoteTakerContext.Provider>
                             </div>
                         </div>
                     </div>
