@@ -20,6 +20,11 @@ use uuid::Uuid;
 type XpcObject = *mut c_void;
 type DispatchQueue = *mut c_void;
 
+#[repr(C)]
+struct XpcType {
+    _opaque: [u8; 0],
+}
+
 const REMOTE_PAIRING_SERVICE: &CStr = c"com.apple.CoreDevice.remotepairingd";
 const REPLY_TIMEOUT: Duration = Duration::from_secs(10);
 const ALREADY_PAIRED: i64 = 1002;
@@ -62,6 +67,10 @@ unsafe extern "C" {
 
     fn xpc_retain(object: XpcObject) -> XpcObject;
     fn xpc_release(object: XpcObject);
+    fn xpc_get_type(object: XpcObject) -> *const XpcType;
+
+    #[link_name = "_xpc_type_dictionary"]
+    static XPC_TYPE_DICTIONARY: XpcType;
 }
 
 struct OwnedXpc(XpcObject);
@@ -80,10 +89,18 @@ impl OwnedXpc {
             .context("libxpc returned a null object")
     }
 
+    /// Takes a reference of its own on an object libxpc only lends to a handler.
+    unsafe fn retain(object: XpcObject) -> Result<Self> {
+        unsafe { Self::from_owned(xpc_retain(object)) }
+    }
+
     fn as_ptr(&self) -> XpcObject {
         self.0
     }
 }
+
+// libxpc objects are reference counted atomically and may be released on any thread.
+unsafe impl Send for OwnedXpc {}
 
 impl Drop for OwnedXpc {
     fn drop(&mut self) {
@@ -249,9 +266,10 @@ fn browse_for_endpoint(
         .context("invalid device UDID")?;
     let (sender, receiver) = mpsc::sync_channel(1);
     let event_handler = RcBlock::new(move |event: XpcObject| {
-        if let Some(endpoint) = unsafe { device_endpoint(event, wanted_udid.as_deref()) } {
-            let endpoint = unsafe { xpc_retain(endpoint) };
-            let _ = sender.try_send(endpoint as usize);
+        if let Some(endpoint) = unsafe { device_endpoint(event, wanted_udid.as_deref()) }
+            && let Ok(endpoint) = unsafe { OwnedXpc::retain(endpoint) }
+        {
+            let _ = sender.try_send(endpoint);
         }
     });
     unsafe {
@@ -267,32 +285,19 @@ fn browse_for_endpoint(
         xpc_connection_send_message_with_reply(connection, message.as_ptr(), queue, &reply_handler);
     }
 
-    let endpoint = receiver
+    receiver
         .recv_timeout(REPLY_TIMEOUT)
-        .context("remotepairingd reported no matching wireless device")?;
-    unsafe { OwnedXpc::from_owned(endpoint as XpcObject) }
+        .context("remotepairingd reported no matching wireless device")
 }
 
 unsafe fn device_endpoint(event: XpcObject, wanted_udid: Option<&CStr>) -> Option<XpcObject> {
-    if event.is_null() {
+    if !is_dictionary(event) {
         return None;
     }
-    let value = unsafe { xpc_dictionary_get_value(event, c"value".as_ptr()) };
-    if value.is_null() {
-        return None;
-    }
-    let found = unsafe { xpc_dictionary_get_value(value, c"deviceFound".as_ptr()) };
-    if found.is_null() {
-        return None;
-    }
-    let zero = unsafe { xpc_dictionary_get_value(found, c"_0".as_ptr()) };
-    if zero.is_null() {
-        return None;
-    }
-    let info = unsafe { xpc_dictionary_get_value(zero, c"deviceInfo".as_ptr()) };
-    if info.is_null() {
-        return None;
-    }
+    let value = unsafe { child_dictionary(event, c"value") }?;
+    let found = unsafe { child_dictionary(value, c"deviceFound") }?;
+    let zero = unsafe { child_dictionary(found, c"_0") }?;
+    let info = unsafe { child_dictionary(zero, c"deviceInfo") }?;
     if let Some(wanted) = wanted_udid {
         let actual = unsafe { xpc_dictionary_get_string(info, c"udid".as_ptr()) };
         if actual.is_null() || unsafe { CStr::from_ptr(actual) } != wanted {
@@ -312,10 +317,9 @@ fn ensure_paired(connection: XpcObject, queue: DispatchQueue) -> Result<()> {
         "RemotePairing.InitiatePairingCommand",
         &body,
     )?;
-    let error = unsafe { xpc_dictionary_get_value(reply.as_ptr(), c"error".as_ptr()) };
-    if error.is_null() {
+    let Some(error) = (unsafe { child_dictionary(reply.as_ptr(), c"error") }) else {
         return Ok(());
-    }
+    };
     let code = unsafe { xpc_dictionary_get_int64(error, c"code".as_ptr()) };
     if code == ALREADY_PAIRED {
         Ok(())
@@ -333,13 +337,12 @@ fn create_assertion(connection: XpcObject, queue: DispatchQueue) -> Result<(Owne
         "RemotePairing.CreateAssertionCommand",
         &body,
     )?;
-    let response = unsafe { xpc_dictionary_get_value(reply.as_ptr(), c"response".as_ptr()) };
-    if response.is_null() {
-        bail!("remotepairingd returned no tunnel assertion");
-    }
+    let response = unsafe { child_dictionary(reply.as_ptr(), c"response") }
+        .context("remotepairingd returned no tunnel assertion")?;
     let identifier = unsafe { xpc_dictionary_get_value(response, c"assertionIdentifier".as_ptr()) };
-    let info = unsafe { xpc_dictionary_get_value(response, c"info".as_ptr()) };
-    let address = unsafe { xpc_dictionary_get_string(info, c"tunnelIPAddress".as_ptr()) };
+    let address = unsafe { child_dictionary(response, c"info") }
+        .map(|info| unsafe { xpc_dictionary_get_string(info, c"tunnelIPAddress".as_ptr()) })
+        .unwrap_or(ptr::null());
     if identifier.is_null() || address.is_null() {
         bail!("remotepairingd returned an incomplete tunnel assertion");
     }
@@ -348,7 +351,7 @@ fn create_assertion(connection: XpcObject, queue: DispatchQueue) -> Result<(Owne
         .context("remotepairingd returned a malformed tunnel address")?
         .parse::<Ipv6Addr>()
         .context("remotepairingd returned an invalid tunnel address")?;
-    let identifier = unsafe { OwnedXpc::from_owned(xpc_retain(identifier)) }?;
+    let identifier = unsafe { OwnedXpc::retain(identifier) }?;
     Ok((identifier, IpAddr::V6(address)))
 }
 
@@ -370,18 +373,36 @@ fn send_message_with_reply(
 ) -> Result<OwnedXpc> {
     let (sender, receiver) = mpsc::sync_channel(1);
     let reply_handler = RcBlock::new(move |reply: XpcObject| {
-        if !reply.is_null() {
-            let reply = unsafe { xpc_retain(reply) };
-            let _ = sender.try_send(reply as usize);
-        }
+        // Anything but a dictionary is an XPC error, such as the connection going away.
+        let reply = is_dictionary(reply)
+            .then(|| unsafe { OwnedXpc::retain(reply) }.ok())
+            .flatten();
+        let _ = sender.try_send(reply);
     });
     unsafe {
         xpc_connection_send_message_with_reply(connection, message.as_ptr(), queue, &reply_handler);
     }
-    let reply = receiver
+    receiver
         .recv_timeout(REPLY_TIMEOUT)
-        .with_context(|| format!("timed out waiting for {request_type}"))?;
-    unsafe { OwnedXpc::from_owned(reply as XpcObject) }
+        .with_context(|| format!("timed out waiting for {request_type}"))?
+        .with_context(|| {
+            format!("remotepairingd dropped the connection before answering {request_type}")
+        })
+}
+
+fn is_dictionary(object: XpcObject) -> bool {
+    !object.is_null()
+        && ptr::eq(
+            unsafe { xpc_get_type(object) },
+            &raw const XPC_TYPE_DICTIONARY,
+        )
+}
+
+/// The value under `key`, only when it is a dictionary itself; a null or differently typed
+/// value reads as absent.
+unsafe fn child_dictionary(dictionary: XpcObject, key: &CStr) -> Option<XpcObject> {
+    let value = unsafe { xpc_dictionary_get_value(dictionary, key.as_ptr()) };
+    is_dictionary(value).then_some(value)
 }
 
 fn request_message(request_type: &str, body: &OwnedXpc) -> Result<OwnedXpc> {
@@ -602,8 +623,30 @@ fn parse_rsd_handshake(data: plist::Value) -> Result<RsdHandshake, IdeviceError>
 
 #[cfg(test)]
 mod tests {
-    use super::parse_nettop_ports;
+    use super::{OwnedXpc, child_dictionary, is_dictionary, parse_nettop_ports};
     use std::net::IpAddr;
+
+    #[test]
+    fn reads_only_dictionaries_as_dictionaries() {
+        let parent = OwnedXpc::new_dictionary().unwrap();
+        let child = OwnedXpc::new_dictionary().unwrap();
+        unsafe {
+            super::xpc_dictionary_set_value(parent.as_ptr(), c"child".as_ptr(), child.as_ptr());
+            super::xpc_dictionary_set_string(parent.as_ptr(), c"text".as_ptr(), c"value".as_ptr());
+        }
+
+        assert!(is_dictionary(parent.as_ptr()));
+        assert!(!is_dictionary(std::ptr::null_mut()));
+        assert_eq!(
+            unsafe { child_dictionary(parent.as_ptr(), c"child") },
+            Some(child.as_ptr())
+        );
+        assert_eq!(unsafe { child_dictionary(parent.as_ptr(), c"text") }, None);
+        assert_eq!(
+            unsafe { child_dictionary(parent.as_ptr(), c"missing") },
+            None
+        );
+    }
 
     #[test]
     fn finds_only_remoted_connections_to_the_tunnel() {
