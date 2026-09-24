@@ -300,7 +300,11 @@ const themeOf = (type: CodeThemeMode, palette: CodePalette): CodeTheme => ({
     bg: palette.background,
     colors: {
         'editor.foreground': palette.colors.foreground,
-        'editor.background': palette.background
+        'editor.background': palette.background,
+        // A diff draws its added, removed and changed lines in these.
+        'gitDecoration.addedResourceForeground': palette.colors.inserted,
+        'gitDecoration.deletedResourceForeground': palette.colors.deleted,
+        'gitDecoration.modifiedResourceForeground': palette.colors.changed
     },
     tokenColors: tokenColors(palette)
 });

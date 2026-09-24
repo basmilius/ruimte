@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { PatchDiff } from '@pierre/diffs/react';
 import type { ChatFileChange } from '@ruimte/contracts';
 import { useTheme } from '@/state/theme';
-import { DIFF_THEME } from '@/chat/ui/diff-theme';
+import { useDiffTheme } from '@/chat/ui/diff-theme';
 
 /*
  * A patch the CLI reported itself (Codex writes unified diffs). The renderer needs a file header
@@ -41,17 +41,18 @@ interface UnifiedDiffProps {
 
 export default function UnifiedDiff({ change, overflow = 'wrap', diffStyle = 'unified' }: UnifiedDiffProps) {
     const resolved = useTheme((t) => t.resolved);
+    const theme = useDiffTheme();
     const patch = useMemo(() => asPatch(change), [change]);
     const options = useMemo(
         () => ({
-            theme: DIFF_THEME,
+            theme,
             themeType: resolved,
             disableFileHeader: true,
             diffStyle,
             overflow,
             hunkSeparators: 'simple' as const
         }),
-        [diffStyle, overflow, resolved]
+        [diffStyle, overflow, theme, resolved]
     );
     if (patch === null) {
         return (
