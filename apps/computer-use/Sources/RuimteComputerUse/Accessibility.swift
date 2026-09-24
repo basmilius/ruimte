@@ -260,6 +260,15 @@ struct HandleTable {
         buckets[CFHash(element)]?.first { CFEqual($0.element, element) }?.index
     }
 
+    /// Keeps what an older table knew and this one did not reach, for a state that read only part of the window.
+    mutating func keep(_ older: HandleTable) {
+        for (index, element) in older.byIndex where byIndex[index] == nil && self.index(of: element) == nil {
+            buckets[CFHash(element), default: []].append((element, index))
+            byIndex[index] = element
+        }
+        nextIndex = max(nextIndex, older.nextIndex)
+    }
+
     /// Indices only grow, so an index from an older state never points at a different element.
     mutating func register(_ element: AXUIElement, previous: HandleTable) -> Int {
         if let existing = index(of: element) {
@@ -296,6 +305,8 @@ struct TreeWalker {
     let previous: HandleTable
 
     private(set) var lines: [String] = []
+    /// The whole text of each line, in the same order.
+    private(set) var elements: [ElementText] = []
     private(set) var handles: HandleTable
     private var visibleRect = CGRect.infinite
     private var visits = 0
@@ -369,6 +380,7 @@ struct TreeWalker {
         if meaningful {
             let index = handles.register(element, previous: previous)
             lines.append(String(repeating: "  ", count: indent) + line(for: info, index: index))
+            elements.append(ElementText(index: index, depth: indent, texts: [info.title, info.value, info.description, info.identifier].compactMap { $0 }))
             childIndent += 1
             childParentLabel = info.label
         }

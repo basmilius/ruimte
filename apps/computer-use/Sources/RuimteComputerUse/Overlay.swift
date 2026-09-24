@@ -173,8 +173,8 @@ final class Overlay {
         operatedFrame = frame
     }
 
-    /// Moves the cursor to the target; the real pointer stays put.
-    func glide(to globalPoint: CGPoint) async throws {
+    /// Moves the cursor to the target, showing `state` on the way; the real pointer stays put.
+    func glide(to globalPoint: CGPoint, showing state: PhantomState = .move) async throws {
         guard let screen else {
             return
         }
@@ -186,7 +186,7 @@ final class Overlay {
             ?? cursorPoint
             ?? (bounds.contains(pointer) ? pointer : CGPoint(x: target.x + 120, y: target.y + 90))
         cursorPoint = target
-        show(ActionLook(state: .move, target: look.target))
+        show(ActionLook(state: state, target: look.target, text: look.text))
         let timing = OverlayStyle.Motion.move
         let motion = LiveMotion(reduceMotion: reduceMotion)
         CATransaction.begin()

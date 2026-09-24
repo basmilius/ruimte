@@ -56,7 +56,11 @@ final class Agent {
     static let defaultMaxElements = 500
     static let defaultMaxText = 100
     static let maxScreenshotWidth: CGFloat = 1280
-    private static let queuedCommands: Set<String> = ["state", "click", "scroll", "type", "key", "set-value", "open", "menu"]
+    /// How much of a window `--find` and `wait` read before they give up on the rest.
+    static let searchLimit = 5000
+    /// Tells a daemon that the handles it remembers came from another run of this app, which numbers from 0 again.
+    static let instance = UUID().uuidString
+    private static let queuedCommands: Set<String> = ["state", "click", "scroll", "type", "key", "set-value", "open", "menu", "read", "drag"]
 
     let home: Home
     let overlay: Overlay
@@ -118,6 +122,11 @@ final class Agent {
             return await enqueue {
                 await self.respond { try await self.perform(request) }
             }
+        case "wait":
+            // Outside the queue, since it only reads and may take two minutes; a pause or a stop still cancels it.
+            return await interruptible {
+                await self.respond { try await self.perform(request) }
+            }
         default:
             return Response.failure("unknown command \"\(request.command)\"")
         }
@@ -164,6 +173,17 @@ final class Agent {
         return result
     }
 
+    private func interruptible(_ work: @escaping @MainActor () async -> Data) async -> Data {
+        let id = UUID()
+        let task = Task { @MainActor in
+            await work()
+        }
+        queued[id] = task
+        let result = await task.value
+        queued[id] = nil
+        return result
+    }
+
     private func perform(_ request: Request) async throws -> [String: Any] {
         try Permissions.requireAccessibility()
         let app: NSRunningApplication
@@ -189,6 +209,12 @@ final class Agent {
                 result = try await setValue(app, request)
             case "menu":
                 result = try await menu(app, request)
+            case "drag":
+                result = try await drag(app, request)
+            case "read":
+                return try await read(app, request)
+            case "wait":
+                return try await wait(app, request)
             default:
                 throw AgentError("unknown command \"\(request.command)\"")
             }
@@ -215,15 +241,38 @@ final class Agent {
         let root = AX.container(of: keyWindow).window ?? keyWindow
         let rootFrame = AX.frame(root) ?? .zero
         let previous = snapshots[pid]?.handles ?? HandleTable()
+        let subtree = try request.within.map { index in
+            guard let snapshot = snapshots[pid] else {
+                throw AgentError("no state for \(Targets.name(app)) yet; run `cu state \(Targets.name(app))` first, then --within one of its elements")
+            }
+            return try snapshot.element(index)
+        }
 
-        var walker = walkTree(appElement, root: root, keyWindow: keyWindow, request: request, previous: previous)
-        if mode == .manual && walker.handles.count < 5 {
+        var walker = walkTree(appElement, root: root, keyWindow: keyWindow, request: request, previous: previous, from: subtree)
+        if subtree == nil && mode == .manual && walker.handles.count < 5 {
             // Some Chromium builds only fill their tree for AXEnhancedUserInterface, which is kept away from native apps.
             AXUIElementSetAttributeValue(appElement, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
             chromium[pid] = .enhanced
             mode = .enhanced
             try await Task.sleep(for: .milliseconds(600))
-            walker = walkTree(appElement, root: root, keyWindow: keyWindow, request: request, previous: previous)
+            walker = walkTree(appElement, root: root, keyWindow: keyWindow, request: request, previous: previous, from: subtree)
+        }
+        var handles = walker.handles
+        if subtree != nil {
+            handles.keep(previous)
+        }
+        var lines = walker.lines
+        var truncation = walker.truncation
+        var matches: Int?
+        if let query = request.find, !query.isEmpty {
+            let kept = TreeQuery.find(query, in: walker.elements)
+            let limit = max(1, request.maxElements ?? Self.defaultMaxElements)
+            matches = walker.elements.filter { $0.contains(query) }.count
+            lines = kept.prefix(limit).map { walker.lines[$0] }
+            truncation = truncation.map { "searched only part of the window: \($0)" }
+            if kept.count > limit {
+                truncation = [truncation, "listed \(limit) of \(kept.count) lines (raise with --max-elements)"].compactMap { $0 }.joined(separator: "; ")
+            }
         }
 
         var notes: [String] = []
@@ -252,7 +301,7 @@ final class Agent {
                 captureProblem = "the last state has no screenshot (\(message))"
             }
         }
-        snapshots[pid] = Snapshot(window: root, handles: walker.handles, capture: capture, captureProblem: captureProblem)
+        snapshots[pid] = Snapshot(window: root, handles: handles, capture: capture, captureProblem: captureProblem)
 
         var window: [String: Any] = [
             "title": VisibleText.clean(AX.string(root, kAXTitleAttribute)) ?? "",
@@ -268,11 +317,18 @@ final class Agent {
             "app": Targets.descriptor(app),
             "window": window,
             "screenshot": screenshot,
-            "elements": walker.handles.count,
-            "tree": walker.lines,
+            "elements": lines.count,
+            "tree": lines,
+            "instance": Self.instance,
         ]
-        if let truncation = walker.truncation {
+        if let truncation {
             result["truncated"] = truncation
+        }
+        if let matches {
+            result["matches"] = matches
+        }
+        if let within = request.within {
+            result["within"] = within
         }
         if app.isHidden {
             result["hidden"] = true
@@ -292,14 +348,20 @@ final class Agent {
         return result
     }
 
-    private func walkTree(_ appElement: AXUIElement, root: AXUIElement, keyWindow: AXUIElement, request: Request, previous: HandleTable) -> TreeWalker {
+    /// Walks the window, its sheet and its open menus, or only the subtree of `from`. A search reads further than it lists.
+    private func walkTree(_ appElement: AXUIElement, root: AXUIElement, keyWindow: AXUIElement, request: Request, previous: HandleTable, from subtree: AXUIElement? = nil) -> TreeWalker {
+        let searching = request.find.map { !$0.isEmpty } ?? false
         var walker = TreeWalker(
             maxDepth: max(1, request.maxDepth ?? Self.defaultMaxDepth),
-            maxElements: max(1, request.maxElements ?? Self.defaultMaxElements),
+            maxElements: searching ? Self.searchLimit : max(1, request.maxElements ?? Self.defaultMaxElements),
             maxText: max(10, request.maxText ?? Self.defaultMaxText),
             previous: previous
         )
         let rootFrame = AX.frame(root) ?? .infinite
+        if let subtree {
+            walker.walk(subtree, visible: rootFrame)
+            return walker
+        }
         walker.walk(root, visible: rootFrame)
         if !CFEqual(root, keyWindow) && walker.handles.index(of: keyWindow) == nil {
             walker.walk(keyWindow, visible: AX.frame(keyWindow) ?? .infinite)
@@ -342,6 +404,17 @@ final class Agent {
         var request = Request(command: "state")
         request.maxElements = 400
         return walkTree(appElement, root: root, keyWindow: keyWindow, request: request, previous: HandleTable()).lines
+    }
+
+    /// The text of every element a person could see in the app now, for a `wait` to test.
+    func probe(_ appElement: AXUIElement) -> [ElementText] {
+        guard let keyWindow = AX.keyWindow(of: appElement) else {
+            return []
+        }
+        let root = AX.container(of: keyWindow).window ?? keyWindow
+        var request = Request(command: "wait")
+        request.maxElements = Self.searchLimit
+        return walkTree(appElement, root: root, keyWindow: keyWindow, request: request, previous: HandleTable()).elements
     }
 
     /// Chromium and Electron build their accessibility tree only once an assistive app asks for it.

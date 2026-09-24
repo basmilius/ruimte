@@ -10,7 +10,9 @@ usage: cu <command> [arguments]
                                         without --no-prompt it asks macOS for what is missing
   apps                                  list running apps with name, bundle id, pid, frontmost
   open <app>                            launch an app, or bring it to the front (and unhide it)
-  state <app>                           accessibility tree of the key window, plus a PNG of it
+  state <app> [--find T] [--within N]   accessibility tree of the key window, plus a PNG of it;
+                                        --find keeps the elements that hold T and what they sit in,
+                                        --within N the subtree of element N
   click <app> --element N [--count 2] [--button right]
   click <app> --x PX --y PX [--count 2] [--button right]
                                         click an element from the last state, or a screenshot pixel
@@ -18,6 +20,12 @@ usage: cu <command> [arguments]
   type <app> <text>                     type text into the focused element
   key <app> <combo> [<combo>...]        press keys: cmd+n, return, escape, tab, shift+tab, up
   set-value <app> --element N <value>   set the AXValue of element N
+  drag <app> (--from N | --from-x PX --from-y PX) (--to N | --to-x PX --to-y PX)
+                                        press, move and let go; the start is hit-tested like a click
+  read <app> --element N                every text of element N whole, with its role and frame
+  wait <app> (--for T | --gone T | --element N --value V) [--timeout S]
+                                        read the app until T appears, T is gone or element N has
+                                        value V, 10 s by default and 110 s at most, then answer with a state
   menu <app>                            list the menu bar with indices
   menu <app> <index | "File > Save">    run a menu item
   presence <state> [--label T] [--step T]
@@ -149,8 +157,33 @@ func makeRequest(_ command: String, _ arguments: Arguments) -> Request {
         request.prompt = !arguments.flags.contains("no-prompt")
     case "apps", "quit", "pause", "resume", "stop":
         break
-    case "state", "open":
+    case "state":
         request.app = requireApp(arguments, command)
+        request.find = arguments.options["find"]
+        request.within = intOption(arguments, "within")
+    case "open":
+        request.app = requireApp(arguments, command)
+    case "drag":
+        request.app = requireApp(arguments, command)
+        request.element = intOption(arguments, "from")
+        request.x = doubleOption(arguments, "from-x")
+        request.y = doubleOption(arguments, "from-y")
+        request.toElement = intOption(arguments, "to")
+        request.toX = doubleOption(arguments, "to-x")
+        request.toY = doubleOption(arguments, "to-y")
+    case "read":
+        request.app = requireApp(arguments, command)
+        guard let element = intOption(arguments, "element") else {
+            fail("`cu read` needs --element N")
+        }
+        request.element = element
+    case "wait":
+        request.app = requireApp(arguments, command)
+        request.text = arguments.options["for"]
+        request.gone = arguments.options["gone"]
+        request.element = intOption(arguments, "element")
+        request.value = arguments.options["value"]
+        request.timeout = doubleOption(arguments, "timeout")
     case "click", "scroll":
         request.app = requireApp(arguments, command)
         request.element = intOption(arguments, "element")

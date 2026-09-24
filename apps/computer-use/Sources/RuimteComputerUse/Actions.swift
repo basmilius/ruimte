@@ -1,6 +1,7 @@
 import AppKit
 import ApplicationServices
 import ComputerUseCore
+import Phantom
 
 extension Agent {
     func snapshot(for app: NSRunningApplication) throws -> Snapshot {
@@ -33,6 +34,10 @@ extension Agent {
         guard let pixelX = request.x, let pixelY = request.y else {
             throw AgentError("pass --element N, or both --x and --y")
         }
+        return try screenPoint(snapshot, pixelX: pixelX, pixelY: pixelY)
+    }
+
+    func screenPoint(_ snapshot: Snapshot, pixelX: Double, pixelY: Double) throws -> CGPoint {
         guard let capture = snapshot.capture else {
             throw AgentError(snapshot.captureProblem ?? "the last state has no screenshot to map --x/--y from")
         }
@@ -141,6 +146,55 @@ extension Agent {
             var answer: [String: Any] = ["method": "wheel", "direction": direction, "pages": pages, "points": distance.rounded(), "target": target]
             if let index {
                 answer["element"] = index
+            }
+            return answer
+        }
+    }
+
+    /// Presses at the start, moves through a few points to the end and lets go there. Only the start is hit-tested:
+    /// the end is wherever the agent drops it, often another element or window.
+    func drag(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
+        let snapshot = try snapshot(for: app)
+        guard (request.element == nil) != (request.x == nil || request.y == nil) else {
+            throw AgentError("drag starts at --from N, or at both --from-x and --from-y, and not both")
+        }
+        guard (request.toElement == nil) != (request.toX == nil || request.toY == nil) else {
+            throw AgentError("drag ends at --to N, or at both --to-x and --to-y, and not both")
+        }
+        var start: CGPoint
+        var grabbed: AXUIElement?
+        if let index = request.element {
+            let element = try snapshot.element(index)
+            start = visibleCenter(of: element, frame: try liveFrame(element, index: index))
+            grabbed = element
+        } else {
+            start = try screenPoint(snapshot, request)
+        }
+        let end: CGPoint
+        if let index = request.toElement {
+            let element = try snapshot.element(index)
+            end = visibleCenter(of: element, frame: try liveFrame(element, index: index))
+        } else if let toX = request.toX, let toY = request.toY {
+            end = try screenPoint(snapshot, pixelX: toX, pixelY: toY)
+        } else {
+            throw AgentError("drag needs where it ends")
+        }
+        let name = grabbed.map { targetName($0, app) } ?? Targets.name(app)
+        let index = request.element
+        return try await act(app, at: start, as: ActionLook(state: .drag, target: name, text: name)) {
+            let hit = try await self.prepareMouse(app, at: start, window: snapshot.window, expecting: grabbed, index: index)
+            let target = AX.summary(hit)
+            let duration = OverlayStyle.Motion.move.duration
+            Task {
+                try? await self.overlay.glide(to: end, showing: .drag)
+            }
+            try await SyntheticInput.drag(from: start, to: end, duration: duration)
+            var answer: [String: Any] = ["method": "mouse", "to": ["x": Double(end.x.rounded()), "y": Double(end.y.rounded())], "target": target]
+            if let index {
+                answer["element"] = index
+            }
+            if let toElement = request.toElement {
+                answer["toElement"] = toElement
             }
             return answer
         }

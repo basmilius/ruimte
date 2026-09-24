@@ -59,6 +59,35 @@ enum SyntheticInput {
         restorePointer(previous)
     }
 
+    /// Presses at `start`, drags through a few points over `duration` seconds and lets go at `end`. The button
+    /// always comes up again, also when the person interrupts halfway, or it would stay down for them.
+    static func drag(from start: CGPoint, to end: CGPoint, duration: Double, steps: Int = 12) async throws {
+        try Task.checkCancellation()
+        let source = self.source
+        let previous = currentPointer()
+        let event = { (type: CGEventType, point: CGPoint) in
+            let made = CGEvent(mouseEventSource: source, mouseType: type, mouseCursorPosition: point, mouseButton: .left)
+            made?.flags = []
+            made?.setIntegerValueField(.mouseEventClickState, value: 1)
+            return made
+        }
+        post(event(.mouseMoved, start))
+        try? await Task.sleep(for: .milliseconds(40))
+        post(event(.leftMouseDown, start))
+        // Many apps start a drag only once the press has lasted a moment.
+        try? await Task.sleep(for: .milliseconds(120))
+        var reached = start
+        for point in DragPath.points(from: start, to: end, steps: steps) where !Task.isCancelled {
+            post(event(.leftMouseDragged, point))
+            reached = point
+            try? await Task.sleep(for: .milliseconds(Int(duration * 1000) / max(1, steps)))
+        }
+        post(event(.leftMouseUp, reached))
+        try? await Task.sleep(for: .milliseconds(80))
+        restorePointer(previous)
+        try Task.checkCancellation()
+    }
+
     /// Scroll wheel events go to the window under the pointer, so the pointer visits the point for the duration.
     /// A positive `deltaY` reveals content further down, a positive `deltaX` content further right.
     static func scroll(at point: CGPoint, deltaX: Double, deltaY: Double) async throws {

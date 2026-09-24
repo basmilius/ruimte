@@ -25,6 +25,18 @@ public struct Request: Codable, Sendable {
     public var path: String?
     /// Wait for the UI to settle after the action and answer with a fresh state.
     public var withState: Bool?
+    /// For `state`: only the elements whose title, value, description or identifier holds this, and what they sit in.
+    public var find: String?
+    /// For `state`: only the subtree of this element from the last state.
+    public var within: Int?
+    /// For `drag`: where it ends, an element from the last state or a pixel of its screenshot.
+    public var toElement: Int?
+    public var toX: Double?
+    public var toY: Double?
+    /// For `wait`: the text that has to leave the tree.
+    public var gone: String?
+    /// For `wait`: how long to wait for the condition, in seconds.
+    public var timeout: Double?
     /// The `presence` state: one of `PhantomState.presenceStates`.
     public var state: String?
     /// Words beside the cursor for a `presence` state, instead of the default for it.

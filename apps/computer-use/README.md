@@ -42,7 +42,9 @@ screenshots/      window captures; one older than an hour goes at the next captu
 
 A connection carries one request. The client writes one JSON object and half-closes, the helper answers with one JSON object and closes. The request is `Request` in `Sources/ComputerUseCore/Wire.swift`. It holds `command`, the fields that command takes, and `secret`, the content of `$RUIMTE_HOME/local.key`. The helper accepts a connection only from a process of the same user. It accepts a request only when `secret` matches that file, which it reads again for every request and compares in constant time. Whoever can read `local.key` can drive the daemon already, so the helper is no weaker than the daemon. The reply is `{"ok": true, "result": {...}}` or `{"ok": false, "error": "...", "code": "..."}`. `code` is there only for a refusal a caller branches on (`paused`, `taken-over`, `stopped`); the message is for people and may change. A request without the secret gets `refused: ...` before the helper looks at anything else in it.
 
-The commands are the ones `cu` sends, listed below. `doctor` also takes `grant` (`accessibility` or `screenRecording`) beside `prompt`: then it asks macOS for that one grant only, which puts the helper in that list of System Settings, and leaves opening the pane to the caller. `cu` has no flag for it. `--state` is `withState`, a menu index or path is `path`, and the key combos of `key` are `combos`.
+The commands are the ones `cu` sends, listed below. `doctor` also takes `grant` (`accessibility` or `screenRecording`) beside `prompt`: then it asks macOS for that one grant only, which puts the helper in that list of System Settings, and leaves opening the pane to the caller. `cu` has no flag for it. `--state` is `withState`, a menu index or path is `path`, and the key combos of `key` are `combos`. `drag` starts at `element` or `x`/`y` and ends at `toElement` or `toX`/`toY`; `wait` takes `text` (`cu wait --for`), `gone`, or `element` with `value`, and `timeout` in seconds.
+
+Every command that acts runs one at a time, in the order it came, so two callers never race for the focus. `wait` is the exception: it only reads and may take two minutes, so it runs beside the queue, and a pause, a take-over or a stop cancels it like a queued command. Every state carries `instance`, a UUID for this run of the helper: handles start over at 0 when it restarts, so a caller that remembers a tree knows it cannot compare the next one with it.
 
 ### The words
 
@@ -93,13 +95,17 @@ cu doctor [--no-prompt]                  check Accessibility and Screen Recordin
 cu apps                                  list running apps with name, bundle id, bundle file name
                                          (bundleName), pid, frontmost
 cu open <app>                            launch an app, or bring it to the front (and unhide it)
-cu state <app>                           accessibility tree of the key window, plus a PNG of it
+cu state <app> [--find T] [--within N]   accessibility tree of the key window, plus a PNG of it
 cu click <app> --element N [--count 2] [--button right]
 cu click <app> --x PX --y PX [--count 2] [--button right]
 cu scroll <app> (--element N | --x PX --y PX) --direction up|down|left|right [--pages N]
 cu type <app> <text>                     type text into the focused element
 cu key <app> <combo> [<combo>...]        press keys: cmd+n, return, escape, tab, shift+tab, up
 cu set-value <app> --element N <value>   set the AXValue of element N
+cu drag <app> (--from N | --from-x PX --from-y PX) (--to N | --to-x PX --to-y PX)
+cu read <app> --element N                every text of element N whole, with its role and frame
+cu wait <app> (--for T | --gone T | --element N --value V) [--timeout S]
+                                         read the app until the condition holds (10 s, at most 110 s)
 cu menu <app>                            list the menu bar with indices
 cu menu <app> <index | "File > Save">    run a menu item
 cu presence <state> [--label T] [--step T]
@@ -152,6 +158,8 @@ One line per meaningful element: controls, anything with a title, value or descr
 - When a sheet is up, the tree starts at its parent window and the sheet sits inside it; `window.sheet` names the sheet. An open context menu or pop-up menu shows up as a `Menu` with its items.
 - `screenshot.path` is a PNG of the window area, at most 1280 px wide, composed of the app's own windows only: sheets and open menus are in it, other apps and the overlay are not. Map a pixel to a screen point with `screenX = origin.x + px / scale` and `screenY = origin.y + py / scale`; `click --x --y` does this for you. An open menu that hangs outside the window widens the area, so check `origin` and the size each time. Files older than an hour are removed at the next capture.
 - A hidden app gets `hidden: true`. While hidden, its windows are off screen, cannot be captured, and AppKit reports them with subrole `Dialog`; `cu open` shows the app again.
+- `--find T` reads up to 5000 elements and lists only those whose title, value, description or identifier holds `T` (ignoring case and accents), with every element they sit in, so the indent still reads as a tree. `matches` counts the elements that hold it; `--max-elements` still caps the lines.
+- `--within N` lists only element `N` of the last state and what is inside it, with the numbers they already had. The elements of the last state outside it stay usable.
 - For Chromium and Electron apps the agent first sets `AXManualAccessibility`, and `AXEnhancedUserInterface` when the tree stays nearly empty. `note` says when it did.
 
 ### Actions
@@ -164,6 +172,9 @@ Every action result has `target`: role, label, identifier, and the window (and s
 - `scroll` sends scroll wheel events at the element or pixel. A page is 90 percent of the element's height (or width), or of the scroll area under the pixel. The pointer is put back afterwards.
 - `type` sends one unicode character per event; a newline becomes Return and a tab becomes Tab. `key` knows `cmd`, `shift`, `option`/`alt`, `ctrl` and `fn`, and the keys a-z, 0-9, punctuation, `return`, `escape`, `tab`, `space`, `delete`, `forwarddelete`, the arrows, `home`, `end`, `pageup`, `pagedown` and `f1`-`f12`. Use `cmd++` or `plus` for plus. Both bring the app to the front first and are refused when that fails. Their `target` is the focused element; they have no `point`, since nothing is clicked.
 - `set-value` works only where the app lets `AXValue` be set (text fields and areas, sliders). A number element takes a number, `true` or `false`.
+- `drag` presses at the start, moves through twelve points to the end over 0.7 seconds and lets go there, then puts the pointer back; the button comes up also when the person interrupts halfway. The start is hit-tested like a click, the end is not, since it is often another element or window. The cursor shows `drag` and glides along.
+- `read` answers an element's title, value, description, placeholder and identifier whole, with its role and frame; the viewfinder goes around the element. It cuts nothing: the daemon caps what it passes on.
+- `wait` shows `look` around the window and reads the app every 250 ms: the whole window up to 5000 elements for `--for` and `--gone`, only the element's value for `--value`, which has to match exactly. It answers `met`, `waited` in seconds and `condition`, with the state at the end under `state`, also when the time ran out.
 - `open` launches an app by the file name of its bundle or else its `CFBundleDisplayName` (searched in `/Applications`, `/System/Applications`, their `Utilities` folders and `~/Applications`) or bundle id, or activates and unhides it when it runs, then waits up to 5 seconds for a window.
 
 ### Menus
