@@ -590,7 +590,22 @@
         "open": "Open Systeeminstellingen",
         "restartNote": "Schermopname werkt pas als Ruimte Computer Use opnieuw start. Ruimte herstart het zodra je terugkomt in dit venster.",
         "checkAgain": "Opnieuw controleren",
-        "remote": "Sta deze toe op {{machine}} zelf, in Systeeminstellingen > Privacy en beveiliging."
+        "remote": "Sta deze toe op {{machine}} zelf, in Systeeminstellingen > Privacy en beveiliging.",
+        "apps": {
+            "always": "Toegestane apps",
+            "alwaysEmpty": "Geen apps die altijd zijn toegestaan.",
+            "terminals": "Behandeld als terminal",
+            "terminalsEmpty": "Geen apps gezien die een shell draaien.",
+            "thisTime": "Deze keer",
+            "allowed": "Toegestaan op {{date}}",
+            "seen": "Gezien op {{date}}",
+            "untitled": "Naamloos",
+            "remove": "Verwijderen",
+            "removeLabel": "{{app}} verwijderen",
+            "notTerminal": "Geen terminal",
+            "notTerminalLabel": "{{app}} is geen terminal",
+            "notTerminalHint": "Een agent vraagt er weer om. Draait de app een shell, dan telt die weer als terminal."
+        }
     },
     "identity": {
         "name": "Naam",

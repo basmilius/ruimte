@@ -590,7 +590,22 @@
         "open": "Open System Settings",
         "restartNote": "Screen Recording takes effect once Ruimte Computer Use starts again. Ruimte restarts it when you come back to this window.",
         "checkAgain": "Check again",
-        "remote": "Allow these on {{machine}} itself, in System Settings > Privacy & Security."
+        "remote": "Allow these on {{machine}} itself, in System Settings > Privacy & Security.",
+        "apps": {
+            "always": "Allowed apps",
+            "alwaysEmpty": "No apps are allowed for always.",
+            "terminals": "Treated as terminals",
+            "terminalsEmpty": "No apps have been seen running a shell.",
+            "thisTime": "This time",
+            "allowed": "Allowed {{date}}",
+            "seen": "Seen {{date}}",
+            "untitled": "Untitled",
+            "remove": "Remove",
+            "removeLabel": "Remove {{app}}",
+            "notTerminal": "Not a terminal",
+            "notTerminalLabel": "{{app}} is not a terminal",
+            "notTerminalHint": "An agent asks for it again. If it runs a shell, it counts as a terminal again."
+        }
     },
     "identity": {
         "name": "Name",

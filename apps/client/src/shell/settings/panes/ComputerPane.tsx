@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { CircleCheck, CircleDashed, LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { ComputerGrant, ComputerUseStatus } from '@ruimte/contracts';
+import type { ComputerGrant, ComputerRevokePayload, ComputerUseStatus } from '@ruimte/contracts';
+import { operatedHere } from '@/computer/operated';
 import {
     canSwitch,
     COMPUTER_GRANTS,
@@ -21,6 +22,7 @@ import { activeLanguage } from '@/i18n/active';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@/shell/settings/controls';
+import { ComputerAppGrants } from '@/shell/settings/panes/ComputerAppGrants';
 import { useComputer } from '@/state/computer';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
@@ -80,6 +82,8 @@ function ComputerMachineRow({ endpoint }: { endpoint: Endpoint }) {
     const platform = useServers((s) => s.byEndpoint[endpoint.id]?.platform ?? null);
     const icon = useServers((s) => s.byEndpoint[endpoint.id]?.icon ?? null);
     const status = useComputer((s) => s.statuses[endpoint.id] ?? null);
+    const grants = useComputer((s) => s.grants[endpoint.id] ?? null);
+    const held = useComputer((s) => operatedHere(endpoint.id, s.statuses[endpoint.id]));
     const setup = computerSetupOf(status, platform);
     const bridge = desktop();
     const local = opensSystemSettings(endpoint.id, platform, bridge?.openSystemSettings !== undefined);
@@ -105,7 +109,7 @@ function ComputerMachineRow({ endpoint }: { endpoint: Endpoint }) {
         return () => window.removeEventListener('focus', onFocus);
     }, [recheck, local, endpoint.id]);
 
-    async function run(work: (link: Transport) => Promise<ComputerUseStatus>): Promise<void> {
+    async function attempt(work: (link: Transport) => Promise<void>): Promise<void> {
         const link = transportFor(endpoint.id);
         if (!link) {
             return;
@@ -113,12 +117,23 @@ function ComputerMachineRow({ endpoint }: { endpoint: Endpoint }) {
         setBusy(true);
         setError(null);
         try {
-            useComputer.getState().setStatus(endpoint.id, await work(link));
+            await work(link);
         } catch (failure) {
             setError(failure instanceof Error ? failure.message : String(failure));
         } finally {
             setBusy(false);
         }
+    }
+
+    function run(work: (link: Transport) => Promise<ComputerUseStatus>): Promise<void> {
+        return attempt(async (link) => useComputer.getState().setStatus(endpoint.id, await work(link)));
+    }
+
+    function revoke(payload: ComputerRevokePayload): Promise<void> {
+        // The list itself comes back as `computer.grants`, to this window and every other.
+        return attempt(async (link) => {
+            await link.request('computer.revoke', payload);
+        });
     }
 
     async function openGrant(grant: ComputerGrant): Promise<void> {
@@ -154,6 +169,9 @@ function ComputerMachineRow({ endpoint }: { endpoint: Endpoint }) {
                     onOpen={(grant) => void openGrant(grant)}
                     onCheck={() => void run((link) => link.request('computer.restart', {}))}
                 />
+            )}
+            {connected && status?.enabled === true && grants !== null && (
+                <ComputerAppGrants grants={grants} held={held} busy={busy} onRevoke={(payload) => void revoke(payload)} />
             )}
             {(error ?? status?.problem) && (
                 <p role="alert" className="text-xs text-status-error">

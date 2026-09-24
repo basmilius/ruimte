@@ -1,13 +1,14 @@
 import i18next from 'i18next';
 import { useComputer } from '@/state/computer';
-import { watchPool } from '@/transport/pool-watch';
+import { pool } from '@/transport';
+import { watchPool, type WatchablePool } from '@/transport/pool-watch';
 
 /*
- * The computer use cards and status of every machine this client holds a socket for. The daemon tells
- * every socket the whole list and the status whenever they change; a socket that opens asks once.
+ * The computer use cards, status and grants of every machine this client holds a socket for. The daemon
+ * tells every socket the whole of each whenever it changes; a socket that opens asks once.
  * A machine with computer use on hears when the interface language changes, so its overlay speaks it.
  */
-export const startComputerWatch = (): (() => void) =>
+export const startComputerWatch = (source: WatchablePool = pool): (() => void) =>
     watchPool((link, endpointId) => {
         let language = i18next.language;
         const onLanguage = (next: string): void => {
@@ -31,12 +32,16 @@ export const startComputerWatch = (): (() => void) =>
                 link.request('computer.status', {})
                     .then((status) => useComputer.getState().setStatus(endpointId, status))
                     .catch(() => undefined);
+                link.request('computer.grants', {})
+                    .then((grants) => useComputer.getState().setGrants(endpointId, grants))
+                    .catch(() => undefined);
             },
             subscriptions: [
                 link.on('computer.approvals', (payload) => useComputer.getState().setApprovals(endpointId, payload.approvals)),
                 link.on('computer.status', (payload) => useComputer.getState().setStatus(endpointId, payload)),
+                link.on('computer.grants', (payload) => useComputer.getState().setGrants(endpointId, payload)),
                 () => i18next.off('languageChanged', onLanguage),
                 () => useComputer.getState().forget(endpointId)
             ]
         };
-    });
+    }, source);
