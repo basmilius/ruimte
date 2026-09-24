@@ -105,7 +105,7 @@ $RUIMTE_HOME/
   computer-use/                    mode 0700, shared with the computer use helper
     settings.json                  whether a person turned computer use on for this machine, and the language they did it in
     grants.json                    the apps a person let every agent into for always, and the apps once seen running shells
-    overlay.json                   the words of the helper's pill, written by the daemon
+    overlay.json                   the words of the helper's cursor, session bar and menu, in the language computer use was turned on in
     agent.sock, screenshots/       the helper's own, see apps/computer-use/README.md
   usage/                           mode 0700
     index.json                     every transcript the scanner read, with where it stopped in each
@@ -206,7 +206,11 @@ An agent operates the apps of this Mac through `ruimte-context computer <action>
 
 An app that runs shells is refused with `terminal`, whatever was granted. The daemon reads that off the process table: one of the app's own children has a controlling terminal the app does not share. An app once seen doing so is remembered in `grants.json`, so it stays refused between its shells. The Ruimte desktop app keeps its shells under the daemon, a level further down, and gets a card like any other app.
 
-`computer.status` answers whether the helper is there, whether it runs and what it reported about Accessibility and Screen Recording; asking it starts the helper only while computer use is on.
+While an agent acts, the helper draws a phantom cursor, a session bar and a menu bar item. Between actions the daemon tells it what the agent is doing (`presence`, `src/computer/presence.ts`), and only for the one agent that holds the session: the one whose call reached the helper last, or, while nobody holds it, the one a card asks about. It shows `permission` with the app while a card of that agent stands, `think` while its turn runs and no call is out, `waiting` when its hooks or its chat say it needs the person, and `error` with the app when the helper refused its last action. A turn that ends shows `done`, which ends the session; an interrupted turn or a closed node shows `idle`. A send goes out only on a change, one at a time, and never holds up an action; one that fails is logged.
+
+The person can pause the session (⌥Space), take the Mac over with their own mouse, or stop it (⌥⎋). A call made while the session is paused or taken over waits in the same budget as a card, asking the helper every half second, and refuses with `paused` or `taken-over` when the person has not given the Mac back by then. An action the person cut off is refused the same way and never sent again, since it may have run halfway. After a stop every action refuses with `stopped`, and the agent is told to ask the person; a `state` picks up again. The daemon reads these from the helper's `code`, not its words.
+
+`computer.status` answers whether the helper is there, whether it runs and what it reported about Accessibility and Screen Recording; asking it starts the helper only while computer use is on. `session` says how the helper's session stood when the machine last heard: `null` while none runs, otherwise its `mode` (`running`, `paused`, `takenOver`) and the `nodeId` of the chat or terminal that holds it.
 
 ## Providers and models
 
