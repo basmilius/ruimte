@@ -160,7 +160,8 @@ export class BrokerRelay implements Relay {
                     }
                     this.askIce();
                 },
-                relayed: (frame) => void this.relayed(frame),
+                // The daemon's guard exits on a stray rejection, and a full disk under a statement is enough for one.
+                relayed: (frame) => void this.relayed(frame).catch((e) => this.log.warn('Handling a relayed signal failed:', errorText(e))),
                 ice: (frame) => this.receivedIce(frame),
                 refused: (frame) => {
                     if (frame.id !== undefined && frame.id === this.iceRequestId) {

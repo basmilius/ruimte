@@ -58,7 +58,10 @@ const quiet = { log: () => undefined, warn: () => undefined };
 
 let clock = 0;
 
-const setup = async (admitStatement?: (publicKey: string, access: SignalAccess) => Promise<'admitted' | 'refused' | 'statements-refused'>) => {
+const setup = async (
+    admitStatement?: (publicKey: string, access: SignalAccess) => Promise<'admitted' | 'refused' | 'statements-refused'>,
+    log: Pick<Console, 'log' | 'warn'> = quiet
+) => {
     const machine = generateKeyPair();
     const paired = generateKeyPair();
     const sockets: FakeSocket[] = [];
@@ -82,7 +85,7 @@ const setup = async (admitStatement?: (publicKey: string, access: SignalAccess) 
         },
         backoffMinMs: 10,
         backoffMaxMs: 20,
-        log: quiet,
+        log,
         now: () => clock
     });
     await relay.publish();
@@ -332,6 +335,27 @@ describe('BrokerRelay', () => {
         socket.deliver(relayedFrom(newcomer, machine.publicKey, { ...carrying, connectionId: 'attempt-0005' }));
         await waitUntil(() => received.length === 2);
         expect(asked).toHaveLength(before);
+        await relay.stop();
+    });
+
+    test('a store that throws under a statement is logged, and the relay carries on', async () => {
+        const access: SignalAccess = {
+            statement: { machineId: 'm', clientPublicKey: 'A'.repeat(43), nonce: 'n'.repeat(22), issuedAt: 0, expiresAt: 1, signature: 's'.repeat(86) },
+            label: 'Laptop'
+        };
+        const warnings: string[] = [];
+        const { relay, machine, paired, socket, received } = await setup(
+            async () => {
+                throw new Error('ENOSPC: no space left on device');
+            },
+            { log: () => undefined, warn: (...parts: unknown[]) => warnings.push(parts.join(' ')) }
+        );
+        socket.deliver(relayedFrom(generateKeyPair(), machine.publicKey, { connectionId: 'attempt-0006', signal: { kind: 'offer', sdp: 'v=0', access } }));
+        await waitUntil(() => warnings.length === 1);
+        expect(warnings[0]).toContain('ENOSPC');
+
+        socket.deliver(relayedFrom(paired, machine.publicKey, offer));
+        await waitUntil(() => received.length === 1);
         await relay.stop();
     });
 });

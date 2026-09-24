@@ -62,4 +62,24 @@ describe('DirectPeers', () => {
         expect(peers.size).toBe(0);
         expect(peersMade.every((peer) => peer.closed)).toBe(true);
     });
+
+    test('an offer that throws before its attempt exists is logged, not left to end the daemon', async () => {
+        const warnings: string[] = [];
+        const peers = new DirectPeers({
+            iceServers: () => {
+                throw new Error('the broker switch broke');
+            },
+            portRange: null,
+            hostAddresses: [],
+            authenticate: async () => null,
+            open: () => undefined,
+            log: { log: () => undefined, warn: (...parts: unknown[]) => warnings.push(parts.join(' ')) },
+            createPeer: (configuration) => new FakePeer(configuration) as unknown as RTCPeerConnection
+        });
+        peers.receive({ connectionId: 'attempt-3', signal: { kind: 'offer', sdp: 'v=0' } }, () => undefined);
+        await settle();
+
+        expect(warnings).toEqual(['Answering a direct connection failed: the broker switch broke']);
+        expect(peers.size).toBe(0);
+    });
 });

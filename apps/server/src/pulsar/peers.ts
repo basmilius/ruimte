@@ -57,7 +57,10 @@ export class DirectPeers {
         const { connectionId, signal } = envelope;
         switch (signal.kind) {
             case 'offer':
-                void this.answer(connectionId, signal.sdp, reply);
+                void this.answer(connectionId, signal.sdp, reply).catch((e) => {
+                    this.log.warn('Answering a direct connection failed:', errorText(e));
+                    this.end(connectionId, 'answering failed');
+                });
                 return;
             case 'candidate': {
                 const attempt = this.attempts.get(connectionId);
@@ -134,7 +137,10 @@ export class DirectPeers {
             const channel = directChannel(fromWerift(raw));
             attempt.channel = channel;
             channel.onClose(() => this.end(connectionId, 'the channel closed'));
-            void this.admit(connectionId, attempt, channel, binding, raw);
+            void this.admit(connectionId, attempt, channel, binding, raw).catch((e) => {
+                this.log.warn('Letting a direct connection in failed:', errorText(e));
+                this.end(connectionId, 'the handshake failed');
+            });
         });
 
         try {
