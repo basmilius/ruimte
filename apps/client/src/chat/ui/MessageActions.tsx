@@ -84,7 +84,7 @@ export function MessageActions({ chatId, row }: { chatId: string; row: MessageRo
                         </Tooltip>
                     )}
                     {hasText && (
-                        <Tooltip label={copied ? t('timeline.actions.copied') : t('timeline.menu.copyMessage')} kbd={t('timeline.actions.shiftPlain')} name>
+                        <Tooltip label={copied ? t('timeline.actions.copied') : t('timeline.menu.copyMessage')} name>
                             <button type="button" className="icon-btn h-7 w-7 rounded-md" onClick={(e) => copy(e.shiftKey)}>
                                 <Icon icon={copied ? Check : Copy} size={14} />
                             </button>

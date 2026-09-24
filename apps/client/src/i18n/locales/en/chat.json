@@ -140,8 +140,7 @@
     "stripFailed": "The message strip failed to render",
     "actions": {
       "label": "Message actions",
-      "copied": "Copied",
-      "shiftPlain": "Shift copies plain text"
+      "copied": "Copied"
     },
     "menu": {
       "copyMessage": "Copy message",
