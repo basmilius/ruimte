@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { Fragment, memo, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { PreviewCard } from '@base-ui-components/react/preview-card';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,8 @@ import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 
 const PREVIEW_CHARS = 280;
+
+const FOUND_WIDTH_PX = 4;
 
 const timeOf = (createdAt: number): string => formatMoment(createdAt);
 
@@ -57,14 +59,29 @@ interface ScrubberProps {
     lastInView: number | null;
     onPick(index: number): void;
     chat?: CardChat | null;
+    /* Per tick, whether a find hit falls in its stretch of the thread; empty while nothing is searched. */
+    found?: readonly boolean[];
+    /* The tick of the hit the find bar is on. */
+    foundCurrent?: number | null;
 }
+
+const NOTHING_FOUND: readonly boolean[] = [];
 
 /*
  * The strip at the left edge of a chat view: a tick per message of the person, per wake by tasks and
  * per other message with a bookmark, the ones on screen bright and the rest dimmed, a bookmark in the accent, growing only under the pointer. A single hover card follows the pointer along the strip, anchored at the tick
- * it points at, so a thousand ticks are a thousand spans and not a thousand popups.
+ * it points at, so a thousand ticks are a thousand spans and not a thousand popups. While a find is
+ * open, a short mark at the strip's right edge stands beside every tick with a hit under it.
  */
-export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView, onPick, chat = null }: ScrubberProps) {
+export const Scrubber = memo(function Scrubber({
+    ticks,
+    firstInView,
+    lastInView,
+    onPick,
+    chat = null,
+    found = NOTHING_FOUND,
+    foundCurrent = null
+}: ScrubberProps) {
     const { t } = useTranslation('chat');
     // State rather than a ref. The card's anchor is built during render and has to change when the strip does.
     const [strip, setStrip] = useState<HTMLDivElement | null>(null);
@@ -85,7 +102,8 @@ export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView,
 
     const kinds = useMemo(() => ticks.map((tick) => tick.kind), [ticks]);
     const marked = useMemo(() => ticks.map((tick) => tick.bookmark !== null), [ticks]);
-    const layout = useMemo(() => layoutTicks(kinds, height, marked), [kinds, height, marked]);
+    const layout = useMemo(() => layoutTicks(kinds, height, marked, found), [kinds, height, marked, found]);
+    const currentSlot = foundCurrent === null ? null : slotOf(layout, foundCurrent);
     const inView = firstInView === null || lastInView === null ? null : { first: firstInView, last: lastInView };
     const hoveredTick = hovered === null ? null : (ticks[hovered] ?? null);
     const hoveredSlot = hovered === null ? null : slotOf(layout, hovered);
@@ -142,16 +160,24 @@ export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView,
                     // A bookmark is a place to find again from anywhere, so it never dims with the rest.
                     const bright = slot.marked || slotInView(slot, inView) || distance === 0;
                     return (
-                        <span
-                            key={slot.first}
-                            aria-hidden
-                            className={clsx(
-                                'absolute left-1 rounded-full transition-[width,opacity] duration-100 ease-out motion-reduce:transition-none',
-                                slot.marked ? 'bg-accent' : slot.kind === 'wake' ? 'bg-text-muted' : 'bg-text',
-                                bright ? 'opacity-100' : 'opacity-30'
+                        <Fragment key={slot.first}>
+                            <span
+                                aria-hidden
+                                className={clsx(
+                                    'absolute left-1 rounded-full transition-[width,opacity] duration-100 ease-out motion-reduce:transition-none',
+                                    slot.marked ? 'bg-accent' : slot.kind === 'wake' ? 'bg-text-muted' : 'bg-text',
+                                    bright ? 'opacity-100' : 'opacity-30'
+                                )}
+                                style={{ top: slot.y, height: TICK_HEIGHT_PX, width: tickWidth(slot.kind, distance) }}
+                            />
+                            {slot.found && (
+                                <span
+                                    aria-hidden
+                                    className={clsx('absolute right-0 rounded-full bg-find-current', index === currentSlot ? 'opacity-100' : 'opacity-50')}
+                                    style={{ top: slot.y, height: TICK_HEIGHT_PX, width: FOUND_WIDTH_PX }}
+                                />
                             )}
-                            style={{ top: slot.y, height: TICK_HEIGHT_PX, width: tickWidth(slot.kind, distance) }}
-                        />
+                        </Fragment>
                     );
                 })}
             </PreviewCard.Trigger>

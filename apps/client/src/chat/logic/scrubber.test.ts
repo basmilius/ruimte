@@ -1,6 +1,20 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem } from '@ruimte/contracts';
-import { layoutTicks, messageAt, messagesInView, slotInView, slotOf, stepMessage, threadPaddingLeft, tickWidth, ticksOf, type TickKind } from './scrubber';
+import {
+    layoutTicks,
+    messageAt,
+    messagesInView,
+    slotInView,
+    slotOf,
+    stepMessage,
+    threadPaddingLeft,
+    tickOfRow,
+    ticksWithHits,
+    tickWidth,
+    ticksOf,
+    type ScrubberTick,
+    type TickKind
+} from './scrubber';
 import { bookmarkRows } from './bookmarks';
 import { deriveTimelineRows } from './timeline';
 
@@ -141,6 +155,36 @@ describe('layoutTicks', () => {
     test('a strip without room draws nothing', () => {
         expect(layoutTicks(kinds(5), 2).slots).toEqual([]);
     });
+
+    test('a merged tick is found when a find hit falls under a message in it', () => {
+        const layout = layoutTicks(['person', 'person', 'person', 'person'], 8, [], [false, false, false, true]);
+        expect(layout.slots.map((slot) => slot.found)).toEqual([false, true]);
+    });
+});
+
+describe('find hits on the strip', () => {
+    const tickAt = (rowIndex: number): ScrubberTick => ({
+        id: `r${rowIndex}`,
+        rowIndex,
+        kind: 'person',
+        text: '',
+        createdAt: 0,
+        turnId: null,
+        bookmark: null
+    });
+    const ticks = [tickAt(2), tickAt(10), tickAt(20)];
+
+    test('a row counts under the tick before it, and a row above the first tick under the first', () => {
+        expect(tickOfRow(ticks, 0)).toBe(0);
+        expect(tickOfRow(ticks, 10)).toBe(1);
+        expect(tickOfRow(ticks, 19)).toBe(1);
+        expect(tickOfRow(ticks, 99)).toBe(2);
+        expect(tickOfRow([], 3)).toBeNull();
+    });
+
+    test('marks every tick a hit falls under, once', () => {
+        expect(ticksWithHits(ticks, [3, 4, 25])).toEqual([true, false, true]);
+    });
 });
 
 describe('messageAt and slotOf', () => {
@@ -208,7 +252,7 @@ describe('messagesInView', () => {
     });
 
     test('a merged tick is in view when any of its messages is', () => {
-        const slot = { first: 20, last: 39, kind: 'person' as const, marked: false, y: 0 };
+        const slot = { first: 20, last: 39, kind: 'person' as const, marked: false, found: false, y: 0 };
         expect(slotInView(slot, { first: 39, last: 41 })).toBe(true);
         expect(slotInView(slot, { first: 10, last: 20 })).toBe(true);
         expect(slotInView(slot, { first: 40, last: 45 })).toBe(false);

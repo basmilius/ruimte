@@ -501,7 +501,8 @@
             "toggleProcesses": "Toggle processes panel",
             "toggleTheme": "Toggle light and dark",
             "keyboardShortcuts": "Keyboard shortcuts",
-            "remote": "Remote"
+            "remote": "Remote",
+            "find": "Find in chat or file"
         },
         "sections": {
             "recent": "Recent",
@@ -658,6 +659,7 @@
         "keyboardShortcuts": "Keyboard Shortcuts",
         "projectSettings": "Project Settings…",
         "clear": "Clear",
-        "open": "Menu"
+        "open": "Menu",
+        "find": "Find"
     }
 }

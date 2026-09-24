@@ -115,6 +115,10 @@
     --term-ansi-bright-magenta: #c026d3;
     --term-ansi-bright-cyan: #0891b2;
     --term-ansi-bright-white: #e4e4e7;
+    /* A find: every match a dim yellow, the one the bar is on a bright one with dark text on it in either theme. */
+    --find-match: rgb(250 204 21 / 0.35);
+    --find-current: #facc15;
+    --find-current-text: #18181b;
     --note-yellow: #fff3bf;
     --note-green: #dcf5e3;
     --note-blue: #dbe9ff;
@@ -259,6 +263,9 @@
     --term-ansi-bright-magenta: #d8b4fe;
     --term-ansi-bright-cyan: #a5f3fc;
     --term-ansi-bright-white: #f4f4f5;
+    --find-match: rgb(250 204 21 / 0.24);
+    --find-current: #f5c542;
+    --find-current-text: #18181b;
     --note-yellow: #3b3416;
     --note-green: #173a25;
     --note-blue: #182f4b;
@@ -389,6 +396,8 @@
     --color-term-blue: var(--term-blue);
     --color-term-yellow: var(--term-yellow);
     --color-term-red: var(--term-red);
+    --color-find-match: var(--find-match);
+    --color-find-current: var(--find-current);
     --color-note-yellow: var(--note-yellow);
     --color-note-green: var(--note-green);
     --color-note-blue: var(--note-blue);
@@ -932,6 +941,9 @@
         from { background: var(--accent-soft); }
         to { background: transparent; }
     }
+    /* Find marks over rendered text (`find/highlights.ts`). */
+    ::highlight(find-match) { background-color: var(--find-match); }
+    ::highlight(find-current) { background-color: var(--find-current); color: var(--find-current-text); }
     /* A code theme in settings, on the app's code background like the viewer, so shiki's own is dropped.
        The token is read under the side's own `data-theme`; a utility would resolve it at the root. */
     .code-theme-preview > [data-theme] { background: var(--term-bg); }

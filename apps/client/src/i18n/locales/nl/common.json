@@ -52,5 +52,17 @@
             "noTrack": "Er was geen audiospoor van de microfoon beschikbaar",
             "stopped": "De microfoontest is gestopt"
         }
+    },
+    "find": {
+        "label": "Zoeken",
+        "count": "{{current}} / {{total}}",
+        "none": "Geen resultaten",
+        "invalid": "Ongeldige reguliere expressie",
+        "caseSensitive": "Hoofdlettergevoelig",
+        "wholeWord": "Heel woord",
+        "regex": "Reguliere expressie gebruiken",
+        "previous": "Vorige treffer",
+        "next": "Volgende treffer",
+        "close": "Sluiten"
     }
 }

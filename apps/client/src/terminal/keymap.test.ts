@@ -116,15 +116,16 @@ describe('isShellShortcut', () => {
         expect(isShellShortcut(key('Digit1', { ctrlKey: true }), false)).toBe(true);
     });
 
-    test("the palette and find in files are the app's here, unlike in a terminal", () => {
+    test("the palette, find in files and the find bar are the app's here, unlike in a terminal", () => {
         expect(isShellShortcut(key('KeyK', { metaKey: true }), true)).toBe(true);
         expect(isShellShortcut(key('KeyF', { metaKey: true, shiftKey: true }), true)).toBe(true);
+        expect(isShellShortcut(key('KeyF', { metaKey: true }), true)).toBe(true);
         expect(isAppShortcut(key('KeyK', { metaKey: true }), true)).toBe(false);
+        expect(isAppShortcut(key('KeyF', { metaKey: true }), true)).toBe(false);
     });
 
     test('the shortcuts the composer answers itself stay in the composer', () => {
         expect(isShellShortcut(key('KeyS', { metaKey: true }), true)).toBe(false);
-        expect(isShellShortcut(key('KeyF', { metaKey: true }), true)).toBe(false);
         expect(isShellShortcut(key('KeyK', { metaKey: true, altKey: true }), true)).toBe(false);
         expect(isShellShortcut(key('Enter', { metaKey: true }), true)).toBe(false);
     });

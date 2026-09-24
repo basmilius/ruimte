@@ -19,6 +19,7 @@ import { formatElapsedShort } from '@/format/duration';
 import { formatTokens } from '@/format/number';
 import { toolSummary } from '@/chat/logic/tools';
 import { ROW_GUTTER } from '@/chat/ui/icons';
+import { useOpenForFind } from '@/chat/ui/find-reveal';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -58,8 +59,9 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
     const endpointId = useEndpointId();
     const long = item.text.split('\n').length > USER_FOLD_LINES || item.text.length > USER_FOLD_CHARS;
     const attachments = item.attachments ?? [];
+    useOpenForFind(item.id, 'text', setOpen);
     return (
-        <div className="flex flex-col items-end">
+        <div data-find-item={item.id} className="flex flex-col items-end">
             <MessageHeading>{t('rows.user.heading')}</MessageHeading>
             {attachments.length > 0 && (
                 <div className="mb-1.5 flex max-w-[80%] flex-wrap justify-end gap-1.5">
@@ -80,7 +82,7 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
             )}
             {item.text !== '' && (
                 <div className="relative max-w-[80%] rounded-2xl bg-surface-active px-3.5 py-2.5 text-sm text-text select-text">
-                    <div className={clsx(long && !open && FOLD)}>
+                    <div data-find-field="text" className={clsx(long && !open && FOLD)}>
                         <MessageMarkdown text={item.text} mentions={item.mentions} skills={item.skills} />
                     </div>
                     {long && (
@@ -115,15 +117,17 @@ function MessageHeading({ children }: { children: ReactNode }) {
 }
 
 /* The report a subagent handed back, drawn as a reply under a label of its own. */
-export function ReportRow({ text }: { text: string }) {
+export function ReportRow({ id, text }: { id: string; text: string }) {
     const { t } = useTranslation('chat');
     return (
-        <div className="-mx-1 px-1 pb-2">
+        <div data-find-item={id} className="-mx-1 px-1 pb-2">
             <MessageHeading>{t('rows.report.heading')}</MessageHeading>
             <div aria-hidden className="mb-1 text-xs font-medium text-text-faint select-none">
                 {t('rows.report.heading')}
             </div>
-            <ReplyMarkdown text={text} streaming={false} />
+            <div data-find-field="text" className="contents">
+                <ReplyMarkdown text={text} streaming={false} />
+            </div>
         </div>
     );
 }
@@ -158,9 +162,13 @@ export function AssistantRow({ chatId, item: derived }: { chatId: string; item: 
     if (mode === 'blocks') {
         const settled = item.streaming ? settledBlocksText(item.text) : item.text;
         return (
-            <div className="-mx-1 px-1 pb-2">
+            <div data-find-item={item.id} className="-mx-1 px-1 pb-2">
                 <ReplyHeading chatId={chatId} />
-                {settled !== '' && <ReplyMarkdown text={settled} streaming={false} arriving={sawWriting} />}
+                {settled !== '' && (
+                    <div data-find-field="text" className="contents">
+                        <ReplyMarkdown text={settled} streaming={false} arriving={sawWriting} />
+                    </div>
+                )}
                 {item.streaming && <Writing />}
             </div>
         );
@@ -174,9 +182,11 @@ export function AssistantRow({ chatId, item: derived }: { chatId: string; item: 
         );
     }
     return (
-        <div className={clsx('-mx-1 px-1 pb-2', mode === 'whole' && sawWriting && WHOLE_FADE_CLASS)}>
+        <div data-find-item={item.id} className={clsx('-mx-1 px-1 pb-2', mode === 'whole' && sawWriting && WHOLE_FADE_CLASS)}>
             <ReplyHeading chatId={chatId} />
-            <ReplyMarkdown text={reveal.text} streaming={reveal.active} />
+            <div data-find-field="text" className="contents">
+                <ReplyMarkdown text={reveal.text} streaming={reveal.active} />
+            </div>
             {live && item.text === '' && <span className="inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-text-faint align-middle" />}
         </div>
     );
@@ -197,8 +207,9 @@ export function ThinkingRow({ chatId, item: derived }: { chatId: string; item: C
     // Whole, the thought stays behind "Thinking..." until it is done and then folds like any other.
     const shown = open || reveal.active || (settled !== null && settled !== '');
     const text = settled ?? reveal.text;
+    useOpenForFind(item.id, 'text', setOpen);
     return (
-        <div className="-mx-1 px-1 pb-2">
+        <div data-find-item={item.id} className="-mx-1 px-1 pb-2">
             <button className="flex items-center gap-2 text-xs text-text-muted hover:text-text" disabled={item.streaming} onClick={() => setOpen((o) => !o)}>
                 <span className={ROW_GUTTER}>
                     <Icon icon={Brain} size={12} />
@@ -213,7 +224,7 @@ export function ThinkingRow({ chatId, item: derived }: { chatId: string; item: C
                 )}
             </button>
             {shown && text !== '' && (
-                <div className="mt-1 border-l border-border pl-2.5 text-sm whitespace-pre-wrap text-text-faint select-text">
+                <div data-find-field="text" className="mt-1 border-l border-border pl-2.5 text-sm whitespace-pre-wrap text-text-faint select-text">
                     {reveal.active ? <FadingWords text={reveal.text} /> : text}
                 </div>
             )}
@@ -231,14 +242,16 @@ const NOTE_ICON = {
  * A line from the machine in the thread. A note of more than one line (a summary a fork sent back)
  * shows its first line and folds the rest open as markdown; one that came from a fork leads to it.
  */
-export function NoteRow({ level, text, from }: { level: 'info' | 'warning' | 'error'; text: string; from?: string }) {
+export function NoteRow({ id, level, text, from }: { id: string; level: 'info' | 'warning' | 'error'; text: string; from?: string }) {
     const { t } = useTranslation('chat');
     const [open, setOpen] = useState(false);
     const breakAt = text.indexOf('\n');
     const head = breakAt === -1 ? text : text.slice(0, breakAt);
     const rest = breakAt === -1 ? '' : text.slice(breakAt + 1).trim();
+    useOpenForFind(id, 'output', setOpen);
     return (
         <div
+            data-find-item={id}
             className={clsx(
                 '-mx-1 mb-0.5 flex min-h-7 items-start gap-2 px-1 py-1 text-xs',
                 level === 'error' ? 'text-status-error' : level === 'warning' ? 'text-status-needs-you' : 'text-text-faint'
@@ -247,7 +260,9 @@ export function NoteRow({ level, text, from }: { level: 'info' | 'warning' | 'er
             <span className={ROW_GUTTER}>{NOTE_ICON[level]}</span>
             <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-2">
-                    <span className="select-text">{head}</span>
+                    <span data-find-field="summary" className="select-text">
+                        {head}
+                    </span>
                     {rest !== '' && (
                         <button className="text-text-muted hover:text-text" onClick={() => setOpen(!open)}>
                             {open ? t('rows.note.hide') : t('rows.note.show')}
@@ -256,7 +271,7 @@ export function NoteRow({ level, text, from }: { level: 'info' | 'warning' | 'er
                     {from !== undefined && <OpenChatButton chatId={from} />}
                 </div>
                 {open && rest !== '' && (
-                    <div className="mt-1 text-text-muted select-text">
+                    <div data-find-field="output" className="mt-1 text-text-muted select-text">
                         <MessageMarkdown text={rest} />
                     </div>
                 )}

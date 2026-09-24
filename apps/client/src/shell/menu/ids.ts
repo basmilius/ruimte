@@ -37,6 +37,7 @@ export type MenuActionId = (typeof MENU_ACTION_IDS)[number];
 export const PALETTE_IDS = [
     'open-folder',
     'reveal',
+    'find',
     'find-in-files',
     'view-new',
     'view-new-drawing',

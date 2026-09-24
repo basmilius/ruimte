@@ -9,13 +9,25 @@ import { bookmarkRows } from '@/chat/logic/bookmarks';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
 import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { registerItemJumper, registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
-import { SCRUBBER_MIN_TICKS, STRIP_INSET_PX, STRIP_WIDTH_PX, messagesInView, stepMessage, threadPaddingLeft, ticksOf } from '@/chat/logic/scrubber';
+import {
+    SCRUBBER_MIN_TICKS,
+    STRIP_INSET_PX,
+    STRIP_WIDTH_PX,
+    messagesInView,
+    stepMessage,
+    threadPaddingLeft,
+    tickOfRow,
+    ticksOf,
+    ticksWithHits
+} from '@/chat/logic/scrubber';
 import { EMPTY_TARGET, readTimelineTarget, withCurrentText, type TimelineTarget } from '@/chat/logic/timeline-target';
 import { forkRefusal } from '@/chat/logic/fork';
+import { FindRevealContext } from '@/chat/ui/find-reveal';
 import { MessageBookmark } from '@/chat/ui/MessageBookmark';
 import { Scrubber, type CardChat } from '@/chat/ui/Scrubber';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { FOLLOW_THRESHOLD_PX, rowRhythm } from '@/chat/ui/rows/row-rhythm';
+import { useChatFind } from '@/chat/ui/use-chat-find';
 import { useToggleSet } from '@/chat/ui/useToggleSet';
 import { Row } from '@/chat/ui/rows/Rows';
 import { useChatRow, useChats } from '@/state/chats';
@@ -25,6 +37,7 @@ import { FileLinkContext } from '@/shell/panels/file-links';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { useModelName } from '@/agents/model-name';
 import { useContextSources } from '@/context/sources';
+import { FindBar } from '@/find/FindBar';
 import { SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
@@ -226,6 +239,37 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     const visibleHeight = Math.max(0, viewport - coveredHeight);
     const inView = showsScrubber ? messagesInView({ starts, scrollTop, visibleHeight }) : null;
 
+    const chatFind = useChatFind({
+        chatId,
+        frame: frameRef,
+        thread: threadRef,
+        scroller: scrollRef,
+        enabled: onMainAgent,
+        rows,
+        structure: items,
+        order,
+        firstRowInView: () => {
+            const top = scrollRef.current?.scrollTop ?? 0;
+            return virtualizer.getVirtualItems().find((virtualRow) => virtualRow.end > top)?.index ?? 0;
+        },
+        openTurn: turns.add,
+        openGroup: groups.add,
+        openSubagent: subagents.add,
+        // A row already on screen stays put; the find scrolls to the match itself once it is drawn.
+        scrollToRow: (index) => {
+            const top = scrollRef.current?.scrollTop ?? 0;
+            const bottom = top + visibleHeight;
+            if (!virtualizer.getVirtualItems().some((virtualRow) => virtualRow.index === index && virtualRow.end > top && virtualRow.start < bottom)) {
+                virtualizer.scrollToIndex(index, { align: 'center' });
+            }
+        },
+        coveredHeight: () => coveredHeightRef.current,
+        stopFollowing
+    });
+    const searching = chatFind.find.open;
+    const found = useMemo(() => (searching ? ticksWithHits(ticks, chatFind.hitRows) : []), [searching, ticks, chatFind.hitRows]);
+    const foundCurrent = chatFind.currentRow === null ? null : tickOfRow(ticks, chatFind.currentRow);
+
     const jumpTo = (index: number): void => {
         const tick = ticks[index];
         if (!tick) {
@@ -310,6 +354,9 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
         // often as it is the project itself.
         <FileLinkContext.Provider value={info?.cwd ?? null}>
             <div ref={frameRef} className="relative flex min-h-0 grow flex-col">
+                {searching && (
+                    <FindBar find={chatFind.find} total={chatFind.total} current={chatFind.current} invalid={chatFind.invalid} onStep={chatFind.step} />
+                )}
                 <ContextMenu.Root>
                     <div
                         ref={scrollRef}
@@ -362,17 +409,19 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                                     )}
                                                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                                                 >
-                                                    <MarkableRow row={row} chatId={chatId}>
-                                                        <Row
-                                                            row={row}
-                                                            chatId={chatId}
-                                                            toggleGroup={groups.toggle}
-                                                            toggleTurn={turns.toggle}
-                                                            toggleSubagent={subagents.toggle}
-                                                            openSubagent={openSubagent}
-                                                            openConversation={openConversation}
-                                                        />
-                                                    </MarkableRow>
+                                                    <FindRevealContext.Provider value={chatFind.reveal}>
+                                                        <MarkableRow row={row} chatId={chatId}>
+                                                            <Row
+                                                                row={row}
+                                                                chatId={chatId}
+                                                                toggleGroup={groups.toggle}
+                                                                toggleTurn={turns.toggle}
+                                                                toggleSubagent={subagents.toggle}
+                                                                openSubagent={openSubagent}
+                                                                openConversation={openConversation}
+                                                            />
+                                                        </MarkableRow>
+                                                    </FindRevealContext.Provider>
                                                 </div>
                                             );
                                         })}
@@ -393,7 +442,15 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                 {showsScrubber && (
                     <div className="absolute top-4" style={{ left: STRIP_INSET_PX, width: STRIP_WIDTH_PX, bottom: coveredHeight }}>
                         <ErrorBoundary label={t('timeline.stripFailed')} resetKeys={[ticks.length]}>
-                            <Scrubber ticks={ticks} firstInView={inView?.first ?? null} lastInView={inView?.last ?? null} onPick={pick} chat={cardChat} />
+                            <Scrubber
+                                ticks={ticks}
+                                firstInView={inView?.first ?? null}
+                                lastInView={inView?.last ?? null}
+                                onPick={pick}
+                                chat={cardChat}
+                                found={found}
+                                foundCurrent={foundCurrent}
+                            />
                         </ErrorBoundary>
                     </div>
                 )}

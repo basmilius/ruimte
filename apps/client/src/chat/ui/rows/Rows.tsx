@@ -38,7 +38,7 @@ export function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, open
         case 'assistant':
             return <AssistantRow chatId={chatId} item={row.item} />;
         case 'report':
-            return <ReportRow text={row.text} />;
+            return <ReportRow id={row.id} text={row.text} />;
         case 'thinking':
             return <ThinkingRow chatId={chatId} item={row.item} />;
         case 'work':
@@ -68,7 +68,7 @@ export function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, open
         case 'question':
             return <QuestionHistoryRow item={row.item} />;
         case 'note':
-            return <NoteRow level={row.level} text={row.text} from={row.from} />;
+            return <NoteRow id={row.id} level={row.level} text={row.text} from={row.from} />;
         case 'compaction':
             return <CompactionRow preTokens={row.preTokens} />;
         case 'working':

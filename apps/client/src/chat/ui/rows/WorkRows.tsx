@@ -6,6 +6,7 @@ import { ChevronRight, FileDiff, X } from 'lucide-react';
 import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import { fileChanges, liveOutput, readImagePath, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
+import { useOpenForFind } from '@/chat/ui/find-reveal';
 import { ReadImage } from '@/chat/ui/ImageView';
 import { formatClockDuration, formatElapsedShort } from '@/format/duration';
 import { ROW_GUTTER, toolIcon } from '@/chat/ui/icons';
@@ -54,7 +55,11 @@ export function ToggleLine({
         >
             <span className={clsx(ROW_GUTTER, live && 'text-accent')}>{icon}</span>
             <span className={clsx('shrink-0', live && 'chat-live-text')}>{label}</span>
-            {detail && <span className="min-w-0 truncate font-mono text-text-faint">{detail}</span>}
+            {detail && (
+                <span data-find-field="summary" className="min-w-0 truncate font-mono text-text-faint">
+                    {detail}
+                </span>
+            )}
             <span className="grow" />
             {trailing}
             {failed && <Icon icon={X} size={12} className="shrink-0" />}
@@ -88,6 +93,7 @@ function ToolBody({ tool }: { tool: ChatToolItem }) {
             )}
             {tool.output !== null && tool.output !== '' && patches.length === 0 && (
                 <pre
+                    data-find-field="output"
                     className={clsx(
                         'max-h-64 overflow-auto whitespace-pre-wrap border-t border-border px-3 py-2 font-mono text-code select-text',
                         tool.state === 'error' ? 'text-term-red' : 'text-term-fg'
@@ -105,8 +111,9 @@ function ToolBody({ tool }: { tool: ChatToolItem }) {
 export function WorkRow({ tool, nested }: { tool: ChatToolItem; nested?: boolean }) {
     const [open, setOpen] = useState(false);
     const image = tool.state === 'done' ? readImagePath(tool.name, tool.input) : null;
+    useOpenForFind(tool.id, 'output', setOpen);
     return (
-        <div className={nested ? 'ml-6' : undefined}>
+        <div data-find-item={tool.id} className={nested ? 'ml-6' : undefined}>
             <ToggleLine
                 icon={toolIcon(tool.name)}
                 label={tool.name}

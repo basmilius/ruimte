@@ -58,12 +58,13 @@ export const isAppShortcut = (event: KeyLike, apple: boolean): boolean =>
 /*
  * What a text field that stops its own keys (the chat composer, the file editor) hands back, everything
  * a terminal does, the Ctrl shortcuts a terminal keeps off macOS (a text field has no program behind
- * it), and the palette and find in files. Ctrl+B stays out of it off macOS, as it always has.
+ * it), the palette, find in files and the find bar. Ctrl+B stays out of it off macOS, as it always has.
  */
 export const shellShortcuts = (apple: boolean): readonly Shortcut[] => [
     ...TERMINAL_HANDED_BACK.filter((candidate) => apple || candidate !== APP_SHORTCUTS.sidebar),
     APP_SHORTCUTS.palette,
-    APP_SHORTCUTS.findInFiles
+    APP_SHORTCUTS.findInFiles,
+    CANVAS_SHORTCUTS.find
 ];
 
 export const isShellShortcut = (event: KeyLike, apple: boolean): boolean => matchesAny(shellShortcuts(apple), event, apple);

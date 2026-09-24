@@ -501,7 +501,8 @@
             "toggleProcesses": "Processen-paneel aan of uit",
             "toggleTheme": "Licht of donker",
             "keyboardShortcuts": "Sneltoetsen",
-            "remote": "Remote"
+            "remote": "Remote",
+            "find": "Zoeken in chat of bestand"
         },
         "sections": {
             "recent": "Recent",
@@ -658,6 +659,7 @@
         "keyboardShortcuts": "Sneltoetsen",
         "projectSettings": "Projectinstellingen…",
         "clear": "Wissen",
-        "open": "Menu"
+        "open": "Menu",
+        "find": "Zoeken"
     }
 }

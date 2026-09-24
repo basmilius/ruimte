@@ -52,5 +52,17 @@
             "noTrack": "No microphone audio track was available",
             "stopped": "The microphone test was stopped"
         }
+    },
+    "find": {
+        "label": "Find",
+        "count": "{{current}} / {{total}}",
+        "none": "No results",
+        "invalid": "Invalid regular expression",
+        "caseSensitive": "Match case",
+        "wholeWord": "Match whole word",
+        "regex": "Use regular expression",
+        "previous": "Previous match",
+        "next": "Next match",
+        "close": "Close"
     }
 }

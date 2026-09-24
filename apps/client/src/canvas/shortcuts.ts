@@ -29,6 +29,7 @@ export const CANVAS_SHORTCUTS = {
     deleteSelection: shortcut('Backspace'),
     zoomIn: shortcut('+'),
     zoomOut: shortcut('-'),
+    find: shortcut('Mod+F'),
     previousMessage: shortcut('Alt+ArrowUp'),
     nextMessage: shortcut('Alt+ArrowDown')
 } as const;

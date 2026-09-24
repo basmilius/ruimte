@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Bot, ChevronDown } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem } from '@ruimte/contracts';
 import { formatElapsedShort } from '@/format/duration';
+import { useOpenForFind } from '@/chat/ui/find-reveal';
 import { Markdown } from '@/chat/ui/Markdown';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from '@/chat/ui/rows/WorkRows';
 import { useSubagentSupport } from '@/chat/subagent-support';
@@ -73,9 +74,10 @@ function SubagentWork({ item, work }: { item: ChatSubagentItem; work: ChatItem[]
 }
 
 /* The report the sub-agent handed back, behind a fold: the row is about the work, this is the answer. */
-function SubagentResult({ result }: { result: string }) {
+function SubagentResult({ itemId, result }: { itemId: string; result: string }) {
     const { t } = useTranslation('chat');
     const [open, setOpen] = useState(false);
+    useOpenForFind(itemId, 'output', setOpen);
     return (
         <div className="ml-6 pb-1">
             <button className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>
@@ -83,7 +85,7 @@ function SubagentResult({ result }: { result: string }) {
                 {open ? t('rows.subagent.hideResult') : t('rows.subagent.showResult')}
             </button>
             {open && (
-                <div className="mt-1 rounded-md border border-border bg-surface-raised px-3 py-2 select-text">
+                <div data-find-field="output" className="mt-1 rounded-md border border-border bg-surface-raised px-3 py-2 select-text">
                     <Markdown text={result} />
                 </div>
             )}
@@ -118,7 +120,7 @@ export function SubagentRow({
     const refused = useSubagentSupport((s) => s.unsupported[endpointId] === true);
     const press = onOpenConversation !== undefined && canOpenSubagent(item, refused) ? onOpenConversation : onToggle;
     return (
-        <div>
+        <div data-find-item={item.id}>
             <ToggleLine
                 icon={<Icon icon={Bot} size={12} />}
                 // A node another agent opened with `--task` reads as the task it is, not as a helper of the CLI's own.
@@ -139,7 +141,7 @@ export function SubagentRow({
             {expanded && (
                 <div className="mb-1">
                     <SubagentWork item={item} work={work} />
-                    {item.result !== null && <SubagentResult result={item.result} />}
+                    {item.result !== null && <SubagentResult itemId={item.id} result={item.result} />}
                 </div>
             )}
         </div>

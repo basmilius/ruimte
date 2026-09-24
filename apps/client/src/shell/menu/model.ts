@@ -230,6 +230,7 @@ export const menuModel = (context: MenuContext): MenuSpec => {
                 command('edit-redo', t('redo'), { shortcut: CANVAS_SHORTCUTS.redo, enabled: zoomable })
             ),
             separator,
+            ...only(workspace, command('find', t('find'), { shortcut: CANVAS_SHORTCUTS.find })),
             ...only(workspace && context.folder, command('find-in-files', t('findInFiles'), { shortcut: APP_SHORTCUTS.findInFiles }))
         ]
     };

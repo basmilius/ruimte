@@ -25,6 +25,7 @@ import { isInNodeBody } from '@/canvas/node-body';
 import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/prompt-stack';
 import { useSubagentView } from '@/chat/subagent-view';
 import { stepTimelineMessage } from '@/chat/timeline-scroll';
+import { openFocusedFind } from '@/find/hosts';
 import { focusedCanvas } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { transportFor } from '@/transport';
@@ -150,6 +151,13 @@ export const useCanvasShortcuts = (): void => {
             }
             const apple = isApplePlatform();
             const is = (target: Shortcut): boolean => matchesShortcut(target, e, apple);
+            // A surface with nothing to search lets the key go, so a browser tab still gets its own find.
+            if (is(CANVAS_SHORTCUTS.find)) {
+                if (!isInFloatingLayer(e.target) && !useUi.getState().settings.open && openFocusedFind()) {
+                    e.preventDefault();
+                }
+                return;
+            }
             /* The grid answers from anywhere, a focused node or a text field included: splitting,
                closing and stepping between cells are about the window, not about what is in a cell. */
             if (is(CANVAS_SHORTCUTS.splitRight) || is(CANVAS_SHORTCUTS.splitDown)) {

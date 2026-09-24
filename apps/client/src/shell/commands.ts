@@ -15,6 +15,7 @@ import {
     showViewOnCanvasAction
 } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
+import { openFocusedFind } from '@/find/hosts';
 import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubheaderView } from '@/project/views';
 import { copyDiagram, exportDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { copyDrawing, exportDrawing } from '@/drawing/drawing-actions';
@@ -138,6 +139,21 @@ export const appCommands = (): Command[] => {
                       label: i18next.t('shell:palette.commands.findInFiles'),
                       shortcut: APP_SHORTCUTS.findInFiles,
                       run: () => useUi.getState().openFindInFiles()
+                  }
+              ]
+            : []),
+        ...(inWorkspace
+            ? [
+                  {
+                      id: 'find',
+                      label: i18next.t('shell:palette.commands.find'),
+                      shortcut: CANVAS_SHORTCUTS.find,
+                      // A frame later: the palette hands the focus back as it closes, and that focus says which surface is meant.
+                      run: () => {
+                          requestAnimationFrame(() => {
+                              openFocusedFind();
+                          });
+                      }
                   }
               ]
             : []),

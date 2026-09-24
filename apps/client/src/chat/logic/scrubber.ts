@@ -75,6 +75,8 @@ export interface TickSlot {
     kind: TickKind;
     /* Whether a message under it has a bookmark, which draws it in the accent. */
     marked: boolean;
+    /* Whether a find hit falls under it, which puts a mark of the find's own color beside it. */
+    found: boolean;
     /* The top of the tick inside the strip. */
     y: number;
 }
@@ -86,8 +88,8 @@ export interface ScrubberLayout {
     slots: TickSlot[];
 }
 
-/* `marked` says per message whether it has a bookmark; absent, none has. */
-export const layoutTicks = (kinds: readonly TickKind[], height: number, marked: readonly boolean[] = []): ScrubberLayout => {
+/* `marked` and `found` say per message whether it has a bookmark and whether a find hit falls under it; absent, none has. */
+export const layoutTicks = (kinds: readonly TickKind[], height: number, marked: readonly boolean[] = [], found: readonly boolean[] = []): ScrubberLayout => {
     const count = kinds.length;
     const room = Math.max(0, Math.floor(height));
     const slotCount = Math.min(count, Math.floor(room / MIN_PITCH_PX));
@@ -104,9 +106,51 @@ export const layoutTicks = (kinds: readonly TickKind[], height: number, marked: 
         // A merged tick is the person's as soon as one message in it is, since those are what the strip is for.
         const run = kinds.slice(first, last + 1);
         const kind = run.includes('person') ? 'person' : run.includes('bookmark') ? 'bookmark' : 'wake';
-        slots.push({ first, last, kind, marked: marked.slice(first, last + 1).includes(true), y: top + i * pitch + inset });
+        slots.push({
+            first,
+            last,
+            kind,
+            marked: marked.slice(first, last + 1).includes(true),
+            found: found.slice(first, last + 1).includes(true),
+            y: top + i * pitch + inset
+        });
     }
     return { top, pitch, count, slots };
+};
+
+/*
+ * The tick whose stretch of the thread a row falls in: a tick stands for its row and every row up to
+ * the next tick's, and a row above the first tick counts under the first. Null without ticks.
+ */
+export const tickOfRow = (ticks: readonly ScrubberTick[], rowIndex: number): number | null => {
+    if (ticks.length === 0) {
+        return null;
+    }
+    let low = 0;
+    let high = ticks.length - 1;
+    let found = 0;
+    while (low <= high) {
+        const middle = (low + high) >> 1;
+        if (ticks[middle]!.rowIndex <= rowIndex) {
+            found = middle;
+            low = middle + 1;
+        } else {
+            high = middle - 1;
+        }
+    }
+    return found;
+};
+
+/* Per tick, whether any of the rows has a find hit in its stretch. */
+export const ticksWithHits = (ticks: readonly ScrubberTick[], hitRows: readonly number[]): boolean[] => {
+    const found = ticks.map(() => false);
+    for (const row of hitRows) {
+        const tick = tickOfRow(ticks, row);
+        if (tick !== null) {
+            found[tick] = true;
+        }
+    }
+    return found;
 };
 
 /* The message under a height in the strip; inside a merged tick the height picks among its messages. */
