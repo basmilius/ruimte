@@ -130,6 +130,40 @@ describe('ruimte-context computer', () => {
         ]);
     });
 
+    test('works in the background unless the agent asks for the front', async () => {
+        const setup = await computerSetup();
+        await approved(setup);
+        await run(setup, ['click', 'TextEdit', '--element', '4']);
+        expect(setup.helper.acted.at(-1)?.front).toBeUndefined();
+        await run(setup, ['click', 'TextEdit', '--x', '10', '--y', '20', '--front']);
+        await run(setup, ['state', 'TextEdit', '--front']);
+        await run(setup, ['read', 'TextEdit', '--element', '1', '--front']);
+        await run(setup, ['wait', 'TextEdit', '--text', 'hi', '--front']);
+        expect(setup.helper.acted.slice(-4).map((request) => [request.command, request.front])).toEqual([
+            ['click', true],
+            ['state', true],
+            ['read', true],
+            ['wait', true]
+        ]);
+    });
+
+    test('says needs-front with the way on, for what only the front can do', async () => {
+        const setup = await computerSetup();
+        await approved(setup);
+        setup.helper.error = 'A click by pixel needs the real pointer, and so the app in front. Call again with --front: that brings the app forward';
+        setup.helper.errorCode = 'needs-front';
+        const [line] = await run(setup, ['click', 'TextEdit', '--x', '10', '--y', '20']);
+        expect(line).toStartWith('refused\tneeds-front\tA click by pixel needs the real pointer');
+        expect(line).toContain('--front');
+    });
+
+    test('tells every action about the background and needs-front in its help', () => {
+        for (const action of noun.actions.filter((candidate) => candidate.word !== 'apps')) {
+            expect(action.detail.some((line) => line.startsWith('refused\tneeds-front\t'))).toBe(true);
+            expect(action.detail.some((line) => line.startsWith('flag\t--front\tno value\t'))).toBe(true);
+        }
+    });
+
     test('refuses arguments the helper would refuse, before anyone is asked', async () => {
         const setup = await computerSetup();
         expect((await run(setup, ['click', 'TextEdit']))[0]).toStartWith('refused\tbad-arguments\t');

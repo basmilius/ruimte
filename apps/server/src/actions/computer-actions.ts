@@ -105,15 +105,20 @@ export const outcomeOf = (result: ActionResult, seen: StateSeen = () => ({ kind:
 
 interface CutInput {
     withState?: boolean | null;
+    front?: boolean | null;
     screenshot?: boolean | null;
     maxDepth?: number | null;
     maxElements?: number | null;
     maxText?: number | null;
 }
 
+/* Only a call that asked for the front says so; the helper works behind the person's work without it. */
+const frontOf = (input: { front?: boolean | null }): OperateInput => (input.front ? { front: true } : {});
+
 /* The helper's own spelling of the options every call shares; a field left out stays out. */
 const cutOf = (input: CutInput): OperateInput => ({
     ...(input.withState ? { withState: true } : {}),
+    ...frontOf(input),
     ...(input.screenshot === false ? { screenshot: false } : {}),
     ...(given(input.maxDepth) ? { maxDepth: input.maxDepth } : {}),
     ...(given(input.maxElements) ? { maxElements: input.maxElements } : {}),
@@ -228,7 +233,7 @@ export const computerActions: ActionHandlers<ServerActionContext> = {
         return { output: { ...stateOf(state, whole ? computer.treeView(actor.id, state, 'full') : null), within: input.within ?? null } };
     },
     'computer.read': async (input, { actor, context }) => {
-        const read = await computerOf(context).operate(actor.id, 'read', input.app, { element: input.element }, holdOf(input));
+        const read = await computerOf(context).operate(actor.id, 'read', input.app, { element: input.element, ...frontOf(input) }, holdOf(input));
         const cut: Record<string, number> = {};
         return {
             output: {

@@ -25,6 +25,13 @@ const WAIT_PARAM = {
     more: 'give your shell command a timeout above it, since some CLIs end one after 10 s'
 } as const;
 
+const FRONT_PARAM = {
+    syntax: '--front',
+    need: 'no value',
+    field: 'front',
+    more: 'ask the person first, unless they asked for it'
+} as const;
+
 const STATE_PARAM = {
     syntax: '--state',
     need: 'no value',
@@ -62,6 +69,7 @@ interface CutInput {
 
 const cutOf = ({ flags, switches }: CutInput) => ({
     wait: flags.wait ?? null,
+    front: switches.has('front'),
     screenshot: !switches.has('no-screenshot'),
     maxDepth: flags['max-depth'] ?? null,
     maxElements: flags['max-elements'] ?? null,
@@ -74,7 +82,7 @@ const ACTION_FLAGS = {
     ...CUT_FLAGS
 };
 
-const ACTION_SWITCHES = ['state', 'no-screenshot'] as const;
+const ACTION_SWITCHES = ['state', 'no-screenshot', 'front'] as const;
 
 /* The same for an action, which answers with the state after it only when --state asks. */
 const thenState = (input: CutInput & { flags: { state?: 'full' } }) => ({
@@ -170,6 +178,8 @@ const COMMON_DETAIL: readonly string[] = [
     "mac\tOne agent operates this Mac at a time: the first to call holds it until its turn ends. Another agent's call refuses with busy at once, or with --wait S holds in line for it, first come first served; apps is open to all",
     `hold\tThe person can pause the session or take the Mac over with their own mouse; a call then holds up to ${APPROVAL_WAIT_MS / 1000} s, or --wait S, until they give it back. Never reach the app another way meanwhile`,
     'timeout\tWith --wait, give your shell command a timeout above it: some CLIs end a shell command after 10 s unless you ask for more',
+    "background\tA call works behind the person's work: it never brings the app forward, moves the pointer or types into the app in front. --front does all three and interrupts the person, so ask them before you use it",
+    'refused\tneeds-front\tonly the front can do this, such as a click by pixel, a double click, a drag or a key on a minimized window: do it another way, or ask the person and call again with --front',
     'refused\tawaiting-approval\tthe card is still up: tell the person, then call again with --wait 60',
     'refused\tpaused, taken-over\tthe person still holds the Mac: call computer state with --wait 60, since they may have changed the window, then act on what it shows',
     'refused\tdeclined\tthe person said no to this app: leave it alone unless they ask you to',
@@ -221,6 +231,7 @@ const state = defineActionVerb('computer', {
         APP_PARAM,
         { syntax: '--find T', need: 'optional', field: 'find', more: 'prints matches, the number of elements that hold it' },
         { syntax: '--within N', need: 'optional', field: 'within', more: 'the numbers stay the ones the elements had' },
+        FRONT_PARAM,
         WAIT_PARAM,
         ...CUT_PARAMS
     ],
@@ -231,7 +242,7 @@ const state = defineActionVerb('computer', {
     ],
     positionals: appTuple('state'),
     flags: z.object({ find: z.string().min(1, '--find needs the text to look for').optional(), within: wholeFlag('within', 0, 1_000_000), ...CUT_FLAGS }),
-    switches: ['no-screenshot'],
+    switches: ['no-screenshot', 'front'],
     async run({ positionals: [app], flags, switches }, call) {
         const part = { find: flags.find ?? null, within: flags.within ?? null };
         return stateLines(await runAction(call, 'computer.state', { app, ...part, ...cutOf({ flags, switches }) }));
@@ -242,7 +253,7 @@ const read = defineActionVerb('computer', {
     name: 'read',
     action: 'computer.read',
     usage: '<app> --element N',
-    params: [APP_PARAM, { syntax: '--element N', need: 'required', field: 'element' }, WAIT_PARAM],
+    params: [APP_PARAM, { syntax: '--element N', need: 'required', field: 'element' }, FRONT_PARAM, WAIT_PARAM],
     detail: [
         'prints\telement\tN\trole',
         'prints\tframe\tx,y\twidthxheight\tin screen points',
@@ -256,8 +267,9 @@ const read = defineActionVerb('computer', {
         element: z.string({ error: 'computer read needs --element' }).regex(/^\d+$/, '--element takes a whole number').transform(Number),
         wait: CUT_FLAGS.wait
     }),
-    async run({ positionals: [app], flags }, call) {
-        const read = await runAction(call, 'computer.read', { app, element: flags.element, wait: flags.wait ?? null });
+    switches: ['front'],
+    async run({ positionals: [app], flags, switches }, call) {
+        const read = await runAction(call, 'computer.read', { app, element: flags.element, wait: flags.wait ?? null, front: switches.has('front') });
         const texts = [
             ['title', read.title],
             ['value', read.value],
@@ -286,6 +298,7 @@ const wait = defineActionVerb('computer', {
         { syntax: '--element N', need: 'with --value', field: 'element' },
         { syntax: '--value V', need: 'with --element', field: 'value' },
         { syntax: '--timeout S', need: 'optional', field: 'timeout', more: 'at most 110; give your shell command a timeout above it' },
+        FRONT_PARAM,
         WAIT_PARAM,
         { syntax: '--state', need: 'no value', field: 'fullState', more: 'write --state=full; without it the rows are only what changed' },
         ...CUT_PARAMS
@@ -350,7 +363,7 @@ const actionParams = <
         | 'computer.drag'
 >(
     own: readonly ActionParam<Name>[]
-): ActionParam<Name>[] => [APP_PARAM, ...own, WAIT_PARAM, STATE_PARAM, ...CUT_PARAMS] as ActionParam<Name>[];
+): ActionParam<Name>[] => [APP_PARAM, ...own, FRONT_PARAM, WAIT_PARAM, STATE_PARAM, ...CUT_PARAMS] as ActionParam<Name>[];
 
 const click = defineActionVerb('computer', {
     name: 'click',
@@ -364,8 +377,9 @@ const click = defineActionVerb('computer', {
         { syntax: '--button B', need: 'optional', field: 'button' }
     ]),
     detail: [
-        'note\tBy element it presses the element without moving the pointer when the app lets it, and clicks its visible center otherwise; a click that would land on something else is refused',
-        'note\tBy pixel it maps a pixel of the last screenshot to the screen and always uses the mouse',
+        'note\tBy element it presses the element, puts the focus in a field, or opens its menu for --button right, without moving the pointer; the menu shows on screen, so press one of its items or send escape',
+        'note\tWith --front, an element that cannot be pressed is clicked at its visible center with the mouse; a click that would land on something else is refused',
+        'note\tBy pixel it maps a pixel of the last screenshot to the screen and always uses the mouse, so it needs --front, and so does --count 2',
         ...OUTCOME_PRINTS,
         ...COMMON_DETAIL
     ],
@@ -404,7 +418,11 @@ const scroll = defineActionVerb('computer', {
         { syntax: '--direction D', need: 'required', field: 'direction', more: 'up, down, left or right' },
         { syntax: '--pages N', need: 'optional', field: 'pages' }
     ]),
-    detail: [...OUTCOME_PRINTS, ...COMMON_DETAIL],
+    detail: [
+        'note\tIn the background it scrolls an element through accessibility, where the app offers that; wheel events need --front, and so does scrolling by pixel',
+        ...OUTCOME_PRINTS,
+        ...COMMON_DETAIL
+    ],
     positionals: appTuple('scroll'),
     flags: z.object({
         element: wholeFlag('element', 0, 1_000_000),
@@ -447,7 +465,7 @@ const drag = defineActionVerb('computer', {
         { syntax: '--to-y PX', need: 'with --to-x', field: 'toY' }
     ]),
     detail: [
-        'note\tIt presses at the start, moves in a few steps to the end and lets go there; for a slider, a split view, a file onto a window',
+        'note\tIt presses at the start, moves in a few steps to the end and lets go there; for a slider, a split view, a file onto a window. It needs --front',
         'note\tThe start is checked like a click: a drag that would grab something else than --from is refused. The end is not, it may lie on another element',
         ...OUTCOME_PRINTS,
         ...COMMON_DETAIL
@@ -483,7 +501,12 @@ const type = defineActionVerb('computer', {
     action: 'computer.type',
     usage: '<app> --text T',
     params: actionParams<'computer.type'>([{ syntax: '--text T', need: 'required', field: 'text', more: 'write --text=T for text that starts with --' }]),
-    detail: ['note\tIt types into whatever has the focus; click the field first. The app is brought to the front', ...OUTCOME_PRINTS, ...COMMON_DETAIL],
+    detail: [
+        'note\tIt types into whatever has the focus in the app; click the field first. In the background the keys go to the app alone; a minimized window needs --front',
+        'note\tTo replace the whole text of a field, set-value works in the background where select all does not',
+        ...OUTCOME_PRINTS,
+        ...COMMON_DETAIL
+    ],
     positionals: appTuple('type'),
     flags: z.object({ text: z.string({ error: 'computer type needs --text' }).min(1, '--text needs the text to type'), ...ACTION_FLAGS }),
     switches: ACTION_SWITCHES,
@@ -504,7 +527,12 @@ const key = defineActionVerb('computer', {
             more: 'cmd, shift, option, ctrl and fn with a-z, 0-9, return, escape, tab, space, delete, the arrows, home, end, pageup, pagedown, f1-f12'
         }
     ]),
-    detail: ['note\tKeys are the US positions of the keyboard; type is for text', ...OUTCOME_PRINTS, ...COMMON_DETAIL],
+    detail: [
+        'note\tKeys are the US positions of the keyboard; type is for text',
+        "note\tIn the background a menu's own shortcut works, and select all, cut, copy, paste, undo and redo refuse with needs-front: they act on the key window, which an app behind the person's work does not have",
+        ...OUTCOME_PRINTS,
+        ...COMMON_DETAIL
+    ],
     positionals: z
         .tuple([z.string().min(1, 'computer key needs an app')], { error: 'computer key needs an app and at least one key combo' })
         .rest(z.string().min(1))
@@ -546,6 +574,7 @@ const menu = defineActionVerb('computer', {
     detail: [
         'prints\tmenu\tline\twithout an item: one row per menu item, indented, with [N], shortcuts, checked, disabled and > for a submenu',
         'note\tA disabled item is tried anyway: an app refreshes that only when the menu opens',
+        'note\tIn the background an item for the window or the text in focus, such as save, export, print or copy, does nothing, since the app has no key window: when the state shows no change, it needs --front',
         ...OUTCOME_PRINTS,
         ...COMMON_DETAIL
     ],
@@ -576,6 +605,7 @@ const open = defineActionVerb('computer', {
     detail: [
         'note\tAn app that does not run yet is named by its bundle id or the file name of its bundle in /Applications, /System/Applications or ~/Applications',
         'note\tIt waits up to 5 s for a window; detail launched says whether it started the app',
+        'note\tIn the background it starts the app or shows a hidden one without bringing it forward; --front brings it forward',
         ...OUTCOME_PRINTS,
         ...COMMON_DETAIL
     ],
@@ -595,6 +625,7 @@ export const COMPUTER_SUMMARY =
 export const COMPUTER_DETAIL: readonly string[] = [
     'first\truimte-context computer apps to see what runs and what you may operate, then open <app> or state <app> to read the whole window once',
     "one\tOne agent operates this Mac at a time, until its turn ends; another agent's call refuses with busy, or holds in line with --wait S",
+    "background\tEvery call works behind the person's work, so they can go on; what needs the front refuses with needs-front. Ask the person before you call again with --front, which brings the app forward and interrupts them",
     'loop\tAn action with --state acts and answers with what changed since then, marked + new, - gone, ~ changed; wait <app> --text T instead of sleeping; read for a text a state cut',
     'find\tstate --find T lists only the elements that hold T and what they sit in, and --within N one part of the window, for a window too big to read whole',
     'note\tThe screenshot is this machine’s, not the project’s: it lives outside the project folder and is swept an hour later',

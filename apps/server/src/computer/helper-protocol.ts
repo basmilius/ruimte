@@ -64,6 +64,8 @@ export interface HelperRequest extends StateOptions {
     pages?: number;
     path?: string;
     withState?: boolean;
+    // Brings the app to the front and uses the real pointer and keyboard; without it the helper works behind the person's work.
+    front?: boolean;
     // For `state`: only the elements that hold this text and what they sit in, or only the subtree of one element.
     find?: string;
     within?: number;
@@ -86,7 +88,7 @@ export interface HelperRequest extends StateOptions {
 
 export const HelperReplySchema = z.union([
     z.object({ ok: z.literal(true), result: z.record(z.string(), z.unknown()) }),
-    // `code` names the refusals a caller branches on (paused, taken-over, stopped); the text is for people.
+    // `code` names the refusals a caller branches on (paused, taken-over, stopped, needs-front); the text is for people.
     z.object({ ok: z.literal(false), error: z.string(), code: z.string().optional() })
 ]);
 

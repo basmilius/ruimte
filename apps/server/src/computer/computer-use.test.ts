@@ -517,6 +517,20 @@ describe('naming an app', () => {
         expect(await codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 3 }))).toBe('stopped');
         expect(agentWords('Run `cu state` again')).toBe('Run `ruimte-context computer state` again');
     });
+
+    test('passes on a call only the front can do as needs-front, and never goes to the front itself', async () => {
+        const { computer, helper } = await computerSetup();
+        const call = computer.operate('chat-1', 'state', 'TextEdit', {});
+        await until(() => computer.pendingApprovals().length === 1);
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'always');
+        await call;
+        helper.error = 'A drag needs the real pointer, and so the app in front. Call again with --front: that brings the app forward';
+        helper.errorCode = 'needs-front';
+        const refusal = await computer.operate('chat-1', 'drag', 'TextEdit', { element: 1, toElement: 2 }).catch((error: unknown) => error);
+        expect(refusal).toMatchObject({ code: 'needs-front', message: helper.error });
+        // Nothing tried it again with the front on the agent's behalf.
+        expect(helper.acted.filter((request) => request.command === 'drag').map((request) => request.front)).toEqual([undefined]);
+    });
 });
 
 /* Lets chat-1 into TextEdit for always, and forgets what that showed. */

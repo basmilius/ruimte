@@ -913,6 +913,9 @@ export class ComputerUse {
                 this.heard({ active: false, mode: 'running', stopped: true });
                 throw new ComputerRefusal('stopped', STOPPED_WORDS);
             }
+            if (error.helperCode === 'needs-front') {
+                throw new ComputerRefusal('needs-front', agentWords(error.message));
+            }
             throw new ComputerRefusal('app-refused', agentWords(error.message));
         }
     }

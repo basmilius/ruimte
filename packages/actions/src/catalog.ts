@@ -202,6 +202,15 @@ const computerHold = {
         .nullish()
         .describe("Seconds the call holds for a card or the person's pause and goes on once they answer or resume; 6 without it")
 };
+/* Every call that reads or operates an app works behind the person's work unless it asks for the front. */
+const computerFront = {
+    front: z
+        .boolean()
+        .nullish()
+        .describe(
+            'True brings the app to the front and uses the real pointer and keyboard, which interrupts the person; without it the call works in the background and refuses with needs-front what only the front can do'
+        )
+};
 /* How the tree and the picture of a state are cut, for state itself and for every action that asks for one after it. */
 const computerStateCut = {
     screenshot: z.boolean().nullish().describe('False leaves the picture of the window out'),
@@ -211,6 +220,7 @@ const computerStateCut = {
 };
 const computerThenState = {
     ...computerHold,
+    ...computerFront,
     withState: z
         .boolean()
         .nullish()
@@ -1845,6 +1855,7 @@ export const ACTION_DEFINITIONS = {
         input: z.object({
             app: computerApp,
             ...computerHold,
+            ...computerFront,
             find: z
                 .string()
                 .min(1)
@@ -1861,7 +1872,7 @@ export const ACTION_DEFINITIONS = {
         effect: 'read',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ app: computerApp, element: computerElement, ...computerHold }),
+        input: z.object({ app: computerApp, element: computerElement, ...computerHold, ...computerFront }),
         output: z.object({
             app: computerAppRef,
             element: z.number().int(),
@@ -1890,6 +1901,7 @@ export const ACTION_DEFINITIONS = {
             value: z.string().nullish().describe('With element: wait until its value is exactly this'),
             timeout: z.number().int().min(1).max(110).nullish().describe('Seconds to wait for it; 10 without it'),
             ...computerHold,
+            ...computerFront,
             fullState: z.boolean().nullish().describe('The whole tree at the end instead of what changed'),
             ...computerStateCut
         }),

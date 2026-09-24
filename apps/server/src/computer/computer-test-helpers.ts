@@ -68,6 +68,8 @@ export class FakeHelper implements HelperTransport {
     accessibility = true;
     screenRecording = true;
     error: string | null = null;
+    // The code the helper puts beside `error`, such as needs-front for a call only the front can do.
+    errorCode: string | null = null;
     session: HelperSession = { active: false, mode: 'running', stopped: false };
     shown: string | null = null;
     // Runs as an app command arrives, before the helper looks at its session: the person's hand in between.
@@ -143,7 +145,7 @@ export class FakeHelper implements HelperTransport {
         }
         this.session = { ...this.session, active: true };
         if (this.error !== null) {
-            return { ok: false, error: this.error };
+            return { ok: false, error: this.error, ...(this.errorCode === null ? {} : { code: this.errorCode }) };
         }
         if (request.command === 'state') {
             return { ok: true, result: this.state };
