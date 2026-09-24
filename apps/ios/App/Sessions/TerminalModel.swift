@@ -147,8 +147,11 @@ final class TerminalModel {
         guard writeTask == nil else { return }
         writeTask = Task {
             defer { writeTask = nil }
+            // Whatever was typed while the previous write was on its way goes out as one, so a slow link costs one
+            // round trip per write instead of one per keystroke.
             while !queuedInput.isEmpty, !Task.isCancelled {
-                let text = queuedInput.removeFirst()
+                let text = queuedInput.joined()
+                queuedInput.removeAll()
                 do { _ = try await client.request("session.write", payload: target(["data": .string(text)])) } catch {
                     self.error = error.localizedDescription
                     queuedInput.removeAll()

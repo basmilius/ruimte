@@ -68,13 +68,14 @@ final class SessionScreenTests: XCTestCase {
         let model = TerminalModel(client: client, sessionID: "terminal")
         model.connected = true
         model.write("a")
-        model.write("b")
         await client.waitForRequest("session.write", count: 1)
+        model.write("b")
+        model.write("c")
         XCTAssertEqual(client.requests.filter { $0.0 == "session.write" }.count, 1)
         client.finishWrite()
         await client.waitForRequest("session.write", count: 2)
         XCTAssertEqual(
-            client.requests.filter { $0.0 == "session.write" }.map { $0.1["data"]?.stringValue }, ["a", "b"])
+            client.requests.filter { $0.0 == "session.write" }.map { $0.1["data"]?.stringValue }, ["a", "bc"])
         XCTAssertFalse(client.requests.contains { $0.0 == "session.resize" })
         client.finishWrite()
     }
