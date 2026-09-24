@@ -228,12 +228,20 @@ import {
 } from './session.ts';
 import { AgentChildrenPayloadSchema, AgentChildrenResultSchema, TaskChangedEventSchema, TaskListPayloadSchema, TaskListResultSchema } from './task.ts';
 import { UsageChangedEventSchema, UsageLimitsSnapshotSchema, UsageSummaryPayloadSchema, UsageSummaryResultSchema } from './usage.ts';
+import {
+    ComputerAnswerPayloadSchema,
+    ComputerAnswerResultSchema,
+    ComputerApprovalsSchema,
+    ComputerUseSetEnabledPayloadSchema,
+    ComputerUseStatusSchema
+} from './computer.ts';
 
 export * from './agent.ts';
 export * from './auth.ts';
 export * from './browser.ts';
 export * from './bytes.ts';
 export * from './chat.ts';
+export * from './computer.ts';
 export * from './context.ts';
 export * from './direct.ts';
 export * from './direct-liveness.ts';
@@ -404,6 +412,10 @@ export const REQUEST_SCHEMAS = {
     'processes.signal': { payload: ProcessesSignalPayloadSchema, result: EmptySchema },
     'processes.listAlerts': { payload: EmptySchema, result: ProcessesAlertsSchema },
     'processes.dismiss': { payload: ProcessesDismissPayloadSchema, result: EmptySchema },
+    'computer.status': { payload: EmptySchema, result: ComputerUseStatusSchema },
+    'computer.setEnabled': { payload: ComputerUseSetEnabledPayloadSchema, result: ComputerUseStatusSchema },
+    'computer.approvals': { payload: EmptySchema, result: ComputerApprovalsSchema },
+    'computer.answer': { payload: ComputerAnswerPayloadSchema, result: ComputerAnswerResultSchema },
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
     'endpoint.signRegistration': { payload: EndpointSignRegistrationPayloadSchema, result: EndpointSignRegistrationResultSchema },
@@ -461,6 +473,8 @@ export const EVENT_SCHEMAS = {
     'usage.limitsChanged': UsageLimitsSnapshotSchema,
     'processes.sample': ProcessesSampleEventSchema,
     'processes.alerts': ProcessesAlertsSchema,
+    'computer.status': ComputerUseStatusSchema,
+    'computer.approvals': ComputerApprovalsSchema,
     'task.changed': TaskChangedEventSchema,
     'plan.changed': PlanChangedEventSchema,
     'plan.removed': PlanRemovedEventSchema,

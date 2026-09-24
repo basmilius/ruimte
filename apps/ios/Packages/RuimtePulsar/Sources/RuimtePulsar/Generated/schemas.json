@@ -29405,6 +29405,229 @@
     "type": "object",
     "properties": {}
   },
+  "request.computer.status.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.computer.status.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean"
+      },
+      "present": {
+        "type": "boolean"
+      },
+      "running": {
+        "type": "boolean"
+      },
+      "accessibility": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "screenRecording": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "problem": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "enabled",
+      "present",
+      "running",
+      "accessibility",
+      "screenRecording"
+    ]
+  },
+  "request.computer.setEnabled.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean"
+      },
+      "language": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 16
+      }
+    },
+    "required": [
+      "enabled"
+    ]
+  },
+  "request.computer.setEnabled.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean"
+      },
+      "present": {
+        "type": "boolean"
+      },
+      "running": {
+        "type": "boolean"
+      },
+      "accessibility": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "screenRecording": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "problem": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "enabled",
+      "present",
+      "running",
+      "accessibility",
+      "screenRecording"
+    ]
+  },
+  "request.computer.approvals.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.computer.approvals.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "approvals": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "requestId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "nodeId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "surface": {
+              "type": "string",
+              "enum": [
+                "chat",
+                "terminal"
+              ]
+            },
+            "nodeTitle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "projectId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "projectName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "app": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "bundleId": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "name",
+                "bundleId"
+              ]
+            },
+            "command": {
+              "type": "string",
+              "minLength": 1
+            },
+            "createdAt": {
+              "type": "number"
+            },
+            "expiresAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "requestId",
+            "nodeId",
+            "surface",
+            "nodeTitle",
+            "projectId",
+            "projectName",
+            "app",
+            "command",
+            "createdAt",
+            "expiresAt"
+          ]
+        }
+      }
+    },
+    "required": [
+      "approvals"
+    ]
+  },
+  "request.computer.answer.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "requestId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "choice": {
+        "type": "string",
+        "enum": [
+          "once",
+          "always",
+          "deny"
+        ]
+      }
+    },
+    "required": [
+      "requestId",
+      "choice"
+    ]
+  },
+  "request.computer.answer.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "accepted": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "accepted"
+    ]
+  },
   "request.endpoint.info.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -39240,6 +39463,131 @@
     },
     "required": [
       "alerts"
+    ]
+  },
+  "event.computer.status": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean"
+      },
+      "present": {
+        "type": "boolean"
+      },
+      "running": {
+        "type": "boolean"
+      },
+      "accessibility": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "screenRecording": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "problem": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "enabled",
+      "present",
+      "running",
+      "accessibility",
+      "screenRecording"
+    ]
+  },
+  "event.computer.approvals": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "approvals": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "requestId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "nodeId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "surface": {
+              "type": "string",
+              "enum": [
+                "chat",
+                "terminal"
+              ]
+            },
+            "nodeTitle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "projectId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "projectName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "app": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "bundleId": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "name",
+                "bundleId"
+              ]
+            },
+            "command": {
+              "type": "string",
+              "minLength": 1
+            },
+            "createdAt": {
+              "type": "number"
+            },
+            "expiresAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "requestId",
+            "nodeId",
+            "surface",
+            "nodeTitle",
+            "projectId",
+            "projectName",
+            "app",
+            "command",
+            "createdAt",
+            "expiresAt"
+          ]
+        }
+      }
+    },
+    "required": [
+      "approvals"
     ]
   },
   "event.task.changed": {
