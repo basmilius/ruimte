@@ -33,6 +33,7 @@ import { registerPlanHandlers } from './handlers/plan.ts';
 import { PlanStore } from './plans/plan-store.ts';
 import type { AgentStart, WorktreeWant } from './canvas/verb.ts';
 import { addWanted } from './canvas/worktree.ts';
+import { SOCKET_BACKPRESSURE_LIMIT } from './backpressure.ts';
 import { connectionOpener, socketChannel, type ClientChannel, type OpenConnection, type SocketChannel } from './connection.ts';
 import { authenticateChannel } from './pulsar/channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS } from './pulsar/data-channel.ts';
@@ -832,6 +833,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             return new Response('Not found', { status: 404 });
         },
         websocket: {
+            backpressureLimit: SOCKET_BACKPRESSURE_LIMIT,
+            closeOnBackpressureLimit: true,
             open(ws) {
                 if (ws.data.protocolRefused) {
                     ws.close(PROTOCOL_REFUSED_CLOSE_CODE, protocolRefusalReason());

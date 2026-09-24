@@ -46,6 +46,18 @@ interface SessionOptions {
     onExit(exitCode: number): void;
 }
 
+interface ClientStream {
+    // Output not sent yet; while a snapshot is on its way, the output that follows its screen.
+    buffered: string;
+    snapshot: PendingSnapshot | null;
+}
+
+interface PendingSnapshot {
+    // The screen is taken at the last marker, so every caller gets one that holds what came before its own call.
+    markers: number;
+    waiters: Array<(screen: string) => void>;
+}
+
 export class Session {
     readonly id: string;
     readonly cwd: string;
@@ -65,7 +77,11 @@ export class Session {
     private readonly pty: PtyProcess;
     private readonly deliver: (clientId: string, data: string) => void;
     private readonly onExit: (exitCode: number) => void;
-    private readonly pending = new Map<string, string>();
+    private readonly clients = new Map<string, ClientStream>();
+    // A disposed terminal never calls back, so `dispose` runs whatever still waits on the parser itself.
+    private readonly parsedWaiters = new Set<() => void>();
+    // Whether the screen moved since the snapshot file last took it; a new session has never been taken.
+    private dirty = true;
     private flushTimer: ReturnType<typeof setTimeout> | null = null;
     private killTimer: ReturnType<typeof setTimeout> | null = null;
     // Bytes of one UTF-8 character can straddle two PTY reads; the streaming decoder keeps the tail.
@@ -116,27 +132,39 @@ export class Session {
     }
 
     get attachedCount(): number {
-        return this.pending.size;
+        return this.clients.size;
     }
 
     isAttached(clientId: string): boolean {
-        return this.pending.has(clientId);
+        return this.clients.has(clientId);
     }
 
     attachedClients(): string[] {
-        return [...this.pending.keys()];
+        return [...this.clients.keys()];
     }
 
-    // Resolves once the emulator has parsed everything fed so far, so the screen a client
-    // receives on attach never lags the bytes it will be streamed next.
-    async serializeScreen(): Promise<string> {
-        await new Promise<void>((resolve) => this.terminal.write('', resolve));
-        return this.serializer.serialize({ scrollback: SCROLLBACK_LINES });
+    /* The screen once the emulator has parsed everything fed so far. A screen for a client comes from `snapshotFor` only. */
+    serializeScreen(): Promise<string> {
+        return new Promise((resolve) => this.whenParsed(() => resolve(this.serialize())));
+    }
+
+    /* The screen for the snapshot file, or null when nothing changed since the last one was taken. */
+    changedScreen(): Promise<string> | null {
+        if (!this.dirty) {
+            return null;
+        }
+        this.dirty = false;
+        return this.serializeScreen();
+    }
+
+    /* A screen that was taken but never reached the disk, so the next pass takes it again. */
+    markChanged(): void {
+        this.dirty = true;
     }
 
     /* The screen and scrollback as text, for an agent that was linked to this session. */
     async plainText(): Promise<string> {
-        await new Promise<void>((resolve) => this.terminal.write('', resolve));
+        await new Promise<void>((resolve) => this.whenParsed(resolve));
         const buffer = this.terminal.buffer.active;
         const lines: string[] = [];
         for (let i = 0; i < buffer.length; i++) {
@@ -148,27 +176,57 @@ export class Session {
         return lines.join('\n');
     }
 
-    async attach(clientId: string, cols?: number, rows?: number): Promise<string> {
+    /*
+     * A screen for one client and the stream that continues it, as one step. From this call on the
+     * client's output is held instead of sent, and what it had buffered goes: the emulator parses
+     * that before the marker, so the screen holds it. The screen is taken in the marker's callback,
+     * where every byte fed before the marker is parsed and none after it, and `onScreen` runs right
+     * there, before the held output may flow.
+     */
+    snapshotFor(clientId: string, onScreen: (screen: string) => void): void {
+        let stream = this.clients.get(clientId);
+        if (!stream) {
+            stream = { buffered: '', snapshot: null };
+            this.clients.set(clientId, stream);
+        }
+        stream.buffered = '';
+        const snapshot = stream.snapshot ?? { markers: 0, waiters: [] };
+        stream.snapshot = snapshot;
+        snapshot.markers += 1;
+        snapshot.waiters.push(onScreen);
+        const owner = stream;
+        this.whenParsed(() => {
+            snapshot.markers -= 1;
+            if (snapshot.markers > 0) {
+                return;
+            }
+            const screen = this.serialize();
+            owner.snapshot = null;
+            for (const waiter of snapshot.waiters) {
+                waiter(screen);
+            }
+            if (owner.buffered !== '' && this.clients.get(clientId) === owner) {
+                this.scheduleFlush();
+            }
+        });
+    }
+
+    attach(clientId: string, cols?: number, rows?: number): Promise<string> {
         if (cols !== undefined && rows !== undefined) {
             this.resize(cols, rows);
         }
-        const screen = await this.serializeScreen();
-        // Registering after the serialize resolved (no await in between) is what keeps the screen
-        // and the stream contiguous: nothing can land in both.
-        if (!this.pending.has(clientId)) {
-            this.pending.set(clientId, '');
-        }
-        return screen;
+        return new Promise((resolve) => this.snapshotFor(clientId, resolve));
     }
 
     detach(clientId: string): void {
-        const buffered = this.pending.get(clientId);
-        if (buffered === undefined) {
+        const stream = this.clients.get(clientId);
+        if (!stream) {
             return;
         }
-        this.pending.delete(clientId);
-        if (buffered !== '') {
-            this.deliver(clientId, buffered);
+        this.clients.delete(clientId);
+        // Output held for a snapshot belongs after a screen this client is no longer streamed from.
+        if (stream.snapshot === null && stream.buffered !== '') {
+            this.deliver(clientId, stream.buffered);
         }
     }
 
@@ -183,26 +241,37 @@ export class Session {
      * usually half drawn where this lands.
      */
     notice(text: string): void {
-        const data = `\r\n${dimmed(text)}`;
-        this.terminal.write(data);
-        for (const [clientId, buffered] of this.pending) {
-            this.pending.set(clientId, buffered + data);
-        }
-        if (this.flushTimer === null && this.pending.size > 0) {
-            this.flushTimer = setTimeout(() => this.flush(), OUTPUT_TICK_MS);
-        }
+        this.append(`\r\n${dimmed(text)}`);
     }
 
     /*
      * What Terminal.app's Clear does: the buffer goes, the prompt line becomes the first, and the
-     * shell is never told. Pending output is flushed first, so bytes from before the clear cannot
-     * land on the fresh screen.
+     * shell is never told. Output waiting for its tick goes out first; every client then gets the
+     * fresh screen through `resync`, and what arrives meanwhile is in that screen or follows it.
      */
-    async clear(): Promise<string> {
+    clear(resync: (clientId: string, screen: string) => void): Promise<void> {
         this.flush();
-        await new Promise<void>((resolve) => this.terminal.write('', resolve));
-        this.terminal.clear();
-        return this.serializeScreen();
+        this.dirty = true;
+        return new Promise((resolve) => {
+            this.whenParsed(() => {
+                this.terminal.clear();
+                const clientIds = this.attachedClients();
+                let open = clientIds.length;
+                if (open === 0) {
+                    resolve();
+                    return;
+                }
+                for (const clientId of clientIds) {
+                    this.snapshotFor(clientId, (screen) => {
+                        resync(clientId, screen);
+                        open -= 1;
+                        if (open === 0) {
+                            resolve();
+                        }
+                    });
+                }
+            });
+        });
     }
 
     resize(cols: number, rows: number): void {
@@ -211,6 +280,7 @@ export class Session {
         }
         this.cols = cols;
         this.rows = rows;
+        this.dirty = true;
         this.terminal.resize(cols, rows);
         if (!this.exited) {
             this.pty.resize(cols, rows);
@@ -235,7 +305,10 @@ export class Session {
 
     dispose(): void {
         this.clearTimers();
-        this.pending.clear();
+        this.clients.clear();
+        for (const run of [...this.parsedWaiters]) {
+            run();
+        }
         this.terminal.dispose();
     }
 
@@ -255,26 +328,52 @@ export class Session {
             clearTimeout(this.flushTimer);
             this.flushTimer = null;
         }
-        for (const [clientId, buffered] of this.pending) {
-            if (buffered === '') {
+        for (const [clientId, stream] of this.clients) {
+            if (stream.snapshot !== null || stream.buffered === '') {
                 continue;
             }
-            this.pending.set(clientId, '');
-            this.deliver(clientId, buffered);
+            const data = stream.buffered;
+            stream.buffered = '';
+            this.deliver(clientId, data);
+        }
+    }
+
+    private serialize(): string {
+        return this.serializer.serialize({ scrollback: SCROLLBACK_LINES });
+    }
+
+    // xterm calls back in the middle of its write loop: every earlier write is parsed there, no later one is.
+    private whenParsed(callback: () => void): void {
+        const run = (): void => {
+            if (this.parsedWaiters.delete(run)) {
+                callback();
+            }
+        };
+        this.parsedWaiters.add(run);
+        this.terminal.write('', run);
+    }
+
+    private scheduleFlush(): void {
+        if (this.flushTimer === null) {
+            this.flushTimer = setTimeout(() => this.flush(), OUTPUT_TICK_MS);
+        }
+    }
+
+    private append(text: string): void {
+        this.dirty = true;
+        this.terminal.write(text);
+        for (const stream of this.clients.values()) {
+            stream.buffered += text;
+        }
+        if (this.clients.size > 0) {
+            this.scheduleFlush();
         }
     }
 
     private receive(bytes: Uint8Array): void {
         const text = this.decoder.decode(bytes, { stream: true });
-        if (text === '') {
-            return;
-        }
-        this.terminal.write(text);
-        for (const [clientId, buffered] of this.pending) {
-            this.pending.set(clientId, buffered + text);
-        }
-        if (this.flushTimer === null && this.pending.size > 0) {
-            this.flushTimer = setTimeout(() => this.flush(), OUTPUT_TICK_MS);
+        if (text !== '') {
+            this.append(text);
         }
     }
 
@@ -283,6 +382,7 @@ export class Session {
             return;
         }
         this.exitCode = exitCode;
+        this.dirty = true;
         this.clearTimers();
         this.flush();
         this.onExit(exitCode);

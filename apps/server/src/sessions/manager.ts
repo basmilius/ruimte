@@ -9,7 +9,7 @@ import { freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, termin
 import { contextHint, verbsNote } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
-import type { SnapshotStore } from './snapshot-store.ts';
+import type { SessionSnapshot, SnapshotStore } from './snapshot-store.ts';
 import { errorText } from '../error-text.ts';
 import { CodedError } from '../coded-error.ts';
 import { ClientSinks } from '../client-sinks.ts';
@@ -106,6 +106,8 @@ export class SessionManager {
     private readonly tokens = new Map<string, string>();
     // Ids whose kill is in flight: the exit that follows removes the session instead of parking it.
     private readonly killing = new Set<string>();
+    // A snapshot pass that took a screen before its node was deleted must not write the file back.
+    private readonly deleted = new WeakSet<Session>();
     // When a resume was typed into a session, until its agent reports in; the guard against typing a second one.
     private readonly resuming = new Map<string, number>();
     private readonly now: () => number;
@@ -410,16 +412,14 @@ export class SessionManager {
     // Every attached client repaints from the screen the daemon owns, the same way it does after a resync.
     async clear(sessionId: string): Promise<void> {
         const session = this.require(sessionId);
-        const screen = await session.clear();
-        for (const clientId of session.attachedClients()) {
-            this.emit(clientId, { event: 'session.resync', payload: { sessionId, screen } });
-        }
+        await session.clear((clientId, screen) => this.emit(clientId, { event: 'session.resync', payload: { sessionId, screen } }));
     }
 
     async kill(sessionId: string): Promise<void> {
         // A node deleted while its session is still being made ends that session rather than missing it.
         await this.creating.get(sessionId)?.catch(() => undefined);
         const session = this.require(sessionId);
+        this.deleted.add(session);
         await this.snapshots?.delete(sessionId);
         await this.agents?.delete(sessionId);
         if (session.exited) {
@@ -446,10 +446,20 @@ export class SessionManager {
         session.kill();
     }
 
-    async snapshotAll(): Promise<Array<{ sessionId: string; screen: string }>> {
-        const result: Array<{ sessionId: string; screen: string }> = [];
-        for (const session of this.sessions.values()) {
-            result.push({ sessionId: session.id, screen: await session.serializeScreen() });
+    /* The screens that changed since the last pass; a quiet session costs nothing. */
+    async snapshotAll(): Promise<SessionSnapshot[]> {
+        const result: SessionSnapshot[] = [];
+        for (const session of [...this.sessions.values()]) {
+            const screen = this.deleted.has(session) ? null : session.changedScreen();
+            if (screen === null) {
+                continue;
+            }
+            result.push({
+                sessionId: session.id,
+                screen: await screen,
+                deleted: () => this.deleted.has(session),
+                unsaved: () => session.markChanged()
+            });
         }
         return result;
     }

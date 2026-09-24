@@ -216,6 +216,8 @@ export const DeviceFrameSchema = z.object({
     width: DeviceFrameSizeSchema,
     height: DeviceFrameSizeSchema,
     format: DeviceVideoFormatSchema.optional(),
+    // Set on the frames of a video stream only: after a gap, the one to start decoding from again.
+    keyFrame: z.boolean().optional(),
     data: z.string().max(11 * 1024 * 1024)
 });
 

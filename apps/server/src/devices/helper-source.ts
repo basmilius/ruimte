@@ -1,4 +1,4 @@
-import type { DeviceInput, LiveStreamFrame } from '@ruimte/contracts';
+import { hevcKeyFrame, type DeviceInput, type LiveStreamFrame } from '@ruimte/contracts';
 import type { LiveFrameSource } from '../streams/live-stream.ts';
 import { DEVICE_HELPER_MAGIC, DeviceHelperDecoder, encodeDeviceHelperMessage } from './helper-protocol.ts';
 
@@ -184,7 +184,7 @@ export class DeviceHelperSource implements LiveFrameSource {
                     if (!this.ready) {
                         throw new DeviceHelperFailure('device-helper-protocol', 'The device capture helper sent a frame before it was ready');
                     }
-                    publish(this.format === 'hevc' ? { ...message.frame, format: 'hevc' } : message.frame);
+                    publish(this.format === 'hevc' ? { ...message.frame, format: 'hevc', keyFrame: hevcKeyFrame(message.frame.data) } : message.frame);
                 } else if (message.type === 'error') {
                     throw new DeviceHelperFailure(message.code, message.message);
                 } else {

@@ -32038,6 +32038,9 @@
           "h264"
         ]
       },
+      "keyFrame": {
+        "type": "boolean"
+      },
       "data": {
         "type": "string",
         "maxLength": 11534336

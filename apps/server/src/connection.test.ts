@@ -83,7 +83,13 @@ const setup = (screens: Record<string, string> = {}) => {
     const dispatcher = new Dispatcher();
     dispatcher.register('server.hello', () => ({ version: '1.2.3', platform: 'test', home: '/tmp/home' }));
     const sessions = Object.assign(sources.sessions, {
-        get: (sessionId: string) => (sessionId in screens ? { isAttached: () => true, serializeScreen: async () => screens[sessionId] as string } : undefined)
+        get: (sessionId: string) =>
+            sessionId in screens
+                ? {
+                      isAttached: () => true,
+                      snapshotFor: (_clientId: string, onScreen: (screen: string) => void) => queueMicrotask(() => onScreen(screens[sessionId] as string))
+                  }
+                : undefined
     });
     const services: ConnectionServices = { ...sources, sessions, dispatcher };
     return { open: connectionOpener(services), sources, order };

@@ -11,9 +11,36 @@ export interface LiveStreamFrame {
     height: number;
     data: Uint8Array;
     format?: LiveStreamFormat;
-    /* Set by a video source only, and never on the wire: what a stream that has to drop a frame waits for. */
+    /* Set by a video source only: what a stream that has to drop a frame waits for. Only `device.frame` carries it. */
     keyFrame?: boolean;
 }
+
+/* Where each NAL unit's header byte sits in an Annex-B access unit, after a three or four byte start code. */
+export const annexBNalHeaders = (data: Uint8Array): number[] => {
+    const headers: number[] = [];
+    for (let index = 0; index + 3 < data.byteLength; index += 1) {
+        if (data[index] === 0 && data[index + 1] === 0 && data[index + 2] === 1) {
+            headers.push(index + 3);
+            index += 3;
+        }
+    }
+    return headers;
+};
+
+export const hevcKeyFrame = (data: Uint8Array): boolean =>
+    annexBNalHeaders(data).some((header) => {
+        const type = (data[header]! >> 1) & 0x3f;
+        return type >= 16 && type <= 23;
+    });
+
+export const H264_SPS = 7;
+const H264_IDR = 5;
+
+export const h264KeyFrame = (data: Uint8Array): boolean =>
+    annexBNalHeaders(data).some((header) => {
+        const type = data[header]! & 0x1f;
+        return type === H264_IDR || type === H264_SPS;
+    });
 
 export type LiveStreamFormat = 'jpeg' | 'hevc' | 'h264';
 

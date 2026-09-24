@@ -35,10 +35,39 @@ const browserFrame = (sequence: number): ServerFrame => ({
     payload: { browserId: 'browser-1', sequence, width: 800, height: 600, data: 'jpeg' }
 });
 
+const deviceFrame = (sequence: number, keyFrame?: boolean): ServerFrame => ({
+    type: 'event',
+    event: 'device.frame',
+    payload: {
+        deviceId: 'phone-1',
+        backendId: 'android',
+        platform: 'android',
+        sequence,
+        width: 800,
+        height: 600,
+        format: keyFrame === undefined ? 'jpeg' : 'h264',
+        ...(keyFrame === undefined ? {} : { keyFrame }),
+        data: 'AA=='
+    }
+});
+
 const setup = (screens: Record<string, string | null> = { a: 'screen-a', b: 'screen-b' }) => {
     const socket = new FakeSocket();
-    const gate = new OutputGate({ socket, screenOf: async (sessionId) => screens[sessionId] ?? null });
-    return { socket, gate, screens };
+    const keyFrameRequests: string[] = [];
+    const gate = new OutputGate({
+        socket,
+        // A session answers a screen later, the way the emulator's parse marker does.
+        screenOf: (sessionId, deliver) => {
+            const screen = screens[sessionId];
+            if (screen === null || screen === undefined) {
+                return false;
+            }
+            queueMicrotask(() => deliver(screen));
+            return true;
+        },
+        requestKeyFrame: ({ backendId, deviceId }) => keyFrameRequests.push(`${backendId}/${deviceId}`)
+    });
+    return { socket, gate, screens, keyFrameRequests };
 };
 
 // The gate resyncs across an await; one macrotask is enough for its whole loop.
@@ -104,6 +133,39 @@ describe('OutputGate', () => {
         await flush();
         gate.send(browserFrame(3));
         expect(socket.of('browser.frame').map((payload) => payload.sequence)).toEqual([3]);
+    });
+
+    test('device pictures are dropped while the client is behind, and nothing asks for a key frame', async () => {
+        const { socket, gate, keyFrameRequests } = setup();
+        socket.buffered = HIGH_WATER_MARK + 1;
+        gate.send(deviceFrame(1));
+        socket.buffered = 0;
+        gate.onDrain();
+        await flush();
+        gate.send(deviceFrame(2));
+
+        expect(socket.of('device.frame').map((payload) => payload.sequence)).toEqual([2]);
+        expect(keyFrameRequests).toEqual([]);
+    });
+
+    test('a video that lost a frame skips to the next key frame, asked for once the socket has room', async () => {
+        const { socket, gate, keyFrameRequests } = setup();
+        gate.send(deviceFrame(1, true));
+        socket.buffered = HIGH_WATER_MARK + 1;
+        gate.send(deviceFrame(2, false));
+        gate.send(deviceFrame(3, true));
+        expect(keyFrameRequests).toEqual([]);
+
+        socket.buffered = 0;
+        gate.onDrain();
+        await flush();
+        expect(keyFrameRequests).toEqual(['android/phone-1']);
+
+        gate.send(deviceFrame(4, false));
+        gate.send(deviceFrame(5, true));
+        gate.send(deviceFrame(6, false));
+
+        expect(socket.of('device.frame').map((payload) => payload.sequence)).toEqual([1, 5, 6]);
     });
 
     test('a drain sends one resync per marked session and then streams again', async () => {

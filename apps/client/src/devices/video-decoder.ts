@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { LiveStreamFormat, LiveStreamFrame } from '@ruimte/contracts';
+import { annexBNalHeaders, H264_SPS, h264KeyFrame, hevcKeyFrame, type LiveStreamFormat, type LiveStreamFrame } from '@ruimte/contracts';
 import type { FrameDecoder, PaintTarget } from '@/transport/live-stream';
 
 type VideoFormat = Exclude<LiveStreamFormat, 'jpeg'>;
@@ -10,36 +10,9 @@ interface VideoCodec {
     codecString(data: Uint8Array): string | null;
 }
 
-/* Where each NAL unit's header byte sits in an Annex-B access unit, after a three or four byte start code. */
-const nalHeaders = (data: Uint8Array): number[] => {
-    const headers: number[] = [];
-    for (let index = 0; index + 3 < data.byteLength; index += 1) {
-        if (data[index] === 0 && data[index + 1] === 0 && data[index + 2] === 1) {
-            headers.push(index + 3);
-            index += 3;
-        }
-    }
-    return headers;
-};
-
-export const hevcKeyFrame = (data: Uint8Array): boolean =>
-    nalHeaders(data).some((header) => {
-        const type = (data[header]! >> 1) & 0x3f;
-        return type >= 16 && type <= 23;
-    });
-
-const H264_IDR = 5;
-const H264_SPS = 7;
-
-export const h264KeyFrame = (data: Uint8Array): boolean =>
-    nalHeaders(data).some((header) => {
-        const type = data[header]! & 0x1f;
-        return type === H264_IDR || type === H264_SPS;
-    });
-
 /* `avc1.PPCCLL` from the profile, constraint flags and level that open the sequence parameter set (RFC 6381). */
 export const h264CodecString = (data: Uint8Array): string | null => {
-    const sps = nalHeaders(data).find((header) => (data[header]! & 0x1f) === H264_SPS && header + 3 < data.byteLength);
+    const sps = annexBNalHeaders(data).find((header) => (data[header]! & 0x1f) === H264_SPS && header + 3 < data.byteLength);
     if (sps === undefined) {
         return null;
     }
@@ -56,8 +29,15 @@ const isVideoFormat = (format: LiveStreamFormat | undefined): format is VideoFor
 
 export class VideoDecoderGate {
     private awaitingKeyFrame = true;
+    private lastSequence: number | null = null;
 
-    accept(keyFrame: boolean, decodeQueueSize: number): EncodedVideoChunkType | null {
+    accept(keyFrame: boolean, decodeQueueSize: number, sequence: number): EncodedVideoChunkType | null {
+        // A machine behind on its link skips to the next key frame; a delta frame after a gap lacks what it refers to.
+        const gap = this.lastSequence !== null && sequence !== (this.lastSequence + 1) >>> 0;
+        this.lastSequence = sequence;
+        if (gap && !keyFrame) {
+            this.awaitingKeyFrame = true;
+        }
         if (this.awaitingKeyFrame && !keyFrame) {
             return null;
         }
@@ -70,6 +50,7 @@ export class VideoDecoderGate {
 
     reset(): void {
         this.awaitingKeyFrame = true;
+        this.lastSequence = null;
     }
 }
 
@@ -116,7 +97,7 @@ class VideoFrameDecoder implements FrameDecoder {
         }
         const codec = CODECS[frame.format];
         const keyFrame = codec.keyFrame(frame.data);
-        const chunkType = this.gate.accept(keyFrame, this.decoder?.decodeQueueSize ?? 0);
+        const chunkType = this.gate.accept(keyFrame, this.decoder?.decodeQueueSize ?? 0, frame.sequence);
         if (!chunkType) {
             return;
         }

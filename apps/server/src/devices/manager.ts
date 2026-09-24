@@ -228,6 +228,14 @@ export class DeviceManager {
         }
     }
 
+    /* For a client that dropped frames of the video while its link was behind. */
+    requestKeyFrame(backendId: string, deviceId: string): void {
+        const session = this.sessions.get(sessionKey(backendId, deviceId));
+        if (session) {
+            this.streams.requestKeyFrame(session.streamId);
+        }
+    }
+
     async input(backendId: string, deviceId: string, clientId: string, input: DeviceInput): Promise<void> {
         const session = this.sessions.get(sessionKey(backendId, deviceId));
         if (!session || !session.clients.has(clientId)) {
@@ -302,5 +310,6 @@ const eventFrame = (device: DeviceInfo, frame: LiveStreamFrame): DeviceFrame => 
     width: frame.width,
     height: frame.height,
     ...(frame.format ? { format: frame.format } : {}),
+    ...(frame.keyFrame !== undefined ? { keyFrame: frame.keyFrame } : {}),
     data: Buffer.from(frame.data).toString('base64')
 });

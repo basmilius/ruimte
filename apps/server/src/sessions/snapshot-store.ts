@@ -37,8 +37,17 @@ export class SnapshotStore {
     }
 }
 
+export interface SessionSnapshot {
+    sessionId: string;
+    screen: string;
+    // True once the node was deleted, which may be while this screen is on its way to the disk.
+    deleted(): boolean;
+    // The write failed, so the next pass takes this session again even if it stays quiet.
+    unsaved(): void;
+}
+
 interface SnapshotSource {
-    snapshotAll(): Promise<Array<{ sessionId: string; screen: string }>>;
+    snapshotAll(): Promise<SessionSnapshot[]>;
 }
 
 interface SnapshotSchedule {
@@ -57,8 +66,24 @@ export const scheduleSnapshots = (source: SnapshotSource, store: SnapshotStore, 
         inFlight = (async () => {
             try {
                 const snapshots = await source.snapshotAll();
-                for (const { sessionId, screen } of snapshots) {
-                    await store.write(sessionId, screen);
+                let failure: unknown = null;
+                for (const snapshot of snapshots) {
+                    if (snapshot.deleted()) {
+                        continue;
+                    }
+                    try {
+                        await store.write(snapshot.sessionId, snapshot.screen);
+                        // The delete may have run while the rename was pending, which put the file back.
+                        if (snapshot.deleted()) {
+                            await store.delete(snapshot.sessionId);
+                        }
+                    } catch (e) {
+                        snapshot.unsaved();
+                        failure ??= e;
+                    }
+                }
+                if (failure !== null) {
+                    throw failure;
                 }
             } finally {
                 inFlight = null;

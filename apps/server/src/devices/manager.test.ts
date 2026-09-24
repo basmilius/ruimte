@@ -138,6 +138,31 @@ describe('DeviceManager', () => {
         expect(backend.source.stops).toBe(1);
     });
 
+    test('a video frame says whether it is a key frame, and a client that lost one can ask for the next', async () => {
+        const backend = new FakeBackend();
+        backend.info = { ...phone, state: 'booted' };
+        let keyFrameRequests = 0;
+        Object.assign(backend.source, { format: 'h264', requestKeyFrame: () => (keyFrameRequests += 1) });
+        const manager = new DeviceManager([backend]);
+        const frames: DeviceFrame[] = [];
+        manager.subscribe('client-1', (event) => {
+            if (event.event === 'device.frame') {
+                frames.push(event.payload);
+            }
+        });
+
+        await manager.open('simctl', 'ios', 'phone-1', 'client-1', 'events', ['jpeg', 'hevc', 'h264']);
+        const before = keyFrameRequests;
+        backend.source.publish?.({ sequence: 1, width: 2, height: 3, format: 'h264', keyFrame: true, data: new Uint8Array([1]) });
+        backend.source.publish?.({ sequence: 2, width: 2, height: 3, data: new Uint8Array([2]) });
+        manager.requestKeyFrame('simctl', 'phone-1');
+        manager.requestKeyFrame('simctl', 'gone');
+
+        expect(frames.map((frame) => frame.keyFrame)).toEqual([true, undefined]);
+        expect(keyFrameRequests - before).toBe(1);
+        manager.closeAll();
+    });
+
     test('a client that subscribed again keeps its newer sink when the older one lets go', async () => {
         const backend = new FakeBackend();
         backend.info = { ...phone, state: 'booted' };

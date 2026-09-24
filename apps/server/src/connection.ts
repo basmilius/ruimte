@@ -30,7 +30,7 @@ interface Attachable extends Subscribable {
 
 interface ScreenSource {
     isAttached(clientId: string): boolean;
-    serializeScreen(): Promise<string>;
+    snapshotFor(clientId: string, onScreen: (screen: string) => void): void;
 }
 
 // Structural, so a test can hand in fakes; `daemon.ts` hands in the real managers and stores.
@@ -45,7 +45,7 @@ export interface ConnectionServices {
     browsers?: Attachable;
     /* The pages the clients hold themselves, which the daemon only knows of while they say so. */
     browserPages?: Attachable;
-    devices?: Attachable;
+    devices?: Attachable & { requestKeyFrame(backendId: string, deviceId: string): void };
     identity: Subscribable;
     projects: Subscribable;
     drawings: Subscribable;
@@ -78,11 +78,15 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
         const clientId = `client-${nextClientId++}`;
         const gate = new OutputGate({
             socket: { send: (data) => channel.send(data), getBufferedAmount: () => channel.bufferedAmount() },
-            screenOf: (sessionId) => {
+            screenOf: (sessionId, deliver) => {
                 const session = services.sessions.get(sessionId);
-                // A session this client no longer watches needs no screen; its mark just goes.
-                return session?.isAttached(clientId) ? session.serializeScreen() : Promise.resolve(null);
-            }
+                if (!session?.isAttached(clientId)) {
+                    return false;
+                }
+                session.snapshotFor(clientId, deliver);
+                return true;
+            },
+            requestKeyFrame: ({ backendId, deviceId }) => services.devices?.requestKeyFrame(backendId, deviceId)
         });
         const client: ClientConnection = {
             id: clientId,

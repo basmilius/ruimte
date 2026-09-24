@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { readdir, stat } from 'node:fs/promises';
 import { RESTORED_TEXT } from './session.ts';
-import { scheduleSnapshots } from './snapshot-store.ts';
+import { SnapshotStore, scheduleSnapshots } from './snapshot-store.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
 
 let harness: Harness;
@@ -70,13 +70,95 @@ describe('snapshot and restore', () => {
         }
     });
 
+    test('a pass writes only the sessions whose screen changed since the last one', async () => {
+        const written: string[] = [];
+        const store = new (class extends SnapshotStore {
+            override write(sessionId: string, screen: string): Promise<void> {
+                written.push(sessionId);
+                return super.write(sessionId, screen);
+            }
+        })(harness.home);
+        await harness.manager.create({ sessionId: 'loud', cols: 80, rows: 24, cwd: harness.home });
+        await harness.manager.create({ sessionId: 'quiet', cols: 80, rows: 24, cwd: harness.home });
+        const schedule = scheduleSnapshots(harness.manager, store, 60_000);
+        try {
+            await schedule.flush();
+            expect(written.sort()).toEqual(['loud', 'quiet']);
+
+            written.length = 0;
+            harness.adapter.forSession('loud').emit('more\r\n');
+            await schedule.flush();
+            expect(written).toEqual(['loud']);
+
+            written.length = 0;
+            await schedule.flush();
+            expect(written).toEqual([]);
+        } finally {
+            schedule.stop();
+        }
+    });
+
+    test('a write that failed is taken again by the next pass, however quiet the session stays', async () => {
+        let failures = 1;
+        const store = new (class extends SnapshotStore {
+            override write(sessionId: string, screen: string): Promise<void> {
+                if (failures > 0) {
+                    failures -= 1;
+                    return Promise.reject(new Error('disk full'));
+                }
+                return super.write(sessionId, screen);
+            }
+        })(harness.home);
+        await harness.manager.create({ sessionId: 'r1', cols: 80, rows: 24, cwd: harness.home });
+        harness.adapter.forSession('r1').emit('kept\r\n');
+        const schedule = scheduleSnapshots(harness.manager, store, 60_000);
+        try {
+            await expect(schedule.flush()).rejects.toThrow('disk full');
+            await schedule.flush();
+            expect(await harness.snapshots.read('r1')).toContain('kept');
+        } finally {
+            schedule.stop();
+        }
+    });
+
+    test('a node deleted while its screen is on the way to the disk stays deleted', async () => {
+        let started = (): void => undefined;
+        const writing = new Promise<void>((resolve) => {
+            started = resolve;
+        });
+        let release = (): void => undefined;
+        const released = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        const store = new (class extends SnapshotStore {
+            override async write(sessionId: string, screen: string): Promise<void> {
+                started();
+                await released;
+                return super.write(sessionId, screen);
+            }
+        })(harness.home);
+        await harness.manager.create({ sessionId: 'r1', cols: 80, rows: 24, cwd: harness.home });
+        harness.adapter.forSession('r1').emit('doomed\r\n');
+        const schedule = scheduleSnapshots(harness.manager, store, 60_000);
+        try {
+            const pass = schedule.flush();
+            await writing;
+            await harness.manager.kill('r1');
+            release();
+            await pass;
+            expect(await harness.snapshots.read('r1')).toBeNull();
+        } finally {
+            schedule.stop();
+        }
+    });
+
     test('the schedule writes on its timer', async () => {
         jest.useFakeTimers();
         let passes = 0;
         const source = {
             snapshotAll: () => {
                 passes += 1;
-                return Promise.resolve([{ sessionId: 't1', screen: `pass ${passes}` }]);
+                return Promise.resolve([{ sessionId: 't1', screen: `pass ${passes}`, deleted: () => false, unsaved: () => undefined }]);
             }
         };
         const schedule = scheduleSnapshots(source, harness.snapshots, 20);
