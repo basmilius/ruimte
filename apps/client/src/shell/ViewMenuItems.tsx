@@ -1,6 +1,21 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { Copy, CornerUpRight, Frame, MessageSquare, PanelBottom, PanelRight, Settings2, Terminal, Trash, UserRoundMinus, Users, X } from 'lucide-react';
+import {
+    Copy,
+    CornerUpRight,
+    Expand,
+    Frame,
+    MessageSquare,
+    PanelBottom,
+    PanelRight,
+    Settings2,
+    Shrink,
+    Terminal,
+    Trash,
+    UserRoundMinus,
+    Users,
+    X
+} from 'lucide-react';
 import { canShareView, isCanvasView, type ProjectView } from '@ruimte/contracts';
 import { BookmarkSubmenu } from '@/chat/ui/BookmarkSubmenu';
 import { ForkMenuItem, useOffersFork } from '@/chat/ui/ForkMenuItem';
@@ -9,7 +24,7 @@ import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from
 import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
-import { canSplit, cellAt, cellCount, freeViewFor, type CellAt } from '@/shell/split';
+import { canSplit, cellAt, cellCount, freeViewFor, maximizedCell, type CellAt } from '@/shell/split';
 import { useChatRow } from '@/state/chats';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
@@ -158,6 +173,7 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
     const { t } = useTranslation('shell');
     const layout = useDocument((s) => s.layout);
     const free = useDocument(freeViewFor);
+    const filling = useDocument((s) => maximizedCell(s.layout, s.maximized) !== null);
     const cell = at ?? layout?.focus ?? null;
     const closable = layout !== null && cellCount(layout) > 1;
     const standing = layout !== null && cell !== null ? (cellAt(layout, cell)?.viewId ?? null) : null;
@@ -171,6 +187,12 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
         }
         splitAction(direction);
     };
+    const toggleMaximized = (): void => {
+        if (at !== undefined) {
+            useDocument.getState().focusCellAt(at);
+        }
+        useDocument.getState().toggleMaximized();
+    };
     return (
         <>
             {room('right') && (
@@ -181,6 +203,12 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
             {room('down') && (
                 <Menu.Item className="menu-item" onClick={() => split('down')}>
                     <Icon icon={PanelBottom} size={14} /> {t('viewMenu.splitDown')} <Kbd shortcut={CANVAS_SHORTCUTS.splitDown} />
+                </Menu.Item>
+            )}
+            {closable && standing !== null && (
+                <Menu.Item className="menu-item" onClick={toggleMaximized}>
+                    <Icon icon={filling ? Shrink : Expand} size={14} /> {t(filling ? 'viewMenu.restoreSplit' : 'viewMenu.maximizeCell')}{' '}
+                    <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} />
                 </Menu.Item>
             )}
             {closable && standing !== null && (

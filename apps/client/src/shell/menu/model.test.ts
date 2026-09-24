@@ -32,6 +32,7 @@ const context = (patch: Partial<MenuContext> = {}): MenuContext => ({
     anyLocked: false,
     cells: 1,
     split: { right: true, down: true },
+    maximized: false,
     panel: null,
     sidebar: true,
     views: ['Main', 'Sketch'],
@@ -147,6 +148,12 @@ describe('the menus', () => {
         expect(find(spec, 'split-down')?.enabled).toBe(true);
         expect(find(spec, 'focus-left')?.enabled).toBe(false);
         expect(find(menuModel(context({ selection: 2 })), 'group-selection')?.enabled).toBe(true);
+    });
+
+    test('a cell maximizes from View while the grid has more than one, and says so while it does', () => {
+        expect(find(menuModel(context({ cells: 1 })), 'cell-maximize')?.enabled).toBe(false);
+        const two = find(menuModel(context({ cells: 2, maximized: true })), 'cell-maximize');
+        expect(two).toMatchObject({ enabled: true, checked: true, accelerator: 'CommandOrControl+Shift+Enter' });
     });
 
     test('zoom is offered on every view and only works where there is a camera', () => {

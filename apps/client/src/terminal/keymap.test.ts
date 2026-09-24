@@ -129,6 +129,13 @@ describe('isShellShortcut', () => {
         expect(isShellShortcut(key('KeyK', { metaKey: true, altKey: true }), true)).toBe(false);
         expect(isShellShortcut(key('Enter', { metaKey: true }), true)).toBe(false);
     });
+
+    test('Mod+Shift+Enter maximizes a cell from a terminal and from the composer, on every platform', () => {
+        expect(isAppShortcut(shortcut('Enter', { metaKey: true, shiftKey: true }), true)).toBe(true);
+        expect(isAppShortcut(shortcut('Enter', { ctrlKey: true, shiftKey: true }), false)).toBe(true);
+        expect(isShellShortcut(shortcut('Enter', { metaKey: true, shiftKey: true }), true)).toBe(true);
+        expect(isAppShortcut(shortcut('Enter', { shiftKey: true }), true)).toBe(false);
+    });
 });
 
 describe('isClearShortcut', () => {

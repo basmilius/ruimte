@@ -84,6 +84,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     const bar = useRef<HTMLDivElement>(null);
     const actions = useRef<HTMLSpanElement>(null);
     const bodyFocused = useDocument((s) => s.bodyFocused);
+    const maximized = useDocument((s) => s.maximized === view.id);
     const files = isFilesView(view);
     const hasViewToolbar = useHasViewToolbar(view);
     /* The files never fold: their controls are the tab strip, and a strip inside a popover is a list
@@ -147,6 +148,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                                 </SubagentTitleCrumb>
                             </>
                         )}
+                        {maximized && <span className="shrink-0 text-text-faint">{t('cellToolbar.maximized')}</span>}
                     </span>
                     {hasViewToolbar && !folded && (
                         <>

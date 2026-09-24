@@ -355,3 +355,14 @@ export const evenCells = (layout: SplitLayout, column: number, at: number, all: 
         columns: layout.columns.map((candidate, index) => (index === column ? { ...candidate, cells: evenOut(candidate.cells, at, all) } : candidate))
     };
 };
+
+/*
+ * The cell a maximized view stands in, or null when there is nothing to fill: no view maximized,
+ * one that left the grid, or a grid of one cell, which fills the area already.
+ */
+export const maximizedCell = (layout: SplitLayout | null, viewId: string | null): CellAt | null => {
+    if (layout === null || viewId === null || cellCount(layout) < 2) {
+        return null;
+    }
+    return locateView(layout, viewId);
+};

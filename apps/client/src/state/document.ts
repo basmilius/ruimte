@@ -36,6 +36,7 @@ import type { EditorRegistry } from '@/state/editors';
 import {
     canSplit,
     cellAt,
+    cellCount,
     closeCell,
     dropView,
     evenCells,
@@ -68,6 +69,9 @@ export interface DocumentState {
     activeViewId: string | null;
     /* How the views stand beside each other on this machine. Null while no view is open at all. */
     layout: SplitLayout | null;
+    /* The view filling the whole grid for a while, the layout under it untouched. Never saved, and
+       any move of the grid ends it, so the grid a person gets back is the one they left. */
+    maximized: string | null;
     /* The canvas that was up last, which is where a node put back on a canvas lands. */
     lastCanvasViewId: string | null;
     /* Machine state beside the document, never in the shared file: where every view stood. */
@@ -127,6 +131,8 @@ export interface DocumentState {
     /* Takes a cell off the grid; the neighbors grow into it. The last cell stays, there has to be one. */
     closeCellAt(at: CellAt): void;
     focusCellAt(at: CellAt): void;
+    /* Fills the grid with the focused cell, or puts the grid back as it was. */
+    toggleMaximized(): void;
     /* The focus one cell along, which is how a grid is navigated: by direction, never by number. */
     focusTowards(direction: SplitDirection): void;
     /* A splitter dragged between two columns or two cells; the shares are of the axis they share. */
@@ -384,7 +390,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             const views = state.exportViews();
             const viewLocal = { ...state.viewLocal, ...state.exportLocal().views };
             const settled = settledOn(views, viewLocal, layout, state);
-            set({ ...settled, viewNotice: afterMove(state.viewNotice, settled.activeViewId) });
+            set({ ...settled, maximized: null, viewNotice: afterMove(state.viewNotice, settled.activeViewId) });
             openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), layout === null ? null : focusedViewId(layout), peers);
         };
 
@@ -439,6 +445,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             views: [],
             activeViewId: null,
             layout: null,
+            maximized: null,
             lastCanvasViewId: null,
             viewLocal: {},
             bodyFocused: false,
@@ -457,7 +464,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 const layout = layoutOf(local ?? { activeViewId: null, layout: undefined }, views);
                 const settled = settledOn(views, viewLocal, layout, { lastCanvasViewId: views.find(isCanvasView)?.id ?? null });
                 // Another project is another set of views, so a banner about the one that just left goes with it.
-                set({ ...settled, viewNotice: null, loading: true, edits: 0, shared: document?.shared ?? [], trashed: kept.trashed });
+                set({ ...settled, maximized: null, viewNotice: null, loading: true, edits: 0, shared: document?.shared ?? [], trashed: kept.trashed });
                 // The project that was here goes first, editors and all, so nothing of it may show through.
                 peers.canvases.keep([]);
                 openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), settled.activeViewId, peers);
@@ -609,6 +616,17 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 // costs nothing, since a commit writes every editor back.
                 if (state.layout !== null && cellAt(state.layout, at) !== null && !isSameCell(state.layout.focus, at)) {
                     commit(focusCell(state.layout, at));
+                }
+            },
+
+            toggleMaximized() {
+                const state = get();
+                if (state.maximized !== null) {
+                    set({ maximized: null });
+                    return;
+                }
+                if (state.layout !== null && cellCount(state.layout) > 1) {
+                    set({ maximized: focusedViewId(state.layout) });
                 }
             },
 

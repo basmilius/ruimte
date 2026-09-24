@@ -141,10 +141,12 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                 return true;
             }
             // A focused terminal has the keyboard the way a native one does: every shortcut the app does
-            // not need to move between views stops here instead of reaching the window listeners.
-            if (!isAppShortcut(e, apple)) {
-                e.stopPropagation();
+            // not need to move between views stops here instead of reaching the window listeners. The
+            // ones it does need are the window's alone, or xterm would write Cmd+Shift+Enter as a return.
+            if (isAppShortcut(e, apple)) {
+                return false;
             }
+            e.stopPropagation();
             if (e.type !== 'keydown') {
                 return true;
             }

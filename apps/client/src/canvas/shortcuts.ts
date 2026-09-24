@@ -12,6 +12,7 @@ export const CANVAS_SHORTCUTS = {
     splitRight: shortcut('Mod+\\'),
     splitDown: shortcut('Mod+Shift+\\'),
     closeCell: shortcut('Mod+W'),
+    maximizeCell: shortcut('Mod+Shift+Enter'),
     newView: shortcut('Mod+T'),
     togglePanel: shortcut('Mod+Alt+B'),
     focusPrompts: shortcut('Mod+Shift+P'),

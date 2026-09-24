@@ -219,6 +219,7 @@
             "right": "Split the cell to the right",
             "down": "Split the cell down",
             "focusNeighbor": "Focus the neighboring cell (any arrow key)",
+            "maximize": "Maximize the focused cell, or restore the split",
             "close": "Close the focused cell"
         },
         "drawing": {

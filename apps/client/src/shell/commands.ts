@@ -33,6 +33,7 @@ import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { cellCount, maximizedCell } from '@/shell/split';
 import type { Shortcut } from '@/ui/shortcut';
 
 export interface Command {
@@ -120,7 +121,8 @@ export const appCommands = (): Command[] => {
     const canvas = focusedCanvas().getState();
     const anyLocked = Object.values(canvas.locks).some(Boolean);
     const folder = useProject.getState().current?.folder ?? null;
-    const { activeViewId, views } = useDocument.getState();
+    const { activeViewId, views, layout, maximized } = useDocument.getState();
+    const filling = maximizedCell(layout, maximized) !== null;
     const activeView = views.find((view) => view.id === activeViewId) ?? null;
     const selected = canvas.selection.length === 1 ? canvas.nodes[canvas.selection[0]!] : undefined;
     const drawing = activeView !== null && isDrawingView(activeView);
@@ -197,6 +199,16 @@ export const appCommands = (): Command[] => {
                   { id: 'view-new-terminal', label: i18next.t('shell:palette.commands.newTerminalView'), run: () => void createViewAction('terminal') },
                   { id: 'view-new-separator', label: i18next.t('shell:palette.commands.newSeparator'), run: () => void createViewAction('separator') },
                   { id: 'view-new-subheader', label: i18next.t('shell:palette.commands.newSubheader'), run: () => void newSubheaderView() },
+                  ...(layout !== null && cellCount(layout) > 1
+                      ? [
+                            {
+                                id: 'cell-maximize',
+                                label: i18next.t(filling ? 'shell:viewMenu.restoreSplit' : 'shell:viewMenu.maximizeCell'),
+                                shortcut: CANVAS_SHORTCUTS.maximizeCell,
+                                run: () => useDocument.getState().toggleMaximized()
+                            }
+                        ]
+                      : []),
                   {
                       id: 'view-new-browser',
                       label: i18next.t('shell:viewDialogs.newBrowser.title'),

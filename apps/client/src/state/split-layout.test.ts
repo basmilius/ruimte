@@ -198,3 +198,45 @@ describe('resizing', () => {
         expect(useDocument.getState().layout?.columns[0]?.cells.map((cell) => cell.size)).toEqual([0.25, 0.75]);
     });
 });
+
+describe('maximizing a cell', () => {
+    const maximized = (): string | null => useDocument.getState().maximized;
+
+    test('fills the grid with the focused cell and gives the very same grid back', () => {
+        useDocument.getState().splitFocused('right', 'b');
+        useDocument.getState().resizeColumns(1, 0.7, 0.3);
+        const before = useDocument.getState().layout;
+        useDocument.getState().toggleMaximized();
+        expect(maximized()).toBe('b');
+        expect(useDocument.getState().layout).toBe(before);
+        useDocument.getState().toggleMaximized();
+        expect(maximized()).toBeNull();
+        expect(useDocument.getState().layout).toBe(before);
+    });
+
+    test('one cell has nothing to fill', () => {
+        useDocument.getState().toggleMaximized();
+        expect(maximized()).toBeNull();
+    });
+
+    test('any move of the grid ends it, and a splitter drag does not', () => {
+        useDocument.getState().splitFocused('right', 'b');
+        useDocument.getState().toggleMaximized();
+        useDocument.getState().resizeColumns(1, 0.6, 0.4);
+        expect(maximized()).toBe('b');
+        useDocument.getState().splitFocused('down', 'c');
+        expect(maximized()).toBeNull();
+        useDocument.getState().toggleMaximized();
+        useDocument.getState().focusCellAt({ column: 0, cell: 0 });
+        expect(maximized()).toBeNull();
+        useDocument.getState().toggleMaximized();
+        useDocument.getState().closeCellAt({ column: 1, cell: 1 });
+        expect(maximized()).toBeNull();
+    });
+
+    test('is never written down', () => {
+        useDocument.getState().splitFocused('right', 'b');
+        useDocument.getState().toggleMaximized();
+        expect(JSON.stringify(useDocument.getState().exportLocal())).not.toContain('maximized');
+    });
+});

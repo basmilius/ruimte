@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactElement } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { isCanvasView, type SplitLayout } from '@ruimte/contracts';
 import { PromptStack } from '@/canvas/PromptStack';
 import { carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
@@ -8,7 +9,11 @@ import { useCellView } from '@/shell/use-cell-view';
 import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
 import { useDocument } from '@/state/document';
 import { CellViewContext } from '@/state/workspace-stores';
-import { canSplit, cellCount, isSameCell, locateView, snapToEven, type CellAt, type SplitZone } from '@/shell/split';
+import { canSplit, cellCount, isSameCell, locateView, maximizedCell, snapToEven, type CellAt, type SplitZone } from '@/shell/split';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { FLOAT } from '@/ui/classes';
+import { Kbd } from '@/ui/Kbd';
+import { Tooltip } from '@/ui/Tooltip';
 import { carriesView, draggedViewId, dragging, edgeZoneAt, isNowhereDrop, setGridTakesPath, shapeOf, zoneAt } from '@/shell/view-drag';
 import { ViewSurface } from '@/shell/ViewHost';
 import { CellToolbar } from '@/shell/CellToolbar';
@@ -69,10 +74,12 @@ const splitDrag = (
 /* A double click evens out the two neighbors, and with Option every column, or every cell of the column. */
 function Splitter({
     axis,
+    hidden,
     onPointerDown,
     onEven
 }: {
     axis: 'x' | 'y';
+    hidden: boolean;
     onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
     onEven: (all: boolean) => void;
 }) {
@@ -82,7 +89,8 @@ function Splitter({
             aria-orientation={axis === 'x' ? 'vertical' : 'horizontal'}
             className={clsx(
                 'relative shrink-0 bg-border transition-colors hover:bg-accent',
-                axis === 'x' ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize'
+                axis === 'x' ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize',
+                hidden && 'invisible'
             )}
             onPointerDown={onPointerDown}
             onDoubleClick={(event) => onEven(event.altKey)}
@@ -140,6 +148,8 @@ function Cell({
     viewId,
     focused,
     split,
+    filling,
+    hidden,
     onZone
 }: {
     at: CellAt;
@@ -147,6 +157,10 @@ function Cell({
     focused: boolean;
     /* More than one cell on screen, which is what gives a cell a bar of its own. */
     split: boolean;
+    /* Maximized: drawn over the whole grid, while its own place in the column stays held. */
+    filling: boolean;
+    /* Behind a maximized cell. Still mounted, so its session and its page keep running. */
+    hidden: boolean;
     onZone: (zone: SplitZone | null, box: { top: number; height: number }) => void;
 }) {
     const view = useCellView(viewId);
@@ -211,8 +225,9 @@ function Cell({
     }
     const body = (
         /* Registered so the parking layer can put a browser page over this box; its size changes
-           with a splitter drag, which moves no state at all, hence the observer. */
-        <div ref={(element) => watchCell(viewId, element)} className="relative min-h-0 grow overflow-hidden">
+           with a splitter drag, which moves no state at all, hence the observer. A cell hidden behind
+           a maximized one leaves the registry, which hides its pages without moving a <webview>. */
+        <div ref={(element) => watchCell(viewId, hidden ? null : element)} className="relative min-h-0 grow overflow-hidden">
             <ViewSurface view={view} />
             <CellOverlay slot="cell">
                 {/* The dock belongs to the canvas under it, so it is drawn in the cell that has the
@@ -220,13 +235,14 @@ function Cell({
                 {focused && <Dock onHiddenChange={setDockHidden} />}
                 {/* A stack per canvas, not per dock: a cell without the focus has no dock, and its prompts still need a place. */}
                 {!isFilesView(view) && isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
+                {filling && <MaximizedIndicator at={at} />}
             </CellOverlay>
         </div>
     );
     return (
         <CellViewContext.Provider value={viewId}>
             <div
-                className="flex min-h-0 min-w-0 grow flex-col overflow-hidden"
+                className={clsx('flex min-h-0 min-w-0 grow flex-col overflow-hidden', filling && 'absolute inset-0 z-10 bg-bg')}
                 // A press anywhere in a cell is what moves the focus to it, the way it moves between panels.
                 onPointerDownCapture={() => useDocument.getState().focusCellAt(at)}
                 /* A press inside a <webview> never reaches this page, only the focus it takes does. The
@@ -291,7 +307,47 @@ function Cell({
     );
 }
 
-function Column({ layout, at }: { layout: SplitLayout; at: number }) {
+/* What stands in for the cells a maximized one hides: their shape, how many there are, and the way back. */
+function MaximizedIndicator({ at }: { at: CellAt }) {
+    const { t } = useTranslation('shell');
+    const layout = useDocument((s) => s.layout);
+    if (layout === null) {
+        return null;
+    }
+    return (
+        <div className="pointer-events-none absolute bottom-4 left-4 flex">
+            <Tooltip label={t('cellToolbar.restore')} name>
+                <button
+                    type="button"
+                    className={clsx(FLOAT, 'pointer-events-auto flex h-7 items-center gap-2 rounded-md px-2 text-xs text-text-muted hover:text-text')}
+                    onClick={() => useDocument.getState().toggleMaximized()}
+                >
+                    {/* Whole pixels for one, two or three of either, with a pixel between them. */}
+                    <span aria-hidden className="flex h-2.75 w-4.25 gap-px">
+                        {layout.columns.map((column, columnIndex) => (
+                            <span key={column.cells[0]!.viewId} className="flex flex-1 flex-col gap-px">
+                                {column.cells.map((cell, cellIndex) => (
+                                    <span
+                                        key={cell.viewId}
+                                        className={clsx(
+                                            'flex-1 rounded-xs',
+                                            isSameCell(at, { column: columnIndex, cell: cellIndex }) ? 'bg-text-muted' : 'bg-border-strong'
+                                        )}
+                                    />
+                                ))}
+                            </span>
+                        ))}
+                    </span>
+                    {t('cellToolbar.hidden', { count: cellCount(layout) - 1 })}
+                    <span aria-hidden>·</span>
+                    <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} className="font-sans" />
+                </button>
+            </Tooltip>
+        </div>
+    );
+}
+
+function Column({ layout, at, maximized }: { layout: SplitLayout; at: number; maximized: CellAt | null }) {
     const column = layout.columns[at]!;
     /* Which cell the drag is over and where in it. It is held here and not in the cell, because a
        side drop reaches across the whole column and the indicator is drawn against that box. */
@@ -299,17 +355,33 @@ function Column({ layout, at }: { layout: SplitLayout; at: number }) {
     const resize = (cell: number): ((event: ReactPointerEvent<HTMLElement>) => void) =>
         splitDrag('y', column.cells[cell - 1]!.size, column.cells[cell]!.size, (before, after) => useDocument.getState().resizeCells(at, cell, before, after));
     return (
-        <div className="relative flex min-h-0 min-w-0 flex-col" style={{ flex: `${column.size} 1 0` }}>
+        /* Not positioned while a cell is maximized, so that cell is drawn against the whole grid. */
+        <div
+            className={clsx('flex min-h-0 min-w-0 flex-col', maximized === null ? 'relative' : maximized.column !== at && 'invisible')}
+            style={{ flex: `${column.size} 1 0` }}
+        >
             {drop !== null && <DropIndicator box={drop.box} zone={drop.zone} />}
             {column.cells.map((cell, index) => (
                 <Fragment key={cell.viewId}>
-                    {index > 0 && <Splitter axis="y" onPointerDown={resize(index)} onEven={(all) => useDocument.getState().evenCells(at, index, all)} />}
-                    <div className="flex min-h-0 flex-col" style={{ flex: `${cell.size} 1 0` }}>
+                    {index > 0 && (
+                        <Splitter
+                            axis="y"
+                            hidden={maximized !== null}
+                            onPointerDown={resize(index)}
+                            onEven={(all) => useDocument.getState().evenCells(at, index, all)}
+                        />
+                    )}
+                    <div
+                        className={clsx('flex min-h-0 flex-col', maximized !== null && !isSameCell(maximized, { column: at, cell: index }) && 'invisible')}
+                        style={{ flex: `${cell.size} 1 0` }}
+                    >
                         <Cell
                             at={{ column: at, cell: index }}
                             viewId={cell.viewId}
                             focused={isSameCell(layout.focus, { column: at, cell: index })}
                             split={cellCount(layout) > 1}
+                            filling={maximized !== null && isSameCell(maximized, { column: at, cell: index })}
+                            hidden={maximized !== null && !isSameCell(maximized, { column: at, cell: index })}
                             onZone={(zone, box) => setDrop(zone === null ? null : { zone, box })}
                         />
                     </div>
@@ -326,6 +398,7 @@ function Column({ layout, at }: { layout: SplitLayout; at: number }) {
  */
 export function SplitGrid(): ReactElement | null {
     const layout = useDocument((s) => s.layout);
+    const maximizedId = useDocument((s) => s.maximized);
     useEffect(() => {
         /* A drag called off with Escape ends with neither a leave nor a drop, so a claim left
            standing would hold the canvas off on the next drag that has nothing to do with it. */
@@ -336,16 +409,25 @@ export function SplitGrid(): ReactElement | null {
     if (layout === null) {
         return null;
     }
+    const maximized = maximizedCell(layout, maximizedId);
     const resize = (column: number): ((event: ReactPointerEvent<HTMLElement>) => void) =>
         splitDrag('x', layout.columns[column - 1]!.size, layout.columns[column]!.size, (before, after) =>
             useDocument.getState().resizeColumns(column, before, after)
         );
     return (
-        <div className="absolute inset-0 flex bg-border">
+        /* Isolated, so a maximized cell stands over its neighbors and never over the parked pages. */
+        <div className="absolute inset-0 isolate flex bg-border">
             {layout.columns.map((column, index) => (
                 <Fragment key={column.cells[0]!.viewId}>
-                    {index > 0 && <Splitter axis="x" onPointerDown={resize(index)} onEven={(all) => useDocument.getState().evenColumns(index, all)} />}
-                    <Column layout={layout} at={index} />
+                    {index > 0 && (
+                        <Splitter
+                            axis="x"
+                            hidden={maximized !== null}
+                            onPointerDown={resize(index)}
+                            onEven={(all) => useDocument.getState().evenColumns(index, all)}
+                        />
+                    )}
+                    <Column layout={layout} at={index} maximized={maximized} />
                 </Fragment>
             ))}
         </div>

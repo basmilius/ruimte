@@ -36,6 +36,8 @@ export interface MenuContext {
     anyLocked: boolean;
     cells: number;
     split: { right: boolean; down: boolean };
+    /* A cell fills the grid for now. */
+    maximized: boolean;
     /* The open panel, or null while none is. */
     panel: PanelKind | null;
     sidebar: boolean;
@@ -250,6 +252,11 @@ export const menuModel = (context: MenuContext): MenuSpec => {
                 separator,
                 command('split-right', t('splitRight'), { shortcut: CANVAS_SHORTCUTS.splitRight, enabled: context.split.right }),
                 command('split-down', t('splitDown'), { shortcut: CANVAS_SHORTCUTS.splitDown, enabled: context.split.down }),
+                command('cell-maximize', t('maximizeCell'), {
+                    shortcut: CANVAS_SHORTCUTS.maximizeCell,
+                    enabled: context.cells > 1,
+                    checked: context.maximized
+                }),
                 separator,
                 command('fit', t('zoomToFit'), { shortcut: CANVAS_SHORTCUTS.fitAll, enabled: zoomable }),
                 command('zoom-selection', t('zoomToSelection'), { shortcut: CANVAS_SHORTCUTS.zoomSelection, enabled: zoomable }),

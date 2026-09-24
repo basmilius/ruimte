@@ -36,6 +36,7 @@ export const TERMINAL_HANDED_BACK: readonly Shortcut[] = [
     CANVAS_SHORTCUTS.splitRight,
     CANVAS_SHORTCUTS.splitDown,
     CANVAS_SHORTCUTS.closeCell,
+    CANVAS_SHORTCUTS.maximizeCell,
     CANVAS_SHORTCUTS.previousView,
     CANVAS_SHORTCUTS.nextView,
     CANVAS_SHORTCUTS.togglePanel,

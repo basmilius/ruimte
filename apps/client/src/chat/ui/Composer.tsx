@@ -644,10 +644,11 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             return true;
         }
         // The composer keeps the keyboard while you type, but the shortcuts that move between views,
-        // panels and the palette stay the app's; the window listener never sees a stopped key.
-        if (!isShellShortcut(e, isApplePlatform())) {
-            e.stopPropagation();
+        // panels and the palette stay the app's, untouched: Mod+Shift+Enter would otherwise send as well.
+        if (isShellShortcut(e, isApplePlatform())) {
+            return false;
         }
+        e.stopPropagation();
         // A key inside an IME composition belongs to the composition, Enter and the arrows included.
         if (e.isComposing) {
             return false;

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectView, SplitLayout } from '@ruimte/contracts';
-import { EVEN_SNAP_PX, evenCells, evenColumns, snapToEven } from './split';
+import { EVEN_SNAP_PX, evenCells, evenColumns, maximizedCell, snapToEven } from './split';
 import {
     canSplit,
     cellAt,
@@ -462,5 +462,18 @@ describe('evenCells', () => {
 
     test('a column that is not there changes nothing', () => {
         expect(evenCells(layout, 4, 1, true)).toBe(layout);
+    });
+});
+
+describe('maximizedCell', () => {
+    test('the cell the maximized view stands in', () => {
+        expect(maximizedCell(gridOf([['a'], ['b', 'c']]), 'c')).toEqual({ column: 1, cell: 1 });
+    });
+
+    test('nothing without a view, for a view off the grid, or with one cell on it', () => {
+        expect(maximizedCell(gridOf([['a'], ['b']]), null)).toBeNull();
+        expect(maximizedCell(gridOf([['a'], ['b']]), 'gone')).toBeNull();
+        expect(maximizedCell(gridOf([['a']]), 'a')).toBeNull();
+        expect(maximizedCell(null, 'a')).toBeNull();
     });
 });

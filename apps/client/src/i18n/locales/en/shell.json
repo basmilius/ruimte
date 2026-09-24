@@ -191,7 +191,11 @@
         "view": "View",
         "drag": "{{name}}, drag to move it to another cell",
         "moreActions": "More actions",
-        "closeCell": "Close this cell"
+        "closeCell": "Close this cell",
+        "maximized": "maximized",
+        "hidden_one": "{{count}} cell hidden",
+        "hidden_other": "{{count}} cells hidden",
+        "restore": "Restore the split"
     },
     "filesView": {
         "name": "Files",
@@ -211,6 +215,8 @@
         "filePick": "File...",
         "splitRight": "Split to the right",
         "splitDown": "Split downwards",
+        "maximizeCell": "Maximize cell",
+        "restoreSplit": "Restore split",
         "views": "Views",
         "newView": "View",
         "putOnCanvas": "Put on canvas",
@@ -602,6 +608,7 @@
         "togglePanel": "Toggle Panel",
         "splitRight": "Split Right",
         "splitDown": "Split Down",
+        "maximizeCell": "Maximize Cell",
         "zoomToFit": "Zoom to Fit",
         "zoomToSelection": "Zoom to Selection",
         "actualSize": "Actual Size",

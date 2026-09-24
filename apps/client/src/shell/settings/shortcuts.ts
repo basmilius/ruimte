@@ -66,6 +66,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
             { keys: CANVAS_SHORTCUTS.splitRight, label: say('split.right') },
             { keys: CANVAS_SHORTCUTS.splitDown, label: say('split.down') },
             { keys: FOCUS_SHORTCUTS.left, label: say('split.focusNeighbor') },
+            { keys: CANVAS_SHORTCUTS.maximizeCell, label: say('split.maximize') },
             { keys: CANVAS_SHORTCUTS.closeCell, label: say('split.close') }
         ]
     },

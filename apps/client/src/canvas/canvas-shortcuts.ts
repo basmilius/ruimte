@@ -165,6 +165,15 @@ export const useCanvasShortcuts = (): void => {
                 splitAction(is(CANVAS_SHORTCUTS.splitDown) ? 'down' : 'right');
                 return;
             }
+            // With one cell and nothing maximized the key is let go, since there is nothing to fill.
+            if (is(CANVAS_SHORTCUTS.maximizeCell)) {
+                const state = useDocument.getState();
+                if (state.maximized !== null || (state.layout !== null && cellCount(state.layout) > 1)) {
+                    e.preventDefault();
+                    state.toggleMaximized();
+                }
+                return;
+            }
             const direction: SplitDirection | null = entryFor(FOCUS_SHORTCUTS, e, apple);
             if (direction) {
                 e.preventDefault();
