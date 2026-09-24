@@ -26,7 +26,23 @@
         "loading": "Loading",
         "empty": "Nothing here yet",
         "error": "Something went wrong",
-        "sidebarFailed": "The sidebar failed to render"
+        "sidebarFailed": "The sidebar failed to render",
+        "failed": {
+            "toolbar": "The toolbar failed to render",
+            "cellChrome": "The controls over the views failed to render",
+            "machine": "The machine status failed to render",
+            "projectSwitch": "The project switch failed to render",
+            "projectBanner": "The project banner failed to render",
+            "voice": "The Voice panel failed to render",
+            "dialog": "This dialog failed to render",
+            "conflicts": "The conflict overlay failed to render",
+            "palette": "The command palette failed to render",
+            "settings": "Settings failed to render",
+            "toasts": "The notifications failed to render",
+            "machineUpdate": "The machine update failed to render",
+            "link": "Linking a machine failed to render",
+            "shortcutHints": "The shortcut hints failed to render"
+        }
     },
     "answer": {
         "yes": "Yes",

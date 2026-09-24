@@ -51,6 +51,11 @@ import { VoiceOverlay } from '@/voice/VoiceOverlay';
 import { VoicePanel } from '@/voice/VoicePanel';
 import { stopVoice } from '@/voice/controller';
 
+/* Where a surface that floats on its own says it failed: a card, so the rest of the window stays usable. */
+const FLOATING_FAILURE = 'fixed inset-x-0 bottom-4 z-(--z-dialog) mx-auto w-fit rounded-lg border border-border shadow-float';
+
+const failed = (surface: string): string => i18next.t(`common:state.failed.${surface}`);
+
 /*
  * The project on screen, with the daemon it lives on under it. Everything inside reads its machine
  * from here instead of from "the active endpoint", which a switch moves before the project follows.
@@ -71,35 +76,65 @@ function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                 <main className="flex min-w-0 grow">
                     <FileToolbarSlotProvider value={{ host: fileToolbarHost, mount: setFileToolbarHost }}>
                         <div className="flex min-w-0 grow flex-col">
-                            <Toolbar />
+                            <ErrorBoundary label={failed('toolbar')} resetKeys={[workspace]} compact className="shrink-0 border-b border-border">
+                                <Toolbar />
+                            </ErrorBoundary>
                             <div className="relative min-h-0 grow">
                                 <ViewHost />
                                 <WebviewParking />
                                 {/* The chrome of a cell, over the pages a cell cannot draw over itself. */}
-                                <CellOverlayLayer />
+                                <ErrorBoundary label={failed('cellChrome')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                                    <CellOverlayLayer />
+                                </ErrorBoundary>
                                 {/* After the parked pages, which carry no z-index of their own and would otherwise draw over it. */}
-                                <MachineLostScreen />
-                                <ProjectSwitchScreen />
-                                <ProjectBanner />
+                                <ErrorBoundary label={failed('machine')} resetKeys={[workspace]} className="absolute inset-0 z-10">
+                                    <MachineLostScreen />
+                                </ErrorBoundary>
+                                <ErrorBoundary label={failed('projectSwitch')} resetKeys={[workspace]} className="absolute inset-0 z-10">
+                                    <ProjectSwitchScreen />
+                                </ErrorBoundary>
+                                <ErrorBoundary label={failed('projectBanner')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                                    <ProjectBanner />
+                                </ErrorBoundary>
                             </div>
                         </div>
                     </FileToolbarSlotProvider>
                     <PlanPanel />
                     <Panel />
-                    <VoicePanel />
+                    <ErrorBoundary label={failed('voice')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                        <VoicePanel />
+                    </ErrorBoundary>
                 </main>
             </div>
             <VoiceOverlay />
             {/* About the project that is open, so they belong to its workspace and not to the shell. */}
-            <LayoutDialog />
-            <ViewDialogs />
-            <EndChildrenDialog />
-            <UnsavedCloseDialog />
-            <LeaveConflictDialog />
-            <WorktreeDialog />
-            <RemoveWorktreeDialog />
-            <MergeWorktreeDialog />
-            <ConflictOverlay />
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <LayoutDialog />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <ViewDialogs />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <EndChildrenDialog />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <UnsavedCloseDialog />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <LeaveConflictDialog />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <WorktreeDialog />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <RemoveWorktreeDialog />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <MergeWorktreeDialog />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('conflicts')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <ConflictOverlay />
+            </ErrorBoundary>
             <ForkDialog />
         </ConnectionProvider>
     );
@@ -160,15 +195,27 @@ export function App() {
                 parked browser pages as well, which is why everything below carries a boundary of its own. */}
             <ErrorBoundary label={i18next.t('common:state.error')} className="fixed inset-0 bg-bg" reload>
                 <WindowContent />
-                <CommandPalette />
-                <SettingsDialog />
+                <ErrorBoundary label={failed('palette')} compact className={FLOATING_FAILURE}>
+                    <CommandPalette />
+                </ErrorBoundary>
+                <ErrorBoundary label={failed('settings')} compact className={FLOATING_FAILURE}>
+                    <SettingsDialog />
+                </ErrorBoundary>
                 <UsageDialog />
                 <ModelsDialog />
-                <Toasts />
+                <ErrorBoundary label={failed('toasts')} compact className={FLOATING_FAILURE}>
+                    <Toasts />
+                </ErrorBoundary>
                 <ReleaseNotesDialog />
-                <MachineUpdateDialog />
-                <LinkRequestDialog />
-                <ShortcutHints />
+                <ErrorBoundary label={failed('machineUpdate')} compact className={FLOATING_FAILURE}>
+                    <MachineUpdateDialog />
+                </ErrorBoundary>
+                <ErrorBoundary label={failed('link')} compact className={FLOATING_FAILURE}>
+                    <LinkRequestDialog />
+                </ErrorBoundary>
+                <ErrorBoundary label={failed('shortcutHints')} compact className={FLOATING_FAILURE}>
+                    <ShortcutHints />
+                </ErrorBoundary>
             </ErrorBoundary>
         </TooltipProvider>
     );
