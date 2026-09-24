@@ -25,7 +25,9 @@ const start = (endpointId: string): void => {
     const monitor = new PingMonitor({
         // The reply carries the daemon's clock, which two machines never share; only the round trip is ours to read.
         send: () => pool.peek(endpointId)?.request('server.ping', {}) ?? Promise.reject(new Error('no socket')),
-        report: (latency) => usePing.getState().setLatency(endpointId, latency)
+        report: (latency) => usePing.getState().setLatency(endpointId, latency),
+        // A socket can stay open for minutes after sleep or a network change while nothing reaches the daemon.
+        stalled: () => pool.reconnect(endpointId)
     });
     monitors.set(endpointId, monitor);
     monitor.start();
