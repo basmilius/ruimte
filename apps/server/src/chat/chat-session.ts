@@ -512,7 +512,7 @@ export class ChatSession {
         if (this.frozen || this.thread.info.activeTurnId !== null) {
             return null;
         }
-        this.lapseResume();
+        this.turnOpened();
         const { preamble, note } = this.contextNote(wake.text);
         const turnId = newId('turn');
         const now = Date.now();
@@ -598,6 +598,14 @@ export class ChatSession {
         this.emit([this.thread.patchInfo({ resumeAt: at })]);
         this.options.persist();
         void hooks.owe(turn.id, at).catch((e: unknown) => console.error(`Owing a resume of chat ${this.id} failed:`, errorText(e)));
+    }
+
+    /* Whatever the last turn stopped on is behind the chat once another turn opens. */
+    private turnOpened(): void {
+        if (this.thread.info.limit !== undefined) {
+            this.emit([this.thread.patchInfo({ limit: undefined })]);
+        }
+        this.lapseResume();
     }
 
     private lapseResume(): void {
@@ -874,7 +882,7 @@ export class ChatSession {
     }
 
     private openTurn(text: string | null, note: string | null, extras: ChatSendExtras, requestedTurnId?: string): string {
-        this.lapseResume();
+        this.turnOpened();
         const turnId = requestedTurnId ?? newId('turn');
         const now = Date.now();
         const events = [this.thread.upsert({ id: turnId, kind: 'turn', createdAt: now, turnId, state: 'running', origin: 'user', endedAt: null, costUsd: 0 })];
@@ -1106,6 +1114,7 @@ export class ChatSession {
         if (openTurnId === null && activeTurnId !== null) {
             // The CLI opened this turn itself; it takes a checkpoint like any other, so the card can
             // show what the agent changed while nobody was watching.
+            this.turnOpened();
             void this.checkpoint(activeTurnId);
             this.options.persist();
         }

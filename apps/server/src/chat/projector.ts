@@ -763,7 +763,8 @@ export class ThreadProjector {
             this.thread.patchInfo({
                 status: 'idle',
                 activeTurnId: null,
-                usage: { ...usage, costUsd: costUsd || usage.costUsd, turns: usage.turns + 1 }
+                usage: { ...usage, costUsd: costUsd || usage.costUsd, turns: usage.turns + 1 },
+                limit: state === 'error' ? limit : undefined
             })
         );
     }

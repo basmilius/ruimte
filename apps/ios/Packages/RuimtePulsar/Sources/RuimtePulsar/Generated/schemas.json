@@ -8714,6 +8714,24 @@
       "resumeAtReset": {
         "type": "boolean"
       },
+      "limit": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "usage",
+              "overload"
+            ]
+          },
+          "resetsAt": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
       "resumeAt": {
         "type": "number"
       },
@@ -10029,6 +10047,24 @@
           },
           "resumeAtReset": {
             "type": "boolean"
+          },
+          "limit": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "usage",
+                  "overload"
+                ]
+              },
+              "resetsAt": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind"
+            ]
           },
           "resumeAt": {
             "type": "number"
@@ -13140,6 +13176,24 @@
                     "resumeAtReset": {
                       "type": "boolean"
                     },
+                    "limit": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "usage",
+                            "overload"
+                          ]
+                        },
+                        "resetsAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ]
+                    },
                     "resumeAt": {
                       "type": "number"
                     },
@@ -13485,6 +13539,24 @@
                     },
                     "resumeAtReset": {
                       "type": "boolean"
+                    },
+                    "limit": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "usage",
+                            "overload"
+                          ]
+                        },
+                        "resetsAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ]
                     },
                     "resumeAt": {
                       "type": "number"
@@ -15156,6 +15228,24 @@
       "resumeAtReset": {
         "type": "boolean"
       },
+      "limit": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "usage",
+              "overload"
+            ]
+          },
+          "resetsAt": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
       "resumeAt": {
         "type": "number"
       },
@@ -15770,6 +15860,24 @@
           },
           "resumeAtReset": {
             "type": "boolean"
+          },
+          "limit": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "usage",
+                  "overload"
+                ]
+              },
+              "resetsAt": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind"
+            ]
           },
           "resumeAt": {
             "type": "number"
@@ -31909,6 +32017,24 @@
             "resumeAtReset": {
               "type": "boolean"
             },
+            "limit": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "usage",
+                    "overload"
+                  ]
+                },
+                "resetsAt": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
             "resumeAt": {
               "type": "number"
             },
@@ -34662,6 +34788,24 @@
                   "resumeAtReset": {
                     "type": "boolean"
                   },
+                  "limit": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "usage",
+                          "overload"
+                        ]
+                      },
+                      "resetsAt": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  },
                   "resumeAt": {
                     "type": "number"
                   },
@@ -35007,6 +35151,24 @@
                   },
                   "resumeAtReset": {
                     "type": "boolean"
+                  },
+                  "limit": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "usage",
+                          "overload"
+                        ]
+                      },
+                      "resetsAt": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
                   },
                   "resumeAt": {
                     "type": "number"
@@ -36270,6 +36432,24 @@
           },
           "resumeAtReset": {
             "type": "boolean"
+          },
+          "limit": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "usage",
+                  "overload"
+                ]
+              },
+              "resetsAt": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind"
+            ]
           },
           "resumeAt": {
             "type": "number"

@@ -53,6 +53,25 @@
     "keep": "Hele geschiedenis houden",
     "compact": "Comprimeren"
   },
+  "limit": {
+    "usage": {
+      "pill": "Limiet bereikt",
+      "pillUntil": "Limiet tot {{time}}",
+      "pillResumes": "Verder om {{time}}",
+      "title": "Gestopt op een verbruikslimiet",
+      "resets": "De limiet reset om {{time}}.",
+      "resumes": "Gaat om {{time}} vanzelf verder, als de limiet reset."
+    },
+    "overload": {
+      "pill": "Overbelast",
+      "pillRetry": "Opnieuw om {{time}}",
+      "title": "Het model was overbelast",
+      "sendAgain": "Stuur een bericht om het opnieuw te proberen.",
+      "retries": "Probeert het om {{time}} vanzelf opnieuw."
+    },
+    "toggle": "Verder na reset",
+    "machineOff": "Uitgezet voor deze machine. Zet het aan in Instellingen, Agents."
+  },
   "contextMeter": {
     "aria": "{{percent}}% van de context gebruikt",
     "title": "Context",

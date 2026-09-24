@@ -560,6 +560,15 @@ describe('queued messages and configuration', () => {
         expect(of('chat.configure').at(-1)).toEqual({ chatId: 'chat', runtimeMode: 'auto' });
     });
 
+    test('only a person lets a chat go on by itself after a limit', async () => {
+        const { registry, of } = fake();
+        expect(await registry.execute('chat.configure', { chatId: 'chat', model: null, option: null, resumeAtReset: true }, VOICE_ACTION_CALL)).toMatchObject({
+            error: { code: 'forbidden-field' }
+        });
+        await registry.execute('chat.configure', { chatId: 'chat', model: null, option: null, resumeAtReset: false }, PERSON_ACTION_CALL);
+        expect(of('chat.configure').at(-1)).toEqual({ chatId: 'chat', resumeAtReset: false });
+    });
+
     test('a chat that started keeps its CLI; a fresh one switches', async () => {
         const { registry, retargeted } = fake(
             {},

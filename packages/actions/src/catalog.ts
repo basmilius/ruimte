@@ -1178,6 +1178,8 @@ export const ACTION_DEFINITIONS = {
                 .describe('One option of the model to set; null leaves the options'),
             // Widening what a chat may do without asking is a person's call alone.
             runtimeMode: forActors(PERSON, RuntimeModeSchema).describe('The permission mode'),
+            // Letting the machine take a chat up again on a clock is a person's call alone.
+            resumeAtReset: forActors(PERSON, z.boolean()).describe('Whether the chat goes on by itself once a limit it stopped on lifts'),
             selection: modelSelection
         }),
         output: chatNamed.extend({ provider: AgentKindSchema, model: z.string(), options: modelOptions, runtimeMode: RuntimeModeSchema })

@@ -42,7 +42,7 @@ export function WithReason({ reason, children }: { reason: string | null; childr
  */
 const saveMachineSetting = async (
     endpoint: Endpoint,
-    patch: { broker?: BrokerSetting; refuseStatements?: boolean; streamingAllowed?: boolean }
+    patch: { broker?: BrokerSetting; refuseStatements?: boolean; streamingAllowed?: boolean; resumeAtReset?: boolean }
 ): Promise<void> => {
     const link = transportFor(endpoint.id);
     if (!link) {
@@ -62,6 +62,7 @@ const saveMachineSetting = async (
             agentsDeleteAnyView: answer.agentsDeleteAnyView === true,
             refuseStatements: answer.refuseStatements === true,
             streamingAllowed: answer.streamingAllowed ?? null,
+            resumeAtReset: answer.resumeAtReset === true,
             broker: answer.broker ?? null,
             brokerFixed: answer.brokerFixed === true
         });

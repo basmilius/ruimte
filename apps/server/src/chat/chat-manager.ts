@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import { ChatAttachmentUploadsSchema } from '@ruimte/contracts';
 import type {
     AgentKind,
-    AgentStatus,
     ChatAttachment,
     ChatAttachResult,
     ChatBookmark,
@@ -173,7 +172,7 @@ export class ChatManager {
     private readonly attached = new Map<string, Set<string>>();
     private readonly coalescers = new Map<string, DeltaCoalescer>();
     // What `chat.status` last said about each chat, so the broadcast is one per change and not one per info event.
-    private readonly announced = new Map<string, AgentStatus>();
+    private readonly announced = new Map<string, string>();
     private readonly logs = new Map<string, ChatLog>();
     private readonly tokens = new Map<string, string>();
     // How big each record was the last time it went to disk, and the writes waiting for a big one.
@@ -1157,10 +1156,12 @@ export class ChatManager {
      * since it streams word by word. Only a change is sent; `chat.list` hands out the rest on connect.
      */
     private announceStatus(chatId: string, info: ChatInfo): void {
-        if (this.announced.get(chatId) === info.status) {
+        // A limit and the resume owed after it are what a header shows of an idle chat, so they count as a change too.
+        const said = JSON.stringify([info.status, info.limit ?? null, info.resumeAt ?? null, info.resumeAtReset ?? null]);
+        if (this.announced.get(chatId) === said) {
             return;
         }
-        this.announced.set(chatId, info.status);
+        this.announced.set(chatId, said);
         this.sinks.emit({ event: 'chat.status', payload: { chatId, info } });
     }
 

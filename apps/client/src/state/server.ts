@@ -24,6 +24,8 @@ export interface ServerInfo {
     refuseStatements: boolean;
     /* Whether the daemon permits browser and device streaming; null for a daemon without the setting. */
     streamingAllowed: boolean | null;
+    /* Whether a chat that stopped on a limit may be taken up again on a clock; false for a daemon without the setting. */
+    resumeAtReset: boolean;
     /* The broker a person picked for this machine; null for a daemon that predates the setting. */
     broker: BrokerSetting | null;
     /* Whether a flag or the environment on the machine decides the broker, which leaves the setting without effect. */
@@ -45,6 +47,7 @@ const UNKNOWN: ServerInfo = {
     agentsDeleteAnyView: false,
     refuseStatements: false,
     streamingAllowed: null,
+    resumeAtReset: false,
     broker: null,
     brokerFixed: false,
     reachability: null,
@@ -64,6 +67,7 @@ interface ServersStore {
             | 'agentsDeleteAnyView'
             | 'refuseStatements'
             | 'streamingAllowed'
+            | 'resumeAtReset'
             | 'broker'
             | 'brokerFixed'
             | 'reachability'
@@ -74,7 +78,7 @@ interface ServersStore {
     setIdentity(
         endpointId: string,
         info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView'> &
-            Partial<Pick<ServerInfo, 'refuseStatements' | 'streamingAllowed' | 'broker' | 'brokerFixed'>>
+            Partial<Pick<ServerInfo, 'refuseStatements' | 'streamingAllowed' | 'resumeAtReset' | 'broker' | 'brokerFixed'>>
     ): void;
     /* A machine that is forgotten takes what it said about itself with it. */
     forget(endpointId: string): void;

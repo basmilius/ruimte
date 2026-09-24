@@ -120,6 +120,17 @@ export const ChatBackgroundTaskSchema = z.object({
 });
 export type ChatBackgroundTask = z.infer<typeof ChatBackgroundTaskSchema>;
 
+/*
+ * Why a turn stopped short, when its CLI said so in its own stream: the plan's usage limit, or a model
+ * too busy to answer. Not a state of its own, since a client that validates `state` knows four.
+ */
+export const ChatTurnLimitSchema = z.object({
+    kind: z.enum(['usage', 'overload']),
+    // When the limit lifts, in milliseconds since the epoch; absent when the CLI named no time.
+    resetsAt: z.number().optional()
+});
+export type ChatTurnLimit = z.infer<typeof ChatTurnLimitSchema>;
+
 export const ChatInfoSchema = z.object({
     chatId: ChatIdSchema,
     provider: AgentKindSchema,
@@ -148,6 +159,8 @@ export const ChatInfoSchema = z.object({
     forkOf: z.object({ chatId: ChatIdSchema, turnId: z.string().min(1), at: z.number() }).optional(),
     // This chat's own switch for being taken up again after a limit; absent follows the machine's `resumeAtReset`.
     resumeAtReset: z.boolean().optional(),
+    // The limit the last turn stopped on, until the next turn opens: what a header shows without the thread.
+    limit: ChatTurnLimitSchema.optional(),
     // When the daemon takes the chat up again on its own, after the limit its last turn stopped on; absent while nothing is owed.
     resumeAt: z.number().optional(),
     createdAt: z.number()
@@ -349,17 +362,6 @@ export const ChatCheckpointDiffSchema = z.object({
     truncated: z.boolean()
 });
 export type ChatCheckpointDiff = z.infer<typeof ChatCheckpointDiffSchema>;
-
-/*
- * Why a turn stopped short, when its CLI said so in its own stream: the plan's usage limit, or a model
- * too busy to answer. Not a state of its own, since a client that validates `state` knows four.
- */
-export const ChatTurnLimitSchema = z.object({
-    kind: z.enum(['usage', 'overload']),
-    // When the limit lifts, in milliseconds since the epoch; absent when the CLI named no time.
-    resetsAt: z.number().optional()
-});
-export type ChatTurnLimit = z.infer<typeof ChatTurnLimitSchema>;
 
 export const ChatTurnItemSchema = z.object({
     ...base,

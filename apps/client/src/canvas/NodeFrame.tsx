@@ -55,6 +55,7 @@ import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canva
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { ForkPill } from '@/chat/ui/ForkPill';
+import { LimitPill } from '@/chat/ui/LimitState';
 import { PlanPill } from '@/plan/PlanPill';
 import { SubagentBreadcrumb, SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
 import { useSubagentTrail } from '@/chat/subagent-view';
@@ -321,6 +322,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     {collapsed && <Pill className="tabular-nums">{t('group.inside', { count: node.memberIds?.length ?? 0 })}</Pill>}
                     {node.kind === 'chat' && !renaming && <ForkPill chatId={id} />}
                     {node.kind === 'chat' && !renaming && <PlanPill chatId={id} />}
+                    {node.kind === 'chat' && !renaming && <LimitPill chatId={id} />}
                     {(node.kind === 'chat' || node.kind === 'terminal') && !renaming && <ComputerIndicator nodeId={id} />}
                     {nodeWorktree && !renaming && (
                         <Tooltip label={nodeWorktree.path}>

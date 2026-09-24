@@ -55,6 +55,7 @@ import { enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirect
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
 import { PromptComposer } from '@/chat/ui/PromptComposer';
 import { QuoteTakerContext } from '@/chat/ui/quote-selection';
+import { LimitDock } from '@/chat/ui/LimitState';
 import { ResumeCompactionDock } from '@/chat/ui/ResumeCompactionDock';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { StashPicker } from '@/chat/ui/Pickers';
@@ -939,6 +940,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                     denyReason={capabilities?.denyReason === true}
                     onAllAnswered={() => inputRef.current?.focus()}
                 >
+                    <LimitDock chatId={chatId} info={info} />
                     {compactionOffer && (
                         <ResumeCompactionDock
                             tokens={compactionOffer.tokens}

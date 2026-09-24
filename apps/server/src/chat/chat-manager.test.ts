@@ -420,10 +420,18 @@ describe('ChatManager', () => {
         await recorder.until(idle);
         expect(recorder.ofKind('turn')[0]).toMatchObject({ state: 'error', limit: { kind: 'usage', resetsAt: 1_789_000_000_000 } });
         expect(recorder.ofKind('note').map((note) => note.text)).toContain("You've hit your session limit · resets 3pm");
+        expect(recorder.info?.limit).toEqual({ kind: 'usage', resetsAt: 1_789_000_000_000 });
 
         await manager.send('chat-limit', 'overloaded');
         await recorder.until(() => recorder.info?.usage.turns === 2 && idle());
         expect(recorder.ofKind('turn')[1]).toMatchObject({ state: 'error', limit: { kind: 'overload' } });
+        expect(recorder.info?.limit).toEqual({ kind: 'overload' });
+
+        // The next turn leaves the limit behind, as soon as it opens.
+        await manager.send('chat-limit', 'fine');
+        expect(recorder.info?.limit).toBeUndefined();
+        await recorder.until(() => recorder.info?.usage.turns === 3 && idle());
+        expect(recorder.info?.limit).toBeUndefined();
     });
 
     test('a CLI that dies with something on stderr leaves the last lines of it in the note', async () => {

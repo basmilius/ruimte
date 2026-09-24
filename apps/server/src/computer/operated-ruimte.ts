@@ -78,7 +78,7 @@ export const carriesPersonAuthority = (request: WireRequest, context: OperatedCo
         case 'chat.create':
             return widens(request.payload.runtimeMode ?? DEFAULT_RUNTIME_MODE, context);
         case 'chat.configure':
-            return request.payload.runtimeMode !== undefined && widens(request.payload.runtimeMode, context);
+            return (request.payload.runtimeMode !== undefined && widens(request.payload.runtimeMode, context)) || request.payload.resumeAtReset === true;
         case 'session.create':
             return request.payload.agent !== undefined && widens(request.payload.agent.runtimeMode ?? DEFAULT_RUNTIME_MODE, context);
         case 'git.operation':

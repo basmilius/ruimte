@@ -53,6 +53,25 @@
     "keep": "Keep full history",
     "compact": "Compact"
   },
+  "limit": {
+    "usage": {
+      "pill": "Limited",
+      "pillUntil": "Limited until {{time}}",
+      "pillResumes": "Resumes {{time}}",
+      "title": "Stopped on a usage limit",
+      "resets": "The limit resets at {{time}}.",
+      "resumes": "Goes on by itself at {{time}}, when the limit resets."
+    },
+    "overload": {
+      "pill": "Overloaded",
+      "pillRetry": "Retry {{time}}",
+      "title": "The model was overloaded",
+      "sendAgain": "Send a message to try again.",
+      "retries": "Tries again by itself at {{time}}."
+    },
+    "toggle": "Resume at reset",
+    "machineOff": "Turned off for this machine. Turn it on in Settings, Agents."
+  },
   "contextMeter": {
     "aria": "{{percent}}% of the context used",
     "title": "Context",

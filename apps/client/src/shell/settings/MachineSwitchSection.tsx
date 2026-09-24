@@ -12,18 +12,25 @@ import { transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
 
 /*
- * What an agent on one machine may take away. It lives in the machine's own `endpoint.json`, since the
- * daemon is what enforces it and a client-side switch would hold nothing back. The wire takes name, icon
- * and this together, so the row sends back the name and icon the machine already carries.
+ * A switch about agents that lives in the machine's own `endpoint.json`, since the daemon is what acts
+ * on it and a client-side switch would hold nothing back: what an agent may take away, and whether a
+ * chat on a limit is taken up again on a clock.
  */
-function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
+export type MachineSwitch = 'agentsDeleteAnyView' | 'resumeAtReset';
+
+// The i18n group under `agents` each switch reads its words from.
+const WORDS: Record<MachineSwitch, string> = { agentsDeleteAnyView: 'deleteAnyView', resumeAtReset: 'resumeAtReset' };
+
+/* The wire takes name, icon and the switch together, so the row sends back the name and icon the machine already carries. */
+function MachineSwitchRow({ endpoint, setting }: { endpoint: Endpoint; setting: MachineSwitch }) {
     const { t } = useTranslation('settings');
     const info = useServers((s) => s.byEndpoint[endpoint.id]);
     const connection = useEndpointConnection(endpoint.id);
     const connected = connection.status === 'open';
     const [busy, setBusy] = useState(false);
+    const words = `agents.${WORDS[setting]}`;
     // The row is one of several machines, so the switch says which one it speaks for.
-    const label = t('agents.deleteAnyView.rowLabel', { machine: endpoint.label });
+    const label = t(`${words}.rowLabel`, { machine: endpoint.label });
 
     const set = async (checked: boolean): Promise<void> => {
         const link = transportFor(endpoint.id);
@@ -36,18 +43,19 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
                 // A machine nobody named answers to its own default, and sending that name back would make it chosen.
                 name: info?.nameSource === 'chosen' ? (info.label ?? null) : null,
                 icon: info?.icon ?? null,
-                agentsDeleteAnyView: checked
+                [setting]: checked
             });
             useServers.getState().setIdentity(endpoint.id, {
                 label: next.label,
                 nameSource: next.nameSource ?? null,
                 icon: next.icon ?? null,
                 agentsDeleteAnyView: next.agentsDeleteAnyView === true,
-                refuseStatements: next.refuseStatements === true
+                refuseStatements: next.refuseStatements === true,
+                resumeAtReset: next.resumeAtReset === true
             });
         } catch (e) {
             useToasts.getState().show({
-                id: `endpoint-delete-any-view-${endpoint.id}`,
+                id: `endpoint-${setting}-${endpoint.id}`,
                 kind: 'error',
                 title: t('machine.toast.saveFailed', { machine: endpoint.label }),
                 description: e instanceof Error ? e.message : t('machine.toast.unchanged')
@@ -65,16 +73,8 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
                     <span className="truncate">{endpoint.label}</span>
                 </span>
             }
-            description={
-                connected
-                    ? t('agents.deleteAnyView.description')
-                    : connection.noLink === true
-                      ? t('agents.deleteAnyView.notConnected')
-                      : t('machine.notAnswering')
-            }
-            control={
-                <Toggle checked={info?.agentsDeleteAnyView === true} onChange={(checked) => void set(checked)} label={label} disabled={busy || !connected} />
-            }
+            description={connected ? t(`${words}.description`) : connection.noLink === true ? t(`${words}.notConnected`) : t('machine.notAnswering')}
+            control={<Toggle checked={info?.[setting] === true} onChange={(checked) => void set(checked)} label={label} disabled={busy || !connected} />}
         />
     );
 }
@@ -83,7 +83,7 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
  * One switch per machine, under the settings about what an agent may do rather than in the Machines
  * pane. The pane is about pairing a machine and whether it answers; this is about an agent.
  */
-export function DeleteAnyViewSection() {
+export function MachineSwitchSection({ setting }: { setting: MachineSwitch }) {
     const { t } = useTranslation('settings');
     const stored = useEndpoints((s) => s.endpoints);
     const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
@@ -96,9 +96,9 @@ export function DeleteAnyViewSection() {
     ];
 
     return (
-        <SettingsSection title={t('agents.deleteAnyView.title')} description={t('agents.deleteAnyView.sectionDescription')}>
+        <SettingsSection title={t(`agents.${WORDS[setting]}.title`)} description={t(`agents.${WORDS[setting]}.sectionDescription`)}>
             {ordered.map((endpoint) => (
-                <DeleteAnyViewRow key={endpoint.id} endpoint={endpoint} />
+                <MachineSwitchRow key={endpoint.id} endpoint={endpoint} setting={setting} />
             ))}
         </SettingsSection>
     );

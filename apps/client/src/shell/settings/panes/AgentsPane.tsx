@@ -11,7 +11,7 @@ import {
 } from '@/chat/preferences';
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@/chat/runtime-modes';
 import { canKeepAwake } from '@/desktop/bridge';
-import { DeleteAnyViewSection } from '@/shell/settings/DeleteAnyViewSection';
+import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Skeleton, Toggle } from '@/shell/settings/controls';
@@ -180,7 +180,8 @@ export function AgentsPane() {
                     }
                 />
             </SettingsSection>
-            <DeleteAnyViewSection />
+            <MachineSwitchSection setting="agentsDeleteAnyView" />
+            <MachineSwitchSection setting="resumeAtReset" />
             <SettingsSection title={t('agents.working.title')} description={t('agents.working.description')}>
                 <SettingsRow
                     label={t('agents.working.turnNotify.label')}

@@ -354,6 +354,13 @@
             "description": "Uit verwijdert een agent alleen weergaven en nodes die hij zelf maakte. Aan mag hij elke weergave en node in elk project daar verwijderen, ook die van jou.",
             "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat."
         },
+        "resumeAtReset": {
+            "title": "Verder na een limiet",
+            "sectionDescription": "Per machine opgeslagen. Elke chat kan het voor zichzelf nog uitzetten.",
+            "rowLabel": "Chats op {{machine}} gaan verder na een limiet",
+            "description": "Aan gaat een chat die op een verbruikslimiet stopte vanzelf verder zodra de limiet reset, en wordt een turn die mislukte omdat het model overbelast was na 1, 5 en 15 minuten opnieuw geprobeerd.",
+            "notConnected": "Niet verbonden. Pas dit aan terwijl er een project op de machine open staat."
+        },
         "defaults": {
             "title": "Standaarden voor nieuwe agents",
             "description": "Een model kiezen in een chat verandert hier ook de standaard.",

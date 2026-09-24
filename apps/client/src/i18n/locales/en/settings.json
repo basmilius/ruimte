@@ -354,6 +354,13 @@
             "description": "Off, an agent only deletes views and nodes it created. On, it can delete any view or node in any project there, including yours.",
             "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open."
         },
+        "resumeAtReset": {
+            "title": "Resume after a limit",
+            "sectionDescription": "Saved per machine. Each chat can still turn it off for itself.",
+            "rowLabel": "Chats on {{machine}} resume after a limit",
+            "description": "On, a chat that stopped on a usage limit goes on by itself once the limit resets, and a turn that failed because the model was overloaded is tried again after 1, 5 and 15 minutes.",
+            "notConnected": "Not connected. Change this while a project on the machine is open."
+        },
         "defaults": {
             "title": "Defaults for new agents",
             "description": "Picking a model in a chat also changes its default here.",
