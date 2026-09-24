@@ -202,8 +202,10 @@ export const fakeClaude: FakeCli = (io) => {
             result();
             return;
         }
-        if (text.startsWith('delegate:')) {
-            const description = text.slice(9).trim();
+        // `delegate late:` sends the subagent's first work before `task_started`, an order the CLI does not promise to avoid.
+        const late = text.startsWith('delegate late:');
+        if (late || text.startsWith('delegate:')) {
+            const description = text.slice(text.indexOf(':') + 1).trim();
             const report = '# Report\n\n- one\n- two';
             out({
                 type: 'assistant',
@@ -223,20 +225,28 @@ export const fakeClaude: FakeCli = (io) => {
                 },
                 session_id: sessionId
             });
-            out({
-                type: 'system',
-                subtype: 'task_started',
-                task_id: 'task-delegate',
-                tool_use_id: 'toolu_delegate',
-                description,
-                subagent_type: 'general-purpose',
-                is_backgrounded: false,
-                spawn_depth: 1,
-                task_type: 'local_agent',
-                prompt: `Do this: ${description}`,
-                session_id: sessionId
-            });
+            const taskStarted = (): void => {
+                out({
+                    type: 'system',
+                    subtype: 'task_started',
+                    task_id: 'task-delegate',
+                    tool_use_id: 'toolu_delegate',
+                    description,
+                    subagent_type: 'general-purpose',
+                    is_backgrounded: false,
+                    spawn_depth: 1,
+                    task_type: 'local_agent',
+                    prompt: `Do this: ${description}`,
+                    session_id: sessionId
+                });
+            };
+            if (!late) {
+                taskStarted();
+            }
             subagentWork('toolu_delegate', report);
+            if (late) {
+                taskStarted();
+            }
             out({
                 type: 'user',
                 message: {
@@ -286,24 +296,26 @@ export const fakeClaude: FakeCli = (io) => {
             });
             assistantText('I will report back');
             result();
-            // What the real CLI does after the turn ended: no user frame, a notification, a fresh init,
-            // an assistant message of its own and a result.
+            // What the real CLI does after the turn ended: the subagent works on, and only later come a
+            // notification, a fresh init, an assistant message of its own and a result, with no user frame.
             io.later(() => {
                 subagentWork('toolu_agent', `the subagent says: ${summary}`);
-                out({
-                    type: 'system',
-                    subtype: 'task_notification',
-                    task_id: 'task-agent',
-                    tool_use_id: 'toolu_agent',
-                    status: 'completed',
-                    output_file: '',
-                    summary,
-                    usage: { total_tokens: 1500, tool_uses: 2, duration_ms: 250 },
-                    session_id: sessionId
+                io.later(() => {
+                    out({
+                        type: 'system',
+                        subtype: 'task_notification',
+                        task_id: 'task-agent',
+                        tool_use_id: 'toolu_agent',
+                        status: 'completed',
+                        output_file: '',
+                        summary,
+                        usage: { total_tokens: 1500, tool_uses: 2, duration_ms: 250 },
+                        session_id: sessionId
+                    });
+                    out({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: io.cwd, tools: ['Bash'], slash_commands: [], argv: args });
+                    assistantText(`the subagent says: ${summary}`);
+                    result();
                 });
-                out({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: io.cwd, tools: ['Bash'], slash_commands: [], argv: args });
-                assistantText(`the subagent says: ${summary}`);
-                result();
             });
             return;
         }

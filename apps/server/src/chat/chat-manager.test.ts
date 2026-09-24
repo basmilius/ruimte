@@ -62,6 +62,13 @@ const LINKED: ContextSource[] = [{ id: 'dev-1', kind: 'device', title: 'iPhone 1
 
 const idle = () => recorder.info?.status === 'idle' && recorder.info.running && recorder.info.activeTurnId === null;
 
+// What a subagent did in the thread: the calls it made and the text it wrote, each under the call that started it.
+const subagentWork = (): Array<Extract<ChatItem, { kind: 'tool' | 'assistant' }>> =>
+    [...recorder.items.values()].filter(
+        (item): item is Extract<ChatItem, { kind: 'tool' | 'assistant' }> =>
+            (item.kind === 'tool' || item.kind === 'assistant') && Boolean(item.parentToolUseId)
+    );
+
 describe('ChatManager', () => {
     test('create spawns nothing; the first send starts the CLI with the selection and streams a reply', async () => {
         const info = await manager.create({ chatId: 'chat-1', cwd: home });
@@ -440,6 +447,7 @@ describe('ChatManager', () => {
 
         // Nothing is sent from here, since the CLI wakes the agent itself once the task settles.
         claude.started[0]!.runLater();
+        claude.started[0]!.runLater();
         await recorder.until(() => recorder.ofKind('turn').length === 2);
         const agentTurn = recorder.ofKind('turn')[1]!;
         expect(agentTurn).toMatchObject({ origin: 'agent', label: 'report written' });
@@ -501,6 +509,73 @@ describe('ChatManager', () => {
         expect(recorder.ofKind('tool').filter((item) => item.parentToolUseId === 'toolu_delegate')).toHaveLength(2);
         // The delegation is a subagent row, so it is not a tool row as well.
         expect(recorder.ofKind('tool').some((item) => item.name === 'Agent')).toBe(false);
+    });
+
+    test('a subagent whose work arrives before the CLI says it started keeps that work on its own row', async () => {
+        await manager.create({ chatId: 'chat-early', cwd: home });
+        manager.attach('chat-early', 'c1');
+        await manager.send('chat-early', 'delegate late: read the readme');
+        await recorder.until(idle);
+
+        expect(recorder.ofKind('subagent')).toHaveLength(1);
+        expect(recorder.ofKind('subagent')[0]).toMatchObject({
+            toolUseId: 'toolu_delegate',
+            status: 'done',
+            background: false,
+            subagentType: 'general-purpose',
+            lastTool: 'Bash',
+            result: '# Report\n\n- one\n- two',
+            native: { agentId: 'task-delegate' }
+        });
+        const work = subagentWork();
+        expect(work.map((item) => [item.kind, item.parentToolUseId])).toEqual([
+            ['tool', 'toolu_delegate'],
+            ['tool', 'toolu_delegate'],
+            ['assistant', 'toolu_delegate']
+        ]);
+        // Nothing of the subagent's reached the thread of the chat itself.
+        expect(recorder.ofKind('tool').every((item) => item.parentToolUseId === 'toolu_delegate')).toBe(true);
+        expect(
+            recorder
+                .ofKind('assistant')
+                .filter((item) => !item.parentToolUseId)
+                .map((item) => item.text)
+        ).toEqual(['summarized']);
+        expect(recorder.ofKind('turn')).toHaveLength(1);
+    });
+
+    test('a background subagent that works on after its turn ended writes on its own row and opens a turn only once it settles', async () => {
+        await manager.create({ chatId: 'chat-later', cwd: home });
+        manager.attach('chat-later', 'c1');
+        await manager.send('chat-later', 'background: report written');
+        await recorder.until(idle);
+        const launched = recorder.ofKind('turn')[0]!;
+        // The person goes on with the chat before the subagent is done.
+        await manager.send('chat-later', 'next question');
+        await recorder.until(() => idle() && recorder.ofKind('turn').length === 2);
+
+        claude.started[0]!.runLater();
+        await recorder.until(() => recorder.ofKind('subagent')[0]?.result === 'the subagent says: report written');
+        expect(recorder.ofKind('subagent')[0]).toMatchObject({ status: 'running', turnId: launched.id });
+        const work = subagentWork();
+        expect(work.map((item) => [item.kind, item.parentToolUseId, item.turnId])).toEqual([
+            ['tool', 'toolu_agent', launched.id],
+            ['tool', 'toolu_agent', launched.id],
+            ['assistant', 'toolu_agent', launched.id]
+        ]);
+        expect(recorder.ofKind('turn')).toHaveLength(2);
+        expect(idle()).toBe(true);
+        expect(
+            recorder
+                .ofKind('assistant')
+                .filter((item) => !item.parentToolUseId)
+                .map((item) => item.text)
+        ).toEqual(['I will report back', 'echo: next question']);
+
+        claude.started[0]!.runLater();
+        await recorder.until(() => idle() && recorder.ofKind('turn').length === 3);
+        expect(recorder.ofKind('subagent')[0]).toMatchObject({ status: 'done', turnId: launched.id });
+        expect(recorder.ofKind('turn')[2]).toMatchObject({ origin: 'agent', label: 'report written', taskToolUseId: 'toolu_agent' });
     });
 
     test('the record holds a turn while it is still running', async () => {
