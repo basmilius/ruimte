@@ -30,6 +30,14 @@ export interface ScrcpyHost {
 const CONNECT_ATTEMPTS = 50;
 const CONNECT_RETRY_MS = 100;
 const FIRST_BYTE_TIMEOUT_MS = 1_000;
+/* How long input waits for the first frame, which is what gives a touch its pixels. */
+const FIRST_FRAME_TIMEOUT_MS = 5_000;
+
+const writeInput = (control: ScrcpyConnection, screen: ScreenSize, input: DeviceInput): void => {
+    for (const message of controlMessages(input, screen)) {
+        control.write(message);
+    }
+};
 
 interface Session {
     serverProcess: ScrcpyServerProcess;
@@ -37,6 +45,9 @@ interface Session {
     video: ScrcpyConnection | null;
     control: ScrcpyConnection | null;
     screen: ScreenSize | null;
+    /* Settles with the first frame or the end of the session, whichever comes first. */
+    firstFrame: Promise<void>;
+    settleFirstFrame: () => void;
     ended: boolean;
 }
 
@@ -89,7 +100,11 @@ export class ScrcpySource implements DeviceSource {
             'send_device_meta=false',
             'clipboard_autosync=false'
         ]);
-        const session: Session = { serverProcess, port, video: null, control: null, screen: null, ended: false };
+        let settleFirstFrame = (): void => undefined;
+        const firstFrame = new Promise<void>((resolve) => {
+            settleFirstFrame = resolve;
+        });
+        const session: Session = { serverProcess, port, video: null, control: null, screen: null, firstFrame, settleFirstFrame, ended: false };
         this.session = session;
         const reader = new ScrcpyVideoReader({ dummyByte: true });
         const onVideo = (bytes: Uint8Array): void => {
@@ -102,6 +117,7 @@ export class ScrcpySource implements DeviceSource {
             }
             for (const frame of frames) {
                 session.screen = { width: frame.width, height: frame.height };
+                session.settleFirstFrame();
                 this.sequence = (this.sequence + 1) % 0x100000000;
                 publish({ sequence: this.sequence, width: frame.width, height: frame.height, data: frame.data, format: 'h264', keyFrame: frame.keyFrame });
             }
@@ -122,17 +138,24 @@ export class ScrcpySource implements DeviceSource {
         }
     }
 
-    input(input: DeviceInput): void {
+    input(input: DeviceInput): void | Promise<void> {
         const session = this.session;
         if (session === null || session.control === null) {
             throw new DeviceError('device-not-streaming', 'Open the device stream before sending input');
         }
         if (session.screen === null) {
-            return;
+            // A tap right after the stream opened, as an agent's first one is, waits for the pixels instead of vanishing.
+            return this.inputAfterFirstFrame(session, input);
         }
-        for (const message of controlMessages(input, session.screen)) {
-            session.control.write(message);
+        writeInput(session.control, session.screen, input);
+    }
+
+    private async inputAfterFirstFrame(session: Session, input: DeviceInput): Promise<void> {
+        await Promise.race([session.firstFrame, this.host.sleep(FIRST_FRAME_TIMEOUT_MS)]);
+        if (session.ended || session.control === null || session.screen === null) {
+            throw new DeviceError('device-not-streaming', 'The Android screen sent no picture yet, so the touch had nowhere to land');
         }
+        writeInput(session.control, session.screen, input);
     }
 
     requestKeyFrame(): void {
@@ -184,6 +207,7 @@ export class ScrcpySource implements DeviceSource {
             return;
         }
         session.ended = true;
+        session.settleFirstFrame();
         if (this.session === session) {
             this.session = null;
         }

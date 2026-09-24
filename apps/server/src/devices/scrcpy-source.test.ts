@@ -35,6 +35,12 @@ class FakeHost implements ScrcpyHost {
     readonly control: Uint8Array[] = [];
     connections = 0;
     killed = false;
+    /* Holds the video until `sendVideo`, as a device does that is slow with its first frame. */
+    holdVideo = false;
+    /* What `sleep` answers once the source started, so a test decides when a wait runs out. */
+    wait: Promise<void> | null = null;
+    private video: ((bytes: Uint8Array) => void) | null = null;
+    private started = false;
     private exit: (code: number) => void = () => undefined;
 
     adb(arguments_: string[]) {
@@ -64,7 +70,13 @@ class FakeHost implements ScrcpyHost {
             if (attempt === 1) {
                 handlers.close();
             } else if (attempt === 2) {
-                handlers.data(opening);
+                if (this.holdVideo) {
+                    // The dummy byte and the codec, which is what tells the source the server listens.
+                    handlers.data(opening.slice(0, 5));
+                    this.video = handlers.data;
+                } else {
+                    handlers.data(opening);
+                }
             }
         });
         return Promise.resolve({
@@ -78,7 +90,15 @@ class FakeHost implements ScrcpyHost {
     }
 
     sleep() {
-        return Promise.resolve();
+        return this.started && this.wait !== null ? this.wait : Promise.resolve();
+    }
+
+    sendVideo() {
+        this.video?.(opening.slice(5));
+    }
+
+    markStarted() {
+        this.started = true;
     }
 }
 
@@ -110,6 +130,35 @@ describe('ScrcpySource', () => {
         const touch = new DataView(host.control[0]!.buffer);
         expect([touch.getInt32(10), touch.getInt32(14)]).toEqual([500, 500]);
         expect(host.control[1]).toEqual(new Uint8Array([17]));
+    });
+
+    test('holds a touch sent before the first frame until that frame gives it its pixels', async () => {
+        const host = new FakeHost();
+        host.holdVideo = true;
+        host.wait = new Promise(() => undefined);
+        const source = new ScrcpySource(host, () => Promise.resolve('/native/scrcpy-server'));
+        await source.start(() => undefined);
+        host.markStarted();
+
+        const sent = source.input({ kind: 'pointer', phase: 'down', x: 0.5, y: 0.25 });
+        expect(host.control).toEqual([]);
+        host.sendVideo();
+        await sent;
+
+        const touch = new DataView(host.control[0]!.buffer);
+        expect([touch.getInt32(10), touch.getInt32(14)]).toEqual([500, 500]);
+    });
+
+    test('refuses a touch when no frame comes before the wait runs out', async () => {
+        const host = new FakeHost();
+        host.holdVideo = true;
+        host.wait = Promise.resolve();
+        const source = new ScrcpySource(host, () => Promise.resolve('/native/scrcpy-server'));
+        await source.start(() => undefined);
+        host.markStarted();
+
+        await expect(source.input({ kind: 'pointer', phase: 'down', x: 0.5, y: 0.25 })).rejects.toThrow('The Android screen sent no picture yet');
+        expect(host.control).toEqual([]);
     });
 
     test('ends the server and the forward when the last viewer leaves', async () => {
