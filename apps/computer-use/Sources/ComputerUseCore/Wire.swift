@@ -25,6 +25,8 @@ public struct Request: Codable, Sendable {
     public var path: String?
     /// Wait for the UI to settle after the action and answer with a fresh state.
     public var withState: Bool?
+    /// Bring the app to the front and use the real pointer and keyboard; without it the call works behind the person's work.
+    public var front: Bool?
     /// For `state`: only the elements whose title, value, description or identifier holds this, and what they sit in.
     public var find: String?
     /// For `state`: only the subtree of this element from the last state.
@@ -72,4 +74,12 @@ public struct AgentError: Error, Sendable {
     public static let stopped = AgentError("stopped by the person (⌥⎋ or the stop button). Run `cu state <app>` to continue.", code: "stopped")
     public static let paused = AgentError("the person paused the session; wait until they resume", code: "paused")
     public static let takenOver = AgentError("the person took over; wait until they resume", code: "taken-over")
+
+    /// A call in the background that only the front can do; `reason` is the sentence that says why, without its period.
+    public static func needsFront(_ reason: String) -> AgentError {
+        AgentError(
+            "\(reason). Call again with --front: that brings the app forward and interrupts the person, so do it only when there is no other way or the person agreed",
+            code: "needs-front"
+        )
+    }
 }

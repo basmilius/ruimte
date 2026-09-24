@@ -6,6 +6,8 @@ import Phantom
 @MainActor
 final class StatusMenu: NSObject, NSMenuDelegate {
     struct Content: Equatable {
+        /// The first line of the menu, which names the app while the agent works in the background.
+        var title: String
         var state: PhantomState
         var mode: SessionMode
         var time: String
@@ -73,8 +75,8 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         guard let content else {
             return
         }
-        let title = NSMenuItem(title: config.menuTitle, action: nil, keyEquivalent: "")
-        title.attributedTitle = NSAttributedString(string: config.menuTitle, attributes: [.font: NSFont.menuFont(ofSize: 0).withWeight(.medium)])
+        let title = NSMenuItem(title: content.title, action: nil, keyEquivalent: "")
+        title.attributedTitle = NSAttributedString(string: content.title, attributes: [.font: NSFont.menuFont(ofSize: 0).withWeight(.medium)])
         title.isEnabled = false
         menu.addItem(title)
         let step = NSMenuItem(title: content.step, action: nil, keyEquivalent: "")

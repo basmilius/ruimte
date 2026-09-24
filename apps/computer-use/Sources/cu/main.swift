@@ -9,7 +9,7 @@ usage: cu <command> [arguments]
   doctor [--no-prompt]                  check Accessibility and Screen Recording;
                                         without --no-prompt it asks macOS for what is missing
   apps                                  list running apps with name, bundle id, pid, frontmost
-  open <app>                            launch an app, or bring it to the front (and unhide it)
+  open <app>                            launch an app, or unhide it; --front brings it forward
   state <app> [--find T] [--within N]   accessibility tree of the key window, plus a PNG of it;
                                         --find keeps the elements that hold T and what they sit in,
                                         --within N the subtree of element N
@@ -43,6 +43,10 @@ Development only, drawn in this process without the agent:
 Every command takes --home <dir>: the RUIMTE_HOME whose local.key it presents and whose
 socket it uses. Without it, RUIMTE_HOME, else ~/.ruimte-dev for the dev app and ~/.ruimte otherwise.
 
+Every command that reads or operates an app works behind the person's work: it never brings the app
+forward, moves the pointer or types into the app in front. What only the front can do is refused with
+needs-front. --front brings the app to the front and uses the real pointer and keyboard.
+
 Options for state, and for every action together with --state:
   --state                               after an action, wait for the UI to settle and answer with a new state
   --text                                print the tree as plain text instead of JSON
@@ -53,7 +57,7 @@ Output is JSON on stdout. On failure the exit code is 1, stdout holds {"error": 
 and stderr repeats the message. Put `--` before text that starts with `--`.
 """
 
-let flagNames: Set<String> = ["text", "no-prompt", "no-screenshot", "state", "help", "held", "reduce-motion"]
+let flagNames: Set<String> = ["text", "no-prompt", "no-screenshot", "state", "front", "help", "held", "reduce-motion"]
 
 struct Arguments {
     var positionals: [String] = []
@@ -151,6 +155,9 @@ func makeRequest(_ command: String, _ arguments: Arguments) -> Request {
     request.screenshot = !arguments.flags.contains("no-screenshot")
     if arguments.flags.contains("state") {
         request.withState = true
+    }
+    if arguments.flags.contains("front") {
+        request.front = true
     }
     switch command {
     case "doctor":

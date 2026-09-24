@@ -278,6 +278,7 @@ final class Agent {
         var notes: [String] = []
         var screenshot: [String: Any] = [:]
         var capture: CaptureResult?
+        var shot: WindowCapture.Shot?
         var captureProblem: String?
         if request.screenshot == false {
             screenshot["error"] = "skipped (--no-screenshot)"
@@ -287,13 +288,14 @@ final class Agent {
             captureProblem = "the last state has no screenshot because Screen Recording is not granted; run `cu doctor`"
         } else {
             do {
-                capture = try await WindowCapture.capture(
+                shot = try await WindowCapture.capture(
                     pid: pid,
                     windowFrame: rootFrame,
                     label: app.bundleIdentifier ?? "pid-\(pid)",
                     maxWidth: Self.maxScreenshotWidth,
                     directory: URL(fileURLWithPath: home.screenshotDirectory, isDirectory: true)
                 )
+                capture = shot?.result
                 screenshot = capture?.json ?? [:]
             } catch {
                 let message = (error as? AgentError)?.message ?? "capture failed: \(error.localizedDescription)"
@@ -333,6 +335,12 @@ final class Agent {
         if app.isHidden {
             result["hidden"] = true
             notes.append("the app is hidden: its windows are off screen, cannot be captured, and AppKit reports them with subrole Dialog; `cu open \(Targets.name(app))` shows it")
+        }
+        if AX.attribute(root, kAXMinimizedAttribute) as? Bool == true {
+            notes.append("the window is minimized: the picture is the last frame it showed, and keys cannot reach it without --front")
+        } else if mode != .none, let shot, !shot.onScreen || WindowStack.isCovered(shot.windowID, in: WindowCapture.onScreenStack()) {
+            // Chromium stops drawing and updating its tree for a window nothing of which shows.
+            notes.append("other windows cover this window whole, so the picture and the tree may be stale until part of it shows")
         }
         switch mode {
         case .manual:
@@ -462,11 +470,16 @@ final class Agent {
         }
     }
 
-    /// A `state` shows as looking: the viewfinder goes around the window the agent captures.
+    /// The app's name while a call works behind the person's work, which is unless it asked for the front.
+    func background(_ request: Request, _ app: NSRunningApplication) -> String? {
+        request.front == true ? nil : Targets.name(app)
+    }
+
+    /// A `state` shows as looking: in front the viewfinder goes around the window the agent captures.
     private func look(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
         let frame = AX.keyWindow(of: AXUIElementCreateApplication(app.processIdentifier)).flatMap(AX.frame)
-        overlay.begin(near: frame.map { CGPoint(x: $0.midX, y: $0.midY) })
-        overlay.operating(in: frame)
+        overlay.begin(near: frame.map { CGPoint(x: $0.midX, y: $0.midY) }, background: background(request, app))
+        overlay.operating(in: frame, pid: app.processIdentifier)
         defer {
             overlay.finishAction()
         }
@@ -474,11 +487,11 @@ final class Agent {
         return try await buildState(app, request)
     }
 
-    /// Wraps one action in the overlay: the cursor glides to the target first and shows the action there.
-    func act(_ app: NSRunningApplication, at point: CGPoint?, as action: ActionLook, reportPoint: Bool = true, _ body: () async throws -> [String: Any]) async throws -> [String: Any] {
+    /// Wraps one action in the overlay: in front the cursor glides to the target first and shows the action there.
+    func act(_ app: NSRunningApplication, _ request: Request, at point: CGPoint?, as action: ActionLook, reportPoint: Bool = true, _ body: () async throws -> [String: Any]) async throws -> [String: Any] {
         try checkStopped()
-        overlay.begin(near: point)
-        overlay.operating(in: AX.keyWindow(of: AXUIElementCreateApplication(app.processIdentifier)).flatMap(AX.frame))
+        overlay.begin(near: point, background: background(request, app))
+        overlay.operating(in: AX.keyWindow(of: AXUIElementCreateApplication(app.processIdentifier)).flatMap(AX.frame), pid: app.processIdentifier)
         defer {
             overlay.finishAction()
         }

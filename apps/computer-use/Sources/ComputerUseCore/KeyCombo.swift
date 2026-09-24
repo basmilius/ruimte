@@ -33,6 +33,23 @@ public struct KeyCombo: Sendable {
 
     public static let escapeKeyCode: CGKeyCode = 53
 
+    /// Select all, cut, copy, paste, undo and redo: AppKit sends them to the focused view of the key window, and an app
+    /// behind the person's work has none, so there they do nothing, by key or by menu.
+    public var editsFocusedText: Bool {
+        guard flags.contains(.maskCommand), !flags.contains(.maskControl), !flags.contains(.maskAlternate) else {
+            return false
+        }
+        let shifted = flags.contains(.maskShift)
+        switch keyCode {
+        case 0, 7, 8, 9:
+            return !shifted
+        case 6:
+            return true
+        default:
+            return false
+        }
+    }
+
     public static func parse(_ text: String) throws -> KeyCombo {
         var normalized = text.trimmingCharacters(in: .whitespaces).lowercased()
         var keyName: String

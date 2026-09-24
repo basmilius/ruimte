@@ -68,7 +68,13 @@ final class Overlay {
     private var takeover = TakeoverDetector()
     /// The key window of the app the agent last acted in, global and y down: where the person's movement takes over.
     private var operatedFrame: CGRect?
+    private var operatedPid: pid_t?
+    /// The app the agent works in behind the person's work, named on the bar; nil while it works in front.
+    private var background: String?
+    /// Until when the operated app coming to the front is its own launch and not the person.
+    private var activationGrace: TimeInterval = 0
     private var mouseMonitor: Any?
+    private var activationObserver: NSObjectProtocol?
     private var tick: Timer?
     private var holdTask: Task<Void, Never>?
     private var idleTask: Task<Void, Never>?
@@ -136,8 +142,14 @@ final class Overlay {
         control.clearStop()
     }
 
-    /// Starts the session, or keeps it going, on the screen of the point.
-    func begin(near globalPoint: CGPoint?) {
+    /// Starts the session, or keeps it going, on the screen of the point. In the background, `app` names the app
+    /// the agent works in, and the cursor stays away: it would be drawn over other apps.
+    func begin(near globalPoint: CGPoint?, background app: String?) {
+        background = app
+        if app != nil {
+            cursor.layer.isHidden = true
+            cursorPoint = nil
+        }
         endTask?.cancel()
         holdTask?.cancel()
         takeover.reset()
@@ -158,6 +170,7 @@ final class Overlay {
             control.begin(at: now)
             hotkeys.register()
             installMouseMonitor()
+            installActivationObserver()
             tick = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated {
                     self?.refreshChrome()
@@ -169,13 +182,19 @@ final class Overlay {
     }
 
     /// The window the agent acts in now, which the person's movement has to be in to take over.
-    func operating(in frame: CGRect?) {
+    func operating(in frame: CGRect?, pid: pid_t) {
         operatedFrame = frame
+        operatedPid = pid
+    }
+
+    /// The app is about to come up by the agent's own doing, which is not the person bringing it forward.
+    func expectActivation(for duration: TimeInterval) {
+        activationGrace = now + duration
     }
 
     /// Moves the cursor to the target, showing `state` on the way; the real pointer stays put.
     func glide(to globalPoint: CGPoint, showing state: PhantomState = .move) async throws {
-        guard let screen else {
+        guard let screen, background == nil else {
             return
         }
         let target = Geometry.local(globalPoint, on: screen)
@@ -262,7 +281,7 @@ final class Overlay {
             guard !settles else {
                 return ["session": false, "shown": NSNull()]
             }
-            begin(near: nil)
+            begin(near: nil, background: background)
         }
         config = OverlayConfig.load(from: configPath)
         holdTask?.cancel()
@@ -368,11 +387,34 @@ final class Overlay {
         }
         let pointer = Geometry.global(fromCocoa: NSEvent.mouseLocation)
         let inside = operatedFrame?.contains(pointer) ?? false
+        if background != nil {
+            // Behind the person's work their hand is expected: only a click that lands in the app's own window takes over.
+            if press, inside, let operatedPid, WindowStack.owner(at: pointer, in: WindowCapture.onScreenStack(), ignoring: getpid()) == operatedPid {
+                takeOver()
+            }
+            return
+        }
         if takeover.note(press: press, distance: distance, inside: inside, at: time) {
             takeOver()
         }
     }
 
+
+    /// Bringing the app the agent works in to the front takes over, in the background; in front the agent brought it there.
+    private func installActivationObserver() {
+        guard activationObserver == nil else {
+            return
+        }
+        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] notification in
+            let pid = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier
+            MainActor.assumeIsolated {
+                guard let self, let pid, self.background != nil, pid == self.operatedPid, self.now > self.activationGrace, self.control.acceptsTakeover else {
+                    return
+                }
+                self.takeOver()
+            }
+        }
+    }
 
     private var cursorGlobalPoint: CGPoint? {
         guard let cursorPoint, let screen else {
@@ -428,9 +470,9 @@ final class Overlay {
         let shown = control.shownState
         let time = SessionControl.clock(control.elapsed(at: now))
         let held = control.mode != .running
-        bar.show(on: screen, SessionBarLayer.Content(title: config.title, state: shown, held: held, time: time, theme: theme), accent: accent, reduceMotion: reduceMotion)
+        bar.show(on: screen, SessionBarLayer.Content(title: config.title(background: background), state: shown, held: held, time: time, theme: theme), accent: accent, reduceMotion: reduceMotion)
         let stepLine = held ? config.step(for: shown, target: nil) : step
-        menu.show(StatusMenu.Content(state: shown, mode: control.mode, time: time, step: stepLine, keys: hotkeys.registered), config: config, accent: accent)
+        menu.show(StatusMenu.Content(title: config.menuTitle(background: background), state: shown, mode: control.mode, time: time, step: stepLine, keys: hotkeys.registered), config: config, accent: accent)
     }
 
     private func armIdleTimeout() {
@@ -458,6 +500,12 @@ final class Overlay {
             NSEvent.removeMonitor(mouseMonitor)
         }
         mouseMonitor = nil
+        if let activationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
+        }
+        activationObserver = nil
+        background = nil
+        operatedPid = nil
         bar.hide()
         menu.hide()
         look = ActionLook(state: .idle)

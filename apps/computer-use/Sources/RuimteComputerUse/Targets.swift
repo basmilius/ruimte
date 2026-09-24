@@ -82,6 +82,9 @@ enum Targets {
     /// Brings the app forward so synthesized keys and clicks land in it, and refuses to go on if something else stays in front.
     static func activate(_ app: NSRunningApplication, window: AXUIElement?) async throws {
         let pid = app.processIdentifier
+        if let window, AX.attribute(window, kAXMinimizedAttribute) as? Bool == true {
+            AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+        }
         if frontmostPid() == pid {
             return
         }
@@ -101,6 +104,21 @@ enum Targets {
         }
         let other = NSWorkspace.shared.frontmostApplication.map(name) ?? "another app"
         throw AgentError("could not bring \(name(app)) to the front (\(other) stays in front); refusing to send input")
+    }
+
+    /// Whether the app has a normal window that the window server knows and does not show: on another Space or minimized.
+    static func hasWindowElsewhere(_ pid: pid_t) -> Bool {
+        let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        return list.contains { entry in
+            guard (entry[kCGWindowOwnerPID as String] as? Int) == Int(pid),
+                  (entry[kCGWindowLayer as String] as? Int) == 0,
+                  (entry[kCGWindowIsOnscreen as String] as? Bool) != true,
+                  let bounds = entry[kCGWindowBounds as String] as? NSDictionary,
+                  let frame = CGRect(dictionaryRepresentation: bounds) else {
+                return false
+            }
+            return frame.width > 50 && frame.height > 50
+        }
     }
 
     /// Hit-tests the point a synthesized event is about to land on. Refuses another app's window and,

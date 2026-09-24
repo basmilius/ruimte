@@ -14,8 +14,8 @@ extension Agent {
             throw AgentError("element \(index) is gone; run `cu state` again")
         }
         let window = AX.keyWindow(of: AXUIElementCreateApplication(app.processIdentifier)).flatMap(AX.frame)
-        overlay.begin(near: info.frame.map { CGPoint(x: $0.midX, y: $0.midY) })
-        overlay.operating(in: window)
+        overlay.begin(near: info.frame.map { CGPoint(x: $0.midX, y: $0.midY) }, background: background(request, app))
+        overlay.operating(in: window, pid: app.processIdentifier)
         defer {
             overlay.finishAction()
         }
@@ -48,8 +48,8 @@ extension Agent {
         }
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
         let window = AX.keyWindow(of: appElement).flatMap(AX.frame)
-        overlay.begin(near: window.map { CGPoint(x: $0.midX, y: $0.midY) })
-        overlay.operating(in: window)
+        overlay.begin(near: window.map { CGPoint(x: $0.midX, y: $0.midY) }, background: background(request, app))
+        overlay.operating(in: window, pid: app.processIdentifier)
         defer {
             overlay.finishAction()
         }

@@ -170,6 +170,11 @@ enum Menus {
         return found
     }
 
+    /// The item's shortcut as a key combo, such as `cmd+shift+s`; nil when it has none.
+    static func shortcut(of item: AXUIElement) -> String? {
+        ItemInfo.read(item)?.shortcut
+    }
+
     /// The readable path of a menu item and the menu bar item it hangs under.
     static func path(of item: AXUIElement) -> (path: String, topItem: AXUIElement?) {
         var titles: [String] = []

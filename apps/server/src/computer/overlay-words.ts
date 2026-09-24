@@ -10,6 +10,9 @@ export interface OverlayWords {
     resume: string;
     takeOver: string;
     stop: string;
+    // While the agent works behind the person's work; `{app}` is the app it works in.
+    backgroundTitle: string;
+    backgroundMenuTitle: string;
     // `{target}` is the element or app an action is aimed at; the helper drops it when there is none.
     steps: Record<string, string>;
 }
@@ -26,6 +29,8 @@ const ENGLISH: OverlayWords = {
     resume: 'Resume',
     takeOver: 'Take over',
     stop: 'Stop session',
+    backgroundTitle: 'Ruimte is working in {app} in the background',
+    backgroundMenuTitle: 'Ruimte is using {app} in the background',
     steps: {
         idle: 'Ready',
         move: 'Moving to {target}',
@@ -53,6 +58,8 @@ const DUTCH: OverlayWords = {
     resume: 'Hervatten',
     takeOver: 'Overnemen',
     stop: 'Sessie stoppen',
+    backgroundTitle: 'Ruimte werkt op de achtergrond in {app}',
+    backgroundMenuTitle: 'Ruimte gebruikt {app} op de achtergrond',
     steps: {
         idle: 'Gereed',
         move: 'Gaat naar {target}',

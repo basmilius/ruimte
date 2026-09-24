@@ -9,6 +9,9 @@ public struct OverlayConfig: Decodable, Equatable, Sendable {
     public var resume = "Resume"
     public var takeOver = "Take over"
     public var stop = "Stop session"
+    /// The session bar and the menu while the agent works behind the person's work; `{app}` is the app it works in.
+    public var backgroundTitle = "Ruimte is working in {app} in the background"
+    public var backgroundMenuTitle = "Ruimte is using {app} in the background"
     /// `#RRGGBB`.
     public var accent: String?
     /// The step line in the menu, per state; `{target}` becomes what the action is aimed at.
@@ -38,6 +41,7 @@ public struct OverlayConfig: Decodable, Equatable, Sendable {
         let words: [(CodingKeys, WritableKeyPath<OverlayConfig, String>)] = [
             (.title, \.title), (.menuTitle, \.menuTitle), (.pause, \.pause),
             (.resume, \.resume), (.takeOver, \.takeOver), (.stop, \.stop),
+            (.backgroundTitle, \.backgroundTitle), (.backgroundMenuTitle, \.backgroundMenuTitle),
         ]
         for (key, path) in words {
             if let value = try? container.decodeIfPresent(String.self, forKey: key), !value.isEmpty {
@@ -57,6 +61,8 @@ public struct OverlayConfig: Decodable, Equatable, Sendable {
         case resume
         case takeOver
         case stop
+        case backgroundTitle
+        case backgroundMenuTitle
         case accent
         case steps
     }
@@ -78,6 +84,15 @@ public struct OverlayConfig: Decodable, Equatable, Sendable {
             return template.replacingOccurrences(of: " {target}", with: "").replacingOccurrences(of: "{target}", with: "")
         }
         return template.replacingOccurrences(of: "{target}", with: target)
+    }
+
+    /// The title of the session bar: in the background it names the app, which the person does not see being operated.
+    public func title(background app: String?) -> String {
+        app.map { backgroundTitle.replacingOccurrences(of: "{app}", with: $0) } ?? title
+    }
+
+    public func menuTitle(background app: String?) -> String {
+        app.map { backgroundMenuTitle.replacingOccurrences(of: "{app}", with: $0) } ?? menuTitle
     }
 
     public var accentComponents: RGB? {

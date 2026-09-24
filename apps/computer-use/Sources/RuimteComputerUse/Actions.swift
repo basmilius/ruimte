@@ -72,13 +72,33 @@ extension Agent {
         let count = right ? 1 : min(max(request.count ?? 1, 1), 3)
         let button: CGMouseButton = right ? .right : .left
         let snapshot = try snapshot(for: app)
+        let behind = request.front != true
 
         if let index = request.element {
             let element = try snapshot.element(index)
             let point = visibleCenter(of: element, frame: try liveFrame(element, index: index))
-            return try await act(app, at: point, as: ActionLook(state: .click, target: targetName(element, app))) {
-                let axAction = right ? kAXShowMenuAction : (count == 1 ? kAXPressAction : nil)
-                if let axAction, AX.actions(element).contains(axAction) {
+            let axAction = right ? kAXShowMenuAction : (count == 1 ? kAXPressAction : nil)
+            let pressable = axAction.map { AX.actions(element).contains($0) } ?? false
+            // A click on a field is how an agent puts the focus there; behind the person's work focusing it does the same.
+            if behind && !pressable && !right && count == 1 && AX.isSettable(element, kAXFocusedAttribute) {
+                return try await act(app, request, at: point, as: ActionLook(state: .click, target: targetName(element, app))) {
+                    let target = AX.summary(element)
+                    self.overlay.press(target: nil)
+                    let result = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+                    guard result == .success else {
+                        throw AgentError.needsFront("\(Targets.name(app)) did not let element \(index) take the focus (AXError \(result.rawValue)), so clicking it needs the real pointer, and so the app in front")
+                    }
+                    return ["method": "AXFocused", "element": index, "target": target]
+                }
+            }
+            if behind && !pressable {
+                guard let axAction else {
+                    throw AgentError.needsFront("A double click needs the real pointer, and so the app in front")
+                }
+                throw AgentError.needsFront("Element \(index) has no \(axAction) action, so clicking it needs the real pointer, and so the app in front")
+            }
+            return try await act(app, request, at: point, as: ActionLook(state: .click, target: targetName(element, app))) {
+                if let axAction, pressable {
                     // Read before acting: a button that closes its sheet takes its window and label with it.
                     let target = AX.summary(element)
                     self.overlay.press(target: nil)
@@ -88,8 +108,13 @@ extension Agent {
                         // A press that opens a modal returns only once the modal closes, so the call times out after it worked.
                         if result == .cannotComplete {
                             answer["note"] = "the app did not answer in time; the action probably opened something modal"
+                        } else if right && behind {
+                            answer["note"] = "the menu is on screen where the app put it, which may be over the person's work, until you press one of its items or send escape"
                         }
                         return answer
+                    }
+                    if behind {
+                        throw AgentError.needsFront("\(Targets.name(app)) refused \(axAction) on element \(index) (AXError \(result.rawValue)), so it needs a click with the real pointer, and so the app in front")
                     }
                 }
                 let hit = try await self.prepareMouse(app, at: point, window: snapshot.window, expecting: element, index: index)
@@ -99,8 +124,11 @@ extension Agent {
                 return ["method": "mouse", "button": buttonName, "element": index, "count": count, "target": target]
             }
         }
+        if behind {
+            throw AgentError.needsFront("A click by pixel needs the real pointer, and so the app in front")
+        }
         let point = try screenPoint(snapshot, request)
-        return try await act(app, at: point, as: ActionLook(state: .click, target: Targets.name(app))) {
+        return try await act(app, request, at: point, as: ActionLook(state: .click, target: Targets.name(app))) {
             let hit = try await self.prepareMouse(app, at: point, window: snapshot.window, expecting: nil, index: nil)
             let target = AX.summary(hit)
             self.overlay.press(target: target["label"] as? String)
@@ -121,6 +149,9 @@ extension Agent {
         }
         let vertical = sign.y != 0
         let snapshot = try snapshot(for: app)
+        if request.front != true && request.element == nil {
+            throw AgentError.needsFront("A scroll by pixel needs the real pointer, and so the app in front; scroll an element instead")
+        }
 
         var point: CGPoint
         var expected: AXUIElement?
@@ -136,7 +167,18 @@ extension Agent {
         }
         let index = request.element
         let look = ActionLook(state: .scroll, target: expected.map { targetName($0, app) } ?? Targets.name(app), direction: ScrollDirection(rawValue: direction) ?? .down)
-        return try await act(app, at: point, as: look) {
+        if request.front != true {
+            guard let expected, let index else {
+                throw AgentError("scroll needs --element N")
+            }
+            return try await act(app, request, at: point, as: look) {
+                var answer = try Self.scrollBehind(expected, direction: direction, pages: pages)
+                answer["element"] = index
+                answer["target"] = AX.summary(expected)
+                return answer
+            }
+        }
+        return try await act(app, request, at: point, as: look) {
             let hit = try await self.prepareMouse(app, at: point, window: snapshot.window, expecting: expected, index: index)
             let target = AX.summary(hit)
             let length = pageLength ?? Self.scrollAreaLength(around: hit, vertical: vertical) ?? AX.frame(snapshot.window).map { vertical ? $0.height : $0.width } ?? 400
@@ -155,6 +197,9 @@ extension Agent {
     /// the end is wherever the agent drops it, often another element or window.
     func drag(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
         let snapshot = try snapshot(for: app)
+        if request.front != true {
+            throw AgentError.needsFront("A drag needs the real pointer, and so the app in front")
+        }
         guard (request.element == nil) != (request.x == nil || request.y == nil) else {
             throw AgentError("drag starts at --from N, or at both --from-x and --from-y, and not both")
         }
@@ -181,7 +226,7 @@ extension Agent {
         }
         let name = grabbed.map { targetName($0, app) } ?? Targets.name(app)
         let index = request.element
-        return try await act(app, at: start, as: ActionLook(state: .drag, target: name, text: name)) {
+        return try await act(app, request, at: start, as: ActionLook(state: .drag, target: name, text: name)) {
             let hit = try await self.prepareMouse(app, at: start, window: snapshot.window, expecting: grabbed, index: index)
             let target = AX.summary(hit)
             let duration = OverlayStyle.Motion.move.duration
@@ -222,7 +267,15 @@ extension Agent {
         }
         let window = snapshots[app.processIdentifier]?.window
         let look = ActionLook(state: .type, target: focusedElement(app).map { targetName($0, app) } ?? Targets.name(app), text: text)
-        return try await act(app, at: focusPoint(app), as: look, reportPoint: false) {
+        if request.front != true {
+            let keys = try keyTarget(app)
+            return try await act(app, request, at: focusPoint(app), as: look, reportPoint: false) {
+                let target = AX.summary(keys.focused ?? keys.window)
+                try await self.typeBehind(text, app: app, keys)
+                return ["typed": text.count, "method": "keys to the app", "target": target]
+            }
+        }
+        return try await act(app, request, at: focusPoint(app), as: look, reportPoint: false) {
             try await Targets.activate(app, window: window)
             try self.checkStopped()
             let target = AX.summary(self.focusedElement(app))
@@ -238,7 +291,23 @@ extension Agent {
         }
         let window = snapshots[app.processIdentifier]?.window
         let look = ActionLook(state: .type, target: focusedElement(app).map { targetName($0, app) } ?? Targets.name(app), text: combos.map(\.name).joined(separator: " "))
-        return try await act(app, at: focusPoint(app), as: look, reportPoint: false) {
+        if request.front != true {
+            if let edit = combos.first(where: \.editsFocusedText) {
+                throw AgentError.needsFront("\(edit.name) edits the focused text through the key window, which an app behind the person's work does not have, so it does nothing there; set-value replaces a text in the background")
+            }
+            let keys = try keyTarget(app)
+            return try await act(app, request, at: focusPoint(app), as: look, reportPoint: false) {
+                let target = AX.summary(keys.focused ?? keys.window)
+                Self.aimKeys(keys, main: true)
+                for combo in combos {
+                    try self.checkStopped()
+                    try await SyntheticInput.ToProcess.press(combo, to: app.processIdentifier)
+                    try await Task.sleep(for: .milliseconds(60))
+                }
+                return ["pressed": combos.map(\.name), "method": "keys to the app", "target": target]
+            }
+        }
+        return try await act(app, request, at: focusPoint(app), as: look, reportPoint: false) {
             try await Targets.activate(app, window: window)
             let target = AX.summary(self.focusedElement(app))
             for combo in combos {
@@ -261,29 +330,35 @@ extension Agent {
             throw AgentError("element \(index) (\(role)) does not accept a value; click it and use `cu type` instead")
         }
         let newValue: CFTypeRef
-        if AX.attribute(element, kAXValueAttribute) is NSNumber {
-            let lowered = text.lowercased()
-            if let number = Double(text) {
-                newValue = NSNumber(value: number)
-            } else if ["true", "yes", "on"].contains(lowered) {
-                newValue = NSNumber(value: 1)
-            } else if ["false", "no", "off"].contains(lowered) {
-                newValue = NSNumber(value: 0)
-            } else {
+        let numeric = AX.attribute(element, kAXValueAttribute) is NSNumber
+        if numeric {
+            guard let number = ValueMatch.number(text) else {
                 throw AgentError("element \(index) holds a number; \"\(text)\" is not one")
             }
+            newValue = NSNumber(value: number)
         } else {
             newValue = text as CFString
         }
-        return try await act(app, at: visibleCenter(of: element, frame: frame), as: ActionLook(state: .type, target: targetName(element, app), text: text)) {
+        return try await act(app, request, at: visibleCenter(of: element, frame: frame), as: ActionLook(state: .type, target: targetName(element, app), text: text)) {
             let target = AX.summary(element)
             let result = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, newValue)
             guard result == .success else {
                 throw AgentError("the app refused the value (AXError \(result.rawValue))")
             }
             var answer: [String: Any] = ["element": index, "target": target]
-            if let readBack = AX.describe(AX.attribute(element, kAXValueAttribute)) {
+            // Some apps answer success and keep the old value, or take it a moment later.
+            var readBack = AX.describe(AX.attribute(element, kAXValueAttribute))
+            var reads = 1
+            while !ValueMatch.holds(readBack, wanted: text, numeric: numeric) && reads <= 10 {
+                try await Task.sleep(for: .milliseconds(100))
+                readBack = AX.describe(AX.attribute(element, kAXValueAttribute))
+                reads += 1
+            }
+            if let readBack {
                 answer["value"] = readBack
+            }
+            if !ValueMatch.holds(readBack, wanted: text, numeric: numeric) {
+                answer["note"] = "the app said yes, but element \(index) holds \"\(readBack ?? "")\" a second later: the value may not have taken; read the state, or click the field and type"
             }
             return answer
         }
@@ -295,6 +370,7 @@ extension Agent {
         guard let query = request.app, !query.isEmpty else {
             throw AgentError("`cu open` needs an app name or bundle id")
         }
+        let behind = request.front != true
         var launched = false
         let app: NSRunningApplication
         if let running = try? Targets.resolve(query) {
@@ -302,13 +378,16 @@ extension Agent {
             if app.isHidden {
                 app.unhide()
             }
-            try await Targets.activate(app, window: nil)
+            if !behind {
+                try await Targets.activate(app, window: nil)
+            }
         } else {
             guard let url = Targets.applicationURL(for: query) else {
                 throw AgentError("no app \"\(query)\" found in /Applications, /System/Applications or ~/Applications; pass its bundle id")
             }
             let configuration = NSWorkspace.OpenConfiguration()
-            configuration.activates = true
+            configuration.activates = !behind
+            overlay.expectActivation(for: 10)
             do {
                 app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
             } catch {
@@ -326,10 +405,17 @@ extension Agent {
             try await Task.sleep(for: .milliseconds(100))
         }
         var result: [String: Any] = ["app": Targets.descriptor(app), "launched": launched]
+        var notes: [String] = []
         if let window {
             result["window"] = VisibleText.clean(AX.string(window, kAXTitleAttribute)) ?? ""
         } else {
-            result["note"] = "no window appeared within 5 seconds; the app may show one only after a menu command"
+            notes.append("no window appeared within 5 seconds; the app may show one only after a menu command")
+        }
+        if behind && launched && Targets.frontmostPid() == app.processIdentifier {
+            notes.append("the app came to the front by itself as it started")
+        }
+        if !notes.isEmpty {
+            result["note"] = notes.joined(separator: "; ")
         }
         return (app, result)
     }
@@ -360,11 +446,16 @@ extension Agent {
             item = try Menus.resolve(target, in: appElement)
         }
         let (path, topItem) = Menus.path(of: item)
+        if request.front != true, let shortcut = Menus.shortcut(of: item), (try? KeyCombo.parse(shortcut))?.editsFocusedText == true {
+            throw AgentError.needsFront("\"\(path)\" (\(shortcut)) edits the focused text through the key window, which an app behind the person's work does not have, so it does nothing there; set-value replaces a text in the background")
+        }
         // Apps refresh AXEnabled of menu items only when a menu opens, so a stale "disabled" is not a reason to refuse.
         let reportedDisabled = !(AX.attribute(item, kAXEnabledAttribute) as? Bool ?? true)
         let point = (topItem.flatMap(AX.frame) ?? AX.frame(item)).map { CGPoint(x: $0.midX, y: $0.midY) }
-        return try await act(app, at: point, as: ActionLook(state: .click, target: path), reportPoint: false) {
-            try await Targets.activate(app, window: nil)
+        return try await act(app, request, at: point, as: ActionLook(state: .click, target: path), reportPoint: false) {
+            if request.front == true {
+                try await Targets.activate(app, window: nil)
+            }
             try self.checkStopped()
             let target = AX.summary(item)
             self.overlay.press(target: nil)
@@ -376,8 +467,118 @@ extension Agent {
             var answer: [String: Any] = ["menu": path, "method": "AXPress", "target": target]
             if result == .cannotComplete {
                 answer["note"] = "the app did not answer in time; the item probably opened something modal"
+            } else if request.front != true {
+                answer["note"] = "behind the person's work an item for the window or the text in focus, such as save, export or print, does nothing, since the app has no key window: if the state shows no change, it needs --front"
             }
             return answer
         }
+    }
+
+    /// Where keys go behind the person's work: the focused element of the app's window, once that window can take them.
+    struct KeyTarget {
+        let window: AXUIElement
+        /// Nil for an app that takes keys in the window itself.
+        let focused: AXUIElement?
+    }
+
+    private func keyTarget(_ app: NSRunningApplication) throws -> KeyTarget {
+        let name = Targets.name(app)
+        guard let window = AX.keyWindow(of: AXUIElementCreateApplication(app.processIdentifier)) else {
+            if Targets.hasWindowElsewhere(app.processIdentifier) {
+                throw AgentError.needsFront("The window of \(name) is on another Space or minimized, so keys need the app in front")
+            }
+            throw AgentError("\(name) has no window open to type in")
+        }
+        if AX.attribute(window, kAXMinimizedAttribute) as? Bool == true {
+            throw AgentError.needsFront("The window of \(name) is minimized, so keys need the app in front")
+        }
+        let focused = focusedElement(app).flatMap { element -> AXUIElement? in
+            AX.role(element) == kAXApplicationRole || AX.role(element) == kAXWindowRole ? nil : element
+        }
+        return KeyTarget(window: window, focused: focused)
+    }
+
+    /// Focuses the element in its own window; `main` also makes the window the app's main one, which raises it among
+    /// the windows behind the person's work but never activates the app.
+    static func aimKeys(_ keys: KeyTarget, main: Bool) {
+        if let focused = keys.focused {
+            AXUIElementSetAttributeValue(focused, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+        }
+        if main && AX.attribute(keys.window, kAXMainAttribute) as? Bool != true {
+            AXUIElementSetAttributeValue(keys.window, kAXMainAttribute as CFString, kCFBooleanTrue)
+        }
+    }
+
+    /// One character at a time to the app's process. The first tells whether keys arrive there at all: when a text
+    /// element keeps its value, the window is made main and it goes again, and after that the front is the only way.
+    private func typeBehind(_ text: String, app: NSRunningApplication, _ keys: KeyTarget) async throws {
+        let pid = app.processIdentifier
+        let characters = Array(text.replacingOccurrences(of: "\r\n", with: "\n"))
+        let valueNow = { keys.focused.flatMap { AX.describe(AX.attribute($0, kAXValueAttribute)) } }
+        let before = valueNow()
+        Self.aimKeys(keys, main: before == nil)
+        var sent = 0
+        if let first = characters.first, before != nil {
+            for attempt in 0..<2 {
+                if attempt == 1 {
+                    Self.aimKeys(keys, main: true)
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+                try checkStopped()
+                try await SyntheticInput.ToProcess.type(first, to: pid)
+                try await Task.sleep(for: .milliseconds(150))
+                if valueNow() != before {
+                    sent = 1
+                    break
+                }
+            }
+            if sent == 0 {
+                throw AgentError.needsFront("\(Targets.name(app)) did not take keys in the background")
+            }
+        }
+        for character in characters.dropFirst(sent) {
+            try checkStopped()
+            try await SyntheticInput.ToProcess.type(character, to: pid)
+            try await Task.sleep(for: SyntheticInput.ToProcess.characterGap)
+        }
+    }
+
+    /// Scrolls through accessibility, since wheel events posted to an app behind the person's work never scroll:
+    /// the page actions of the element or what it sits in, or else the value of a scroll area's scroll bar.
+    private static func scrollBehind(_ element: AXUIElement, direction: String, pages: Double) throws -> [String: Any] {
+        let chain = [element] + AX.ancestors(of: element)
+        let pageAction = "AXScroll\(direction.prefix(1).uppercased() + direction.dropFirst())ByPage"
+        let times = max(1, Int(pages.rounded()))
+        // Some apps list the page actions and refuse them; the scroll bar is tried next.
+        if let scrollable = chain.first(where: { AX.actions($0).contains(pageAction) }),
+           AXUIElementPerformAction(scrollable, pageAction as CFString) == .success {
+            for _ in 1..<times {
+                AXUIElementPerformAction(scrollable, pageAction as CFString)
+            }
+            return ["method": pageAction, "direction": direction, "pages": times]
+        }
+        let vertical = direction == "up" || direction == "down"
+        let barAttribute = vertical ? kAXVerticalScrollBarAttribute : kAXHorizontalScrollBarAttribute
+        for area in chain where AX.role(area) == kAXScrollAreaRole {
+            guard let bar = AX.element(area, barAttribute), AX.isSettable(bar, kAXValueAttribute),
+                  let now = (AX.attribute(bar, kAXValueAttribute) as? NSNumber)?.doubleValue,
+                  let visible = AX.frame(area),
+                  let content = (AX.attribute(area, kAXContentsAttribute) as? [AXUIElement])?.compactMap(AX.frame).first else {
+                continue
+            }
+            let seen = vertical ? visible.height : visible.width
+            let whole = vertical ? content.height : content.width
+            guard whole > seen else {
+                return ["method": "AXValue of the scroll bar", "direction": direction, "moved": false, "note": "the area shows all it holds; there is nothing to scroll"]
+            }
+            let sign: Double = direction == "down" || direction == "right" ? 1 : -1
+            let target = min(1, max(0, now + sign * Double(seen) * 0.9 * pages / Double(whole - seen)))
+            let result = AXUIElementSetAttributeValue(bar, kAXValueAttribute as CFString, NSNumber(value: target))
+            guard result == .success else {
+                throw AgentError.needsFront("The app refused to move its scroll bar (AXError \(result.rawValue)), so scrolling needs the wheel, and so the app in front")
+            }
+            return ["method": "AXValue of the scroll bar", "direction": direction, "pages": pages, "moved": target != now]
+        }
+        throw AgentError.needsFront("Nothing around this element scrolls through accessibility, so scrolling it needs the wheel, and so the app in front")
     }
 }

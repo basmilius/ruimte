@@ -164,4 +164,50 @@ enum SyntheticInput {
             try await Task.sleep(for: .milliseconds(12))
         }
     }
+
+    /// Keys for an app behind the person's work: posted to its process alone, so they never pass the system's event
+    /// stream or the focus. Wheel events posted this way do not scroll, measured on macOS 27.
+    @MainActor
+    enum ToProcess {
+        /// The app drops characters that come faster, since it reads them as it gets to them.
+        static let characterGap: Duration = .milliseconds(40)
+
+        private static func post(_ event: CGEvent?, to pid: pid_t) {
+            guard let event else {
+                return
+            }
+            event.setIntegerValueField(.eventSourceUserData, value: marker)
+            event.postToPid(pid)
+        }
+
+        static func press(_ combo: KeyCombo, to pid: pid_t) async throws {
+            let down = CGEvent(keyboardEventSource: source, virtualKey: combo.keyCode, keyDown: true)
+            let up = CGEvent(keyboardEventSource: source, virtualKey: combo.keyCode, keyDown: false)
+            down?.flags = combo.flags
+            up?.flags = combo.flags
+            post(down, to: pid)
+            try? await Task.sleep(for: .milliseconds(25))
+            post(up, to: pid)
+        }
+
+        static func type(_ character: Character, to pid: pid_t) async throws {
+            if character == "\n" || character == "\r" {
+                try await press(KeyCombo(keyCode: 36, flags: [], name: "return"), to: pid)
+                return
+            }
+            if character == "\t" {
+                try await press(KeyCombo(keyCode: 48, flags: [], name: "tab"), to: pid)
+                return
+            }
+            let units = Array(String(character).utf16)
+            let down = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true)
+            let up = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: false)
+            for event in [down, up] {
+                event?.flags = []
+                event?.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units)
+            }
+            post(down, to: pid)
+            post(up, to: pid)
+        }
+    }
 }
