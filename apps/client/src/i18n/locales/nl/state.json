@@ -12,7 +12,11 @@
     "current": "Ruimte is up-to-date",
     "unknownVersion": "onbekend",
     "theUpdate": "de update",
-    "noAnswer": "De shell antwoordde niet."
+    "noAnswer": "De shell antwoordde niet.",
+    "updated": {
+      "title": "Bijgewerkt naar versie {{version}}",
+      "whatsNew": "Wat is er nieuw"
+    }
   },
   "badge": {
     "installed": "Geïnstalleerd",

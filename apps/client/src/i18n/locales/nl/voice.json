@@ -30,7 +30,13 @@
         "collapse": "Notitie-acties inklappen",
         "expand": "Notitie-acties uitklappen",
         "notesAdded_one": "{{count}} notitie toegevoegd",
-        "notesAdded_other": "{{count}} notities toegevoegd"
+        "notesAdded_other": "{{count}} notities toegevoegd",
+        "status": {
+            "running": "bezig",
+            "completed": "klaar",
+            "undone": "teruggedraaid",
+            "failed": "mislukt"
+        }
     },
     "conversation": {
         "start": "Voice Control starten",
@@ -79,5 +85,62 @@
             "unknown": "Dicteren stopte onverwacht. Probeer het opnieuw.",
             "targetChanged": "Het tekstveld is gewijzigd. Dicteer opnieuw."
         }
+    },
+    "activity": {
+        "closedProject": "Project gesloten",
+        "placedView": "View geplaatst",
+        "cancelled": "Geannuleerd",
+        "switchedProject": "Van project gewisseld",
+        "focusedView": "View gefocust",
+        "renamedView": "View hernoemd",
+        "createdView": {
+            "canvas": "Canvas-view gemaakt",
+            "drawing": "Tekening-view gemaakt",
+            "diagram": "Diagram-view gemaakt",
+            "terminal": "Terminal-view gemaakt",
+            "browser": "Browser-view gemaakt",
+            "chat": "Chat-view gemaakt",
+            "file": "Bestand-view gemaakt",
+            "separator": "Scheiding toegevoegd",
+            "subheader": "Kopje toegevoegd",
+            "device": "Apparaat-view gemaakt"
+        },
+        "deletedView": "View verwijderd",
+        "focusedNode": "Node gefocust",
+        "renamedNode": "Node hernoemd",
+        "addedNode": {
+            "terminal": "Terminal toegevoegd",
+            "chat": "AI Chat toegevoegd",
+            "browser": "Browser toegevoegd",
+            "device": "Apparaat toegevoegd",
+            "group": "Groep toegevoegd",
+            "note": "Notitie toegevoegd",
+            "drawing": "Tekening toegevoegd",
+            "diagram": "Diagram toegevoegd",
+            "file": "Bestand toegevoegd",
+            "unknown": "Node toegevoegd"
+        },
+        "duplicatedNode": "Node gedupliceerd",
+        "selectedNodes": "Nodes geselecteerd",
+        "deletedNodes": "Nodes verwijderd",
+        "groupedNodes": "Nodes gegroepeerd",
+        "zoomedToFit": "Ingezoomd op alles",
+        "undidChange": "Wijziging ongedaan gemaakt",
+        "redidChange": "Wijziging opnieuw gedaan",
+        "deletedLayout": "Layout verwijderd",
+        "clearedTerminal": "Terminal gewist",
+        "clearedChat": "AI Chat gewist",
+        "stoppedChatTurn": "Turn van AI Chat gestopt",
+        "stoppedSubagent": "Sub-agent gestopt",
+        "stoppedTask": "Achtergrondtaak gestopt",
+        "answeredQuestion": "Vraag van agent beantwoord",
+        "stoppedTerminal": "Terminalsessie gestopt",
+        "replacedDrawing": "Tekening vervangen",
+        "replacedDiagram": "Diagram vervangen",
+        "resumedAgent": "Terminal-agent hervat",
+        "restartedTerminal": "Terminal opnieuw gestart",
+        "changedNoteColor": "Kleur van notitie gewijzigd",
+        "queuedPrompt": "Prompt voor AI Chat in de wachtrij",
+        "prompted": "AI Chat geprompt"
     }
 }

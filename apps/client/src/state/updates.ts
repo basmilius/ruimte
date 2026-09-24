@@ -103,12 +103,12 @@ export const noteVersionChange = (current: string, storage: SeenVersionStorage |
         const withNotes = typeof desktop()?.releaseNotes === 'function';
         const id = useToasts.getState().show({
             id: 'updated-version',
-            title: `Updated to version ${current}`,
+            title: i18next.t('state:update.updated.title', { version: current }),
             kind: 'success',
             persist: true,
             action: withNotes
                 ? {
-                      label: "What's new",
+                      label: i18next.t('state:update.updated.whatsNew'),
                       run: () => {
                           useToasts.getState().dismiss(id);
                           openReleaseNotes(current);

@@ -30,7 +30,13 @@
         "collapse": "Collapse note actions",
         "expand": "Expand note actions",
         "notesAdded_one": "{{count}} note added",
-        "notesAdded_other": "{{count}} notes added"
+        "notesAdded_other": "{{count}} notes added",
+        "status": {
+            "running": "running",
+            "completed": "done",
+            "undone": "undone",
+            "failed": "failed"
+        }
     },
     "conversation": {
         "start": "Start Voice Control",
@@ -79,5 +85,62 @@
             "unknown": "Dictation stopped unexpectedly. Try again.",
             "targetChanged": "The text field changed. Please dictate again."
         }
+    },
+    "activity": {
+        "closedProject": "Closed project",
+        "placedView": "Placed view",
+        "cancelled": "Cancelled",
+        "switchedProject": "Switched project",
+        "focusedView": "Focused view",
+        "renamedView": "Renamed view",
+        "createdView": {
+            "canvas": "Created canvas view",
+            "drawing": "Created drawing view",
+            "diagram": "Created diagram view",
+            "terminal": "Created terminal view",
+            "browser": "Created browser view",
+            "chat": "Created chat view",
+            "file": "Created file view",
+            "separator": "Added separator",
+            "subheader": "Added subheader",
+            "device": "Created device view"
+        },
+        "deletedView": "Deleted view",
+        "focusedNode": "Focused node",
+        "renamedNode": "Renamed node",
+        "addedNode": {
+            "terminal": "Added terminal",
+            "chat": "Added AI Chat",
+            "browser": "Added browser",
+            "device": "Added device",
+            "group": "Added group",
+            "note": "Added note",
+            "drawing": "Added drawing",
+            "diagram": "Added diagram",
+            "file": "Added file",
+            "unknown": "Added node"
+        },
+        "duplicatedNode": "Duplicated node",
+        "selectedNodes": "Selected nodes",
+        "deletedNodes": "Deleted nodes",
+        "groupedNodes": "Grouped nodes",
+        "zoomedToFit": "Zoomed to fit",
+        "undidChange": "Undid change",
+        "redidChange": "Redid change",
+        "deletedLayout": "Deleted layout",
+        "clearedTerminal": "Cleared terminal",
+        "clearedChat": "Cleared AI Chat",
+        "stoppedChatTurn": "Stopped AI Chat turn",
+        "stoppedSubagent": "Stopped sub-agent",
+        "stoppedTask": "Stopped background task",
+        "answeredQuestion": "Answered agent question",
+        "stoppedTerminal": "Stopped terminal session",
+        "replacedDrawing": "Replaced drawing",
+        "replacedDiagram": "Replaced diagram",
+        "resumedAgent": "Resumed terminal agent",
+        "restartedTerminal": "Restarted terminal",
+        "changedNoteColor": "Changed note color",
+        "queuedPrompt": "Queued AI Chat prompt",
+        "prompted": "Prompted AI Chat"
     }
 }

@@ -12,7 +12,11 @@
     "current": "Ruimte is up to date",
     "unknownVersion": "unknown",
     "theUpdate": "the update",
-    "noAnswer": "The shell did not answer."
+    "noAnswer": "The shell did not answer.",
+    "updated": {
+      "title": "Updated to version {{version}}",
+      "whatsNew": "What's new"
+    }
   },
   "badge": {
     "installed": "Installed",

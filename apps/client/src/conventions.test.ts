@@ -27,4 +27,9 @@ describe('the conventions of the client', () => {
             .map(({ path }) => path);
         expect(listening.filter((path) => !(path in KEY_LISTENERS))).toEqual([]);
     });
+
+    test('type comes in the four sizes of the theme, never a size in brackets', () => {
+        const bracketed = sources().flatMap(({ path, text }) => [...text.matchAll(/text-\[\d[^\]]*\]/g)].map((match) => `${path}: ${match[0]}`));
+        expect(bracketed).toEqual([]);
+    });
 });

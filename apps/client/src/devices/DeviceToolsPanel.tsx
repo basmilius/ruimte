@@ -232,7 +232,7 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
 function ToolSection({ title, children }: { title: string; children: ReactNode }) {
     return (
         <section className="flex flex-col gap-2.5 border-b border-border px-3 py-3 last:border-b-0">
-            <h3 className="text-[11px] font-medium tracking-wide text-text-faint uppercase">{title}</h3>
+            <h3 className="text-xs font-medium tracking-wide text-text-faint uppercase">{title}</h3>
             {children}
         </section>
     );

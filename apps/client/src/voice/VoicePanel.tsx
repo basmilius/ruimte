@@ -51,7 +51,7 @@ const actionIcons: Record<VoiceActionKind, LucideIcon> = {
 function VoiceStatus({ elapsedMs, phase }: { elapsedMs: number; phase: VoicePhase }) {
     const { t } = useTranslation('voice');
     return (
-        <div className="flex shrink-0 items-center gap-1.5 text-[10px] text-text-muted" role="status">
+        <div className="flex shrink-0 items-center gap-1.5 text-xs text-text-muted" role="status">
             <span
                 className={clsx('h-1.5 w-1.5 rounded-full', phase === 'listening' ? 'bg-positive' : phase === 'error' ? 'bg-status-error' : 'bg-text-faint')}
             />
@@ -91,7 +91,7 @@ function ActionEvent({ action }: { action: VoiceAction }) {
                 ) : completed ? (
                     <Icon icon={Check} size={15} className="text-positive" />
                 ) : (
-                    <span className="text-[10px] text-text-faint">{action.status}</span>
+                    <span className="text-xs text-text-faint">{t(`actions.status.${action.status}`)}</span>
                 )}
             </div>
         </div>
@@ -162,7 +162,7 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
                     ) : completed ? (
                         <Icon icon={Check} size={15} className="text-positive" />
                     ) : (
-                        <span className="text-[10px] text-text-faint">undone</span>
+                        <span className="text-xs text-text-faint">{t('actions.status.undone')}</span>
                     )}
                 </div>
             </div>
@@ -188,7 +188,7 @@ function TranscriptEntry({ streaming, utterance }: { streaming: boolean; utteran
         <div>
             <div
                 className={clsx(
-                    'mb-1.5 text-[10px] font-medium tracking-wide uppercase tabular-nums',
+                    'mb-1.5 text-xs font-medium tracking-wide uppercase tabular-nums',
                     utterance.speaker === 'assistant' ? 'text-accent' : 'text-text-muted'
                 )}
             >
@@ -197,7 +197,7 @@ function TranscriptEntry({ streaming, utterance }: { streaming: boolean; utteran
             <p className="text-sm leading-6 text-text whitespace-pre-wrap [text-wrap:pretty]">
                 {streaming ? <FadingWords text={utterance.text} /> : utterance.text}
             </p>
-            {utterance.interrupted && <p className="mt-1 text-[10px] text-text-faint">{t('speaker.interrupted')}</p>}
+            {utterance.interrupted && <p className="mt-1 text-xs text-text-faint">{t('speaker.interrupted')}</p>}
         </div>
     );
 }
