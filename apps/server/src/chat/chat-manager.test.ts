@@ -636,10 +636,9 @@ describe('ChatManager', () => {
     test('kill drops the thread and its record, after the write that was still out', async () => {
         await manager.create({ chatId: 'chat-7', cwd: home });
         manager.attach('chat-7', 'c1');
-        await manager.send('chat-7', 'x');
-        await recorder.until(idle);
+        // The first write of a chat is the whole record, later changes only go to its log.
         const held = store.holdNextWrite('chat-7');
-        manager.get('chat-7')!.addNote('info', 'written while the node goes');
+        await manager.send('chat-7', 'x');
         await held.entered;
 
         const killed = manager.kill('chat-7');
@@ -684,8 +683,7 @@ describe('ChatManager', () => {
         expect(recorder.info?.queue?.map((message) => message.text)).toEqual(['kept']);
         expect(() => manager.unqueue('chat-q2', queue[0]!.id)).toThrow('No queued message');
 
-        // A daemon that goes down mid-turn must not lose what was waiting behind it.
-        await store.written('chat-q2', (record) => (record.info.queue ?? []).map((message) => message.text).join() === 'kept');
+        // A daemon that goes down mid-turn must not lose what was waiting behind it, which the log holds at once.
         manager.get('chat-q2')?.dispose();
         const reloaded = makeManager();
         expect((await reloaded.create({ chatId: 'chat-q2' })).queue?.map((message) => message.text)).toEqual(['kept']);

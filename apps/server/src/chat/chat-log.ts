@@ -11,7 +11,7 @@ export interface ChatLogLine {
     event: ChatEvent;
 }
 
-/* Past this the log is folded into the snapshot the next time the snapshot is written anyway. */
+/* Past this the next write of the record folds the log into it. */
 export const COMPACT_ABOVE_BYTES = 1024 * 1024;
 
 const LineSchema = z.object({ seq: z.number().int().positive(), at: z.number(), event: ChatEventSchema });
@@ -60,6 +60,8 @@ export class ChatLog {
     private fd: number | null = null;
     private seqValue: number;
     private resetSeqValue: number;
+    // False once a line failed to reach the disk, until a fold writes the file again.
+    private written = true;
 
     constructor(path: string | null, state: ChatLogState = { seq: 0, resetSeq: 0, lines: [] }) {
         this.path = path;
@@ -91,6 +93,11 @@ export class ChatLog {
         return this.bytes;
     }
 
+    /* Whether the file holds every line since the last fold, which is what lets a snapshot wait. */
+    get onDisk(): boolean {
+        return this.written;
+    }
+
     /* Numbers an event and writes it down; answers its seq. The seq holds even when the disk refused the line. */
     append(event: ChatEvent, at: number): number {
         this.seqValue += 1;
@@ -106,6 +113,7 @@ export class ChatLog {
                 this.fd ??= this.open(this.path);
                 writeSync(this.fd, text);
             } catch (e) {
+                this.written = false;
                 // The event still reaches every client; only a restart before the next snapshot loses it.
                 console.error(`Appending to ${this.path} failed:`, errorText(e));
             }
@@ -146,9 +154,10 @@ export class ChatLog {
         try {
             if (text === '') {
                 rmSync(this.path, { force: true });
-                return;
+            } else {
+                writeAtomicSync(this.path, text);
             }
-            writeAtomicSync(this.path, text);
+            this.written = true;
         } catch (e) {
             console.error(`Compacting ${this.path} failed:`, errorText(e));
         }

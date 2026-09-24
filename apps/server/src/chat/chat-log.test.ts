@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { appendFile, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { appendFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatEvent } from '@ruimte/contracts';
@@ -108,5 +108,18 @@ describe('ChatLog', () => {
         expect(log.after(2)).toHaveLength(2);
         expect(log.append(delta('next'), 1)).toBe(5);
         log.close();
+    });
+
+    test('a line that missed the disk says so until a fold writes the file again', async () => {
+        const blocked = join(dir, 'blocked');
+        await writeFile(blocked, '');
+        const log = new ChatLog(join(blocked, 'chat.log'));
+        expect(log.onDisk).toBe(true);
+        const seq = log.append(delta('a'), 10);
+        expect(log.onDisk).toBe(false);
+
+        await rm(blocked);
+        log.compact(seq);
+        expect(log.onDisk).toBe(true);
     });
 });

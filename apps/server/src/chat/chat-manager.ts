@@ -178,6 +178,8 @@ export class ChatManager {
     // How big each record was the last time it went to disk, and the writes waiting for a big one.
     private readonly sizes = new Map<string, number>();
     private readonly waiting = new Map<string, ReturnType<typeof setTimeout>>();
+    // What the last record held that no event carries (preambles, cleared task ids), as its JSON.
+    private readonly unlogged = new Map<string, string>();
     // The write in flight per chat, so the next one queues behind it instead of racing it.
     private readonly writes = new Map<string, Promise<void>>();
     // When each chat last said anything, which is what a chat has instead of a hook event.
@@ -853,6 +855,7 @@ export class ChatManager {
         this.logs.delete(chatId);
         this.cancelWaiting(chatId);
         this.sizes.delete(chatId);
+        this.unlogged.delete(chatId);
         this.writes.delete(chatId);
         this.activity.delete(chatId);
         this.chats.delete(chatId);
@@ -1055,6 +1058,11 @@ export class ChatManager {
         }
     }
 
+    /* Resolves once every write of the chat's record asked for so far has landed or was found unneeded. */
+    async persisted(chatId: string): Promise<void> {
+        await this.writes.get(chatId);
+    }
+
     private persist(chatId: string): void {
         this.cancelWaiting(chatId);
         void this.persistNow(chatId).catch((e) => console.error(`Chat record for ${chatId} failed:`, errorText(e)));
@@ -1099,11 +1107,19 @@ export class ChatManager {
             }
             // A delta held back is already in the thread, so it gets its seq before the snapshot says where it ends.
             this.coalescers.get(chatId)?.flush();
+            const unlogged = JSON.stringify([session.preambles, session.clearedTaskIds]);
+            const folds = fold || log.size > COMPACT_ABOVE_BYTES || !log.onDisk;
+            // The log already holds every change to the thread, so the whole record is rewritten only to fold
+            // the log, on a chat's first write, or for what no event carries.
+            if (!folds && this.sizes.has(chatId) && this.unlogged.get(chatId) === unlogged) {
+                return;
+            }
             const { info, items } = session.thread.snapshot();
             const at = { seq: log.seq, resetSeq: log.resetSeq };
             this.sizes.set(chatId, await this.store.write(chatId, info, items, at, session.preambles, session.clearedTaskIds));
+            this.unlogged.set(chatId, unlogged);
             // A chat killed while the write was out has no log left to fold.
-            if (this.logs.get(chatId) === log && (fold || log.size > COMPACT_ABOVE_BYTES)) {
+            if (this.logs.get(chatId) === log && folds) {
                 log.compact(at.seq);
             }
         });

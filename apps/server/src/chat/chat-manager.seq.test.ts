@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatAttachResult, ChatEvent, Task } from '@ruimte/contracts';
@@ -7,7 +7,8 @@ import { ProviderRegistry } from '../providers/registry.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
-import { ChatRecorder } from './chat-test-helpers.ts';
+import { COMPACT_ABOVE_BYTES } from './chat-log.ts';
+import { ChatRecorder, RecordingStore } from './chat-test-helpers.ts';
 import { fakeClaude } from './fake-claude.ts';
 import { inProcess, type InProcessCli } from './fake-cli.ts';
 import { ChatThread } from './thread.ts';
@@ -213,5 +214,44 @@ describe('the stream of a chat', () => {
             level: 'warning',
             text: 'This turn could not be resumed after the machine restarted: this machine does not resume turns'
         });
+    });
+});
+
+describe('the record of a chat', () => {
+    test('turns after its first write only go to the log, and a machine that went down without a word still reads every one', async () => {
+        const store = new RecordingStore(home, attachments);
+        const first = boot({ store });
+        await first.manager.create({ chatId: 'chat', cwd: home });
+        first.manager.attach('chat', 'watcher');
+        for (const prompt of ['one', 'two', 'three', 'four', 'five']) {
+            await first.manager.send('chat', prompt);
+            await first.recorder.until(idle(first.recorder));
+        }
+        await first.manager.persisted('chat');
+        expect(store.calls).toEqual(['write chat']);
+        const items = first.manager.get('chat')!.thread.list();
+        expect(items.filter((item) => item.kind === 'turn')).toHaveLength(5);
+
+        // Down without a shutdown: nothing is folded or written on the way out.
+        first.manager.get('chat')!.dispose();
+        managers.splice(managers.indexOf(first.manager), 1);
+        const second = boot();
+        await second.manager.create({ chatId: 'chat' });
+        expect(second.manager.get('chat')!.thread.list()).toEqual(items);
+    });
+
+    test('a log that passed its bound is folded into the record at the next write, which leaves the log short', async () => {
+        const store = new RecordingStore(home, attachments);
+        const { manager, recorder } = boot({ store });
+        await manager.create({ chatId: 'chat', cwd: home });
+        manager.attach('chat', 'watcher');
+        await manager.send('chat', `output:${COMPACT_ABOVE_BYTES + 1024}`);
+        await recorder.until(idle(recorder));
+        await manager.persisted('chat');
+
+        expect(store.calls).toEqual(['write chat', 'write chat']);
+        expect((await stat(join(home, 'chats', 'chat.json'))).size).toBeGreaterThan(COMPACT_ABOVE_BYTES);
+        // Gone when nothing came after the fold.
+        expect((await readFile(store.logPath('chat'), 'utf8').catch(() => '')).length).toBeLessThan(16 * 1024);
     });
 });
