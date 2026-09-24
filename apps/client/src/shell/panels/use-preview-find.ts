@@ -25,6 +25,18 @@ export interface PreviewFind {
 
 const NOTHING = { total: 0, current: null };
 
+const readyPages = new WeakSet<FindablePage>();
+
+/* Electron's find throws until the guest is attached and `dom-ready` fired, which a Cmd+F right after opening beats. */
+export const trackPageReady = (element: FindablePage): void => {
+    element.addEventListener('dom-ready', () => readyPages.add(element), { once: true });
+};
+
+const readyPage = (page: RefObject<FindablePage | null>): FindablePage | null => {
+    const element = page.current;
+    return element !== null && readyPages.has(element) ? element : null;
+};
+
 /*
  * The find bar over an HTML preview in the desktop app, answered by Chromium's own find in the page.
  * That find only knows literal text and case, so the other two toggles never reach it.
@@ -36,16 +48,14 @@ export const usePreviewFind = (find: FindState, page: RefObject<FindablePage | n
     // What the page was asked last, to ask again after it reloads.
     const asked = useRef<{ text: string; caseSensitive: boolean } | null>(null);
 
+    // A page that is not ready yet is still asked: the load that makes it ready ends in `refresh`.
     useEffect(() => {
-        const element = page.current;
-        if (element === null) {
-            return;
-        }
+        const element = readyPage(page);
         if (!find.open) {
             if (wasOpen.current) {
                 wasOpen.current = false;
                 asked.current = null;
-                element.stopFindInPage('keepSelection');
+                element?.stopFindInPage('keepSelection');
                 setState(NOTHING);
             }
             return;
@@ -53,23 +63,23 @@ export const usePreviewFind = (find: FindState, page: RefObject<FindablePage | n
         wasOpen.current = true;
         if (text === '') {
             asked.current = null;
-            element.stopFindInPage('clearSelection');
+            element?.stopFindInPage('clearSelection');
             setState(NOTHING);
             return;
         }
         asked.current = { text, caseSensitive };
-        element.findInPage(text, { findNext: true, matchCase: caseSensitive });
+        element?.findInPage(text, { findNext: true, matchCase: caseSensitive });
     }, [page, find.open, text, caseSensitive]);
 
     const refresh = useCallback((): void => {
         if (asked.current !== null) {
-            page.current?.findInPage(asked.current.text, { findNext: true, matchCase: asked.current.caseSensitive });
+            readyPage(page)?.findInPage(asked.current.text, { findNext: true, matchCase: asked.current.caseSensitive });
         }
     }, [page]);
 
     const step = (direction: 1 | -1): void => {
         if (text !== '') {
-            page.current?.findInPage(text, { forward: direction === 1, findNext: false, matchCase: caseSensitive });
+            readyPage(page)?.findInPage(text, { forward: direction === 1, findNext: false, matchCase: caseSensitive });
         }
     };
 

@@ -12,7 +12,7 @@ import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { localFileUrl } from '@/shell/panels/file-url';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { htmlPreviewDocument } from '@/shell/panels/html-preview';
-import { usePreviewFind, type FindablePage, type FoundInPage } from '@/shell/panels/use-preview-find';
+import { trackPageReady, usePreviewFind, type FindablePage, type FoundInPage } from '@/shell/panels/use-preview-find';
 import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useUnsaved } from '@/state/text-drafts';
@@ -118,6 +118,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
             element.executeJavaScript(scrollScript(restore)).catch(() => {});
             refresh();
         });
+        trackPageReady(element);
         element.addEventListener('found-in-page', (event) => found((event as unknown as { result: FoundInPage }).result));
         element.addEventListener('console-message', (event) => {
             const message = (event as unknown as { message: string }).message;
