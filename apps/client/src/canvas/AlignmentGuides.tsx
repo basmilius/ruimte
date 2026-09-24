@@ -39,18 +39,22 @@ export function AlignmentGuides({ guides, gaps, camera }: { guides: readonly Ali
                     const start = toScreen(gap.start, gap.axis);
                     const end = toScreen(gap.end, gap.axis);
                     return (
-                        <path
+                        <g
                             key={`${gap.axis}:${gap.start}:${gap.end}:${gap.position}`}
                             className={gap.equal ? 'text-accent' : 'text-text-muted'}
-                            d={
-                                along
-                                    ? `M${start} ${position}H${end}M${start} ${position - TICK}V${position + TICK}M${end} ${position - TICK}V${position + TICK}`
-                                    : `M${position} ${start}V${end}M${position - TICK} ${start}H${position + TICK}M${position - TICK} ${end}H${position + TICK}`
-                            }
                             fill="none"
                             stroke="currentColor"
                             strokeWidth={1}
-                        />
+                        >
+                            <path d={along ? `M${start} ${position}H${end}` : `M${position} ${start}V${end}`} strokeDasharray="4 3" />
+                            <path
+                                d={
+                                    along
+                                        ? `M${start} ${position - TICK}V${position + TICK}M${end} ${position - TICK}V${position + TICK}`
+                                        : `M${position - TICK} ${start}H${position + TICK}M${position - TICK} ${end}H${position + TICK}`
+                                }
+                            />
+                        </g>
                     );
                 })}
             </svg>
