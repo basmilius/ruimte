@@ -1,0 +1,791 @@
+<title>Ruimte codebase review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root {
+    --ground: #f5f6f3;
+    --surface: #ffffff;
+    --ink: #1a1e1c;
+    --muted: #5b6460;
+    --faint: #8a938f;
+    --line: rgba(26, 30, 28, 0.12);
+    --line-strong: rgba(26, 30, 28, 0.22);
+    --accent: #1f5f73;
+    --accent-soft: rgba(31, 95, 115, 0.1);
+    --high: #b3261e;
+    --high-soft: rgba(179, 38, 30, 0.1);
+    --mid: #a15c07;
+    --mid-soft: rgba(161, 92, 7, 0.12);
+    --low: #4f5d6b;
+    --low-soft: rgba(79, 93, 107, 0.12);
+    --ok: #2e6b3f;
+    --code-bg: rgba(26, 30, 28, 0.05);
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --ground: #121615;
+        --surface: #1a1f1d;
+        --ink: #e6ebe8;
+        --muted: #a2aca7;
+        --faint: #76807b;
+        --line: rgba(230, 235, 232, 0.12);
+        --line-strong: rgba(230, 235, 232, 0.24);
+        --accent: #6fb3c8;
+        --accent-soft: rgba(111, 179, 200, 0.14);
+        --high: #f2837a;
+        --high-soft: rgba(242, 131, 122, 0.14);
+        --mid: #e3a857;
+        --mid-soft: rgba(227, 168, 87, 0.14);
+        --low: #a6b3c0;
+        --low-soft: rgba(166, 179, 192, 0.14);
+        --ok: #7cc48f;
+        --code-bg: rgba(230, 235, 232, 0.07);
+    }
+}
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #121615;
+    --surface: #1a1f1d;
+    --ink: #e6ebe8;
+    --muted: #a2aca7;
+    --faint: #76807b;
+    --line: rgba(230, 235, 232, 0.12);
+    --line-strong: rgba(230, 235, 232, 0.24);
+    --accent: #6fb3c8;
+    --accent-soft: rgba(111, 179, 200, 0.14);
+    --high: #f2837a;
+    --high-soft: rgba(242, 131, 122, 0.14);
+    --mid: #e3a857;
+    --mid-soft: rgba(227, 168, 87, 0.14);
+    --low: #a6b3c0;
+    --low-soft: rgba(166, 179, 192, 0.14);
+    --ok: #7cc48f;
+    --code-bg: rgba(230, 235, 232, 0.07);
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    padding-inline: 16px;
+    padding-block: 32px 64px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { font-size: 16px; font-weight: 600; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+a { color: var(--accent); }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.lede { max-width: 68ch; color: var(--muted); font-size: 16px; }
+header { display: flex; flex-direction: column; gap: 14px; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 600; }
+section { display: flex; flex-direction: column; gap: 18px; }
+.section-head { display: flex; flex-direction: column; gap: 6px; }
+.section-head p { color: var(--muted); max-width: 70ch; }
+
+/* Severity tally */
+.tally { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.tally div { background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.tally .n { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tally .l { font-size: 13px; color: var(--muted); }
+.tally .high .n { color: var(--high); }
+.tally .mid .n { color: var(--mid); }
+.tally .low .n { color: var(--low); }
+
+/* Priority list */
+.prio { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--line); }
+.prio li { display: grid; grid-template-columns: 34px 1fr; gap: 4px 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.prio .step { font-family: var(--mono); font-size: 13px; color: var(--accent); font-weight: 500; padding-top: 2px; }
+.prio h3 { font-size: 15px; }
+.prio p { grid-column: 2; color: var(--muted); font-size: 14px; }
+.prio .refs { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Themes */
+.themes { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; }
+.theme { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; background-clip: padding-box; }
+.theme p { font-size: 14px; color: var(--muted); }
+.theme .refs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; }
+
+.ref { font-family: var(--mono); font-size: 12px; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-decoration: none; border: 0; cursor: pointer; }
+.ref:hover, .ref:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Filters */
+.filters { display: flex; flex-direction: column; gap: 10px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--ground); padding-block: 10px; border-bottom: 1px solid var(--line); }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.row .label { font-size: 12px; color: var(--muted); width: 72px; flex: none; }
+.chip { font: inherit; font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip .c { font-variant-numeric: tabular-nums; opacity: 0.65; margin-left: 4px; }
+#q { font: inherit; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); flex: 1; min-width: 0; max-width: 360px; }
+#q:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.count { font-size: 13px; color: var(--muted); }
+
+/* Findings */
+.findings { display: flex; flex-direction: column; gap: 10px; }
+.finding { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--low); border-radius: 8px; background-clip: padding-box; }
+.finding.high { border-left-color: var(--high); }
+.finding.mid { border-left-color: var(--mid); }
+.finding > summary { list-style: none; cursor: pointer; padding: 12px 16px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: baseline; }
+.finding > summary::-webkit-details-marker { display: none; }
+.finding > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+.fid { font-family: var(--mono); font-size: 13px; color: var(--muted); font-weight: 500; }
+.ftitle { font-weight: 600; font-size: 15px; }
+.tags { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 12px; padding: 1px 8px; border-radius: 4px; background: var(--code-bg); color: var(--muted); }
+.tag.sev-high { background: var(--high-soft); color: var(--high); font-weight: 600; }
+.tag.sev-mid { background: var(--mid-soft); color: var(--mid); font-weight: 600; }
+.tag.sev-low { background: var(--low-soft); color: var(--low); font-weight: 600; }
+.tag.checked { color: var(--ok); }
+.fbody { padding: 0 16px 16px 16px; display: grid; gap: 12px; border-top: 1px solid var(--line); padding-top: 14px; margin: 0 0 0 0; }
+.fbody dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 10px 16px; }
+.fbody dt { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); font-weight: 600; padding-top: 2px; }
+.fbody dd { margin: 0; font-size: 14px; max-width: 76ch; }
+.fbody ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.where code { font-size: 12px; }
+.empty { color: var(--muted); padding: 20px 0; }
+
+/* Tooling table */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+
+.good { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px 28px; }
+.good div { display: flex; flex-direction: column; gap: 4px; padding-left: 14px; border-left: 2px solid var(--ok); }
+.good p { font-size: 14px; color: var(--muted); }
+
+.method { font-size: 14px; color: var(--muted); display: flex; flex-direction: column; gap: 10px; max-width: 76ch; }
+.method ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+@media (max-width: 560px) {
+    h1 { font-size: 28px; }
+    .fbody dl { grid-template-columns: 1fr; gap: 2px; }
+    .fbody dd { margin-bottom: 8px; }
+    .row .label { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+<header>
+    <span class="eyebrow">Codereview · basmilius/ruimte</span>
+    <h1>Ruimte codebase review</h1>
+    <p class="lede">Een diepe review van de hele monorepo, op zoek naar wezenlijke verbeteringen: beveiliging, dataverlies, correctheid onder gelijktijdigheid, prestaties en de vangnetten in tooling en CI. Stijlpunten zijn weggelaten, net als alles wat al in <code>docs/NEXT.md</code> staat, en de productregels uit <code>CLAUDE.md</code> zijn als vaststaand behandeld.</p>
+    <div class="meta">
+        <span><b>Datum</b> 24 september 2026</span>
+        <span><b>Commit</b> <span class="mono">3713df4</span></span>
+        <span><b>Omvang</b> ca. 261.000 regels TS, Swift en Rust</span>
+        <span><b>Bevindingen</b> <span id="total-count">0</span></span>
+    </div>
+</header>
+
+<section>
+    <div class="section-head">
+        <h2>In het kort</h2>
+        <p>Er is niets kritiek in de zin van een open gat op afstand. Er zijn wel drie clusters die snel aandacht verdienen: de Electron-schil vertrouwt elke pagina in het hoofdvenster, een gecommitte <code>project.json</code> bepaalt welke opdracht een terminal typt, en op meerdere plekken gaan wijzigingen verloren tussen schijf, daemon en client.</p>
+    </div>
+    <div class="tally" id="tally"></div>
+</section>
+
+<section>
+    <div class="section-head">
+        <h2>Voorgestelde volgorde</h2>
+        <p>Gerangschikt op risico gedeeld door moeite. De eerste twee stappen zijn samen ongeveer een dag werk en halen het grootste deel van het beveiligingsrisico weg.</p>
+    </div>
+    <ol class="prio" id="prio"></ol>
+</section>
+
+<section>
+    <div class="section-head">
+        <h2>Patronen</h2>
+        <p>Veel losse bevindingen hebben dezelfde oorzaak. Wie het patroon aanpakt, sluit ze in één keer.</p>
+    </div>
+    <div class="themes" id="themes"></div>
+</section>
+
+<section id="all">
+    <div class="section-head">
+        <h2>Alle bevindingen</h2>
+        <p>Klik een bevinding open voor bestanden, scenario, oplossing en inschatting. "Gereproduceerd" betekent dat er een script tegen de echte klassen is gedraaid. "Gemeten" betekent dat er een getal is vastgesteld. "In code bevestigd" betekent dat het pad van begin tot eind is nagelezen. "Aannemelijk" betekent dat één schakel niet te bewijzen was. Het vinkje staat bij bevindingen die ik na de review zelf opnieuw in de code heb gecontroleerd.</p>
+    </div>
+    <div class="filters">
+        <div class="row" id="f-sev"><span class="label">Ernst</span></div>
+        <div class="row" id="f-area"><span class="label">Gebied</span></div>
+        <div class="row"><span class="label">Zoeken</span><input id="q" type="search" placeholder="bestand, onderwerp…" autocomplete="off"><span class="count" id="shown"></span></div>
+    </div>
+    <div class="findings" id="list"></div>
+</section>
+
+<section>
+    <div class="section-head">
+        <h2>Tooling en CI, zelf gemeten</h2>
+        <p>Gedraaid in een schone checkout met Bun 1.3.11: <code>bun install</code>, <code>bun run check</code>, <code>bun run test</code>, <code>format:check</code>, oxlint met extra regels en een productie-build van de client.</p>
+    </div>
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Controle</th><th>Uitkomst</th><th>Betekenis</th></tr></thead>
+            <tbody>
+                <tr><td><code>bun run check</code></td><td class="num">faalt</td><td>Alle typechecks slagen, maar <code>check:swift</code> meldt <code>document-renderer.js</code> als verouderd. Na opnieuw genereren verschillen de geminificeerde bundle en de laatste cijfers van de floats in <code>document-scenes.json</code>. De uitvoer hangt dus af van de Bun-versie (zie T1).</td></tr>
+                <tr><td><code>bun install</code></td><td class="num">herschrijft lock</td><td>Met een oudere Bun wordt <code>bun.lock</code> teruggezet naar <code>lockfileVersion 1</code> en worden ranges opnieuw opgelost. Nergens staat een vastgepinde Bun-versie.</td></tr>
+                <tr><td><code>bun run test</code></td><td class="num">4756 ok · 1 fout · 70 skip</td><td>De fout zit in <code>pulsar-worker/src/worker.test.ts</code>: de tweede Miniflare-instantie haalt de hook-timeout van 30 s niet en deze sandbox hangt daar steeds op (zie T3). De hele suite duurt 57 s.</td></tr>
+                <tr><td><code>format:check</code></td><td class="num">ok</td><td>1566 bestanden, allemaal geformatteerd.</td></tr>
+                <tr><td>oxlint (huidige config)</td><td class="num">151 waarschuwingen</td><td>121× <code>no-unused-expressions</code>, 13× <code>only-export-components</code>, 8× <code>exhaustive-deps</code>, 5× <code>set-state-in-effect</code>. Waarschuwingen laten CI niet falen.</td></tr>
+                <tr><td>oxlint <code>curly</code></td><td class="num">≈37 in bron</td><td>De regel "altijd accolades" staat in <code>CLAUDE.md</code> maar niet in <code>.oxlintrc.json</code>. De andere 300 treffers zitten in de gegenereerde iOS-bundle.</td></tr>
+                <tr><td>Client-build</td><td class="num">2,7 MB entry</td><td>De entry-chunk is 808 KB gzip, met daarnaast ca. 0,9 MB aan modulepreloads (<code>open</code>, <code>reach</code>, <code>themes</code>). Voor <code>station.ruimte.app</code> is dat de eerste laadtijd (zie C6).</td></tr>
+                <tr><td>CI-dekking</td><td class="num">gedeeltelijk</td><td><code>ci.yml</code> draait check, format, build en unit tests op macOS. Niet: 13 <code>*.integration.test.ts</code>, de Swift-pakkettests (<code>WireSchemaTests</code>, <code>MachineClientTests</code>, …) en <code>cargo test</code> van de device bridge.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section>
+    <div class="section-head">
+        <h2>Wat sterk is</h2>
+        <p>De reviewers kwamen ook veel goed doordacht werk tegen. Dit zijn fundamenten om op te bouwen en niet om aan te tornen.</p>
+    </div>
+    <div class="good">
+        <div><h3>Handtekeningen en handshake</h3><p>Elk doel heeft een eigen prefixregel. Challenges worden altijd besteed. Tickets en challenges zijn begrensd. Op een direct kanaal zit de DTLS-binding in beide handtekeningen en de broker leest nooit een envelop.</p></div>
+        <div><h3>Outbox en chatlog</h3><p>Een duurzaam bestand per entry, serialisatie per lane en idempotente handlers. Elk event krijgt synchroon een append en een seq voordat een client het hoort, en <code>after(since)</code> geeft <code>null</code> zodra het de volledigheid niet kan bewijzen.</p></div>
+        <div><h3>Het tweebestandsmodel</h3><p>De gedeelde tekst wordt vergeleken vóór elke schrijfactie, met één regel per node voor leesbare diffs. Onbekende soorten worden rauw bewaard en ongewijzigd teruggeschreven, en dat is getest.</p></div>
+        <div><h3>Git zonder verrassingen</h3><p>Alles gaat als argumentlijst zonder shell. Een worktree-merge forceert <code>autoStash=false</code>, <code>rerere=false</code> en <code>core.editor=true</code>. Een pull is <code>--ff-only</code> en meldt <code>diverged</code> apart.</p></div>
+        <div><h3>Transport in de client</h3><p><code>LinkTransport</code> gebruikt een generatieteller en een token per link, zodat late events van een vervangen link onschadelijk zijn. De WebRTC-link heeft liveness op basis van ontvangen bytes en een nette sluitvolgorde.</p></div>
+        <div><h3>Actieregister en gegenereerde contracten</h3><p>Velden per actor, dry-runs, revisies en bevestigingstokens, allemaal met tests. De Swift-modellen en <code>schemas.json</code> worden uit zod gegenereerd en een verouderde uitvoer laat de typecheck falen.</p></div>
+    </div>
+</section>
+
+<section>
+    <div class="section-head"><h2>Werkwijze</h2></div>
+    <div class="method">
+        <p>Zeven parallelle deelreviews, elk met de opdracht elk pad van begin tot eind te lezen en geen speculatie op te nemen:</p>
+        <ul>
+            <li>daemon: beveiliging, auth en transport</li>
+            <li>daemon: sessies, pty, chat en outbox</li>
+            <li>daemon: projectopslag, git, canvas-verbs en browser</li>
+            <li>client: state, transport en canvas</li>
+            <li>client: UI, acties, chat en i18n</li>
+            <li>desktop, Pulsar, station en CSP</li>
+            <li>iOS, contracts en de device bridge</li>
+        </ul>
+        <p>Drie bevindingen zijn gereproduceerd met tijdelijke scripts tegen de echte klassen (R1, R2, D1) en een paar zijn gemeten. Daarna heb ik de zwaarste punten opnieuw in de code nagelezen (het vinkje) en de tooling zelf gedraaid. Er is niets aan de repository gewijzigd. Omdat het om een review van 261k regels gaat, kunnen er nog andere dingen zijn. Wat hier staat, is geverifieerd, niet uitputtend.</p>
+    </div>
+</section>
+</div>
+
+<script>
+const AREAS = {
+    sec: 'Beveiliging',
+    data: 'Data en git',
+    run: 'Terminal en chat',
+    net: 'Client: verbinding en prestaties',
+    ui: 'Client: UI en conventies',
+    ios: 'iOS en wire',
+    tool: 'Tooling en CI'
+};
+const SEV = { high: 'Hoog', mid: 'Middel', low: 'Laag' };
+const STATUS = { repro: 'Gereproduceerd', meas: 'Gemeten', code: 'In code bevestigd', plaus: 'Aannemelijk' };
+
+const F = [
+    // Beveiliging
+    { id: 'S1', area: 'sec', sev: 'high', st: 'code', chk: true, t: 'Een gecommitte project.json bepaalt welk proces een node start',
+      w: ['packages/contracts/src/project-split.ts:196-215', 'apps/client/src/nodes/TerminalBody.tsx:185-191', 'apps/server/src/sessions/manager.ts:234', 'apps/ios/App/Workspace/MobileWorkspace.swift:236-247'],
+      s: 'Een repository, een pull request of een agent met alleen schrijfrechten zet in <code>.ruimte/project.json</code> een terminalnode met <code>command: "curl … | sh"</code>. De opdracht wordt in een verse shell getypt zodra een client die node mount, op de desktop of de iPhone, en niemand bevestigt iets. <code>mergeFiles</code> haalt <code>runtimeMode</code>, <code>resume</code> en <code>worktree</code> ook niet weg als ze in het gedeelde bestand staan, en <code>session.create</code> legt geen modusplafond op. Een agent komt zo onder "alleen <code>agent</code> start iets" en het plafond voor kinderen uit, terwijl de regel is dat afdwinging onder <code>$RUIMTE_HOME</code> leeft.',
+      f: ['Overlayvelden en absolute of <code>..</code>-paden bij het lezen uit het gedeelde bestand strippen.', 'Het plafond per agentnode in de lineage onder <code>$RUIMTE_HOME</code> vastleggen en <code>runtimeMode</code> in <code>SessionManager.create</code> daartegen begrenzen.', 'Een <code>command</code> uit projectbestanden pas typen na goedkeuring door een persoon (hash van map en opdracht onder <code>$RUIMTE_HOME</code>). Anders weigeren met een nieuwe code zoals <code>launch-unconfirmed</code> en de client laten vragen "<code>bun dev</code> uitvoeren?".'],
+      e: '2 tot 3 dagen (daemon, contracts, beide clients)' },
+    { id: 'S2', area: 'sec', sev: 'high', st: 'code', chk: true, t: 'Het hoofdvenster kan wegnavigeren en de nieuwe pagina erft de hele bridge, local secret inbegrepen',
+      w: ['apps/desktop/src/main.ts:398-459', 'apps/desktop/src/main.ts:721 (fromAppWindow)', 'apps/desktop/src/main.ts:691-700 (daemon:local-secret)', 'apps/client/src/canvas/drop.ts:26,51'],
+      s: 'Het hoofdvenster heeft geen <code>will-navigate</code>- of <code>will-redirect</code>-guard. <code>fromAppWindow</code> vergelijkt alleen het <code>webContents</code>-object, en dat blijft hetzelfde op elke URL. Een link die een persoon uit een browser op het venster sleept (<code>text/uri-list</code>, door niemand afgehandeld) of een gedropt <code>.html</code>-bestand navigeert het hoofdframe. Die pagina krijgt <code>window.ruimteDesktop</code> en kan <code>localSecret()</code> opvragen. Daarmee kan ze agents starten en shells openen, oftewel code uitvoeren. Dat de drop echt navigeert heb ik niet handmatig nagespeeld; dat de guard ontbreekt wel nagelezen.',
+      f: ['<code>will-navigate</code>, <code>will-redirect</code> en <code>will-frame-navigate</code> op het hoofdvenster: alles buiten de app-origin weigeren en http(s) naar <code>shell.openExternal</code> sturen.', '<code>fromAppWindow</code> laten eisen dat <code>senderFrame</code> het hoofdframe is en dat de origin klopt, en dat toepassen op elke <code>ipcMain</code>-handler.', 'In de client een <code>dragover</code>/<code>drop</code>-listener op documentniveau die ongeclaimde drags afvangt.'],
+      e: 'Enkele uren' },
+    { id: 'S3', area: 'sec', sev: 'high', st: 'code', chk: true, t: 'Browsernodes krijgen stil elke permissie: microfoon, klembord lezen, notificaties',
+      w: ['apps/desktop/src/main.ts:280-307 (persist:ruimte)', 'apps/desktop/src/main.ts:419-432 (alleen defaultSession)', 'apps/desktop/src/main.ts:327-331 (alleen preview weigert)'],
+      s: 'De handlers staan alleen op de sessie van het hoofdvenster. <code>persist:ruimte</code>, waar elke browsernode leeft, heeft geen request-, check- of device-handler, en dan keurt Electron alles goed. Zodra macOS Ruimte microfoontoegang heeft gegeven (voor dicteren of Voice), kan elke site in een browsernode zonder vraag opnemen. Op Linux is er zelfs geen systeemstap. Een agent die via prompt-injectie een browsernode naar zo\'n pagina stuurt, is genoeg. Dit staat haaks op "de microfoon alleen tijdens dicteren".',
+      f: ['Op <code>persist:ruimte</code> standaard weigeren; alleen <code>fullscreen</code>, <code>pointerLock</code> en <code>clipboard-sanitized-write</code> toestaan. <code>openExternal</code> weigeren of laten bevestigen.', 'Later media, locatie en notificaties via een prompt per origin in de client.'],
+      e: 'Enkele uren, plus een dag voor de prompt per origin' },
+    { id: 'S4', area: 'sec', sev: 'mid', st: 'code', t: 'Geen will-attach-webview-hardening en window.open opent elk URL-schema extern',
+      w: ['apps/desktop/src/main.ts:411 (webviewTag: true)', 'apps/desktop/src/main.ts:454-457'],
+      s: 'Een script in de renderer, bijvoorbeeld via XSS in een preview, kan <code>&lt;webview nodeintegration preload=…&gt;</code> aanmaken en krijgt dan Node. <code>setWindowOpenHandler</code> geeft elk schema aan <code>shell.openExternal</code>, inclusief <code>file://</code> naar een <code>.app</code>, terwijl de twee IPC-varianten alleen http(s) toestaan. Dit is verdediging in de diepte: de chat-markdown is vandaag veilig.',
+      f: ['In <code>will-attach-webview</code> <code>preload</code> verwijderen en <code>nodeIntegration: false</code>, <code>contextIsolation</code> en <code>sandbox</code> afdwingen. Alleen de twee bekende partities toestaan.', 'De window-open-handler beperken tot <code>https?:</code> en <code>mailto:</code>.'],
+      e: 'Enkele uren' },
+    { id: 'S5', area: 'sec', sev: 'mid', st: 'code', t: '--cwd wordt op het echte pad gecontroleerd, maar het symlinkpad wordt opgeslagen en gestart',
+      w: ['apps/server/src/canvas/project-paths.ts:56-62', 'apps/server/src/actions/start-actions.ts:61,129,181,233', 'apps/server/src/actions/node-actions.ts:147'],
+      s: '<code>ln -s . w</code>, dan <code>ruimte-context agent codex --cwd w</code> (dat slaagt), dan <code>ln -sfn ~ w</code>. Het kind start later, en bij elke herstart opnieuw, in <code>$HOME</code>. Voor Codex wordt dat de beschrijfbare root van de sandbox.',
+      f: ['<code>checkCwd</code> het echte pad laten teruggeven en dat opslaan, zoals <code>readInsideFile</code> al doet. Een test toevoegen die de symlink na de check omzet.'],
+      e: 'Ongeveer 1 uur' },
+    { id: 'S6', area: 'sec', sev: 'mid', st: 'code', t: 'Een apparaat intrekken sluit het niet betrouwbaar buiten',
+      w: ['apps/server/src/auth/auth-store.ts:109-130, 183-186, 210-225', 'apps/server/src/auth/handshake.ts:95-137'],
+      s: 'Er zijn drie oorzaken. <code>pair</code> voegt een tweede record toe voor een sleutel die al bekend is, en de client koppelt met één sleutel opnieuw, dus intrekken van het ene record laat het andere werken. <code>registerKey</code> hangt zonder bewijs een sleutel aan een legacy-sessie en negeert <code>revokedKeys</code>. En tussen <code>sessionForPublicKey</code> en <code>issueTicket</code> kan een revoke vallen, waarna toch een ticket van 12 uur wordt uitgegeven.',
+      f: ['In <code>pair</code> het record voor dezelfde sleutel hergebruiken en in <code>revoke</code> alle records met die sleutel verwijderen. Duplicaten bij het laden opruimen.', 'In <code>registerKey</code> ingetrokken sleutels weigeren en een handtekening over een verse challenge eisen.', 'Het ticket alleen uitgeven als het record op dat moment nog bestaat.'],
+      e: 'Halve dag' },
+    { id: 'S7', area: 'sec', sev: 'mid', st: 'code', t: 'Langlevende credentials in URL\'s, en een ticket opent ook /ws',
+      w: ['apps/server/src/auth/access.ts:67-68', 'apps/server/src/auth/handshake.ts:22,126-137', 'apps/client/src/state/endpoints.ts:96-103,304', 'apps/client/src/transport/machine-url.ts:35-50,125'],
+      s: 'De lokale desktoprij heeft geen <code>daemonPublicKey</code>, dus de client valt terug op de local secret. Die komt in de WS-URL en in elke <code>&lt;img&gt;</code>- en <code>&lt;video&gt;</code>-src terecht. Tickets zijn herbruikbaar, verlengen zich bij gebruik met 12 uur en openen ook de socket. "Afbeeldingsadres kopiëren", tunnellogs of een gedeelde HAR lekken zo een sleutel die nooit verloopt en pairing-links kan maken. Het commentaar in <code>endpoint/handshake.ts:76-79</code> belooft het omgekeerde.',
+      f: ['Tickets voor <code>/ws</code> eenmalig maken.', 'Voor byte-routes een apart, kortlevend credential of ondertekende URL\'s per resource gebruiken.', 'De local secret en legacy-tokens alleen nog in de <code>Authorization</code>-header accepteren.'],
+      e: '1 tot 2 dagen' },
+    { id: 'S8', area: 'sec', sev: 'mid', st: 'code', t: 'Twee gelijktijdige refreshes trekken de Pulsar-sessie in, en station-tabs doen precies dat',
+      w: ['apps/pulsar-worker/src/sessions.ts:81-100', 'packages/pulsar/src/session-vault.ts:105-108', 'apps/client/src/pulsar/web.ts:169'],
+      s: 'Elke tab bouwt een eigen vault over hetzelfde IndexedDB-record, zonder <code>navigator.locks</code>. Bij het herstellen van tabs refreshen er twee tegelijk. De verliezer presenteert een besteed token en de worker trekt de hele sessie in, dus overal uitgelogd. De test op <code>worker.test.ts:710</code> bevestigt dat intrekken.',
+      f: ['In de client <code>rotate</code> onder <code>navigator.locks</code> uitvoeren en de store binnen de lock opnieuw lezen.', 'Op de server de verliezer van de bewaakte <code>UPDATE</code> <code>unauthorized</code> laten geven zonder in te trekken, eventueel met een korte gratieperiode voor een correct ondertekende vorige hash.'],
+      e: 'Uren tot een dag' },
+    { id: 'S9', area: 'sec', sev: 'mid', st: 'code', t: 'Een gestolen sessie is niet in te trekken, en een identiteit ontkoppelen laat haar sessies leven',
+      w: ['apps/pulsar-worker/src/index.ts:42-113', 'apps/pulsar-worker/src/identities.ts:270-299', 'apps/pulsar-worker/src/statements.ts:17-69'],
+      s: 'Er is geen route om sessies te tonen of een andere sessie te beëindigen. Na een gestolen laptop of een gekaapt GitHub-account blijft de sessie van de aanvaller tot 30 dagen statements maken voor elke machine. De enige rem is per machine met de hand "statements weigeren" aanzetten.',
+      f: ['<code>GET /v1/sessions</code>, <code>DELETE /v1/sessions/:id</code> en "overal elders afmelden".', 'Eventueel bij het ontkoppelen van een identiteit de sessies intrekken die via die identiteit zijn geopend.'],
+      e: 'Ongeveer een dag' },
+    { id: 'S10', area: 'sec', sev: 'mid', st: 'code', t: 'Iedereen kan een bekende machinesleutel buitensluiten bij de broker',
+      w: ['apps/pulsar-broker/src/broker.ts:138-154', 'apps/pulsar-broker/src/config.ts:52-55'],
+      s: '<code>announcements.take(publicKey)</code> loopt bij <code>hello</code>, vóór het bewijs. Met 30 sockets per minuut met de sleutel van het slachtoffer blijft diens bucket leeg, en de echte machine krijgt bij opnieuw verbinden <code>rate-limited</code>.',
+      f: ['Het budget per sleutel pas na een geslaagde <code>prove</code> belasten en onbewezen hello\'s per IP begrenzen. Een test met een onbewezen vloed toevoegen.'],
+      e: 'Enkele uren' },
+    { id: 'S11', area: 'sec', sev: 'mid', st: 'code', t: 'TURN-credentials voor elke zelfgemaakte sleutel, 24 uur geldig',
+      w: ['apps/pulsar-broker/src/broker.ts:267-288', 'apps/pulsar-broker/src/turn.ts:35-125'],
+      s: 'Een script maakt 50 sleutels en haalt credentials op. Daarmee neemt het alle 200 coturn-allocaties in, of relayt het verkeer. In Cloudflare-modus krijgt iedereen dezelfde set en wordt per GB gerekend.',
+      f: ['ICE-servers alleen uitgeven aan een clientsleutel waarnaar een machine al heeft gerelayd.', 'De TTL terugbrengen naar minuten en <code>ice</code>-requests per IP begrenzen.'],
+      e: 'Uren tot een dag' },
+    { id: 'S12', area: 'sec', sev: 'mid', st: 'plaus', t: 'Linux zonder keyring: refresh-token, sessiesleutel en OpenAI-sleutel feitelijk in platte tekst',
+      w: ['apps/desktop/src/pulsar-store.ts:26-96', 'apps/desktop/src/secret-store.ts:21-47'],
+      s: 'Met de <code>basic_text</code>-backend geeft <code>safeStorage.isEncryptionAvailable()</code> <code>true</code> terug, terwijl Chromium dan met een vaste sleutel versleutelt. De sleutel en het token liggen naast elkaar, dus de binding voegt niets toe. Niet op een machine zonder keyring nagespeeld.',
+      f: ['Op Linux ook eisen dat <code>getSelectedStorageBackend() !== "basic_text"</code>, en anders in de UI "niet bewaard" tonen, zoals <code>persistent()</code> al doet.'],
+      e: 'Enkele uren' },
+    { id: 'S13', area: 'sec', sev: 'low', st: 'code', t: 'De registratiehandtekening van een machine dekt brokerUrl en icon niet',
+      w: ['packages/pulsar/src/signing.ts:69-70, 93-94', 'apps/pulsar-worker/src/machines.ts:83,164'],
+      s: 'Met een registratieblob van minder dan 10 minuten oud kan iemand met een token op het account <code>brokerUrl</code> naar de eigen broker omzetten. De impact blijft bij metadata en uitval, omdat signalen end-to-end ondertekend zijn.',
+      f: ['v2-doelen toevoegen die beide velden dekken, en v1 alleen accepteren zonder die velden.'],
+      e: 'Enkele uren plus compatibiliteit' },
+    { id: 'S14', area: 'sec', sev: 'low', st: 'code', t: '/auth/challenge laat zich overspoelen en verdringt echte challenges',
+      w: ['apps/server/src/auth/handshake.ts:73-92', 'apps/server/src/daemon.ts:690-698'],
+      s: 'De route is ongeauthenticeerd en heeft CORS <code>*</code>. Het challenge-geheugen houdt er 512 vast en verdringt de oudste, en challenges van het directe kanaal delen dezelfde map. Een lokale lus laat het koppelen van de iPhone mislukken met "Pair again".',
+      f: ['Stateless challenges (HMAC over nonce en tijd) met alleen een set van bestede challenges, of gescheiden pools met een rate limit.'],
+      e: 'Enkele uren' },
+    { id: 'S15', area: 'sec', sev: 'low', st: 'code', t: '/hooks leest de hele body vóór de tokencheck',
+      w: ['apps/server/src/agents/hook-receiver.ts:55-69'],
+      s: 'De limiet geldt alleen via <code>content-length</code>. Een chunked request met een nep-token laat <code>request.json()</code> tot 128 MB bufferen voordat het token wordt geweigerd.',
+      f: ['Eerst het token valideren en dan de body gestreamd tellen, of <code>maxRequestBodySize</code> op <code>Bun.serve</code> zetten.'],
+      e: 'Ongeveer 1 uur' },
+    { id: 'S16', area: 'sec', sev: 'low', st: 'plaus', t: 'Eén onafgehandelde rejection op een netwerkpad stopt de daemon, met alle shells en agents',
+      w: ['apps/server/src/pulsar/turn-guard.ts:38-47', 'apps/server/src/pulsar/broker-relay.ts:163', 'apps/server/src/pulsar/peers.ts:60,101-105,137'],
+      s: '<code>guardWeriftTurn</code> sluit het proces af bij elke rejection die niet van werift komt. <code>void this.relayed(frame)</code> schrijft via <code>writeAtomic</code>, dus een volle schijf bij een binnenkomend statement is genoeg.',
+      f: ['<code>.catch(log)</code> op deze plekken toevoegen en overwegen onverwachte rejections te loggen in plaats van af te sluiten.'],
+      e: '1 tot 2 uur' },
+    { id: 'S17', area: 'sec', sev: 'low', st: 'plaus', t: 'Een tijdelijke keychainfout vervangt de sessiesleutel voorgoed',
+      w: ['apps/desktop/src/pulsar-store.ts:82-96'],
+      s: 'Een ontbrekend bestand en een mislukte ontsleuteling vallen allebei terug op een nieuwe sleutel die over de oude wordt geschreven. Een geweigerde keychainprompt na een update maakt de sessie zo onbruikbaar.',
+      f: ['Alleen bij <code>ENOENT</code> een nieuwe sleutel maken. Bij een ontsleutelfout alleen in het geheugen werken.'],
+      e: 'Ongeveer 1 uur' },
+
+    // Data en git
+    { id: 'D1', area: 'data', sev: 'high', st: 'repro', chk: true, t: 'Na een externe bewerking krijgen twee verschillende documenten dezelfde rev',
+      w: ['apps/server/src/projects/project-store.ts:936-990 (reload)', 'apps/server/src/projects/project-store.ts:576-628 (mutateUnlocked)', 'apps/server/src/projects/project-store.ts:658 (readCurrent leest rev van schijf)'],
+      s: '<code>reload()</code> verhoogt <code>rev</code> alleen in het geheugen. <code>mutateUnlocked</code> leest de rev van schijf en stuurt dus een ander document onder dezelfde rev. Gereproduceerd: na een <code>git pull</code> landt een agent-<code>node new</code>, de client autosavet met <code>baseRev</code> van het pull-document, de save wordt geaccepteerd en de node van de agent is weg, terwijl zijn sessie doorloopt. Daarnaast draait <code>reload</code> buiten <code>locked()</code>, dus een mutate ertussen kan oudere tekst als nieuwste laten publiceren.',
+      f: ['<code>reload</code> via <code>this.locked</code> laten lopen.', 'De bump ook in het private bestand schrijven, of in <code>mutateUnlocked</code> <code>Math.max(diskRev, state.rev)</code> nemen.', 'De reproductie als test opnemen.'],
+      e: 'Enkele uren' },
+    { id: 'D2', area: 'data', sev: 'mid', st: 'code', t: 'project.save kijkt niet naar schijf: een save vlak na een git pull draait de pull stil terug',
+      w: ['apps/server/src/projects/project-store.ts:496-518, 264-281', 'apps/server/src/projects/project-store.ts:941-944 (watch-fout ingeslikt)', 'apps/server/src/projects/view-file-store.ts:111-124'],
+      s: 'Een save wordt alleen tegen de rev in het geheugen gecontroleerd. Een pull wordt pas 150 ms na de laatste bestandswijziging gezien, terwijl de client tijdens slepen elke 400 ms opslaat. De save schrijft het oude canvas over de gepullde <code>project.json</code>, de reload ziet daarna <code>text === lastText</code> en zwijgt, en <code>git status</code> toont een teruggedraaide pull. Als <code>watch()</code> faalt (bijvoorbeeld door de inotify-limiet), is er helemaal geen detectie.',
+      f: ['Binnen de lock het gedeelde bestand lezen vóór het schrijven. Wijkt het af van <code>lastText</code>, dan behandelen als reload en <code>rev-conflict</code> gooien; de client handelt dat pad al af.', 'Hetzelfde in <code>ProjectViewFileStore.save</code>.'],
+      e: 'Enkele uren' },
+    { id: 'D3', area: 'data', sev: 'high', st: 'code', chk: true, t: 'Undo en redo wissen wijzigingen van agents en andere clients, en beëindigen hun sessies',
+      w: ['apps/client/src/state/canvas.ts:680-729 (applyExternal)', 'apps/client/src/state/canvas.ts:747-776 (undo/redo)', 'apps/client/src/terminal/lifecycle-watch.ts:35-61', 'apps/client/src/actions/content-actions.ts:93-101'],
+      s: '<code>applyExternal</code> raakt <code>past</code> en <code>future</code> niet aan, en undo zet een volledige snapshot terug. Een persoon verplaatst node A, een agent start kind B, de persoon drukt Cmd+Z: B verdwijnt, de lifecycle-watcher ziet dat als verwijdering en killt de sessie van het kind, en de save haalt B uit <code>project.json</code>. Andersom komt een node die een agent verwijderde terug en start opnieuw.',
+      f: ['In <code>applyExternal</code> dezelfde patch op elke entry in <code>past</code> en <code>future</code> toepassen: verwijderde items eruit, nieuwe items erin. Of, grof maar veilig, de geschiedenis wissen bij toevoegen of verwijderen.', 'Tests: undo na een externe toevoeging houdt de node, undo na een externe verwijdering brengt niets terug.'],
+      e: 'Halve dag' },
+    { id: 'D4', area: 'data', sev: 'mid', st: 'code', t: 'Tijdens een save-conflict gaan bewerkingen stil verloren of stoppen saves blijvend',
+      w: ['apps/client/src/project/project-client.ts:467, 315, 483-490, 528', 'apps/client/src/project/ProjectBanner.tsx'],
+      s: 'Zolang de conflictbanner staat, doet <code>save()</code> niets, maar de banner blokkeert niets. Wisselen of sluiten van project gooit alles weg. Smaller maar ernstiger: als een latere <code>project.changed</code> schoon merget terwijl het conflict openstaat, zet "Mijn versie houden" de rev terug. De volgende save krijgt <code>rev-conflict</code> en wacht op een event dat al voorbij is, waarna het project dirty blijft zonder foutmelding.',
+      f: ['Bij een geslaagde <code>adopt</code> tijdens een conflict het conflictdocument vervangen.', 'Bij <code>rev-conflict</code> met een onveranderde rev na een korte termijn het actuele document ophalen.', '<code>leave()</code> en <code>closeProject()</code> laten vragen zolang er onopgeslagen conflictwerk is.'],
+      e: 'Halve dag' },
+    { id: 'D5', area: 'data', sev: 'high', st: 'code', chk: true, t: 'AI in de conflictoverlay schrijft voorstellen in het verkeerde bestand en wist handwerk',
+      w: ['apps/client/src/conflicts/ConflictOverlay.tsx:196-250', 'apps/client/src/conflicts/ConflictOverlay.tsx:171 (apply via editor.current)', 'apps/client/src/conflicts/conflict-model.ts:69-83 (draftWith)'],
+      s: '<code>ask()</code> is de closure van het moment van klikken, dus <code>target.path === activeFile</code> vergelijkt met het toen actieve bestand. <code>apply()</code> gaat via een ref die al naar het bestand op het scherm wijst. Wie tijdens "AI voor alle bestanden" naar <code>b.ts</code> klikt, krijgt de blokken van <code>a.ts</code> in <code>b.ts</code>, gemarkeerd als opgelost, en "Oplossen" schrijft dat naar schijf. Daarnaast bouwt <code>draftWith</code> voor bestanden buiten beeld het concept opnieuw op uit de ongerepte blokken, waardoor half afgemaakt handwerk verdwijnt zonder undo.',
+      f: ['Het actieve pad in een ref bijhouden, <code>path</code> aan <code>EditorHandle</code> toevoegen en alleen via de editor toepassen als het pad klopt.', 'Anders met een pure <code>answerInto(draft, file, answered)</code> alleen nog open stukken vervangen. Die unit-testen.', 'De bestandslijst uitschakelen zolang <code>busy</code> waar is.'],
+      e: 'Halve dag' },
+    { id: 'D6', area: 'data', sev: 'mid', st: 'code', t: 'Een conflict oplossen corrumpeert niet-UTF-8-bestanden en stript een BOM',
+      w: ['apps/server/src/git/conflict.ts:172-185, 244', 'apps/server/src/git/run.ts:45'],
+      s: '<code>Response.text()</code> laat een BOM vallen en maakt van Latin-1 <code>0xE9</code> een U+FFFD. De enige binaire check is <code>includes("\\0")</code>. Na het oplossen is elk niet-ASCII-teken in het bestand vervangen, ook in regels die niemand aanraakte.',
+      f: ['Als bytes lezen en decoderen met <code>TextDecoder("utf-8", { fatal: true, ignoreBOM: true })</code>. Lukt dat niet, dan als binair behandelen (alleen een hele kant kiezen). De BOM bewaren.'],
+      e: 'Enkele uren' },
+    { id: 'D7', area: 'data', sev: 'mid', st: 'code', t: 'Ours, theirs of verwijderen kiezen gebeurt zonder digest-check',
+      w: ['apps/server/src/git/conflict.ts:225-236', 'apps/client/src/conflicts/ConflictOverlay.tsx:290 (hash: null)'],
+      s: 'Alleen het pad met samengevoegde inhoud controleert de digest. <code>checkout --ours/--theirs</code> en <code>rm --force</code> overschrijven een handmatige bewerking in de editor, of lopen op basis van een verouderde overlay op een tweede client. Dat botst met "een bestand dat bewoog weigert".',
+      f: ['De overlay ook bij een keuze de gelezen <code>hash</code> laten sturen (het veld is al optioneel) en weigeren als het pad niet meer unmerged is.'],
+      e: 'Enkele uren' },
+    { id: 'D8', area: 'data', sev: 'mid', st: 'code', t: 'Twee agents kunnen in één worktree belanden',
+      w: ['apps/server/src/actions/start-actions.ts:64-71', 'apps/server/src/canvas/worktree.ts:23-33', 'apps/server/src/git/worktrees.ts:215-219, 252-257'],
+      s: 'Twee gelijktijdige <code>agent claude --worktree</code>-calls kiezen allebei <code>claude</code> als naam. Agents doen vaak parallelle tool-calls. De tweede krijgt de bestaande worktree met <code>created: false</code>, en <code>claim</code> hangt het record om naar de tweede node. Twee agents bewerken dan dezelfde bestanden en de merge van de eerste ouder breekt.',
+      f: ['Naamkeuze en <code>worktree add</code> samen onder <code>serialize(main)</code> uitvoeren en een bestaande worktree van een andere node weigeren.'],
+      e: 'Halve dag' },
+    { id: 'D9', area: 'data', sev: 'mid', st: 'code', t: 'Een worktree-merge controleert HEAD niet opnieuw en paneelacties nemen geen lock',
+      w: ['apps/server/src/git/worktree-merge.ts:143-151, 174-216', 'apps/server/src/git/actions.ts', 'apps/server/src/git/conflict.ts (runOperation, resolveConflict)'],
+      s: 'Het doel wordt één keer bepaald. Het stoppen en committen van de agent kan seconden duren. Een checkout in het paneel of een <code>git switch</code> in een terminal in die tijd laat <code>merge --no-ff</code> op de verkeerde branch landen.',
+      f: ['Vlak voor de merge controleren dat <code>git symbolic-ref -q HEAD</code> gelijk is aan <code>refs/heads/&lt;into&gt;</code>.', 'Paneelacties via dezelfde lock per repo laten lopen, met de common dir als sleutel.'],
+      e: 'Uren; een dag voor de gedeelde lock' },
+    { id: 'D10', area: 'data', sev: 'low', st: 'plaus', t: 'Een squash zonder wijzigingen laat SQUASH_MSG staan, waarna elke merge wordt geweigerd',
+      w: ['apps/server/src/git/worktree-merge.ts:249-257, 151', 'apps/server/src/git/conflict.ts:63-66'],
+      s: 'Een branch waarvan de commits al zijn gecherry-pickt, staat nog <code>ahead</code>. <code>merge --squash</code> staget niets maar schrijft wel <code>SQUASH_MSG</code>, en daarna is het doel altijd <code>target-busy</code> zonder afbreekknop.',
+      f: ['<code>SQUASH_MSG</code> verwijderen als er niets gestaged is, en de busy-check gelijk laten lopen met <code>operationOf</code>.'],
+      e: 'Ongeveer 1 uur' },
+    { id: 'D11', area: 'data', sev: 'low', st: 'plaus', t: 'Git-processen hebben geen timeout; een hangende merge houdt de repo-lock tot een herstart',
+      w: ['apps/server/src/git/run.ts:36-50', 'apps/server/src/git/worktree-merge.ts:73-79, 110', 'apps/server/src/git/worktrees.ts:543-550'],
+      s: 'Een hook die hangt, een gpg-pinentry of een netwerkschijf houdt <code>exclusive(main)</code> voor altijd vast. <code>streamGit</code> krijgt geen <code>onSpawn</code>, dus <code>git.cancel</code> stopt pas tussen twee stappen.',
+      f: ['<code>onSpawn</code> doorgeven zodat cancel de lopende stap killt, en alleen-lezen-calls een standaardtimeout geven.'],
+      e: 'Halve dag' },
+    { id: 'D12', area: 'data', sev: 'low', st: 'code', t: 'writeAtomic doet geen fsync',
+      w: ['apps/server/src/fs.ts:18-32'],
+      s: 'Een rename is atomair bij een procescrash, niet bij stroomuitval. APFS en ext4 kunnen dan een leeg doelbestand achterlaten. <code>project.json</code> wordt apart gezet, de rev begint weer bij 0 en private views verdwijnen.',
+      f: ['Via een filehandle schrijven, <code>fh.sync()</code> aanroepen, sluiten, hernoemen en eventueel de directory fsyncen. Met de debounce van 400 ms kost dat weinig.'],
+      e: '1 tot 2 uur' },
+    { id: 'D13', area: 'data', sev: 'low', st: 'plaus', t: 'Een view-file-reload kan een halfgeschreven tekening als corrupt apart zetten',
+      w: ['apps/server/src/projects/view-file-store.ts:300-323', 'apps/server/src/projects/project-files.ts:83-85'],
+      s: 'De projectstore parseert bij een reload bewust zonder iets te verplaatsen. De view-file-store doet dat wel: een tekening die halverwege een checkout wordt gelezen, gaat naar <code>.corrupt-*</code>, en de volgende save schrijft de oude versie terug.',
+      f: ['Bij een reload parseren zonder te verplaatsen, zoals de projectstore.'],
+      e: 'Ongeveer 1 uur' },
+    { id: 'D14', area: 'data', sev: 'low', st: 'code', t: 'project.save controleert niet op dubbele ids, mutate wel',
+      w: ['apps/server/src/projects/project-store.ts:496-517 vs 594-597'],
+      s: 'Door een clientbug kan een save met een dubbel id worden weggeschreven. Daarna faalt elke lezing met <code>invalid</code> en elke verb met <code>project-invalid</code>, tot iemand het bestand met de hand repareert.',
+      f: ['<code>duplicateIdIn</code> ook in <code>saveUnlocked</code> aanroepen.'],
+      e: '30 minuten' },
+
+    // Terminal en chat
+    { id: 'R1', area: 'run', sev: 'high', st: 'repro', chk: true, t: 'session.attach verliest bytes: output die in scherm noch stream zit',
+      w: ['apps/server/src/sessions/session.ts:132-162 (serializeScreen, attach)', 'apps/server/src/sessions/session.ts:267-279 (receive)'],
+      s: 'De <code>WriteBuffer</code> van xterm verwerkt in slices van 12 ms en roept de callback van <code>write("")</code> midden in een slice aan. De <code>await</code>-voortzetting draait daarna, terwijl chunks van na de marker nog niet geparsed zijn en de client nog niet in <code>pending</code> staat. Gereproduceerd met <code>FakePtyAdapter</code>: <b>10.500 regels kwijt</b> bij een drukke producer. Dit raakt elke attach tijdens een build-log, <code>cat</code> of een zware TUI en breekt de kerninvariant in de richting "nergens".',
+      f: ['Een primitief <code>snapshotFor(clientId)</code>: de client synchroon als "attaching" markeren met een eigen buffer, dan in de <code>write("")</code>-callback serialiseren en de buffer naar <code>pending</code> promoveren.', 'Dat ook gebruiken voor <code>OutputGate.resync</code> en <code>Session.clear</code>.'],
+      e: 'Halve dag plus tests' },
+    { id: 'R2', area: 'run', sev: 'mid', st: 'repro', t: 'Resync en een her-attach dupliceren bytes uit de buffer van 16 ms',
+      w: ['apps/server/src/backpressure.ts:219-243', 'apps/server/src/connection.ts:81-85', 'apps/server/src/sessions/session.ts:158-160, 253-265'],
+      s: '<code>screenOf</code> serialiseert, maar laat de <code>pending</code>-tekst van de client staan. Die zit al in het scherm en wordt daarna nog eens gestreamd. Gereproduceerd: <code>M0 | [RESYNC M0,M1,M2] | M2</code>. Het zichtbare gevolg is dubbele regels op een traag kanaal (WebRTC, iPhone).',
+      f: ['Hetzelfde primitief als bij R1, waarbij snapshotten voor een client ook atomair diens buffer leegt.'],
+      e: 'Enkele uren bovenop R1' },
+    { id: 'R3', area: 'run', sev: 'high', st: 'code', chk: true, t: 'In de client komen eerste scherm en live output in de verkeerde volgorde binnen',
+      w: ['apps/client/src/terminal/session-client.ts:103-129 (await infoOf)', 'apps/client/src/terminal/session-client.ts:249 (reattach)', 'apps/client/src/nodes/TerminalBody.tsx:175-194'],
+      s: '<code>attach</code> wacht na het attach-antwoord nog op <code>session.list</code>, een tweede round trip, voordat het scherm wordt teruggegeven. De daemon streamt intussen al, en <code>onOutput</code> schrijft direct. Bij een eerste mount komt het scherm dan na nieuwere bytes binnen. Bij een reconnect wist <code>term.reset()</code> alles wat in dat venster binnenkwam. Over een link van 100 ms of meer gebeurt dit vaak.',
+      f: ['Direct na het attach-antwoord terugkeren en <code>infoOf</code> plus resume zonder wachten laten lopen.', 'Een test die <code>session.output</code> tussen de twee antwoorden stuurt.'],
+      e: 'Enkele uren' },
+    { id: 'R4', area: 'run', sev: 'mid', st: 'code', t: 'ChatManager.kill racet met een lopende snapshot-write, waarna de verwijderde chat terugkomt',
+      w: ['apps/server/src/chat/chat-manager.ts:724-760, 937-958', 'apps/server/src/chat/chat-store.ts:96-108', 'apps/server/src/sessions/manager.ts:413-427'],
+      s: 'Een node wordt midden in een turn verwijderd terwijl <code>persistNow</code> op de rename wacht. <code>store.delete</code> loopt eerst en daarna zet de rename <code>&lt;chatId&gt;.json</code> terug. Bij de volgende start staat een spookchat in <code>chat.list</code>. De test op <code>chat-manager.test.ts:496</code> wacht de race uit in plaats van hem te voorkomen. Sessies hebben hetzelfde patroon via de snapshot-pass en een late <code>SessionEnd</code>-hook.',
+      f: ['In <code>kill</code> op de lopende write wachten vóór het verwijderen, of <code>ChatStore</code> een tombstone geven zoals <code>RecordDirectory</code>.', 'Een <code>killed</code>-set die <code>emit</code> en <code>persist</code> respecteren.'],
+      e: 'Enkele uren' },
+    { id: 'R5', area: 'run', sev: 'mid', st: 'meas', t: 'De stderr van chat-CLI\'s wordt nooit gelezen: het geheugen groeit en de reden van een crash gaat verloren',
+      w: ['apps/server/src/chat/chat-process.ts:25-33 (stderr: "pipe")', 'apps/server/src/chat/projector.ts:731'],
+      s: 'Bun buffert een ongelezen pipe in het geheugen. Gemeten: 300 MB naar stderr gaf <b>+323 MB RSS</b>, en dat blijft zolang het proces leeft, wat urenlang kan zijn. Wie een CLI ziet crashen, leest alleen "exited with code N".',
+      f: ['stderr in een begrensde ringbuffer lezen (bijvoorbeeld 8 KB) en die bij <code>exit</code> of <code>failed</code> tonen.'],
+      e: 'Enkele uren' },
+    { id: 'R6', area: 'run', sev: 'mid', st: 'plaus', t: 'Chat-CLI\'s overleven een daemon-shutdown, en kill laat hun kindprocessen als wees achter',
+      w: ['apps/server/src/chat/chat-session.ts:626-640', 'apps/server/src/chat/claude-backend.ts:98-117', 'apps/server/src/daemon.ts:879-911'],
+      s: '<code>shutdown</code> roept <code>process.exit</code> aan voordat de SIGTERM-timer van 3 s afgaat. Bij een zelfupdate midden in een turn kan de oude CLI doorwerken terwijl <code>resume-run</code> een tweede <code>claude --resume</code> start. <code>dispose()</code> SIGKILLt alleen de pid, dus een <code>npm run dev</code> van een verwijderde chat blijft draaien.',
+      f: ['Chat-CLI\'s met <code>detached: true</code> starten en de procesgroep eerst SIGTERM en na een grace SIGKILL sturen.', 'In <code>shutdown</code> begrensd (ca. 2 s) op de exits wachten.'],
+      e: 'Ongeveer een dag' },
+    { id: 'R7', area: 'run', sev: 'mid', st: 'code', t: 'Backpressure dekt alleen terminaloutput en browserframes',
+      w: ['apps/server/src/backpressure.ts:34, 62-73, 110-118', 'apps/server/src/streams/frame-fanout.ts:43-46', 'apps/server/src/pulsar/data-channel.ts:151-168'],
+      s: '<code>device.frame</code>, chatdeltas, replies en <code>bytes.read</code>-chunks gaan ongegate. Op een direct kanaal groeit de wachtrij onbegrensd (een iPhone die een device bekijkt over TURN op 4G). Op de WebSocket dropt Bun boven 16 MB stil: replies raken kwijt (het request hangt), er vallen gaten in de chat-<code>seq</code> en HEVC-streams raken corrupt zonder dat een keyframe wordt gevraagd.',
+      f: ['<code>device.frame</code> vervangbaar maken en naar het volgende keyframe springen, zoals <code>http-stream.ts</code> al doet.', 'Een harde limiet per client instellen waarboven het kanaal sluit met een reden, en <code>closeOnBackpressureLimit</code> zetten.'],
+      e: 'Ongeveer een dag' },
+    { id: 'R8', area: 'run', sev: 'mid', st: 'meas', t: 'De snapshot-pass serialiseert elke sessie elke 30 s, ook als er niets veranderde',
+      w: ['apps/server/src/sessions/snapshot-store.ts:50-80', 'apps/server/src/sessions/manager.ts:443-449'],
+      s: 'Gemeten: 10k regels scrollback op 200 kolommen kost <b>93 tot 140 ms</b> synchroon en levert 1,7 MB op. Met 20 terminals is dat een blokkade van ongeveer 2 s en 34 MB schrijfwerk per halve minuut, ook als alles stil staat. Beëindigde sessies worden eindeloos opnieuw geserialiseerd.',
+      f: ['Een <code>dirty</code>-vlag per sessie (in <code>receive</code>, <code>resize</code>, <code>clear</code>, <code>handleExit</code>), schone sessies overslaan en tussen sessies de event loop vrijgeven.'],
+      e: 'Enkele uren' },
+    { id: 'R9', area: 'run', sev: 'mid', st: 'code', t: 'Hele chatthread opnieuw stringifyen en schrijven bij elke tool-call, terwijl er een append-log is',
+      w: ['apps/server/src/chat/chat-manager.ts:908-958', 'apps/server/src/chat/chat-store.ts:84-86 (has() parseert alles)', 'apps/server/src/chat/chat-manager.ts:851-866'],
+      s: 'Onder 256 KB wordt het record bij elke <code>tool.done</code> herschreven, daarboven tot twee keer per seconde. Een thread van enkele MB kost tientallen ms per keer, per actieve chat. <code>has()</code> parseert, valideert en replayt het volledige record alleen om te weten of het bestaat.',
+      f: ['Snapshots bij het einde van een turn, bij clear, kill of shutdown, of boven een logdrempel. Daartussen dekt de log alles.', '<code>has()</code> via een <code>stat</code> laten lopen en <code>activeTurnId</code> in een klein sidecar-bestand zetten.'],
+      e: 'Ongeveer een dag' },
+    { id: 'R10', area: 'run', sev: 'low', st: 'code', t: 'Na een CLI-exit blijft de wachtrij hangen en springt het volgende bericht ervoor',
+      w: ['apps/server/src/chat/chat-session.ts:1025-1031, 378-432, 177-196'],
+      s: '"B" en "C" staan in de wachtrij, de CLI crasht, en de turn sluit zonder <code>drainQueue</code>. Het volgende bericht "D" gaat direct weg, B en C pas daarna. Welke kant de oplossing op gaat, is een productkeuze.',
+      f: ['Bij <code>exit</code>/<code>failed</code> de wachtrij legen, of <code>send</code> achteraan laten aansluiten als de wachtrij niet leeg is (veiliger bij een crashlus).'],
+      e: 'Enkele uren' },
+    { id: 'R11', area: 'run', sev: 'low', st: 'repro', t: 'Een afgebroken laatste regel in de chatlog slikt het eerste event na een herstart',
+      w: ['apps/server/src/chat/chat-log.ts:95-114, 164-167'],
+      s: 'Het parsen slaat de afgebroken regel netjes over, maar <code>open(path, "a")</code> plakt de volgende append eraan vast. Gereproduceerd: na een torn tail gaf append <code>b</code>, <code>c</code> bij het teruglezen <code>["1:a","3:c"]</code>. Het gat verschuift ook <code>base</code>, waardoor elke <code>since</code>-resume terugvalt op de volledige geschiedenis.',
+      f: ['Bij de eerste <code>open</code> afkappen tot de laatste newline, of eerst een <code>\\n</code> schrijven.'],
+      e: 'Minder dan een uur' },
+    { id: 'R12', area: 'run', sev: 'low', st: 'plaus', t: 'Een deliver-message kan een zojuist gestopt kind herstarten',
+      w: ['apps/server/src/outbox/end-children.ts:26'],
+      s: '<code>REVIVING</code> dekt alleen <code>start-agent</code>, <code>resume-run</code> en <code>wake-parent</code>. Een bericht voor een kind overleeft <code>end-children</code> en wekt de CLI direct weer op.',
+      f: ['<code>deliver-message</code> en <code>give-task</code> aan <code>REVIVING</code> toevoegen, of <code>wake</code> laten weigeren bij een beëindigde lineage.'],
+      e: 'Minder dan een uur' },
+    { id: 'R13', area: 'run', sev: 'low', st: 'plaus', t: 'Clear op een chat houdt openstaande taak-wakes vast',
+      w: ['apps/server/src/chat/chat-manager.ts:683-690', 'apps/server/src/tasks/wake-parent.ts:105-138'],
+      s: 'Na clear wordt de verse conversatie gewekt met "A task you gave has settled…" voor een taak die zij nooit gaf. Of dat gewenst is, is een productkeuze.',
+      f: ['Als clear verstoten betekent: <code>tasks.dropWake(chatId)</code> in <code>clear</code> aanroepen.'],
+      e: 'Minder dan een uur' },
+    { id: 'R14', area: 'run', sev: 'mid', st: 'code', t: 'Een browsernode die een agent of andere client verwijdert, blijft draaien',
+      w: ['apps/client/src/state/canvas.ts:682,728 (loading)', 'apps/client/src/terminal/lifecycle-watch.ts:41,61', 'apps/client/src/terminal/lifecycle.ts:19'],
+      s: '<code>applyExternal</code> markeert zich als laden, en de watcher slaat <code>end()</code> dan over. De <code>&lt;webview&gt;</code> blijft geparkeerd en de pagina blijft JavaScript, netwerk en audio draaien, met een renderer van 50 tot 150 MB. Van terminals blijft <code>lastScreens</code> (tot 5000 regels) hangen.',
+      f: ['Een merge onderscheiden van een projectwissel en voor verwijderde nodes alleen lokaal opruimen (<code>browserRegistry.destroy</code>, <code>forgetScreen</code>), zonder kill.'],
+      e: 'Enkele uren' },
+
+    // Client net/perf
+    { id: 'C1', area: 'net', sev: 'mid', st: 'code', t: 'De pool kan na vergeten of opnieuw koppelen een nieuwere verbinding sluiten',
+      w: ['apps/client/src/transport/pool.ts:65-79, 100, 180-181'],
+      s: 'De release-functie en de idle-timer zoeken de entry op id en niet op identiteit. Vergeet een machine en koppel haar binnen 30 s opnieuw: de oude timer disposet de nieuwe, vastgehouden transport, en die verbindt nooit meer tot een reload.',
+      f: ['Overal op identiteit vergelijken (<code>byId.get(id) === entry</code>) en in <code>rekey</code> de timer en <code>offStatus</code> van de vervangen entry opruimen.'],
+      e: '2 tot 3 uur' },
+    { id: 'C2', area: 'net', sev: 'mid', st: 'code', t: 'Een stil gestorven WebSocket wordt niet opgemerkt en requests hebben geen timeout',
+      w: ['apps/client/src/transport/websocket-transport.ts', 'apps/client/src/transport/link-transport.ts:154-165', 'apps/client/src/transport/ping-monitor.ts:52-72', 'apps/client/src/project/project-client.ts:463'],
+      s: 'WebRTC heeft <code>ChannelLiveness</code>, de WebSocket niets. Na slaap, een netwerkwissel of een haperende tunnel blijft de socket minutenlang "open". <code>project.save</code> hangt, en de hele save-keten, <code>leave()</code> en het wisselen van project hangen mee. De statusstip toont intussen de laatste goede latency, omdat een onbeantwoorde ping elke volgende meting blokkeert.',
+      f: ['<code>PingMonitor</code> een timeout geven (bijvoorbeeld twee keer het interval) en bij verlopen <code>pool.reconnect</code> aanroepen.', 'Optioneel een timeout per request voor begrensd werk.'],
+      e: 'Halve dag' },
+    { id: 'C3', area: 'net', sev: 'mid', st: 'code', t: 'Pannen en zoomen rendert en routeert het hele canvas per wheel-event',
+      w: ['apps/client/src/canvas/use-wheel-camera.ts:58', 'apps/client/src/canvas/Canvas.tsx:97-105', 'apps/client/src/canvas/EdgeLayer.tsx:80', 'apps/client/src/canvas/edge-route.ts:137-145, 368-466', 'apps/client/src/context/sources.ts:8'],
+      s: 'Een trackpad levert 60 tot 120 events per seconde. <code>EdgeLayer</code> en <code>PortHints</code> zijn niet gememoized en routeren elke lijn opnieuw, terwijl dat niet van de camera afhangt. Een geblokkeerde route is een A* over 4.608 toestanden voor maximaal 4 zijparen. <code>useHasContextLinks</code> draait per NodeFrame de volledige <code>deriveContextSources</code> in een selector.',
+      f: ['<code>EdgeLayer</code> en <code>PortHints</code> memoizen en routes in een <code>useMemo</code> op <code>[lines, obstacles, hidden]</code> zetten.', 'Eén afleiding per <code>(nodes, texts, edges)</code>, gecachet in een <code>WeakMap</code>.', '<code>panBy</code> per animatieframe bundelen.'],
+      e: 'Ongeveer een dag' },
+    { id: 'C4', area: 'net', sev: 'mid', st: 'code', t: 'Altijd gemounte oppervlakken renderen bij elk sleepframe en elk gestreamd woord',
+      w: ['apps/client/src/shell/CommandPalette.tsx:184-185, 690', 'apps/client/src/shell/Sidebar.tsx:704-759', 'apps/client/src/state/chats.ts:95-102', 'apps/client/src/shell/sidebar-source.ts:22-28', 'apps/client/src/shell/StatusSummary.tsx:51-57'],
+      s: 'De gesloten command palette (1083 regels) abonneert op <code>nodes</code> en bouwt bij elk sleepframe <code>entries</code> opnieuw op. De sidebar abonneert op heel <code>useChats.byKey</code>, dat bij elke delta een nieuw object wordt. De React Compiler staat niet aan (<code>react()</code> zonder compiler), dus het commentaar "Left to the compiler" in <code>Composer.tsx:167</code> klopt niet.',
+      f: ['De palette splitsen in een schil die alleen <code>paletteOpen</code> leest en een body die alleen gemount is zolang de palette open is.', 'Een aparte <code>statusByKey</code>-slice in <code>chats.ts</code> die alleen bij <code>info</code> verandert.', '<code>sidebar-source</code> op een projectie vergelijken. De compiler aanzetten, of het commentaar schrappen.'],
+      e: 'Ongeveer een dag' },
+    { id: 'C5', area: 'net', sev: 'low', st: 'code', t: 'Een reconnect koppelt terminals één voor één opnieuw, met drie round trips per stuk',
+      w: ['apps/client/src/transport/mounted-registry.ts:26-37'],
+      s: 'Met 20 terminals over een link van 100 ms tekent de laatste pas na ongeveer 6 s opnieuw, en elke attach haalt de volledige sessielijst op.',
+      f: ['Begrensd parallel werken met één <code>session.list</code> per pass. Dat past goed bij R3.'],
+      e: 'Enkele uren' },
+    { id: 'C6', area: 'net', sev: 'mid', st: 'meas', chk: true, t: 'De hoofdbundle is 2,7 MB (808 KB gzip) en bijna niets wordt lazy geladen',
+      w: ['apps/client/vite.config.ts', 'apps/client/src/App.tsx', 'dist/assets/index-*.js (build)'],
+      s: 'Productie-build: de entry-chunk is 2.738 KB en 808 KB gzip, met daarnaast modulepreloads van <code>open</code> (540 KB), <code>reach</code> (279 KB) en <code>themes</code>. In de hele client staan maar 21 <code>import()</code>/<code>lazy()</code>. Voor de desktop maakt dat weinig uit. Voor <code>station.ruimte.app</code> op mobiel is het de eerste indruk.',
+      f: ['Het startscherm en de werkruimte als aparte chunks.', 'Panelen (git, conflicten, voice, settings, tekenen, diagram) lazy laden achter hun <code>ErrorBoundary</code>. Met <code>rollup-plugin-visualizer</code> eerst meten wat in de entry zit.'],
+      e: '1 tot 2 dagen' },
+
+    // UI
+    { id: 'U1', area: 'ui', sev: 'mid', st: 'code', t: 'Een renderfout in een oppervlak zonder eigen ErrorBoundary vernietigt alle browserpagina\'s',
+      w: ['apps/client/src/App.tsx:71-100, 156-168'],
+      s: 'Er zijn twaalf oppervlakken met daemondata zonder eigen boundary, waaronder <code>ConflictOverlay</code>, <code>CommandPalette</code>, <code>SettingsDialog</code>, <code>VoicePanel</code> en de worktree-dialogen. De root-boundary "unmount de geparkeerde browserpagina\'s" volgens zijn eigen commentaar, dus één onverwachte vorm van <code>GitConflictResult</code> kost elke webview.',
+      f: ['Elk van die oppervlakken in een <code>ErrorBoundary</code> met key zetten.', 'Een scantest die de kinderen van <code>App</code> en <code>WorkspaceShell</code> controleert.'],
+      e: '2 tot 3 uur' },
+    { id: 'U2', area: 'ui', sev: 'mid', st: 'code', chk: true, t: 'Een kale Enter op window, per canvas gebonden, eet Enter op knoppen',
+      w: ['apps/client/src/canvas/EdgeLayer.tsx:98-115', 'apps/client/src/shell/ViewHost.tsx:32-52', 'apps/client/src/drawing/DrawingView.tsx:209-227'],
+      s: 'Zolang er een lijn geselecteerd is, zet elk canvas (tot negen) een <code>keydown</code> op <code>window</code> die Enter afvangt, zonder focus- of floating-layer-check. Wie daarna Enter drukt op een knop in een dialoog of op commit in het git-paneel, opent de lijneditor. Dit breekt twee regels: "elke sneltoets heeft een modifier" en "één keer gebonden, nooit per cel".',
+      f: ['Naar <code>canvas-shortcuts.ts</code> verplaatsen, achter dezelfde guards als de andere toetsen.', 'Een scantest die <code>addEventListener("keydown"</code> alleen in toegestane bestanden accepteert.'],
+      e: '2 tot 3 uur' },
+    { id: 'U3', area: 'ui', sev: 'mid', st: 'code', t: 'Dicteren toont ruwe foutteksten, vraagt geen toegang en de controller heeft geen test',
+      w: ['apps/client/src/dictation/helper.ts:36-47', 'apps/client/src/dictation/controller.ts:196, 229', 'apps/client/src/audio/capture.ts:96'],
+      s: 'Een Nederlandse interface toont "no-bridge" of de Engelse DOMException-tekst van Chromium als tooltip en in een <code>role="alert"</code>. Voice vertaalt dezelfde fouten via <code>microphoneFailureText</code>. Juist de module die "invoegen pas na stoppen" afdwingt, heeft geen test.',
+      f: ['<code>microphoneFailureText</code> naar <code>audio/</code> verplaatsen, <code>DictationError</code>-codes op i18n-sleutels mappen en in <code>#run</code> toegang vragen.', 'De engine injecteerbaar maken en de vier kerngevallen testen.'],
+      e: 'Halve dag' },
+    { id: 'U4', area: 'ui', sev: 'low', st: 'code', t: 'Het activiteitenlog van Voice is alleen Engels en gebruikt tekst onder 12 px',
+      w: ['apps/client/src/voice/tools.ts (29 labels)', 'apps/client/src/voice/VoicePanel.tsx:54,94,165,191,200', 'apps/client/src/state/updates.ts:106,110'],
+      s: '<code>text-[10px]</code> komt 6 keer voor en <code>text-[11px]</code> 1 keer. Beide breken "alleen de vier maten, niets onder 12px". Daarnaast zijn er hardgecodeerde Engelse labels, ruwe <code>action.status</code>-enums en "What\'s new".',
+      f: ['<code>Reply.entry</code> een i18n-sleutel met parameters laten dragen.', 'Een scantest op <code>text-\\[</code>.'],
+      e: 'Halve dag' },
+    { id: 'U5', area: 'ui', sev: 'low', st: 'code', t: 'Toegankelijkheid: aandachtsmarkeringen zijn onzichtbaar voor schermlezers',
+      w: ['apps/client/src/canvas/NodeFrame.tsx:118-120', 'apps/client/src/shell/Sidebar.tsx:229,253-261,532-552,579,638,1032', 'apps/client/src/conflicts/ConflictOverlay.tsx:382,387', 'apps/client/src/chat/ui/Composer.tsx:944', 'apps/client/src/shell/CellToolbar.tsx:187'],
+      s: 'In de sidebar, hét attentie-oppervlak, zegt de naam van een rij nooit "heeft je nodig", "draait" of "fout". Vier icoonknoppen hebben geen toegankelijke naam, en de vier <code>title=</code>-attributen in de codebase staan allemaal in <code>Sidebar.tsx</code>.',
+      f: ['<code>sr-only</code>-tekst in <code>StatusDot</code> en de markeringen zetten, <code>name</code> toevoegen aan de vier tooltips en de <code>title</code>s vervangen door <code>Tooltip</code>.'],
+      e: '3 tot 4 uur' },
+
+    // iOS & wire
+    { id: 'I1', area: 'ios', sev: 'high', st: 'code', chk: true, t: 'Eén nieuwe AgentKind-waarde laat de iPhone geen chats of projecten meer openen',
+      w: ['packages/contracts/src/agent.ts:6', 'apps/ios/Packages/RuimtePulsar/Sources/RuimtePulsar/WireSchema.swift:117', 'apps/ios/App/Sessions/ChatModel.swift:111-116'],
+      s: 'Een onbekende enumwaarde laat het hele antwoord afketsen. NEXT.md punt 4 plant "één literal in <code>AgentKind</code>" voor een derde provider. Zodra één machine die heeft, falen <code>provider.list</code>, <code>chat.list</code>, <code>session.list</code> en elke <code>project.open</code> met zo\'n node, ook als een teamgenoot die commitde. De productregel verbiedt nieuwe enumwaarden alleen in chat- en push-payloads, en dat wordt nergens automatisch gecontroleerd.',
+      f: ['Open vocabulaires markeren (<code>AgentKind</code>, <code>RuntimeMode</code>, <code>AgentStatus</code>), <code>x-open-enum</code> genereren en in <code>WireSchema</code> elke string accepteren, met een generieke provider in de UI. Dat eerst in een iOS-release uitbrengen.', 'Een CI-check die <code>schemas.json</code> vergelijkt met de laatste tag en faalt op nieuwe verplichte velden, gesloten enumwaarden of nieuwe <code>oneOf</code>-leden.'],
+      e: 'Ongeveer een dag, vóór NEXT #4' },
+    { id: 'I2', area: 'ios', sev: 'high', st: 'code', t: 'De iPhone geeft elk request na 15 s op terwijl de machine doorwerkt',
+      w: ['apps/ios/Packages/RuimteTransport/Sources/RuimteTransport/MachineClient.swift:147', 'apps/ios/App/Pages/Git/GitActions.swift:153-181', 'apps/server/src/handlers/git.ts:115-121'],
+      s: 'Een push met een pre-push-hook duurt 20 s. De telefoon meldt een time-out en geeft de knoppen vrij, de persoon drukt nogmaals en er lopen twee pushes. <code>chat.send</code> met 10 MiB aan bijlagen verloopt na 15 s, terwijl de daemon de turn al draait, dus opnieuw verzenden stuurt het bericht twee keer.',
+      f: ['Een timeout per requesttype: geen voor git-operaties, fork en summarize, en een op grootte gebaseerde voor <code>chat.send</code>. Een verlopen wijziging behandelen als "uitkomst onbekend".', 'Een optioneel client-message-id op <code>chat.send</code> voor deduplicatie.'],
+      e: 'Ongeveer een dag' },
+    { id: 'I3', area: 'ios', sev: 'mid', st: 'code', t: 'Events die de validatie niet halen verdwijnen stil, en er is geen resume met since',
+      w: ['apps/ios/Packages/RuimteTransport/Sources/RuimteTransport/MachineClient.swift:335', 'apps/ios/App/Sessions/ChatModel.swift:67-90', 'apps/server/src/dispatcher.ts:28-30, 103-104'],
+      s: 'Een event dat niet valideert wordt met <code>try?</code> weggegooid. De tijdlijn blijft dan op "pending" staan zonder teken. <code>seq</code> of <code>since</code> komt nergens in de app voor, dus elke terugkeer uit de achtergrond haalt per open chat tot 512 KiB opnieuw op. De daemon valideert zijn eigen uitvoer nooit.',
+      f: ['Een falend <code>chat.event</code> loggen en de chat opnieuw attachen, met een melding "machine nieuwer dan app".', 'De laatste <code>seq</code> per chat bijhouden. Een daemontest die projectorfixtures tegen <code>EVENT_SCHEMAS</code> parseert.'],
+      e: 'Ongeveer een dag' },
+    { id: 'I4', area: 'ios', sev: 'mid', st: 'code', t: 'De relay-only-schakelaar van de diagnose verandert de echte verbinding, of doet niets',
+      w: ['apps/ios/Packages/RuimteTransport/Sources/RuimteTransport/MachineConnections.swift:134', 'apps/ios/App/ConnectionProbe.swift:45-58', 'apps/ios/App/ConnectionScreen.swift:19-20,121-124'],
+      s: 'De opener van de eerste houder wint voor de hele levensduur van de entry. Als eerst de diagnose verbond, loopt het open project tot een herstart via TURN. <code>probe.reconnect</code> breekt ook de link van open chats af.',
+      f: ['Entries op <code>(machineID, relayOnly)</code> keyen of de probe een eigen <code>MachineConnections</code> geven, en <code>relayOnly</code> resetten als het scherm verdwijnt.'],
+      e: 'Enkele uren' },
+    { id: 'I5', area: 'ios', sev: 'mid', st: 'code', t: 'Toestaan of Weigeren vanuit een notificatie sluit het open project',
+      w: ['apps/ios/App/Notifications/NotificationCoordinator.swift:593-596', 'apps/ios/App/Workspace/AppHome.swift:87-95'],
+      s: 'Na een goedkeuring vanaf het vergrendelscherm landt de persoon bij het openen van de app op de projectlijst in plaats van in de chat.',
+      f: ['<code>destination</code> alleen zetten bij <code>UNNotificationDefaultActionIdentifier</code>, of pas als het antwoord in de achtergrond mislukte.'],
+      e: 'Ongeveer 1 uur' },
+    { id: 'I6', area: 'ios', sev: 'mid', st: 'code', t: 'Bij typen in de terminal wacht elk stuk invoer een round trip',
+      w: ['apps/ios/App/Sessions/TerminalModel.swift:139-156'],
+      s: 'Bij 250 ms round trip over een relay groeit de wachtrij zodra iemand sneller dan 4 stukken per seconde typt, en de echo loopt steeds verder achter.',
+      f: ['<code>queuedInput.joined()</code> in één write versturen, of zonder op het antwoord te wachten, want het kanaal is geordend.'],
+      e: 'Enkele uren' },
+    { id: 'I7', area: 'ios', sev: 'mid', st: 'code', t: 'Aandachtsmarkeringen pollen elke 10 s in plaats van chat.status te volgen',
+      w: ['apps/ios/App/Workspace/AttentionStore.swift:84-91, 187-205', 'apps/server/src/chat/chat-manager.ts:1001-1007'],
+      s: 'Er gaan drie requests per 10 s uit, inclusief de volledige <code>chat.list</code> over de relay. Dat kost batterij en data, en markeringen lopen tot 10 s achter. Het commentaar zegt dat er geen event is, maar <code>chat.status</code> wordt naar elke client gebroadcast.',
+      f: ['Op <code>chat.status</code> abonneren en alleen bij het verbinden verversen.'],
+      e: 'Enkele uren' },
+    { id: 'I8', area: 'ios', sev: 'mid', st: 'code', t: 'Het streamingwerk groeit met de lengte van de chat',
+      w: ['apps/ios/App/Sessions/ChatModel.swift:170-186', 'apps/ios/App/Sessions/SubagentPages.swift:38-45'],
+      s: 'Elke delta kopieert de hele tekst van het item, tot 60 keer per seconde. De subagentpagina leest <code>model.items</code> en rekent bij elke delta de hele thread opnieuw. Een gestreamd log van 1 MB betekent tientallen MB kopieerwerk per seconde.',
+      f: ['Gestreamde tekst alleen in <code>ChatItemState</code> bijhouden en <code>items</code> alleen bij structurele events bijwerken. De subagentpagina laten observeren op een afgeleide lijst met revisie.'],
+      e: 'Ongeveer een dag' },
+    { id: 'I9', area: 'ios', sev: 'low', st: 'plaus', t: 'De volgorde van connect en close kan de client als verbonden laten staan',
+      w: ['apps/ios/App/Workspace/SharedMachineSession.swift:53-72'],
+      s: '<code>opened</code> springt via een <code>Task</code>, <code>closed</code> loopt synchroon. Valt de link weg voordat die task draait, dan staat <code>connected = true</code> op een dode link, en bij de echte reconnect wordt niets opnieuw aangekoppeld.',
+      f: ['<code>opened</code> synchroon aanroepen, of de lease-generatie in de task controleren.'],
+      e: 'Ongeveer 1 uur' },
+    { id: 'I10', area: 'ios', sev: 'low', st: 'code', t: 'Device bridge: één te groot frame beëindigt de stream, en XPC-objecten lekken',
+      w: ['apps/ios-device-bridge/src/main.rs:216-219, 517-527', 'apps/ios-device-bridge/src/native_remoted.rs:250-255, 372-376'],
+      s: 'Bij verlies van markerpakketten over wifi groeien access units samen tot boven 8 MiB, en de <code>?</code> beëindigt de hele mirror.',
+      f: ['Boven de limiet het frame overslaan en doorgaan. Bij een mislukte <code>try_send</code> vrijgeven en <code>xpc_get_type</code> controleren vóór het lezen.'],
+      e: 'Enkele uren' },
+
+    // Tooling
+    { id: 'T1', area: 'tool', sev: 'mid', st: 'meas', chk: true, t: 'Bun is nergens vastgepind; gegenereerde bestanden hangen af van de Bun-versie',
+      w: ['.github/workflows/*.yml (8× bun-version: latest)', 'package.json (geen packageManager)', 'apps/ios/Scripts/generate-renderer.ts:7-12, 64-67', 'apps/ios/Tests/Fixtures/document-scenes.json'],
+      s: 'Met Bun 1.3.11 faalt <code>bun run check</code> op main: de geminificeerde <code>document-renderer.js</code> ziet er anders uit, en de scene-fixtures verschillen in het laatste cijfer van floats (<code>37.23045369887423</code> tegenover <code>…236</code>), omdat <code>Math.sin</code>/<code>cos</code> per JSC-versie verschilt. <code>bun install</code> herschrijft daarbij de lockfile. De volgende Bun-release kan CI op elk moment rood maken zonder codewijziging, ook midden in een release.',
+      f: ['Een <code>"packageManager": "bun@x.y.z"</code> of <code>.bun-version</code> toevoegen en in elke workflow <code>bun-version-file</code> gebruiken.', 'Floats in de parity-fixtures afronden (bijvoorbeeld op 6 decimalen) en de Swift-test met een tolerantie laten vergelijken.'],
+      e: '1 tot 2 uur' },
+    { id: 'T2', area: 'tool', sev: 'mid', st: 'code', t: 'CI draait geen integratietests, geen Swift-tests en geen Rust-tests',
+      w: ['.github/workflows/ci.yml', 'apps/ios/Packages/*/Tests', 'apps/ios-device-bridge'],
+      s: 'Er zijn 13 <code>*.integration.test.ts</code>-bestanden (echte git-, pty- en broker-paden) die alleen lokaal draaien. <code>WireSchemaTests</code> en <code>WireFixtureTests</code> zijn de enige controle dat de Swift-validator met zod overeenstemt, en CI draait ze nooit. Voor de bridge draait niets <code>cargo test</code> of clippy.',
+      f: ['Een macOS-job met <code>bun run test:integration</code>, <code>swift test</code> per pakket (met een vastgepinde Xcode voor tools-version 6.4) en <code>cargo test --locked</code>.'],
+      e: 'Enkele uren tot een dag' },
+    { id: 'T3', area: 'tool', sev: 'low', st: 'meas', chk: true, t: 'De worker-test start workerd in de standaardrun, met een hook-timeout van 30 s',
+      w: ['apps/pulsar-worker/src/worker.test.ts:486, 1613-1619', 'apps/server/src/docker/remote-daemon.test.ts (timeouts van 60 tot 90 s, env-gated)'],
+      s: 'Miniflare start echte <code>workerd</code>-processen, terwijl de regel is dat de standaardrun geen processen of sockets gebruikt en dat een timeout nooit wordt verlengd. In deze sandbox faalt "an address book nobody configured" steeds (Broken pipe, hook-timeout), ook als het bestand alleen draait. Op CI-macOS slaagt het waarschijnlijk, maar het is de enige rode test in de suite.',
+      f: ['Het bestand hernoemen naar <code>worker.integration.test.ts</code>, of één Miniflare-instantie per bestand delen met een binding-override. Hetzelfde voor <code>remote-daemon.test.ts</code>.'],
+      e: 'Enkele uren' },
+    { id: 'T4', area: 'tool', sev: 'low', st: 'meas', chk: true, t: 'Lintregels dwingen de eigen conventies niet af',
+      w: ['.oxlintrc.json (2 regels)', 'apps/client/src/shell/RemoveWorktreeDialog.tsx:44', 'apps/client/src/shell/MergeWorktreeDialog.tsx:84', 'apps/client/src/shell/LinkMachineDialog.tsx:54'],
+      s: 'Er staan 151 waarschuwingen open die CI niet laten falen, waaronder 8 <code>exhaustive-deps</code> met ontbrekende dependencies in dialogen. Ongeveer 37 keer <code>if</code> zonder accolades in de bron. Conventies zoals geen <code>title=</code>, geen <code>Intl</code> buiten <code>format/</code>, geen bracket-maten, geen fractionele px en geen kale toetsen op window staan alleen in <code>CLAUDE.md</code>. <code>NEXT.md</code> punt 12 zegt nog dat <code>fs.write</code> niet op de wire staat, terwijl dat wel zo is.',
+      f: ['<code>curly</code> en <code>react-hooks/exhaustive-deps</code> als error, <code>oxlint --deny-warnings</code> in CI.', 'Eén <code>conventions.test.ts</code> met grep-scans voor wat geen lintregel kan (de guards uit U1, U2, U4 en U5 bij elkaar).'],
+      e: 'Enkele uren' }
+];
+
+const PRIO = [
+    { t: 'Electron dichtzetten', p: 'Navigatieguard op het hoofdvenster, een sender-frame- en origincheck op elke IPC-handler, standaard weigeren op persist:ruimte, hardening in will-attach-webview. Grotendeels configuratie, met veruit de meeste risicoreductie per uur.', r: ['S2', 'S3', 'S4'] },
+    { t: 'Kleine beveiligingsgaten in de daemon', p: 'Het symlinkpad bij --cwd, de body-limiet op /hooks, catch op de netwerk-promises. Elk minder dan een uur.', r: ['S5', 'S15', 'S16'] },
+    { t: 'Terminalbytes kloppend maken aan beide kanten', p: 'Eén snapshotprimitief in Session lost verlies en duplicatie op, en de client moet het scherm niet meer achter een tweede round trip wachten.', r: ['R1', 'R2', 'R3'] },
+    { t: 'Geen wijzigingen meer kwijt tussen schijf, daemon en client', p: 'De rev na een reload, een save die naar schijf kijkt, undo die externe patches respecteert, de AI in de conflictoverlay.', r: ['D1', 'D2', 'D3', 'D5'] },
+    { t: 'Open enums vóór de derde provider', p: 'Moet in een iOS-release staan voordat NEXT #4 landt, samen met een CI-diff van schemas.json tegen de laatste tag.', r: ['I1'] },
+    { t: 'Bun vastpinnen en CI verbreden', p: 'Voorkomt dat een Bun-release CI rood maakt midden in een release, en laat de Swift-, Rust- en integratietests meedraaien.', r: ['T1', 'T2', 'T3'] },
+    { t: 'De vertrouwensgrens rond project.json', p: 'De grootste klus: launch-parameters uit gedeelde bestanden als onvertrouwd behandelen, met goedkeuring onder $RUIMTE_HOME.', r: ['S1'] },
+    { t: 'Credentials en accounts', p: 'Intrekken dat echt werkt, geen local secret in URL\'s, refresh zonder zelfintrekking, sessiebeheer in Pulsar.', r: ['S6', 'S7', 'S8', 'S9'] },
+    { t: 'Prestaties op het 30-node-doel', p: 'Het canvas bij pannen, altijd gemounte oppervlakken, de snapshot-pass, stderr, chat-snapshots.', r: ['C3', 'C4', 'R8', 'R5', 'R9'] }
+];
+
+const THEMES = [
+    { t: 'Wat in project.json staat, wordt vertrouwd', p: 'Het gedeelde bestand is door iedereen met schrijfrechten te wijzigen: teamgenoten, PR\'s en agents. Toch bepaalt het wat een terminal typt en met welke modus een agent start. Het principe "afdwinging onder $RUIMTE_HOME" is voor verbs goed geregeld, maar voor launch-parameters niet.', r: ['S1', 'S5', 'D14'] },
+    { t: 'Snapshot plus stream is één atomaire stap', p: 'Op drie plekken wordt een momentopname genomen en daarna, na een await, de stroom aangezet: bij attach en resync in de daemon, bij attach in de client en bij reload tegenover mutate in de projectstore. Elke keer valt er iets tussen.', r: ['R1', 'R2', 'R3', 'D1'] },
+    { t: 'Een externe wijziging is geen lading', p: 'De client behandelt een merge van een agent of andere client als "laden". Daardoor weet undo er niets van en ruimt de lifecycle-watcher niets op.', r: ['D3', 'R14', 'D4'] },
+    { t: 'Identiteit in plaats van naam', p: 'De pool zoekt op id in plaats van op entry, auth op sleutel met dubbele records, worktrees op branchnaam en de conflictoverlay op het bestand ten tijde van de klik. Telkens wordt een oud handvat op iets nieuws toegepast.', r: ['C1', 'S6', 'D8', 'D5'] },
+    { t: 'Elke vorm van druk begrenzen', p: 'Terminaloutput heeft backpressure, maar device-video, replies, stderr, de challenges en de broker-buckets niet. Waar het ontbreekt, groeit het geheugen of valt er stil iets weg.', r: ['R7', 'R5', 'S14', 'S10', 'S11'] },
+    { t: 'Regels die alleen in CLAUDE.md staan', p: 'Veel conventies worden goed gevolgd, maar niet afgedwongen, en de uitzonderingen zitten precies in nieuwe code. Eén conventietest plus strengere lint vangt ze voortaan automatisch.', r: ['T4', 'U1', 'U2', 'U4', 'I1'] }
+];
+
+const byId = Object.fromEntries(F.map((f) => [f.id, f]));
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const refBtn = (id) => `<button class="ref" type="button" data-go="${id}">${id}</button>`;
+
+document.getElementById('total-count').textContent = String(F.length);
+
+const tally = { high: 0, mid: 0, low: 0 };
+F.forEach((f) => { tally[f.sev] += 1; });
+const reproduced = F.filter((f) => f.st === 'repro' || f.st === 'meas').length;
+document.getElementById('tally').innerHTML =
+    `<div class="high"><span class="n">${tally.high}</span><span class="l">Hoog</span></div>` +
+    `<div class="mid"><span class="n">${tally.mid}</span><span class="l">Middel</span></div>` +
+    `<div class="low"><span class="n">${tally.low}</span><span class="l">Laag</span></div>` +
+    `<div><span class="n">${reproduced}</span><span class="l">Gereproduceerd of gemeten</span></div>`;
+
+document.getElementById('prio').innerHTML = PRIO.map((p, i) =>
+    `<li><span class="step">${i + 1}</span><h3>${esc(p.t)}</h3><p>${esc(p.p)}</p><div class="refs">${p.r.map(refBtn).join('')}</div></li>`
+).join('');
+
+document.getElementById('themes').innerHTML = THEMES.map((t) =>
+    `<div class="theme"><h3>${esc(t.t)}</h3><p>${esc(t.p)}</p><div class="refs">${t.r.map(refBtn).join('')}</div></div>`
+).join('');
+
+const renderFinding = (f) => `
+<details class="finding ${f.sev}" id="f-${f.id}" data-sev="${f.sev}" data-area="${f.area}">
+    <summary>
+        <span class="fid">${f.id}</span>
+        <span class="ftitle">${esc(f.t)}</span>
+        <span class="tags">
+            <span class="tag sev-${f.sev}">${SEV[f.sev]}</span>
+            <span class="tag">${AREAS[f.area]}</span>
+            <span class="tag">${STATUS[f.st]}</span>
+            ${f.chk ? '<span class="tag checked">✓ zelf nagelezen</span>' : ''}
+            <span class="tag">${esc(f.e)}</span>
+        </span>
+    </summary>
+    <div class="fbody">
+        <dl>
+            <dt>Waar</dt><dd class="where"><ul>${f.w.map((w) => `<li><code>${esc(w)}</code></li>`).join('')}</ul></dd>
+            <dt>Wat misgaat</dt><dd>${f.s}</dd>
+            <dt>Oplossing</dt><dd><ul>${f.f.map((x) => `<li>${x}</li>`).join('')}</ul></dd>
+            <dt>Moeite</dt><dd>${esc(f.e)}</dd>
+        </dl>
+    </div>
+</details>`;
+
+const ORDER = { high: 0, mid: 1, low: 2 };
+const AREA_ORDER = Object.keys(AREAS);
+const sorted = [...F].sort((a, b) => ORDER[a.sev] - ORDER[b.sev] || AREA_ORDER.indexOf(a.area) - AREA_ORDER.indexOf(b.area));
+const list = document.getElementById('list');
+list.innerHTML = sorted.map(renderFinding).join('') + '<p class="empty" id="empty" hidden>Geen bevindingen voor deze filters.</p>';
+
+const state = { sev: 'all', area: 'all', q: '' };
+const chipRow = (el, key, entries) => {
+    el.insertAdjacentHTML('beforeend', entries.map(([value, label, count]) =>
+        `<button class="chip" type="button" data-key="${key}" data-value="${value}" aria-pressed="${value === 'all'}">${label}<span class="c">${count}</span></button>`
+    ).join(''));
+};
+chipRow(document.getElementById('f-sev'), 'sev', [['all', 'Alles', F.length], ...Object.entries(SEV).map(([k, v]) => [k, v, tally[k]])]);
+chipRow(document.getElementById('f-area'), 'area', [['all', 'Alles', F.length], ...Object.entries(AREAS).map(([k, v]) => [k, v, F.filter((f) => f.area === k).length])]);
+
+const apply = () => {
+    let shown = 0;
+    const q = state.q.trim().toLowerCase();
+    for (const el of list.querySelectorAll('.finding')) {
+        const f = byId[el.id.slice(2)];
+        const hay = (f.id + ' ' + f.t + ' ' + f.w.join(' ') + ' ' + f.s).toLowerCase();
+        const visible = (state.sev === 'all' || f.sev === state.sev) && (state.area === 'all' || f.area === state.area) && (q === '' || hay.includes(q));
+        el.hidden = !visible;
+        if (visible) { shown += 1; }
+    }
+    document.getElementById('empty').hidden = shown !== 0;
+    document.getElementById('shown').textContent = `${shown} van ${F.length}`;
+};
+
+document.addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (chip) {
+        state[chip.dataset.key] = chip.dataset.value;
+        for (const other of document.querySelectorAll(`.chip[data-key="${chip.dataset.key}"]`)) {
+            other.setAttribute('aria-pressed', String(other === chip));
+        }
+        apply();
+        return;
+    }
+    const go = e.target.closest('[data-go]');
+    if (go) {
+        const target = document.getElementById('f-' + go.dataset.go);
+        if (!target) { return; }
+        if (target.hidden) {
+            state.sev = 'all'; state.area = 'all'; state.q = '';
+            document.getElementById('q').value = '';
+            for (const c of document.querySelectorAll('.chip')) { c.setAttribute('aria-pressed', String(c.dataset.value === 'all')); }
+            apply();
+        }
+        target.open = true;
+        target.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        target.querySelector('summary').focus({ preventScroll: true });
+    }
+});
+document.getElementById('q').addEventListener('input', (e) => { state.q = e.target.value; apply(); });
+apply();
+</script>
