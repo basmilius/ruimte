@@ -385,6 +385,32 @@ describe('ChatManager', () => {
         expect(claude.started).toHaveLength(2);
     });
 
+    test('a CLI that dies with something on stderr leaves the last lines of it in the note', async () => {
+        await manager.create({ chatId: 'chat-loud', cwd: home });
+        manager.attach('chat-loud', 'c1');
+        await manager.send('chat-loud', 'crash loudly');
+        await recorder.until(() => recorder.info?.running === false && recorder.info.status === 'error');
+        const tail = [...Array<string>(8).fill('warming up'), 'Error: the fake lost its key', '    at handleUser (fake-claude.ts)'].join('\n');
+        expect(recorder.ofKind('note')[0]).toMatchObject({ level: 'error', text: `Claude Code exited with code 1\n\n\`\`\`\n${tail}\n\`\`\`` });
+    });
+
+    test('what a crashed CLI left queued goes out before the next message, in the order it was sent', async () => {
+        await manager.create({ chatId: 'chat-cq', cwd: home });
+        manager.attach('chat-cq', 'c1');
+        await manager.send('chat-cq', 'slow');
+        await manager.send('chat-cq', 'B');
+        await manager.send('chat-cq', 'C');
+        claude.started[0]!.crash(1);
+        await recorder.until(() => recorder.info?.running === false && recorder.info.status === 'error');
+        expect(recorder.info?.queue?.map((message) => message.text)).toEqual(['B', 'C']);
+
+        expect(await manager.send('chat-cq', 'D')).toMatchObject({ queued: true });
+        await recorder.until(() => recorder.ofKind('assistant').length === 3 && idle());
+        expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['slow', 'B', 'C', 'D']);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: B', 'echo: C', 'echo: D']);
+        expect(recorder.info?.queue).toEqual([]);
+    });
+
     test('a turn carries its checkpoint and the diff of what it changed', async () => {
         const tree = 'a'.repeat(40);
         const diff: ChatCheckpointDiff = { files: [{ path: 'made.txt', kind: 'add', added: 1, deleted: 0, diff: '+hello\n' }], truncated: false };
@@ -490,14 +516,22 @@ describe('ChatManager', () => {
         await recorder.until(idle);
     });
 
-    test('kill drops the thread and its record', async () => {
+    test('kill drops the thread and its record, after the write that was still out', async () => {
         await manager.create({ chatId: 'chat-7', cwd: home });
         manager.attach('chat-7', 'c1');
         await manager.send('chat-7', 'x');
         await recorder.until(idle);
-        // The write the settled turn asked for is the last one; a kill before it lands would race it.
-        await store.written('chat-7', (record) => record.info.activeTurnId === null && record.items.some((item) => item.kind === 'turn'));
-        await manager.kill('chat-7');
+        const held = store.holdNextWrite('chat-7');
+        manager.get('chat-7')!.addNote('info', 'written while the node goes');
+        await held.entered;
+
+        const killed = manager.kill('chat-7');
+        // A turn of the event loop, so a kill that did not wait for the write would have asked for the delete by now.
+        await new Promise((resolve) => setImmediate(resolve));
+        held.release();
+        await killed;
+        await held.landed;
+        expect(store.calls.filter((call) => call.endsWith('chat-7')).at(-1)).toBe('delete chat-7');
         expect(manager.list()).toEqual([]);
         expect(await store.read('chat-7')).toBeNull();
         expect(() => manager.send('chat-7', 'x')).toThrow('No chat');

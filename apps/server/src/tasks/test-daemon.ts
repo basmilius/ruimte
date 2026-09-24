@@ -119,6 +119,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         onInterruptedRun: outboxLink.onInterruptedRun,
         messages: (chatId) => notices.take(chatId).map(renderNotice),
         taskRows: (chatId) => tasks.ofParent(chatId),
+        dropWakes: (chatId) => tasks.dropWake(chatId),
         endedAt: (chatId) => lineage.endedAt(chatId),
         plans
     });

@@ -230,6 +230,16 @@ describe('ThreadProjector', () => {
         expect(thread.info).toMatchObject({ running: false, status: 'error', activeTurnId: null });
     });
 
+    test('the last of stderr follows the reason in a code block that its own backticks cannot close', () => {
+        const { thread, project } = setup();
+        project({ type: 'exit', exitCode: 2, stderr: 'Error: no key\n```oops```' });
+        expect(thread.list().at(-1)).toMatchObject({
+            kind: 'note',
+            level: 'error',
+            text: 'Test CLI exited with code 2\n\n````\nError: no key\n```oops```\n````'
+        });
+    });
+
     test('an exit of an idle chat is quiet', () => {
         const { thread, project } = setup();
         project({ type: 'turn.done', state: 'done', costUsd: 0 });

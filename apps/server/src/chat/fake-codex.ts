@@ -153,6 +153,11 @@ export const fakeCodex: FakeCli = (io) => {
             io.exit(1);
             return;
         }
+        if (text === 'crash loudly') {
+            io.err('Error: the fake lost its thread\n');
+            io.exit(1);
+            return;
+        }
         if (text === 'fail') {
             turnCompleted('failed', 'The model is overloaded');
             return;

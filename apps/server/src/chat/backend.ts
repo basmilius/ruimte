@@ -108,7 +108,8 @@ export type BackendEvent =
     | { type: 'turn.done'; state: 'done' | 'aborted' | 'error'; costUsd: number; error?: string; native?: { turnId?: string; lastUuid?: string } }
     // The CLI could not be reached or refused the request; the turn ends and the chat needs a new one.
     | { type: 'failed'; message: string }
-    | { type: 'exit'; exitCode: number | null };
+    // `stderr` is the last of what the CLI wrote there, for an exit with an error code.
+    | { type: 'exit'; exitCode: number | null; stderr?: string };
 
 export interface BackendHost {
     onEvent(event: BackendEvent): void;
@@ -136,7 +137,8 @@ export interface ChatBackend {
     listSkills?(): Promise<ChatSkill[]>;
     // One page of a thread the CLI keeps, asked of this running process rather than of a new one.
     listThreadItems?(params: { threadId: string; cursor?: string; limit: number; sortDirection: 'asc' | 'desc' }): Promise<unknown>;
-    // Closes the input and lets the CLI leave on its own; `dispose` kills it.
+    // Closes the input and lets the CLI leave on its own; `dispose` ends it.
     stop(): void;
-    dispose(): void;
+    // Ends the CLI and everything it started; settles once it exited or was sent the SIGKILL.
+    dispose(): Promise<void>;
 }

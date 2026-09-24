@@ -1,4 +1,4 @@
-import { spawnChatProcess, type ChatProcess, type SpawnChatProcess } from './chat-process.ts';
+import { ChatChild, type SpawnChatProcess } from './chat-process.ts';
 
 export type CodexFrame = Record<string, unknown>;
 
@@ -9,7 +9,8 @@ interface CodexTransportOptions {
     spawn?: SpawnChatProcess;
     // Notifications and server requests; responses to our own requests settle their promise instead.
     onFrame(frame: CodexFrame): void;
-    onExit(exitCode: number | null): void;
+    // `stderr` is the tail of what the app-server wrote there, for an exit with an error code only.
+    onExit(exitCode: number | null, stderr: string | null): void;
 }
 
 class CodexRpcError extends Error {
@@ -31,7 +32,7 @@ type Settle = { resolve(value: unknown): void; reject(reason: Error): void; meth
  * has no id. The app-server also sends requests of its own (approvals), answered with `respond`.
  */
 export class CodexTransport {
-    private readonly process: ChatProcess;
+    private readonly child: ChatChild;
     private readonly options: CodexTransportOptions;
     private readonly pending = new Map<number, Settle>();
     private nextId = 1;
@@ -39,18 +40,18 @@ export class CodexTransport {
 
     constructor(options: CodexTransportOptions) {
         this.options = options;
-        const spawn = options.spawn ?? spawnChatProcess;
-        this.process = spawn({
+        this.child = new ChatChild({
             command: options.command,
             cwd: options.cwd,
             env: options.env,
-            onExit: (exitCode) => this.handleExit(exitCode)
+            ...(options.spawn ? { spawn: options.spawn } : {}),
+            onExit: (exitCode, stderr) => this.handleExit(exitCode, stderr)
         });
         void this.readLines();
     }
 
     get pid(): number {
-        return this.process.pid;
+        return this.child.pid;
     }
 
     get alive(): boolean {
@@ -84,14 +85,25 @@ export class CodexTransport {
     /* Closes stdin; the app-server ends on its own once it has nothing more to say. */
     end(): void {
         try {
-            this.process.stdin.end();
+            this.child.process.stdin.end();
         } catch {
             // Already closed by the other side.
         }
     }
 
     kill(signal: 'SIGTERM' | 'SIGKILL' = 'SIGTERM'): void {
-        this.process.kill(signal);
+        this.child.process.kill(signal);
+    }
+
+    /* Closes stdin and ends the app-server if it has not left on its own once the grace is over. */
+    stop(): void {
+        this.end();
+        this.child.endAfterGrace();
+    }
+
+    /* Ends the app-server and whatever it started; settles once it exited or was sent the SIGKILL. */
+    dispose(): Promise<void> {
+        return this.child.end();
     }
 
     private write(frame: CodexFrame): void {
@@ -99,15 +111,15 @@ export class CodexTransport {
             return;
         }
         try {
-            this.process.stdin.write(`${JSON.stringify(frame)}\n`);
-            this.process.stdin.flush();
+            this.child.process.stdin.write(`${JSON.stringify(frame)}\n`);
+            this.child.process.stdin.flush();
         } catch {
             // The exit handler reports a process that is gone.
         }
     }
 
     private async readLines(): Promise<void> {
-        const reader = this.process.stdout.getReader();
+        const reader = this.child.process.stdout.getReader();
         const decoder = new TextDecoder();
         let buffered = '';
         try {
@@ -162,7 +174,7 @@ export class CodexTransport {
         }
     }
 
-    private handleExit(exitCode: number | null): void {
+    private handleExit(exitCode: number | null, stderr: string | null): void {
         if (this.closed) {
             return;
         }
@@ -171,6 +183,6 @@ export class CodexTransport {
             settle.reject(new Error(`${settle.method} failed: Codex exited`));
         }
         this.pending.clear();
-        this.options.onExit(exitCode);
+        this.options.onExit(exitCode, stderr);
     }
 }

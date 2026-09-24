@@ -1,12 +1,9 @@
 import { chatPrompt } from '../context/context-note.ts';
 import { claudeArgs, claudeEnv, promptPrefix } from '../providers/claude.ts';
 import type { ApprovalDecision, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
-import { spawnChatProcess, type ChatProcess } from './chat-process.ts';
+import { ChatChild } from './chat-process.ts';
 import { ClaudeProtocol } from './claude-protocol.ts';
 import { buildUserMessage } from './input.ts';
-
-// After stdin closed, a CLI that is still around is not going to say more.
-const EXIT_GRACE_MS = 3000;
 
 /*
  * One `claude -p` process on the stream-json protocol: flags from the selection and the modes,
@@ -18,9 +15,8 @@ export class ClaudeBackend implements ChatBackend {
     private readonly launch: BackendLaunch;
     private readonly host: BackendHost;
     private readonly protocol = new ClaudeProtocol();
-    private process: ChatProcess | null = null;
+    private child: ChatChild | null = null;
     private stdinClosed = false;
-    private exitTimer: ReturnType<typeof setTimeout> | null = null;
     // The person asked to stop; the result frame that follows closes the turn as aborted.
     private interrupted = false;
 
@@ -30,30 +26,30 @@ export class ClaudeBackend implements ChatBackend {
     }
 
     get running(): boolean {
-        return this.process !== null;
+        return this.child !== null;
     }
 
     get pid(): number | null {
-        return this.process?.pid ?? null;
+        return this.child?.pid ?? null;
     }
 
     start(): Promise<void> {
-        if (this.process) {
+        if (this.child) {
             return Promise.resolve();
         }
         const { selection, runtimeMode, resume } = this.launch;
         const args = [...this.launch.command, ...claudeArgs({ selection, runtimeMode, resume })];
         args.push('--append-system-prompt', chatPrompt({ sources: this.launch.context, depth: this.launch.depth, standalone: this.launch.standalone }));
         this.stdinClosed = false;
-        const spawn = this.launch.spawn ?? spawnChatProcess;
-        const process: ChatProcess = spawn({
+        const child: ChatChild = new ChatChild({
             command: args,
             cwd: this.launch.cwd,
             env: { ...this.launch.env, ...claudeEnv(selection) },
-            onExit: (exitCode) => this.handleExit(process, exitCode)
+            ...(this.launch.spawn ? { spawn: this.launch.spawn } : {}),
+            onExit: (exitCode, stderr) => this.handleExit(child, exitCode, stderr)
         });
-        this.process = process;
-        void this.readLines(process);
+        this.child = child;
+        void this.readLines(child);
         return Promise.resolve();
     }
 
@@ -96,28 +92,18 @@ export class ClaudeBackend implements ChatBackend {
     }
 
     stop(): void {
-        const process = this.process;
-        if (!process || this.exitTimer !== null) {
-            return;
-        }
         this.closeStdin();
-        this.exitTimer = setTimeout(() => {
-            this.exitTimer = null;
-            process.kill('SIGTERM');
-        }, EXIT_GRACE_MS);
+        this.child?.endAfterGrace();
     }
 
-    dispose(): void {
-        if (this.exitTimer !== null) {
-            clearTimeout(this.exitTimer);
-            this.exitTimer = null;
-        }
-        this.process?.kill('SIGKILL');
-        this.process = null;
+    dispose(): Promise<void> {
+        const child = this.child;
+        this.child = null;
+        return child?.end() ?? Promise.resolve();
     }
 
-    private async readLines(process: ChatProcess): Promise<void> {
-        const reader = process.stdout.getReader();
+    private async readLines(child: ChatChild): Promise<void> {
+        const reader = child.process.stdout.getReader();
         const decoder = new TextDecoder();
         let buffered = '';
         try {
@@ -129,21 +115,21 @@ export class ClaudeBackend implements ChatBackend {
                 buffered += decoder.decode(value, { stream: true });
                 let newline = buffered.indexOf('\n');
                 while (newline >= 0) {
-                    this.handleLine(process, buffered.slice(0, newline));
+                    this.handleLine(child, buffered.slice(0, newline));
                     buffered = buffered.slice(newline + 1);
                     newline = buffered.indexOf('\n');
                 }
             }
             if (buffered.trim() !== '') {
-                this.handleLine(process, buffered);
+                this.handleLine(child, buffered);
             }
         } catch {
             // The process died mid-read; onExit reports it.
         }
     }
 
-    private handleLine(process: ChatProcess, line: string): void {
-        if (this.process !== process || line.trim() === '') {
+    private handleLine(child: ChatChild, line: string): void {
+        if (this.child !== child || line.trim() === '') {
             return;
         }
         let frame: unknown;
@@ -163,40 +149,36 @@ export class ClaudeBackend implements ChatBackend {
     }
 
     private write(frame: unknown): void {
-        const process = this.process;
-        if (!process || this.stdinClosed) {
+        const child = this.child;
+        if (!child || this.stdinClosed) {
             return;
         }
         try {
-            process.stdin.write(`${JSON.stringify(frame)}\n`);
-            process.stdin.flush();
+            child.process.stdin.write(`${JSON.stringify(frame)}\n`);
+            child.process.stdin.flush();
         } catch {
             // The exit handler reports a process that is gone.
         }
     }
 
     private closeStdin(): void {
-        if (!this.process || this.stdinClosed) {
+        if (!this.child || this.stdinClosed) {
             return;
         }
         this.stdinClosed = true;
         try {
-            this.process.stdin.end();
+            this.child.process.stdin.end();
         } catch {
             // Already closed by the other side.
         }
     }
 
-    private handleExit(process: ChatProcess, exitCode: number | null): void {
-        if (this.process !== process) {
+    private handleExit(child: ChatChild, exitCode: number | null, stderr: string | null): void {
+        if (this.child !== child) {
             return;
         }
-        if (this.exitTimer !== null) {
-            clearTimeout(this.exitTimer);
-            this.exitTimer = null;
-        }
-        this.process = null;
+        this.child = null;
         this.protocol.forgetPending();
-        this.host.onEvent({ type: 'exit', exitCode });
+        this.host.onEvent({ type: 'exit', exitCode, ...(stderr === null ? {} : { stderr }) });
     }
 }

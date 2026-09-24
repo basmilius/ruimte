@@ -8,9 +8,6 @@ import { attachmentNote } from './input.ts';
 import { CodexTransport, type CodexFrame } from './codex-transport.ts';
 import { errorText } from '../error-text.ts';
 
-// After stdin closed, an app-server that is still around is not going to say more.
-const EXIT_GRACE_MS = 3000;
-
 const CLIENT_INFO = { name: 'ruimte', title: 'Ruimte', version: '0.1.0' };
 
 const textInput = (text: string) => [{ type: 'text', text, text_elements: [] }];
@@ -48,7 +45,6 @@ export class CodexBackend implements ChatBackend {
     private readonly protocol: CodexProtocol;
     private transport: CodexTransport | null = null;
     private threadId = '';
-    private exitTimer: ReturnType<typeof setTimeout> | null = null;
     /*
      * Codex 0.154 ignores developer instructions on `thread/resume` (measured), so a thread started
      * before anything was linked would never hear of its links; the first prompt of a resumed process says so instead.
@@ -85,7 +81,7 @@ export class CodexBackend implements ChatBackend {
             env: this.launch.env,
             ...(this.launch.spawn ? { spawn: this.launch.spawn } : {}),
             onFrame: (frame) => this.handleFrame(transport, frame),
-            onExit: (exitCode) => this.handleExit(transport, exitCode)
+            onExit: (exitCode, stderr) => this.handleExit(transport, exitCode, stderr)
         });
         this.transport = transport;
         await transport.request('initialize', { clientInfo: CLIENT_INFO, capabilities: { experimentalApi: true, requestAttestation: false } });
@@ -276,24 +272,13 @@ export class CodexBackend implements ChatBackend {
     }
 
     stop(): void {
-        const transport = this.transport;
-        if (!transport || this.exitTimer !== null) {
-            return;
-        }
-        transport.end();
-        this.exitTimer = setTimeout(() => {
-            this.exitTimer = null;
-            transport.kill('SIGTERM');
-        }, EXIT_GRACE_MS);
+        this.transport?.stop();
     }
 
-    dispose(): void {
-        if (this.exitTimer !== null) {
-            clearTimeout(this.exitTimer);
-            this.exitTimer = null;
-        }
-        this.transport?.kill('SIGKILL');
+    dispose(): Promise<void> {
+        const transport = this.transport;
         this.transport = null;
+        return transport?.dispose() ?? Promise.resolve();
     }
 
     /* A request whose failure the person has to hear about, since it is the turn that cannot go on. */
@@ -331,17 +316,13 @@ export class CodexBackend implements ChatBackend {
         }
     }
 
-    private handleExit(transport: CodexTransport, exitCode: number | null): void {
+    private handleExit(transport: CodexTransport, exitCode: number | null, stderr: string | null): void {
         if (this.transport !== transport) {
             return;
         }
-        if (this.exitTimer !== null) {
-            clearTimeout(this.exitTimer);
-            this.exitTimer = null;
-        }
         this.transport = null;
         this.protocol.forgetPending();
-        this.emit({ type: 'exit', exitCode });
+        this.emit({ type: 'exit', exitCode, ...(stderr === null ? {} : { stderr }) });
     }
 
     private emit(event: BackendEvent): void {

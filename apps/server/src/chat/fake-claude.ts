@@ -125,6 +125,18 @@ export const fakeClaude: FakeCli = (io) => {
             io.exit(1);
             return;
         }
+        if (text === 'crash loudly') {
+            io.err(`${'warming up\n'.repeat(2000)}Error: the fake lost its key\n    at handleUser (fake-claude.ts)\n`);
+            io.exit(1);
+            return;
+        }
+        // Over stdio only: a process of the CLI's own, as a dev server an agent started would be.
+        if (text === 'start a grandchild') {
+            const grandchild = Bun.spawn(['sleep', '600'], { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore' });
+            assistantText(`grandchild ${grandchild.pid}`);
+            result();
+            return;
+        }
         // A line of its own, so a prompt with a task brief under it or a message above it still waits.
         if (text.split('\n').some((line) => line === 'slow')) {
             slow = true;

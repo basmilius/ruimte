@@ -6,6 +6,8 @@ export interface FakeIo {
     readonly argv: string[];
     readonly cwd: string;
     out(frame: unknown): void;
+    // What the real CLI says on stderr before it gives up.
+    err(text: string): void;
     // Nothing the fake writes after this reaches the backend; the caller returns right after.
     exit(code: number): void;
     // Work the real CLI does later on its own; in a test, the test says when later is.
@@ -22,6 +24,8 @@ export interface StartedFake {
     readonly argv: string[];
     // Runs what the fake put off with `later`, in the order it was put off.
     runLater(): void;
+    // Ends the fake in the middle of whatever it does, as a crash would.
+    crash(code: number): void;
     // Settles once the backend has heard the exit and read everything written before it.
     readonly exited: Promise<number | null>;
 }
@@ -43,6 +47,12 @@ export const inProcess = (cli: FakeCli): InProcessCli => {
     const spawn = (options: ChatSpawnOptions): ChatProcess => {
         const encoder = new TextEncoder();
         const chunks: Uint8Array[] = [];
+        let stderrController: ReadableStreamDefaultController<Uint8Array> | null = null;
+        const stderr = new ReadableStream<Uint8Array>({
+            start: (controller) => {
+                stderrController = controller;
+            }
+        });
         const deferred: Array<() => void> = [];
         let ended = false;
         let exitCode: number | null = null;
@@ -64,6 +74,8 @@ export const inProcess = (cli: FakeCli): InProcessCli => {
             }
             ended = true;
             exitCode = code;
+            // A pipe closes with the process that held it.
+            stderrController?.close();
             nudge();
         };
         const program = cli({
@@ -75,6 +87,11 @@ export const inProcess = (cli: FakeCli): InProcessCli => {
                 }
                 chunks.push(encoder.encode(`${JSON.stringify(frame)}\n`));
                 nudge();
+            },
+            err: (text) => {
+                if (!ended) {
+                    stderrController?.enqueue(encoder.encode(text));
+                }
             },
             exit: (code) => exit(code),
             later: (work) => {
@@ -133,12 +150,14 @@ export const inProcess = (cli: FakeCli): InProcessCli => {
                     work();
                 }
             },
+            crash: (code) => exit(code),
             exited
         });
         return {
             pid: nextPid++,
             stdin,
             stdout,
+            stderr,
             // A signal ends a real process without an exit code of its own.
             kill: () => exit(null)
         };
@@ -153,6 +172,9 @@ export const runOverStdio = async (cli: FakeCli): Promise<void> => {
         cwd: process.cwd(),
         out: (frame) => {
             process.stdout.write(`${JSON.stringify(frame)}\n`);
+        },
+        err: (text) => {
+            process.stderr.write(text);
         },
         exit: (code) => process.exit(code),
         later: (work) => {

@@ -189,6 +189,18 @@ describe('a task wakes the chat that gave it', () => {
         expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
     });
 
+    test('a lead cleared after delegating is a new conversation, which the task no longer wakes', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadWorking(daemon);
+        const child = await delegate(daemon, 'Lexer', 'fix the tokenizer');
+        await daemon.chats.clear('chat-lead', true);
+        await daemon.until(() => daemon.tasks.get(child.taskId)?.status === 'done');
+        await daemon.worker.settled();
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'done', wake: 'none' });
+        expect(wakeTurns(daemon)).toEqual([]);
+    });
+
     test('a terminal child that exits without done fails its task, and the lead is woken with that', async () => {
         const daemon = await boot();
         daemon.worker.start();

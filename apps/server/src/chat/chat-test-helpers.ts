@@ -85,11 +85,45 @@ type ChatStoreWriteRest = Parameters<ChatStore['write']> extends [string, ChatIn
 
 /* A store that says when a write landed, so a test reads the file after the write and not after a guess. */
 export class RecordingStore extends ChatStore {
+    // Every write as it lands and every delete as it is asked for, in that order.
+    readonly calls: string[] = [];
     private readonly latest = new Map<string, ChatRecord>();
     private waiters: Array<{ chatId: string; check(record: ChatRecord): boolean; resolve(): void }> = [];
+    private held: { chatId: string; gate: Promise<void>; entered(): void; landed(): void } | null = null;
+
+    /* Keeps the next write of a chat from reaching the disk until released: a write that is still out. */
+    holdNextWrite(chatId: string): { entered: Promise<void>; release(): void; landed: Promise<void> } {
+        let release: () => void = () => undefined;
+        const gate = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        let entered: () => void = () => undefined;
+        const reached = new Promise<void>((resolve) => {
+            entered = resolve;
+        });
+        let landed: () => void = () => undefined;
+        const written = new Promise<void>((resolve) => {
+            landed = resolve;
+        });
+        this.held = { chatId, gate, entered, landed };
+        return { entered: reached, release, landed: written };
+    }
+
+    override async delete(chatId: string): Promise<void> {
+        this.calls.push(`delete ${chatId}`);
+        await super.delete(chatId);
+    }
 
     override async write(chatId: string, info: ChatInfo, items: ChatItem[], ...rest: ChatStoreWriteRest): Promise<number> {
+        const held = this.held?.chatId === chatId ? this.held : null;
+        if (held !== null) {
+            this.held = null;
+            held.entered();
+            await held.gate;
+        }
         const size = await super.write(chatId, info, items, ...rest);
+        this.calls.push(`write ${chatId}`);
+        held?.landed();
         const record = { info, items };
         this.latest.set(chatId, record);
         const waiting = this.waiters;

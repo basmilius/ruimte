@@ -49,7 +49,7 @@ interface ChatSessionOptions {
     /* What a turn said about the plan it runs on. It belongs to the machine, so it leaves the chat. */
     onLimits?(update: LimitsUpdate): void;
     persist(): void;
-    // A write that may wait a moment: the work of a turn in flight, so a restart loses less than a whole turn.
+    // A write that may wait a moment, for a small change the log already holds.
     persistSoon(): void;
     // The name the CLI gave its session, where it writes one down; absent for a CLI that does not.
     readTitle?(agentSessionId: string): Promise<string | null>;
@@ -176,7 +176,8 @@ export class ChatSession {
      */
     send(text: string, extras: ChatSendExtras = {}): { queued: boolean; turnId: string } {
         const turnId = newId('turn');
-        if (this.busy) {
+        // Behind whatever still waits (a CLI that crashed leaves its queue), so everything goes out in the order it was sent.
+        if (this.busy || this.queue.length > 0) {
             const message: ChatQueuedMessage = {
                 id: newId('queued'),
                 turnId,
@@ -187,6 +188,7 @@ export class ChatSession {
                 ...(extras.attachments?.length ? { attachments: extras.attachments } : {})
             };
             this.setQueue([...this.queue, message]);
+            this.drainQueue();
             return { queued: true, turnId };
         }
         this.dispatch(text, extras, turnId);
@@ -344,7 +346,7 @@ export class ChatSession {
         for (const task of tasks) {
             this.clearedTasks.add(task.id);
         }
-        this.dispose();
+        void this.dispose();
         this.generation += 1;
         this.projector.reset();
         // Null again, so the fresh CLI hears about its links at launch as it would on a first turn.
@@ -601,7 +603,7 @@ export class ChatSession {
         this.backend = null;
         this.starting = null;
         this.restartPending = false;
-        backend?.dispose();
+        void backend?.dispose();
         const now = Date.now();
         const turnId = this.thread.info.activeTurnId;
         const events: ChatEvent[] = [];
@@ -634,14 +636,16 @@ export class ChatSession {
         this.backend?.stop();
     }
 
-    dispose(): void {
+    /* Ends the CLI and everything it started; settles once it exited or was sent the SIGKILL. */
+    dispose(): Promise<void> {
         if (this.titleTimer !== null) {
             clearTimeout(this.titleTimer);
             this.titleTimer = null;
         }
-        this.backend?.dispose();
+        const ended = this.backend?.dispose() ?? Promise.resolve();
         this.backend = null;
         this.starting = null;
+        return ended;
     }
 
     /* What a turn changed against its checkpoint: the stored answer, or one taken now while it runs. */
@@ -1008,9 +1012,6 @@ export class ChatSession {
         }
         if (event.type === 'turn.done' || event.type === 'exit' || event.type === 'failed') {
             this.options.persist();
-        } else if (event.type === 'tool.done' || event.type === 'task.done') {
-            // A background subagent settles between turns; without this its report is only in memory.
-            this.options.persistSoon();
         }
         if (openTurnId !== null && activeTurnId === null) {
             this.settleCheckpoint(openTurnId);

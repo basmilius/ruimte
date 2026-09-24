@@ -250,6 +250,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         nameChat: (provider, input) => suggestChatTitle(providers, provider, input),
         onInterruptedRun: outboxLink.onInterruptedRun,
         taskRows: (chatId) => tasks.ofParent(chatId),
+        dropWakes: (chatId) => tasks.dropWake(chatId),
         endedAt: (chatId) => lineage.endedAt(chatId),
         plans,
         bookmarks

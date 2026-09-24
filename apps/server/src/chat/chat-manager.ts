@@ -131,11 +131,13 @@ interface ChatManagerOptions {
     endedAt?: (chatId: string) => number | null;
     // The tasks a chat gave, so a chat loaded from disk shows a row for each even when a crash lost the write of one.
     taskRows?: (chatId: string) => Task[];
+    // A cleared chat is a conversation that gave no task, so what it gave before wakes it no more; the rows stay for a person.
+    dropWakes?: (chatId: string) => Promise<void>;
     plans?: ChatPlans;
     bookmarks?: BookmarkStore;
 }
 
-// Above this the record is big enough that rewriting it on every tool call costs more than it saves.
+// Above this the record is big enough that rewriting it for every small change costs more than it saves.
 const DEBOUNCE_ABOVE_BYTES = 256 * 1024;
 const DEBOUNCE_MS = 500;
 
@@ -179,6 +181,7 @@ export class ChatManager {
     private readonly onInterruptedRun: ChatManagerOptions['onInterruptedRun'] | null;
     private readonly endedAt: (chatId: string) => number | null;
     private readonly taskRows: (chatId: string) => Task[];
+    private readonly dropWakes: (chatId: string) => Promise<void>;
     private readonly plans: ChatPlans | null;
     private readonly bookmarks: BookmarkStore | null;
     /* Where Claude Code keeps its projects on this machine; empty when it has none. */
@@ -190,6 +193,7 @@ export class ChatManager {
         this.onInterruptedRun = options.onInterruptedRun ?? null;
         this.endedAt = options.endedAt ?? (() => null);
         this.taskRows = options.taskRows ?? (() => []);
+        this.dropWakes = options.dropWakes ?? (() => Promise.resolve());
         this.plans = options.plans ?? null;
         this.bookmarks = options.bookmarks ?? null;
         // Only whoever reads the thread has anything to point a bookmark at, so the list goes where the thread goes.
@@ -762,7 +766,8 @@ export class ChatManager {
             this.persistNow(chatId, true),
             this.attachments.removeAll(chatId),
             this.plans?.removeChat(chatId),
-            this.bookmarks?.removeChat(chatId)
+            this.bookmarks?.removeChat(chatId),
+            this.dropWakes(chatId)
         ]);
     }
 
@@ -801,7 +806,9 @@ export class ChatManager {
     async kill(chatId: string): Promise<void> {
         await this.creating.get(chatId)?.catch(() => undefined);
         const session = this.require(chatId);
-        session.dispose();
+        // A write already out would put the record back after the delete.
+        const writing = this.writes.get(chatId);
+        void session.dispose();
         this.subagents.releaseChat(chatId);
         for (const [key, hold] of this.childHolds) {
             if (hold.parentId === chatId) {
@@ -824,6 +831,7 @@ export class ChatManager {
                 this.tokens.delete(token);
             }
         }
+        await writing;
         await Promise.all([
             this.store?.delete(chatId),
             this.attachments.removeAll(chatId),
@@ -947,7 +955,10 @@ export class ChatManager {
         }
     }
 
-    /* Ends every CLI and writes every thread; used when the daemon goes down. */
+    /*
+     * Writes every thread and ends every CLI, waiting for them as long as the grace of a SIGKILL. A
+     * turn that was running is taken up after the restart, never finished by a CLI nobody hears.
+     */
     async shutdown(): Promise<void> {
         for (const session of this.chats.values()) {
             session.freeze();
@@ -956,6 +967,7 @@ export class ChatManager {
             this.cancelWaiting(chatId);
         }
         await Promise.all([...this.chats.keys()].map((chatId) => this.persistNow(chatId, true)));
+        await Promise.all([...this.chats.values()].map((session) => session.dispose()));
     }
 
     /*
@@ -988,7 +1000,7 @@ export class ChatManager {
         void this.persistNow(chatId).catch((e) => console.error(`Chat record for ${chatId} failed:`, errorText(e)));
     }
 
-    /* A write that may wait: a long thread is not rewritten for every tool call that settles. */
+    /* A write that may wait: a long thread is not rewritten for every small change. */
     private persistSoon(chatId: string): void {
         if ((this.sizes.get(chatId) ?? 0) < DEBOUNCE_ABOVE_BYTES) {
             this.persist(chatId);

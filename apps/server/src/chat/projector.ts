@@ -29,6 +29,13 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 
 const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
+/* A markdown code block around text that may hold backticks of its own. */
+const fenced = (text: string): string => {
+    const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+    const fence = '`'.repeat(Math.max(3, longest + 1));
+    return `${fence}\n${text}\n${fence}`;
+};
+
 // The Agent tool is what Claude Code calls a delegation; older builds and other CLIs say Task.
 const isSubagentCall = (event: Extract<BackendEvent, { type: 'tool.started' }>): boolean =>
     event.parentRef === null && (event.name === 'Agent' || event.name === 'Task');
@@ -308,7 +315,7 @@ export class ThreadProjector {
                 events.push(this.thread.patchInfo({ status: 'error', activeTurnId: null }));
                 break;
             case 'exit':
-                this.finishProcess(event.exitCode, events);
+                this.finishProcess(event.exitCode, event.stderr ?? null, events);
                 break;
         }
         return events;
@@ -728,11 +735,13 @@ export class ThreadProjector {
         );
     }
 
-    private finishProcess(exitCode: number | null, events: ChatEvent[]): void {
+    private finishProcess(exitCode: number | null, stderr: string | null, events: ChatEvent[]): void {
         this.settleOpenItems(events, true);
         const busy = this.thread.info.status === 'running' || this.thread.info.status === 'needs-you';
         if (busy || (exitCode !== null && exitCode !== 0)) {
-            events.push(this.note('error', exitCode === null ? `${this.providerName} stopped` : `${this.providerName} exited with code ${exitCode}`));
+            const reason = exitCode === null ? `${this.providerName} stopped` : `${this.providerName} exited with code ${exitCode}`;
+            // A note shows its first line and folds the rest open as markdown.
+            events.push(this.note('error', stderr === null ? reason : `${reason}\n\n${fenced(stderr)}`));
         }
         this.closeTurn(busy ? 'error' : 'done', 0, events);
         // Whatever ran beside the turns went with the process.

@@ -47,6 +47,15 @@ const idle = () => recorder.info?.status === 'idle' && recorder.info.running && 
 
 const crashed = () => recorder.info?.running === false && recorder.info.status === 'error';
 
+const alive = (pid: number): boolean => {
+    try {
+        process.kill(pid, 0);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
 describe('ChatManager over real processes', () => {
     test('Claude Code answers over its pipes and a crash reports the exit code', async () => {
         await manager.create({ chatId: 'chat-claude', cwd: home });
@@ -59,6 +68,34 @@ describe('ChatManager over real processes', () => {
         await manager.send('chat-claude', 'crash');
         await waitFor(crashed, 'the Claude process to exit');
         expect(recorder.ofKind('note').at(-1)).toMatchObject({ level: 'error', text: 'Claude Code exited with code 1' });
+    });
+
+    test('a crash says what Claude Code wrote on stderr last, read to the end of the pipe', async () => {
+        await manager.create({ chatId: 'chat-loud', cwd: home });
+        manager.attach('chat-loud', 'c1');
+        await manager.send('chat-loud', 'crash loudly');
+        await waitFor(crashed, 'the Claude process to exit');
+        const note = recorder.ofKind('note').at(-1);
+        expect(note?.text.startsWith('Claude Code exited with code 1\n\n```\n')).toBe(true);
+        expect(note?.text.endsWith('Error: the fake lost its key\n    at handleUser (fake-claude.ts)\n```')).toBe(true);
+    });
+
+    test('a disposed chat takes along what its CLI started, not only the CLI', async () => {
+        await manager.create({ chatId: 'chat-tree', cwd: home });
+        manager.attach('chat-tree', 'c1');
+        await manager.send('chat-tree', 'start a grandchild');
+        await waitFor(idle, 'the Claude turn to end');
+        const pid = Number(/^grandchild (\d+)$/.exec(recorder.ofKind('assistant')[0]?.text ?? '')?.[1]);
+        expect(alive(pid)).toBe(true);
+        try {
+            await manager.get('chat-tree')!.dispose();
+            // Reaped by whoever adopts it, which takes a moment after the signal.
+            await waitFor(() => !alive(pid), 'the grandchild to go');
+        } finally {
+            if (alive(pid)) {
+                process.kill(pid, 'SIGKILL');
+            }
+        }
     });
 
     test('Codex answers over its pipes and a crash reports the exit code', async () => {
