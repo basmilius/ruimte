@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { CONTENT_SECURITY_POLICY, withSecurityHeaders } from './headers';
+import { CONTENT_SECURITY_POLICY, notFoundForMissingAsset, withSecurityHeaders } from './headers';
 
 const directive = (name: string): string[] =>
     CONTENT_SECURITY_POLICY.split(';')
@@ -39,5 +39,17 @@ describe('the station headers', () => {
         expect(missing.status).toBe(404);
         expect(missing.headers.get('cache-control')).toBeNull();
         expect(missing.headers.get('content-security-policy')).toBe(CONTENT_SECURITY_POLICY);
+    });
+
+    test('a chunk that is gone is a 404, never the page cached as that chunk', () => {
+        const page = (): Response => new Response('<!doctype html>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
+
+        const gone = withSecurityHeaders(notFoundForMissingAsset(page(), '/assets/WorkspaceShell-old.js'), '/assets/WorkspaceShell-old.js');
+        expect(gone.status).toBe(404);
+        expect(gone.headers.get('cache-control')).toBeNull();
+
+        expect(notFoundForMissingAsset(page(), '/pulsar/callback').status).toBe(200);
+        const chunk = new Response('x', { headers: { 'content-type': 'text/javascript' } });
+        expect(notFoundForMissingAsset(chunk, '/assets/index-abc123.js')).toBe(chunk);
     });
 });

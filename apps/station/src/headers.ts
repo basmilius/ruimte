@@ -42,3 +42,14 @@ export const withSecurityHeaders = (response: Response, pathname: string): Respo
     }
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 };
+
+/*
+ * A path under `/assets/` that is no file would get the page from `not_found_handling`, cached for a year
+ * as if it were that chunk. A tab left open over a deploy asks for a chunk that is gone, and has to see it fail.
+ */
+export const notFoundForMissingAsset = (response: Response, pathname: string): Response => {
+    if (!pathname.startsWith('/assets/') || !response.headers.get('content-type')?.startsWith('text/html')) {
+        return response;
+    }
+    return new Response('Not found', { status: 404, headers: { 'content-type': 'text/plain' } });
+};

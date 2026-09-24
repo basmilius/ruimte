@@ -1,4 +1,4 @@
-import { withSecurityHeaders } from './headers.ts';
+import { notFoundForMissingAsset, withSecurityHeaders } from './headers.ts';
 
 interface Env {
     ASSETS: Fetcher;
@@ -16,6 +16,6 @@ export default {
             url.protocol = 'https:';
             return Response.redirect(url.toString(), 301);
         }
-        return withSecurityHeaders(await env.ASSETS.fetch(request), url.pathname);
+        return withSecurityHeaders(notFoundForMissingAsset(await env.ASSETS.fetch(request), url.pathname), url.pathname);
     }
 } satisfies ExportedHandler<Env>;
