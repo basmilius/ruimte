@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { createPublicKey, verify } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileSessionKey, fileSessionStore, type StringCipher } from './pulsar-store';
@@ -101,9 +101,34 @@ describe('fileSessionKey', () => {
         expect((await fileSessionKey(path, fakeCipher(false))()).publicKey).not.toBe(first.publicKey);
     });
 
-    test('a key file that will not decrypt is replaced by a new key', async () => {
+    test('a keychain that refuses to decrypt leaves the key file alone and signs with a key in memory', async () => {
+        const first = await fileSessionKey(path, fakeCipher())();
+        const onDisk = readFileSync(path);
+        const refusing: StringCipher = {
+            ...fakeCipher(),
+            decryptString: () => {
+                throw new Error('The user name or passphrase you entered is not correct.');
+            }
+        };
+        const load = fileSessionKey(path, refusing);
+        const inMemory = await load();
+        expect(inMemory.publicKey).not.toBe(first.publicKey);
+        expect((await load()).publicKey).toBe(inMemory.publicKey);
+        expect(readFileSync(path)).toEqual(onDisk);
+        expect((await fileSessionKey(path, fakeCipher())()).publicKey).toBe(first.publicKey);
+    });
+
+    test('a key file that will not decrypt stays as it is', async () => {
         writeFileSync(path, 'not a key');
         const signer = await fileSessionKey(path, fakeCipher())();
-        expect((await fileSessionKey(path, fakeCipher())()).publicKey).toBe(signer.publicKey);
+        expect(signer.publicKey).toMatch(/^[A-Za-z0-9_-]{43}$/);
+        expect(readFileSync(path, 'utf8')).toBe('not a key');
+    });
+
+    test('a key file that cannot be read is not written over', async () => {
+        mkdirSync(path);
+        const signer = await fileSessionKey(path, fakeCipher())();
+        expect(signer.publicKey).toMatch(/^[A-Za-z0-9_-]{43}$/);
+        expect(statSync(path).isDirectory()).toBe(true);
     });
 });

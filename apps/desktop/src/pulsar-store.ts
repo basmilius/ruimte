@@ -71,28 +71,41 @@ const signerOf = (privateKey: KeyObject): SessionSigner => ({
     sign: async (message) => sign(null, Buffer.from(message), privateKey).toString('base64url')
 });
 
+/* A key for this run only; a session bound to it signs in again on the next start. */
+const keyInMemory = (): SessionSigner => signerOf(generateKeyPairSync('ed25519').privateKey);
+
 /*
  * The key the shell's session is bound to: every refresh is signed with it, so the refresh token in the
  * file beside it opens nothing on another computer. Made once and kept encrypted like the session, in a
  * file of its own so signing out leaves it. Without encryption it lives in memory, like the session does.
+ * Only a missing file makes a new one: a keychain that refused once (a declined prompt after an update)
+ * may answer on the next start, and a key written over the old one would end that session for good.
  */
 export const fileSessionKey = (path: string, cipher: StringCipher): (() => Promise<SessionSigner>) => {
     let held: Promise<SessionSigner> | null = null;
 
-    const load = async (): Promise<SessionSigner> => {
-        if (cipher.isEncryptionAvailable()) {
-            try {
-                const der = Buffer.from(cipher.decryptString(await readFile(path)), 'base64url');
-                return signerOf(createPrivateKey({ key: der, format: 'der', type: 'pkcs8' }));
-            } catch {
-                // No key yet, or one another keychain wrote: a new one, and a session bound to the old one signs in again.
-            }
-        }
+    const createKeyFile = async (): Promise<SessionSigner> => {
         const { privateKey } = generateKeyPairSync('ed25519');
-        if (cipher.isEncryptionAvailable()) {
-            await writeEncrypted(path, cipher, privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64url'));
-        }
+        await writeEncrypted(path, cipher, privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64url'));
         return signerOf(privateKey);
+    };
+
+    const load = async (): Promise<SessionSigner> => {
+        if (!cipher.isEncryptionAvailable()) {
+            return keyInMemory();
+        }
+        let encrypted: Buffer;
+        try {
+            encrypted = await readFile(path);
+        } catch (e) {
+            return (e as NodeJS.ErrnoException).code === 'ENOENT' ? createKeyFile() : keyInMemory();
+        }
+        try {
+            const der = Buffer.from(cipher.decryptString(encrypted), 'base64url');
+            return signerOf(createPrivateKey({ key: der, format: 'der', type: 'pkcs8' }));
+        } catch {
+            return keyInMemory();
+        }
     };
 
     return () => {
