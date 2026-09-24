@@ -72,6 +72,10 @@ export class TransportPool {
                 return;
             }
             released = true;
+            // A hold on a socket that was dropped or replaced since has nothing left to let go of.
+            if (this.byId.get(entry.endpointId) !== entry) {
+                return;
+            }
             entry.holds -= 1;
             this.arm(entry);
         };
@@ -97,7 +101,10 @@ export class TransportPool {
         if (!entry || oldId === newId) {
             return;
         }
-        this.byId.get(newId)?.transport.dispose();
+        const replaced = this.byId.get(newId);
+        if (replaced) {
+            this.retire(replaced);
+        }
         this.byId.delete(oldId);
         this.byId.set(newId, entry);
         entry.endpointId = newId;
@@ -116,7 +123,10 @@ export class TransportPool {
 
     /* Closes the socket and forgets it; what a forgotten or revoked endpoint gets. */
     drop(endpointId: string): void {
-        this.close(endpointId);
+        const entry = this.byId.get(endpointId);
+        if (entry) {
+            this.close(entry);
+        }
     }
 
     statusOf(endpointId: string): ConnectionState {
@@ -178,23 +188,29 @@ export class TransportPool {
         }
         entry.idleTimer = setTimeout(() => {
             entry.idleTimer = null;
-            this.close(entry.endpointId);
+            this.close(entry);
         }, this.idleMs);
     }
 
-    private close(endpointId: string): void {
-        const entry = this.byId.get(endpointId);
-        if (!entry) {
+    /* By identity: the id may meanwhile name a newer socket, which is not this one to close. */
+    private close(entry: Entry): void {
+        if (this.byId.get(entry.endpointId) !== entry) {
             return;
         }
+        this.byId.delete(entry.endpointId);
+        this.retire(entry);
+        this.resnapshot();
+        this.emit(entry.endpointId);
+    }
+
+    /* Ends a socket that is out of the map, with nothing of it left to fire. */
+    private retire(entry: Entry): void {
         if (entry.idleTimer) {
             clearTimeout(entry.idleTimer);
+            entry.idleTimer = null;
         }
         entry.offStatus();
-        this.byId.delete(endpointId);
         entry.transport.dispose();
-        this.resnapshot();
-        this.emit(endpointId);
     }
 
     private resnapshot(): void {

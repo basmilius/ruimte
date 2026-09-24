@@ -217,6 +217,40 @@ describe('TransportPool', () => {
         expect(pool.peek('a')).toBeNull();
     });
 
+    test('a hold released after its machine was forgotten and paired again leaves the new socket alone', async () => {
+        const { pool, opened } = setup(1_000);
+        const stale = pool.hold(endpoint('a'));
+        pool.drop('a');
+        pool.hold(endpoint('a'));
+
+        stale();
+        jest.advanceTimersByTime(1_000);
+        await idle();
+
+        expect(opened).toHaveLength(2);
+        expect(opened[1]?.disposed).toBe(false);
+        expect(pool.peek('a')).toBe(opened[1]!);
+    });
+
+    test('a rekey onto a waiting socket ends it, and its countdown and status go with it', async () => {
+        const { pool, opened } = setup(1_000);
+        pool.hold(endpoint('daemon-b'))();
+        pool.hold(endpoint('10.0.0.4:4210'));
+        const heard: TransportStatus[] = [];
+        pool.subscribeStatus('daemon-b', (status) => heard.push(status));
+
+        pool.rekey('10.0.0.4:4210', 'daemon-b', 'ws://10.0.0.4:4210/ws');
+        heard.length = 0;
+        opened[0]!.setStatus('closed');
+        jest.advanceTimersByTime(1_000);
+        await idle();
+
+        expect(opened[0]?.disposed).toBe(true);
+        expect(opened[1]?.disposed).toBe(false);
+        expect(pool.peek('daemon-b')).toBe(opened[1]!);
+        expect(heard).toEqual([]);
+    });
+
     test('a machine hears only its own status, and the pool hears every one', () => {
         const { pool, opened } = setup();
         pool.hold(endpoint('a'));
