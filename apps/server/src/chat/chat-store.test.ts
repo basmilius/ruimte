@@ -76,6 +76,17 @@ describe('ChatStore', () => {
         expect(record?.lines).toHaveLength(1);
     });
 
+    test('knows a chat by its record or its log alone', async () => {
+        expect(await store.has('chat')).toBe(false);
+        logEvents([{ type: 'item', item: user('u1', 'hi') }]);
+        expect(await store.has('chat')).toBe(true);
+        await rm(store.logPath('chat'));
+        await store.write('chat', info(), [user('u1', 'hi')]);
+        expect(await store.has('chat')).toBe(true);
+        await store.delete('chat');
+        expect(await store.has('chat')).toBe(false);
+    });
+
     test('a reset in the log empties the thread and says where it happened', async () => {
         await store.write('chat', info(), [user('u1', 'old')], { seq: 3, resetSeq: 0 });
         logEvents(

@@ -1,5 +1,5 @@
 import { mkdirSync } from 'node:fs';
-import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ChatInfoSchema, ChatItemSchema, type ChatInfo, type ChatItem } from '@ruimte/contracts';
 import { z } from 'zod';
@@ -81,9 +81,10 @@ export class ChatStore {
         return [...new Set(ids)];
     }
 
-    /* Whether anything of the chat is on disk that `read` could make a thread of. */
+    /* Whether anything of the chat is on disk, without reading it: a record or a log. */
     async has(chatId: string): Promise<boolean> {
-        return (await this.read(chatId)) !== null;
+        const found = await Promise.all([exists(join(this.dir, recordFileName(chatId))), exists(this.logPath(chatId))]);
+        return found.includes(true);
     }
 
     /* Removes a log no record can be made of and answers the last seq it handed out, zero without one. */
@@ -173,6 +174,18 @@ export class ChatStore {
         await Promise.all([rm(join(this.dir, recordFileName(chatId)), { force: true }), rm(this.logPath(chatId), { force: true })]);
     }
 }
+
+const exists = async (path: string): Promise<boolean> => {
+    try {
+        await stat(path);
+        return true;
+    } catch (e) {
+        if (isNotFound(e)) {
+            return false;
+        }
+        throw e;
+    }
+};
 
 const readOrNull = async (path: string): Promise<string | null> => {
     try {
