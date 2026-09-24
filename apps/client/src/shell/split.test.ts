@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectView, SplitLayout } from '@ruimte/contracts';
-import { EVEN_SNAP_PX, evenCells, evenColumns, maximizedCell, snapToEven } from './split';
+import { draggedSizes, EVEN_SNAP_PX, evenCells, evenColumns, maximizedCell, snapToEven } from './split';
 import {
     canSplit,
     cellAt,
@@ -536,5 +536,27 @@ describe('closeCellsRightOf', () => {
     test('the last column has nothing to its right', () => {
         const layout = gridOf([['a'], ['b']]);
         expect(closeCellsRightOf(layout, { column: 1, cell: 0 })).toBe(layout);
+    });
+});
+
+describe('draggedSizes', () => {
+    const rounded = (sizes: number[]): number[] => sizes.map((size) => Math.round(size * 1000) / 1000);
+
+    test('moves only the two neighbors of the splitter', () => {
+        expect(rounded(draggedSizes([0.3, 0.4, 0.3], 1, 0.1, 1000, false))).toEqual([0.4, 0.3, 0.3]);
+    });
+
+    test('with Option the mirroring splitter moves the other way, around the middle item', () => {
+        expect(rounded(draggedSizes([0.3, 0.4, 0.3], 1, 0.05, 1000, true))).toEqual([0.35, 0.3, 0.35]);
+        expect(rounded(draggedSizes([0.3, 0.4, 0.3], 2, 0.05, 1000, true))).toEqual([0.25, 0.5, 0.25]);
+    });
+
+    test('two items have no mirror, so Option drags as usual', () => {
+        expect(rounded(draggedSizes([0.5, 0.5], 1, 0.1, 1000, true))).toEqual([0.6, 0.4]);
+    });
+
+    test('a mirrored drag stops where an item would get too small', () => {
+        expect(rounded(draggedSizes([0.3, 0.4, 0.3], 1, 0.5, 1000, true))).toEqual([0.425, 0.15, 0.425]);
+        expect(rounded(draggedSizes([0.3, 0.4, 0.3], 1, -0.5, 1000, true))).toEqual([0.15, 0.7, 0.15]);
     });
 });

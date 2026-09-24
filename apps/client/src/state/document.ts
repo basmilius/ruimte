@@ -148,9 +148,9 @@ export interface DocumentState {
     toggleMaximized(): void;
     /* The focus one cell along, which is how a grid is navigated: by direction, never by number. */
     focusTowards(direction: SplitDirection): void;
-    /* A splitter dragged between two columns or two cells; the shares are of the axis they share. */
-    resizeColumns(at: number, before: number, after: number): void;
-    resizeCells(column: number, at: number, before: number, after: number): void;
+    /* A splitter dragged between columns or cells: every share on that axis, in order. */
+    resizeColumns(sizes: readonly number[]): void;
+    resizeCells(column: number, sizes: readonly number[]): void;
     /* A double click on a splitter: its two neighbors even out, or with `all` every column, or every cell of the column. */
     evenColumns(at: number, all: boolean): void;
     evenCells(column: number, at: number, all: boolean): void;
@@ -684,27 +684,23 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             },
 
             /* A drag is not a move of the grid, since no editor opens or closes, so it sets the sizes alone. */
-            resizeColumns(at, before, after) {
+            resizeColumns(sizes) {
                 set((state) => {
-                    if (state.layout === null || at <= 0 || at >= state.layout.columns.length) {
+                    if (state.layout === null || sizes.length !== state.layout.columns.length) {
                         return {};
                     }
-                    const columns = state.layout.columns.map((column, index) =>
-                        index === at - 1 ? { ...column, size: before } : index === at ? { ...column, size: after } : column
-                    );
+                    const columns = state.layout.columns.map((column, index) => ({ ...column, size: sizes[index]! }));
                     return { layout: { ...state.layout, columns } };
                 });
             },
 
-            resizeCells(column, at, before, after) {
+            resizeCells(column, sizes) {
                 set((state) => {
                     const held = state.layout?.columns[column];
-                    if (!state.layout || !held || at <= 0 || at >= held.cells.length) {
+                    if (!state.layout || !held || sizes.length !== held.cells.length) {
                         return {};
                     }
-                    const cells = held.cells.map((cell, index) =>
-                        index === at - 1 ? { ...cell, size: before } : index === at ? { ...cell, size: after } : cell
-                    );
+                    const cells = held.cells.map((cell, index) => ({ ...cell, size: sizes[index]! }));
                     const columns = state.layout.columns.map((candidate, index) => (index === column ? { ...candidate, cells } : candidate));
                     return { layout: { ...state.layout, columns } };
                 });

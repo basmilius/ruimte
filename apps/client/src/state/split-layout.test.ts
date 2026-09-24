@@ -187,14 +187,14 @@ describe('deleting a view that is in a cell', () => {
 describe('resizing', () => {
     test('a drag between two columns moves the share and nothing else', () => {
         useDocument.getState().splitFocused('right', 'b');
-        useDocument.getState().resizeColumns(1, 0.7, 0.3);
+        useDocument.getState().resizeColumns([0.7, 0.3]);
         expect(useDocument.getState().layout?.columns.map((column) => column.size)).toEqual([0.7, 0.3]);
         expect(shape()).toEqual([['a'], ['b']]);
     });
 
     test('a drag between two cells of one column moves those two', () => {
         useDocument.getState().splitFocused('down', 'b');
-        useDocument.getState().resizeCells(0, 1, 0.25, 0.75);
+        useDocument.getState().resizeCells(0, [0.25, 0.75]);
         expect(useDocument.getState().layout?.columns[0]?.cells.map((cell) => cell.size)).toEqual([0.25, 0.75]);
     });
 });
@@ -204,7 +204,7 @@ describe('maximizing a cell', () => {
 
     test('fills the grid with the focused cell and gives the very same grid back', () => {
         useDocument.getState().splitFocused('right', 'b');
-        useDocument.getState().resizeColumns(1, 0.7, 0.3);
+        useDocument.getState().resizeColumns([0.7, 0.3]);
         const before = useDocument.getState().layout;
         useDocument.getState().toggleMaximized();
         expect(maximized()).toBe('b');
@@ -222,7 +222,7 @@ describe('maximizing a cell', () => {
     test('any move of the grid ends it, and a splitter drag does not', () => {
         useDocument.getState().splitFocused('right', 'b');
         useDocument.getState().toggleMaximized();
-        useDocument.getState().resizeColumns(1, 0.6, 0.4);
+        useDocument.getState().resizeColumns([0.6, 0.4]);
         expect(maximized()).toBe('b');
         useDocument.getState().splitFocused('down', 'c');
         expect(maximized()).toBeNull();

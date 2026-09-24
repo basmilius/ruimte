@@ -9,7 +9,7 @@ import { useCellView } from '@/shell/use-cell-view';
 import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
 import { useDocument } from '@/state/document';
 import { CellViewContext } from '@/state/workspace-stores';
-import { canSplit, cellCount, isSameCell, locateView, maximizedCell, snapToEven, type CellAt, type SplitZone } from '@/shell/split';
+import { canSplit, cellCount, isSameCell, locateView, draggedSizes, maximizedCell, type CellAt, type SplitZone } from '@/shell/split';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { FLOAT } from '@/ui/classes';
 import { Kbd } from '@/ui/Kbd';
@@ -22,7 +22,6 @@ import { Dock } from '@/shell/Dock';
 import { CellOverlay } from '@/shell/CellOverlay';
 
 /* The smallest a cell may be dragged to, as a share of its axis. Below this nothing in it is legible. */
-const MIN_SHARE = 0.15;
 
 /*
  * What a surface inside a cell says about the paths dropped on it, so the grid does not carry a list
@@ -34,31 +33,31 @@ const takesDrop = (target: EventTarget | null): string | null =>
     (target as HTMLElement | null)?.closest?.('[data-takes-drop]')?.getAttribute('data-takes-drop') ?? null;
 
 /*
- * Dragging the line between two columns or two cells. Sizes are shares of an axis rather than pixels,
+ * Dragging the line in front of item `at` of an axis. Sizes are shares of an axis rather than pixels,
  * so the grid keeps its proportions when the window changes size; the drag measures against the box
- * the two neighbors share, which is the only place a share can be turned back into a pointer position.
+ * the items share, which is the only place a share can be turned back into a pointer position.
+ * Option is read on every move, so it can be pressed or let go halfway through a drag.
  */
 const splitDrag = (
     axis: 'x' | 'y',
-    before: number,
-    after: number,
-    onShares: (before: number, after: number) => void
+    sizes: readonly number[],
+    at: number,
+    onSizes: (sizes: number[]) => void
 ): ((event: ReactPointerEvent<HTMLElement>) => void) => {
     return (event: ReactPointerEvent<HTMLElement>): void => {
         event.preventDefault();
         const handle = event.currentTarget;
-        // The splitter's parent is the box the two neighbors share, which is what a share is a share of.
+        // The splitter's parent is the box the items share, which is what a share is a share of.
         const box = handle.parentElement?.getBoundingClientRect();
         const span = axis === 'x' ? (box?.width ?? 0) : (box?.height ?? 0);
         if (span === 0) {
             return;
         }
         const start = axis === 'x' ? event.clientX : event.clientY;
-        const total = before + after;
+        const total = sizes.reduce((sum, size) => sum + size, 0);
         const onMove = (move: PointerEvent): void => {
-            const moved = ((axis === 'x' ? move.clientX : move.clientY) - start) / span;
-            const next = snapToEven(Math.max(MIN_SHARE * total, Math.min(total - MIN_SHARE * total, before + moved)), total, span);
-            onShares(next, total - next);
+            const moved = (((axis === 'x' ? move.clientX : move.clientY) - start) / span) * total;
+            onSizes(draggedSizes(sizes, at, moved, span / total, move.altKey));
         };
         const onUp = (): void => {
             handle.removeEventListener('pointermove', onMove);
@@ -71,7 +70,8 @@ const splitDrag = (
     };
 };
 
-/* A double click evens out the two neighbors, and with Option every column, or every cell of the column. */
+/* A double click evens out the two neighbors, and with Option every column, or every cell of the column.
+   Dragging with Option moves the mirroring splitter along, the other way. */
 function Splitter({
     axis,
     hidden,
@@ -353,7 +353,12 @@ function Column({ layout, at, maximized }: { layout: SplitLayout; at: number; ma
        side drop reaches across the whole column and the indicator is drawn against that box. */
     const [drop, setDrop] = useState<{ zone: SplitZone; box: { top: number; height: number } } | null>(null);
     const resize = (cell: number): ((event: ReactPointerEvent<HTMLElement>) => void) =>
-        splitDrag('y', column.cells[cell - 1]!.size, column.cells[cell]!.size, (before, after) => useDocument.getState().resizeCells(at, cell, before, after));
+        splitDrag(
+            'y',
+            column.cells.map((entry) => entry.size),
+            cell,
+            (sizes) => useDocument.getState().resizeCells(at, sizes)
+        );
     return (
         /* Not positioned while a cell is maximized, so that cell is drawn against the whole grid. */
         <div
@@ -411,8 +416,11 @@ export function SplitGrid(): ReactElement | null {
     }
     const maximized = maximizedCell(layout, maximizedId);
     const resize = (column: number): ((event: ReactPointerEvent<HTMLElement>) => void) =>
-        splitDrag('x', layout.columns[column - 1]!.size, layout.columns[column]!.size, (before, after) =>
-            useDocument.getState().resizeColumns(column, before, after)
+        splitDrag(
+            'x',
+            layout.columns.map((entry) => entry.size),
+            column,
+            (sizes) => useDocument.getState().resizeColumns(sizes)
         );
     return (
         /* Isolated, so a maximized cell stands over its neighbors and never over the parked pages. */
