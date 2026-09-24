@@ -20,8 +20,8 @@ larger ones becomes a GitHub issue when it starts.
 4. **A third chat provider** (Gemini, Copilot or opencode) as the proof that the backend seam
    holds: a provider value, a backend and a protocol mapper, plus one literal in `AgentKind`.
    Hooks for Gemini and Copilot are a day per CLI on top. Two things come before it. The iPhone
-   app with open enums (I1 in `docs/reports/2026-09-24-codebase-review.html`: `AgentKind`,
-   `RuntimeMode` and `AgentStatus` are `x-open-enum` in `schemas.json`) has to be out in an iOS
+   app with open enums (`AgentKind`, `RuntimeMode` and `AgentStatus` are `x-open-enum` in
+   `schemas.json`, since 1a42876c) has to be out in an iOS
    release first, since an older build refuses a whole answer over one value it does not know. And
    the desktop client validates `AgentKind` with zod just as closed, so a newer machine elsewhere
    with a third provider breaks the desktop the same way. Decide how it reads an unknown provider
