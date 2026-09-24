@@ -103,6 +103,15 @@ if (values.os === 'mac') {
     const speechHelper = join(nativeDir, 'speech-bridge');
     await copyFile(join(speechRoot, 'target', rustTarget, 'release', 'speech-bridge'), speechHelper);
     await chmod(speechHelper, 0o755);
+
+    // The desktop build moves `Helpers` out of the daemon's folder into the app's own; see electron-builder.yml.
+    const computerUseBuild = Bun.spawnSync(
+        ['bun', resolve(root, '../computer-use/scripts/build.ts'), '--variant', 'release', '--arch', values.arch, '--outdir', join(outDir, 'Helpers')],
+        { cwd: root, stdio: ['ignore', 'inherit', 'inherit'] }
+    );
+    if (computerUseBuild.exitCode !== 0) {
+        process.exit(computerUseBuild.exitCode);
+    }
 }
 
 if (values.os === 'mac' || values.os === 'linux') {

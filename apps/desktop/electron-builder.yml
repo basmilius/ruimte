@@ -14,6 +14,7 @@ extraResources:
     to: client
   - from: ../server/dist/${os}-${arch}
     to: bin
+    filter: ['**/*', '!Helpers{,/**/*}']
 asar: true
 afterPack: build/after-pack.cjs
 npmRebuild: false
@@ -38,6 +39,14 @@ mac:
     - Contents/Resources/bin/ruimte
     - Contents/Resources/bin/native/ios-device-bridge
     - Contents/Resources/bin/native/speech-bridge
+  # The computer use helper is an app of its own, because macOS attaches Accessibility and Screen Recording
+  # to a bundle. Contents/Helpers is where a bundle expects a nested app: codesign signs and verifies it
+  # there as nested code, where under Resources it would only be sealed as files. `build/sign.cjs` signs it
+  # with its own entitlements.
+  extraFiles:
+    - from: ../server/dist/${os}-${arch}/Helpers
+      to: Helpers
+  sign: build/sign.cjs
   # `bun scripts/icon.ts` writes both out of `assets/AppIcon.icon`. The catalog is what macOS 26 reads
   # for the light, dark, tinted and clear renderings; the icns only serves whoever asks for a file.
   icon: build/icon/AppIcon.icns

@@ -16,6 +16,9 @@ module.exports = async (context) => {
     if (context.electronPlatformName === 'darwin' && !existsSync(join(resources, 'bin', 'native', 'speech-bridge'))) {
         throw new Error('No speech helper; compile the server resources for this os and arch first');
     }
+    if (context.electronPlatformName === 'darwin' && !existsSync(join(resources, '..', 'Helpers', 'Ruimte Computer Use.app', 'Contents', 'MacOS', 'RuimteComputerUse'))) {
+        throw new Error('No computer use helper; compile the server resources for this os and arch first');
+    }
     if (!existsSync(join(resources, 'client', 'index.html'))) {
         throw new Error('No built client; run `bun run --cwd apps/client build` first');
     }

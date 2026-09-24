@@ -65,6 +65,15 @@ daemon.
 The daemon is not a helper Electron knows about, so `mac.binaries` names it. Without that line it
 ships unsigned inside a signed app and Apple refuses the notarization.
 
+The computer use helper is an app of its own in `Contents/Helpers` (`apps/computer-use/README.md`).
+electron-builder finds and signs it by itself, but through `build/sign.cjs`, which gives it the empty
+entitlements in `apps/computer-use/Resources/entitlements.plist` instead of the shell's. Its signature
+should read `flags=0x10000(runtime)`, a `Timestamp` and no entitlements:
+
+```sh
+codesign -dv --entitlements - "apps/desktop/release/mac-arm64/Ruimte.app/Contents/Helpers/Ruimte Computer Use.app"
+```
+
 After a build, three commands say whether it is sound:
 
 ```sh
