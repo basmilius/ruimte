@@ -26,8 +26,8 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   Unsaved drawing drafts persist locally for recovery.
 - SwiftTerm terminals with snapshots, output, resync, keyboard controls and paste confirmation.
   `session.attach` uses `follow:true` so opening a phone never resizes the desktop PTY.
-  A command from the project file that nobody on the machine approved yet waits above the
-  terminal as "Run bun dev?" until a tap on Run (`heldCommand`, `session.runHeld`).
+  A command from the project file that nobody on the machine has approved yet waits above the
+  terminal as "Run bun dev?" until someone taps Run (`heldCommand`, `session.runHeld`).
 - File and media previews, filesystem updates, usage and machine access management.
   Destructive actions require confirmation.
 - Git over every repository a project folder holds: the one the folder is in, its initialized
@@ -225,8 +225,8 @@ GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
   changes. Liveness reads libwebrtc transport packets rather than ping replies.
 - Normal ICE selection prefers a usable direct route, as in the existing clients. TURN
   supplies a fallback when direct candidates cannot connect. Relay-only is off by default
-  and is available solely through the test app's diagnostic switch, which holds a link of its
-  own (`diagnostic:<machine id>`) and turns off again when the screen goes away.
+  and is available only through the test app's diagnostic switch. That switch holds a link of
+  its own (`diagnostic:<machine id>`) and turns off again when its screen closes.
 - A machine first admits the device with an account statement. After the pinned channel
   handshake succeeds, the app persists that pairing in local preferences, bound to the
   machine ID and both public keys. Later attempts omit the statement and need no account
@@ -240,14 +240,14 @@ GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
   of the daemon's own schemas as Swift enums (agent, task, plan and chat), with the plan markers,
   so a switch over one stops compiling when a case is added; their object schemas stay out, since a
   plan step holds its own sub-steps and the resulting `$ref` is not resolved here.
-  `AgentKind`, `RuntimeMode` and `AgentStatus` are open on the wire: their API schemas carry
-  `x-open-enum` instead of `enum`, so a newer machine's word passes validation and the app falls
-  back to a generic name and mark, while the Swift enums stay closed for switches.
+  `AgentKind`, `RuntimeMode` and `AgentStatus` are open on the wire. Their API schemas carry
+  `x-open-enum` instead of `enum`, so a value from a newer machine passes validation and the app
+  shows a generic name and mark for it. The Swift enums stay closed for switches.
   `bun run check` refuses stale output.
-  `MachineClient` correlates responses, times out reads only (a mutation ends when the link closes),
-  rejects pending requests on disconnect, hands an event it cannot validate to rejected-event
-  subscribers (a chat attaches again once), shares subscriptions/attachments and reads versioned
-  resources in chunks.
+  `MachineClient` correlates responses and rejects pending requests on disconnect. It times out
+  reads only, since a mutation ends when the link closes. An event it cannot validate goes to
+  rejected-event subscribers, and a chat then attaches again, once. It shares subscriptions and
+  attachments and reads versioned resources in chunks.
 - Required nullable fields, optional fields and optional nullable fields remain distinct.
   `Presence` represents missing, null and value when all three occur. The validator strips
   unknown object keys like Zod. The statement lifetime refinement is an explicit generator

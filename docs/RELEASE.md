@@ -124,8 +124,9 @@ stays out of the app, but not out of the feed: a pushed tag whose release is sti
 appears in `releases.atom`.
 
 The `publish` job publishes the draft once `verify` (every job of `ci.yml`, run on the tagged commit)
-and every build succeed, as Latest, or as a
-prerelease for a tag with a `-` in it; the build is not downloaded to try the daemon in it first. If a release does turn out broken on start, that is where to look: start
+and every build succeed. It publishes as Latest, or as a prerelease for a tag with a `-` in it, and
+it does not download the build to try the daemon in it first. If a release does turn out broken on
+start, that is where to look: start
 `Contents/Resources/bin/ruimte` from the arm64 zip with a temporary `RUIMTE_HOME` and another port,
 wait for `/health`, then open a socket with `?protocol=N&token=<local.key>` and check that
 `endpoint.info` carries `protocol`. v0.0.12 shipped a daemon that crashed on start (tsyringe loaded
