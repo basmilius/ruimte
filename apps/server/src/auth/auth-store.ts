@@ -303,7 +303,7 @@ export class AuthStore {
         const text = `${JSON.stringify(state, null, 2)}\n`;
         await this.writes.run(async () => {
             await mkdir(join(this.path, '..'), { recursive: true, mode: 0o700 });
-            await writeAtomic(this.path, text);
+            await writeAtomic(this.path, text, 0o600, { durable: true });
         });
     }
 }

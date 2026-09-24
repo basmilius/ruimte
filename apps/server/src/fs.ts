@@ -1,5 +1,6 @@
 import { renameSync, writeFileSync } from 'node:fs';
-import { rename, stat, writeFile } from 'node:fs/promises';
+import { open, rename, stat, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
 
 // Windows can refuse a rename while a watcher or an indexer holds the target; a few short retries cover it.
 const RENAME_RETRIES = 5;
@@ -14,20 +15,59 @@ let nextTemp = 0;
 /* Where a file waits while it is being written; the pid keeps two daemons over one home apart. */
 export const tempNameFor = (target: string): string => `${target}.${process.pid}-${nextTemp++}.tmp`;
 
-// A crash between the two steps leaves a stray temp file, never a half-written file.
-export const writeAtomic = async (target: string, content: string | Uint8Array, mode = 0o600): Promise<void> => {
+export interface WriteAtomicOptions {
+    /* Flushed to the disk before and after the rename, for a file whose loss costs a person their work. */
+    durable?: boolean;
+}
+
+const writeFlushed = async (path: string, content: string | Uint8Array, mode: number): Promise<void> => {
+    const handle = await open(path, 'w', mode);
+    try {
+        await handle.writeFile(content);
+        await handle.sync();
+    } finally {
+        await handle.close();
+    }
+};
+
+// Windows cannot open a directory to flush it, and NTFS journals the rename itself.
+const syncDirectory = async (path: string): Promise<void> => {
+    if (process.platform === 'win32') {
+        return;
+    }
+    const handle = await open(path, 'r');
+    try {
+        await handle.sync();
+    } finally {
+        await handle.close();
+    }
+};
+
+/*
+ * A crash between the two steps leaves a stray temp file, never a half-written file. That holds for
+ * a process that dies; after a power cut APFS and ext4 can still hold an empty target, unless the
+ * write is durable.
+ */
+export const writeAtomic = async (target: string, content: string | Uint8Array, mode = 0o600, options: WriteAtomicOptions = {}): Promise<void> => {
     const temp = tempNameFor(target);
-    await writeFile(temp, content, { mode });
+    if (options.durable) {
+        await writeFlushed(temp, content, mode);
+    } else {
+        await writeFile(temp, content, { mode });
+    }
     for (let attempt = 0; ; attempt++) {
         try {
             await rename(temp, target);
-            return;
+            break;
         } catch (e) {
             if (!isTransient(e) || attempt >= RENAME_RETRIES) {
                 throw e;
             }
             await new Promise((resolve) => setTimeout(resolve, RENAME_RETRY_MS));
         }
+    }
+    if (options.durable) {
+        await syncDirectory(dirname(target));
     }
 };
 
