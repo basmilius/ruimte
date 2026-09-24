@@ -41,6 +41,19 @@ final class PhaseZeroTests: XCTestCase {
         XCTAssertTrue(probe.history.isEmpty)
     }
 
+    @MainActor func testTheProbeHoldsALinkOfItsOwn() {
+        let connections = MachineConnections(monitorPaths: false)
+        defer { connections.shutdown() }
+        let open: MachineConnections.Opener = { _ in throw CancellationError() }
+        let events = LinkEvents(opened: {}, message: { _ in }, closed: { _ in })
+        let project = connections.hold(machineID: "machine-1", open: open, events: events)
+        let probe = connections.hold(
+            machineID: ConnectionProbe.connectionKey("machine-1"), open: open, events: events)
+        XCTAssertEqual(connections.machineCount, 2)
+        project.release()
+        probe.release()
+    }
+
     func testGeneratedContractsAndUnicodeSignaturesOnIOS() throws {
         let message = String(repeating: "A", count: 15_999) + "📱漢字"
         let key = DeviceKey()

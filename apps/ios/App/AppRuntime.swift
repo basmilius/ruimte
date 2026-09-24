@@ -285,6 +285,7 @@ final class AppRuntime {
         connectionRevision += 1
         sessions.removeValue(forKey: id)?.invalidate()
         connections.forget(machineID: id)
+        connections.forget(machineID: ConnectionProbe.connectionKey(id))
         if forgetPairing { pairings.forget(machineID: id) }
     }
 

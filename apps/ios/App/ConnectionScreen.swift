@@ -121,6 +121,7 @@ struct ConnectionScreen: View {
             }
             .onDisappear {
                 probe.disconnect()
+                runtime.relayOnly = false
                 runtime.connections.setScene(sceneID, foreground: false)
             }
         }

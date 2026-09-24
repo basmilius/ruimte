@@ -17,6 +17,10 @@ final class ConnectionProbe {
     private var helloID: String?
     private var timeout: Task<Void, Never>?
 
+    /// The probe holds a link of its own, so its relay-only switch and its reconnects never touch the link an open
+    /// project or chat shares.
+    static func connectionKey(_ machineID: String) -> String { "diagnostic:" + machineID }
+
     func connect(_ machine: Machine, runtime: AppRuntime) {
         disconnect()
         self.machine = machine
@@ -42,7 +46,7 @@ final class ConnectionProbe {
         }, route: { [weak self] relayed in
             self?.relayed = relayed
         })
-        lease = runtime.connections.hold(machineID: machine.id, open: { events in
+        lease = runtime.connections.hold(machineID: Self.connectionKey(machine.id), open: { events in
             let identity = PairingIdentity(machineID: machine.id, machineKey: machine.publicKey, clientKey: key.publicKey)
             return try runtime.pairings.open(identity: identity, requestAccess: {
                 guard let token = try await runtime.vault?.accessToken() else {
@@ -63,7 +67,7 @@ final class ConnectionProbe {
         guard let machine else { return }
         startedAt = .now
         status = "Reconnecting"
-        runtime.connections.reconnect(machineID: machine.id)
+        runtime.connections.reconnect(machineID: Self.connectionKey(machine.id))
     }
 
     func foregrounded() { startedAt = .now }
