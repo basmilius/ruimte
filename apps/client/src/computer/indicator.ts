@@ -19,8 +19,9 @@ export const nodeSessionMode = (status: ComputerUseStatus | undefined, nodeId: s
 export const useNodeComputerSession = (endpointId: string, nodeId: string): ComputerSessionMode | null =>
     useComputer((s) => nodeSessionMode(s.statuses[endpointId], nodeId));
 
-export const indicatorLook = (mode: ComputerSessionMode): IndicatorLook => ({
+/* `machine` is the label the rest of the client gives the machine the agent operates. */
+export const indicatorLook = (mode: ComputerSessionMode, machine: string): IndicatorLook => ({
     tone: mode === 'running' ? 'accent' : 'muted',
-    label: i18next.t(`computer:indicator.${mode}`),
+    label: i18next.t(`computer:indicator.${mode}`, { machine }),
     actions: mode === 'running' ? ['pause', 'stop'] : ['resume', 'stop']
 });

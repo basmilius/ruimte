@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { ComputerGrant, ComputerUseStatus } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 
@@ -54,6 +55,15 @@ export const computerSetupOf = (status: ComputerUseStatus | null, platform: stri
         return at('starting');
     }
     return at(accessibility === 'granted' && screenRecording === 'granted' ? 'ready' : 'grants');
+};
+
+/* The line under a machine in the settings: where it stands, naming the grant when only one is left. */
+export const setupLine = (setup: ComputerSetup): string => {
+    const waiting = COMPUTER_GRANTS.filter((grant) => setup[grant] !== 'granted');
+    if (setup.phase === 'grants' && waiting.length === 1) {
+        return i18next.t('settings:computer.machine.grantsOne', { grant: i18next.t(`settings:computer.grant.${waiting[0]!}.label`) });
+    }
+    return i18next.t(`settings:computer.machine.${setup.phase === 'unknown' ? 'checking' : setup.phase}`);
 };
 
 /* The switch means something only on a system that has the helper. */

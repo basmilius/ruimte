@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ComputerUseStatus } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import { canSwitch, computerSetupOf, opensSystemSettings, recheckOf, showsGrants } from './setup';
+import { canSwitch, computerSetupOf, opensSystemSettings, recheckOf, setupLine, showsGrants } from './setup';
 
 const status = (patch: Partial<ComputerUseStatus> = {}): ComputerUseStatus => ({
     enabled: true,
@@ -38,6 +38,14 @@ describe('the setup of computer use', () => {
         expect(missing).toEqual({ phase: 'grants', accessibility: 'granted', screenRecording: 'missing' });
         expect(showsGrants(missing)).toBe(true);
         expect(computerSetupOf(status(), 'darwin')).toEqual({ phase: 'ready', accessibility: 'granted', screenRecording: 'granted' });
+    });
+
+    test('names the one grant left, and counts two', () => {
+        expect(setupLine(computerSetupOf(status({ screenRecording: false }), 'darwin'))).toBe('Waiting for the Screen Recording permission.');
+        expect(setupLine(computerSetupOf(status({ accessibility: false }), 'darwin'))).toBe('Waiting for the Accessibility permission.');
+        expect(setupLine(computerSetupOf(status({ accessibility: false, screenRecording: false }), 'darwin'))).toBe('Waiting for two permissions.');
+        expect(setupLine(computerSetupOf(status(), 'darwin'))).toBe('On. An agent asks you before it uses an app.');
+        expect(setupLine(computerSetupOf(null, 'darwin'))).toBe('Checking…');
     });
 
     test('coming back restarts the helper only while Screen Recording is missing', () => {

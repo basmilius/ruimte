@@ -1,6 +1,6 @@
 {
     "indicator": {
-        "running": "Bedient deze computer",
+        "running": "Bedient {{machine}}",
         "paused": "Gepauzeerd",
         "takenOver": "Jij hebt de controle",
         "pause": "Pauzeren",

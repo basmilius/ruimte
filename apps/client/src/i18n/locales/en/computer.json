@@ -1,6 +1,6 @@
 {
     "indicator": {
-        "running": "Operating this computer",
+        "running": "Operating {{machine}}",
         "paused": "Paused",
         "takenOver": "You have control",
         "pause": "Pause",

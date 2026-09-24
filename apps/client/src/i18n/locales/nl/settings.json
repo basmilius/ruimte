@@ -569,6 +569,7 @@
             "off": "Uit. Agents op deze machine kunnen de apps niet zien of bedienen.",
             "starting": "Ruimte Computer Use starten…",
             "grants": "Wacht op twee toestemmingen.",
+            "grantsOne": "Wacht op de toestemming voor {{grant}}.",
             "ready": "Aan. Een agent vraagt het je voordat die een app gebruikt."
         },
         "grant": {

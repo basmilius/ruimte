@@ -569,6 +569,7 @@
             "off": "Off. Agents on this machine cannot see or operate its apps.",
             "starting": "Starting Ruimte Computer Use…",
             "grants": "Waiting for two permissions.",
+            "grantsOne": "Waiting for the {{grant}} permission.",
             "ready": "On. An agent asks you before it uses an app."
         },
         "grant": {

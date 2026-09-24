@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import type { ComputerControlAction } from '@ruimte/contracts';
 import { indicatorLook, useNodeComputerSession } from '@/computer/indicator';
 import { useComputer } from '@/state/computer';
+import { localEndpointLabel, useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
@@ -52,10 +53,11 @@ export function ComputerIndicator({ nodeId }: { nodeId: string }) {
     const { t } = useTranslation('computer');
     const endpointId = useEndpointId();
     const mode = useNodeComputerSession(endpointId, nodeId);
+    const machine = useEndpoints((s) => s.endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? localEndpointLabel());
     if (mode === null) {
         return null;
     }
-    const look = indicatorLook(mode);
+    const look = indicatorLook(mode, machine);
     return (
         <Menu.Root>
             <Tooltip label={look.label} name>

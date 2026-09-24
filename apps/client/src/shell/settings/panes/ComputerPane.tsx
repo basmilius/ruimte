@@ -9,6 +9,7 @@ import {
     computerSetupOf,
     opensSystemSettings,
     recheckOf,
+    setupLine,
     showsGrants,
     SYSTEM_SETTINGS_PANES,
     type ComputerSetup,
@@ -134,7 +135,7 @@ function ComputerMachineRow({ endpoint }: { endpoint: Endpoint }) {
                     <span className="truncate">{endpoint.label}</span>
                 </span>
             }
-            description={connected ? t(`computer.machine.${setup.phase === 'unknown' ? 'checking' : setup.phase}`) : t('computer.machine.notConnected')}
+            description={connected ? setupLine(setup) : t('computer.machine.notConnected')}
             control={
                 <Toggle
                     checked={status?.enabled === true}
