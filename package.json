@@ -17,6 +17,7 @@
     "lint": "oxlint --deny-warnings",
     "test": "bun test --parallel --only-failures",
     "test:integration": "bun --config=integration.bunfig.toml test .integration.test.ts",
+    "test:terminal": "bun --config=integration.bunfig.toml test apps/server/src/sessions/terminal-stream.integration.test.ts",
     "format": "oxfmt --write \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
     "format:check": "oxfmt --check \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
     "dev:desktop": "bun run --cwd apps/desktop dev",
