@@ -103,9 +103,9 @@ $RUIMTE_HOME/
   checkpoints/                     mode 0700
     <repo>-<hash>.index            the private git index a turn's checkpoint is written through
   computer-use/                    mode 0700, shared with the computer use helper
-    settings.json                  whether a person turned computer use on for this machine, and the language they did it in
+    settings.json                  whether a person turned computer use on for this machine, and the interface language it speaks
     grants.json                    the apps a person let every agent into for always, and the apps once seen running shells
-    overlay.json                   the words of the helper's cursor, session bar and menu, in the language computer use was turned on in
+    overlay.json                   the words of the helper's cursor, session bar and menu, in that language
     agent.sock, screenshots/       the helper's own, see apps/computer-use/README.md
   usage/                           mode 0700
     index.json                     every transcript the scanner read, with where it stopped in each
@@ -212,7 +212,7 @@ The person can pause the session (⌥Space), take the Mac over with their own mo
 
 `computer.status` answers whether the helper is there, whether it runs and what it reported about Accessibility and Screen Recording; asking it starts the helper only while computer use is on. `session` says how the helper's session stood when the machine last heard: `null` while none runs, otherwise its `mode` (`running`, `paused`, `takenOver`) and the `nodeId` of the chat or terminal that holds it. While one runs the daemon asks the helper every two seconds, so a pause or a stop on the helper's own bar, keys or menu, and the helper ending an idle session, show without a call; it stops asking once none runs.
 
-`computer.restart` quits the helper, waits until its socket closes and starts it again, since macOS applies a Screen Recording grant to a fresh launch only; the settings call it when a person comes back from System Settings. `computer.requestGrant` has the helper ask macOS for one grant, which is what lists it in that pane of System Settings for the person to switch on. `computer.control` is the session bar's buttons pressed in Ruimte (`pause`, `resume`, `stop`): the daemon forwards the press to a helper that runs, starts none for it, and answers with the status after it.
+`computer.restart` quits the helper, waits until its socket closes and starts it again, since macOS applies a Screen Recording grant to a fresh launch only; the settings call it when a person comes back from System Settings. `computer.requestGrant` has the helper ask macOS for one grant, which is what lists it in that pane of System Settings for the person to switch on. `computer.control` is the session bar's buttons pressed in Ruimte (`pause`, `resume`, `stop`): the daemon forwards the press to a helper that runs, starts none for it, and answers with the status after it. The overlay speaks the interface language of the client that turned computer use on, and a client whose language changes says so with `computer.setLanguage`; while computer use is on the daemon writes `overlay.json` again, which the helper reads at its next action or presence.
 
 ## Providers and models
 

@@ -65,6 +65,11 @@ export class ComputerUseStore {
         await this.write(this.settingsPath, this.settings);
     }
 
+    async setLanguage(language: string): Promise<void> {
+        this.settings = { ...this.settings, language };
+        await this.write(this.settingsPath, this.settings);
+    }
+
     alwaysAllowed(bundleId: string): boolean {
         return this.grants.always.some((entry) => entry.bundleId === bundleId);
     }

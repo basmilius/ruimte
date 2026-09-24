@@ -234,6 +234,7 @@ import {
     ComputerApprovalsSchema,
     ComputerControlPayloadSchema,
     ComputerRequestGrantPayloadSchema,
+    ComputerSetLanguagePayloadSchema,
     ComputerUseSetEnabledPayloadSchema,
     ComputerUseStatusSchema
 } from './computer.ts';
@@ -422,6 +423,7 @@ export const REQUEST_SCHEMAS = {
     'computer.restart': { payload: EmptySchema, result: ComputerUseStatusSchema },
     'computer.control': { payload: ComputerControlPayloadSchema, result: ComputerUseStatusSchema },
     'computer.requestGrant': { payload: ComputerRequestGrantPayloadSchema, result: ComputerUseStatusSchema },
+    'computer.setLanguage': { payload: ComputerSetLanguagePayloadSchema, result: EmptySchema },
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
     'endpoint.signRegistration': { payload: EndpointSignRegistrationPayloadSchema, result: EndpointSignRegistrationResultSchema },

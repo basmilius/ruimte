@@ -62,6 +62,16 @@ describe('computer use', () => {
         expect(overlayWords('fr').title).toBe('Ruimte is using your computer');
     });
 
+    test('speaks a language a client switched to from then on, only while it is on', async () => {
+        const { computer, home } = await computerSetup();
+        const overlay = async (): Promise<{ title: string }> => JSON.parse(await readFile(join(home, 'computer-use', 'overlay.json'), 'utf8'));
+        await computer.setLanguage('nl');
+        expect((await overlay()).title).toBe('Ruimte bedient je computer');
+        await computer.setEnabled(false, undefined);
+        await computer.setLanguage('en');
+        expect((await overlay()).title).toBe('Ruimte bedient je computer');
+    });
+
     test('turning it off quits the helper and takes every card down', async () => {
         const { computer, helper } = await computerSetup();
         const call = codeOf(computer.operate('chat-1', 'state', 'TextEdit', {}));

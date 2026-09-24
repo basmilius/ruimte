@@ -338,6 +338,15 @@ export class ComputerUse {
         return this.setStatus({ ...this.current, enabled: false, running: false });
     }
 
+    /* A person's interface language changed: the helper speaks it from its next action or presence on, since it reads the words again for each. */
+    async setLanguage(language: string): Promise<void> {
+        if (!this.store.enabled || language === this.store.language) {
+            return;
+        }
+        await this.store.setLanguage(language);
+        await this.writeOverlay();
+    }
+
     /* macOS lists an app in a pane of Privacy & Security only once it asked for that grant, so the person finds it there to switch on. */
     async requestGrant(grant: ComputerGrant): Promise<ComputerUseStatus> {
         if (!this.store.enabled || !this.helper.present) {

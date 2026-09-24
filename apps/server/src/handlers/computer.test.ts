@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ServerFrame } from '@ruimte/contracts';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { computerSetup } from '../computer/computer-test-helpers.ts';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
 import { registerComputerHandlers } from './computer.ts';
@@ -23,5 +25,16 @@ describe('computer handlers', () => {
 
         await dispatcher.handle(client, request('computer.restart'));
         expect(frames.at(-1)).toMatchObject({ ok: true, result: { enabled: true, running: true, screenRecording: true } });
+    });
+
+    test('a language a client switched to reaches the overlay', async () => {
+        const { computer, home } = await computerSetup();
+        const dispatcher = new Dispatcher();
+        registerComputerHandlers(dispatcher, computer);
+        const frames: ServerFrame[] = [];
+        const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
+        await dispatcher.handle(client, request('computer.setLanguage', { language: 'nl' }));
+        expect(frames.at(-1)).toMatchObject({ ok: true, result: {} });
+        expect(JSON.parse(await readFile(join(home, 'computer-use', 'overlay.json'), 'utf8')).pause).toBe('Pauzeren');
     });
 });

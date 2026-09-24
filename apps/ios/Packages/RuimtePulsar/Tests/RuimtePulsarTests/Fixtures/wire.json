@@ -229,6 +229,7 @@
     "computer.restart",
     "computer.control",
     "computer.requestGrant",
+    "computer.setLanguage",
     "endpoint.info",
     "endpoint.setIdentity",
     "endpoint.signRegistration",

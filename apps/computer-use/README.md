@@ -46,7 +46,7 @@ The commands are the ones `cu` sends, listed below. `doctor` also takes `grant` 
 
 ### The words
 
-`overlay.json` is optional and read again at the start of every session and every `presence`, so a language switched in Ruimte reaches a helper that is already running. Every key is optional; a missing file or key keeps the English default:
+`overlay.json` is optional and read again at every action and every `presence`, so a language switched in Ruimte reaches a helper that is already running, in the middle of a session too. Every key is optional; a missing file or key keeps the English default:
 
 ```json
 {

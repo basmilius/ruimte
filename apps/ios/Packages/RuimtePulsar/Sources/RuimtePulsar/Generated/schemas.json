@@ -29927,6 +29927,25 @@
       "screenRecording"
     ]
   },
+  "request.computer.setLanguage.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "language": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 16
+      }
+    },
+    "required": [
+      "language"
+    ]
+  },
+  "request.computer.setLanguage.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.endpoint.info.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

@@ -37,6 +37,12 @@ export const ComputerUseSetEnabledPayloadSchema = z.object({
 });
 export type ComputerUseSetEnabledPayload = z.infer<typeof ComputerUseSetEnabledPayloadSchema>;
 
+// The interface language of a client changed; the machine's overlay speaks it from then on, while computer use is on.
+export const ComputerSetLanguagePayloadSchema = z.object({
+    language: z.string().min(2).max(16)
+});
+export type ComputerSetLanguagePayload = z.infer<typeof ComputerSetLanguagePayloadSchema>;
+
 /* The two macOS grants the helper needs; a person gives each in System Settings, on the Mac itself. */
 export const ComputerGrantSchema = z.enum(['accessibility', 'screenRecording']);
 export type ComputerGrant = z.infer<typeof ComputerGrantSchema>;
