@@ -459,6 +459,43 @@ export const fakeClaude: FakeCli = (io) => {
     };
 };
 
+/*
+ * The fake, except that resuming one of `sessionIds` stops at once. `missing` is what Claude Code 2.1.281
+ * does for a session it has no transcript of: one error result, a line on stderr and exit 1, before it
+ * reads any input. `exit` is a CLI that did resume and then went on the first prompt.
+ */
+export const claudeStoppingOnResume =
+    (sessionIds: ReadonlySet<string>, how: 'missing' | 'exit'): FakeCli =>
+    (io) => {
+        const resumeAt = io.argv.indexOf('--resume');
+        const sessionId = resumeAt >= 0 ? io.argv[resumeAt + 1] : undefined;
+        if (sessionId === undefined || !sessionIds.has(sessionId)) {
+            return fakeClaude(io);
+        }
+        if (how === 'exit') {
+            fakeClaude(io);
+            return { onLine: () => io.exit(1) };
+        }
+        const message = `No conversation found with session ID: ${sessionId}`;
+        io.out({
+            type: 'result',
+            subtype: 'error_during_execution',
+            duration_ms: 0,
+            is_error: true,
+            num_turns: 0,
+            stop_reason: null,
+            session_id: sessionId,
+            total_cost_usd: 0,
+            usage: { input_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0, output_tokens: 0 },
+            modelUsage: {},
+            permission_denials: [],
+            errors: [message]
+        });
+        io.err(`${message}\n`);
+        io.exit(1);
+        return { onLine: () => undefined };
+    };
+
 if (import.meta.main) {
     await runOverStdio(fakeClaude);
 }

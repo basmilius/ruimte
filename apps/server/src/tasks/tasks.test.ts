@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatItem, ChatSubagentItem, ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import { nextLine } from '../canvas/task-verbs.ts';
+import { claudeStoppingOnResume } from '../chat/fake-claude.ts';
+import type { FakeCli } from '../chat/fake-cli.ts';
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from './test-daemon.ts';
@@ -59,8 +61,8 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const boot = async (): Promise<Daemon> => {
-    const daemon = await bootTestDaemon({ home, store, clock });
+const boot = async (claudeCli?: FakeCli): Promise<Daemon> => {
+    const daemon = await bootTestDaemon({ home, store, clock, ...(claudeCli ? { claudeCli } : {}) });
     running.push(daemon);
     return daemon;
 };
@@ -314,6 +316,42 @@ describe('a task wakes the chat that gave it', () => {
         expect(second.tasks.get(child.taskId)?.wake).toBe('sent');
         expect(second.outbox.list()).toEqual([]);
     });
+
+    test.each(['missing', 'exit'] as const)(
+        'a child whose CLI stops at once on its resume after a restart (%s) ends its turn in an error, fails its task and wakes the lead once',
+        async (how) => {
+            const first = await boot();
+            first.worker.start();
+            await leadIdle(first);
+            // `slow` keeps the child's first turn open, so the restart catches it in the middle.
+            const child = await delegate(first, 'Lexer', 'slow');
+            await first.until(() => first.chats.get(child.childId)?.info.agentSessionId != null);
+            const turnId = first.chats.get(child.childId)!.info.activeTurnId!;
+            const sessionId = first.chats.get(child.childId)!.info.agentSessionId!;
+            running.splice(running.indexOf(first), 1);
+            await first.stop();
+
+            const second = await boot(claudeStoppingOnResume(new Set([sessionId]), how));
+            second.worker.start();
+            await second.chats.recoverInterrupted();
+            await second.until(() => wakeTurns(second).some((turn) => turn.state === 'done'));
+            await second.worker.settled();
+
+            // Whether the turn took its second attempt before the CLI went depends on which the daemon hears first.
+            expect(turnsOf(second, child.childId).map((turn) => [turn.id, turn.state])).toEqual([[turnId, 'error']]);
+            expect(second.tasks.get(child.taskId)).toMatchObject({ status: 'failed', wake: 'sent', result: { source: 'turn' } });
+            expect(wakeTurns(second).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
+            expect(second.chats.get(child.childId)?.info).toMatchObject({ running: false, activeTurnId: null });
+            const notes = second.chats
+                .get(child.childId)!
+                .thread.list()
+                .flatMap((item) => (item.kind === 'note' && item.turnId === turnId && item.level === 'error' ? [item.text] : []));
+            expect(notes.join('\n')).toContain(how === 'missing' ? 'No conversation found with session ID' : 'Claude Code exited with code 1');
+            // Tried once: the CLI started and answered, so there is nothing to retry.
+            expect(second.claude.started.filter((cli) => cli.argv.includes(sessionId))).toHaveLength(1);
+            expect(second.outbox.list()).toEqual([]);
+        }
+    );
 
     test('a child a person removes cancels its task, fails its row with a note and wakes nobody', async () => {
         const daemon = await boot();

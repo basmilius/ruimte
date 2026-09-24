@@ -11,7 +11,7 @@ import { ChatStore } from '../chat/chat-store.ts';
 import { chatForkDeps, forkChat, readForkInfo } from '../chat/fork.ts';
 import { fakeClaude } from '../chat/fake-claude.ts';
 import { fakeCodex } from '../chat/fake-codex.ts';
-import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
+import { inProcess, type FakeCli, type InProcessCli } from '../chat/fake-cli.ts';
 import { turnFromMessage } from '../context/deliver-message.ts';
 import { deliverNotice, NoticeStore, renderNotice, showNotices } from '../context/notices.ts';
 import { Dispatcher } from '../dispatcher.ts';
@@ -77,9 +77,19 @@ export interface TestDaemonOptions {
     worktrees?: Worktrees;
     /* The CLIs this machine says it has; Claude Code alone unless a test needs another. */
     installed?: AgentKind[];
+    /* What runs as Claude Code; the plain fake unless a test needs one that misbehaves. */
+    claudeCli?: FakeCli;
 }
 
-export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktrees, installed = ['claude'] }: TestDaemonOptions): Promise<TestDaemon> => {
+export const bootTestDaemon = async ({
+    home,
+    store,
+    clock,
+    checkpoints,
+    worktrees,
+    installed = ['claude'],
+    claudeCli = fakeClaude
+}: TestDaemonOptions): Promise<TestDaemon> => {
     const prompts = new PendingPromptStore(home);
     await prompts.load();
     const lineage = new AgentLineageStore(home);
@@ -91,7 +101,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
     const notices = new NoticeStore(home, () => clock.now());
     await notices.load();
     const adapter = new FakePtyAdapter();
-    const claude = inProcess(fakeClaude);
+    const claude = inProcess(claudeCli);
     const codex = inProcess(fakeCodex);
     const sessions = new SessionManager({ adapter, env: { HOME: home, PATH: process.env.PATH }, firstPrompt: (id) => prompts.take(id) });
     const attachments = new AttachmentStore(home);
