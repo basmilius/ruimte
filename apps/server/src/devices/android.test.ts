@@ -13,6 +13,7 @@ class FakeAdb {
     readonly calls: string[][] = [];
     devices = 'List of devices attached\nemulator-5554          device product:sdk_gphone64_arm64 model:sdk_gphone64_arm64 transport_id:2\n';
     readonly shell = new Map<string, string>();
+    readonly execOut = new Map<string, string>();
     failing = new Set<string>();
 
     run = async (_command: string, arguments_: string[]) => {
@@ -33,6 +34,9 @@ class FakeAdb {
                 return { exitCode: 0, stdout: arguments_[1] === 'R5CT' ? '1\nSM-S921B\n34\n' : PROBE_BOOTED, stderr: '' };
             }
             return { exitCode: 0, stdout: this.shell.get(script) ?? '', stderr: '' };
+        }
+        if (arguments_[2] === 'exec-out') {
+            return { exitCode: 0, stdout: this.execOut.get(arguments_.slice(3).join(' ')) ?? '', stderr: '' };
         }
         return { exitCode: 0, stdout: 'OK\n', stderr: '' };
     };
@@ -272,5 +276,46 @@ describe('AndroidBackend', () => {
         await expect(backend.action('Pixel_9_Pro_API_35', { ...target, action: 'sendPush', appId: 'com.example.app', payload: 'Hi' })).rejects.toMatchObject({
             code: 'device-action-unavailable'
         });
+    });
+
+    test('reads the elements of the screen from uiautomator, in pixels of a display it asked the size of', async () => {
+        const adb = new FakeAdb();
+        adb.shell.set('wm size', 'Physical size: 1080x2400\n');
+        adb.execOut.set(
+            'uiautomator dump /dev/tty',
+            '<?xml version=\'1.0\' ?><hierarchy rotation="0"><node class="android.widget.Button" package="com.example" text="Pay" resource-id="com.example:id/pay" clickable="true" enabled="true" bounds="[40,2000][1040,2200]" /></hierarchy>UI hierchary dumped to: /dev/tty'
+        );
+        const tree = await backendWith(adb).tree('Pixel_9_Pro_API_35');
+        expect(tree.screen).toEqual({ width: 1080, height: 2400 });
+        expect(tree.root.children).toEqual([
+            {
+                role: 'Button',
+                subrole: null,
+                label: 'Pay',
+                value: null,
+                identifier: 'com.example:id/pay',
+                frame: { x: 40, y: 2000, width: 1000, height: 200 },
+                enabled: true,
+                children: []
+            }
+        ]);
+        expect(adb.calls.some((call) => call.includes('/data/local/tmp/ruimte-window.xml'))).toBe(false);
+    });
+
+    test('dumps to a file on a device that cannot write to its own output, and says why when there is no tree at all', async () => {
+        const adb = new FakeAdb();
+        const script =
+            'uiautomator dump /data/local/tmp/ruimte-window.xml >/dev/null && cat /data/local/tmp/ruimte-window.xml; rm -f /data/local/tmp/ruimte-window.xml';
+        adb.shell.set('wm size', 'Physical size: 1080x2400\n');
+        adb.execOut.set('uiautomator dump /dev/tty', 'java.io.FileNotFoundException: /dev/tty');
+        adb.shell.set(script, '<hierarchy rotation="0"><node class="android.widget.TextView" text="Hi" bounds="[0,0][10,10]" /></hierarchy>');
+        const backend = backendWith(adb);
+        expect((await backend.tree('Pixel_9_Pro_API_35')).root.children[0]?.label).toBe('Hi');
+        adb.shell.set(script, 'ERROR: could not get idle state.');
+        await expect(backend.tree('Pixel_9_Pro_API_35')).rejects.toMatchObject({
+            code: 'device-tree-failed',
+            message: expect.stringContaining('could not get idle state')
+        });
+        await expect(backend.tree('Tablet_API_34')).rejects.toMatchObject({ code: 'device-not-booted' });
     });
 });

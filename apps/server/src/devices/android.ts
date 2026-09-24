@@ -14,6 +14,8 @@ import type {
     DeviceTool
 } from '@ruimte/contracts';
 import { locateAndroidSdk, type AndroidSdk } from './android-sdk.ts';
+import { androidTree, parseWmSize } from './android-tree.ts';
+import type { DeviceTree } from './device-tree.ts';
 import { DeviceError, type DeviceBackend, type DeviceSource } from './manager.ts';
 import type { CommandResult } from './scrcpy-source.ts';
 
@@ -120,6 +122,9 @@ const PACKAGE_NAME = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/;
 const FIRST_EMULATOR_PORT = 5554;
 const LAST_EMULATOR_PORT = 5682;
 const EMULATOR_SERIAL = /^emulator-(\d+)$/;
+
+/* Where a device that cannot dump to its own output leaves its tree, for as long as it takes to read it. */
+const TREE_DUMP = '/data/local/tmp/ruimte-window.xml';
 
 /* One argument for the device's `sh`, which is what `adb shell` hands a command line to. */
 export const shellQuote = (argument: string): string => (/^[A-Za-z0-9_./:=@%+-]+$/.test(argument) ? argument : `'${argument.replaceAll("'", "'\\''")}'`);
@@ -499,6 +504,29 @@ export class AndroidBackend implements DeviceBackend {
             throw new DeviceError('device-capture-failed', result.stderr.trim() || 'adb could not capture the device screen');
         }
         return result.stdout;
+    }
+
+    /*
+     * The screen's elements from uiautomator, written to its own output so no file is left on the
+     * device; a device that cannot write there dumps to a file that is read and removed.
+     */
+    async tree(deviceId: string): Promise<DeviceTree> {
+        const { serial } = await this.booted(deviceId);
+        const sdk = this.sdk();
+        const [dump, size] = await Promise.all([this.adb(sdk, ['-s', serial, 'exec-out', 'uiautomator', 'dump', '/dev/tty']), this.shell(serial, 'wm size')]);
+        const screen = parseWmSize(size);
+        if (screen === null) {
+            throw new DeviceError('invalid-adb-output', 'adb did not say how large the screen is');
+        }
+        let xml = dump.stdout;
+        if (!xml.includes('<hierarchy')) {
+            xml = await this.shell(serial, `uiautomator dump ${TREE_DUMP} >/dev/null && cat ${TREE_DUMP}; rm -f ${TREE_DUMP}`);
+        }
+        const tree = androidTree(xml, screen);
+        if (tree === null) {
+            throw new DeviceError('device-tree-failed', `uiautomator wrote no tree: ${(xml.trim() || dump.stdout.trim() || 'no output').slice(0, 300)}`);
+        }
+        return tree;
     }
 
     async type(deviceId: string, text: string): Promise<void> {

@@ -51,4 +51,11 @@ describe.skipIf(booted === undefined)('Android screen', () => {
             await source.stop();
         }
     }, 30_000);
+
+    test('reads the elements on screen through uiautomator, in the pixels of a screencap', async () => {
+        const [tree, shot] = await Promise.all([backend.tree(booted!.deviceId), backend.screenshot(booted!.deviceId)]);
+        const view = new DataView(shot.buffer, shot.byteOffset);
+        expect(tree.screen).toEqual({ width: view.getUint32(16), height: view.getUint32(20) });
+        expect(tree.root.children.length).toBeGreaterThan(0);
+    }, 30_000);
 });
