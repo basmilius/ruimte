@@ -167,12 +167,14 @@ const OUTCOME_PRINTS: readonly string[] = [
 const COMMON_DETAIL: readonly string[] = [
     `approval\tThe first call in an app a person has not let you into puts a card in front of them and holds up to ${APPROVAL_WAIT_MS / 1000} s, or --wait S, for their answer`,
     'approval\tA yes holds for this chat or terminal session, or for always on this machine; a no reaches you once, as declined. Every permission mode asks, full-access included',
+    "mac\tOne agent operates this Mac at a time: the first to call holds it until its turn ends. Another agent's call refuses with busy at once, or with --wait S holds in line for it, first come first served; apps is open to all",
     `hold\tThe person can pause the session or take the Mac over with their own mouse; a call then holds up to ${APPROVAL_WAIT_MS / 1000} s, or --wait S, until they give it back. Never reach the app another way meanwhile`,
     'timeout\tWith --wait, give your shell command a timeout above it: some CLIs end a shell command after 10 s unless you ask for more',
     'refused\tawaiting-approval\tthe card is still up: tell the person, then call again with --wait 60',
     'refused\tpaused, taken-over\tthe person still holds the Mac: call computer state with --wait 60, since they may have changed the window, then act on what it shows',
     'refused\tdeclined\tthe person said no to this app: leave it alone unless they ask you to',
-    'refused\tstopped\tthe person stopped you: ask them before you go on; once they agree, computer state picks up again',
+    'refused\tbusy\tanother agent holds the Mac: call again with --wait 60, which holds until it is free, or go on with work that needs no app',
+    'refused\tstopped\tthe person stopped computer use, for every agent: ask them before you go on; once they agree, computer state picks up again',
     'refused\tterminal\tthe app runs shells and is never yours, whatever the person says: run the command in your own shell',
     'refused\tapp-refused\tthe app or the helper said no, usually to a number from an older state: read the state again',
     'refused\tnot-in-session, computer-use-off, not-granted\tnothing you can change: tell the person',
@@ -188,7 +190,7 @@ const apps = defineActionVerb('computer', {
     detail: [
         'prints\tapp\tname\tbundle id\tpid\taccess\tfront\taccess is always, this-time, ask (a card goes up on first use), terminal (refused) or no-bundle-id (refused); front is front, hidden or -',
         'prints\tnote\tsentence\twhen the helper has no Screen Recording, which a state picture and a click by pixel need',
-        'note\tListing asks nobody: it reads no window and operates nothing'
+        'note\tListing asks nobody: it reads no window and operates nothing, so it answers while another agent holds the Mac'
     ],
     positionals: z.tuple([], { error: 'computer apps takes nothing' }),
     flags: z.object({}),
@@ -592,6 +594,7 @@ export const COMPUTER_SUMMARY =
 
 export const COMPUTER_DETAIL: readonly string[] = [
     'first\truimte-context computer apps to see what runs and what you may operate, then open <app> or state <app> to read the whole window once',
+    "one\tOne agent operates this Mac at a time, until its turn ends; another agent's call refuses with busy, or holds in line with --wait S",
     'loop\tAn action with --state acts and answers with what changed since then, marked + new, - gone, ~ changed; wait <app> --text T instead of sleeping; read for a text a state cut',
     'find\tstate --find T lists only the elements that hold T and what they sit in, and --within N one part of the window, for a window too big to read whole',
     'note\tThe screenshot is this machine’s, not the project’s: it lives outside the project folder and is swept an hour later',

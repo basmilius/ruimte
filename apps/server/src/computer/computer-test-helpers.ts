@@ -1,6 +1,8 @@
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { AgentStatus } from '@ruimte/contracts';
+import type { SessionEvent } from '../sessions/manager.ts';
 import type { Timers } from './approvals.ts';
 import { ComputerUse, type ComputerUseOptions } from './computer-use.ts';
 import { ComputerHelper, HelperUnreachable, type HelperTransport } from './helper.ts';
@@ -310,3 +312,12 @@ export const until = async (condition: () => boolean): Promise<void> => {
         throw new Error('the condition never held');
     }
 };
+
+export const chatInfo = (chatId: string, status: AgentStatus): SessionEvent =>
+    ({ event: 'chat.event', payload: { chatId, event: { type: 'info', info: { chatId, status } } } }) as unknown as SessionEvent;
+
+export const turnEnded = (chatId: string, state: 'done' | 'aborted' | 'error'): SessionEvent =>
+    ({ event: 'chat.event', payload: { chatId, event: { type: 'item', item: { kind: 'turn', id: 'turn-1', state } } } }) as unknown as SessionEvent;
+
+export const terminalStatus = (sessionId: string, status: AgentStatus): SessionEvent =>
+    ({ event: 'session.status', payload: { sessionId, agent: { status } } }) as unknown as SessionEvent;

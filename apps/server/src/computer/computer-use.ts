@@ -37,7 +37,7 @@ import {
     type WaitResult
 } from './helper-protocol.ts';
 import { overlayWords, presenceWords } from './overlay-words.ts';
-import { ComputerPresence, type PresenceShow } from './presence.ts';
+import { ComputerPresence, type LineOutcome, type PresenceShow } from './presence.ts';
 import type { ComputerUseStore } from './store.ts';
 import { readProcessTable, runsShells, type ProcessRow, type ProcessTable } from './terminal-apps.ts';
 import { diffTree, rememberTree, type RememberedTree, type TreeView } from './tree-diff.ts';
@@ -67,6 +67,18 @@ const HELD_WORDS: Record<HeldCode, string> = {
 };
 
 const STOPPED_WORDS = 'The person stopped you; ask them before you operate an app again, and once they agree start with computer state';
+
+/* One agent operates the Mac at a time; the words name the one that does, by the title the person sees. */
+const busyRefusal = (nodeTitle: string | null): ComputerRefusal =>
+    new ComputerRefusal(
+        'busy',
+        `Another agent operates this Mac now${nodeTitle === null ? '' : `, from "${nodeTitle}"`}; call again with --wait 60, which holds until it is free, or go on with work that needs no app`
+    );
+
+const offRefusal = (): ComputerRefusal => new ComputerRefusal('computer-use-off', 'Computer use is off on this machine; only a person turns it on, in Ruimte');
+
+const declinedRefusal = (name: string): ComputerRefusal =>
+    new ComputerRefusal('declined', `The person did not let you operate ${name}; leave it alone unless they ask you to`);
 
 const terminalRefusal = (name: string): ComputerRefusal =>
     new ComputerRefusal(
@@ -232,7 +244,9 @@ export class ComputerUse {
     private readonly presence: ComputerPresence;
     // The helper's session as last heard: from doctor, a presence reply or a refusal. Null while the helper does not run.
     private session: HelperSession | null = null;
-    // Nodes whose agent held the session when the person stopped it, and has not heard so yet.
+    // Nodes whose agent made a call since computer use was turned on; a stop is told to each of them.
+    private readonly callers = new Set<string>();
+    // Nodes whose agent has not heard of the person's last stop yet.
     private readonly stopped = new Set<string>();
     // The helper forgetting the last stop; a call waits for it, or the helper would refuse it for that stop too.
     private clearing: Promise<void> = Promise.resolve();
@@ -265,6 +279,7 @@ export class ComputerUse {
             words: () => presenceWords(this.store.language),
             alive: (nodeId) => this.runOf(nodeId) !== null,
             onHolder: () => this.setStatus(this.current),
+            onLine: () => this.setStatus(this.current),
             ...(options.log ? { log: options.log } : {})
         });
         this.approvals = new ComputerApprovals({
@@ -298,7 +313,7 @@ export class ComputerUse {
         return this.current;
     }
 
-    /* The chat or terminal whose agent holds the session: the one whose call reached the helper last. */
+    /* The chat or terminal whose agent holds the Mac: the first to take it, until its turn ends, its node goes or the session ends. */
     get holder(): string | null {
         return this.presence.holder;
     }
@@ -392,6 +407,7 @@ export class ComputerUse {
 
     /* A chat or terminal goes; a chat says nothing to an observer when it does. */
     nodeClosed(nodeId: string): void {
+        this.callers.delete(nodeId);
         this.stopped.delete(nodeId);
         for (const key of this.trees.keys()) {
             if (key.startsWith(`${nodeId}\n`)) {
@@ -437,6 +453,7 @@ export class ComputerUse {
         }
         this.approvals.dropAll();
         this.approvals.dropThisTime();
+        this.callers.clear();
         this.stopped.clear();
         this.trees.clear();
         this.presence.drop();
@@ -507,9 +524,10 @@ export class ComputerUse {
         await this.helper.quit();
     }
 
-    /* Every app that runs, with how this caller stands with it. Asks nothing of a person. */
+    /* Every app that runs, with how this caller stands with it. Asks nothing of a person and needs no hold on the Mac. */
     async apps(callerId: string): Promise<AppsOutcome> {
         const doctor = await this.ready();
+        this.callers.add(callerId);
         this.refuseOnceIfStopped(callerId);
         const { apps } = await this.call(() => this.helper.request({ command: 'apps' }, AppsResultSchema));
         const rows = await this.processes();
@@ -543,7 +561,8 @@ export class ComputerUse {
     /*
      * `state` answers with the tree and the picture, `read` with one element whole, `wait` with whether it
      * happened and the state after; every other command with what it did. `holdMs` is how long the call
-     * may wait for a card or the person's pause together, the default hold without it.
+     * may wait for another agent to let go of the Mac, a card and the person's pause together; without
+     * it the call holds the default for a card or a pause, and a Mac another agent holds refuses at once.
      */
     async operate(callerId: string, command: 'state', query: string, input: OperateInput, holdMs?: number): Promise<StateResult>;
     async operate(callerId: string, command: 'read', query: string, input: OperateInput, holdMs?: number): Promise<ReadResult>;
@@ -558,16 +577,17 @@ export class ComputerUse {
     async operate(callerId: string, command: AppCommand, query: string, input: OperateInput, holdMs?: number): Promise<HelperAnswer> {
         this.presence.calling(callerId);
         try {
-            return await this.operateNow(callerId, command, query, input, Math.min(holdMs ?? this.waitMs, MAX_HOLD_MS));
+            return await this.operateNow(callerId, command, query, input, Math.min(holdMs ?? this.waitMs, MAX_HOLD_MS), holdMs !== undefined);
         } finally {
             this.presence.acted(callerId);
         }
     }
 
-    private async operateNow(callerId: string, command: AppCommand, query: string, input: OperateInput, holdMs: number): Promise<HelperAnswer> {
-        // One budget for the card and the person's pause together, so a held call still ends inside the CLI's own limit.
+    private async operateNow(callerId: string, command: AppCommand, query: string, input: OperateInput, holdMs: number, waits: boolean): Promise<HelperAnswer> {
+        // One budget for the line, the card and the person's pause together, so a held call still ends inside the CLI's own limit.
         const deadline = this.now() + holdMs;
         await this.ready();
+        this.callers.add(callerId);
         this.refuseOnceIfStopped(callerId);
         const run = this.runOf(callerId);
         if (run === null) {
@@ -577,7 +597,18 @@ export class ComputerUse {
         if (await this.isTerminal(app.bundleId, app.name, pid, pid === null ? [] : await this.processes())) {
             throw terminalRefusal(app.name);
         }
-        const outcome = await this.approvals.ask({ callerId, run, app, command, caller: await this.describe(callerId) }, Math.max(0, deadline - this.now()));
+        const ask = { callerId, run, app, command, caller: await this.describe(callerId) };
+        if (!this.presence.take(callerId)) {
+            if (!waits) {
+                throw await this.busy();
+            }
+            // The card goes up while the agent is in line, so the person can answer before the Mac is free.
+            if (this.approvals.raiseAhead(ask) === 'declined') {
+                throw declinedRefusal(app.name);
+            }
+            await this.waitForTheMac(callerId, deadline);
+        }
+        const outcome = await this.approvals.ask(ask, Math.max(0, deadline - this.now()));
         if (outcome === 'waiting') {
             throw new ComputerRefusal(
                 'awaiting-approval',
@@ -585,7 +616,7 @@ export class ComputerUse {
             );
         }
         if (outcome === 'declined') {
-            throw new ComputerRefusal('declined', `The person did not let you operate ${app.name}; leave it alone unless they ask you to`);
+            throw declinedRefusal(app.name);
         }
         await this.holdWhileHeld(deadline);
         const request: HelperRequest = { ...input, command, app: pid === null ? app.bundleId : String(pid) };
@@ -599,6 +630,45 @@ export class ComputerUse {
             }
         }
         return result;
+    }
+
+    /* Holds a call in line until the Mac is this caller's, and refuses once its budget is spent or the session went without a word. */
+    private async waitForTheMac(callerId: string, deadline: number): Promise<void> {
+        while (!this.presence.take(callerId)) {
+            const left = deadline - this.now();
+            if (left <= 0) {
+                throw await this.busy();
+            }
+            const outcome = await new Promise<LineOutcome | 'timeout'>((settle) => {
+                const leave = this.presence.wait(callerId, (lineOutcome) => {
+                    cancel();
+                    settle(lineOutcome);
+                });
+                const cancel = this.timers.set(() => {
+                    leave();
+                    settle('timeout');
+                }, left);
+            });
+            if (outcome === 'yours') {
+                return;
+            }
+            if (outcome === 'timeout') {
+                throw await this.busy();
+            }
+            if (outcome === 'gone') {
+                throw new ComputerRefusal('not-in-session', 'Only an agent in a chat or a terminal that runs now operates an app');
+            }
+            if (!this.store.enabled) {
+                throw offRefusal();
+            }
+            this.refuseOnceIfStopped(callerId);
+        }
+    }
+
+    private async busy(): Promise<ComputerRefusal> {
+        const holder = this.presence.holder;
+        const caller = holder === null ? null : await this.describe(holder).catch(() => null);
+        return busyRefusal(caller?.nodeTitle ?? null);
     }
 
     private async target(command: AppCommand, query: string): Promise<{ app: AppRef; pid: number | null }> {
@@ -651,8 +721,12 @@ export class ComputerUse {
         return true;
     }
 
-    /* One call that reaches the helper for an app: it makes the caller the one the cursor speaks for. */
+    /* One call that reaches the helper for an app, only while the caller still holds the Mac: its turn may have ended while it waited. */
     private async act<Result>(callerId: string, deadline: number, work: () => Promise<Result>): Promise<Result> {
+        this.refuseOnceIfStopped(callerId);
+        if (!this.presence.take(callerId)) {
+            throw await this.busy();
+        }
         this.presence.acting(callerId);
         let result: Result;
         try {
@@ -703,8 +777,9 @@ export class ComputerUse {
         return this.session.mode === 'paused' ? 'paused' : this.session.mode === 'takenOver' ? 'taken-over' : null;
     }
 
-    private heard(session: HelperSession | null): void {
-        this.noteSession(session);
+    /* `ours` is a session this machine ended itself, with `done` or `end`, which the holder already let go of. */
+    private heard(session: HelperSession | null, ours = false): void {
+        this.noteSession(session, ours);
         this.setStatus(this.current);
     }
 
@@ -732,8 +807,9 @@ export class ComputerUse {
         }
     }
 
-    private noteSession(session: HelperSession | null): void {
+    private noteSession(session: HelperSession | null, ours = false): void {
         const stoppedNow = session?.stopped === true && this.session?.stopped !== true;
+        const endedNow = this.session?.active === true && session?.active !== true;
         this.session = session;
         // An action on its way to Ruimte may be the one that starts the session.
         if ((session === null || !session.active) && this.ruimteActions === 0) {
@@ -742,17 +818,19 @@ export class ComputerUse {
         }
         if (stoppedNow) {
             this.personStopped();
+        } else if (endedNow && !ours) {
+            this.presence.helperEnded();
         }
     }
 
     /*
-     * The person stopped the session, from the bar, a key, the menu or Ruimte. The agent that held it
-     * hears so on its next call, whatever that is; the helper forgets the stop, so no other agent does.
+     * The person stopped the session, from the bar, a key, the menu or Ruimte. Every agent that called
+     * since computer use was turned on hears so once, on its next call, whatever that is; a call in line
+     * hears it at once. The helper forgets the stop, so an agent that heard it may start again.
      */
     private personStopped(): void {
-        const holder = this.presence.holder;
-        if (holder !== null) {
-            this.stopped.add(holder);
+        for (const caller of this.callers) {
+            this.stopped.add(caller);
         }
         this.approvals.dropThisTime();
         this.presence.drop();
@@ -775,6 +853,7 @@ export class ComputerUse {
             ...(show.label === undefined ? {} : { label: show.label }),
             ...(show.ends ? { ends: true } : {})
         };
+        const settles = show.state === 'done' || show.state === 'end' || show.ends === true;
         let reply;
         try {
             reply = await this.helper.ask(request, PresenceResultSchema);
@@ -785,17 +864,17 @@ export class ComputerUse {
             throw error;
         }
         if (reply === null || !reply.session) {
-            this.heard(reply === null ? null : { active: false, mode: 'running', stopped: false });
+            this.heard(reply === null ? null : { active: false, mode: 'running', stopped: false }, reply !== null && settles);
             return;
         }
         // The helper ends a session once `done` has faded, so it runs no more as far as anyone should show.
-        this.heard({ active: show.state !== 'done' && show.state !== 'end' && show.ends !== true, mode: reply.mode, stopped: false });
+        this.heard({ active: !settles, mode: reply.mode, stopped: false }, settles);
     }
 
     /* On, present and able to read another app; anything short of that is refused before an app is named. */
     private async ready(): Promise<DoctorResult> {
         if (!this.store.enabled) {
-            throw new ComputerRefusal('computer-use-off', 'Computer use is off on this machine; only a person turns it on, in Ruimte');
+            throw offRefusal();
         }
         const doctor = await this.call(() => this.helper.request({ command: 'doctor', prompt: false }, DoctorResultSchema));
         this.noteSession(doctor.session ?? null);
@@ -840,6 +919,7 @@ export class ComputerUse {
 
     private setStatus(status: ComputerUseStatus): ComputerUseStatus {
         const session = this.session;
+        const waiting = this.presence.waiting;
         const next: ComputerUseStatus = {
             ...status,
             session:
@@ -847,6 +927,11 @@ export class ComputerUse {
                     ? { mode: session.mode, nodeId: this.presence.holder, ...(this.operatingRuimte() ? { operatingRuimte: true } : {}) }
                     : null
         };
+        if (waiting.length > 0) {
+            next.waiting = waiting;
+        } else {
+            delete next.waiting;
+        }
         if (JSON.stringify(next) !== JSON.stringify(this.current)) {
             this.current = next;
             this.sinks.emit({ event: 'computer.status', payload: next });

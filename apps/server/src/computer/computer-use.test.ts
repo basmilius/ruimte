@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentStatus, ComputerAppGrants } from '@ruimte/contracts';
+import type { ComputerAppGrants } from '@ruimte/contracts';
 import { mkdir, mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { APPROVAL_WAIT_MS, CARD_MS } from './approvals.ts';
-import { computerSetup, SHELL_APP, TEXT_EDIT, until, type ComputerSetup } from './computer-test-helpers.ts';
+import { chatInfo, computerSetup, SHELL_APP, terminalStatus, TEXT_EDIT, turnEnded, until, type ComputerSetup } from './computer-test-helpers.ts';
 import { agentWords, findInstalledApp, resolveApp, RUIMTE_SETTLE_MS, SESSION_POLL_MS } from './computer-use.ts';
 import { overlayWords } from './overlay-words.ts';
 
@@ -174,18 +174,18 @@ describe('the approval of an app', () => {
         await computer.operate('chat-1', 'click', 'TextEdit', { element: 1 });
         expect(helper.acted.at(-1)).toMatchObject({ command: 'click', element: 1 });
 
-        // Another agent, and the same chat after its conversation started over, are asked again.
+        // The same chat after its conversation started over, and another agent once the Mac is its, are asked again.
+        runs.set('chat-1', 'chat:fresh');
+        const again = codeOf(computer.operate('chat-1', 'state', 'TextEdit', {}));
+        await until(() => computer.pendingApprovals().length === 1);
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'deny');
+        expect(await again).toBe('declined');
+        computer.observe(turnEnded('chat-1', 'done'));
         const other = codeOf(computer.operate('term-1', 'state', 'TextEdit', {}));
         await until(() => computer.pendingApprovals().length === 1);
         expect(computer.pendingApprovals()[0]!.surface).toBe('terminal');
-        runs.set('chat-1', 'chat:fresh');
-        const again = codeOf(computer.operate('chat-1', 'state', 'TextEdit', {}));
-        await until(() => computer.pendingApprovals().length === 2);
-        for (const card of computer.pendingApprovals()) {
-            await computer.answer(card.requestId, 'deny');
-        }
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'deny');
         expect(await other).toBe('declined');
-        expect(await again).toBe('declined');
     });
 
     test('"always" holds for every agent and survives a restart', async () => {
@@ -407,7 +407,7 @@ describe('taking a grant back', () => {
         const heard = events.length;
         expect(await computer.revoke(TEXT_EDIT.bundleId!, 'always')).toBe(false);
         expect(events).toHaveLength(heard);
-        expect(await asksAgain(setup, 'term-1')).toBe(true);
+        expect(await asksAgain(setup, 'chat-1')).toBe(true);
     });
 
     test('an app that is no terminal is asked about again, until it runs a shell again', async () => {
@@ -518,15 +518,6 @@ const letIn = async (setup: ComputerSetup): Promise<void> => {
     await until(() => setup.helper.presences.at(-1) === 'think');
     setup.helper.requests.length = 0;
 };
-
-const chatInfo = (chatId: string, status: AgentStatus): SessionEvent =>
-    ({ event: 'chat.event', payload: { chatId, event: { type: 'info', info: { chatId, status } } } }) as unknown as SessionEvent;
-
-const turnEnded = (chatId: string, state: 'done' | 'aborted' | 'error'): SessionEvent =>
-    ({ event: 'chat.event', payload: { chatId, event: { type: 'item', item: { kind: 'turn', id: 'turn-1', state } } } }) as unknown as SessionEvent;
-
-const terminalStatus = (sessionId: string, status: AgentStatus): SessionEvent =>
-    ({ event: 'session.status', payload: { sessionId, agent: { status } } }) as unknown as SessionEvent;
 
 describe('the presence at the cursor', () => {
     test('asks for permission with the app, then works between actions and waits on the person', async () => {
@@ -742,17 +733,6 @@ describe('a stop by the person', () => {
         expect((await computer.operate('chat-1', 'state', 'TextEdit', {})).tree).toHaveLength(2);
     });
 
-    test('is not told to another agent, whatever it calls', async () => {
-        const setup = await computerSetup();
-        const { computer, helper } = setup;
-        await letIn(setup);
-        helper.stop();
-        await computer.operate('term-1', 'click', 'TextEdit', { element: 1 });
-        expect(helper.acted.at(-1)).toMatchObject({ command: 'click' });
-        expect(await codeOf(computer.apps('chat-1'))).toBe('stopped');
-        expect((await computer.apps('chat-1')).apps).toHaveLength(2);
-    });
-
     test('takes back what was allowed this time', async () => {
         const { computer, timers } = await computerSetup();
         const call = computer.operate('chat-1', 'state', 'TextEdit', {});
@@ -765,6 +745,201 @@ describe('a stop by the person', () => {
         await until(() => computer.pendingApprovals().length === 1);
         timers.advance(APPROVAL_WAIT_MS);
         expect(await again).toBe('awaiting-approval');
+    });
+});
+
+const NOTES = { name: 'Notes', pid: 502, bundleId: 'com.example.notes' };
+
+const refusalOf = (work: Promise<unknown>): Promise<{ code: string; message: string } | null> =>
+    work.then(
+        () => null,
+        (error: unknown) => error as { code: string; message: string }
+    );
+
+/* Lets the call run until it stands in line for the Mac. */
+const inLine = async (computer: ComputerSetup['computer'], count: number): Promise<void> => {
+    await until(() => (computer.status().waiting ?? []).length === count);
+};
+
+describe('one agent at a time', () => {
+    test('refuses another agent busy at once, naming the node that holds the Mac', async () => {
+        const setup = await computerSetup();
+        const { computer, helper } = setup;
+        await letIn(setup);
+        const refusal = await refusalOf(computer.operate('term-1', 'click', 'TextEdit', { element: 1 }));
+        expect(refusal?.code).toBe('busy');
+        expect(refusal?.message).toContain('Node chat-1');
+        expect(refusal?.message).toContain('--wait 60');
+        expect(helper.acted).toEqual([]);
+        await computer.operate('chat-1', 'click', 'TextEdit', { element: 1 });
+        expect(helper.acted.map((request) => request.command)).toEqual(['click']);
+    });
+
+    test("holds a call with --wait until the holder's turn ends, and refuses busy once the wait is spent", async () => {
+        const setup = await computerSetup();
+        const { computer, helper, timers } = setup;
+        await letIn(setup);
+        const spent = codeOf(computer.operate('term-1', 'click', 'TextEdit', { element: 1 }, 10_000));
+        await inLine(computer, 1);
+        timers.advance(10_000);
+        expect(await spent).toBe('busy');
+        expect(computer.status().waiting).toBeUndefined();
+
+        const call = computer.operate('term-1', 'click', 'TextEdit', { element: 1 }, 60_000);
+        await inLine(computer, 1);
+        expect(computer.status().waiting).toEqual(['term-1']);
+        timers.advance(30_000);
+        expect(helper.acted).toEqual([]);
+        computer.observe(turnEnded('chat-1', 'done'));
+        await call;
+        expect(helper.acted.map((request) => request.command)).toEqual(['click']);
+        expect(computer.holder).toBe('term-1');
+        expect(computer.status().waiting).toBeUndefined();
+    });
+
+    test('hands the Mac to the agents in line in the order they asked', async () => {
+        const setup = await computerSetup();
+        const { computer, helper, runs } = setup;
+        runs.set('chat-2', 'chat:c');
+        await letIn(setup);
+        const order: string[] = [];
+        const second = computer.operate('term-1', 'click', 'TextEdit', { element: 1 }, 60_000).then(() => order.push('term-1'));
+        await inLine(computer, 1);
+        const third = computer.operate('chat-2', 'click', 'TextEdit', { element: 2 }, 60_000).then(() => order.push('chat-2'));
+        await inLine(computer, 2);
+        expect(computer.status().waiting).toEqual(['term-1', 'chat-2']);
+        // The chat whose turn ended asks again, and goes to the back of the line.
+        computer.observe(turnEnded('chat-1', 'done'));
+        const last = computer.operate('chat-1', 'click', 'TextEdit', { element: 3 }, 60_000).then(() => order.push('chat-1'));
+        await second;
+        await inLine(computer, 2);
+        expect(computer.status().waiting).toEqual(['chat-2', 'chat-1']);
+        computer.observe(terminalStatus('term-1', 'running'));
+        computer.observe(terminalStatus('term-1', 'idle'));
+        await third;
+        computer.observe(turnEnded('chat-2', 'done'));
+        await last;
+        expect(order).toEqual(['term-1', 'chat-2', 'chat-1']);
+        expect(helper.acted.map((request) => request.element)).toEqual([1, 2, 3]);
+    });
+
+    test('shows the card of an agent in line, whose answer does not hand it the Mac', async () => {
+        const setup = await computerSetup();
+        const { computer, helper } = setup;
+        await letIn(setup);
+        helper.apps = [...helper.apps, NOTES];
+        const call = computer.operate('term-1', 'state', 'Notes', {}, 60_000);
+        await inLine(computer, 1);
+        await until(() => computer.pendingApprovals().length === 1);
+        expect(computer.pendingApprovals()[0]).toMatchObject({ nodeId: 'term-1', app: { name: 'Notes' } });
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        expect(computer.holder).toBe('chat-1');
+        expect(computer.status().waiting).toEqual(['term-1']);
+        // The cursor still speaks for the holder: no permission for the agent in line.
+        expect(helper.presences).toEqual([]);
+        expect(helper.acted).toEqual([]);
+        computer.observe(turnEnded('chat-1', 'done'));
+        await call;
+        expect(helper.acted.at(-1)).toMatchObject({ command: 'state', app: '502' });
+        expect(computer.pendingApprovals()).toEqual([]);
+    });
+
+    test('keeps apps open to every agent', async () => {
+        const setup = await computerSetup();
+        const { computer } = setup;
+        await letIn(setup);
+        expect((await computer.apps('term-1')).apps.map(({ access }) => access)).toEqual(['always', 'terminal']);
+        expect(computer.holder).toBe('chat-1');
+    });
+
+    test("is let go when the holder's node closes, and a node in line that closes leaves it", async () => {
+        const setup = await computerSetup();
+        const { computer, runs } = setup;
+        runs.set('chat-2', 'chat:c');
+        await letIn(setup);
+        const call = computer.operate('term-1', 'click', 'TextEdit', { element: 1 }, 60_000);
+        await inLine(computer, 1);
+        computer.nodeClosed('chat-1');
+        await call;
+        expect(computer.holder).toBe('term-1');
+        const waiter = codeOf(computer.operate('chat-2', 'click', 'TextEdit', { element: 1 }, 60_000));
+        await inLine(computer, 1);
+        computer.nodeClosed('chat-2');
+        expect(await waiter).toBe('not-in-session');
+        expect(computer.holder).toBe('term-1');
+    });
+
+    test('is let go when the helper ends a quiet session by itself', async () => {
+        const setup = await computerSetup();
+        const { computer, helper, timers } = setup;
+        await letIn(setup);
+        helper.session = { active: false, mode: 'running', stopped: false };
+        timers.advance(SESSION_POLL_MS);
+        await until(() => computer.holder === null);
+        await computer.operate('term-1', 'click', 'TextEdit', { element: 1 });
+        expect(computer.holder).toBe('term-1');
+    });
+
+    test('is let go when computer use is turned off, and a call in line hears so', async () => {
+        const setup = await computerSetup();
+        const { computer } = setup;
+        await letIn(setup);
+        const waiter = codeOf(computer.operate('term-1', 'click', 'TextEdit', { element: 1 }, 60_000));
+        await inLine(computer, 1);
+        await computer.setEnabled(false, undefined);
+        expect(await waiter).toBe('computer-use-off');
+        expect(computer.holder).toBeNull();
+    });
+
+    test('never lets a call reach the helper once its turn ended while it waited and another took the Mac', async () => {
+        const setup = await computerSetup();
+        const { computer, helper } = setup;
+        await letIn(setup);
+        helper.apps = [...helper.apps, NOTES];
+        const call = codeOf(computer.operate('chat-1', 'state', 'Notes', {}, 60_000));
+        await until(() => computer.pendingApprovals().length === 1);
+        computer.observe(turnEnded('chat-1', 'aborted'));
+        await computer.operate('term-1', 'click', 'TextEdit', { element: 1 });
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
+        expect(await call).toBe('busy');
+        expect(helper.acted.map((request) => request.command)).toEqual(['click']);
+    });
+});
+
+describe('a stop by the person, for every agent', () => {
+    test('reaches every agent that called since computer use was turned on, once each, and bans none', async () => {
+        const setup = await computerSetup();
+        const { computer, runs } = setup;
+        runs.set('chat-2', 'chat:c');
+        await letIn(setup);
+        expect(await codeOf(computer.operate('term-1', 'click', 'TextEdit', { element: 1 }))).toBe('busy');
+        await computer.apps('chat-2');
+        await computer.control('stop');
+        for (const nodeId of ['chat-1', 'term-1', 'chat-2']) {
+            expect(await codeOf(computer.apps(nodeId))).toBe('stopped');
+        }
+        // A stop is no ban: the first to take the Mac again holds it.
+        expect((await computer.apps('term-1')).apps).toHaveLength(2);
+        await computer.operate('term-1', 'state', 'TextEdit', {});
+        expect(computer.holder).toBe('term-1');
+        expect(await codeOf(computer.operate('chat-1', 'state', 'TextEdit', {}))).toBe('busy');
+        // An agent that never called before the stop hears nothing of it.
+        runs.set('chat-3', 'chat:d');
+        expect((await computer.apps('chat-3')).apps).toHaveLength(2);
+    });
+
+    test('refuses a call in line at once', async () => {
+        const setup = await computerSetup();
+        const { computer } = setup;
+        await letIn(setup);
+        const waiter = codeOf(computer.operate('term-1', 'click', 'TextEdit', { element: 1 }, 60_000));
+        await inLine(computer, 1);
+        await computer.control('stop');
+        expect(await waiter).toBe('stopped');
+        expect(computer.status().waiting).toBeUndefined();
+        await computer.operate('term-1', 'state', 'TextEdit', {});
+        expect(computer.holder).toBe('term-1');
     });
 });
 

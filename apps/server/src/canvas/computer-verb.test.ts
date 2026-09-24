@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
-import { computerSetup, SAMPLE_STATE, until, type ComputerSetup } from '../computer/computer-test-helpers.ts';
+import { computerSetup, SAMPLE_STATE, turnEnded, until, type ComputerSetup } from '../computer/computer-test-helpers.ts';
 import { refusalBody } from '../refusal.ts';
 import { VerbRefusal, type CanvasHost, type Noun } from './verb.ts';
 import { VERBS, verbNamed } from './verbs.ts';
@@ -184,7 +184,8 @@ describe('ruimte-context computer', () => {
         await call;
         setup.helper.state = { ...SAMPLE_STATE, tree: ['[8] Window:StandardWindow "Other" (0,0 10x10)'] };
         expect(await run(setup, ['click', 'TextEdit', '--element', '1', '--state'])).toContain('full\ta new window');
-        // The terminal's agent has read nothing of this app yet.
+        // The terminal's agent has read nothing of this app yet; it gets the Mac once the chat's turn ended.
+        setup.computer.observe(turnEnded('chat-1', 'done'));
         expect(await run(setup, ['click', 'TextEdit', '--element', '1', '--state'], 'term-1')).toContain('full\tthe first state of this app you got');
     });
 

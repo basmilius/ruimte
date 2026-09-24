@@ -130,16 +130,10 @@ export class ComputerApprovals {
 
     /* Raises the card, or joins the one that stands, and holds for the answer for `waitMs`, or the default hold. */
     async ask(ask: ApprovalAsk, waitMs: number = this.waitMs): Promise<ApprovalOutcome> {
-        const { callerId, run, app } = ask;
-        if (this.allowed(callerId, run, app.bundleId)) {
-            return 'granted';
+        const pending = this.settledOrRaised(ask);
+        if (typeof pending === 'string') {
+            return pending;
         }
-        const key = keyOf(callerId, app.bundleId);
-        if (this.declined.get(key) === run) {
-            this.declined.delete(key);
-            return 'declined';
-        }
-        const pending = this.raise(key, ask);
         return new Promise<ApprovalOutcome>((settle) => {
             const cancel = this.timers.set(() => {
                 pending.waiters.delete(done);
@@ -151,6 +145,12 @@ export class ComputerApprovals {
             };
             pending.waiters.add(done);
         });
+    }
+
+    /* Raises the card without holding for the answer, for an agent in line for the Mac: the person may answer before it is that agent's turn. */
+    raiseAhead(ask: ApprovalAsk): ApprovalOutcome {
+        const pending = this.settledOrRaised(ask);
+        return typeof pending === 'string' ? pending : 'waiting';
     }
 
     /* A person's answer. False when the card is gone already, which tells a second client it lost the race. */
@@ -273,6 +273,20 @@ export class ComputerApprovals {
         if (this.thisTime.delete(nodeId)) {
             this.grantsChanged();
         }
+    }
+
+    /* What is settled already, a yes or a no that has yet to reach the agent, or else the card that stands for the ask. */
+    private settledOrRaised(ask: ApprovalAsk): 'granted' | 'declined' | Pending {
+        const { callerId, run, app } = ask;
+        if (this.allowed(callerId, run, app.bundleId)) {
+            return 'granted';
+        }
+        const key = keyOf(callerId, app.bundleId);
+        if (this.declined.get(key) === run) {
+            this.declined.delete(key);
+            return 'declined';
+        }
+        return this.raise(key, ask);
     }
 
     private raise(key: string, ask: ApprovalAsk): Pending {

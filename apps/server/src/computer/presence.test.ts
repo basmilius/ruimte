@@ -95,8 +95,9 @@ describe('the presence of the agent that holds the session', () => {
         expect(shown).toHaveLength(4);
     });
 
-    test('is driven only by the agent whose call reached the helper last', async () => {
+    test('is held by the first agent to take it until its turn ends, and shows nobody else', async () => {
         const { presence, shown } = setup();
+        expect(presence.take('chat-1')).toBe(true);
         presence.calling('chat-1');
         presence.acting('chat-1');
         presence.acted('chat-1');
@@ -105,26 +106,79 @@ describe('the presence of the agent that holds the session', () => {
         presence.status('chat-2', 'idle');
         await settled();
         expect(shown).toEqual(['think']);
+        expect(presence.take('term-1')).toBe(false);
+        presence.acting('term-1');
+        expect(presence.holder).toBe('chat-1');
+        presence.status('chat-1', 'idle');
+        await until(() => shown.length === 2);
+        expect(shown.at(-1)).toBe('done');
+        expect(presence.take('term-1')).toBe(true);
         presence.calling('term-1');
         presence.acting('term-1');
-        expect(presence.holder).toBe('term-1');
-        presence.status('chat-1', 'idle');
         presence.acted('term-1');
-        await until(() => shown.length === 2);
+        await until(() => shown.length === 3);
         // term-1 said it needs the person before it held the session; that is what it shows now.
         expect(shown.at(-1)).toBe('waiting');
         presence.status('term-1', 'exited');
-        await until(() => shown.length === 3);
+        await until(() => shown.length === 4);
         expect(shown.at(-1)).toBe('end');
     });
 
-    test('asks for permission with the app while a card of the holder stands, and a card claims a session nobody holds', async () => {
+    test('hands the Mac to the line in the order it asked, the moment the holder lets go', async () => {
         const { presence, shown } = setup();
+        const outcomes: string[] = [];
+        presence.take('chat-1');
+        // An agent in line has its call out the whole time it waits.
+        presence.calling('chat-2');
+        presence.calling('term-1');
+        const leave = presence.wait('chat-2', (outcome) => outcomes.push(`chat-2 ${outcome}`));
+        presence.wait('term-1', (outcome) => outcomes.push(`term-1 ${outcome}`));
+        expect(presence.waiting).toEqual(['chat-2', 'term-1']);
+        // Nobody jumps the line, not even while the holder lets go.
+        expect(presence.take('chat-3')).toBe(false);
+        presence.turnEnded('chat-1', 'done');
+        expect(outcomes).toEqual(['chat-2 yours']);
+        expect(presence.holder).toBe('chat-2');
+        expect(presence.waiting).toEqual(['term-1']);
+        await until(() => shown.length === 1);
+        await settled();
+        expect(shown).toEqual(['done']);
+        // Leaving a line it is no longer in changes nothing.
+        leave();
+        presence.closed('chat-2');
+        expect(outcomes).toEqual(['chat-2 yours', 'term-1 yours']);
+        expect(presence.holder).toBe('term-1');
+        presence.wait('chat-1', (outcome) => outcomes.push(`chat-1 ${outcome}`));
+        presence.drop();
+        expect(outcomes.at(-1)).toBe('chat-1 dropped');
+        expect(presence.holder).toBeNull();
+        expect(presence.waiting).toEqual([]);
+    });
+
+    test('lets a node that goes leave the line, and the helper ending a session frees a holder with no call out', () => {
+        const { presence } = setup();
+        const outcomes: string[] = [];
+        presence.take('chat-1');
+        presence.wait('term-1', (outcome) => outcomes.push(`term-1 ${outcome}`));
+        presence.wait('chat-2', (outcome) => outcomes.push(`chat-2 ${outcome}`));
+        presence.status('term-1', 'exited');
+        expect(outcomes).toEqual(['term-1 gone']);
+        presence.calling('chat-1');
+        presence.helperEnded();
+        expect(presence.holder).toBe('chat-1');
+        presence.acted('chat-1');
+        presence.helperEnded();
+        expect(presence.holder).toBe('chat-2');
+        expect(outcomes).toEqual(['term-1 gone', 'chat-2 yours']);
+    });
+
+    test('asks for permission with the app while a card of the holder stands, and never for a card of another', async () => {
+        const { presence, shown } = setup();
+        presence.take('chat-1');
         presence.approvals([card('chat-1', 'TextEdit')]);
         await until(() => shown.length === 1);
         expect(shown).toEqual(['permission: Waiting for permission for TextEdit']);
-        expect(presence.holder).toBe('chat-1');
-        // Somebody else's card does not take the session over.
+        // Somebody else's card does not take the session over, not even one that stands alone.
         presence.approvals([card('chat-1', 'TextEdit'), card('chat-2', 'Notes')]);
         presence.approvals([card('chat-2', 'Notes')]);
         await until(() => shown.length === 2);
