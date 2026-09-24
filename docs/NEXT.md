@@ -24,7 +24,7 @@ larger ones becomes a GitHub issue when it starts.
    `RuntimeMode` and `AgentStatus` are `x-open-enum` in `schemas.json`) has to be out in an iOS
    release first, since an older build refuses a whole answer over one value it does not know. And
    the desktop client validates `AgentKind` with zod just as closed, so a newer machine elsewhere
-   with a third provider breaks the desktop the same way: decide how it reads an unknown provider
+   with a third provider breaks the desktop the same way. Decide how it reads an unknown provider
    before this starts.
 5. **Approvals for the other terminal CLIs.** Hook-reply approvals are Claude Code's alone, because
    it is the only terminal CLI with a hook that offers one: Codex waits on such a contract, Gemini
