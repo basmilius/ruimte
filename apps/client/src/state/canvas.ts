@@ -93,7 +93,7 @@ export interface Locks {
 }
 
 /* What undo and redo restore: the placement of everything, never the camera or the selection. */
-interface Snapshot {
+export interface Snapshot {
     nodes: Record<string, CanvasNode>;
     order: string[];
     texts: Record<string, TextElement>;
@@ -135,6 +135,11 @@ export interface CanvasState extends CameraSlice {
     gesturing: boolean;
     /* True for the one update that swaps in another project's content, so nobody reads it as edits. */
     loading: boolean;
+    /*
+     * True for the one update that takes in another writer's change. Like `loading` it is no edit, but
+     * a node it removes is really gone from the file, so what this client held for it can go too.
+     */
+    merging: boolean;
     past: Snapshot[];
     future: Snapshot[];
 
@@ -204,7 +209,8 @@ export interface CanvasState extends CameraSlice {
     /*
      * What another writer (an agent or a second client) changed on this canvas, put in beside what
      * the person is doing: no history step and no camera move, so a drag in progress and an undo
-     * stack both survive it. Only what was deleted leaves the selection.
+     * stack both survive it. What it adds or deletes goes into every step of that stack as well
+     * (`patchSnapshot`). Only what was deleted leaves the selection.
      */
     applyExternal(patch: CanvasPatch): void;
     /* The nodes a gesture is moving or resizing right now, which a merge leaves where the person has them. */
@@ -284,6 +290,39 @@ const snapshotOf = (s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'edges' |
     layouts: s.layouts
 });
 
+/*
+ * Takes another writer's additions and deletions into one step of the history, so an undo neither
+ * brings back what they deleted nor takes away what they added. The fields of what the step already
+ * holds stay as they are: an undo still puts a person's own move back. `patch` names only what is new
+ * to this editor, since a node that is merely changed there may be one the step is from before.
+ */
+export const patchSnapshot = (snapshot: Snapshot, patch: CanvasPatch): Snapshot => {
+    const nodes = { ...snapshot.nodes };
+    for (const id of patch.removed.nodes) {
+        delete nodes[id];
+    }
+    const texts = { ...snapshot.texts };
+    for (const id of patch.removed.texts) {
+        delete texts[id];
+    }
+    const order = snapshot.order.filter((id) => nodes[id] !== undefined);
+    for (const node of patch.nodes) {
+        if (nodes[node.id] === undefined) {
+            nodes[node.id] = node;
+            order.push(node.id);
+        }
+    }
+    for (const text of patch.texts) {
+        texts[text.id] ??= text;
+    }
+    const removedEdges = new Set(patch.removed.edges);
+    const holds = (id: string): boolean => nodes[id] !== undefined || texts[id] !== undefined;
+    const edges = snapshot.edges.filter((edge) => !removedEdges.has(edge.id));
+    const present = new Set(edges.map((edge) => edge.id));
+    edges.push(...patch.edges.filter((edge) => !present.has(edge.id)));
+    return { ...snapshot, nodes, order, texts, edges: edges.filter((edge) => holds(edge.from) && holds(edge.to)) };
+};
+
 /* Remembers the placement before a change; called by every action that changes it. */
 const remember = (s: CanvasState): Pick<CanvasState, 'past' | 'future'> => ({ past: [...s.past.slice(-(HISTORY_LIMIT - 1)), snapshotOf(s)], future: [] });
 
@@ -316,6 +355,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         resizing: null,
         gesturing: false,
         loading: false,
+        merging: false,
         past: [],
         future: [],
 
@@ -678,8 +718,16 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             }
         },
         applyExternal(patch) {
-            // Marked as a load, like a project swapping in, since all of it is already on disk, so none of it is an edit.
             set((s) => {
+                const arrived: CanvasPatch = {
+                    ...patch,
+                    nodes: patch.nodes.filter((node) => s.nodes[node.id] === undefined),
+                    texts: patch.texts.filter((text) => s.texts[text.id] === undefined),
+                    edges: patch.edges.filter((edge) => !s.edges.some((held) => held.id === edge.id))
+                };
+                const reshapes =
+                    arrived.nodes.length + arrived.texts.length + arrived.edges.length > 0 ||
+                    patch.removed.nodes.length + patch.removed.texts.length + patch.removed.edges.length > 0;
                 const gone = new Set([...patch.removed.nodes, ...patch.removed.texts, ...patch.removed.edges]);
                 const nodes: Record<string, CanvasNode> = { ...s.nodes };
                 for (const id of patch.removed.nodes) {
@@ -707,13 +755,19 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 const hidden = hiddenIn(nodes);
                 const lost = (id: string | null | undefined): boolean => id !== null && id !== undefined && gone.has(id);
                 return {
-                    loading: true,
+                    merging: true,
                     nodes,
                     order: patch.order.filter((id) => nodes[id] !== undefined),
                     texts,
                     edges,
                     layouts: patch.layouts ?? s.layouts,
                     hidden,
+                    ...(reshapes
+                        ? {
+                              past: s.past.map((snapshot) => patchSnapshot(snapshot, arrived)),
+                              future: s.future.map((snapshot) => patchSnapshot(snapshot, arrived))
+                          }
+                        : {}),
                     ...(gone.size === 0
                         ? {}
                         : {
@@ -725,7 +779,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                           })
                 };
             });
-            set({ loading: false });
+            set({ merging: false });
         },
         heldNodeIds() {
             const { gesturing, resizing, selection, nodes, texts } = get();

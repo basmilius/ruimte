@@ -19,6 +19,7 @@ interface CanvasSlice {
     camera: { x: number; y: number; zoom: number };
     bodyFocusId: string | null;
     loading: boolean;
+    merging: boolean;
 }
 
 /*
@@ -404,7 +405,11 @@ export class ProjectClient {
         if (state.loading || previous.loading || !this.opened || !this.sink.getState().current) {
             return;
         }
-        if (state.nodes !== previous.nodes || state.texts !== previous.texts || state.edges !== previous.edges || state.order !== previous.order) {
+        // What a merge brings in is on disk already.
+        if (
+            !state.merging &&
+            (state.nodes !== previous.nodes || state.texts !== previous.texts || state.edges !== previous.edges || state.order !== previous.order)
+        ) {
             this.sink.setDirty(true);
             this.scheduleSave();
         }

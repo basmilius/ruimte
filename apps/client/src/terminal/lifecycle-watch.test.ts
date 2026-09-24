@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument, ProjectNode } from '@ruimte/contracts';
+import type { CanvasPatch } from '@/project/merge';
 import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
@@ -23,16 +24,20 @@ const container: Endpoint = {
 };
 
 let ended: string[] = [];
+let gone: string[] = [];
 let stop: (() => void) | null = null;
+
+const watch = (): (() => void) => watchNodes((endpointId, id, kind, exit) => (exit === 'closed' ? ended : gone).push(`${endpointId} ${kind}:${id}`));
 
 beforeEach(() => {
     ended = [];
+    gone = [];
     focusedCanvas().getState().setViewport({ w: 800, h: 600 });
     useDocument.getState().load(project([view('a', [node('t1'), node('c1', 'chat'), node('b1', 'browser')]), view('b', [node('t2')])]), {
         activeViewId: 'a',
         views: {}
     });
-    stop = watchNodes((endpointId, id, kind) => ended.push(`${endpointId} ${kind}:${id}`));
+    stop = watch();
 });
 
 afterEach(() => {
@@ -95,7 +100,7 @@ describe('a node leaving the document', () => {
         stop?.();
         useEndpoints.getState().add(container);
         useEndpoints.getState().setActive(container.id);
-        stop = watchNodes((endpointId, id, kind) => ended.push(`${endpointId} ${kind}:${id}`));
+        stop = watch();
         focusedCanvas().getState().select(['t1']);
         focusedCanvas().getState().deleteSelected();
         expect(ended).toEqual(['Xk3p terminal:t1']);
@@ -107,5 +112,41 @@ describe('a node leaving the document', () => {
         focusedCanvas().getState().select(['t1', 'c1']);
         focusedCanvas().getState().deleteSelected();
         expect(ended).toEqual([]);
+    });
+});
+
+describe('a node another writer took out of the file', () => {
+    const without = (id: string): ProjectCanvasView[] =>
+        (useDocument.getState().exportViews() as ProjectCanvasView[]).map((entry) => ({ ...entry, nodes: entry.nodes.filter((held) => held.id !== id) }));
+    const removal = (id: string): CanvasPatch => ({
+        nodes: [],
+        texts: [],
+        edges: [],
+        removed: { nodes: [id], texts: [], edges: [] },
+        order: focusedCanvas()
+            .getState()
+            .order.filter((held) => held !== id),
+        layouts: null
+    });
+
+    test('is only let go of here when it stood on screen, never ended', () => {
+        useDocument.getState().applyMerge(without('b1'), { a: removal('b1') }, [], {});
+        expect(focusedCanvas().getState().nodes.b1).toBeUndefined();
+        expect(ended).toEqual([]);
+        expect(gone).toEqual(['local browser:b1']);
+    });
+
+    test('is only let go of here when it stood on a view that is not on screen, never ended', () => {
+        useDocument.getState().applyMerge(without('t2'), {}, [], {});
+        expect(ended).toEqual([]);
+        expect(gone).toEqual(['local terminal:t2']);
+    });
+
+    test('leaves a close made here right after it ending as before', () => {
+        useDocument.getState().applyMerge(without('t2'), {}, [], {});
+        focusedCanvas().getState().select(['t1']);
+        focusedCanvas().getState().deleteSelected();
+        expect(ended).toEqual(['local terminal:t1']);
+        expect(gone).toEqual(['local terminal:t2']);
     });
 });

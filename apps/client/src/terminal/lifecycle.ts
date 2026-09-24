@@ -9,19 +9,26 @@ import { browserClientFor, chatClientFor, sessionClientFor } from '@/transport/c
 const noop = (): void => undefined;
 
 /* The node names the machine it ran on, so a node that leaves is ended there and not on the machine that is active now. */
-const end: NodeEnder = (endpointId, id, kind) => {
+const end: NodeEnder = (endpointId, id, kind, exit) => {
+    const kills = exit === 'closed';
     if (kind === 'terminal') {
         forgetScreen(endpointId, id);
-        void sessionClientFor(endpointId)?.kill(id).catch(noop);
+        if (kills) {
+            void sessionClientFor(endpointId)?.kill(id).catch(noop);
+        }
     } else if (kind === 'chat') {
-        void chatClientFor(endpointId)?.kill(id).catch(noop);
+        if (kills) {
+            void chatClientFor(endpointId)?.kill(id).catch(noop);
+        }
     } else if (kind === 'browser') {
         browserRegistry.destroy(endpointKey(endpointId, id));
-        void browserClientFor(endpointId)?.kill(id).catch(noop);
+        if (kills) {
+            void browserClientFor(endpointId)?.kill(id).catch(noop);
+        }
     }
 };
 
-/* Ends the daemon session of every node that leaves the document. The watching itself is testable on its own. */
+/* Ends the daemon session of every node this client takes out of the document. The watching itself is testable on its own. */
 export const startSessionLifecycle = (): (() => void) => watchNodes(end);
 
 /*

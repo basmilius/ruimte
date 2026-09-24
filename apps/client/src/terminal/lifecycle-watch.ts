@@ -6,8 +6,15 @@ import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId, endpointKey, splitKey } from '@/state/keys';
 
+/*
+ * How a node left the document. `closed` is this client taking it out, which ends its session. `gone`
+ * is another writer's change taken in: an agent never ends another node's session, so all that goes
+ * is what this client held for it.
+ */
+export type NodeExit = 'closed' | 'gone';
+
 /* What ending a node means, injected so the watching itself never touches the transport. */
-export type NodeEnder = (endpointId: string, id: string, kind: CanvasNodeKind) => void;
+export type NodeEnder = (endpointId: string, id: string, kind: CanvasNodeKind, exit: NodeExit) => void;
 
 /*
  * Every node the project holds, on any view, keyed on the machine it runs on, with the kind that says
@@ -39,7 +46,7 @@ const liveNodes = (): Map<string, CanvasNodeKind> => {
 /* Ends every node that leaves the document, so no store talks to the transport itself. */
 export const watchNodes = (end: NodeEnder): (() => void) => {
     let previous = liveNodes();
-    const step = (changed: boolean, settling: boolean): void => {
+    const step = (changed: boolean, settling: boolean, merging: boolean): void => {
         if (!changed) {
             return;
         }
@@ -49,7 +56,7 @@ export const watchNodes = (end: NodeEnder): (() => void) => {
             for (const [key, kind] of previous) {
                 if (!current.has(key)) {
                     const { endpointId, id } = splitKey(key);
-                    end(endpointId, id, kind);
+                    end(endpointId, id, kind, merging ? 'gone' : 'closed');
                 }
             }
         }
@@ -64,12 +71,16 @@ export const watchNodes = (end: NodeEnder): (() => void) => {
         return !same;
     };
     const canvasLoading = (): boolean => liveCanvases().some(([, state]) => state.loading);
+    const canvasMerging = (): boolean => liveCanvases().some(([, state]) => state.merging);
     nodesMoved();
-    const offCanvas = subscribeCanvases(() => step(nodesMoved(), canvasLoading() || useDocument.getState().loading));
+    const offCanvas = subscribeCanvases(() =>
+        step(nodesMoved(), canvasLoading() || useDocument.getState().loading, canvasMerging() || useDocument.getState().merging)
+    );
     const offDocument = useDocument.subscribe((state, before) =>
         step(
             state.views !== before.views || state.trashed !== before.trashed || state.activeViewId !== before.activeViewId,
-            state.loading || before.loading || canvasLoading()
+            state.loading || before.loading || canvasLoading(),
+            state.merging || canvasMerging()
         )
     );
     /* Another machine is another project on another daemon. What this one holds keeps running, and

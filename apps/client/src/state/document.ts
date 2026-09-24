@@ -90,6 +90,8 @@ export interface DocumentState {
     edits: number;
     /* True for the one update that swaps in another project, so nobody reads it as edits. */
     loading: boolean;
+    /* True while another writer's change is taken in: a node it drops is gone from the file, not closed here. */
+    merging: boolean;
     /* The views that live in the shared file, which is the one a team commits. Everything else is
        this person's, which is what a view is until someone shares it. */
     shared: string[];
@@ -465,6 +467,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             viewNotice: null,
             edits: 0,
             loading: false,
+            merging: false,
             shared: [],
             flags: {},
             trashed: [],
@@ -510,10 +513,11 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
 
             applyMerge(merged, canvases, shared, flags) {
                 const { views, trashed } = splitTrash(merged, get().trashed);
-                set((state) => ({ views, shared, flags, trashed, viewNotice: keptNotice(state.viewNotice, views) }));
+                set((state) => ({ views, shared, flags, trashed, merging: true, viewNotice: keptNotice(state.viewNotice, views) }));
                 for (const [viewId, patch] of Object.entries(canvases)) {
                     peers.canvases.peek(viewId)?.getState().applyExternal(patch);
                 }
+                set({ merging: false });
             },
 
             heldNodeIds() {

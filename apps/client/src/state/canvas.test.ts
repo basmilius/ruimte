@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { groupFrame, ProjectCanvasViewSchema, type ProjectCanvasView } from '@ruimte/contracts';
 import { toWorld } from '@/canvas/math';
-import { carriedByGroups, createCanvasStore, focusedCanvas, isNodeActive, type CanvasNode } from './canvas';
+import type { CanvasPatch } from '@/project/merge';
+import { carriedByGroups, createCanvasStore, focusedCanvas, isNodeActive, patchSnapshot, type CanvasNode } from './canvas';
 
 /* Every test here is about one editor, and with no workspace open that is the module's own. */
 const canvas = () => focusedCanvas().getState();
@@ -398,5 +399,128 @@ describe('text elements', () => {
         const before = canvas().texts;
         canvas().styleText('text-gone', { italic: true });
         expect(canvas().texts).toBe(before);
+    });
+});
+
+describe('another writer and the history', () => {
+    const view = (nodes: CanvasNode[], edges: ProjectCanvasView['edges'] = []): ProjectCanvasView => ({
+        kind: 'canvas',
+        id: 'main',
+        name: 'main',
+        nodes,
+        texts: [],
+        edges,
+        layouts: []
+    });
+    const patch = (changes: Partial<CanvasPatch>): CanvasPatch => ({
+        nodes: [],
+        texts: [],
+        edges: [],
+        removed: { nodes: [], texts: [], edges: [] },
+        order: [],
+        layouts: null,
+        ...changes
+    });
+    const editorWith = (nodes: CanvasNode[], edges: ProjectCanvasView['edges'] = []) => {
+        const editor = createCanvasStore();
+        editor.getState().loadView(view(nodes, edges), null);
+        return editor;
+    };
+
+    test('an undo after a node another writer added keeps that node, and puts back only my own move', () => {
+        const editor = editorWith([node('mine', 0, 0)]);
+        editor.getState().select(['mine']);
+        editor.getState().moveSelected(40, 0, true);
+
+        editor.getState().applyExternal(patch({ nodes: [node('child', 400, 0)], order: ['mine', 'child'] }));
+        editor.getState().undo();
+
+        expect(editor.getState().nodes.mine).toMatchObject({ x: 0 });
+        expect(editor.getState().nodes.child).toMatchObject({ x: 400 });
+        expect(editor.getState().order).toEqual(['mine', 'child']);
+
+        editor.getState().redo();
+        expect(editor.getState().nodes.mine).toMatchObject({ x: 40 });
+        expect(editor.getState().order).toEqual(['mine', 'child']);
+    });
+
+    test('an undo after a node another writer deleted brings nothing of it back, its lines included', () => {
+        const editor = editorWith([node('mine', 0, 0), node('gone', 400, 0)], [{ id: 'line', from: 'mine', to: 'gone' }]);
+        editor.getState().select(['mine']);
+        editor.getState().moveSelected(40, 0, true);
+
+        editor.getState().applyExternal(patch({ removed: { nodes: ['gone'], texts: [], edges: [] }, order: ['mine'] }));
+        editor.getState().undo();
+
+        expect(editor.getState().nodes.mine).toMatchObject({ x: 0 });
+        expect(editor.getState().nodes.gone).toBeUndefined();
+        expect(editor.getState().order).toEqual(['mine']);
+        expect(editor.getState().edges).toEqual([]);
+    });
+
+    test('a node I deleted myself comes back on undo after another writer changed something else', () => {
+        const editor = editorWith([node('mine', 0, 0), node('other', 400, 0)]);
+        editor.getState().select(['mine']);
+        editor.getState().deleteSelected();
+
+        editor.getState().applyExternal(patch({ nodes: [node('other', 800, 0)], order: ['other'] }));
+        editor.getState().undo();
+
+        expect(editor.getState().nodes.mine).toMatchObject({ x: 0 });
+        // What the step already held keeps its own fields, whatever came in since.
+        expect(editor.getState().nodes.other).toMatchObject({ x: 400 });
+    });
+
+    test('a change that only moves fields leaves the history untouched', () => {
+        const editor = editorWith([node('mine', 0, 0), node('other', 400, 0)]);
+        editor.getState().select(['mine']);
+        editor.getState().moveSelected(40, 0, true);
+        const past = editor.getState().past;
+
+        editor.getState().applyExternal(patch({ nodes: [node('other', 800, 0)], order: ['mine', 'other'] }));
+
+        expect(editor.getState().past).toBe(past);
+    });
+
+    test('taking in a change is a merge and not a load', () => {
+        const editor = editorWith([node('mine', 0, 0)]);
+        const seen: [boolean, boolean][] = [];
+        editor.subscribe((state) => seen.push([state.loading, state.merging]));
+
+        editor.getState().applyExternal(patch({ removed: { nodes: ['mine'], texts: [], edges: [] } }));
+
+        expect(seen).toEqual([
+            [false, true],
+            [false, false]
+        ]);
+    });
+});
+
+describe('patchSnapshot', () => {
+    test('adds what is new, drops what is gone and leaves the fields of what it holds', () => {
+        const snapshot = {
+            nodes: { kept: node('kept', 0, 0), gone: node('gone', 0, 0) },
+            order: ['kept', 'gone'],
+            texts: { note: { id: 'note', x: 0, y: 0, text: 'hi', size: 18 } },
+            edges: [
+                { id: 'into-gone', from: 'kept', to: 'gone' },
+                { id: 'removed', from: 'kept', to: 'note' }
+            ],
+            layouts: []
+        };
+        const patched = patchSnapshot(snapshot, {
+            nodes: [node('kept', 900, 900), node('fresh', 10, 10)],
+            texts: [],
+            edges: [{ id: 'new-line', from: 'kept', to: 'fresh' }],
+            removed: { nodes: ['gone'], texts: [], edges: ['removed'] },
+            order: ['kept', 'fresh'],
+            layouts: null
+        });
+
+        expect(patched.nodes.kept).toMatchObject({ x: 0 });
+        expect(Object.keys(patched.nodes).sort()).toEqual(['fresh', 'kept']);
+        expect(patched.order).toEqual(['kept', 'fresh']);
+        expect(patched.edges.map((edge) => edge.id)).toEqual(['new-line']);
+        expect(snapshot.order).toEqual(['kept', 'gone']);
     });
 });
