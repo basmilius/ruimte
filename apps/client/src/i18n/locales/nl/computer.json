@@ -1,0 +1,11 @@
+{
+    "indicator": {
+        "running": "Bedient deze Mac",
+        "paused": "Gepauzeerd",
+        "takenOver": "Jij hebt de controle",
+        "pause": "Pauzeren",
+        "resume": "Hervatten",
+        "stop": "Sessie stoppen",
+        "failed": "Kon de sessie niet aanpassen"
+    }
+}

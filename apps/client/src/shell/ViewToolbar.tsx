@@ -1,3 +1,5 @@
+import { ComputerIndicator } from '@/computer/ComputerIndicator';
+import { useNodeComputerSession } from '@/computer/indicator';
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
 import { useDictation } from '@/dictation/controller';
 import { isFilesView, type CellView } from '@/shell/files-view';
@@ -10,6 +12,7 @@ import { BrowserToolbar } from '@/nodes/BrowserBody';
 import { DeviceToolbar } from '@/devices/DeviceBody';
 import { useNodeHost } from '@/nodes/node-host';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
+import { useEndpointId } from '@/state/keys';
 import { useHasPlans } from '@/state/plans';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
@@ -32,6 +35,8 @@ export function ViewToolbar({
     const hasSubagents = useShowsSubagents(view);
     const forked = useIsFork(view);
     const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
+    const endpointId = useEndpointId();
+    const operating = useNodeComputerSession(endpointId, view?.kind === 'chat' || view?.kind === 'terminal' ? view.id : '') !== null;
 
     /* The tabs take the slack and the file's own controls close the bar, the way they do for a
        file view: one strip that says which files are open and what can be done to the one in front. */
@@ -65,7 +70,7 @@ export function ViewToolbar({
         return <div ref={mount} className="flex min-w-0 grow items-center justify-end gap-1" />;
     }
     if (view.kind === 'chat') {
-        if (!hasSubagents && !forked && !planned) {
+        if (!hasSubagents && !forked && !planned && !operating) {
             return null;
         }
         return (
@@ -73,11 +78,12 @@ export function ViewToolbar({
                 {hasSubagents && <SubagentBreadcrumb chatId={view.id} title={chatTitle} className="grow" />}
                 {forked && <ForkPill chatId={view.id} />}
                 {planned && <PlanPill chatId={view.id} />}
+                {operating && <ComputerIndicator nodeId={view.id} />}
             </div>
         );
     }
     const mode = modeOf(host);
-    if (!mode && !dictationEnabled) {
+    if (!mode && !dictationEnabled && !operating) {
         return null;
     }
     return (
@@ -88,6 +94,7 @@ export function ViewToolbar({
                 </Tooltip>
             )}
             <div className="ml-auto flex shrink-0 items-center">
+                <ComputerIndicator nodeId={view.id} />
                 <TerminalDictationButton terminalId={view.id} />
             </div>
         </div>

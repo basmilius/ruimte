@@ -1,0 +1,11 @@
+{
+    "indicator": {
+        "running": "Operating this Mac",
+        "paused": "Paused",
+        "takenOver": "You have control",
+        "pause": "Pause",
+        "resume": "Resume",
+        "stop": "Stop session",
+        "failed": "Could not change the session"
+    }
+}

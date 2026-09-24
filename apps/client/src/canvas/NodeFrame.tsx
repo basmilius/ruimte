@@ -37,6 +37,7 @@ import { useNodeAlerts } from '@/processes/use-node-alerts';
 import { useHasContextLinks } from '@/context/sources';
 import { accentColor } from '@/canvas/accents';
 import { ApprovalStrip } from '@/canvas/ApprovalStrip';
+import { ComputerIndicator } from '@/computer/ComputerIndicator';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { FlagMarkOf } from '@/project/FlagMark';
@@ -319,6 +320,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     {collapsed && <Pill className="tabular-nums">{t('group.inside', { count: node.memberIds?.length ?? 0 })}</Pill>}
                     {node.kind === 'chat' && !renaming && <ForkPill chatId={id} />}
                     {node.kind === 'chat' && !renaming && <PlanPill chatId={id} />}
+                    {(node.kind === 'chat' || node.kind === 'terminal') && !renaming && <ComputerIndicator nodeId={id} />}
                     {nodeWorktree && !renaming && (
                         <Tooltip label={nodeWorktree.path}>
                             <Pill mono icon={<Icon icon={GitBranch} size={12} />}>
