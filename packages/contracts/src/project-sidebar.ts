@@ -1,6 +1,16 @@
 import { z } from 'zod';
 import { AgentKindSchema, AgentStatusSchema } from './agent.ts';
-import { isCanvasView, isSessionView, NodeTitleSourceSchema, ProjectIconChoiceSchema, ProjectSummarySchema, viewIconOf, type ProjectView } from './project.ts';
+import { flagOf } from './project-flags.ts';
+import {
+    isCanvasView,
+    isSessionView,
+    NodeTitleSourceSchema,
+    ProjectIconChoiceSchema,
+    ProjectSummarySchema,
+    viewIconOf,
+    type ProjectFlags,
+    type ProjectView
+} from './project.ts';
 
 const SidebarNodeSchema = z.object({
     id: z.string(),
@@ -20,6 +30,8 @@ export const ProjectSidebarViewSchema = z.object({
     provider: AgentKindSchema.nullable(),
     path: z.string().nullable(),
     shared: z.boolean(),
+    // The flag this person put on the row, as a node accent name; absent from a daemon from before flags.
+    flag: z.string().optional(),
     nodes: z.array(SidebarNodeSchema),
     self: SidebarNodeSchema.nullable()
 });
@@ -37,9 +49,10 @@ export type ProjectSidebarView = z.infer<typeof ProjectSidebarViewSchema>;
 export type ProjectSidebarResult = z.infer<typeof ProjectSidebarResultSchema>;
 
 // Keep canvas geometry, note text and embedded files off background sidebar requests.
-export const projectSidebarViews = (views: readonly ProjectView[], shared: readonly string[]): ProjectSidebarView[] =>
+export const projectSidebarViews = (views: readonly ProjectView[], shared: readonly string[], flags?: ProjectFlags): ProjectSidebarView[] =>
     views.map((view) => {
         const provider = view.kind === 'chat' || view.kind === 'terminal' ? (view.node.provider ?? null) : null;
+        const flag = flagOf(flags, view.id);
         return {
             id: view.id,
             name: view.name ?? '',
@@ -49,6 +62,7 @@ export const projectSidebarViews = (views: readonly ProjectView[], shared: reado
             provider,
             path: view.kind === 'file' ? view.path : null,
             shared: shared.includes(view.id),
+            ...(flag === null ? {} : { flag }),
             nodes: isCanvasView(view)
                 ? view.nodes.flatMap((node) =>
                       node.kind === 'terminal' || node.kind === 'chat' || node.kind === 'browser' || node.kind === 'device'

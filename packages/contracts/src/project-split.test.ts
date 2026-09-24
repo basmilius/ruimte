@@ -99,6 +99,27 @@ describe('splitContent', () => {
         expect(split.private.views.map((view) => view.id)).toEqual(['h1']);
     });
 
+    test('a flag stays in the private file, and moving one leaves the shared file as it was', () => {
+        const views = [canvas('main', [node('n1'), node('n2')]), canvas('mine')];
+        const plain = splitContent(content(views), ['main'], 1);
+        const flagged = splitContent({ ...content(views), flags: { main: 'red', n1: 'blue', mine: 'green' } }, ['main'], 1);
+        expect(flagged.shared).toEqual(plain.shared);
+        expect(JSON.stringify(flagged.shared)).not.toContain('red');
+        expect(flagged.private.flags).toEqual({ main: 'red', n1: 'blue', mine: 'green' });
+    });
+
+    test('a flag whose view or node is gone goes with it, and no flags leave no key behind', () => {
+        const split = splitContent({ ...content([canvas('main', [node('n1')])]), flags: { n1: 'red', gone: 'blue' } }, [], 1);
+        expect(split.private.flags).toEqual({ n1: 'red' });
+        expect('flags' in splitContent({ ...content([canvas('main')]), flags: { gone: 'blue' } }, [], 1).private).toBe(false);
+        expect('flags' in splitContent(content([canvas('main')]), [], 1).private).toBe(false);
+    });
+
+    test('a color this version does not know is kept for the Ruimte that wrote it', () => {
+        const split = splitContent({ ...content([canvas('main')]), flags: { main: 'ultraviolet' } }, [], 1);
+        expect(split.private.flags).toEqual({ main: 'ultraviolet' });
+    });
+
     test('an id in the list that names no view of this project is ignored', () => {
         const split = splitContent(content([canvas('main')]), ['main', 'ghost'], 1);
         expect(split.shared.views.map((view) => view.id)).toEqual(['main']);
@@ -110,6 +131,12 @@ describe('mergeFiles', () => {
         const before = content([canvas('main', [node('n1', { resume: 'sess-1', cwd: '/etc' })]), chatView('c1', { resume: 'sess-2' }), canvas('own')]);
         const split = splitContent(before, ['main', 'c1'], 3);
         expect(mergeFiles(split.shared, split.private, fallback)).toEqual({ content: before, shared: ['main', 'c1'] });
+    });
+
+    test('the flags come back over both files', () => {
+        const before = { ...content([canvas('main', [node('n1')]), chatView('c1')]), flags: { main: 'red', n1: 'blue', c1: 'green' } };
+        const split = splitContent(before, ['main'], 2);
+        expect(mergeFiles(split.shared, split.private, fallback).content).toEqual(before);
     });
 
     test('a shared view the private file never heard of falls in behind the one before it', () => {

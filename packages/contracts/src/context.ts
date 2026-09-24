@@ -15,6 +15,8 @@ export const ContextSourceSchema = z.object({
     nodeId: z.string().min(1).optional(),
     /* Which device a device node points at. It travels with the source because only the machine
        knows which devices it really has, and that answer is worth nothing until the moment of asking. */
-    device: DeviceReferenceSchema.optional()
+    device: DeviceReferenceSchema.optional(),
+    // The flag the person put on the node or view, as a node accent name.
+    flag: z.string().optional()
 });
 export type ContextSource = z.infer<typeof ContextSourceSchema>;

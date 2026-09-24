@@ -17306,6 +17306,9 @@
                       "shared": {
                         "type": "boolean"
                       },
+                      "flag": {
+                        "type": "string"
+                      },
                       "nodes": {
                         "type": "array",
                         "items": {
@@ -19458,6 +19461,17 @@
               }
             }
           },
+          "flags": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
           "version": {
             "type": "number",
             "const": 3
@@ -21453,6 +21467,17 @@
                 },
                 "node": false
               }
+            }
+          },
+          "flags": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1
             }
           }
         },
@@ -36884,6 +36909,17 @@
                 },
                 "node": false
               }
+            }
+          },
+          "flags": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "version": {

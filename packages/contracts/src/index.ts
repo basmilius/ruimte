@@ -253,6 +253,7 @@ export * from './node-defaults.ts';
 export * from './plan.ts';
 export * from './processes.ts';
 export * from './project.ts';
+export * from './project-flags.ts';
 export * from './project-sidebar.ts';
 export * from './project-migrate.ts';
 export * from './project-split.ts';

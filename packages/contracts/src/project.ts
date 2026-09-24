@@ -505,6 +505,14 @@ export const storedViewOf = (view: ProjectView): unknown => {
     return view.kind === 'canvas' ? { ...view, nodes: view.nodes.map(storedNodeOf) } : view;
 };
 
+/*
+ * The flags one person put on views and nodes, by id, since a view id and a node id are one
+ * namespace. A color is a node accent name (`NODE_ACCENT_NAMES`), kept as a plain string so a name
+ * a newer Ruimte adds reads as no flag here and is still written back; read one with `flagOf`.
+ */
+export const ProjectFlagsSchema = z.record(z.string().min(1), z.string().min(1));
+export type ProjectFlags = z.infer<typeof ProjectFlagsSchema>;
+
 // What the person edits; the daemon wraps it with the version and the rev.
 export const ProjectContentSchema = z.object({
     name: z.string().min(1),
@@ -512,7 +520,10 @@ export const ProjectContentSchema = z.object({
     // Absent means "show what the folder declares"; a file written before this existed parses fine.
     icon: ProjectIconChoiceSchema.optional(),
     // In sidebar order. A new project has no views until someone adds one.
-    views: z.array(ProjectViewSchema)
+    views: z.array(ProjectViewSchema),
+    /* Only ever in the private file, whatever file the flagged view is in. A save without it keeps
+       the flags on disk, which is what a client from before flags amounts to. */
+    flags: ProjectFlagsSchema.optional()
 });
 export type ProjectContent = z.infer<typeof ProjectContentSchema>;
 
@@ -586,7 +597,9 @@ export const ProjectPrivateFileSchema = z.object({
        this list does not falls in behind the one before it, so a view a colleague added arrives in
        the right place without anybody merging an order. */
     order: z.array(z.string()),
-    overlay: z.record(z.string(), ProjectNodeOverlaySchema).default({})
+    overlay: z.record(z.string(), ProjectNodeOverlaySchema).default({}),
+    // Absent when nothing is flagged, so a file from before flags reads the same as one without any.
+    flags: ProjectFlagsSchema.optional()
 });
 export type ProjectPrivateFile = z.infer<typeof ProjectPrivateFileSchema>;
 

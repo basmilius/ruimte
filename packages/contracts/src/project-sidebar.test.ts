@@ -37,6 +37,16 @@ test('the sidebar projection keeps navigation and session identity but excludes 
     expect(projected.every((view) => !('texts' in view) && !('edges' in view))).toBe(true);
 });
 
+test('a row carries the flag of its view, and none for a color this version cannot paint', () => {
+    const views: ProjectView[] = [
+        { id: 'a', kind: 'canvas', name: 'A', nodes: [], texts: [], edges: [], layouts: [] },
+        { id: 'b', kind: 'chat', name: 'B', node: {} }
+    ];
+    const projected = projectSidebarViews(views, [], { a: 'red', b: 'ultraviolet' });
+    expect(projected[0]?.flag).toBe('red');
+    expect('flag' in projected[1]!).toBe(false);
+});
+
 test('an empty sidebar result is valid for a machine with no open projects', () => {
     expect(ProjectSidebarResultSchema.safeParse({ projects: [] }).success).toBe(true);
 });

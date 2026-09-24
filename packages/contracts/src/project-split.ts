@@ -1,3 +1,4 @@
+import { liveFlags } from './project-flags.ts';
 import { isAbsolutePath } from './stored-path.ts';
 import {
     EMPTY_PRIVATE_FILE,
@@ -134,6 +135,8 @@ export const splitContent = (content: ProjectContent, shared: readonly string[],
             })
         );
     }
+    // A flag is one person's mark, so it stays here whichever file its view went to.
+    const flags = liveFlags(content.flags, content.views);
     return {
         shared: {
             version: PROJECT_VERSION,
@@ -147,7 +150,8 @@ export const splitContent = (content: ProjectContent, shared: readonly string[],
             rev,
             views: rest,
             order: content.views.map((view) => view.id),
-            overlay
+            overlay,
+            ...(Object.keys(flags).length > 0 ? { flags } : {})
         }
     };
 };
@@ -210,7 +214,8 @@ export const mergeFiles = (
             name: shared?.name ?? fallback.name,
             color: shared?.color ?? fallback.color,
             ...(shared?.icon ? { icon: shared.icon } : {}),
-            views: orderedViews(sharedViews, file.views, file.order)
+            views: orderedViews(sharedViews, file.views, file.order),
+            ...(file.flags ? { flags: file.flags } : {})
         },
         shared: sharedViews.map((view) => view.id)
     };
