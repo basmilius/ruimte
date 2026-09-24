@@ -2,16 +2,19 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Bot, ChevronDown } from 'lucide-react';
-import type { ChatItem, ChatSubagentItem } from '@ruimte/contracts';
+import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
 import type { SubagentBranch } from '@/chat/logic/timeline';
 import { formatElapsedShort } from '@/format/duration';
 import { useOpenForFind } from '@/chat/ui/find-reveal';
 import { Markdown } from '@/chat/ui/Markdown';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from '@/chat/ui/rows/WorkRows';
+import { entryTimeOf, statusWordOf, taskIdOf } from '@/chat/subagent-list';
 import { useSubagentSupport } from '@/chat/subagent-support';
 import { canOpenSubagent } from '@/chat/subagent-view';
 import { useEndpointId } from '@/state/keys';
+import { useTasks } from '@/state/tasks';
 import { Icon } from '@/ui/Icon';
+import { useNow } from '@/ui/useNow';
 
 // The work of a long-running agent scrolls inside its row instead of pushing the thread away.
 const CHILDREN_MAX_PX = 320;
@@ -35,8 +38,13 @@ function ChildRow({ item }: { item: ChatItem }) {
     return null;
 }
 
-function StatusPill({ item }: { item: ChatSubagentItem }) {
+function StatusPill({ item, task }: { item: ChatSubagentItem; task: Task | null }) {
     const { t } = useTranslation(['chat', 'common']);
+    const paused = statusWordOf(item, task) === 'paused';
+    const now = useNow(60_000, paused);
+    if (paused) {
+        return <span className="shrink-0 text-xs text-text-faint tabular-nums">{entryTimeOf(item, task, now)}</span>;
+    }
     if (item.status === 'running') {
         return <RunningFor startedAt={item.startedAt} />;
     }
@@ -115,9 +123,12 @@ export function SubagentRow({
     onOpenConversation?(): void;
 }) {
     const { t } = useTranslation('chat');
-    const running = item.status === 'running';
-    const detail = item.description || item.summary || item.subagentType || '';
     const endpointId = useEndpointId();
+    const taskId = taskIdOf(item);
+    const task = useTasks((s) => (taskId === null ? null : (s.byEndpoint[endpointId]?.[taskId] ?? null)));
+    // A task paused on its child's limit is still a running row on the wire, but nothing is at work.
+    const running = item.status === 'running' && statusWordOf(item, task) !== 'paused';
+    const detail = item.description || item.summary || item.subagentType || '';
     // A row that carries no pointer on a machine that already said no has nothing to open.
     const refused = useSubagentSupport((s) => s.unsupported[endpointId] === true);
     const press = onOpenConversation !== undefined && canOpenSubagent(item, refused) ? onOpenConversation : onToggle;
@@ -136,7 +147,7 @@ export function SubagentRow({
                     <>
                         {item.background && <span className="shrink-0 text-xs text-text-faint">{t('rows.subagent.background')}</span>}
                         {running && item.lastTool && <span className="shrink-0 text-xs text-text-faint">{item.lastTool}</span>}
-                        <StatusPill item={item} />
+                        <StatusPill item={item} task={task} />
                     </>
                 }
             />
