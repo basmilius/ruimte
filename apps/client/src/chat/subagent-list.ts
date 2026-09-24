@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
+import { formatMoment } from '@/format/datetime';
 import { formatElapsedShort } from '@/format/duration';
 import type { StatusWord } from '@/ui/status-look';
 
@@ -8,9 +9,16 @@ export const subagentTitle = (item: ChatSubagentItem): string => item.descriptio
 /* The task a row stands for, whose id the daemon wrote into the row's own. */
 export const taskIdOf = (item: ChatSubagentItem): string | null => (item.origin === 'ruimte' && item.id.startsWith('task-') ? item.id.slice(5) : null);
 
-/* A cancelled task is a failed row on the wire, and only the task itself still says which it was. */
-export const statusWordOf = (item: ChatSubagentItem, task: Task | null): StatusWord =>
-    item.status === 'failed' && task?.status === 'cancelled' ? 'cancelled' : item.status;
+/* A cancelled task is a failed row on the wire and a paused one a running row, and only the task itself still says which it is. */
+export const statusWordOf = (item: ChatSubagentItem, task: Task | null): StatusWord => {
+    if (item.status === 'failed' && task?.status === 'cancelled') {
+        return 'cancelled';
+    }
+    if (item.status === 'running' && task?.status === 'open' && task.paused !== undefined) {
+        return 'paused';
+    }
+    return item.status;
+};
 
 /*
  * What the flyout over the composer lists: every sub-agent still at work, and the ones that settled
@@ -37,9 +45,9 @@ export const flyoutSubagents = (order: readonly string[], structure: Readonly<Re
         .map(({ item }) => item);
 };
 
-/* The one state the badge shows for all of them: work in progress first, then whatever went wrong. */
+/* The one state the badge shows for all of them: work in progress first, then work held up, then whatever went wrong. */
 export const summaryWordOf = (words: readonly StatusWord[]): StatusWord =>
-    (['running', 'failed', 'cancelled'] as const).find((word) => words.includes(word)) ?? 'done';
+    (['running', 'paused', 'failed', 'cancelled'] as const).find((word) => words.includes(word)) ?? 'done';
 
 /* The time on the right of an entry: how long it has run so far, or how long it took once it settled. */
 export const entryTimeOf = (item: ChatSubagentItem, task: Task | null, now: number): string => {
@@ -47,6 +55,10 @@ export const entryTimeOf = (item: ChatSubagentItem, task: Task | null, now: numb
     const startedAt = task?.createdAt ?? item.startedAt;
     const finishedAt = task === null ? item.finishedAt : (task.settledAt ?? item.finishedAt);
     const word = statusWordOf(item, task);
+    if (word === 'paused') {
+        const until = task?.paused?.until;
+        return until === undefined ? i18next.t('common:status.paused') : i18next.t('chat:activity.pausedUntil', { time: formatMoment(until, now) });
+    }
     if (item.status === 'running') {
         return startedAt > 0 ? formatElapsedShort(now - startedAt) : '';
     }

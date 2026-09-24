@@ -12,7 +12,7 @@ import { Tooltip } from '@/ui/Tooltip';
  */
 export function TaskMark({ task, className }: { task: Task; className?: string }) {
     const { t } = useTranslation('common');
-    const word = taskStatusWord(task.status);
+    const word = taskStatusWord(task);
     const look = statusLookOf(word);
     return (
         <Tooltip label={t('taskMark', { title: task.title, status: t(`status.${word}`) })}>

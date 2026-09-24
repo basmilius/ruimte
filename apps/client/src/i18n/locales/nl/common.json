@@ -58,6 +58,7 @@
     },
     "status": {
         "running": "bezig",
+        "paused": "gepauzeerd",
         "done": "klaar",
         "failed": "mislukt",
         "cancelled": "geannuleerd"

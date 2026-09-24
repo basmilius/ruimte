@@ -289,6 +289,7 @@
     "shells_other": "{{count}} shells",
     "monitors_one": "{{count}} monitor",
     "monitors_other": "{{count}} monitors",
+    "pausedUntil": "paused until {{time}}",
     "took": {
       "done": "done in {{duration}}",
       "failed": "failed after {{duration}}",

@@ -58,6 +58,7 @@
     },
     "status": {
         "running": "running",
+        "paused": "paused",
         "done": "done",
         "failed": "failed",
         "cancelled": "cancelled"

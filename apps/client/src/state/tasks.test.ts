@@ -52,7 +52,7 @@ describe('tasks', () => {
         store.putTask('local', task('second'));
         const shown = childTask(useTasks.getState().byEndpoint.local, 'chat-child');
         expect(shown?.id).toBe('second');
-        expect(taskStatusWord(shown!.status)).toBe('running');
+        expect(taskStatusWord(shown!)).toBe('running');
         // The first one settling again, as an event late for it, does not take the mark back.
         store.putTask('local', task('first', { status: 'done', settledAt: 2 }));
         expect(childTask(useTasks.getState().byEndpoint.local, 'chat-child')?.id).toBe('second');

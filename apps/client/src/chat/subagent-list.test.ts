@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
 import { composerStopLabel, composerStopOf, entryTimeOf, flyoutSubagents, statusWordOf, stopOf, subagentTitle, summaryWordOf, taskIdOf } from './subagent-list';
+import { formatMoment } from '@/format/datetime';
 
 const subagent = (id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem => ({
     id,
@@ -80,6 +81,8 @@ describe('subagent list', () => {
 
     test('the badge shows work in progress first, then a failure, then a cancel, and done only when all are', () => {
         expect(summaryWordOf(['done', 'failed', 'running'])).toBe('running');
+        expect(summaryWordOf(['paused', 'failed', 'running'])).toBe('running');
+        expect(summaryWordOf(['done', 'failed', 'paused'])).toBe('paused');
         expect(summaryWordOf(['done', 'cancelled', 'failed'])).toBe('failed');
         expect(summaryWordOf(['done', 'cancelled'])).toBe('cancelled');
         expect(summaryWordOf(['done', 'done'])).toBe('done');
@@ -93,6 +96,12 @@ describe('subagent list', () => {
         expect(statusWordOf(row, task('failed'))).toBe('failed');
         expect(statusWordOf(row, null)).toBe('failed');
         expect(statusWordOf(subagent('a', { status: 'done' }), null)).toBe('done');
+    });
+
+    test('a task whose child stopped on a limit is paused, where the row itself only knows it runs', () => {
+        const row = subagent('task-t1', { origin: 'ruimte', childId: 'child' });
+        expect(statusWordOf(row, { ...task('open'), paused: { kind: 'usage' } })).toBe('paused');
+        expect(statusWordOf(row, task('open'))).toBe('running');
     });
 
     test('the title falls back from the description to what the CLI said and then to the kind', () => {
@@ -146,6 +155,14 @@ describe('the time on the right of an entry', () => {
         expect(entryTimeOf(row, task, noon)).toBe('1m 5s');
         const settled = { ...task, settledAt: noon - 30_000, status: 'cancelled' } as Task;
         expect(entryTimeOf({ ...row, status: 'failed', finishedAt: null }, settled, noon)).toBe('cancelled after 35s');
+    });
+
+    test('a paused task says until when, or only that it is paused when the limit named no time', () => {
+        const reset = noon + 3 * 3_600_000;
+        const row = subagent('task-t', { origin: 'ruimte', childId: 'node-1', startedAt: noon - 1_000 });
+        const paused = { createdAt: noon - 65_000, settledAt: null, status: 'open', paused: { kind: 'usage', until: reset } } as unknown as Task;
+        expect(entryTimeOf(row, paused, noon)).toBe(`paused until ${formatMoment(reset, noon)}`);
+        expect(entryTimeOf(row, { ...paused, paused: { kind: 'overload' } }, noon)).toBe('paused');
     });
 });
 
