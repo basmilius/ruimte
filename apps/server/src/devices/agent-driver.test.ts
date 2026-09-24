@@ -143,4 +143,22 @@ describe('DeviceDriver', () => {
         await driver.launch('phone-node', SIMULATOR, 'com.example.app');
         expect(backend.actions).toEqual([{ action: 'launchApp', appId: 'com.example.app', backendId: 'simctl', platform: 'ios', deviceId: 'sim-1' }]);
     });
+
+    test('types through a session it holds, which lets go a minute later like any other call', async () => {
+        await driver.type('phone-node', 'chat-1', SIMULATOR, 'Grüße');
+        expect(backend.typed).toEqual(['Grüße']);
+        expect(backend.source.chords).toEqual([[0xe3, 0x19]]);
+        expect(driver.abilities(SIMULATOR).type).toBe(true);
+        timers.advance(AGENT_HOLD_IDLE_MS);
+        await settle();
+        expect(backend.source.stops).toBe(1);
+    });
+
+    test('refuses to type where the backend has no way to, or the gate says no', async () => {
+        const readOnly = { ...SIMULATOR, capabilities: { ...SIMULATOR.capabilities, input: false } };
+        await expect(driver.type('phone-node', 'chat-1', readOnly, 'hi')).rejects.toMatchObject({ code: 'device-input-unavailable' });
+        gate = { refusal: () => ({ code: 'taken-over', message: 'The person took this device over' }) };
+        await expect(driver.type('phone-node', 'chat-1', SIMULATOR, 'hi')).rejects.toMatchObject({ code: 'taken-over' });
+        expect(backend.typed).toEqual([]);
+    });
 });

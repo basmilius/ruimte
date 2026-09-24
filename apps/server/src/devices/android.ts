@@ -124,6 +124,30 @@ const EMULATOR_SERIAL = /^emulator-(\d+)$/;
 /* One argument for the device's `sh`, which is what `adb shell` hands a command line to. */
 export const shellQuote = (argument: string): string => (/^[A-Za-z0-9_./:=@%+-]+$/.test(argument) ? argument : `'${argument.replaceAll("'", "'\\''")}'`);
 
+/* `input text` reads %s as a space and nothing else specially, so a literal %s goes in two calls that split it. */
+const textCommands = (part: string): string[] => {
+    const pieces = part.split('%s');
+    return pieces
+        .map((piece, index) => `${index > 0 ? 's' : ''}${piece}${index < pieces.length - 1 ? '%' : ''}`)
+        .filter((piece) => piece !== '')
+        .map((piece) => `input text ${shellQuote(piece.replaceAll(' ', '%s'))}`);
+};
+
+/* The device shell line that types this text, a newline as Enter and a tab as Tab; `input` knows no character past ASCII. */
+export const typingScript = (text: string): string => {
+    const normalized = text.replace(/\r\n?/g, '\n');
+    if (!/^[\x20-\x7e\n\t]*$/.test(normalized)) {
+        throw new DeviceError(
+            'device-input-unavailable',
+            'Android takes only plain ASCII text from Ruimte: letters, digits, punctuation, spaces, newlines and tabs'
+        );
+    }
+    return normalized
+        .split(/(\n|\t)/)
+        .flatMap((part) => (part === '\n' ? ['input keyevent 66'] : part === '\t' ? ['input keyevent 61'] : textCommands(part)))
+        .join(' && ');
+};
+
 export const parseAdbDevices = (output: string): AdbEntry[] =>
     output
         .split('\n')
@@ -475,6 +499,12 @@ export class AndroidBackend implements DeviceBackend {
             throw new DeviceError('device-capture-failed', result.stderr.trim() || 'adb could not capture the device screen');
         }
         return result.stdout;
+    }
+
+    async type(deviceId: string, text: string): Promise<void> {
+        const script = typingScript(text);
+        const { serial } = await this.booted(deviceId);
+        await this.shell(serial, script);
     }
 
     createSource(deviceId: string): DeviceSource {

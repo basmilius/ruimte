@@ -1,5 +1,5 @@
 import type { DeviceAction, DeviceInfo, DeviceInput, DeviceSettings, LiveStreamFrame } from '@ruimte/contracts';
-import type { DeviceBackend, DeviceSource } from './manager.ts';
+import type { DeviceBackend, DeviceKeyboard, DeviceSource } from './manager.ts';
 
 /* The first bytes of a png of this size: the signature and a header chunk, which is all a size is read from. */
 export const pngOf = (width: number, height: number): Uint8Array => {
@@ -35,6 +35,7 @@ export class RecordingSource implements DeviceSource {
     starts = 0;
     stops = 0;
     readonly inputs: DeviceInput[] = [];
+    readonly chords: number[][] = [];
 
     start(_publish: (frame: LiveStreamFrame) => void): Promise<void> {
         this.starts += 1;
@@ -52,6 +53,13 @@ export class RecordingSource implements DeviceSource {
         }
         this.inputs.push(input);
     }
+
+    keys(usages: readonly number[]): void {
+        if (this.starts === this.stops) {
+            throw new Error('keys reached a source that is not running');
+        }
+        this.chords.push([...usages]);
+    }
 }
 
 /* One device behind a backend a test steers: its state, its shot and the actions it was asked for. */
@@ -60,6 +68,7 @@ export class RecordingBackend implements DeviceBackend {
     readonly platform: DeviceInfo['platform'];
     readonly source = new RecordingSource();
     readonly actions: DeviceAction[] = [];
+    readonly typed: string[] = [];
     info: DeviceInfo;
     shot = pngOf(1206, 2622);
     lists = 0;
@@ -81,6 +90,14 @@ export class RecordingBackend implements DeviceBackend {
 
     screenshot(): Promise<Uint8Array> {
         return Promise.resolve(this.shot);
+    }
+
+    /* Types the way a simulator does: a paste chord through the session for each text. */
+    async type(_deviceId: string, text: string, keyboard: () => Promise<DeviceKeyboard>): Promise<void> {
+        this.typed.push(text);
+        await (
+            await keyboard()
+        )([0xe3, 0x19]);
     }
 
     action(_deviceId: string, action: DeviceAction): Promise<DeviceSettings> {

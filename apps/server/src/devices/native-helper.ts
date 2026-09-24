@@ -10,6 +10,7 @@ interface NativeHidHandle {
     scroll(deltaX: number, deltaY: number, anchorX: number, anchorY: number, width: number, height: number): Promise<void>;
     button(button: string): Promise<void>;
     orientation(orientation: number): Promise<boolean>;
+    key(type: 'down' | 'up', usage: number): Promise<void>;
 }
 
 interface NativeCaptureHandle {
@@ -113,6 +114,10 @@ export const runDeviceHelper = async (deviceId: string, runtime?: DeviceHelperRu
                 if (message.type === 'stop') {
                     return 0;
                 }
+                if (message.type === 'keys') {
+                    await pressKeys(hid, message.usages);
+                    continue;
+                }
                 if (message.type !== 'input') {
                     throw new Error('The device helper received an output-only protocol message');
                 }
@@ -128,6 +133,15 @@ export const runDeviceHelper = async (deviceId: string, runtime?: DeviceHelperRu
         await unsubscribe?.();
         await capture?.stop();
         protocolSink?.end();
+    }
+};
+
+const pressKeys = async (hid: NativeHidHandle, usages: readonly number[]): Promise<void> => {
+    for (const usage of usages) {
+        await hid.key('down', usage);
+    }
+    for (const usage of [...usages].reverse()) {
+        await hid.key('up', usage);
     }
 };
 

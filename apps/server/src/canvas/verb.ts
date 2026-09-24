@@ -140,7 +140,7 @@ export interface BrowserDriveHost {
 export type ComputerHost = Pick<ComputerUse, 'enabled' | 'apps' | 'operate' | 'treeView'>;
 
 /* What an agent's `device` call reaches: the device a node points at, a shot of it and the gestures on it. */
-export type DeviceDriveHost = Pick<DeviceDriver, 'find' | 'screen' | 'abilities' | 'shot' | 'tap' | 'swipe' | 'button' | 'launch'>;
+export type DeviceDriveHost = Pick<DeviceDriver, 'find' | 'screen' | 'abilities' | 'shot' | 'tap' | 'swipe' | 'button' | 'type' | 'launch'>;
 
 export interface WorktreeHost {
     /* Every worktree of the repository a folder is in, with the work each holds. */

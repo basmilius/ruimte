@@ -150,6 +150,14 @@ export class DeviceHelperSource implements LiveFrameSource {
         this.process.stdin.flush();
     }
 
+    keys(usages: readonly number[]): void {
+        if (this.process === null || !this.ready) {
+            throw new DeviceHelperFailure('device-not-streaming', 'Open the device stream before sending input');
+        }
+        this.process.stdin.write(encodeDeviceHelperMessage({ type: 'keys', usages: [...usages] }));
+        this.process.stdin.flush();
+    }
+
     async stop(): Promise<void> {
         const child = this.process;
         if (child === null) {

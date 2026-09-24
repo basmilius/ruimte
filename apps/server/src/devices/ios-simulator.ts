@@ -15,7 +15,7 @@ import {
     type DeviceToggleSetting
 } from '@ruimte/contracts';
 import { DeviceHelperSource, type DeviceHelperLauncher } from './helper-source.ts';
-import { DeviceError, type DeviceBackend } from './manager.ts';
+import { DeviceError, type DeviceBackend, type DeviceKeyboard } from './manager.ts';
 
 interface CommandResult {
     exitCode: number;
@@ -48,7 +48,13 @@ const stateOf = (state: string): DeviceInfo['state'] => {
 };
 
 const defaultRunner: SimctlRunner = async (arguments_, stdin) => {
-    const process = Bun.spawn(['xcrun', 'simctl', ...arguments_], { stdin: stdin === undefined ? 'ignore' : 'pipe', stdout: 'pipe', stderr: 'pipe' });
+    // simctl reads stdin in the locale's encoding, and a daemon under launchd has none, which turns ü into √º.
+    const process = Bun.spawn(['xcrun', 'simctl', ...arguments_], {
+        stdin: stdin === undefined ? 'ignore' : 'pipe',
+        stdout: 'pipe',
+        stderr: 'pipe',
+        env: stdin === undefined ? undefined : { ...Bun.env, LC_ALL: 'en_US.UTF-8' }
+    });
     if (stdin !== undefined && process.stdin) {
         process.stdin.write(stdin);
         process.stdin.end();
@@ -58,6 +64,15 @@ const defaultRunner: SimctlRunner = async (arguments_, stdin) => {
 };
 
 const IOS_BUTTONS: DeviceButton[] = ['home', 'swipeHome', 'appSwitcher', 'lock', 'siri'];
+
+/* USB HID keyboard usages (page 7). */
+const KEY_RETURN = 0x28;
+const KEY_TAB = 0x2b;
+const KEY_V = 0x19;
+const KEY_LEFT_COMMAND = 0xe3;
+
+/* The app reads the pasteboard on its own time after the paste, so the next piece waits before it writes the pasteboard again. */
+const PASTE_SETTLE_MS = 150;
 
 const IOS_TEXT_SIZES: Record<DeviceTextSize, string> = {
     small: 'small',
@@ -120,10 +135,12 @@ export class IosSimulatorBackend implements DeviceBackend {
     readonly kinds = ['simulator'] as const;
     private readonly run: SimctlRunner;
     private readonly launch: DeviceHelperLauncher | null;
+    private readonly sleep: (ms: number) => Promise<void>;
 
-    constructor(run: SimctlRunner = defaultRunner, launch: DeviceHelperLauncher | null = null) {
+    constructor(run: SimctlRunner = defaultRunner, launch: DeviceHelperLauncher | null = null, sleep: (ms: number) => Promise<void> = (ms) => Bun.sleep(ms)) {
         this.run = run;
         this.launch = launch;
+        this.sleep = sleep;
     }
 
     async list(): Promise<DeviceInfo[]> {
@@ -290,6 +307,25 @@ export class IosSimulatorBackend implements DeviceBackend {
             return new Uint8Array(await readFile(path));
         } finally {
             await rm(directory, { recursive: true, force: true });
+        }
+    }
+
+    /*
+     * Pastes the text in through the simulator's pasteboard, which it replaces: a key per character
+     * would follow the keyboard layout and could not type an accent or an emoji at all.
+     */
+    async type(deviceId: string, text: string, keyboard: () => Promise<DeviceKeyboard>): Promise<void> {
+        const keys = await keyboard();
+        for (const part of text.replace(/\r\n?/g, '\n').split(/(\n|\t)/)) {
+            if (part === '\n') {
+                await keys([KEY_RETURN]);
+            } else if (part === '\t') {
+                await keys([KEY_TAB]);
+            } else if (part !== '') {
+                await this.command(['pbcopy', deviceId], part);
+                await keys([KEY_LEFT_COMMAND, KEY_V]);
+                await this.sleep(PASTE_SETTLE_MS);
+            }
         }
     }
 

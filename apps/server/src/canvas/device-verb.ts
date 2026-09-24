@@ -162,6 +162,24 @@ const buttonAction = defineActionVerb('device', {
     }
 });
 
+const typeAction = defineActionVerb('device', {
+    name: 'type',
+    action: 'device.type',
+    usage: '<id> --text T',
+    params: [NODE_PARAM, { syntax: '--text T', need: 'required', field: 'text' }],
+    detail: [
+        'note\tThe text goes wherever the focus is, so tap the field first and take a shot to see it has the cursor',
+        'note\tA simulator takes the text through its pasteboard, which it replaces, so any character goes; Android takes plain ASCII only, and a phone takes no text',
+        'prints\tdone\ttype\tid\tdevice',
+        ...COMMON_DETAIL
+    ],
+    positionals: nodeTuple('type', ' and the text in --text'),
+    flags: z.object({ text: z.string({ error: '--text needs the text to type' }).min(1, '--text needs the text to type') }),
+    async run({ positionals: [id], flags }, call) {
+        return doneLine('type', await runAction(call, 'device.type', { nodeId: id, text: flags.text }));
+    }
+});
+
 const launchAction = defineActionVerb('device', {
     name: 'launch',
     action: 'device.launch',
@@ -175,9 +193,10 @@ const launchAction = defineActionVerb('device', {
     }
 });
 
-export const DEVICE_ACTIONS = [stateAction, shotAction, tapAction, swipeAction, buttonAction, launchAction] as const;
+export const DEVICE_ACTIONS = [stateAction, shotAction, tapAction, swipeAction, buttonAction, typeAction, launchAction] as const;
 
-export const DEVICE_SUMMARY = 'Sees and operates the device under a device node you have a line to: a picture of its screen, taps, swipes, buttons and apps';
+export const DEVICE_SUMMARY =
+    'Sees and operates the device under a device node you have a line to: a picture of its screen, taps, swipes, buttons, text and apps';
 
 export const DEVICE_DETAIL: readonly string[] = [
     'note\tWork in shots: take one, decide on it, act in its pixels, and take the next to see what happened',

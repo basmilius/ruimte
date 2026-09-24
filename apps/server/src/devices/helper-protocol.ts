@@ -8,12 +8,15 @@ export const DEVICE_HELPER_MAX_CONTROL_BYTES = 64 * 1024;
 
 const ReadySchema = z.object({ width: z.number().int().min(1).max(0xffff), height: z.number().int().min(1).max(0xffff) });
 const ErrorSchema = z.object({ code: z.string().min(1).max(128), message: z.string().min(1).max(4096) });
+/* A chord of USB HID keyboard usages (page 7), pressed in order and let go in reverse. */
+const KeysSchema = z.object({ usages: z.array(z.number().int().min(0).max(0xffff)).min(1).max(8) });
 
 export type DeviceHelperMessage =
     | { type: 'ready'; width: number; height: number }
     | { type: 'frame'; frame: LiveStreamFrame }
     | { type: 'error'; code: string; message: string }
     | { type: 'input'; input: DeviceInput }
+    | { type: 'keys'; usages: number[] }
     | { type: 'stop' };
 
 const MessageKind = {
@@ -21,7 +24,8 @@ const MessageKind = {
     frame: 2,
     error: 3,
     input: 17,
-    stop: 18
+    stop: 18,
+    keys: 19
 } as const;
 
 const textEncoder = new TextEncoder();
@@ -40,6 +44,8 @@ export const encodeDeviceHelperMessage = (message: DeviceHelperMessage): Uint8Ar
         payload = textEncoder.encode(JSON.stringify({ code: error.code, message: error.message }));
     } else if (message.type === 'input') {
         payload = textEncoder.encode(JSON.stringify(DeviceInputSchema.parse(message.input)));
+    } else if (message.type === 'keys') {
+        payload = textEncoder.encode(JSON.stringify(KeysSchema.parse({ usages: message.usages })));
     } else {
         payload = new Uint8Array();
     }
@@ -109,6 +115,9 @@ export class DeviceHelperDecoder {
         }
         if (kind === MessageKind.input) {
             return { type: 'input', input: DeviceInputSchema.parse(this.json(payload)) };
+        }
+        if (kind === MessageKind.keys) {
+            return { type: 'keys', ...KeysSchema.parse(this.json(payload)) };
         }
         if (kind === MessageKind.stop && payload.byteLength === 0) {
             return { type: 'stop' };

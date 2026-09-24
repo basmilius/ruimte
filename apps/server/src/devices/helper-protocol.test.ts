@@ -26,12 +26,14 @@ describe('device helper protocol', () => {
 
     test('uses the same framing for commands sent to the helper', () => {
         const input: DeviceHelperMessage = { type: 'input', input: { kind: 'pointer', phase: 'down', x: 0.2, y: 0.8 } };
+        const keys: DeviceHelperMessage = { type: 'keys', usages: [0xe3, 0x19] };
         const decoder = new DeviceHelperDecoder();
 
-        expect(decoder.push(join(DEVICE_HELPER_MAGIC, encodeDeviceHelperMessage(input), encodeDeviceHelperMessage({ type: 'stop' })))).toEqual([
-            input,
-            { type: 'stop' }
-        ]);
+        expect(
+            decoder.push(
+                join(DEVICE_HELPER_MAGIC, encodeDeviceHelperMessage(input), encodeDeviceHelperMessage(keys), encodeDeviceHelperMessage({ type: 'stop' }))
+            )
+        ).toEqual([input, keys, { type: 'stop' }]);
     });
 
     test('rejects unknown preambles and oversized frames', () => {

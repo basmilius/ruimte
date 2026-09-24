@@ -42,6 +42,10 @@ describe('runDeviceHelper', () => {
                     calls.push(['orientation', orientation]);
                     return true;
                 }
+
+                async key(type: 'down' | 'up', usage: number): Promise<void> {
+                    calls.push(['key', type, usage]);
+                }
             },
             SimCapture: class {
                 private frame: ((data: Uint8Array, width: number, height: number, flags: number) => Promise<void>) | null = null;
@@ -79,6 +83,7 @@ describe('runDeviceHelper', () => {
                         encodeDeviceHelperMessage({ type: 'input', input: { kind: 'scroll', deltaX: 12, deltaY: -30, x: 0.4, y: 0.6 } }),
                         encodeDeviceHelperMessage({ type: 'input', input: { kind: 'button', button: 'appSwitcher' } }),
                         encodeDeviceHelperMessage({ type: 'input', input: { kind: 'rotate', direction: 'left' } }),
+                        encodeDeviceHelperMessage({ type: 'keys', usages: [0xe3, 0x19] }),
                         encodeDeviceHelperMessage({ type: 'stop' })
                     )
                 );
@@ -101,6 +106,10 @@ describe('runDeviceHelper', () => {
             ['scroll', 12, -30, 0.4, 0.6, 1179, 2556],
             ['button', 'app_switcher'],
             ['orientation', 4],
+            ['key', 'down', 0xe3],
+            ['key', 'down', 0x19],
+            ['key', 'up', 0x19],
+            ['key', 'up', 0xe3],
             ['unsubscribe'],
             ['stop']
         ]);
@@ -115,6 +124,7 @@ describe('runDeviceHelper', () => {
                 scroll = async (): Promise<void> => undefined;
                 button = async (): Promise<void> => undefined;
                 orientation = async (): Promise<boolean> => true;
+                key = async (): Promise<void> => undefined;
             },
             SimCapture: class {
                 subscribe = async (): Promise<() => void> => () => undefined;

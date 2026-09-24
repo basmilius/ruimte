@@ -132,4 +132,35 @@ describe('IosSimulatorBackend', () => {
         expect(calls[0]!.slice(0, 4)).toEqual(['io', 'phone-1', 'screenshot', '--type=png']);
         expect(calls[0]!.at(-1)).toEndWith('/screen.png');
     });
+
+    test('pastes text through the pasteboard, a newline as Return, waiting after each paste', async () => {
+        const events: string[] = [];
+        const backend = new IosSimulatorBackend(
+            async (arguments_, stdin) => {
+                events.push(`${arguments_.join(' ')} <${stdin}>`);
+                return { exitCode: 0, stdout: '', stderr: '' };
+            },
+            null,
+            async (ms) => {
+                events.push(`sleep ${ms}`);
+            }
+        );
+
+        await backend.type('phone-1', 'Grüße 🎉\r\nnext\tlast', async () => async (usages) => {
+            events.push(`keys ${usages.join(',')}`);
+        });
+        expect(events).toEqual([
+            'pbcopy phone-1 <Grüße 🎉>',
+            'keys 227,25',
+            'sleep 150',
+            'keys 40',
+            'pbcopy phone-1 <next>',
+            'keys 227,25',
+            'sleep 150',
+            'keys 43',
+            'pbcopy phone-1 <last>',
+            'keys 227,25',
+            'sleep 150'
+        ]);
+    });
 });

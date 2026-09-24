@@ -84,7 +84,7 @@ const run = async (argv: string[]): Promise<string[]> => {
 describe('ruimte-context device', () => {
     test('is a noun of help with every action', () => {
         expect(VERBS).toContain(noun);
-        expect(noun.actions.map((action) => action.word)).toEqual(['state', 'shot', 'tap', 'swipe', 'button', 'launch']);
+        expect(noun.actions.map((action) => action.word)).toEqual(['state', 'shot', 'tap', 'swipe', 'button', 'type', 'launch']);
     });
 
     test('says which device the node holds and what works on it', async () => {
@@ -95,7 +95,7 @@ describe('ruimte-context device', () => {
             'buttons\thome swipeHome appSwitcher lock siri',
             'can\tshot\tyes',
             'can\tinput\tyes',
-            'can\ttype\tno',
+            'can\ttype\tyes',
             'can\tlaunch\tyes'
         ]);
         await run(['shot', 'phone-1']);
@@ -130,6 +130,12 @@ describe('ruimte-context device', () => {
         expect(backend.source.inputs.at(-1)).toEqual({ kind: 'button', button: 'home' });
         expect((await run(['launch', 'phone-1', '--app', 'com.example.app']))[0]).toBe('done\tlaunch\tphone-1\tiPhone 18 Pro');
         expect(backend.actions).toMatchObject([{ action: 'launchApp', appId: 'com.example.app' }]);
+    });
+
+    test('types into whatever has the focus, and needs the text', async () => {
+        expect((await run(['type', 'phone-1', '--text', 'Grüße\nnext']))[0]).toBe('done\ttype\tphone-1\tiPhone 18 Pro');
+        expect(backend.typed).toEqual(['Grüße\nnext']);
+        expect((await run(['type', 'phone-1']))[0]).toBe('refused\tbad-arguments\t--text needs the text to type');
     });
 
     test('refuses a button the device does not announce, with the ones it does', async () => {

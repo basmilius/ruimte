@@ -2095,6 +2095,15 @@ export const ACTION_DEFINITIONS = {
         input: z.object({ nodeId: deviceNode, button: z.string().min(1).describe('A button the device announces, as device.inspect lists them') }),
         output: deviceDone
     },
+    'device.type': {
+        title: 'Type on a device',
+        description: 'Types text into whatever has the focus on the device of a device node.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ nodeId: deviceNode, text: z.string().min(1).max(2000).describe('The text to type; a newline is Return and a tab is Tab') }),
+        output: deviceDone
+    },
     'device.launch': {
         title: 'Open an app on a device',
         description: 'Opens an app on a device node by its bundle id or package name.',

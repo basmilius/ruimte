@@ -146,6 +146,11 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
         await driverOf(context.host).button(nodeId, actor.id, device, named);
         return { output: { nodeId, device: device.name } };
     },
+    'device.type': async ({ nodeId, text }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
+        await driverOf(context.host).type(nodeId, actor.id, device, text);
+        return { output: { nodeId, device: device.name } };
+    },
     'device.launch': async ({ nodeId, app }, { actor, context }) => {
         const device = await bootedDevice(context, actor.id, nodeId);
         const driver = driverOf(context.host);

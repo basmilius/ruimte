@@ -44,7 +44,7 @@ export interface DeviceGate {
 
 export const OPEN_GATE: DeviceGate = { refusal: () => null };
 
-type Manager = Pick<DeviceManager, 'find' | 'hold' | 'release' | 'input' | 'screenshot' | 'action'>;
+type Manager = Pick<DeviceManager, 'find' | 'hold' | 'release' | 'input' | 'keys' | 'canType' | 'type' | 'screenshot' | 'action'>;
 
 export interface DeviceDriverOptions {
     home: string;
@@ -98,7 +98,7 @@ export class DeviceDriver {
         return {
             shot: booted && device.capabilities.screenshot,
             input: booted && device.capabilities.input,
-            type: false,
+            type: booted && this.manager.canType(device),
             launch: booted && deviceTools(device).includes('launchApp')
         };
     }
@@ -140,6 +140,26 @@ export class DeviceDriver {
 
     async button(nodeId: string, caller: string, device: DeviceInfo, button: DeviceButton): Promise<void> {
         await this.operate(nodeId, caller, device, (send) => send({ kind: 'button', button }));
+    }
+
+    async type(nodeId: string, caller: string, device: DeviceInfo, text: string): Promise<void> {
+        this.pass(nodeId);
+        if (!this.manager.canType(device)) {
+            throw new CodedError('device-input-unavailable', `Ruimte cannot type on ${device.name}`);
+        }
+        const holder = `agent:${caller}`;
+        let held = false;
+        try {
+            await this.manager.type(device.backendId, device.platform, device.deviceId, text, async () => {
+                await this.hold(device, holder);
+                held = true;
+                return (usages) => this.manager.keys(device.backendId, device.deviceId, holder, usages);
+            });
+        } finally {
+            if (held) {
+                this.keep(device, holder);
+            }
+        }
     }
 
     async launch(nodeId: string, device: DeviceInfo, app: string): Promise<void> {
@@ -187,17 +207,21 @@ export class DeviceDriver {
             throw new CodedError('device-input-unavailable', `${device.name} takes no input from Ruimte on this machine`);
         }
         const holder = `agent:${caller}`;
-        const key = `${deviceKey(device)}\u0000${holder}`;
-        await this.manager.hold(device.backendId, device.platform, device.deviceId, holder);
-        this.keep(key, device, holder);
+        await this.hold(device, holder);
         try {
             await gesture((input) => this.manager.input(device.backendId, device.deviceId, holder, input));
         } finally {
-            this.keep(key, device, holder);
+            this.keep(device, holder);
         }
     }
 
-    private keep(key: string, device: DeviceInfo, holder: string): void {
+    private async hold(device: DeviceInfo, holder: string): Promise<void> {
+        await this.manager.hold(device.backendId, device.platform, device.deviceId, holder);
+        this.keep(device, holder);
+    }
+
+    private keep(device: DeviceInfo, holder: string): void {
+        const key = `${deviceKey(device)}\u0000${holder}`;
         this.holds.get(key)?.cancel();
         const hold: Hold = { device, holder, cancel: () => undefined };
         hold.cancel = this.timers.set(() => this.drop(key, hold), AGENT_HOLD_IDLE_MS);

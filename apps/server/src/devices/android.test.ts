@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { DeviceSource } from './manager.ts';
-import { AndroidBackend, parseAdbDevices, shellQuote, type AndroidBackendOptions, type AvdInfo, type EmulatorProcess } from './android.ts';
+import { AndroidBackend, parseAdbDevices, shellQuote, typingScript, type AndroidBackendOptions, type AvdInfo, type EmulatorProcess } from './android.ts';
 
 const SDK = { adb: '/sdk/platform-tools/adb', emulator: '/sdk/emulator/emulator', avdHome: '/home/.android/avd' };
 const PIXEL: AvdInfo = { name: 'Pixel_9_Pro_API_35', displayName: 'Pixel 9 Pro API 35', apiLevel: '35' };
@@ -76,6 +76,24 @@ describe('shellQuote', () => {
     });
 });
 
+describe('typingScript', () => {
+    test('types spaces as %s, quotes the rest for the device shell and presses Enter and Tab', () => {
+        expect(typingScript('hello world')).toBe('input text hello%sworld');
+        expect(typingScript("it's $HOME; rm -rf /\nnext\tlast")).toBe(
+            "input text 'it'\\''s%s$HOME;%srm%s-rf%s/' && input keyevent 66 && input text next && input keyevent 61 && input text last"
+        );
+    });
+
+    test('types a literal %s in two calls, so input never reads it as a space', () => {
+        expect(typingScript('50%s off')).toBe('input text 50% && input text s%soff');
+        expect(typingScript('100% sure')).toBe('input text 100%%ssure');
+    });
+
+    test('refuses what input cannot type', () => {
+        expect(() => typingScript('Grüße')).toThrow('plain ASCII');
+    });
+});
+
 describe('AndroidBackend', () => {
     test('lists every AVD by its name, running or not, and phones by their serial', async () => {
         const adb = new FakeAdb();
@@ -116,6 +134,13 @@ describe('AndroidBackend', () => {
         expect(await backend.screenshot('Pixel_9_Pro_API_35')).toEqual(new Uint8Array([0x89, 0x50, 0x4e, 0x47]));
         expect(captured).toEqual([['-s', 'emulator-5554', 'exec-out', 'screencap', '-p']]);
         await expect(backend.screenshot('Tablet_API_34')).rejects.toMatchObject({ code: 'device-not-booted' });
+    });
+
+    test('types on a running device through its shell', async () => {
+        const adb = new FakeAdb();
+        await backendWith(adb).type('Pixel_9_Pro_API_35', 'hi there');
+
+        expect(adb.calls.at(-1)).toEqual(['-s', 'emulator-5554', 'shell', 'input text hi%sthere']);
     });
 
     test('says why a screen could not be captured', async () => {

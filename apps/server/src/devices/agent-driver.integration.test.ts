@@ -76,6 +76,10 @@ describe.skipIf(booted === undefined)('ruimte-context device on a booted simulat
         const swipe = (from: number, to: number) =>
             device(['swipe', 'phone-1', '--from', `${width! / 2},${height! * from}`, '--to', `${width! / 2},${height! * to}`]);
 
+        // A Settings left on a page of its own, such as search results, has no list to scroll; a fresh one opens on the list.
+        await manager
+            .action({ action: 'terminateApp', appId: 'com.apple.Preferences', backendId: booted!.backendId, platform: 'ios', deviceId: booted!.deviceId })
+            .catch(() => undefined);
         expect((await device(['launch', 'phone-1', '--app', 'com.apple.Preferences']))[0]).toStartWith('done\tlaunch');
         await Bun.sleep(1500);
         expect((await shotNow()).equals(start)).toBe(false);

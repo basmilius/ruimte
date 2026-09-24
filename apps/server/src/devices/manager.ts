@@ -23,7 +23,12 @@ import { ClientSinks } from '../client-sinks.ts';
 
 export interface DeviceSource extends LiveFrameSource {
     input(input: DeviceInput): void | Promise<void>;
+    /* A chord of USB HID keyboard usages, pressed in order and let go in reverse; absent on a source without a keyboard. */
+    keys?(usages: readonly number[]): void | Promise<void>;
 }
+
+/* Presses a chord on a device through a session held for whoever types. */
+export type DeviceKeyboard = (usages: readonly number[]) => Promise<void>;
 
 export interface DeviceBackend {
     readonly id: string;
@@ -38,6 +43,11 @@ export interface DeviceBackend {
     createSource?(deviceId: string): DeviceSource;
     /* A png of the screen as it is now, at the device's own resolution. */
     screenshot?(deviceId: string): Promise<Uint8Array>;
+    /*
+     * Types text into whatever has the focus on the device, a newline as Return and a tab as Tab.
+     * `keyboard` holds a session and answers its keys, for a backend that types through them.
+     */
+    type?(deviceId: string, text: string, keyboard: () => Promise<DeviceKeyboard>): Promise<void>;
 }
 
 interface DeviceSession {
@@ -293,6 +303,38 @@ export class DeviceManager {
         }
         try {
             await session.source.input(input);
+        } catch (error) {
+            throw this.sourceError(error);
+        }
+    }
+
+    async keys(backendId: string, deviceId: string, clientId: string, usages: readonly number[]): Promise<void> {
+        const session = this.sessions.get(sessionKey(backendId, deviceId));
+        if (!session || !session.clients.has(clientId)) {
+            throw new DeviceError('device-not-open', 'Open the device before sending input');
+        }
+        if (!session.source.keys) {
+            throw new DeviceError('device-input-unavailable', 'This device takes no keys from Ruimte');
+        }
+        try {
+            await session.source.keys(usages);
+        } catch (error) {
+            throw this.sourceError(error);
+        }
+    }
+
+    /* Whether Ruimte types on this device; a backend that types through keys needs the device to take input. */
+    canType(device: DeviceInfo): boolean {
+        return this.backends.get(device.backendId)?.type !== undefined && device.capabilities.input;
+    }
+
+    async type(backendId: string, platform: DevicePlatform, deviceId: string, text: string, keyboard: () => Promise<DeviceKeyboard>): Promise<void> {
+        const backend = this.backend(backendId, platform);
+        if (!backend.type) {
+            throw new DeviceError('device-input-unavailable', 'Ruimte cannot type on this device');
+        }
+        try {
+            await backend.type(deviceId, text, keyboard);
         } catch (error) {
             throw this.sourceError(error);
         }
