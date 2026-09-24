@@ -1021,6 +1021,45 @@ describe('a deleted view waiting on its undo', () => {
         dispose();
     });
 
+    test('a page that goes before its save lands finishes the deletion on the next open', async () => {
+        const storage = new Map<string, string>();
+        const listeners = new Map<string, () => void>();
+        const host = {
+            addEventListener: (type: string, listener: () => void) => void listeners.set(type, listener),
+            removeEventListener: (type: string) => void listeners.delete(type)
+        } as unknown as Pick<Window, 'addEventListener' | 'removeEventListener'>;
+        const first = setup({ storage, open: 'p1', window: host, stores: createWorkspaceStores() });
+        first.transport.views = [canvasView('main'), canvasView('notes')];
+        await tick();
+        first.stores.document.getState().trashView('notes');
+        first.transport.holdSave = new Promise(() => undefined);
+        listeners.get('pagehide')!();
+        await tick();
+        first.dispose();
+
+        const second = setup({ storage, open: 'p1', stores: createWorkspaceStores() });
+        second.transport.views = [canvasView('main'), canvasView('notes')];
+        await tick(10);
+        expect(second.stores.document.getState().views.map((view) => view.id)).toEqual(['main']);
+        const saved = second.transport.of('project.save').at(-1)?.payload as { content: ProjectContent };
+        expect(saved.content.views.map((view) => view.id)).toEqual(['main']);
+        expect([...storage.keys()].some((key) => key.startsWith('ruimte.deletedViews.'))).toBe(false);
+        second.dispose();
+    });
+
+    test('an undo forgets the deletion, so the next open keeps the view', async () => {
+        const storage = new Map<string, string>();
+        const { transport, stores, dispose } = setup({ storage, open: 'p1', stores: createWorkspaceStores() });
+        transport.views = [canvasView('main'), canvasView('notes')];
+        await tick();
+        stores.document.getState().trashView('notes');
+        expect([...storage.keys()].some((key) => key.startsWith('ruimte.deletedViews.'))).toBe(true);
+
+        stores.document.getState().restoreView('notes');
+        expect([...storage.keys()].some((key) => key.startsWith('ruimte.deletedViews.'))).toBe(false);
+        dispose();
+    });
+
     test('goes for good before the project is left', async () => {
         const { transport, stores, client, dispose } = setup({ open: 'p1', stores: createWorkspaceStores() });
         transport.views = [canvasView('main'), canvasView('notes')];

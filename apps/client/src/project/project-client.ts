@@ -5,6 +5,7 @@ import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { forgetClosedProject, rememberClosedProject } from './closed-projects';
 import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
+import { readDeletedViews, writeDeletedViews } from './deleted-views';
 import { browserStorage, rememberProject, type LastProjectStorage } from './last-project';
 import { mergeProject, type CanvasPatch } from './merge';
 import type { PanelsPort } from './panels-port';
@@ -34,7 +35,7 @@ interface DocumentAccess {
     getState(): {
         views: ProjectView[];
         shared: string[];
-        trashed: readonly unknown[];
+        trashed: ReadonlyArray<{ view: ProjectView }>;
         activeViewId: string | null;
         edits: number;
         loading: boolean;
@@ -43,6 +44,7 @@ interface DocumentAccess {
         heldNodeIds(): Set<string>;
         exportViews(): ProjectView[];
         fileViews(): ProjectView[];
+        deleteView(id: string): void;
         purgeTrash(): void;
         exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout'>;
     };
@@ -140,6 +142,8 @@ export class ProjectClient {
     private base: ProjectContent | null = null;
     /* Why the last incoming document went to the person instead of being merged in. */
     private refusal: string | null = null;
+    /* Views that left the trash for good but may still be in the file, until a save without them lands. */
+    private purging = new Set<string>();
 
     constructor(
         transport: Transport,
@@ -387,6 +391,7 @@ export class ProjectClient {
             this.sink.setChosenIcon(result.document.icon ?? null);
             this.sink.setCurrent(result.summary, result.document.rev);
             this.remember(result.summary.projectId);
+            this.finishDeletions(result.summary.projectId, result.document);
             // The project is open whatever the list says; a list that did not come is asked again when the link opens.
             await this.refreshList().catch(() => undefined);
         } finally {
@@ -413,8 +418,18 @@ export class ProjectClient {
      * the first kind. The view that is open and where its camera stood belong to this client.
      */
     private onDocument(state: ReturnType<DocumentAccess['getState']>, previous: ReturnType<DocumentAccess['getState']>): void {
-        if (state.loading || previous.loading || !this.opened || !this.sink.getState().current) {
+        const current = this.sink.getState().current;
+        if (state.loading || previous.loading || !this.opened || !current) {
             return;
+        }
+        if (state.trashed !== previous.trashed) {
+            // One that left the trash without coming back into the list is purged, or deleted by another writer.
+            for (const entry of previous.trashed) {
+                if (!state.trashed.some((kept) => kept.view.id === entry.view.id) && !state.views.some((view) => view.id === entry.view.id)) {
+                    this.purging.add(entry.view.id);
+                }
+            }
+            this.rememberDeletions(current.projectId);
         }
         if (state.edits !== previous.edits) {
             this.sink.setDirty(true);
@@ -423,6 +438,22 @@ export class ProjectClient {
         if (state.activeViewId !== previous.activeViewId) {
             this.scheduleLocal();
         }
+    }
+
+    private rememberDeletions(projectId: string): void {
+        const viewIds = new Set([...this.documents.getState().trashed.map((entry) => entry.view.id), ...this.purging]);
+        writeDeletedViews(this.endpointId(), projectId, [...viewIds], this.storage);
+    }
+
+    /* A page that went while a deletion waited on its undo or its save leaves it here, to be done now. */
+    private finishDeletions(projectId: string, document: ProjectDocument): void {
+        this.purging = new Set(
+            readDeletedViews(this.endpointId(), projectId, this.storage).filter((viewId) => document.views.some((view) => view.id === viewId))
+        );
+        for (const viewId of this.purging) {
+            this.documents.getState().deleteView(viewId);
+        }
+        this.rememberDeletions(projectId);
     }
 
     private scheduleSave(): void {
@@ -493,6 +524,13 @@ export class ProjectClient {
                 this.base = content;
                 this.sink.setRev(result.rev);
                 this.sink.setError(null);
+                const landed = [...this.purging].filter((viewId) => !content.views.some((view) => view.id === viewId));
+                if (landed.length > 0) {
+                    for (const viewId of landed) {
+                        this.purging.delete(viewId);
+                    }
+                    this.rememberDeletions(current.projectId);
+                }
             })
             .catch((e: unknown) => {
                 this.sink.setDirty(true);
