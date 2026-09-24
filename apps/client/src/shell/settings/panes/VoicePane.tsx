@@ -152,7 +152,7 @@ export function VoicePane() {
                         </label>
                         <input
                             id="openai-api-key"
-                            className="field min-w-0 flex-1 basis-64 font-mono"
+                            className="field min-w-0 flex-1 basis-64 font-mono text-code"
                             type="password"
                             autoComplete="off"
                             placeholder={displayStatus?.configured ? t('voice.key.replacePlaceholder') : 'sk-…'}

@@ -53,7 +53,7 @@ import {
 } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
 import { useChatRow } from '@/state/chats';
-import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { MENU_LABEL, MENU_SEPARATOR, MULTILINE_FIELD } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 import { TextMenu } from '@/ui/TextMenu';
@@ -86,9 +86,9 @@ const STATE_TONE: Record<PlanStepState, string> = {
 const INDENT_PX = 24;
 // With the row's `mx-1` it puts a step's column under the caret of the section above it.
 const ROW_PADDING_PX = 8;
-/* A group's row folds on a click anywhere, rounded and lit like a sidebar item. The ring asks for
-   keyboard modality too, since `:focus-visible` alone stays on for a click after any keystroke. */
-const TOGGLE_ROW = 'cursor-default rounded-md outline-none hover:bg-surface-hover focus-visible:ring-accent in-data-[modality=keyboard]:focus-visible:ring-1';
+/* A group's row folds on a click anywhere, rounded and lit like a sidebar item. The outline stays off
+   under the pointer, since `:focus-visible` alone stays on for a click after any keystroke. */
+const TOGGLE_ROW = 'focus-ring cursor-default rounded-md hover:bg-surface-hover in-data-[modality=pointer]:focus-visible:outline-none';
 
 // The length of `.plan-step-revealed` in `styles.css`, which also ends the mark with motion turned off.
 const REVEAL_MS = 1600;
@@ -575,7 +575,7 @@ function NoteEditor({ initial, onDone }: { initial: string; onDone: (text: strin
             value={text}
             placeholder={t('note.placeholder')}
             aria-label={t('note.label')}
-            className="mt-1 block w-full resize-none rounded-md border border-border bg-surface-sunken px-2 py-1 text-xs text-text outline-none select-text focus:border-accent"
+            className={clsx(MULTILINE_FIELD, 'mt-1 block select-text')}
             onChange={(event) => setText(event.target.value)}
             onKeyDown={onKeyDown}
             onBlur={() => end(text.trim())}

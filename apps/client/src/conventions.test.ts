@@ -175,6 +175,13 @@ describe('the conventions of the client', () => {
         expect(bracketed).toEqual([]);
     });
 
+    test('keyboard focus is the accent outline, never a ring or a colored border', () => {
+        const drawn = sources().flatMap(({ path, text }) =>
+            [...text.matchAll(/focus(-visible|-within)?:(ring-|border-accent)/g)].map((match) => `${path}: ${match[0]}`)
+        );
+        expect(drawn).toEqual([]);
+    });
+
     test('a hint is a Tooltip, never a title on an element', () => {
         const titled = sources()
             .filter(({ path }) => path.endsWith('.tsx'))

@@ -29,7 +29,7 @@ function VoiceOverlayContent({ visible }: { visible: boolean }) {
         <div className="flex justify-center px-6 pt-20 pb-8 before:absolute before:inset-0 before:bg-gradient-to-t before:from-bg before:via-bg/90 before:to-transparent">
             <button
                 type="button"
-                className="pointer-events-auto relative flex w-full max-w-lg flex-col items-center gap-3 rounded-xl px-4 py-2 text-center text-text outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="pointer-events-auto relative flex w-full max-w-lg flex-col items-center gap-3 rounded-xl px-4 py-2 text-center text-text"
                 aria-label={t('button')}
                 onClick={() => useVoice.getState().setOpen(true)}
             >

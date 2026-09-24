@@ -29,13 +29,14 @@ function EdgeLabel({
 }) {
     const canvasStore = useCanvasStore();
     if (editing) {
+        // A pixel wider on every side than the field, since a foreignObject clips the focus outline around it.
         return (
-            <foreignObject x={at.x - 60} y={at.y - 14} width="120" height="28">
+            <foreignObject x={at.x - 61} y={at.y - 15} width="122" height="30">
                 <input
                     autoFocus
                     defaultValue={label ?? ''}
                     maxLength={MAX_TITLE_LENGTH}
-                    className="h-7 w-full rounded-full border border-accent bg-surface-raised px-2 text-center text-xs text-text outline-none"
+                    className="field field-sm m-px w-[120px] text-center"
                     onPointerDown={(e) => e.stopPropagation()}
                     onBlur={(e) => {
                         // Both directions carry the name: to a person this is one line, and one line has one name.

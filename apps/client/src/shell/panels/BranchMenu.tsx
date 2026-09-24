@@ -288,11 +288,11 @@ function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProp
     return (
         <>
             <div className="mx-1 my-1 flex items-center gap-1">
-                <div className="flex min-w-0 grow items-center gap-2 rounded-lg border border-border px-2.5">
-                    <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
+                <span className="relative min-w-0 grow">
+                    <Icon icon={Search} size={14} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-text-faint" aria-hidden />
                     <input
                         ref={inputRef}
-                        className="h-8 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
+                        className="field pl-8"
                         placeholder={t('git.branchMenu.search')}
                         spellCheck={false}
                         value={query}
@@ -305,7 +305,7 @@ function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProp
                             }
                         }}
                     />
-                </div>
+                </span>
                 {/* An item and not a plain button, so it keeps the keyboard and the closing a menu row has. */}
                 <Tooltip label={t('git.branchMenu.create')} name>
                     <Menu.Item className="icon-btn h-8 w-8" onClick={() => onCreate(cwd)}>

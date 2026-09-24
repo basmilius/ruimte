@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FolderGit2, LoaderCircle, Sparkles } from 'lucide-react';
 import type { GitCapabilitiesResult } from '@ruimte/contracts';
-import { COMMIT_MESSAGE } from '@/ui/classes';
+import { MULTILINE_FIELD } from '@/ui/classes';
 import { cancelGitRunAction, performAsPerson } from '@/actions/client-actions';
 import { commitTargets, nextActionId, splitMessage, type CommitCandidate } from '@/shell/panels/git-actions';
 import { useGit } from '@/state/git';
@@ -87,7 +87,7 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
                 </div>
             )}
             <textarea
-                className={COMMIT_MESSAGE}
+                className={MULTILINE_FIELD}
                 rows={3}
                 spellCheck={false}
                 placeholder={t('git.commit.placeholder')}

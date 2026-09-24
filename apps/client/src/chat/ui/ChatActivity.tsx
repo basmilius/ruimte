@@ -128,7 +128,7 @@ function ActivityRow({
     return (
         <div className={clsx('flex items-center gap-1 rounded-md', onOpen && 'hover:bg-surface-hover')}>
             {onOpen ? (
-                <Popover.Close className={clsx(ROW_BODY, 'focus-visible:ring-1 focus-visible:ring-accent focus-visible:outline-none')} onClick={onOpen}>
+                <Popover.Close className={ROW_BODY} onClick={onOpen}>
                     {body}
                 </Popover.Close>
             ) : (

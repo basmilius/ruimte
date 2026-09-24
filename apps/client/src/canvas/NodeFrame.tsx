@@ -143,7 +143,7 @@ function Title({ id, title, editing, muted, onDone }: { id: string; title: strin
             autoFocus
             defaultValue={title}
             maxLength={MAX_TITLE_LENGTH}
-            className="min-w-0 grow rounded-md bg-surface-sunken px-1.5 py-0.5 text-xs font-medium text-text outline-none ring-1 ring-accent"
+            className="field field-sm min-w-0 grow font-medium"
             onPointerDown={(e) => e.stopPropagation()}
             onFocus={(e) => e.currentTarget.select()}
             onBlur={(e) => {

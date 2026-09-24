@@ -174,7 +174,7 @@ function RenameField({ value, onDone }: { value: string; onDone(next: string | n
             autoFocus
             defaultValue={value}
             maxLength={MAX_TITLE_LENGTH}
-            className="min-w-0 grow rounded bg-surface-sunken px-1.5 py-0.5 text-sm text-text outline-none ring-1 ring-accent"
+            className="field field-sm min-w-0 grow text-sm"
             onFocus={(e) => e.currentTarget.select()}
             onBlur={(e) => onDone(e.currentTarget.value.trim() || null)}
             onKeyDown={(e) => {
@@ -367,10 +367,7 @@ function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
                 tabIndex={tabbable ? 0 : -1}
-                className={clsx(
-                    'flex w-full cursor-default outline-none focus-visible:ring-1 focus-visible:ring-accent',
-                    row.headingBelow ? 'h-4 items-end' : 'h-6 items-center'
-                )}
+                className={clsx('focus-ring flex w-full cursor-default', row.headingBelow ? 'h-4 items-end' : 'h-6 items-center')}
                 onFocus={onFocus}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
                 onDragEnd={() => onDrag(null)}
@@ -422,7 +419,7 @@ function SubheaderRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
                 tabIndex={tabbable ? 0 : -1}
-                className={clsx(SECTION_LABEL, 'flex h-8 w-full cursor-default items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-accent')}
+                className={clsx(SECTION_LABEL, 'focus-ring flex h-8 w-full cursor-default items-center px-2')}
                 onFocus={onFocus}
                 onDoubleClick={() => rename(true)}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
@@ -469,7 +466,7 @@ function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<View
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
                 tabIndex={tabbable ? 0 : -1}
-                className={clsx(ROW, 'cursor-default font-medium text-text-faint outline-none focus-visible:ring-1 focus-visible:ring-accent')}
+                className={clsx(ROW, 'focus-ring cursor-default font-medium text-text-faint')}
                 onFocus={onFocus}
                 onKeyDown={(e) => arrowStep(e, onArrow)}
             >

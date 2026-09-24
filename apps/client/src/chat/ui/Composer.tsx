@@ -855,7 +855,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             <ChatActivity chatId={chatId} />
             <div
                 className={clsx(
-                    '@container/composer pointer-events-auto flex flex-col overflow-hidden rounded-2xl border shadow-float backdrop-blur-[14px] focus-within:border-accent',
+                    '@container/composer pointer-events-auto flex flex-col overflow-hidden rounded-2xl border shadow-float backdrop-blur-[14px] focus-ring-within',
                     dragging
                         ? 'border-accent bg-[color-mix(in_srgb,var(--accent-soft)_60%,var(--surface-raised))]'
                         : 'border-border bg-[color-mix(in_srgb,var(--surface-raised)_92%,transparent)]'

@@ -101,7 +101,7 @@ function NameField({ initial, onDone }: { initial: string; onDone: (name: string
             maxLength={CHAT_BOOKMARK_LIMITS.name}
             placeholder={t('bookmarks.namePlaceholder')}
             aria-label={t('bookmarks.nameLabel')}
-            className="h-6 w-64 max-w-full min-w-0 rounded-md bg-surface-sunken px-1.5 text-xs text-text outline-none ring-1 ring-accent select-text placeholder:text-text-faint"
+            className="field field-sm w-64 max-w-full min-w-0 select-text"
             onPointerDown={(e) => e.stopPropagation()}
             onFocus={(e) => e.currentTarget.select()}
             onBlur={(e) => settle(e.currentTarget.value)}

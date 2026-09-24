@@ -42,9 +42,6 @@ const LOCATIONS = [
     { label: 'Tokyo', latitude: 35.6762, longitude: 139.6503 }
 ] as const;
 
-const FIELD =
-    'h-8 min-w-0 rounded-lg border border-border bg-surface-raised px-2 text-xs text-text outline-none placeholder:text-text-faint focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50';
-
 export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onClose: () => void }) {
     const { t } = useTranslation('machines');
     const endpointId = useEndpointId();
@@ -294,7 +291,13 @@ function TextAction({
     };
     return (
         <form className="flex gap-1.5" onSubmit={submit}>
-            <input className={`${FIELD} grow`} value={value} disabled={disabled} placeholder={placeholder} onChange={(event) => setValue(event.target.value)} />
+            <input
+                className="field field-sm min-w-0 grow disabled:opacity-50"
+                value={value}
+                disabled={disabled}
+                placeholder={placeholder}
+                onChange={(event) => setValue(event.target.value)}
+            />
             <Button type="submit" size="sm" variant="secondary" disabled={disabled || value.trim().length === 0}>
                 {label}
             </Button>
@@ -323,7 +326,7 @@ function LocationTools({
             {canSet && (
                 <div className="flex gap-1.5">
                     <input
-                        className={`${FIELD} w-1/2`}
+                        className="field field-sm w-1/2 min-w-0 disabled:opacity-50"
                         inputMode="decimal"
                         value={latitude}
                         disabled={disabled}
@@ -331,7 +334,7 @@ function LocationTools({
                         onChange={(event) => setLatitude(event.target.value)}
                     />
                     <input
-                        className={`${FIELD} w-1/2`}
+                        className="field field-sm w-1/2 min-w-0 disabled:opacity-50"
                         inputMode="decimal"
                         value={longitude}
                         disabled={disabled}
@@ -404,7 +407,13 @@ function PermissionTools({
     };
     return (
         <ToolSection title={t('device.tools.permissions.title')}>
-            <input className={FIELD} value={appId} disabled={disabled} placeholder={appIdPlaceholder} onChange={(event) => setAppId(event.target.value)} />
+            <input
+                className="field field-sm min-w-0 disabled:opacity-50"
+                value={appId}
+                disabled={disabled}
+                placeholder={appIdPlaceholder}
+                onChange={(event) => setAppId(event.target.value)}
+            />
             <div className="flex flex-wrap gap-1.5">
                 <Select<DevicePermission>
                     label={t('device.tools.permissions.label')}
@@ -440,10 +449,16 @@ function PushAction({ appIdPlaceholder, disabled, act }: { appIdPlaceholder: str
     };
     return (
         <form className="flex flex-col gap-1.5" onSubmit={submit}>
-            <input className={FIELD} value={appId} disabled={disabled} placeholder={appIdPlaceholder} onChange={(event) => setAppId(event.target.value)} />
+            <input
+                className="field field-sm min-w-0 disabled:opacity-50"
+                value={appId}
+                disabled={disabled}
+                placeholder={appIdPlaceholder}
+                onChange={(event) => setAppId(event.target.value)}
+            />
             <div className="flex gap-1.5">
                 <input
-                    className={`${FIELD} grow`}
+                    className="field field-sm min-w-0 grow disabled:opacity-50"
                     value={payload}
                     disabled={disabled}
                     placeholder={t('device.tools.push.alertText')}

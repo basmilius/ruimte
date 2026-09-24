@@ -207,7 +207,7 @@ export function MergeWorktreeDialog() {
                                 <label className="mt-3 flex flex-col gap-1.5">
                                     <span className={SECTION_LABEL}>{t('merge.commitMessage')}</span>
                                     <input
-                                        className="field font-mono"
+                                        className="field font-mono text-code"
                                         spellCheck={false}
                                         value={subject}
                                         onChange={(event) => setDraft({ ...draft, subject: event.target.value })}

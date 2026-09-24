@@ -163,7 +163,7 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
             >
                 {edges >= 2 && <div aria-hidden className={`${PROMPT_SURFACE} absolute inset-x-6 -top-3 h-4`} />}
                 {edges >= 1 && <div aria-hidden className={`${PROMPT_SURFACE} absolute inset-x-3 -top-1.5 h-4`} />}
-                <div className={`${PROMPT_SURFACE} relative focus-within:border-accent`}>
+                <div className={`${PROMPT_SURFACE} focus-ring-within relative`}>
                     <ErrorBoundary label={t('promptStack.failed')} resetKeys={[active.id]} className="relative p-3">
                         <PromptView
                             key={active.id}

@@ -107,7 +107,7 @@ function RenameField({ id, onDone }: { id: string; onDone: () => void }) {
             autoFocus
             defaultValue={label}
             aria-label={t('diagram.nodeLabel')}
-            className="absolute h-7 rounded-md bg-surface-sunken px-1.5 text-center text-sm font-medium text-text outline-none ring-1 ring-accent"
+            className="field field-sm absolute text-center text-sm font-medium"
             style={{
                 left: Math.round(camera.x + (box.x + box.w / 2) * camera.zoom - width / 2),
                 top: Math.round(camera.y + (box.y + box.h / 2) * camera.zoom - 14),

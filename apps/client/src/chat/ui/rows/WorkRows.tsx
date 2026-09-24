@@ -48,7 +48,7 @@ export function ToggleLine({
         <button
             className={clsx(
                 // Fix the width so long commands reach the truncation inside the negative margins.
-                '-mx-1 mb-0.5 flex h-7 w-[calc(100%+8px)] items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+                '-mx-1 mb-0.5 flex h-7 w-[calc(100%+8px)] items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-hover',
                 failed && 'text-status-error',
                 className
             )}
@@ -191,7 +191,7 @@ export function TurnFoldRow({
     return (
         <button
             className={clsx(
-                'group -mx-1 mb-2 flex h-7 w-[calc(100%+8px)] min-w-0 items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+                'group -mx-1 mb-2 flex h-7 w-[calc(100%+8px)] min-w-0 items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-hover',
                 turn.state === 'error' && 'text-status-error'
             )}
             aria-expanded={expanded}

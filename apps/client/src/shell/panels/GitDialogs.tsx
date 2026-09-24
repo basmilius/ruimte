@@ -48,17 +48,22 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
                     <Dialog.Title className="text-base font-semibold text-text">{title}</Dialog.Title>
                     {description !== undefined && <p className="mt-1 text-sm text-text-muted">{description}</p>}
                     {choices.length > filterFrom && (
-                        <div className="mt-4 flex items-center gap-2 rounded-lg border border-border px-2.5">
-                            <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
+                        <span className="relative mt-4 block">
+                            <Icon
+                                icon={Search}
+                                size={14}
+                                className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-text-faint"
+                                aria-hidden
+                            />
                             <input
                                 autoFocus
-                                className="h-8 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
+                                className="field pl-8"
                                 placeholder={t('git.dialog.filter')}
                                 spellCheck={false}
                                 value={query}
                                 onChange={(event) => setQuery(event.target.value)}
                             />
-                        </div>
+                        </span>
                     )}
                     <div className="mt-3 max-h-72 overflow-y-auto">
                         {shown.length === 0 && <p className="px-1 py-6 text-center text-sm text-text-faint">{empty}</p>}

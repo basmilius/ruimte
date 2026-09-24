@@ -478,7 +478,7 @@ export function FilesPanel() {
                 <span className="relative min-w-0 grow">
                     <Icon icon={Search} size={14} className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-text-faint" aria-hidden />
                     <input
-                        className="field h-7 pl-8 text-xs"
+                        className="field field-sm pl-8"
                         placeholder={t('files.filter')}
                         aria-label={t('files.filter')}
                         spellCheck={false}

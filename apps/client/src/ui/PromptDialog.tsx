@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/ui/Button';
-import { COMMIT_MESSAGE, SECTION_LABEL } from '@/ui/classes';
+import { MULTILINE_FIELD, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { useAsyncAction } from '@/ui/useAsyncAction';
 
@@ -116,7 +116,7 @@ export function PromptDialog({
                             {field.label !== undefined && <span className={SECTION_LABEL}>{field.label}</span>}
                             <input
                                 autoFocus
-                                className={clsx('field', field.mono === true && 'font-mono')}
+                                className={clsx('field', field.mono === true && 'font-mono text-code')}
                                 aria-label={field.ariaLabel}
                                 spellCheck={false}
                                 placeholder={field.placeholder}
@@ -138,7 +138,7 @@ export function PromptDialog({
                         <label className="mt-3 flex flex-col gap-1.5">
                             <span className={SECTION_LABEL}>{area.label}</span>
                             <textarea
-                                className={COMMIT_MESSAGE}
+                                className={MULTILINE_FIELD}
                                 rows={5}
                                 spellCheck={false}
                                 placeholder={area.placeholder}

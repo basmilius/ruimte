@@ -119,7 +119,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                             <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
                             <input
                                 ref={inputRef}
-                                className="h-9 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
+                                className="h-8 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
                                 placeholder={t('pickers.model.search')}
                                 spellCheck={false}
                                 value={query}

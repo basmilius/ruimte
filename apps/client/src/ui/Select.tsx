@@ -44,7 +44,7 @@ const TRIGGER_SIZE = {
 } as const;
 
 const TRIGGER_VARIANT = {
-    outlined: 'max-w-56 rounded-lg border border-border bg-surface-raised text-text focus-visible:ring-1 focus-visible:ring-accent',
+    outlined: 'max-w-56 rounded-lg border border-border bg-surface-raised text-text',
     ghost: 'rounded-md text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text data-disabled:hover:bg-transparent data-disabled:hover:text-text-muted'
 } as const;
 
@@ -100,7 +100,7 @@ export function Select<T extends string>({
             <BaseSelect.Trigger
                 aria-label={label}
                 className={clsx(
-                    'flex shrink-0 items-center whitespace-nowrap text-xs outline-none',
+                    'flex shrink-0 items-center whitespace-nowrap text-xs',
                     TRIGGER_SIZE[size],
                     TRIGGER_VARIANT[variant],
                     TRIGGER_DISABLED,

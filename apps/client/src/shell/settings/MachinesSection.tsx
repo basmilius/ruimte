@@ -124,7 +124,7 @@ function MachineRow({ entry, onOpen }: { entry: MachineEntry; onOpen(): void }) 
         <div className="flex min-w-0 items-center gap-1 py-1 pr-3 pl-1.5">
             <button
                 type="button"
-                className="flex min-w-0 grow items-center gap-3 rounded-lg px-2.5 py-1.5 text-left outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent"
+                className="flex min-w-0 grow items-center gap-3 rounded-lg px-2.5 py-1.5 text-left hover:bg-surface-hover"
                 aria-label={t('machines.rowAria', { machine: name, reach: reachLabel(entry) })}
                 onClick={onOpen}
             >

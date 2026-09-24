@@ -501,8 +501,8 @@
     .icon-btn:disabled:hover { background: transparent; color: var(--text-faint); }
     .icon-btn:disabled:active { scale: 1; }
 
-    /* Every text input in the app. One height, one border and one focus ring, so a field in a
-       dialog, in settings and next to a chat answer cannot drift apart. */
+    /* Every text input in the app: one border and one focus ring, at the one height or the compact
+       one, so a field in a dialog, in settings and next to a chat answer cannot drift apart. */
     .field {
         height: 32px;
         width: 100%;
@@ -516,10 +516,20 @@
     }
     .field::placeholder { color: var(--text-faint); }
     .field:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+    /* At the height of a small button: a row of tools, and a name typed in place of the label it renames. */
+    .field-sm {
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 6px;
+        font-size: var(--text-xs);
+    }
 
-    /* Keyboard focus is visible on every control; pointer focus stays quiet. */
-    .icon-btn:focus-visible, .menu-item:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    /* Keyboard focus is visible on every control; pointer focus stays quiet. `.focus-ring` is the
+       same outline for something that takes focus without being a button, such as a row in a list. */
+    .icon-btn:focus-visible, .menu-item:focus-visible, button:focus-visible, .focus-ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     .menu-item:focus-visible { outline-offset: -2px; }
+    /* A card that holds a field, the composer's or a prompt's, wears the field's outline on its own edge. */
+    .focus-ring-within:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: -1px; }
     /* Base UI moves DOM focus to the item the pointer hovers, and a browser keeps `:focus-visible`
        on for scripted focus as long as its own keyboard flag is up, so after any keystroke the ring
        would follow the mouse through every menu. The last real input event decides instead
