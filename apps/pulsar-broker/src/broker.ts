@@ -140,12 +140,6 @@ export class Broker {
                     this.refuseFrame(peer, 'A socket announces once');
                     return;
                 }
-                const waitKey = this.announcements.take(frame.publicKey);
-                if (waitKey > 0) {
-                    this.send(peer, { type: 'rate-limited', scope: 'key', retryAfterMs: waitKey });
-                    this.close(peer, CLOSE.rateLimited, 'Announcing too often');
-                    return;
-                }
                 peer.role = frame.role;
                 peer.publicKey = frame.publicKey;
                 peer.nonce = randomBytes(24).toString('base64url');
@@ -246,6 +240,13 @@ export class Broker {
         if (!verifySignature(peer.publicKey, message, signature)) {
             this.send(peer, { type: 'error', code: 'bad-signature', message: 'The signature does not verify for that key' });
             this.close(peer, CLOSE.badSignature, 'Bad signature');
+            return;
+        }
+        // Counted only once the key is proven: anyone can say hello with a machine's key, and would drain its budget.
+        const waitKey = this.announcements.take(peer.publicKey);
+        if (waitKey > 0) {
+            this.send(peer, { type: 'rate-limited', scope: 'key', retryAfterMs: waitKey });
+            this.close(peer, CLOSE.rateLimited, 'Announcing too often');
             return;
         }
         const previous = this.announced.get(peer.publicKey);

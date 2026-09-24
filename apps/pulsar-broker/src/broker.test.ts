@@ -249,6 +249,25 @@ describe('the broker between peers', () => {
         expect(first.state.closed).toBeNull();
     });
 
+    test('a flood of hellos with a key nobody proved leaves that key free to announce', async () => {
+        const broker = newBroker({ announcesPerMinutePerKey: 2 });
+        const victim = newKey();
+        for (let i = 0; i < 10; i++) {
+            const socket = new FakeSocket();
+            broker.message(broker.open(socket, `198.51.100.${i}`, BROKER_NAME), JSON.stringify({ type: 'hello', role: 'machine', publicKey: victim.publicKey }));
+            expect(socket.sent.map((frame) => frame.type)).toEqual(['challenge']);
+        }
+        for (let i = 0; i < 10; i++) {
+            connect(broker, 'machine', victim, { signer: newKey() });
+        }
+        await settle();
+
+        const machine = connect(broker, 'machine', victim);
+        await settle();
+        expect(machine.state.ready).toBe(true);
+        expect(framesOf(machine.state, 'rate-limited')).toEqual([]);
+    });
+
     test('a frame over the size cap closes the socket', async () => {
         const broker = newBroker({ maxMessageBytes: 2048 });
         const client = connect(broker, 'client', newKey());
