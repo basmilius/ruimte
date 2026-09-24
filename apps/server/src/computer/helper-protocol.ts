@@ -6,7 +6,23 @@ import { z } from 'zod';
  * The reply schemas keep only what the daemon reads; a field the helper adds later passes unseen.
  */
 
-export const HELPER_COMMANDS = ['doctor', 'apps', 'quit', 'presence', 'state', 'click', 'scroll', 'type', 'key', 'set-value', 'open', 'menu'] as const;
+export const HELPER_COMMANDS = [
+    'doctor',
+    'apps',
+    'quit',
+    'presence',
+    'pause',
+    'resume',
+    'stop',
+    'state',
+    'click',
+    'scroll',
+    'type',
+    'key',
+    'set-value',
+    'open',
+    'menu'
+] as const;
 export type HelperCommand = (typeof HELPER_COMMANDS)[number];
 
 /* The commands that read or operate one app, which is what a person has to let an agent into. */
@@ -60,6 +76,9 @@ const SessionModeSchema = z.enum(['running', 'paused', 'takenOver']);
 
 export const HelperSessionSchema = z.object({ active: z.boolean(), mode: SessionModeSchema, stopped: z.boolean() });
 export type HelperSession = z.infer<typeof HelperSessionSchema>;
+
+/* What `pause`, `resume` and `stop` answer: the session after the press, which may have changed nothing. */
+export const PressResultSchema = z.object({ session: HelperSessionSchema });
 
 export const PresenceResultSchema = z.union([
     z.object({ session: z.literal(true), shown: z.string(), mode: SessionModeSchema }),

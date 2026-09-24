@@ -157,6 +157,21 @@ export class ComputerHelper {
         await this.deliver({ command: 'quit' }, false).catch(() => null);
     }
 
+    /* Quits a running helper and waits until its socket is closed, so the next request starts a fresh one rather than reaching the one on its way out. */
+    async quitAndWait(): Promise<void> {
+        await this.quit();
+        for (let waited = 0; waited < this.startWaitMs; waited += START_POLL_MS) {
+            const answered = await this.deliver({ command: 'doctor', prompt: false }, false)
+                .then((reply) => reply !== null)
+                .catch(() => false);
+            if (!answered) {
+                return;
+            }
+            await this.sleep(START_POLL_MS);
+        }
+        throw new HelperFailure('helper-unreachable', `Ruimte Computer Use did not quit within ${this.startWaitMs / 1000} s`);
+    }
+
     private resultOf<Schema extends z.ZodType>(reply: unknown, schema: Schema): z.infer<Schema> {
         const parsed = HelperReplySchema.safeParse(reply);
         if (!parsed.success) {

@@ -37,6 +37,15 @@ export const ComputerUseSetEnabledPayloadSchema = z.object({
 });
 export type ComputerUseSetEnabledPayload = z.infer<typeof ComputerUseSetEnabledPayloadSchema>;
 
+/* The buttons of the helper's session bar, pressed by a person on the node whose agent holds the Mac. */
+export const ComputerControlActionSchema = z.enum(['pause', 'resume', 'stop']);
+export type ComputerControlAction = z.infer<typeof ComputerControlActionSchema>;
+
+export const ComputerControlPayloadSchema = z.object({
+    action: ComputerControlActionSchema
+});
+export type ComputerControlPayload = z.infer<typeof ComputerControlPayloadSchema>;
+
 /*
  * An agent wants to operate an app it has not been let into. One card per agent and app, whatever
  * it asked first; the answer covers everything that agent does in that app.

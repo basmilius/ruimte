@@ -6,6 +6,10 @@ export const registerComputerHandlers = (dispatcher: Dispatcher, computer: Compu
 
     dispatcher.register('computer.setEnabled', (payload) => computer.setEnabled(payload.enabled, payload.language));
 
+    dispatcher.register('computer.restart', () => computer.restart());
+
+    dispatcher.register('computer.control', (payload) => computer.control(payload.action));
+
     dispatcher.register('computer.approvals', () => ({ approvals: computer.pendingApprovals() }));
 
     dispatcher.register('computer.answer', async (payload) => ({ accepted: await computer.answer(payload.requestId, payload.choice) }));

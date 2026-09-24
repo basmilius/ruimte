@@ -80,6 +80,24 @@ describe('the helper', () => {
     });
 });
 
+describe('quitting the helper for a fresh launch', () => {
+    test('waits while it still answers, and returns once its socket is closed', async () => {
+        const fake = new FakeHelper();
+        fake.lingerAfterQuit = 3;
+        const helper = await helperOver(fake);
+        await helper.quitAndWait();
+        expect(fake.running).toBe(false);
+        expect(fake.requests.map((request) => request.command)).toEqual(['quit', 'doctor', 'doctor', 'doctor']);
+    });
+
+    test('gives up on a helper that keeps answering', async () => {
+        const fake = new FakeHelper();
+        fake.lingerAfterQuit = 1_000;
+        const helper = await helperOver(fake);
+        expect((await failureOf(helper.quitAndWait())).code).toBe('helper-unreachable');
+    });
+});
+
 describe('where the helper is', () => {
     test('beside the packaged daemon, in a checkout, and nowhere off macOS', async () => {
         const root = await mkdtemp(join(tmpdir(), 'ruimte-helper-'));

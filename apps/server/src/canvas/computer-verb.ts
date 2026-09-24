@@ -374,5 +374,6 @@ export const COMPUTER_SUMMARY =
 export const COMPUTER_DETAIL: readonly string[] = [
     'note\tA loop: open or apps, state to read the window and its elements, an action with --state to act and read the result in one call',
     'note\tThe screenshot is this machine’s, not the project’s: it lives outside the project folder and is swept an hour later',
-    'off\tWhile computer use is off on this machine every action refuses with computer-use-off, and only a person turns it on'
+    'off\tWhile computer use is off on this machine every action refuses with computer-use-off, and only a person turns it on',
+    'grants\tUntil a person gave Ruimte Computer Use both Accessibility and Screen Recording every action refuses with not-granted; only they can, in the settings of Ruimte'
 ];

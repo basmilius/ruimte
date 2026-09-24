@@ -1,7 +1,7 @@
 import { mkdir, readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { ComputerApproval, ComputerApprovalChoice, ComputerUseStatus } from '@ruimte/contracts';
+import type { ComputerApproval, ComputerApprovalChoice, ComputerControlAction, ComputerUseStatus } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { CodedError } from '../coded-error.ts';
 import { writeAtomic } from '../fs.ts';
@@ -13,6 +13,7 @@ import {
     AppsResultSchema,
     DoctorResultSchema,
     PresenceResultSchema,
+    PressResultSchema,
     StateResultSchema,
     type ActionResult,
     type AppCommand,
@@ -203,6 +204,11 @@ export class ComputerUse {
         return this.store.enabled;
     }
 
+    /* On, and with both grants as the helper last reported them: only then do agents hear of the noun. */
+    get usable(): boolean {
+        return this.store.enabled && this.current.accessibility === true && this.current.screenRecording === true;
+    }
+
     status(): ComputerUseStatus {
         return this.current;
     }
@@ -279,10 +285,39 @@ export class ComputerUse {
         return this.setStatus({ ...this.current, enabled: false, running: false });
     }
 
-    /* Writes the pill's words for a helper that is on; call once the store is loaded. */
+    /* Screen Recording applies to a fresh launch of the helper only, so a person who just granted it gets one without a command. */
+    async restart(): Promise<ComputerUseStatus> {
+        if (!this.store.enabled || !this.helper.present) {
+            return this.refreshStatus();
+        }
+        this.presence.drop();
+        await this.helper.quitAndWait();
+        this.session = null;
+        return this.refreshStatus();
+    }
+
+    /* A person's press on the node whose agent holds the Mac, which the helper takes as a press on its own session bar. */
+    async control(action: ComputerControlAction): Promise<ComputerUseStatus> {
+        if (!this.store.enabled) {
+            return this.current;
+        }
+        const reply = await this.helper.ask({ command: action }, PressResultSchema);
+        if (reply === null) {
+            this.heard(null);
+            return this.current;
+        }
+        if (reply.session.stopped) {
+            this.presence.drop();
+        }
+        this.heard(reply.session);
+        return this.current;
+    }
+
+    /* Writes the pill's words for a helper that is on, and asks it for the grants so agents hear of the noun without a client asking first. */
     async start(): Promise<void> {
         if (this.store.enabled) {
             await this.writeOverlay();
+            void this.refreshStatus();
         }
     }
 
@@ -492,10 +527,11 @@ export class ComputerUse {
             accessibility: doctor.accessibility.granted,
             screenRecording: doctor.screenRecording.granted
         });
-        if (!doctor.accessibility.granted) {
+        const missing = [...(doctor.accessibility.granted ? [] : ['Accessibility']), ...(doctor.screenRecording.granted ? [] : ['Screen Recording'])];
+        if (missing.length > 0) {
             throw new ComputerRefusal(
                 'not-granted',
-                'Ruimte Computer Use does not have the Accessibility permission yet; only a person grants it, in System Settings > Privacy & Security'
+                `Ruimte Computer Use does not have the ${missing.join(' and ')} ${missing.length === 1 ? 'permission' : 'permissions'} yet; only a person grants ${missing.length === 1 ? 'it' : 'them'}, in the Computer use settings of Ruimte`
             );
         }
         return doctor;

@@ -87,6 +87,32 @@ describe('computer use', () => {
         helper.accessibility = false;
         expect(await codeOf(computer.operate('chat-1', 'state', 'TextEdit', {}))).toBe('not-granted');
     });
+
+    test('refuses a missing Screen Recording grant too, and names every grant that is missing', async () => {
+        const { computer, helper } = await computerSetup();
+        helper.screenRecording = false;
+        const refusal = await computer.operate('chat-1', 'state', 'TextEdit', {}).catch((error: unknown) => error as { code: string; message: string });
+        expect(refusal).toMatchObject({ code: 'not-granted' });
+        expect((refusal as { message: string }).message).toContain('the Screen Recording permission');
+        helper.accessibility = false;
+        expect(((await computer.apps('chat-1').catch((error: unknown) => error)) as { message: string }).message).toContain(
+            'the Accessibility and Screen Recording permissions'
+        );
+        expect(computer.pendingApprovals()).toEqual([]);
+    });
+
+    test('is usable, and told to agents, only while it is on and both grants are there', async () => {
+        const { computer, helper } = await computerSetup({ enabled: false });
+        expect(computer.usable).toBe(false);
+        helper.screenRecording = false;
+        await computer.setEnabled(true, 'en');
+        expect(computer.usable).toBe(false);
+        helper.screenRecording = true;
+        await computer.refreshStatus();
+        expect(computer.usable).toBe(true);
+        await computer.setEnabled(false, undefined);
+        expect(computer.usable).toBe(false);
+    });
 });
 
 describe('the approval of an app', () => {
@@ -444,5 +470,60 @@ describe('the status of the session', () => {
         const sessions = events.flatMap((event) => (event.event === 'computer.status' ? [event.payload.session] : []));
         expect(sessions).toContainEqual({ mode: 'paused', nodeId: 'chat-1' });
         expect(sessions.at(-1)).toBeNull();
+    });
+});
+
+describe('a fresh helper for a new grant', () => {
+    test('quits the helper, waits until it stops answering, and starts one that reads the grants anew', async () => {
+        const { computer, helper, launches } = await computerSetup();
+        helper.screenRecording = false;
+        await computer.refreshStatus();
+        expect(computer.status().screenRecording).toBe(false);
+        helper.lingerAfterQuit = 2;
+        helper.screenRecording = true;
+        const before = launches.length;
+        const status = await computer.restart();
+        expect(launches.length).toBe(before + 1);
+        expect(status).toMatchObject({ enabled: true, running: true, screenRecording: true });
+        expect(helper.requests.map((request) => request.command).indexOf('quit')).toBeGreaterThanOrEqual(0);
+    });
+
+    test('starts nothing while computer use is off', async () => {
+        const { computer, helper, launches } = await computerSetup({ enabled: false });
+        helper.running = false;
+        expect(await computer.restart()).toMatchObject({ enabled: false, running: false });
+        expect(launches).toEqual([]);
+    });
+});
+
+describe("the person's buttons in Ruimte", () => {
+    test('pause and resume the session the way the session bar does', async () => {
+        const setup = await computerSetup();
+        const { computer, helper } = setup;
+        await letIn(setup);
+        expect((await computer.control('pause')).session).toEqual({ mode: 'paused', nodeId: 'chat-1' });
+        expect(helper.session.mode).toBe('paused');
+        // A second pause is no resume.
+        expect((await computer.control('pause')).session).toEqual({ mode: 'paused', nodeId: 'chat-1' });
+        expect((await computer.control('resume')).session).toEqual({ mode: 'running', nodeId: 'chat-1' });
+    });
+
+    test('a stop ends the session, and the agent hears stopped on its next call', async () => {
+        const setup = await computerSetup();
+        const { computer, helper } = setup;
+        await letIn(setup);
+        expect((await computer.control('stop')).session).toBeNull();
+        computer.observe(chatInfo('chat-1', 'needs-you'));
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        expect(helper.presences).toEqual([]);
+        expect(await codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 1 }))).toBe('stopped');
+    });
+
+    test('start no helper and change nothing when none runs', async () => {
+        const { computer, helper, launches } = await computerSetup();
+        helper.running = false;
+        const before = launches.length;
+        expect((await computer.control('stop')).session).toBeNull();
+        expect(launches.length).toBe(before);
     });
 });

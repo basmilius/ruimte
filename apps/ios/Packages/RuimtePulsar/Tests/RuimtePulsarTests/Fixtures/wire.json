@@ -226,6 +226,8 @@
     "computer.setEnabled",
     "computer.approvals",
     "computer.answer",
+    "computer.restart",
+    "computer.control",
     "endpoint.info",
     "endpoint.setIdentity",
     "endpoint.signRegistration",

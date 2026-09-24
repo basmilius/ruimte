@@ -65,15 +65,35 @@ export class FakeHelper implements HelperTransport {
     shown: string | null = null;
     // Runs as an app command arrives, before the helper looks at its session: the person's hand in between.
     onAct: (() => void) | null = null;
+    // How many requests a helper told to quit still answers, the way the real one does for a moment.
+    lingerAfterQuit = 0;
+    private lingering: number | null = null;
 
     async send(request: HelperRequest): Promise<unknown> {
+        if (this.lingering !== null) {
+            if (this.lingering === 0) {
+                this.running = false;
+                this.lingering = null;
+            } else {
+                this.lingering -= 1;
+            }
+        }
         if (!this.running) {
             throw new HelperUnreachable('connect ENOENT');
         }
         this.requests.push(request);
         if (request.command === 'quit') {
-            this.running = false;
+            if (this.lingerAfterQuit === 0) {
+                this.running = false;
+            } else {
+                this.lingering = this.lingerAfterQuit;
+            }
+            // A fresh launch reads the grants anew; this one keeps what it had.
             return { ok: true, result: { stopped: true } };
+        }
+        if (request.command === 'pause' || request.command === 'resume' || request.command === 'stop') {
+            this.press(request.command);
+            return { ok: true, result: { session: this.session } };
         }
         if (request.command === 'doctor') {
             return {
@@ -123,7 +143,7 @@ export class FakeHelper implements HelperTransport {
 
     /* The requests that acted on an app, leaving out the doctor and apps calls every action makes first. */
     get acted(): HelperRequest[] {
-        return this.requests.filter((request) => !['doctor', 'apps', 'quit', 'presence'].includes(request.command));
+        return this.requests.filter((request) => !['doctor', 'apps', 'quit', 'presence', 'pause', 'resume', 'stop'].includes(request.command));
     }
 
     /* What the daemon showed at the cursor, as `state` or `state: label`. */
@@ -140,6 +160,20 @@ export class FakeHelper implements HelperTransport {
 
     stop(): void {
         this.session = { active: false, mode: 'running', stopped: true };
+    }
+
+    /* What the buttons of the session bar do: nothing without a session, and a pause while paused is no resume. */
+    private press(action: 'pause' | 'resume' | 'stop'): void {
+        if (!this.session.active) {
+            return;
+        }
+        if (action === 'stop') {
+            this.stop();
+        } else if (action === 'pause' && this.session.mode === 'running') {
+            this.hold('paused');
+        } else if (action === 'resume' && this.session.mode !== 'running') {
+            this.hold('running');
+        }
     }
 
     private presence(request: HelperRequest): unknown {

@@ -239,7 +239,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         firstPrompt: (sessionId) => prompts.take(sessionId),
         firstNotices: messagesFor,
         depthOf: (sessionId) => lineage.depthOf(sessionId),
-        computerUse: () => computer.enabled,
+        computerUse: () => computer.usable,
         // A node no project places yet has no folder to approve against, so its command waits for the save that adds it.
         commands: {
             approved: (sessionId, command) => {
@@ -298,7 +298,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         contextUrl,
         binDir,
         depthOf: (chatId) => lineage.depthOf(chatId),
-        computer: () => computer.enabled,
+        computer: () => computer.usable,
         modeCeiling: (chatId) => lineage.ceilingOf(chatId),
         checkCwd: startCwd,
         contextSources: (chatId) => context.list(chatId),
@@ -904,7 +904,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                             messages: messagesFor(sessionId),
                             depth: lineage.depthOf(sessionId),
                             verbs,
-                            computer: computer.enabled
+                            computer: computer.usable
                         });
                     },
                     (token, body, signal) => manager.holdApproval(token, body, signal)
