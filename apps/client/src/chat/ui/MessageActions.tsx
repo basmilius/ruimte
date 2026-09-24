@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Bookmark, Check, Copy, GitFork } from 'lucide-react';
-import { placeBookmark, removeBookmark } from '@/chat/bookmarks';
+import { placeBookmark } from '@/chat/bookmarks';
 import { forkRefusal } from '@/chat/logic/fork';
 import type { TimelineRow } from '@/chat/logic/timeline';
 import { messageTextOf } from '@/chat/logic/timeline-copy';
@@ -68,15 +68,13 @@ export function MessageActions({ chatId, row }: { chatId: string; row: MessageRo
         >
             {!streaming && (
                 <span className={BTN_GROUP}>
-                    <Tooltip label={bookmark === null ? t('bookmarks.add') : t('bookmarks.remove')} name>
-                        <button
-                            type="button"
-                            className={clsx('icon-btn h-7 w-7 rounded-md', bookmark !== null && 'text-accent')}
-                            onClick={() => void (bookmark === null ? placeBookmark(endpointId, chatId, row.id) : removeBookmark(endpointId, chatId, bookmark))}
-                        >
-                            <Icon icon={Bookmark} size={14} />
-                        </button>
-                    </Tooltip>
+                    {bookmark === null && (
+                        <Tooltip label={t('bookmarks.add')} name>
+                            <button type="button" className="icon-btn h-7 w-7 rounded-md" onClick={() => void placeBookmark(endpointId, chatId, row.id)}>
+                                <Icon icon={Bookmark} size={14} />
+                            </button>
+                        </Tooltip>
+                    )}
                     {canFork && turnId !== null && (
                         <Tooltip label={t('timeline.menu.forkFromHere')} name>
                             <button type="button" className="icon-btn h-7 w-7 rounded-md" onClick={() => useUi.getState().setForkDialog({ chatId, turnId })}>

@@ -51,7 +51,12 @@ export function BookmarkMarker({ chatId, itemId, bookmark }: BookmarkMarkerProps
             )}
             <span className="min-w-6 grow border-t border-border" />
             {bookmark !== null && !naming && (
-                <span className={clsx(BTN_GROUP, 'shrink-0 opacity-0 group-has-focus-visible/bookmark:opacity-100 group-hover/bookmark:opacity-100')}>
+                <span
+                    className={clsx(
+                        BTN_GROUP,
+                        '-ml-2 max-w-0 shrink-0 overflow-hidden opacity-0 group-hover/bookmark:ml-0 group-hover/bookmark:max-w-none group-hover/bookmark:opacity-100 group-has-focus-visible/bookmark:ml-0 group-has-focus-visible/bookmark:max-w-none group-has-focus-visible/bookmark:opacity-100'
+                    )}
+                >
                     <Tooltip label={t('bookmarks.rename')} name>
                         <button type="button" className="icon-btn h-6 w-6 rounded-md" onClick={() => useBookmarkNaming.getState().open(chatKey, itemId)}>
                             <Icon icon={Pencil} size={12} />
