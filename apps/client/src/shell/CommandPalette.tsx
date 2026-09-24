@@ -834,8 +834,8 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                             so it is the plain arrow that leaves browsing. */}
                         {browsing && (
                             <Tooltip label={backLabel} kbd={KEY_SHORTCUTS.backspace}>
-                                <button
-                                    className="flex h-6 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-xs text-text-muted hover:bg-surface-hover"
+                                <Button
+                                    size="xs"
                                     // The field keeps the keys; a control that takes focus would swallow the next arrow.
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={stepBack}
@@ -852,7 +852,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                                             <span className="max-w-32 truncate">{browseLabel}</span>
                                         </>
                                     )}
-                                </button>
+                                </Button>
                             </Tooltip>
                         )}
                         {grepping && <Icon icon={FileSearch} size={14} className="shrink-0 text-accent" />}

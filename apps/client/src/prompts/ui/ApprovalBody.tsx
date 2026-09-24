@@ -49,7 +49,7 @@ function ApprovalDetails({ item }: { item: ChatApprovalItem }) {
                         </Suspense>
                     </div>
                     <div className="flex items-center border-t border-border p-1">
-                        <Button size="sm" className="rounded-full!" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+                        <Button size="sm" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
                             {expanded ? t('approval.collapseDiff') : t('approval.viewDiff')}
                         </Button>
                     </div>

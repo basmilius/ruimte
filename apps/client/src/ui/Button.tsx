@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes } from 'react';
 import clsx from 'clsx';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'positive' | 'inverse';
-type ButtonSize = 'sm' | 'md';
+type ButtonSize = 'xs' | 'sm' | 'md';
 
 const VARIANT: Record<ButtonVariant, string> = {
     // A filled button darkens under the pointer. Its color is the meaning, so no token of its own for hover.
@@ -15,8 +15,10 @@ const VARIANT: Record<ButtonVariant, string> = {
     inverse: 'bg-text text-bg hover:opacity-90 disabled:hover:opacity-100'
 };
 
-/* 28 and 32 pixels, the two heights the rest of the app already uses for a compact and a normal control. */
+/* 28 and 32 pixels are the compact and the normal control of the rest of the app; 24 fits a header
+   of 32, such as the bar above each side of a conflict. */
 const SIZE: Record<ButtonSize, string> = {
+    xs: 'h-6 px-2',
     sm: 'h-7 px-2.5',
     md: 'h-8 px-3'
 };

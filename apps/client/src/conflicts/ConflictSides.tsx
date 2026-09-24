@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight, Check } from 'lucide-react';
 import { bothLines, sideLines, type MergeBlock, type MergeSide } from '@ruimte/merge';
+import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
 interface SideProps {
@@ -18,13 +19,9 @@ function Side({ label, lines, take, disabled, onTake }: SideProps) {
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-2">
                 <span className="truncate text-xs font-medium text-text-muted">{label}</span>
-                <button
-                    className="ml-auto h-6 shrink-0 rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text"
-                    disabled={disabled}
-                    onClick={onTake}
-                >
+                <Button size="xs" className="ml-auto" disabled={disabled} onClick={onTake}>
                     {take}
-                </button>
+                </Button>
             </div>
             <div className="min-h-0 grow overflow-auto">
                 {lines.length === 0 ? (
@@ -74,21 +71,13 @@ export function ConflictSides({ block, ours, theirs, settled, onTake, onBoth }: 
                     </span>
                 )}
                 <span className="grow" />
-                <button
-                    className="flex h-6 items-center gap-1 rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text"
-                    disabled={bothLines(block, 'ours').length === 0}
-                    onClick={() => onBoth('ours')}
-                >
+                <Button size="xs" disabled={bothLines(block, 'ours').length === 0} onClick={() => onBoth('ours')}>
                     <Icon icon={ArrowLeftRight} size={12} />
                     {t('side.bothOurs', { ours, theirs })}
-                </button>
-                <button
-                    className="h-6 rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text"
-                    disabled={bothLines(block, 'theirs').length === 0}
-                    onClick={() => onBoth('theirs')}
-                >
+                </Button>
+                <Button size="xs" disabled={bothLines(block, 'theirs').length === 0} onClick={() => onBoth('theirs')}>
                     {t('side.bothTheirs', { ours, theirs })}
-                </button>
+                </Button>
             </div>
         </div>
     );

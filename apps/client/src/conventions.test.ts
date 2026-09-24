@@ -153,6 +153,24 @@ const drawsBoundary = (path: string): boolean => {
     return found;
 };
 
+/* Every class a `className` can carry, from a plain string, a template or the arguments of `clsx`. */
+const classesIn = (value: unknown): string =>
+    nodesIn(value)
+        .flatMap((node) => {
+            if (node.type === 'Literal' && 'value' in node && typeof node.value === 'string') {
+                return [node.value];
+            }
+            if (node.type === 'TemplateElement' && 'value' in node) {
+                return [(node.value as { cooked: string }).cooked];
+            }
+            return [];
+        })
+        .join(' ');
+
+/* A segment of a control or a row that toggles says what it is with one of these, and a row of a list
+   with its left-aligned text; neither is a Button. */
+const ROW_ATTRIBUTES = new Set(['role', 'aria-pressed', 'aria-checked']);
+
 /* The window's own tree and the workspace's, which is where a failure would reach every parked page. */
 const SHELLS = [
     ['App.tsx', 'App'],
@@ -203,6 +221,36 @@ describe('the conventions of the client', () => {
                 return found;
             });
         expect(titled).toEqual([]);
+    });
+
+    test('a button with a word in it is a Button, never a height, a padding and a radius of its own', () => {
+        const built = sources()
+            .filter(({ path }) => path.endsWith('.tsx') && path !== 'ui/Button.tsx')
+            .flatMap(({ path, text }) => {
+                const found: string[] = [];
+                new Visitor({
+                    JSXOpeningElement(node) {
+                        if (node.name.type !== 'JSXIdentifier' || node.name.name !== 'button') {
+                            return;
+                        }
+                        const attributes = node.attributes.flatMap((attribute) =>
+                            attribute.type === 'JSXAttribute' && attribute.name.type === 'JSXIdentifier'
+                                ? [{ name: attribute.name.name, value: attribute.value }]
+                                : []
+                        );
+                        if (attributes.some(({ name }) => ROW_ATTRIBUTES.has(name))) {
+                            return;
+                        }
+                        const classes = classesIn(attributes.find(({ name }) => name === 'className')?.value);
+                        const exempt = /\b(icon-btn|w-\d+|menu-item|cursor-row|text-left)\b/.test(classes);
+                        if (!exempt && /(^|\s)h-[678](\s|$)/.test(classes) && /\bpx-/.test(classes) && /\brounded-/.test(classes)) {
+                            found.push(`${path}:${lineOf(text, node.start)}`);
+                        }
+                    }
+                }).visit(programOf(path, text));
+                return found;
+            });
+        expect(built).toEqual([]);
     });
 
     test('only src/format builds a formatter out of Intl', () => {

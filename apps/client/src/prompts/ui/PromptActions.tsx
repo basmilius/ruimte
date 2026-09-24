@@ -6,14 +6,7 @@ import { Icon } from '@/ui/Icon';
 
 /* The one button Mod+Enter presses and ArrowDown from the heading lands on, when the body has nothing to choose. */
 export function PromptPrimary(props: ButtonHTMLAttributes<HTMLButtonElement>) {
-    return (
-        <button
-            type="button"
-            data-prompt-primary
-            className="inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-full bg-text px-2.5 text-xs font-medium text-bg hover:opacity-90 disabled:opacity-50"
-            {...props}
-        />
-    );
+    return <Button variant="inverse" size="sm" data-prompt-primary {...props} />;
 }
 
 export interface ApprovalButton {
@@ -42,7 +35,7 @@ export function ApprovalActions({
     return (
         <>
             {onAddReason && (
-                <Button size="sm" className="rounded-full!" disabled={locked} onClick={onAddReason}>
+                <Button size="sm" disabled={locked} onClick={onAddReason}>
                     {t('approval.addReason')}
                 </Button>
             )}
@@ -54,14 +47,7 @@ export function ApprovalActions({
                             {sending ? t('sending') : button.label}
                         </PromptPrimary>
                     ) : (
-                        <Button
-                            key={button.id}
-                            size="sm"
-                            className="rounded-full!"
-                            disabled={locked}
-                            aria-description={button.description}
-                            onClick={button.onPress}
-                        >
+                        <Button key={button.id} size="sm" disabled={locked} aria-description={button.description} onClick={button.onPress}>
                             {button.label}
                         </Button>
                     )
@@ -97,12 +83,12 @@ export function QuestionActions({
     return (
         <>
             {index > 0 && (
-                <Button size="sm" className="rounded-full!" disabled={sending} onClick={onPrevious}>
+                <Button size="sm" disabled={sending} onClick={onPrevious}>
                     {t('question.previous')}
                 </Button>
             )}
             {dismissable && index === 0 && (
-                <Button size="sm" className="rounded-full!" disabled={locked} onClick={onDismiss}>
+                <Button size="sm" disabled={locked} onClick={onDismiss}>
                     {t('common:action.dismiss')}
                 </Button>
             )}

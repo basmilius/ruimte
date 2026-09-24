@@ -2,6 +2,7 @@ import { useEffect, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Quote } from 'lucide-react';
 import { selectedAnswerQuote, type QuoteTaker } from '@/chat/ui/quote-selection';
+import { Button } from '@/ui/Button';
 import { FLOAT } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
@@ -85,9 +86,9 @@ export function QuoteButton({
     }
 
     return (
-        <button
-            type="button"
-            className={`${FLOAT} absolute z-10 flex h-7 -translate-x-1/2 select-none items-center gap-1.5 rounded-md px-2.5 text-xs text-text hover:bg-surface-hover`}
+        <Button
+            size="sm"
+            className={`${FLOAT} absolute z-10 -translate-x-1/2 select-none`}
             style={{ left: offer.x, top: offer.y }}
             // Pressing a button moves the selection, and the selection is what it quotes.
             onMouseDown={(e) => e.preventDefault()}
@@ -99,6 +100,6 @@ export function QuoteButton({
         >
             <Icon icon={Quote} size={12} />
             {t('composer.quote.add')}
-        </button>
+        </Button>
     );
 }

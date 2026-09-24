@@ -11,6 +11,7 @@ import { useDocument } from '@/state/document';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { StatusDot } from '@/canvas/NodeFrame';
+import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
@@ -28,13 +29,10 @@ function Walker({ label, count, ids, children }: { label: string; count: number;
     };
     return (
         <Tooltip label={label} name>
-            <button
-                className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs tabular-nums text-text-muted hover:bg-surface-hover hover:text-text"
-                onClick={next}
-            >
+            <Button className="tabular-nums" onClick={next}>
                 {children}
                 {count}
-            </button>
+            </Button>
         </Tooltip>
     );
 }
@@ -75,7 +73,7 @@ export function StatusSummary() {
                         <span
                             role="status"
                             aria-label={t('status.workingCount', { count: groups.working.length })}
-                            className="flex h-8 items-center gap-1.5 px-2 text-xs tabular-nums text-text-muted"
+                            className="flex h-8 items-center gap-1.5 px-3 text-xs font-medium tabular-nums text-text-muted"
                         >
                             <StatusDot status="running" plain />
                             {groups.working.length}

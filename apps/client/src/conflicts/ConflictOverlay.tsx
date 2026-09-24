@@ -368,9 +368,9 @@ export function ConflictOverlay() {
                             <span className="flex items-center gap-2 text-xs text-text-muted">
                                 <Icon icon={LoaderCircle} size={12} className="animate-spin" />
                                 {t('ai.working', { path: basenameOf(run.path), done: run.done + 1, total: run.total })}
-                                <button className="h-6 rounded-md px-2 text-xs hover:bg-surface-hover" onClick={() => cancelGitRunAction(run.actionId)}>
+                                <Button size="xs" onClick={() => cancelGitRunAction(run.actionId)}>
                                     {t('common:action.cancel')}
-                                </button>
+                                </Button>
                             </span>
                         )}
                         <span className={BTN_GROUP}>

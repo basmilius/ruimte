@@ -11,6 +11,7 @@ import { useDocument } from '@/state/document';
 import { CellViewContext } from '@/state/workspace-stores';
 import { canSplit, cellCount, isSameCell, locateView, draggedSizes, maximizedCell, type CellAt, type SplitZone } from '@/shell/split';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { Button } from '@/ui/Button';
 import { FLOAT } from '@/ui/classes';
 import { Kbd } from '@/ui/Kbd';
 import { Tooltip } from '@/ui/Tooltip';
@@ -317,11 +318,7 @@ function MaximizedIndicator({ at }: { at: CellAt }) {
     return (
         <div className="pointer-events-none absolute bottom-4 left-4 flex">
             <Tooltip label={t('cellToolbar.restore')} name>
-                <button
-                    type="button"
-                    className={clsx(FLOAT, 'pointer-events-auto flex h-7 items-center gap-2 rounded-md px-2 text-xs text-text-muted hover:text-text')}
-                    onClick={() => useDocument.getState().toggleMaximized()}
-                >
+                <Button size="sm" className={clsx(FLOAT, 'pointer-events-auto')} onClick={() => useDocument.getState().toggleMaximized()}>
                     {/* Whole pixels for one, two or three of either, with a pixel between them. */}
                     <span aria-hidden className="flex h-2.75 w-4.25 gap-px">
                         {layout.columns.map((column, columnIndex) => (
@@ -341,7 +338,7 @@ function MaximizedIndicator({ at }: { at: CellAt }) {
                     {t('cellToolbar.hidden', { count: cellCount(layout) - 1 })}
                     <span aria-hidden>·</span>
                     <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} className="font-sans" />
-                </button>
+                </Button>
             </Tooltip>
         </div>
     );
