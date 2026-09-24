@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+/* Who has the Mac while a session runs: the agent, or the person, who paused it or took over with their own hand. */
+export const ComputerSessionModeSchema = z.enum(['running', 'paused', 'takenOver']);
+export type ComputerSessionMode = z.infer<typeof ComputerSessionModeSchema>;
+
 /*
  * Whether agents on this machine may operate its apps, and what stands in the way. Off by default:
  * a person turns it on per machine, and nothing launches the helper app until then.
@@ -13,7 +17,16 @@ export const ComputerUseStatusSchema = z.object({
     accessibility: z.boolean().nullable(),
     screenRecording: z.boolean().nullable(),
     // Why the helper could not be asked, in words; absent when nothing went wrong.
-    problem: z.string().optional()
+    problem: z.string().optional(),
+    // The helper's session as the machine last heard of it: null while none runs, absent from a machine that does not report it.
+    session: z
+        .object({
+            mode: ComputerSessionModeSchema,
+            // The chat or terminal whose agent drives it; null when none on this machine does.
+            nodeId: z.string().nullable()
+        })
+        .nullable()
+        .optional()
 });
 export type ComputerUseStatus = z.infer<typeof ComputerUseStatusSchema>;
 

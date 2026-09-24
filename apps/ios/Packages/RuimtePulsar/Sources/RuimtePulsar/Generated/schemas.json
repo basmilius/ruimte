@@ -29437,6 +29437,36 @@
       },
       "problem": {
         "type": "string"
+      },
+      "session": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "paused",
+                  "takenOver"
+                ]
+              },
+              "nodeId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "mode",
+              "nodeId"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       }
     },
     "required": [
@@ -29491,6 +29521,36 @@
       },
       "problem": {
         "type": "string"
+      },
+      "session": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "paused",
+                  "takenOver"
+                ]
+              },
+              "nodeId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "mode",
+              "nodeId"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       }
     },
     "required": [
@@ -39492,6 +39552,36 @@
       },
       "problem": {
         "type": "string"
+      },
+      "session": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "paused",
+                  "takenOver"
+                ]
+              },
+              "nodeId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "mode",
+              "nodeId"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       }
     },
     "required": [
