@@ -229,7 +229,7 @@ const constantSource = Object.entries(constants)
  * so one closed literal it never saw would refuse every `chat.list` or `project.open` holding it; on the wire these
  * are any string, and the known words ride along as `x-open-enum` for the app to fall back from.
  */
-const openVocabularies = new Set<z.ZodType>([agent.AgentKindSchema, agent.AgentStatusSchema, RuntimeModeSchema]);
+const openVocabularies: ReadonlySet<unknown> = new Set([agent.AgentKindSchema, agent.AgentStatusSchema, RuntimeModeSchema]);
 const apiRoots: Record<string, z.ZodType> = {};
 for (const [name, pair] of Object.entries(REQUEST_SCHEMAS)) {
     apiRoots[`request.${name}.payload`] = pair.payload;
