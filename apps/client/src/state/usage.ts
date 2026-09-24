@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import type { UsageLimitsSnapshot, UsageSummaryPayload, UsageSummaryResult } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { useEndpointId } from '@/state/keys';
+import { localTimeZone } from '@/format/time-zone';
 import type { UsageCurrency } from '@/shell/usage/format';
 
 export type UsagePeriod = 'today' | '7d' | '30d' | '90d';
@@ -66,7 +67,7 @@ export const windowFor = (period: UsagePeriod, now = new Date()): UsageSummaryPa
         from: dayOf(from),
         to: dayOf(now),
         resolution: period === 'today' ? 'hour' : 'day',
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+        timeZone: localTimeZone() ?? 'UTC'
     };
 };
 

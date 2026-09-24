@@ -6,7 +6,7 @@ import { accentColor, accentLabel, FEATURED_ACCENTS, isFeatured, NODE_ACCENTS, t
 import { formatDayClock } from '@/format/datetime';
 import { useFormatLocale } from '@/format/locale';
 import { formatMoney } from '@/format/number';
-import { FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM } from '@/format/regions';
+import { FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@/format/regions';
 import { chooseLanguage, chooseRegion } from '@/i18n';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
 import { CodeSection } from '@/shell/settings/panes/CodeSection';
@@ -123,7 +123,6 @@ function RegionRow() {
     const region = useSettings((s) => s.formatRegion);
     // Subscribing is the point. The example below redraws when the region changes under it.
     useFormatLocale();
-    const countries = new Intl.DisplayNames([i18n.language], { type: 'region' });
     const label = (choice: string): string => {
         if (choice === FORMAT_LANGUAGE) {
             return t('appearance.region.language');
@@ -131,7 +130,7 @@ function RegionRow() {
         if (choice === FORMAT_SYSTEM) {
             return t('appearance.region.system');
         }
-        return countries.of(choice.slice(choice.indexOf('-') + 1)) ?? choice;
+        return regionName(choice, i18n.language);
     };
 
     return (

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, formatRegionFrom } from '@/format/regions';
+import { FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, formatRegionFrom, regionName } from '@/format/regions';
 
 describe('a stored region', () => {
     test('is kept when this version offers it', () => {
@@ -18,5 +18,12 @@ describe('a stored region', () => {
     test('offers the language first and the system after it', () => {
         expect(FORMAT_REGION_CHOICES[0]).toBe(FORMAT_LANGUAGE);
         expect(FORMAT_REGION_CHOICES[1]).toBe('system');
+    });
+});
+
+describe('the name of a region', () => {
+    test('is its country, in the language asked for', () => {
+        expect(regionName('nl-NL', 'en')).toBe('Netherlands');
+        expect(regionName('en-GB', 'nl')).toBe('Verenigd Koninkrijk');
     });
 });

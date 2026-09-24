@@ -9,6 +9,7 @@ import {
     type UsageSummaryResult
 } from '@ruimte/contracts';
 import { asRefusal } from '@/actions/developer-actions';
+import { localTimeZone } from '@/format/time-zone';
 import { projectNodes } from '@/project/views';
 import { currentEndpointId } from '@/state/keys';
 import { useProcesses, useProcessWarnings } from '@/state/processes';
@@ -39,7 +40,7 @@ const LIVE_MACHINE: MachineReach = {
     limits: () => useUsageStore.getState().byEndpoint[currentEndpointId()]?.limits ?? null,
     titles: () => new Map(projectNodes().map((node) => [node.id, node.title])),
     now: () => new Date(),
-    timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    timeZone: () => localTimeZone() ?? 'UTC'
 };
 
 const DEFAULT_PROCESSES = 5;

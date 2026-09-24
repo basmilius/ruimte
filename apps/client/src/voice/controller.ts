@@ -6,6 +6,7 @@ import { chatClientFor } from '@/transport/connections';
 import { VoiceToolQueue } from '@/voice/tool-queue';
 import { voiceWorkspaceRevision } from '@/voice/workspace-context';
 import { claimMicrophone } from '@/audio/ownership';
+import { localTimeZone } from '@/format/time-zone';
 import i18next from 'i18next';
 import { isCanvasView, isOpenableView } from '@ruimte/contracts';
 import { focusedCanvas } from '@/state/canvas';
@@ -49,7 +50,7 @@ const failureText = (error: unknown): string => (error instanceof Error ? error.
  */
 const temporalContext = (): string => {
     const now = new Date();
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
+    const timeZone = localTimeZone() ?? 'unknown';
     const local = new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long' }).format(now);
     return `User local date and time: ${local}. IANA time zone: ${timeZone}. UTC time: ${now.toISOString()}.`;
 };
