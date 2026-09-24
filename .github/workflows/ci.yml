@@ -32,7 +32,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      # The npm integration test compiles the daemon, and with it both Rust helpers.
+      # The npm integration test compiles the daemon, and with it the Rust helpers and the Swift one.
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
@@ -65,4 +65,16 @@ jobs:
         working-directory: apps/ios/Packages/${{ matrix.package }}
     steps:
       - uses: actions/checkout@v5
+      - run: swift test
+
+  # The same runner as the iOS packages, for the tests. `integration` compiles the helper for release on
+  # macos-latest, the runner the release itself builds on.
+  computer-use:
+    runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: apps/computer-use
+    steps:
+      - uses: actions/checkout@v5
+      - run: swift build
       - run: swift test
