@@ -28,8 +28,8 @@ const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
 
 /*
  * The accent, five colors at a time. Every Tailwind hue is on offer, which is more than a settings
- * row can carry, so the other twelve sit in a list behind them, in the order of the wheel; the trigger
- * wears the chosen color itself whenever that color is one of the ones it hides.
+ * row can carry, so the list behind them holds all of them in the order of the wheel, the five
+ * included; the trigger wears the chosen color itself whenever that color is not one of the five.
  */
 function AccentSwatches() {
     const { t } = useTranslation('settings');
@@ -37,7 +37,6 @@ function AccentSwatches() {
     const update = useSettings((s) => s.update);
     const ring = 'ring-2 ring-accent ring-offset-2 ring-offset-surface';
     const featured = NODE_ACCENTS.filter((entry) => isFeatured(entry.id)).sort((a, b) => FEATURED_ACCENTS.indexOf(a.id) - FEATURED_ACCENTS.indexOf(b.id));
-    const rest = NODE_ACCENTS.filter((entry) => !isFeatured(entry.id));
     const hidden = isFeatured(accent) ? null : accent;
     const pick = (id: AccentId): void => update({ accent: id });
     return (
@@ -68,7 +67,7 @@ function AccentSwatches() {
                 </Tooltip>
                 <MenuPopup align="end" className="max-h-96 overflow-y-auto">
                     <Menu.RadioGroup value={accent} onValueChange={(value: AccentId) => pick(value)}>
-                        {rest.map((entry) => (
+                        {NODE_ACCENTS.map((entry) => (
                             <Menu.RadioItem key={entry.id} value={entry.id} className="menu-item">
                                 <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: entry.color }} aria-hidden />
                                 <span className="grow">{accentLabel(entry.id)}</span>
