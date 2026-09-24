@@ -194,8 +194,9 @@ export const fakeCodex: FakeCli = (io) => {
             askApproval('fileChange', entry, { reason: 'Write outside the sandbox' });
             return;
         }
-        if (text.startsWith('spawn:')) {
-            const prompt = text.slice(6).trim();
+        const finish = text.startsWith('spawn and finish:');
+        if (finish || text.startsWith('spawn:')) {
+            const prompt = text.slice(text.indexOf(':') + 1).trim();
             const childId = `child-${nonce}-${++itemCounter}`;
             const steps: Frame[] = [{ type: 'userMessage', id: `${childId}-prompt`, content: [{ type: 'text', text: prompt, text_elements: [] }] }];
             for (let step = 1; step <= FAKE_CHILD_STEPS; step++) {
@@ -220,9 +221,19 @@ export const fakeCodex: FakeCli = (io) => {
                 status: 'inProgress'
             });
             started(spawn);
-            completed({ ...spawn, receiverThreadIds: [childId], agentsStates: { [childId]: { status: 'running', message: null } } });
+            const running = { ...spawn, receiverThreadIds: [childId], agentsStates: { [childId]: { status: 'running', message: null } } };
+            if (!finish) {
+                completed(running);
+                agentMessage('spawned');
+                turnCompleted('completed');
+                return;
+            }
+            completed({ ...running, status: 'completed', agentsStates: { [childId]: { status: 'completed', message: 'the docs are read' } } });
             agentMessage('spawned');
+            const spawnedIn = turnId;
             turnCompleted('completed');
+            // A snapshot of the call from while its agent still ran, delivered after the agent finished.
+            io.later(() => notify('item/completed', { item: running, threadId, turnId: spawnedIn, completedAtMs: Date.now() }));
             return;
         }
         if (text.startsWith('ask:')) {

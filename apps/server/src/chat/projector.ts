@@ -132,7 +132,7 @@ export class ThreadProjector {
         const events: ChatEvent[] = [];
         // The CLI talks outside a turn when it wakes the agent itself: a background task it launched
         // earlier settled. The work needs a turn of its own, or it lands in the thread unattached.
-        if (this.thread.info.activeTurnId === null && startsAgentTurn(event)) {
+        if (this.thread.info.activeTurnId === null && startsAgentTurn(event) && !this.restatesCall(generation, event)) {
             this.openAgentTurn(events);
         }
         const info = this.thread.info;
@@ -366,6 +366,11 @@ export class ThreadProjector {
                 events.push(this.thread.upsert({ ...item, status: 'failed', finishedAt: this.now() }));
             }
         }
+    }
+
+    /* A call the thread already has a row for, told again after its turn ended (a snapshot Codex sends late), is no new work. */
+    private restatesCall(generation: number, event: BackendEvent): boolean {
+        return event.type === 'tool.started' && this.thread.get(this.itemId(generation, event.ref)) !== undefined;
     }
 
     private itemId(generation: number, ref: string): string {

@@ -646,6 +646,24 @@ describe('ChatManager with Codex', () => {
             expect(items.filter((item) => item.kind === 'tool')).toHaveLength(FAKE_CHILD_STEPS);
         });
 
+        test('a snapshot of the spawn that arrives after the agent finished does not run it again', async () => {
+            await open('chat-snapshot');
+            await manager.send('chat-snapshot', 'spawn and finish: survey the docs');
+            await recorder.until(() => idle() && recorder.ofKind('subagent')[0]?.status === 'done');
+            const finished = structuredClone(recorder.ofKind('subagent')[0]!);
+            expect(typeof finished.finishedAt).toBe('number');
+
+            const seen = recorder.events.length;
+            codex.started[0]!.runLater();
+            // The row is written again once the snapshot is heard, even with nothing in it changed.
+            await recorder.until(() => recorder.events.slice(seen).some((event) => event.type === 'item' && event.item.kind === 'subagent'));
+
+            expect(recorder.ofKind('subagent')).toEqual([finished]);
+            // Nor does it open a turn of the agent's own that nothing would ever end.
+            expect(recorder.ofKind('turn')).toHaveLength(1);
+            expect(idle()).toBe(true);
+        });
+
         test('a row without a thread is refused by name', async () => {
             await open('chat-none');
             await expect(manager.subagent('c1', { chatId: 'chat-none', toolUseId: 'nope' })).rejects.toMatchObject({ code: 'subagent-not-found' });
