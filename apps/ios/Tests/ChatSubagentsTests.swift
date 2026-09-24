@@ -39,6 +39,21 @@ final class ChatSubagentsTests: XCTestCase {
         XCTAssertEqual(sections.done.map { $0.text("id") }, ["e", "d", "f"])
     }
 
+    @MainActor func testThePageDerivesItsListsAgainOnlyWhenASubagentMoved() {
+        let model = ChatModel(client: SubagentMachine(), chatID: "chat")
+        let reply = JSONValue.object(["id": .string("reply"), "kind": .string("assistant"), "text": .string("Hi")])
+        model.replace(.object(["items": .array([agent("a", started: 10), reply])]))
+        let derived = SubagentListDerivation()
+        let lists = { derived.lists(revision: model.subagentRevision, machineRefused: false) { model.items } }
+        XCTAssertEqual(lists().active.map { $0.text("id") }, ["a"])
+        model.receive(.object(["type": .string("delta"), "itemId": .string("reply"), "text": .string(" there")]))
+        _ = lists()
+        XCTAssertEqual(derived.derivations, 1)
+        model.receive(.object(["type": .string("item"), "item": tool("t", parent: "use-a", created: 30)]))
+        XCTAssertEqual(lists().work["use-a"]?.count, 1)
+        XCTAssertEqual(derived.derivations, 2)
+    }
+
     @MainActor func testOnlyARowWithAPointerOpensOnAMachineThatRefused() {
         let native = agent("n", extra: ["native": .object(["agentId": .string("x")])])
         XCTAssertTrue(ChatSubagents.canOpen(agent("a"), machineRefused: false))

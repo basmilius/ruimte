@@ -15,6 +15,9 @@ final class ChatModel {
     /// Whether the thread holds a subagent row, and one with a pointer of its own; kept apart from `items` so the
     /// screen does not observe every streamed delta.
     private(set) var subagentRows = (any: false, native: false)
+    /// Moves when a subagent row or the work under one changes, so the sub-agent page derives its lists again then and
+    /// not on every word the main thread streams.
+    private(set) var subagentRevision = 0
     var draft: String { didSet { UserDefaults.standard.set(draft, forKey: draftKey) } }
     var attachments: [ChatUpload] = []
     var mentions: [String] = []
@@ -158,6 +161,7 @@ final class ChatModel {
             }, uniquingKeysWith: { _, newest in newest })
         refreshPending()
         presentation.replace(items, info: info)
+        subagentRevision += 1
         revision += 1
     }
 
@@ -181,6 +185,7 @@ final class ChatModel {
             }
             refreshPending()
             presentation.upsert(item)
+            if Self.concernsSubagent(item) { subagentRevision += 1 }
             revision += 1
         case "delta":
             guard let id = event["itemId"]?.stringValue, let index = positions[id],
@@ -195,6 +200,7 @@ final class ChatModel {
             }
             items[index] = .object(item)
             presentation.upsert(.object(item), textOnly: true)
+            if Self.concernsSubagent(.object(item)) { subagentRevision += 1 }
             revision += 1
         default: break
         }
@@ -224,6 +230,7 @@ final class ChatModel {
                     uniquingKeysWith: { _, newest in newest })
                 self.refreshPending()
                 self.presentation.prepend(page["items"]?.arrayValue ?? [])
+                self.subagentRevision += 1
                 self.revision += 1
             }
         } catch {
@@ -234,6 +241,10 @@ final class ChatModel {
                 self.error = error.localizedDescription
             }
         }
+    }
+
+    private static func concernsSubagent(_ item: JSONValue) -> Bool {
+        item.text("kind") == "subagent" || !(item["parentToolUseId"]?.stringValue ?? "").isEmpty
     }
 
     func target(_ values: [String: JSONValue] = [:]) -> JSONValue {

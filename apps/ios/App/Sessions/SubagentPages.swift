@@ -34,21 +34,20 @@ struct SubagentListPage: View {
     @State private var opened: SubagentCrumb?
     @State private var ending: EndingAgents?
     @State private var failure: String?
-
-    private var subagents: [JSONValue] {
-        ChatSubagents.openable(model.items, machineRefused: model.presentation.subagentsRefused)
-    }
+    @State private var derived = SubagentListDerivation()
 
     var body: some View {
-        let work = ChatSubagents.threadWork(model.items)
-        let sections = ChatSubagents.sections(subagents, work: work)
+        let lists = derived.lists(
+            revision: model.subagentRevision, machineRefused: model.presentation.subagentsRefused
+        ) { model.items }
+        let work = lists.work
         List {
-            section("Active", items: sections.active, work: work)
-            section("Done", items: sections.done, work: work)
+            section("Active", items: lists.active, work: work)
+            section("Done", items: lists.done, work: work)
         }
         .modifier(MobileSidebarList(minimumRowHeight: 56))
         .overlay {
-            if subagents.isEmpty {
+            if lists.isEmpty {
                 ContentUnavailableView(
                     "No sub-agents", lucideIcon: "bot", description: Text("This chat has no sub-agents to open."))
             }
@@ -133,6 +132,32 @@ struct SubagentListPage: View {
         } catch {
             failure = error.localizedDescription
         }
+    }
+}
+
+/// The lists of the sub-agent page, kept until the chat's subagent revision moves. `items` is only read when they are
+/// derived again, so a page that holds them does not observe the words the main thread streams.
+@MainActor final class SubagentListDerivation {
+    struct Lists {
+        var active: [JSONValue] = []
+        var done: [JSONValue] = []
+        var work: [String: [JSONValue]] = [:]
+        var isEmpty: Bool { active.isEmpty && done.isEmpty }
+    }
+
+    private var key: (revision: Int, machineRefused: Bool)?
+    private var cached = Lists()
+    private(set) var derivations = 0
+
+    func lists(revision: Int, machineRefused: Bool, items: () -> [JSONValue]) -> Lists {
+        if let key, key.revision == revision, key.machineRefused == machineRefused { return cached }
+        key = (revision, machineRefused)
+        derivations += 1
+        let all = items()
+        let work = ChatSubagents.threadWork(all)
+        let sections = ChatSubagents.sections(ChatSubagents.openable(all, machineRefused: machineRefused), work: work)
+        cached = Lists(active: sections.active, done: sections.done, work: work)
+        return cached
     }
 }
 
