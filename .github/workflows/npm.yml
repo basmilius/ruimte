@@ -54,7 +54,7 @@ jobs:
           ref: v${{ needs.version.outputs.version }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: package.json
       - run: bun install --frozen-lockfile
       - name: Compile the daemon
         env:
@@ -79,7 +79,7 @@ jobs:
           ref: v${{ needs.version.outputs.version }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: package.json
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
