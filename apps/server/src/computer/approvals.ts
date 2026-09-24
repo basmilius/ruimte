@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ComputerApproval, ComputerApprovalChoice } from '@ruimte/contracts';
+import type { AgentStatus, ComputerApproval, ComputerApprovalChoice } from '@ruimte/contracts';
 
 /*
  * How long a verb holds its call while the card is up. Codex ends a shell command after 10 s unless
@@ -26,7 +26,7 @@ export interface CallerInfo {
 
 export interface ApprovalAsk {
     callerId: string;
-    /* Which run of that chat or terminal asks; a grant for this time holds only while it is the one running. */
+    /* Which run of that chat or terminal asks; a card stands only while it is the one running. */
     run: string;
     app: AppRef;
     command: string;
@@ -71,11 +71,15 @@ export interface ComputerApprovalsOptions {
 
 const keyOf = (callerId: string, bundleId: string): string => `${callerId}\n${bundleId}`;
 
+/* The statuses of an agent in the middle of a turn: waiting on the person is still that turn. */
+const inTurn = (status: AgentStatus | undefined): boolean => status === 'running' || status === 'needs-you';
+
 /*
  * Which apps each agent may operate, and the cards that ask a person about the rest. A card is one
  * per agent and app and goes to every client; whoever answers first settles it. A grant for this
- * time lives in memory and ends with the run of the chat or terminal it was given to; a grant for
- * always is the store's. A no reaches the agent once: the call that waits hears it, or else the next.
+ * time lives in memory and ends with the turn of the agent it was given to, or with the run of its
+ * chat or terminal; a grant for always is the store's. A no reaches the agent once: the call that
+ * waits hears it, or else the next.
  */
 export class ComputerApprovals {
     private readonly grants: GrantBook;
@@ -88,6 +92,7 @@ export class ComputerApprovals {
     private readonly pending = new Map<string, Pending>();
     private readonly thisTime = new Map<string, { run: string; bundles: Set<string> }>();
     private readonly declined = new Map<string, string>();
+    private readonly statuses = new Map<string, AgentStatus>();
 
     constructor(options: ComputerApprovalsOptions) {
         this.grants = options.grants;
@@ -181,6 +186,38 @@ export class ComputerApprovals {
     /* Every grant for this time, after a person stopped a session: going on asks again. */
     dropThisTime(): void {
         this.thisTime.clear();
+    }
+
+    /* What a chat or terminal is doing. A turn that ends takes back what was allowed this time; one allowed between turns lasts through the next. */
+    agentStatus(nodeId: string, status: AgentStatus): void {
+        const before = this.statuses.get(nodeId);
+        this.statuses.set(nodeId, status);
+        if (inTurn(before) && !inTurn(status)) {
+            this.thisTime.delete(nodeId);
+        }
+    }
+
+    /* A chat's turn settled, however it went. */
+    turnEnded(nodeId: string): void {
+        this.agentStatus(nodeId, 'idle');
+        this.thisTime.delete(nodeId);
+    }
+
+    /* The agent of a chat or terminal is gone: its cards go at once, instead of when they would have expired. */
+    forget(nodeId: string): void {
+        const cards = [...this.pending.entries()].filter(([, pending]) => pending.request.nodeId === nodeId);
+        for (const [key] of cards) {
+            this.close(key);
+        }
+        for (const waiter of cards.flatMap(([, pending]) => [...pending.waiters])) {
+            waiter('declined');
+        }
+        for (const key of [...this.declined.keys()].filter((candidate) => candidate.startsWith(`${nodeId}\n`))) {
+            this.declined.delete(key);
+        }
+        this.thisTime.delete(nodeId);
+        this.statuses.delete(nodeId);
+        this.publish();
     }
 
     /* Takes every card down, when a person turns computer use off; nothing waits for an answer after that. */

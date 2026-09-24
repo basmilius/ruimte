@@ -51,7 +51,7 @@
     "body": "{{node}} in {{project}} wil {{app}} op deze machine zien en bedienen.",
     "bodyNoProject": "{{node}} wil {{app}} op deze machine zien en bedienen.",
     "unnamed": "Een agent",
-    "scope": "Deze keer geldt zolang deze sessie loopt. Altijd laat elke agent op deze machine {{app}} gebruiken.",
+    "scope": "Deze keer geldt tot de turn van de agent klaar is. Altijd laat elke agent op deze machine {{app}} gebruiken.",
     "once": "Deze keer toestaan",
     "always": "Altijd toestaan",
     "deny": "Weigeren"

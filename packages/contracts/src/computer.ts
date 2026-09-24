@@ -83,7 +83,7 @@ export const ComputerApprovalsSchema = z.object({
 });
 export type ComputerApprovals = z.infer<typeof ComputerApprovalsSchema>;
 
-/* `once` holds while that chat or terminal session runs; `always` holds on this machine until a person takes it back. */
+/* `once` holds until the agent's turn ends, or the person stops it; `always` holds on this machine until a person takes it back. */
 export const ComputerApprovalChoiceSchema = z.enum(['once', 'always', 'deny']);
 export type ComputerApprovalChoice = z.infer<typeof ComputerApprovalChoiceSchema>;
 

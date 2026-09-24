@@ -51,7 +51,7 @@
     "body": "{{node}} in {{project}} wants to see and operate {{app}} on this machine.",
     "bodyNoProject": "{{node}} wants to see and operate {{app}} on this machine.",
     "unnamed": "An agent",
-    "scope": "This time lasts while this session runs. Always lets every agent on this machine use {{app}}.",
+    "scope": "This time lasts until the agent's turn ends. Always lets every agent on this machine use {{app}}.",
     "once": "Allow this time",
     "always": "Always allow",
     "deny": "Deny"

@@ -229,6 +229,97 @@ describe('the approval of an app', () => {
     });
 });
 
+/* Raises the card for TextEdit and answers it for this time; the call it held goes through. */
+const allowOnce = async (computer: ComputerSetup['computer'], nodeId: string): Promise<void> => {
+    const call = computer.operate(nodeId, 'state', 'TextEdit', {});
+    await until(() => computer.pendingApprovals().length === 1);
+    await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
+    await call;
+};
+
+/* Whether the node is asked again: a card goes up, which the test then lets expire unanswered. */
+const asksAgain = async (setup: ComputerSetup, nodeId: string): Promise<boolean> => {
+    const acted = setup.helper.acted.length;
+    const call = codeOf(setup.computer.operate(nodeId, 'click', 'TextEdit', { element: 1 }));
+    await until(() => setup.computer.pendingApprovals().length > 0 || setup.helper.acted.length > acted);
+    const asked = setup.computer.pendingApprovals().length > 0;
+    setup.timers.advance(APPROVAL_WAIT_MS);
+    await call;
+    for (const card of setup.computer.pendingApprovals()) {
+        await setup.computer.answer(card.requestId, 'deny');
+    }
+    // The no of that answer reaches the agent on its next call; take it here so the test starts clean.
+    if (asked) {
+        await codeOf(setup.computer.operate(nodeId, 'click', 'TextEdit', { element: 1 }));
+    }
+    return asked;
+};
+
+describe('"this time"', () => {
+    test('lasts until the turn of a chat ends', async () => {
+        const setup = await computerSetup();
+        setup.computer.observe(chatInfo('chat-1', 'running'));
+        await allowOnce(setup.computer, 'chat-1');
+        expect(await asksAgain(setup, 'chat-1')).toBe(false);
+        setup.computer.observe(turnEnded('chat-1', 'done'));
+        expect(await asksAgain(setup, 'chat-1')).toBe(true);
+    });
+
+    test('lasts while a terminal agent waits on the person, and ends when it goes idle', async () => {
+        const setup = await computerSetup();
+        setup.computer.observe(terminalStatus('term-1', 'running'));
+        await allowOnce(setup.computer, 'term-1');
+        setup.computer.observe(terminalStatus('term-1', 'needs-you'));
+        setup.computer.observe(terminalStatus('term-1', 'running'));
+        expect(await asksAgain(setup, 'term-1')).toBe(false);
+        setup.computer.observe(terminalStatus('term-1', 'idle'));
+        expect(await asksAgain(setup, 'term-1')).toBe(true);
+    });
+
+    test('given between turns lasts through the next one', async () => {
+        const setup = await computerSetup();
+        setup.computer.observe(chatInfo('chat-1', 'running'));
+        setup.computer.observe(chatInfo('chat-1', 'idle'));
+        await allowOnce(setup.computer, 'chat-1');
+        setup.computer.observe(chatInfo('chat-1', 'idle'));
+        setup.computer.observe(chatInfo('chat-1', 'running'));
+        expect(await asksAgain(setup, 'chat-1')).toBe(false);
+        setup.computer.observe(chatInfo('chat-1', 'idle'));
+        expect(await asksAgain(setup, 'chat-1')).toBe(true);
+    });
+
+    test('goes when computer use is turned off', async () => {
+        const setup = await computerSetup();
+        await allowOnce(setup.computer, 'chat-1');
+        await setup.computer.setEnabled(false, undefined);
+        await setup.computer.setEnabled(true, 'en');
+        expect(await asksAgain(setup, 'chat-1')).toBe(true);
+    });
+});
+
+describe('a card whose agent is gone', () => {
+    test('goes at once when a terminal agent exits or a node closes', async () => {
+        const { computer } = await computerSetup();
+        const published: number[] = [];
+        computer.subscribe('client-1', (event) => {
+            if (event.event === 'computer.approvals') {
+                published.push(event.payload.approvals.length);
+            }
+        });
+        const terminal = codeOf(computer.operate('term-1', 'state', 'TextEdit', {}));
+        await until(() => computer.pendingApprovals().length === 1);
+        computer.observe(terminalStatus('term-1', 'exited'));
+        expect(await terminal).toBe('declined');
+        expect(published.at(-1)).toBe(0);
+
+        const chat = codeOf(computer.operate('chat-1', 'state', 'TextEdit', {}));
+        await until(() => computer.pendingApprovals().length === 1);
+        computer.nodeClosed('chat-1');
+        expect(await chat).toBe('declined');
+        expect(published.at(-1)).toBe(0);
+    });
+});
+
 describe('a terminal', () => {
     test('is refused even with an approval for always, and remembered after it was seen', async () => {
         const { computer, helper } = await computerSetup();

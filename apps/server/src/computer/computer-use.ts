@@ -252,19 +252,27 @@ export class ComputerUse {
         return this.approvals.answer(requestId, choice);
     }
 
-    /* What the chats and terminals are doing, for the cursor of the agent that holds the session. */
+    /* What the chats and terminals are doing: for the cursor of the agent that holds the session, and for how long "this time" lasts. */
     observe(event: SessionEvent): void {
         if (event.event === 'session.status') {
-            if (event.payload.agent) {
-                this.presence.status(event.payload.sessionId, event.payload.agent.status);
+            const { sessionId, agent } = event.payload;
+            if (agent) {
+                this.approvals.agentStatus(sessionId, agent.status);
+                this.presence.status(sessionId, agent.status);
+                if (agent.status === 'exited') {
+                    this.approvals.forget(sessionId);
+                }
             }
         } else if (event.event === 'session.exit') {
+            this.approvals.forget(event.payload.sessionId);
             this.presence.closed(event.payload.sessionId);
         } else if (event.event === 'chat.event') {
             const { chatId, event: chat } = event.payload;
             if (chat.type === 'item' && chat.item.kind === 'turn' && chat.item.state !== 'running') {
+                this.approvals.turnEnded(chatId);
                 this.presence.turnEnded(chatId, chat.item.state);
             } else if (chat.type === 'info') {
+                this.approvals.agentStatus(chatId, chat.info.status);
                 this.presence.status(chatId, chat.info.status);
             }
         }
@@ -273,6 +281,7 @@ export class ComputerUse {
     /* A chat or terminal goes; a chat says nothing to an observer when it does. */
     nodeClosed(nodeId: string): void {
         this.stopped.delete(nodeId);
+        this.approvals.forget(nodeId);
         this.presence.closed(nodeId);
     }
 
