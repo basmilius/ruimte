@@ -179,6 +179,51 @@ describe('SessionVault', () => {
     });
 });
 
+/* `navigator.locks` for one name: whoever asks waits for everyone before. */
+const fakeLock = () => {
+    let tail: Promise<unknown> = Promise.resolve();
+    let holding = 0;
+    let mostAtOnce = 0;
+    const exclusive = <T>(run: () => Promise<T>): Promise<T> => {
+        const turn = tail.then(async () => {
+            holding += 1;
+            mostAtOnce = Math.max(mostAtOnce, holding);
+            try {
+                return await run();
+            } finally {
+                holding -= 1;
+            }
+        });
+        tail = turn.catch(() => undefined);
+        return turn;
+    };
+    return {
+        exclusive,
+        get mostAtOnce(): number {
+            return mostAtOnce;
+        }
+    };
+};
+
+describe('SessionVaults over one store', () => {
+    test('two tabs refreshing at once take turns, so each token is spent once and the session survives', async () => {
+        const book = fakeAddressBook();
+        const store = memoryStore();
+        const lock = fakeLock();
+        const first = new SessionVault({ client: book.client, store, signer: keyed, exclusive: lock.exclusive, now: () => NOW });
+        const second = new SessionVault({ client: book.client, store, signer: keyed, exclusive: lock.exclusive, now: () => NOW });
+        await first.exchange(exchange);
+
+        const [fromFirst, fromSecond] = await Promise.all([first.refresh(), second.refresh()]);
+        expect(lock.mostAtOnce).toBe(1);
+        expect([fromFirst?.accessToken, fromSecond?.accessToken]).toEqual([token('2'), token('3')]);
+        // The second read the token the first rotated to, instead of the one both saw before waiting.
+        const spent = book.calls.filter((call) => call.path === '/v1/session/refresh').map((call) => (call.body as { refreshToken: string }).refreshToken);
+        expect(spent).toEqual([token('a'), token('b')]);
+        expect(store.held?.refreshToken).toBe(token('c'));
+    });
+});
+
 describe('SessionVault and its key', () => {
     test('a device that lost its key is signed out rather than left with a session it cannot refresh', async () => {
         const book = fakeAddressBook();

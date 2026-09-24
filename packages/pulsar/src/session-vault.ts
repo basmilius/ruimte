@@ -39,6 +39,11 @@ export interface SessionVaultOptions {
     store: SessionStore;
     /* Null when this side has no key any more, which leaves a kept session nothing to refresh with. */
     signer: () => Promise<SessionSigner | null>;
+    /*
+     * Runs a refresh alone among every vault over the same store, such as a page's other tabs. A vault
+     * only serializes its own refreshes, and two holders spending one token end the session everywhere.
+     */
+    exclusive?: <T>(run: () => Promise<T>) => Promise<T>;
     now?: () => number;
 }
 
@@ -59,6 +64,7 @@ export class SessionVault {
     private readonly client: AddressBookClient;
     private readonly store: SessionStore;
     private readonly signer: () => Promise<SessionSigner | null>;
+    private readonly exclusive: <T>(run: () => Promise<T>) => Promise<T>;
     private readonly now: () => number;
     private current: SessionView | null = null;
     private refreshing: Promise<SessionView | null> | null = null;
@@ -67,6 +73,7 @@ export class SessionVault {
         this.client = options.client;
         this.store = options.store;
         this.signer = options.signer;
+        this.exclusive = options.exclusive ?? ((run) => run());
         this.now = options.now ?? Date.now;
     }
 
@@ -103,7 +110,7 @@ export class SessionVault {
      * throws and keeps the session, since the token is still good once the address book answers again.
      */
     refresh(): Promise<SessionView | null> {
-        this.refreshing ??= this.rotate().finally(() => {
+        this.refreshing ??= this.exclusive(() => this.rotate()).finally(() => {
             this.refreshing = null;
         });
         return this.refreshing;

@@ -157,6 +157,10 @@ export const indexedDbSessionStore = (): SessionStore => {
     };
 };
 
+/* Every tab of this origin keeps its own vault over the one IndexedDB record, so a refresh waits for the others. */
+const oneTabAtATime = <T>(run: () => Promise<T>): Promise<T> =>
+    typeof navigator !== 'undefined' && 'locks' in navigator ? navigator.locks.request('ruimte-pulsar-refresh', run) : run();
+
 /* The page as a platform to sign in on, or null inside the desktop shell and on an origin the address book would not send a login back to. */
 export const webPulsar = (): PulsarPlatform | null => {
     if (desktop() !== null || typeof location === 'undefined' || typeof indexedDB === 'undefined') {
@@ -166,7 +170,7 @@ export const webPulsar = (): PulsarPlatform | null => {
     if (redirectUri === null) {
         return null;
     }
-    const vault = new SessionVault({ client: new AddressBookClient(), store: indexedDbSessionStore(), signer: () => clientKey() });
+    const vault = new SessionVault({ client: new AddressBookClient(), store: indexedDbSessionStore(), signer: () => clientKey(), exclusive: oneTabAtATime });
     return {
         addressBook: async () => ADDRESS_BOOK_URL,
         keeper: vault,
