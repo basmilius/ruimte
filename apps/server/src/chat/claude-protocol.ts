@@ -198,6 +198,7 @@ export class ClaudeProtocol {
                 events.push({
                     type: 'task.progress',
                     ref,
+                    taskId: str(frame.task_id),
                     summary: str(frame.description),
                     lastTool: str(frame.last_tool_name),
                     usage: taskUsage(frame.usage)
@@ -218,6 +219,7 @@ export class ClaudeProtocol {
             events.push({
                 type: 'task.done',
                 ref: str(frame.tool_use_id),
+                taskId,
                 summary: str(frame.summary),
                 ok: str(frame.status) === 'completed',
                 usage: taskUsage(frame.usage),
@@ -237,6 +239,7 @@ export class ClaudeProtocol {
                 events.push({
                     type: 'task.started',
                     ref,
+                    taskId: str(frame.task_id),
                     description: str(frame.description),
                     subagentType: str(frame.subagent_type),
                     prompt: str(frame.prompt),

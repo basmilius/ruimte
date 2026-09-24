@@ -258,9 +258,7 @@ export class ThreadProjector {
                 // Keep one summary line for the next turn's header; the tool row already has the result.
                 const line = event.summary === null ? '' : summaryLine(event.summary);
                 this.taskSummary = line === '' ? this.taskSummary : line;
-                if (event.ref !== null) {
-                    this.settleBackgroundSubagent(generation, event.ref, event, events);
-                }
+                this.settleBackgroundSubagent(generation, event, events);
                 break;
             }
             case 'background.started':
@@ -507,6 +505,18 @@ export class ThreadProjector {
         return item?.kind === 'subagent' ? item : null;
     }
 
+    /*
+     * The row a task frame is about. A message that wakes a settled agent again names the call that
+     * sent it (SendMessage), so only the agent's own id still leads to the row it already has.
+     */
+    private taskSubagent(generation: number, ref: string | null, taskId: string | null | undefined): ChatSubagentItem | null {
+        const byRef = ref === null ? null : this.subagent(generation, ref);
+        if (byRef || !taskId) {
+            return byRef;
+        }
+        return this.thread.list().findLast((item): item is ChatSubagentItem => item.kind === 'subagent' && item.native?.agentId === taskId) ?? null;
+    }
+
     private budgetFor(parent: ChatSubagentItem): { items: number; textBytes: number } {
         const budget = this.budgets.get(parent.id) ?? { items: 0, textBytes: 0 };
         this.budgets.set(parent.id, budget);
@@ -563,16 +573,15 @@ export class ThreadProjector {
     /* What the CLI itself says about the delegation: which agent it is, and whether it blocks the turn. */
     private patchSubagentStart(generation: number, event: Extract<BackendEvent, { type: 'task.started' }>, events: ChatEvent[]): void {
         const existing = this.thread.get(this.itemId(generation, event.ref));
-        if (existing && existing.kind !== 'subagent') {
-            return;
-        }
         if (!existing) {
             this.startSubagent(generation, { type: 'tool.started', ref: event.ref, name: 'Agent', input: {}, parentRef: null }, events);
         }
-        const item = this.subagent(generation, event.ref);
+        const item = this.taskSubagent(generation, event.ref, event.taskId);
         if (!item) {
             return;
         }
+        // A settled agent that starts again under another call was woken by a message, and works on in the background.
+        const resumed = item.status !== 'running' && item.toolUseId !== event.ref;
         events.push(
             this.thread.upsert({
                 ...item,
@@ -580,13 +589,22 @@ export class ThreadProjector {
                 subagentType: item.subagentType ?? event.subagentType,
                 prompt: item.prompt ?? event.prompt,
                 background: event.background,
-                ...(event.threadId ? { native: { ...item.native, threadId: event.threadId } } : {})
+                ...(resumed ? { status: 'running', startedAt: this.now(), finishedAt: null } : {}),
+                ...(event.taskId || event.threadId
+                    ? {
+                          native: {
+                              ...item.native,
+                              ...(event.taskId ? { agentId: event.taskId } : {}),
+                              ...(event.threadId ? { threadId: event.threadId } : {})
+                          }
+                      }
+                    : {})
             })
         );
     }
 
     private patchSubagentProgress(generation: number, event: Extract<BackendEvent, { type: 'task.progress' }>, events: ChatEvent[]): void {
-        const item = this.subagent(generation, event.ref);
+        const item = this.taskSubagent(generation, event.ref, event.taskId);
         if (!item || item.status !== 'running') {
             return;
         }
@@ -649,8 +667,8 @@ export class ThreadProjector {
     }
 
     /* The notification a background agent settles with; its report is the last text it wrote. */
-    private settleBackgroundSubagent(generation: number, ref: string, event: Extract<BackendEvent, { type: 'task.done' }>, events: ChatEvent[]): void {
-        const item = this.subagent(generation, ref);
+    private settleBackgroundSubagent(generation: number, event: Extract<BackendEvent, { type: 'task.done' }>, events: ChatEvent[]): void {
+        const item = this.taskSubagent(generation, event.ref, event.taskId);
         if (!item) {
             return;
         }

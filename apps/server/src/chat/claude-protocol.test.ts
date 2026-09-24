@@ -121,13 +121,22 @@ describe('ClaudeProtocol', () => {
                 prompt: 'sleep 20'
             })
         ).toEqual([
-            { type: 'task.started', ref: 'toolu_agent', description: 'Run sleep', subagentType: 'general-purpose', prompt: 'sleep 20', background: true }
+            {
+                type: 'task.started',
+                ref: 'toolu_agent',
+                taskId: 'a3838cf8b1de992a3',
+                description: 'Run sleep',
+                subagentType: 'general-purpose',
+                prompt: 'sleep 20',
+                background: true
+            }
         ]);
 
         expect(
             protocol.handle({
                 type: 'system',
                 subtype: 'task_progress',
+                task_id: 'a3838cf8b1de992a3',
                 tool_use_id: 'toolu_agent',
                 description: 'Running Sleep for 20 seconds',
                 subagent_type: 'general-purpose',
@@ -138,6 +147,7 @@ describe('ClaudeProtocol', () => {
             {
                 type: 'task.progress',
                 ref: 'toolu_agent',
+                taskId: 'a3838cf8b1de992a3',
                 summary: 'Running Sleep for 20 seconds',
                 lastTool: 'Bash',
                 usage: { totalTokens: 15074, toolUses: 1, durationMs: 2575 }
@@ -184,6 +194,7 @@ describe('ClaudeProtocol', () => {
             {
                 type: 'task.done',
                 ref: 'toolu_agent',
+                taskId: 'a3838cf8b1de992a3',
                 summary: 'slept',
                 ok: true,
                 usage: { totalTokens: 16464, toolUses: 1, durationMs: 24235 },
@@ -192,7 +203,7 @@ describe('ClaudeProtocol', () => {
         ]);
         // A task that ended another way is still the thing that wakes the agent.
         expect(protocol.handle({ type: 'system', subtype: 'task_notification', task_id: 't', status: 'failed', summary: 'no luck' })).toEqual([
-            { type: 'task.done', ref: null, summary: 'no luck', ok: false, usage: null, outputFile: null }
+            { type: 'task.done', ref: null, taskId: 't', summary: 'no luck', ok: false, usage: null, outputFile: null }
         ]);
         // Claude Code 2.1.273 says `stopped` for a task that was killed, with its own id and nothing it wrote.
         expect(
@@ -206,7 +217,17 @@ describe('ClaudeProtocol', () => {
                 summary: 'Merge-readiness review',
                 skip_transcript: false
             })
-        ).toEqual([{ type: 'task.done', ref: 'toolu_01GNbHkKfS9B2cD6q6SRC9cQ', summary: 'Merge-readiness review', ok: false, usage: null, outputFile: null }]);
+        ).toEqual([
+            {
+                type: 'task.done',
+                ref: 'toolu_01GNbHkKfS9B2cD6q6SRC9cQ',
+                taskId: 'a91114f36f4c6b0ef',
+                summary: 'Merge-readiness review',
+                ok: false,
+                usage: null,
+                outputFile: null
+            }
+        ]);
     });
 
     test('a permission request waits for an answer and its response carries the suggested rule', () => {
@@ -364,7 +385,7 @@ describe('ClaudeProtocol', () => {
             { type: 'background.ended', taskId: 'b1' }
         ]);
         expect(protocol.handle({ type: 'system', subtype: 'task_notification', task_id: 'b1', status: 'killed' })).toEqual([
-            { type: 'task.done', ref: null, summary: null, ok: false, usage: null, outputFile: null }
+            { type: 'task.done', ref: null, taskId: 'b1', summary: null, ok: false, usage: null, outputFile: null }
         ]);
         expect(protocol.handle({ type: 'system', subtype: 'task_notification', task_id: 'm1', status: 'completed' })[0]).toEqual({
             type: 'background.ended',

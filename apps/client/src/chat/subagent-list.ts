@@ -14,19 +14,26 @@ export const statusWordOf = (item: ChatSubagentItem, task: Task | null): StatusW
 
 /*
  * What the flyout over the composer lists: every sub-agent still at work, and the ones that settled
- * since the last message, so a finished batch stays until the next message is sent. A settled one
- * from before that message stays too while a sibling of its turn still runs. Older ones are only in
- * the thread.
+ * since the last message, so a finished batch stays until the next message is sent. That includes an
+ * older row a message woke again. A settled one from before that message stays too while a sibling of
+ * its turn still runs. Older ones are only in the thread.
  */
 export const flyoutSubagents = (order: readonly string[], structure: Readonly<Record<string, ChatItem>>): ChatSubagentItem[] => {
     const lastMessage = order.findLastIndex((id) => structure[id]?.kind === 'user');
+    const lastMessageAt = lastMessage < 0 ? null : (structure[order[lastMessage]!]?.createdAt ?? null);
     const items = order.flatMap((id, index) => {
         const item = structure[id];
         return item?.kind === 'subagent' ? [{ item, index }] : [];
     });
     const turns = new Set(items.flatMap(({ item }) => (item.status === 'running' && item.turnId !== null ? [item.turnId] : [])));
     return items
-        .filter(({ item, index }) => item.status === 'running' || index > lastMessage || (item.turnId !== null && turns.has(item.turnId)))
+        .filter(
+            ({ item, index }) =>
+                item.status === 'running' ||
+                index > lastMessage ||
+                (lastMessageAt !== null && item.finishedAt !== null && item.finishedAt > lastMessageAt) ||
+                (item.turnId !== null && turns.has(item.turnId))
+        )
         .map(({ item }) => item);
 };
 

@@ -56,6 +56,13 @@ describe('subagent list', () => {
         expect(flyoutSubagents(['survey', 'task'], structure)).toEqual([survey, task]);
     });
 
+    test('a row from before the last message that a message woke again stays once it settles', () => {
+        const woken = subagent('woken', { status: 'done', turnId: 'turn-1', startedAt: 20, finishedAt: 30 });
+        const settled = subagent('settled', { status: 'done', turnId: 'turn-1', startedAt: 1, finishedAt: 5 });
+        const structure: Record<string, ChatItem> = { woken, settled, u1: { ...message('u1'), createdAt: 10 } };
+        expect(flyoutSubagents(['settled', 'woken', 'u1'], structure)).toEqual([woken]);
+    });
+
     test('the badge shows work in progress first, then a failure, then a cancel, and done only when all are', () => {
         expect(summaryWordOf(['done', 'failed', 'running'])).toBe('running');
         expect(summaryWordOf(['done', 'cancelled', 'failed'])).toBe('failed');

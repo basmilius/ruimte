@@ -439,6 +439,30 @@ describe('subagents', () => {
         expect(thread.get('1:toolu_agent')).toMatchObject({ status: 'done', summary: 'read the docs twice' });
     });
 
+    test('a message that wakes a settled subagent runs its own row again, under the call that sent it', () => {
+        const { thread, project } = setup();
+        project(
+            { type: 'tool.started', ref: 'toolu_agent', name: 'Agent', input: { description: 'Get a word' }, parentRef: null },
+            { type: 'task.started', ref: 'toolu_agent', taskId: 'a522', description: 'Get a word', subagentType: null, prompt: null, background: false },
+            { type: 'task.done', ref: 'toolu_agent', taskId: 'a522', summary: null, ok: true },
+            { type: 'tool.done', ref: 'toolu_agent', output: 'APPLE', state: 'done' },
+            // The CLI names the SendMessage call on every frame about the woken agent, and only its id stays the same.
+            { type: 'tool.started', ref: 'toolu_send', name: 'SendMessage', input: { to: 'a522' }, parentRef: null },
+            { type: 'task.started', ref: 'toolu_send', taskId: 'a522', description: 'Get a word', subagentType: null, prompt: null, background: true },
+            { type: 'tool.done', ref: 'toolu_send', output: 'Resuming agent a522', state: 'done' }
+        );
+        expect(thread.get('1:toolu_agent')).toMatchObject({ status: 'running', background: true, finishedAt: null, native: { agentId: 'a522' } });
+        expect(thread.get('1:toolu_send')).toMatchObject({ kind: 'tool' });
+
+        // Its turn ends before it does, and what it writes lands on its own row.
+        project(
+            { type: 'turn.done', state: 'done', costUsd: 0 },
+            { type: 'text.done', ref: 'msg_5:t0', text: 'BANANA', parentRef: 'toolu_agent' },
+            { type: 'task.done', ref: 'toolu_send', taskId: 'a522', summary: 'said banana', ok: true }
+        );
+        expect(thread.get('1:toolu_agent')).toMatchObject({ status: 'done', result: 'BANANA', summary: 'said banana', finishedAt: expect.any(Number) });
+    });
+
     test('a subagent that works past the cap keeps the beginning and says it was cut', () => {
         const { thread, project } = setup();
         project({ type: 'tool.started', ref: 'toolu_agent', name: 'Agent', input: {}, parentRef: null });

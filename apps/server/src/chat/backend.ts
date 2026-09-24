@@ -87,13 +87,23 @@ export type BackendEvent =
           subagentType: string | null;
           prompt: string | null;
           background: boolean;
+          // The CLI's own id for the agent, which stays the same when a message wakes it again under another call.
+          taskId?: string | null;
           // The thread a CLI that keeps one per agent opened for it, which is where its whole conversation is read.
           threadId?: string | null;
       }
-    | { type: 'task.progress'; ref: string; summary: string | null; lastTool: string | null; usage: ChatSubagentUsage | null }
+    | { type: 'task.progress'; ref: string; taskId?: string | null; summary: string | null; lastTool: string | null; usage: ChatSubagentUsage | null }
     // A task the CLI runs beside the turn (a background subagent, a backgrounded command) settled.
     // Its summary is what the CLI says came of it, and what a turn the CLI opens on its own is about.
-    | { type: 'task.done'; ref: string | null; summary: string | null; ok: boolean; usage?: ChatSubagentUsage | null; outputFile?: string | null }
+    | {
+          type: 'task.done';
+          ref: string | null;
+          taskId?: string | null;
+          summary: string | null;
+          ok: boolean;
+          usage?: ChatSubagentUsage | null;
+          outputFile?: string | null;
+      }
     // A command or a monitor the CLI keeps running beside its turns. `ref` is the call that started it, when a
     // call did; `monitor` is set when the CLI's own frame already says it is one.
     | { type: 'background.started'; taskId: string; ref: string | null; monitor: boolean; description: string | null }
