@@ -55,6 +55,7 @@ describe('computer use', () => {
         expect(await call).toBe('declined');
         expect(computer.pendingApprovals()).toEqual([]);
         expect(helper.running).toBe(false);
+        expect(computer.status()).toMatchObject({ enabled: false, running: false });
     });
 
     test('lists apps without asking anybody, with how the caller stands with each', async () => {

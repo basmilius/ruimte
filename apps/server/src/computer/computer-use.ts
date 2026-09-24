@@ -216,11 +216,12 @@ export class ComputerUse {
         await this.store.setEnabled(enabled, language);
         if (enabled) {
             await this.writeOverlay();
-        } else {
-            this.approvals.dropAll();
-            await this.helper.quit();
+            return this.refreshStatus();
         }
-        return this.refreshStatus();
+        this.approvals.dropAll();
+        await this.helper.quit();
+        // Not asked again: the helper answers for a moment after it was told to quit.
+        return this.setStatus({ ...this.current, enabled: false, running: false });
     }
 
     /* Writes the pill's words for a helper that is on; call once the store is loaded. */
