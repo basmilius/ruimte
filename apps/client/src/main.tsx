@@ -3,6 +3,7 @@ import { App } from '@/App';
 import { initI18n } from '@/i18n';
 import { startAgentNotifications } from '@/shell/notifications';
 import { startAttentionWatch } from '@/state/attention';
+import { startSnoozeClock } from '@/state/snooze';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
 import { startServerInfo } from '@/transport/server-info';
 import { startPing } from '@/transport/ping';
@@ -34,6 +35,7 @@ import '@xterm/xterm/css/xterm.css';
 import '@/styles.css';
 
 startSessionLifecycle();
+startSnoozeClock();
 startAgentNotifications();
 startAttentionWatch();
 startServerInfo();

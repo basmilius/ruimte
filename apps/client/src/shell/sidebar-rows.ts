@@ -19,6 +19,8 @@ export interface SidebarNode {
     finished?: boolean;
     /* The task another agent opened it with. */
     task?: Task | null;
+    /* When a person's snooze runs out, while it holds: the node waits outside "Needs you" until then. */
+    snoozedUntil?: number | null;
 }
 
 export interface SidebarView {
@@ -115,6 +117,9 @@ export const heaviestStatus = (nodes: readonly SidebarNode[]): AgentStatus | nul
         return heaviest === null || WEIGHT[node.status] > WEIGHT[heaviest] ? node.status : heaviest;
     }, null);
 
+/* Whether a node belongs in "Needs you": waiting, and not put aside for now. */
+export const waitsOnYou = (node: SidebarNode): boolean => node.status === 'needs-you' && !node.snoozedUntil;
+
 /*
  * The sidebar as one list of rows: what waits for you first, then the views in the order the
  * project file names them, with the nodes of an open canvas under it. The
@@ -126,7 +131,7 @@ export const buildSidebar = ({ project, expandedIds }: SidebarInput): SidebarSec
     const waiting: SidebarRow[] = [];
     for (const view of project.views) {
         for (const node of [...view.nodes, ...(view.self ? [view.self] : [])]) {
-            if (node.status === 'needs-you') {
+            if (waitsOnYou(node)) {
                 waiting.push({ type: 'node', rowId: `needs:${node.id}`, node, viewId: view.id, viewName: view.name });
             }
         }

@@ -13,6 +13,7 @@ import { useChats, type ChatsById } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
+import { snoozeOf, useSnoozes, type Snoozes } from '@/state/snooze';
 
 export { readableNodes, seenNodes, sightOf, visibleNodes, type CanvasSight } from '@/state/in-sight';
 
@@ -119,6 +120,8 @@ export const nextUnseen = (pass: AttentionPass): Set<string> => {
 export interface AttentionGroups {
     /* Nodes waiting on a person, in the order the project lists them. */
     needsYou: string[];
+    /* Nodes waiting on a person who put them aside for now, which no count includes. */
+    snoozed: string[];
     /* Nodes with an agent in the middle of a turn. Never a shell somebody left attached. */
     working: string[];
     /* Nodes whose turn ended while nobody was looking. */
@@ -130,12 +133,17 @@ export const groupAttention = (
     sessions: SessionsByKey,
     chats: ChatsById,
     endpointId: string,
-    unseen: Readonly<Record<string, true>>
+    unseen: Readonly<Record<string, true>>,
+    snoozes: Snoozes
 ): AttentionGroups => {
-    const groups: AttentionGroups = { needsYou: [], working: [], finished: [] };
+    const groups: AttentionGroups = { needsYou: [], snoozed: [], working: [], finished: [] };
     for (const node of nodes) {
         if (nodeStatus(node, sessions, chats, endpointId) === 'needs-you') {
-            groups.needsYou.push(node.id);
+            if (snoozeOf(snoozes, endpointId, node.id) !== null) {
+                groups.snoozed.push(node.id);
+            } else {
+                groups.needsYou.push(node.id);
+            }
             continue;
         }
         if (nodeWorking(node, sessions, chats, endpointId)) {
@@ -199,6 +207,18 @@ export const clearUnseen = (nodeId: string): void => {
     useAttention.getState().setUnseen(new Set(Object.keys(useAttention.getState().unseen).filter((entry) => entry !== key)));
 };
 
+/* Whether each node needs you, keyed for the snoozes; a node with no status yet says nothing either way. */
+export const snoozeObservations = (nodes: readonly StatusOf[], sessions: SessionsByKey, chats: ChatsById, endpointId: string): Map<string, boolean> => {
+    const observed = new Map<string, boolean>();
+    for (const node of nodes) {
+        const status = nodeStatus(node, sessions, chats, endpointId);
+        if (status !== undefined) {
+            observed.set(endpointKey(endpointId, node.id), status === 'needs-you');
+        }
+    }
+    return observed;
+};
+
 /*
  * Keeps the marks, the counts and what the shell is told in step with the stores the hooks write
  * into. Every pass counts the project from scratch, so a subscription that misses a change only ever
@@ -214,13 +234,14 @@ export const startAttentionWatch = (): (() => void) => {
         const keyOf = (nodeId: string): string => endpointKey(endpointId, nodeId);
         const sessions = useSessions.getState().byKey;
         const chats = useChats.getState().byKey;
-        const groups = groupAttention(nodes, sessions, chats, endpointId, useAttention.getState().unseen);
+        const groups = groupAttention(nodes, sessions, chats, endpointId, useAttention.getState().unseen, useSnoozes.getState().byKey);
         const visible = seenNodes(document.hasFocus(), nodesInSight());
         seePushNotifications(endpointId, visible);
         const result: AttentionPass = {
             working: new Set(groups.working.map(keyOf)),
             previous,
-            needsYou: new Set(groups.needsYou.map(keyOf)),
+            // A snoozed node still waits, so its turn has not ended and it earns no mark.
+            needsYou: new Set([...groups.needsYou, ...groups.snoozed].map(keyOf)),
             seen: new Set([...visible].map(keyOf)),
             // The machine's own unread entries count too, since a turn that ended while no client was connected still leaves its mark.
             unseen: new Set([...Object.keys(useAttention.getState().unseen), ...unreadOnMachine(endpointId).map(keyOf)]),
@@ -245,6 +266,8 @@ export const startAttentionWatch = (): (() => void) => {
             told = line;
             desktop()?.setAgentActivity?.(activity);
         }
+        // Last, since a snooze it ends runs this pass again, and that one has to start from this one's `previous`.
+        useSnoozes.getState().observe(snoozeObservations(nodes, sessions, chats, endpointId));
     };
 
     /*
@@ -269,6 +292,7 @@ export const startAttentionWatch = (): (() => void) => {
     const offCanvases = subscribeCanvases(schedule);
     const offDocument = useDocument.subscribe(schedule);
     const offPushAttention = subscribePushAttention(pass);
+    const offSnoozes = useSnoozes.subscribe(pass);
     window.addEventListener('focus', pass);
     window.addEventListener('blur', pass);
     pass();
@@ -278,6 +302,7 @@ export const startAttentionWatch = (): (() => void) => {
         offCanvases();
         offDocument();
         offPushAttention();
+        offSnoozes();
         window.removeEventListener('focus', pass);
         window.removeEventListener('blur', pass);
     };

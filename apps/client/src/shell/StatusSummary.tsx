@@ -9,6 +9,7 @@ import { useChats } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useDocument } from '@/state/document';
 import { useSessions } from '@/state/sessions';
+import { useSnoozes } from '@/state/snooze';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
@@ -53,11 +54,12 @@ export function StatusSummary() {
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.byKey);
     const unseen = useAttention((s) => s.unseen);
+    const snoozes = useSnoozes((s) => s.byKey);
 
     // The dependencies are what `projectNodes` reads; the call itself takes the stores as they are.
     const nodes = useMemo(() => projectNodes(), [views, activeViewId, order, canvasNodes]);
 
-    const groups = groupAttention(nodes, sessions, chats, endpointId, unseen);
+    const groups = groupAttention(nodes, sessions, chats, endpointId, unseen, snoozes);
     if (groups.needsYou.length === 0 && groups.working.length === 0 && groups.finished.length === 0) {
         return null;
     }

@@ -30,6 +30,16 @@
         },
         "unsavedFile": "Unsaved changes"
     },
+    "snooze": {
+        "action": "Snooze",
+        "unsnooze": "Unsnooze",
+        "until": "Snoozed until {{time}}",
+        "choices": {
+            "ten-minutes": "10 minutes",
+            "hour": "1 hour",
+            "tomorrow": "Tomorrow"
+        }
+    },
     "panel": {
         "fallback": "Panel",
         "close": "Close {{name}}",

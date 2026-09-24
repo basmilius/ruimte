@@ -38,6 +38,8 @@ import { accentColor } from '@/canvas/accents';
 import { ApprovalStrip } from '@/canvas/ApprovalStrip';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
+import { SnoozeMenuItems } from '@/shell/Snooze';
+import { useEndpointId } from '@/state/keys';
 import { useCellHasFocus } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
@@ -201,6 +203,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
     const [fileControls, setFileControls] = useState<HTMLElement | null>(null);
     const toolbarSlot = useMemo(() => fixedSlot(fileControls), [fileControls]);
     const status = useNodeStatus(node);
+    const endpointId = useEndpointId();
     const unseen = useUnseen(id);
     const processAlerts = useNodeAlerts(id);
     const task = useChildTask(id);
@@ -410,7 +413,11 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                 )}
             </ContextMenu.Trigger>
 
-            <NodeMenuPopup id={id} onRename={() => setRenaming(true)} />
+            <NodeMenuPopup
+                id={id}
+                onRename={() => setRenaming(true)}
+                snooze={<SnoozeMenuItems endpointId={endpointId} nodeId={id} needsYou={status === 'needs-you'} />}
+            />
         </ContextMenu.Root>
     );
 });

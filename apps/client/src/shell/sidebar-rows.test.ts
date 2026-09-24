@@ -123,6 +123,14 @@ describe('buildSidebar', () => {
         expect(needs!.rows[0]).toMatchObject({ rowId: 'needs:auth', viewName: 'auth' });
         expect(list!.rows[0]).toMatchObject({ rowId: 'view:auth', expandable: false, status: 'needs-you', draft: true });
     });
+
+    test('a snoozed node leaves the section and keeps its status in the list of views', () => {
+        const snoozed = view('backend', [{ ...node('claude', 'needs-you'), snoozedUntil: 5_000 }]);
+        const sections = build([snoozed], 'backend', ['backend']);
+        expect(sections.map((section) => section.kind)).toEqual(['views']);
+        expect(sections[0]!.rows[0]).toMatchObject({ rowId: 'view:backend', status: 'needs-you' });
+        expect(sections[0]!.rows[1]).toMatchObject({ rowId: 'node:backend:claude', node: { snoozedUntil: 5_000 } });
+    });
 });
 
 describe('the list of views', () => {

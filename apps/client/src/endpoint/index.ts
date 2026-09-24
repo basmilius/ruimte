@@ -6,6 +6,7 @@ import { useBrowser } from '@/browser/registry';
 import { forgetCachedList } from '@/project/list';
 import { useChats } from '@/state/chats';
 import { useLastSeen } from '@/state/last-seen';
+import { useSnoozes } from '@/state/snooze';
 import { LOCAL_ENDPOINT_ID, activeEndpoint, endpointForDaemon, parsePairingUrl, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
 import { useProvidersStore } from '@/state/providers';
@@ -135,6 +136,7 @@ const forgetEndpointState = (id: string): void => {
     useProcesses.getState().forget(id);
     useProcessWarnings.getState().forget(id);
     useLastSeen.getState().forget(id);
+    useSnoozes.getState().forget(id);
     dropClientLocalOf(browserStorage(), id);
 };
 

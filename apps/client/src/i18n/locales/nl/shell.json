@@ -30,6 +30,16 @@
         },
         "unsavedFile": "Niet-opgeslagen wijzigingen"
     },
+    "snooze": {
+        "action": "Snoozen",
+        "unsnooze": "Snooze opheffen",
+        "until": "Gesnoozed tot {{time}}",
+        "choices": {
+            "ten-minutes": "10 minuten",
+            "hour": "1 uur",
+            "tomorrow": "Morgen"
+        }
+    },
     "panel": {
         "fallback": "Paneel",
         "close": "{{name}} sluiten",

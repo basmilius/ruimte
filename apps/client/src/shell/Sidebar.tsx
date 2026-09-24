@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import {
@@ -40,11 +40,14 @@ import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useUi } from '@/state/ui';
 import { useEndpointId } from '@/state/keys';
+import { snoozeOf, useSnoozes } from '@/state/snooze';
+import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/shell/Snooze';
 import {
     buildSidebar,
     isSessionKind,
     rowAfterArrow,
     rowOrder,
+    waitsOnYou,
     type SidebarNode,
     type SidebarNodeRow,
     type SidebarProject,
@@ -191,9 +194,26 @@ function ProcessWarningMark() {
     );
 }
 
-function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarNodeRow }) {
+/* What a "Needs you" row keeps at its right edge, and gives up to the snooze while the pointer is on it. */
+const SNOOZE_MARKS = 'flex shrink-0 items-center gap-2 group-hover/snooze:invisible group-has-[[data-popup-open]]/snooze:invisible';
+
+/* A "Needs you" row with the snooze in its corner, out of the Tab order since the list is one stop; the context menu has the same choices. */
+function SnoozableRow({ endpointId, nodeId, children }: { endpointId: string; nodeId: string; children: ReactNode }) {
+    return (
+        <div className="group/snooze relative">
+            {children}
+            <span className="absolute inset-y-0 right-1 flex items-center opacity-0 group-hover/snooze:opacity-100 has-[[data-popup-open]]:opacity-100">
+                <SnoozeButton endpointId={endpointId} nodeId={nodeId} tabIndex={-1} />
+            </span>
+        </div>
+    );
+}
+
+function NodeRow({ row, tabbable, onFocus, onArrow, snoozable }: RowProps & { row: SidebarNodeRow; snoozable: boolean }) {
     const { t } = useTranslation('shell');
     const { node } = row;
+    const currentEndpointId = useEndpointId();
+    const endpointId = row.target?.endpointId ?? currentEndpointId;
     const title = useBrowserDisplayTitle(node.id, node.title, node.titleSource);
     const picked = useCanvas((s) => s.selection.includes(node.id));
     // The selection belongs to the canvas store, so the row pairs on the view that store holds, not
@@ -222,7 +242,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
             </div>
         );
     }
-    return (
+    const menu = (
         <ContextMenu.Root>
             <ContextMenu.Trigger
                 render={<button />}
@@ -251,18 +271,36 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                 </span>
                 {!row.location && row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
                 <span className="grow" />
-                {node.draft && (
-                    <Tooltip label={t('sidebar.unsentDraft')}>
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
-                    </Tooltip>
-                )}
-                {node.task && <TaskMark task={node.task} />}
-                {node.finished && <UnseenMark />}
-                {node.alert && <ProcessWarningMark />}
-                {node.status && <StatusDot status={node.status} plain />}
+                <span className={SNOOZE_MARKS}>
+                    {node.draft && (
+                        <Tooltip label={t('sidebar.unsentDraft')}>
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
+                        </Tooltip>
+                    )}
+                    {node.task && <TaskMark task={node.task} />}
+                    {node.finished && <UnseenMark />}
+                    {node.alert && <ProcessWarningMark />}
+                    {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
+                    {node.status && <StatusDot status={node.status} plain />}
+                </span>
             </ContextMenu.Trigger>
-            <NodeMenuPopup id={node.id} onRename={() => setRenaming(true)} />
+            <NodeMenuPopup
+                id={node.id}
+                onRename={() => setRenaming(true)}
+                snooze={
+                    node.status === 'needs-you' || node.snoozedUntil ? (
+                        <SnoozeMenuItems endpointId={endpointId} nodeId={node.id} needsYou={node.status === 'needs-you'} />
+                    ) : undefined
+                }
+            />
         </ContextMenu.Root>
+    );
+    return snoozable ? (
+        <SnoozableRow endpointId={endpointId} nodeId={node.id}>
+            {menu}
+        </SnoozableRow>
+    ) : (
+        menu
     );
 }
 
@@ -442,6 +480,7 @@ function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<View
 function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowProps) {
     const { t } = useTranslation(['shell', 'common']);
     const { view } = row;
+    const endpointId = useEndpointId();
     const title = useBrowserDisplayTitle(view.id, view.name, view.titleSource);
     const unsaved = useUnsavedStoredPath(view.kind === 'file' ? view.path : null, row.target);
     const [renaming, setRenaming] = useState(false);
@@ -541,6 +580,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                     </Tooltip>
                 )}
                 {(view.self ? view.self.alert : view.nodes.some((node) => node.alert)) && <ProcessWarningMark />}
+                {view.self?.snoozedUntil && <SnoozedMark until={view.self.snoozedUntil} />}
                 {row.status && <StatusDot status={row.status} plain />}
                 {/* Last of the row, after every dot: where a view lives says something about the
                     project and not about what is happening in it, and the dots are the news. Only a
@@ -555,6 +595,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
             <ContextMenu.Portal>
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
+                        {view.self && <SnoozeMenuItems endpointId={endpointId} nodeId={view.self.id} needsYou={view.self.status === 'needs-you'} />}
                         <ViewMenuItems viewId={view.id} kind={view.kind} onSidebar />
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>
@@ -567,9 +608,7 @@ function ProjectHeading({ group, tabbable, onFocus, onArrow }: RowProps & { grou
     const { t } = useTranslation('shell');
     const machineIcon = useServers((state) => state.byEndpoint[group.endpointId]?.icon ?? null);
     const collapse = (value: boolean) => useSidebarProjects.getState().collapse(group.key, value);
-    const count = group.project.views
-        .flatMap((view) => [...view.nodes, ...(view.self ? [view.self] : [])])
-        .filter((node) => node.status === 'needs-you').length;
+    const count = group.project.views.flatMap((view) => [...view.nodes, ...(view.self ? [view.self] : [])]).filter(waitsOnYou).length;
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
@@ -628,7 +667,7 @@ function ProjectHeading({ group, tabbable, onFocus, onArrow }: RowProps & { grou
     );
 }
 
-function BackgroundRow({ row, group, tabbable, onFocus, onArrow }: RowProps & { row: SidebarRow; group: SidebarGroup }) {
+function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: RowProps & { row: SidebarRow; group: SidebarGroup; snoozable: boolean }) {
     const { t } = useTranslation('shell');
     const view = row.type === 'view' ? row.view : null;
     const item = row.type === 'node' ? row.node : null;
@@ -638,7 +677,7 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow }: RowProps & { 
     };
     const label = view?.name ?? item?.title ?? '';
     const status = row.type === 'view' ? row.status : row.node.status;
-    return (
+    const button = (
         <button
             type="button"
             data-sidebar-row={row.rowId}
@@ -696,11 +735,20 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow }: RowProps & { 
                         <span className="block truncate">{label || t('sidebar.noViews')}</span>
                         {row.type === 'node' && row.location && <span className="block truncate text-xs text-text-faint">{row.location}</span>}
                     </span>
-                    {status && group.state === 'ready' && <StatusDot status={status} plain />}
-                    {view?.shared && <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />}
+                    <span className={SNOOZE_MARKS}>
+                        {status && group.state === 'ready' && <StatusDot status={status} plain />}
+                        {view?.shared && <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />}
+                    </span>
                 </>
             )}
         </button>
+    );
+    return snoozable && item ? (
+        <SnoozableRow endpointId={group.endpointId} nodeId={item.id}>
+            {button}
+        </SnoozableRow>
+    ) : (
+        button
     );
 }
 
@@ -717,6 +765,7 @@ export function Sidebar() {
     const warnings = useProcessWarnings((s) => s.byEndpoint);
     const unseen = useAttention((s) => s.unseen);
     const tasks = useTasks((s) => s.byEndpoint);
+    const snoozes = useSnoozes((s) => s.byKey);
     const open = useUi((s) => s.sidebarOpen);
     const expanded = useUi(useShallow((s) => s.sidebarExpanded));
     const instant = useInstantWidth();
@@ -747,7 +796,8 @@ export function Sidebar() {
                     draft: node.kind === 'chat' && drafts.includes(node.id),
                     alert: (warnings[endpointId] ?? []).some((alert) => alert.nodeId === node.id),
                     finished: isUnseen(unseen, endpointId, node.id),
-                    task: childTask(tasks[endpointId], node.id)
+                    task: childTask(tasks[endpointId], node.id),
+                    snoozedUntil: snoozeOf(snoozes, endpointId, node.id)
                 });
                 const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
                 return {
@@ -765,7 +815,7 @@ export function Sidebar() {
                 };
             })
         }),
-        [source, shared, endpointId, sessions, chats, drafts, warnings, unseen, tasks]
+        [source, shared, endpointId, sessions, chats, drafts, warnings, unseen, tasks, snoozes]
     );
 
     const activeViewId = project.activeViewId;
@@ -977,6 +1027,7 @@ export function Sidebar() {
                                                     key={row.rowId}
                                                     row={row}
                                                     group={owner}
+                                                    snoozable={section.kind === 'needs-you'}
                                                     tabbable={row.rowId === roving}
                                                     onFocus={() => setRovingId(row.rowId)}
                                                     onArrow={moveFocus}
@@ -988,6 +1039,7 @@ export function Sidebar() {
                                                 <NodeRow
                                                     key={row.rowId}
                                                     row={row}
+                                                    snoozable={section.kind === 'needs-you'}
                                                     tabbable={row.rowId === roving}
                                                     onFocus={() => setRovingId(row.rowId)}
                                                     onArrow={moveFocus}

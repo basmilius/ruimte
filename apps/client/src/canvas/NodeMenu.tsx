@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
@@ -50,8 +51,11 @@ import { Tooltip } from '@/ui/Tooltip';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
 
-/* The context menu of one node, the same from its frame and from its row in the sidebar. */
-export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }) {
+/*
+ * The context menu of one node, the same from its frame and from its row in the sidebar. `snooze`
+ * leads it, and is all a row offers for a node that is not on the canvas this menu acts on.
+ */
+export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename(): void; snooze?: ReactNode }) {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const node = useCanvas((s) => s.nodes[id]);
@@ -67,7 +71,13 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     const groupWorktrees = useGroupWorktrees(node?.kind === 'group' ? id : null);
 
     if (!node) {
-        return null;
+        return snooze ? (
+            <ContextMenu.Portal>
+                <ContextMenu.Positioner className="z-(--z-popup)">
+                    <ContextMenu.Popup className="menu-popup">{snooze}</ContextMenu.Popup>
+                </ContextMenu.Positioner>
+            </ContextMenu.Portal>
+        ) : null;
     }
 
     const remove = (): void => {
@@ -118,6 +128,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
         <ContextMenu.Portal>
             <ContextMenu.Positioner className="z-(--z-popup)">
                 <ContextMenu.Popup className="menu-popup">
+                    {snooze}
                     <ContextMenu.Item className="menu-item" onClick={onRename}>
                         <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <span className={MENU_HINT}>{t('menu.doubleClick')}</span>
                     </ContextMenu.Item>

@@ -10,6 +10,7 @@ import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { nodeStatus, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
+import { snoozeOf, useSnoozes } from '@/state/snooze';
 
 /* Whether this window may raise anything at all. What a person is looking at is asked per node. */
 const mayNotify = (): boolean => 'Notification' in window && Notification.permission === 'granted';
@@ -131,15 +132,18 @@ export const startAgentNotifications = (): (() => void) => {
         const sessions = useSessions.getState().byKey;
         const chats = useChats.getState().byKey;
         const { agentsApprovals, agentsTurnSound } = useSettings.getState();
+        const snoozes = useSnoozes.getState().byKey;
+        const snoozed = (nodeId: string): boolean => snoozeOf(snoozes, endpointId, nodeId) !== null;
         const notices = approvalNotices(nodes, sessions, endpointId, {
             machine: machineName(endpointId),
             offered: agentsApprovals,
             now: Date.now()
-        });
+        }).filter((notice) => !snoozed(notice.nodeId));
         const asking = new Set(notices.map((notice) => notice.nodeId));
         const current = new Map<string, string | undefined>();
         for (const node of nodes) {
-            const status = nodeStatus(node, sessions, chats, endpointId);
+            // A snoozed wait reads as no wait, so the end of the snooze is a new one and announces itself.
+            const status = snoozed(node.id) ? undefined : nodeStatus(node, sessions, chats, endpointId);
             current.set(node.id, status);
             // A node with a permission open is waiting too, but the card for that request says more.
             if (status !== 'needs-you' || asking.has(node.id)) {
@@ -160,11 +164,13 @@ export const startAgentNotifications = (): (() => void) => {
     const offSessions = useSessions.subscribe(check);
     const offChats = useChats.subscribe(check);
     const offSettings = useSettings.subscribe(check);
+    const offSnoozes = useSnoozes.subscribe(check);
     return () => {
         window.removeEventListener('pointerdown', askOnce);
         offSessions();
         offChats();
         offSettings();
+        offSnoozes();
         scheduleExpiry(null);
         for (const notification of approvals.values()) {
             notification.close();

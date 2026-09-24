@@ -8,6 +8,7 @@ import {
     readableNodes,
     seenNodes,
     settledSince,
+    snoozeObservations,
     visibleNodes,
     type AttentionPass
 } from '@/state/attention';
@@ -164,35 +165,62 @@ describe('the counts', () => {
     ];
 
     test('a shell somebody left attached is no agent working', () => {
-        const groups = groupAttention(nodes, { 'local:t1': session(), 'local:t2': session() }, {}, 'local', {});
+        const groups = groupAttention(nodes, { 'local:t1': session(), 'local:t2': session() }, {}, 'local', {}, {});
         expect(groups.working).toEqual([]);
     });
 
     test('an agent in the middle of a turn is, on a terminal and in a chat alike', () => {
-        const groups = groupAttention(nodes, { 'local:t1': session(agent('running')) }, { 'local:c1': chat('running') }, 'local', {});
+        const groups = groupAttention(nodes, { 'local:t1': session(agent('running')) }, { 'local:c1': chat('running') }, 'local', {}, {});
         expect(groups.working).toEqual(['t1', 'c1']);
     });
 
     test('a node that waits on a person counts there and nowhere else', () => {
-        const groups = groupAttention(nodes, { 'local:t1': session(agent('needs-you')) }, {}, 'local', { 'local:t1': true });
+        const groups = groupAttention(nodes, { 'local:t1': session(agent('needs-you')) }, {}, 'local', { 'local:t1': true }, {});
         expect(groups.needsYou).toEqual(['t1']);
         expect(groups.finished).toEqual([]);
     });
 
     test('a marked node counts as finished', () => {
-        const groups = groupAttention(nodes, {}, {}, 'local', { 'local:t2': true });
+        const groups = groupAttention(nodes, {}, {}, 'local', { 'local:t2': true }, {});
         expect(groups.finished).toEqual(['t2']);
     });
 
     test('a mark of another machine is about another node than the one on screen', () => {
-        expect(groupAttention(nodes, {}, {}, 'local', { 'Xk3p:t2': true }).finished).toEqual([]);
+        expect(groupAttention(nodes, {}, {}, 'local', { 'Xk3p:t2': true }, {}).finished).toEqual([]);
     });
 
     test('the badge is everything waiting to be looked at, and never the same node twice', () => {
-        const groups = groupAttention(nodes, { 'local:t1': session(agent('needs-you')), 'local:t2': session(agent('running')) }, {}, 'local', {
-            'local:t1': true,
-            'local:c1': true
-        });
+        const groups = groupAttention(
+            nodes,
+            { 'local:t1': session(agent('needs-you')), 'local:t2': session(agent('running')) },
+            {},
+            'local',
+            {
+                'local:t1': true,
+                'local:c1': true
+            },
+            {}
+        );
         expect(attentionTotal(groups)).toBe(2);
+    });
+
+    test('a snoozed node waits outside every count', () => {
+        const groups = groupAttention(nodes, { 'local:t1': session(agent('needs-you')) }, {}, 'local', {}, { 'local:t1': 2_000 });
+        expect(groups.needsYou).toEqual([]);
+        expect(groups.snoozed).toEqual(['t1']);
+        expect(attentionTotal(groups)).toBe(0);
+    });
+
+    test('a snooze on another machine leaves this node counted', () => {
+        const groups = groupAttention(nodes, { 'local:t1': session(agent('needs-you')) }, {}, 'local', {}, { 'Xk3p:t1': 2_000 });
+        expect(groups.needsYou).toEqual(['t1']);
+    });
+
+    test('what a snooze learns of a node is whether it needs you, and nothing for a node with no status yet', () => {
+        const observed = snoozeObservations(nodes, { 'local:t1': session(agent('needs-you')), 'local:t2': session(agent('running')) }, {}, 'local');
+        expect([...observed]).toEqual([
+            ['local:t1', true],
+            ['local:t2', false]
+        ]);
     });
 });
