@@ -95,10 +95,12 @@ export class Prefetcher {
 
 /* Safari has no idle callback; the timeout at least lets the frame that asked finish first. */
 const FALLBACK_DELAY_MS = 50;
+/* A canvas that keeps drawing (a blinking cursor, a stream) may never leave an idle moment, and a prefetch that never runs helps nobody. */
+const IDLE_TIMEOUT_MS = 2000;
 
 const whenIdle: WhenIdle = (run) => {
     if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(() => run());
+        requestIdleCallback(() => run(), { timeout: IDLE_TIMEOUT_MS });
         return;
     }
     setTimeout(run, FALLBACK_DELAY_MS);
