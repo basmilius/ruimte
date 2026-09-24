@@ -186,7 +186,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                             {controls}
                         </span>
                     )}
-                    <Tooltip label={t('cellToolbar.closeCell')}>
+                    <Tooltip label={t('cellToolbar.closeCell')} name>
                         <button type="button" className="icon-btn h-7 w-7 cursor-default" onClick={() => closeCellAction(view.id)}>
                             <Icon icon={X} size={14} />
                         </button>

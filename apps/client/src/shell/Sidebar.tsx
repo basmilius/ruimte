@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactElement, type ReactNode } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import {
@@ -160,6 +160,18 @@ function RowIcon({ id, kind, provider, className }: { id: string; kind: CanvasNo
 }
 
 /* Answers with the name that was typed, or null when the field is left empty, which unnames it. */
+/* The whole text of a row that truncates it, on hover; a row with nothing more to say has no tooltip. */
+function MaybeTooltip({ label, children }: { label: string | null | undefined; children: ReactElement<Record<string, unknown>> }) {
+    if (!label) {
+        return children;
+    }
+    return (
+        <Tooltip label={label} side="right">
+            {children}
+        </Tooltip>
+    );
+}
+
 function RenameField({ value, onDone }: { value: string; onDone(next: string | null): void }) {
     return (
         <input
@@ -245,46 +257,47 @@ function NodeRow({ row, tabbable, onFocus, onArrow, snoozable }: RowProps & { ro
     }
     const menu = (
         <ContextMenu.Root>
-            <ContextMenu.Trigger
-                render={<button />}
-                data-sidebar-row={row.rowId}
-                title={row.location}
-                aria-current={selected ? 'true' : undefined}
-                tabIndex={tabbable ? 0 : -1}
-                className={clsx(ROW, row.viewName === null && 'pl-6', row.location && 'h-auto min-h-10', selected ? ROW_SELECTED : ROW_PLAIN)}
-                onFocus={onFocus}
-                onClick={() => (row.target ? void openSidebarTarget(row.target) : revealNode(node.id))}
-                onDoubleClick={() => setRenaming(true)}
-                onKeyDown={(e) => {
-                    arrowStep(e, onArrow);
-                    if (e.key === 'F2') {
-                        e.preventDefault();
-                        setRenaming(true);
-                    }
-                }}
-            >
-                <span className={ICON_SLOT}>
-                    <RowIcon id={node.id} kind={node.kind} provider={node.provider} />
-                </span>
-                <span className="min-w-0 truncate">
-                    <span className="block truncate">{node.kind === 'browser' ? title : node.title}</span>
-                    {row.location && <span className="block truncate text-xs text-text-faint">{row.location}</span>}
-                </span>
-                {!row.location && row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
-                <span className="grow" />
-                <span className={SNOOZE_MARKS}>
-                    {node.draft && (
-                        <Tooltip label={t('sidebar.unsentDraft')}>
-                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
-                        </Tooltip>
-                    )}
-                    {node.task && <TaskMark task={node.task} />}
-                    {node.finished && <UnseenMark />}
-                    {node.alert && <ProcessWarningMark />}
-                    {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
-                    {node.status && <StatusDot status={node.status} plain />}
-                </span>
-            </ContextMenu.Trigger>
+            <MaybeTooltip label={row.location}>
+                <ContextMenu.Trigger
+                    render={<button />}
+                    data-sidebar-row={row.rowId}
+                    aria-current={selected ? 'true' : undefined}
+                    tabIndex={tabbable ? 0 : -1}
+                    className={clsx(ROW, row.viewName === null && 'pl-6', row.location && 'h-auto min-h-10', selected ? ROW_SELECTED : ROW_PLAIN)}
+                    onFocus={onFocus}
+                    onClick={() => (row.target ? void openSidebarTarget(row.target) : revealNode(node.id))}
+                    onDoubleClick={() => setRenaming(true)}
+                    onKeyDown={(e) => {
+                        arrowStep(e, onArrow);
+                        if (e.key === 'F2') {
+                            e.preventDefault();
+                            setRenaming(true);
+                        }
+                    }}
+                >
+                    <span className={ICON_SLOT}>
+                        <RowIcon id={node.id} kind={node.kind} provider={node.provider} />
+                    </span>
+                    <span className="min-w-0 truncate">
+                        <span className="block truncate">{node.kind === 'browser' ? title : node.title}</span>
+                        {row.location && <span className="block truncate text-xs text-text-faint">{row.location}</span>}
+                    </span>
+                    {!row.location && row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
+                    <span className="grow" />
+                    <span className={SNOOZE_MARKS}>
+                        {node.draft && (
+                            <Tooltip label={t('sidebar.unsentDraft')}>
+                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
+                            </Tooltip>
+                        )}
+                        {node.task && <TaskMark task={node.task} />}
+                        {node.finished && <UnseenMark />}
+                        {node.alert && <ProcessWarningMark />}
+                        {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
+                        {node.status && <StatusDot status={node.status} plain />}
+                    </span>
+                </ContextMenu.Trigger>
+            </MaybeTooltip>
             <NodeMenuPopup
                 id={node.id}
                 onRename={() => setRenaming(true)}
@@ -613,51 +626,52 @@ function ProjectHeading({ group, tabbable, onFocus, onArrow }: RowProps & { grou
     const count = group.project.views.flatMap((view) => [...view.nodes, ...(view.self ? [view.self] : [])]).filter(waitsOnYou).length;
     return (
         <ContextMenu.Root>
-            <ContextMenu.Trigger
-                render={<button type="button" />}
-                data-sidebar-row={`project:${group.key}`}
-                tabIndex={tabbable ? 0 : -1}
-                aria-expanded={!group.collapsed}
-                aria-label={`${group.summary.name} · ${group.machineLabel}${group.active ? ` · ${t('sidebar.activeProject')}` : ''}`}
-                title={`${group.summary.name} · ${group.machineLabel}`}
-                onFocus={onFocus}
-                onClick={() => collapse(!group.collapsed)}
-                onKeyDown={(event) => {
-                    arrowStep(event, onArrow);
-                    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-                        event.preventDefault();
-                        collapse(event.key === 'ArrowLeft');
-                    }
-                }}
-                className={clsx(ROW, 'group font-medium text-text hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-accent')}
-            >
-                <span className={clsx(ICON_SLOT, group.active && 'text-accent')}>
-                    <ProjectGlyph
-                        projectId={group.summary.projectId}
-                        endpointId={group.endpointId}
-                        icon={group.summary.icon}
-                        size={14}
-                        color={group.active ? 'var(--accent)' : group.summary.color}
-                        className="col-start-1 row-start-1 group-hover:hidden group-focus-visible:hidden"
-                    />
-                    <Icon
-                        icon={ChevronRight}
-                        size={14}
-                        className={clsx('col-start-1 row-start-1 hidden group-hover:block group-focus-visible:block', !group.collapsed && 'rotate-90')}
-                    />
-                </span>
-                <span className="min-w-0 grow truncate">{group.summary.name}</span>
-                <Tooltip label={group.machineLabel}>
-                    <span className="grid h-8 w-6 shrink-0 place-items-center text-text-faint" aria-label={group.machineLabel}>
-                        <MachineGlyph icon={machineIcon} size={14} />
+            <MaybeTooltip label={`${group.summary.name} · ${group.machineLabel}`}>
+                <ContextMenu.Trigger
+                    render={<button type="button" />}
+                    data-sidebar-row={`project:${group.key}`}
+                    tabIndex={tabbable ? 0 : -1}
+                    aria-expanded={!group.collapsed}
+                    aria-label={`${group.summary.name} · ${group.machineLabel}${group.active ? ` · ${t('sidebar.activeProject')}` : ''}`}
+                    onFocus={onFocus}
+                    onClick={() => collapse(!group.collapsed)}
+                    onKeyDown={(event) => {
+                        arrowStep(event, onArrow);
+                        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                            event.preventDefault();
+                            collapse(event.key === 'ArrowLeft');
+                        }
+                    }}
+                    className={clsx(ROW, 'group font-medium text-text hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-accent')}
+                >
+                    <span className={clsx(ICON_SLOT, group.active && 'text-accent')}>
+                        <ProjectGlyph
+                            projectId={group.summary.projectId}
+                            endpointId={group.endpointId}
+                            icon={group.summary.icon}
+                            size={14}
+                            color={group.active ? 'var(--accent)' : group.summary.color}
+                            className="col-start-1 row-start-1 group-hover:hidden group-focus-visible:hidden"
+                        />
+                        <Icon
+                            icon={ChevronRight}
+                            size={14}
+                            className={clsx('col-start-1 row-start-1 hidden group-hover:block group-focus-visible:block', !group.collapsed && 'rotate-90')}
+                        />
                     </span>
-                </Tooltip>
-                {group.state === 'ready' && count > 0 && (
-                    <span className="tabular-nums text-status-needs-you" aria-label={t('sidebar.waitingCount', { count })}>
-                        {count}
-                    </span>
-                )}
-            </ContextMenu.Trigger>
+                    <span className="min-w-0 grow truncate">{group.summary.name}</span>
+                    <Tooltip label={group.machineLabel}>
+                        <span className="grid h-8 w-6 shrink-0 place-items-center text-text-faint" aria-label={group.machineLabel}>
+                            <MachineGlyph icon={machineIcon} size={14} />
+                        </span>
+                    </Tooltip>
+                    {group.state === 'ready' && count > 0 && (
+                        <span className="tabular-nums text-status-needs-you" aria-label={t('sidebar.waitingCount', { count })}>
+                            {count}
+                        </span>
+                    )}
+                </ContextMenu.Trigger>
+            </MaybeTooltip>
             <ContextMenu.Portal>
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
@@ -680,70 +694,71 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: Ro
     const label = view?.name ?? item?.title ?? '';
     const status = row.type === 'view' ? row.status : row.node.status;
     const button = (
-        <button
-            type="button"
-            data-sidebar-row={row.rowId}
-            tabIndex={tabbable ? 0 : -1}
-            aria-disabled={inert || undefined}
-            aria-expanded={row.type === 'view' && row.expandable ? row.expanded : undefined}
-            title={row.type === 'node' ? row.location : label}
-            onFocus={onFocus}
-            onClick={() => {
-                if (!inert && row.target) void openSidebarTarget(row.target);
-            }}
-            onKeyDown={(event) => {
-                arrowStep(event, onArrow);
-                if (row.type === 'view' && row.expandable && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
-                    event.preventDefault();
-                    if (row.expanded !== (event.key === 'ArrowRight')) toggle();
-                }
-            }}
-            className={clsx(
-                ROW,
-                'focus-visible:outline-2 focus-visible:outline-accent',
-                inert ? 'cursor-default text-text-faint' : ROW_PLAIN,
-                row.type === 'node' && row.viewName === null && 'pl-6',
-                row.type === 'node' && row.location && 'h-auto min-h-10'
-            )}
-        >
-            {view?.kind === 'separator' ? (
-                <span className="h-px w-full bg-border" />
-            ) : (
-                <>
-                    <span
-                        className={ICON_SLOT}
-                        onClick={(event) => {
-                            if (row.type === 'view' && row.expandable) {
-                                event.stopPropagation();
-                                toggle();
-                            }
-                        }}
-                    >
-                        {row.type === 'view' && row.expandable ? (
-                            <Icon icon={ChevronRight} size={14} className={clsx(row.expanded && 'rotate-90')} />
-                        ) : view ? (
-                            view.kind === 'browser' && !view.icon ? (
+        <MaybeTooltip label={row.type === 'node' ? row.location : label}>
+            <button
+                type="button"
+                data-sidebar-row={row.rowId}
+                tabIndex={tabbable ? 0 : -1}
+                aria-disabled={inert || undefined}
+                aria-expanded={row.type === 'view' && row.expandable ? row.expanded : undefined}
+                onFocus={onFocus}
+                onClick={() => {
+                    if (!inert && row.target) void openSidebarTarget(row.target);
+                }}
+                onKeyDown={(event) => {
+                    arrowStep(event, onArrow);
+                    if (row.type === 'view' && row.expandable && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+                        event.preventDefault();
+                        if (row.expanded !== (event.key === 'ArrowRight')) toggle();
+                    }
+                }}
+                className={clsx(
+                    ROW,
+                    'focus-visible:outline-2 focus-visible:outline-accent',
+                    inert ? 'cursor-default text-text-faint' : ROW_PLAIN,
+                    row.type === 'node' && row.viewName === null && 'pl-6',
+                    row.type === 'node' && row.location && 'h-auto min-h-10'
+                )}
+            >
+                {view?.kind === 'separator' ? (
+                    <span className="h-px w-full bg-border" />
+                ) : (
+                    <>
+                        <span
+                            className={ICON_SLOT}
+                            onClick={(event) => {
+                                if (row.type === 'view' && row.expandable) {
+                                    event.stopPropagation();
+                                    toggle();
+                                }
+                            }}
+                        >
+                            {row.type === 'view' && row.expandable ? (
+                                <Icon icon={ChevronRight} size={14} className={clsx(row.expanded && 'rotate-90')} />
+                            ) : view ? (
+                                view.kind === 'browser' && !view.icon ? (
+                                    <Icon icon={Globe} size={14} />
+                                ) : (
+                                    <ViewGlyph id={view.id} kind={view.kind} icon={view.icon} provider={view.provider} path={view.path} />
+                                )
+                            ) : item?.kind === 'browser' ? (
                                 <Icon icon={Globe} size={14} />
-                            ) : (
-                                <ViewGlyph id={view.id} kind={view.kind} icon={view.icon} provider={view.provider} path={view.path} />
-                            )
-                        ) : item?.kind === 'browser' ? (
-                            <Icon icon={Globe} size={14} />
-                        ) : item ? (
-                            <RowIcon id={item.id} kind={item.kind} provider={item.provider} />
-                        ) : null}
-                    </span>
-                    <span className="min-w-0 grow">
-                        <span className="block truncate">{label || t('sidebar.noViews')}</span>
-                        {row.type === 'node' && row.location && <span className="block truncate text-xs text-text-faint">{row.location}</span>}
-                    </span>
-                    <span className={SNOOZE_MARKS}>
-                        {status && group.state === 'ready' && <StatusDot status={status} plain />}
-                        {view?.shared && <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />}
-                    </span>
-                </>
-            )}
-        </button>
+                            ) : item ? (
+                                <RowIcon id={item.id} kind={item.kind} provider={item.provider} />
+                            ) : null}
+                        </span>
+                        <span className="min-w-0 grow">
+                            <span className="block truncate">{label || t('sidebar.noViews')}</span>
+                            {row.type === 'node' && row.location && <span className="block truncate text-xs text-text-faint">{row.location}</span>}
+                        </span>
+                        <span className={SNOOZE_MARKS}>
+                            {status && group.state === 'ready' && <StatusDot status={status} plain />}
+                            {view?.shared && <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />}
+                        </span>
+                    </>
+                )}
+            </button>
+        </MaybeTooltip>
     );
     return snoozable && item ? (
         <SnoozableRow endpointId={group.endpointId} nodeId={item.id}>
@@ -1094,12 +1109,11 @@ export function Sidebar() {
 
                 <div className="flex shrink-0 items-center gap-1 border-t border-border p-2">
                     <Menu.Root>
-                        <Menu.Trigger
-                            title={combined ? t('sidebar.newViewIn', { project: currentProject?.name }) : undefined}
-                            className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50 disabled:hover:bg-transparent data-[popup-open]:bg-surface-active"
-                        >
-                            <Icon icon={Plus} size={14} /> {t('viewMenu.newView')}
-                        </Menu.Trigger>
+                        <MaybeTooltip label={combined ? t('sidebar.newViewIn', { project: currentProject?.name }) : null}>
+                            <Menu.Trigger className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50 disabled:hover:bg-transparent data-[popup-open]:bg-surface-active">
+                                <Icon icon={Plus} size={14} /> {t('viewMenu.newView')}
+                            </Menu.Trigger>
+                        </MaybeTooltip>
                         <MenuPopup side="top" className="min-w-52">
                             <NewViewItems />
                         </MenuPopup>

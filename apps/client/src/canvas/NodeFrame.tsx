@@ -112,16 +112,21 @@ const EDGE_STYLE: Record<(typeof RESIZE_EDGES)[number], string> = {
 };
 
 /* `plain` drops the tooltip: inside a control that already has a name of its own, a second tooltip
-   under the pointer only fights the first one. */
+   under the pointer only fights the first one. A screen reader still hears the status either way. */
 export function StatusDot({ status, className, plain = false }: { status: AgentStatus; className?: string; plain?: boolean }) {
     const { t } = useTranslation('canvas');
+    const label = t(`status.${status}`);
     const dot = (
-        <span className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', STATUS_CLASS[status], status === 'running' && 'animate-pulse', className)} />
+        <span
+            role="img"
+            aria-label={label}
+            className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', STATUS_CLASS[status], status === 'running' && 'animate-pulse', className)}
+        />
     );
     if (plain) {
         return dot;
     }
-    return <Tooltip label={t(`status.${status}`)}>{dot}</Tooltip>;
+    return <Tooltip label={label}>{dot}</Tooltip>;
 }
 
 function Title({ id, title, editing, muted, onDone }: { id: string; title: string; editing: boolean; muted: boolean; onDone: () => void }) {
