@@ -9,7 +9,7 @@ import { SplitGrid } from '@/shell/SplitGrid';
 import { DiagramView } from '@/diagram/DiagramView';
 import { DrawingView } from '@/drawing/DrawingView';
 import { useDiagram } from '@/state/diagram';
-import { drawingHasSomethingToClear, useDrawing, useDrawingStore } from '@/state/drawing';
+import { useDrawing } from '@/state/drawing';
 import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
 import { DeviceBody } from '@/devices/DeviceBody';
 import { ChatBody } from '@/nodes/ChatBody';
@@ -17,45 +17,12 @@ import { TerminalBody } from '@/nodes/TerminalBody';
 import { FileSurface } from '@/shell/panels/FileSurface';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
-import { isApplePlatform } from '@/desktop/bridge';
 import { useFiles } from '@/state/files';
-import { isLeaveNodeShortcut } from '@/terminal/keymap';
-import { focusViewRow } from '@/shell/sidebar-focus';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { isInFloatingLayer } from '@/ui/floating';
-
-/*
- * A view of its own has no canvas to fall back to, so leaving its body puts the keyboard on its row
- * in the sidebar. A chat leaves on Escape; a terminal hands Escape to the program it runs and leaves
- * on the same shortcut a terminal node uses.
- */
-const useLeaveOnEscape = (view: ProjectView): void => {
-    const drawingStore = useDrawingStore();
-    useEffect(() => {
-        const onKeyDown = (e: KeyboardEvent): void => {
-            const leaving = view.kind === 'terminal' ? isLeaveNodeShortcut(e, isApplePlatform()) : e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.altKey;
-            // An open popup or dialog owns Escape; it closes itself and the body keeps the keyboard.
-            // Every cell has this listener, so only the one the keyboard is in may answer.
-            if (!leaving || !useDocument.getState().bodyFocused || useDocument.getState().activeViewId !== view.id || isInFloatingLayer(e.target)) {
-                return;
-            }
-            // A drawing clears its draft, its selection and its tool first; only an empty one is left.
-            if (view.kind === 'drawing' && drawingHasSomethingToClear(drawingStore.getState())) {
-                return;
-            }
-            e.preventDefault();
-            useDocument.getState().setBodyFocused(false);
-            focusViewRow(view.id);
-        };
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [drawingStore, view.id, view.kind]);
-};
 
 function StandaloneView({ view }: { view: ProjectView }) {
     // `bodyFocused` is one flag for the whole grid, so without the cell every chat and terminal would grab it.
     const focused = useDocument((s) => s.bodyFocused && s.activeViewId === view.id);
-    useLeaveOnEscape(view);
     return (
         <div
             className="absolute inset-0 bg-surface"

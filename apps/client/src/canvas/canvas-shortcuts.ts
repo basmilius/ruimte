@@ -29,6 +29,9 @@ import { stepTimelineMessage } from '@/chat/timeline-scroll';
 import { openFocusedFind } from '@/find/hosts';
 import { focusedCanvas } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
+import { drawingHasSomethingToClear, focusedDrawing } from '@/state/drawing';
+import { focusViewRow } from '@/shell/sidebar-focus';
+import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { transportFor } from '@/transport';
 import { activeViewOf, useDocument } from '@/state/document';
 import { FILES_VIEW_ID } from '@/shell/files-view';
@@ -54,6 +57,30 @@ const onStandaloneView = (): boolean => {
     }
     const view = activeViewOf(state);
     return view !== null && !isCanvasView(view);
+};
+
+/*
+ * A view of its own has no canvas to fall back to, so leaving its body puts the keyboard on its row
+ * in the sidebar. A chat leaves on Escape; a terminal hands Escape to the program it runs and leaves
+ * on the same shortcut a terminal node uses.
+ */
+const leaveStandaloneView = (e: KeyboardEvent): void => {
+    const state = useDocument.getState();
+    const view = activeViewOf(state);
+    if (view === null || !state.bodyFocused) {
+        return;
+    }
+    const leaving = view.kind === 'terminal' ? isLeaveNodeShortcut(e, isApplePlatform()) : !e.metaKey && !e.ctrlKey && !e.altKey;
+    if (!leaving) {
+        return;
+    }
+    // A drawing clears its draft, its selection and its tool first, whichever of the two listeners hears the key first.
+    if (view.kind === 'drawing' && (e.defaultPrevented || drawingHasSomethingToClear(focusedDrawing().getState()))) {
+        return;
+    }
+    e.preventDefault();
+    state.setBodyFocused(false);
+    focusViewRow(view.id);
 };
 
 /* The tab the files cell has up, or null when another cell has the focus or the cell holds none. */
@@ -133,8 +160,8 @@ export const useCanvasShortcuts = (): void => {
                 if (isInFloatingLayer(e.target)) {
                     return;
                 }
-                // The view host answers Escape for a view of its own; there is no canvas to return to.
                 if (onStandaloneView()) {
+                    leaveStandaloneView(e);
                     return;
                 }
                 if (s.linkDraft?.aiming) {
@@ -346,8 +373,8 @@ export const useCanvasShortcuts = (): void => {
         /*
          * Escape in a chat that shows a sub-agent goes one level back up before it does anything else,
          * the way a drawing clears its selection before it lets go of the keyboard. It listens in the
-         * capture phase, because leaving the node (below) and leaving a view of its own (`ViewHost`) both
-         * listen on the window too, and only stopping the key here keeps them from also acting on it.
+         * capture phase, because leaving the node and leaving a view of its own (below) listen on the
+         * window too, and only stopping the key here keeps them from also acting on it.
          */
         const onEscapeCapture = (e: KeyboardEvent): void => {
             if (!e.isComposing && !isInFloatingLayer(e.target) && matchesShortcut(CANVAS_SHORTCUTS.voiceControl, e, isApplePlatform())) {

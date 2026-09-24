@@ -3,6 +3,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useShallow } from 'zustand/react/shallow';
 import type { DrawingElement } from '@ruimte/contracts';
 import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@ruimte/drawing';
+import { isSpaceDown } from '@/canvas/canvas-shortcuts';
 import { GRID, toWorld } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { DrawingDock } from '@/drawing/DrawingDock';
@@ -102,7 +103,6 @@ export function DrawingView({ id }: { id: string }) {
     const rootRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<HTMLCanvasElement>(null);
     const draftRef = useRef<HTMLCanvasElement>(null);
-    const spaceRef = useRef(false);
     const camera = useDrawing(useShallow((s) => s.camera));
     const tool = useDrawing((s) => s.tool);
     const theme = useTheme((s) => s.resolved);
@@ -206,26 +206,6 @@ export function DrawingView({ id }: { id: string }) {
 
     useWheelCamera(rootRef, drawingStore);
 
-    /* Space turns any tool into the hand for as long as it is held. */
-    useEffect(() => {
-        const onKeyDown = (e: KeyboardEvent): void => {
-            if (e.code === 'Space' && !isTypingTarget(e.target)) {
-                spaceRef.current = true;
-            }
-        };
-        const onKeyUp = (e: KeyboardEvent): void => {
-            if (e.code === 'Space') {
-                spaceRef.current = false;
-            }
-        };
-        window.addEventListener('keydown', onKeyDown);
-        window.addEventListener('keyup', onKeyUp);
-        return () => {
-            window.removeEventListener('keydown', onKeyDown);
-            window.removeEventListener('keyup', onKeyUp);
-        };
-    }, []);
-
     const screenPoint = (e: { clientX: number; clientY: number }): Point => {
         const rect = rootRef.current!.getBoundingClientRect();
         return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -276,7 +256,7 @@ export function DrawingView({ id }: { id: string }) {
         if (state.editingTextId !== null) {
             return;
         }
-        if (state.tool === 'hand' || spaceRef.current || e.button === 1) {
+        if (state.tool === 'hand' || isSpaceDown() || e.button === 1) {
             start({ kind: 'pan', last: { x: e.clientX, y: e.clientY } }, e);
             return;
         }
@@ -539,7 +519,7 @@ export function DrawingView({ id }: { id: string }) {
                 // Space is held in a ref so a key does not repaint the drawing; the cursor catches
                 // up on the next render, which the pointer move right after it always brings.
                 // oxlint-disable-next-line react/refs
-                cursor: cursorFor(tool, gestureKind, spaceRef.current)
+                cursor: cursorFor(tool, gestureKind, isSpaceDown())
             }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
@@ -577,6 +557,3 @@ const cursorFor = (tool: string, gesture: Gesture['kind'] | null, space: boolean
     }
     return tool === 'select' ? 'default' : 'crosshair';
 };
-
-const isTypingTarget = (el: EventTarget | null): boolean =>
-    el instanceof HTMLElement && (el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
