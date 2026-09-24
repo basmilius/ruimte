@@ -116,6 +116,36 @@
         "alertText": "Meldingstekst",
         "send": "Versturen"
       }
+    },
+    "operated": {
+      "label": "Computer use",
+      "working": "Bezig",
+      "paused": "Gepauzeerd",
+      "takenOver": "Jij hebt de controle",
+      "pause": "Pauzeren",
+      "resume": "Hervatten",
+      "takeOver": "Overnemen",
+      "failed": "Kon niet aanpassen wie het apparaat bedient",
+      "strip": "Een agent bedient {{name}}",
+      "step": {
+        "tap": "Tikt",
+        "swipe": "Veegt",
+        "type": "Typt",
+        "shot": "Kijkt",
+        "launch": "Opent {{app}}",
+        "button": "Drukt op {{button}}"
+      },
+      "button": {
+        "home": "Drukt op Home",
+        "back": "Drukt op Terug",
+        "swipeHome": "Veegt naar home",
+        "appSwitcher": "Opent de app-switcher",
+        "recentApps": "Opent recente apps",
+        "lock": "Drukt op Vergrendelen",
+        "power": "Drukt op Aan/uit",
+        "siri": "Roept Siri op",
+        "assistant": "Roept de assistent op"
+      }
     }
   },
   "pairing": {

@@ -116,6 +116,36 @@
         "alertText": "Alert text",
         "send": "Send"
       }
+    },
+    "operated": {
+      "label": "Computer use",
+      "working": "Working",
+      "paused": "Paused",
+      "takenOver": "You have control",
+      "pause": "Pause",
+      "resume": "Resume",
+      "takeOver": "Take over",
+      "failed": "Could not change who operates the device",
+      "strip": "An agent operates {{name}}",
+      "step": {
+        "tap": "Tapping",
+        "swipe": "Swiping",
+        "type": "Typing",
+        "shot": "Looking",
+        "launch": "Opening {{app}}",
+        "button": "Pressing {{button}}"
+      },
+      "button": {
+        "home": "Pressing Home",
+        "back": "Pressing Back",
+        "swipeHome": "Swiping home",
+        "appSwitcher": "Opening the app switcher",
+        "recentApps": "Opening recent apps",
+        "lock": "Pressing Lock",
+        "power": "Pressing Power",
+        "siri": "Calling Siri",
+        "assistant": "Calling the assistant"
+      }
     }
   },
   "pairing": {

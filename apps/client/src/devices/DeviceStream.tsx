@@ -13,6 +13,7 @@ import {
     positionInContainedFrame,
     trackpadGesturePoint
 } from '@/devices/device-layout';
+import { DeviceTapPing } from '@/devices/DeviceOperatedStrip';
 import { videoFrameDecoder } from '@/devices/video-decoder';
 import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
@@ -412,6 +413,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                 onPointerCancel={endPointer}
                 onWheel={onWheel}
             />
+            <DeviceTapPing device={device} screen={canvas} />
             {!imageReady && !streamError && (
                 <div className="absolute inset-0 grid place-items-center text-xs text-text-muted">
                     <span className="flex items-center gap-2">
