@@ -180,6 +180,37 @@ export const fakeClaude: FakeCli = (io) => {
             refusal("You've hit your session limit · resets 3pm", 'rate_limit', 429);
             return;
         }
+        // A line of its own as well: a tool call whose result is that many bytes, the way a long log or a big file reads back.
+        const output = text.split('\n').find((line) => line.startsWith('output:'));
+        if (output !== undefined) {
+            const bytes = Number(output.slice(7));
+            const toolUseId = `toolu_${nonce}_${++messageCounter}`;
+            out({
+                type: 'assistant',
+                message: {
+                    id: `msg_${nonce}_${messageCounter}`,
+                    model,
+                    role: 'assistant',
+                    content: [{ type: 'tool_use', id: toolUseId, name: 'Bash', input: { command: 'cat build.log' } }],
+                    usage
+                },
+                session_id: sessionId
+            });
+            const line = 'build step finished without warnings\n';
+            out({
+                type: 'user',
+                message: {
+                    role: 'user',
+                    content: [
+                        { type: 'tool_result', tool_use_id: toolUseId, content: line.repeat(Math.ceil(bytes / line.length)).slice(0, bytes), is_error: false }
+                    ]
+                },
+                session_id: sessionId
+            });
+            assistantText(`read ${bytes} bytes of build log`);
+            result();
+            return;
+        }
         if (text.split('\n').includes('overloaded')) {
             refusal('API Error: Repeated 529 Overloaded errors', 'overloaded', 529);
             return;

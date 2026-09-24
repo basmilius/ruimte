@@ -10,6 +10,7 @@
     "smoke": "bun src/smoke.ts",
     "compile": "bun scripts/compile.ts",
     "snapshot-prices": "bun scripts/snapshot-prices.ts",
+    "measure:memory": "bun scripts/measure-team-memory.ts",
     "docker:up": "docker compose -f docker/compose.yml up -d --build --wait",
     "docker:down": "docker compose -f docker/compose.yml down",
     "docker:reset": "docker compose -f docker/compose.yml --profile test down -v",
