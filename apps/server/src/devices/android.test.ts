@@ -98,7 +98,30 @@ describe('AndroidBackend', () => {
         expect(devices[2]!.capabilities.tools).toContain('voiceOver');
         expect(devices[2]!.capabilities.tools).toContain('location');
         expect(devices[0]!.capabilities.tools).not.toContain('location');
-        expect(devices[1]!.capabilities).toMatchObject({ stream: false, input: false });
+        expect(devices[1]!.capabilities).toMatchObject({ stream: false, input: false, screenshot: false });
+        expect(devices[0]!.capabilities.screenshot).toBe(true);
+        expect(devices[2]!.capabilities.screenshot).toBe(true);
+    });
+
+    test('photographs a running device through adb as the bytes of a png', async () => {
+        const adb = new FakeAdb();
+        const captured: string[][] = [];
+        const backend = backendWith(adb, {
+            runBytes: async (_command, arguments_) => {
+                captured.push(arguments_);
+                return { exitCode: 0, stdout: new Uint8Array([0x89, 0x50, 0x4e, 0x47]), stderr: '' };
+            }
+        });
+
+        expect(await backend.screenshot('Pixel_9_Pro_API_35')).toEqual(new Uint8Array([0x89, 0x50, 0x4e, 0x47]));
+        expect(captured).toEqual([['-s', 'emulator-5554', 'exec-out', 'screencap', '-p']]);
+        await expect(backend.screenshot('Tablet_API_34')).rejects.toMatchObject({ code: 'device-not-booted' });
+    });
+
+    test('says why a screen could not be captured', async () => {
+        const backend = backendWith(new FakeAdb(), { runBytes: async () => ({ exitCode: 1, stdout: new Uint8Array(), stderr: 'error: closed' }) });
+
+        await expect(backend.screenshot('Pixel_9_Pro_API_35')).rejects.toMatchObject({ code: 'device-capture-failed', message: 'error: closed' });
     });
 
     test('asks a device about itself once it finished booting', async () => {

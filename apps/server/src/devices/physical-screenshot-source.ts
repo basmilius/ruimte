@@ -36,9 +36,8 @@ const runCommand = async (command: string[], signal: AbortSignal): Promise<Comma
     }
 };
 
-export const capturePhysicalFrame: PhysicalFrameCapture = async (deviceId, sequence, directory, signal) => {
-    const png = join(directory, 'screen.png');
-    const jpeg = join(directory, 'screen.jpeg');
+/* A png of the screen written to `png`, and the size devicectl says it has. */
+const capturePng = async (deviceId: string, png: string, signal: AbortSignal): Promise<{ width: number; height: number }> => {
     const captured = await runCommand(
         [
             '/usr/bin/xcrun',
@@ -62,19 +61,38 @@ export const capturePhysicalFrame: PhysicalFrameCapture = async (deviceId, seque
     if (captured.exitCode !== 0) {
         throw new DeviceError('device-capture-failed', captured.stderr.trim() || 'devicectl could not capture the device screen');
     }
-    let dimensions: z.infer<typeof CaptureResultSchema>;
     try {
-        dimensions = CaptureResultSchema.parse(JSON.parse(captured.stdout));
+        return CaptureResultSchema.parse(JSON.parse(captured.stdout)).result;
     } catch {
         throw new DeviceError('invalid-devicectl-output', 'devicectl returned screenshot details Ruimte could not read');
     }
+};
+
+export const capturePhysicalFrame: PhysicalFrameCapture = async (deviceId, sequence, directory, signal) => {
+    const png = join(directory, 'screen.png');
+    const jpeg = join(directory, 'screen.jpeg');
+    const dimensions = await capturePng(deviceId, png, signal);
     await rm(jpeg, { force: true });
     const converted = await runCommand(['/usr/bin/sips', '-s', 'format', 'jpeg', '-s', 'formatOptions', '75', png, '--out', jpeg], signal);
     if (converted.exitCode !== 0) {
         throw new DeviceError('device-capture-failed', converted.stderr.trim() || 'The physical device screenshot could not be converted');
     }
     const data = new Uint8Array(await Bun.file(jpeg).arrayBuffer());
-    return { sequence, width: dimensions.result.width, height: dimensions.result.height, data };
+    return { sequence, width: dimensions.width, height: dimensions.height, data };
+};
+
+export type PhysicalScreenshot = (deviceId: string) => Promise<Uint8Array>;
+
+/* One png of the screen at the phone's own resolution, for an agent, beside whatever preview runs. */
+export const capturePhysicalScreenshot: PhysicalScreenshot = async (deviceId) => {
+    const directory = await mkdtemp(join(tmpdir(), 'ruimte-ios-device-shot-'));
+    try {
+        const png = join(directory, 'screen.png');
+        await capturePng(deviceId, png, new AbortController().signal);
+        return new Uint8Array(await Bun.file(png).arrayBuffer());
+    } finally {
+        await rm(directory, { recursive: true, force: true });
+    }
 };
 
 export class PhysicalScreenshotSource implements DeviceSource {

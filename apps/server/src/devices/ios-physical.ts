@@ -1,7 +1,13 @@
 import { z } from 'zod';
 import type { DeviceInfo } from '@ruimte/contracts';
 import { DeviceError, type DeviceBackend, type DeviceSource } from './manager.ts';
-import { capturePhysicalFrame, PhysicalScreenshotSource, type PhysicalFrameCapture } from './physical-screenshot-source.ts';
+import {
+    capturePhysicalFrame,
+    capturePhysicalScreenshot,
+    PhysicalScreenshotSource,
+    type PhysicalFrameCapture,
+    type PhysicalScreenshot
+} from './physical-screenshot-source.ts';
 import type { PhysicalStreamSourceFactory } from './physical-stream-source.ts';
 
 interface CommandResult {
@@ -57,17 +63,20 @@ export class IosPhysicalBackend implements DeviceBackend {
     readonly kinds = ['physical'] as const;
     private readonly capture: PhysicalFrameCapture;
     private readonly createLiveSource: PhysicalStreamSourceFactory | null;
+    private readonly photograph: PhysicalScreenshot;
     private readonly udids = new Map<string, string>();
     private readonly run: DevicectlRunner;
 
     constructor(
         run: DevicectlRunner = defaultRunner,
         capture: PhysicalFrameCapture = capturePhysicalFrame,
-        createLiveSource: PhysicalStreamSourceFactory | null = null
+        createLiveSource: PhysicalStreamSourceFactory | null = null,
+        photograph: PhysicalScreenshot = capturePhysicalScreenshot
     ) {
         this.run = run;
         this.capture = capture;
         this.createLiveSource = createLiveSource;
+        this.photograph = photograph;
     }
 
     async list(): Promise<DeviceInfo[]> {
@@ -125,6 +134,10 @@ export class IosPhysicalBackend implements DeviceBackend {
             return this.createLiveSource(deviceId, udid);
         }
         return new PhysicalScreenshotSource(deviceId, this.capture);
+    }
+
+    screenshot(deviceId: string): Promise<Uint8Array> {
+        return this.photograph(deviceId);
     }
 
     private async command(arguments_: string[]): Promise<CommandResult> {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ProjectContent, ProjectEdge, ProjectNode } from '@ruimte/contracts';
+import type { DeviceInfo, ProjectContent, ProjectEdge, ProjectNode } from '@ruimte/contracts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
 import { DeviceDriver } from '../devices/agent-driver.ts';
 import { RecordingBackend, SIMULATOR, pngOf } from '../devices/device-test-helpers.ts';
@@ -45,13 +45,25 @@ beforeEach(async () => {
     backend.shot = pngOf(1000, 2000);
     nodes = [{ id: 'chat-1', kind: 'chat', title: 'Tester', x: 0, y: 0, w: 560, h: 360 }, PHONE];
     edges = [{ id: 'edge-1', from: 'phone-1', to: 'chat-1' }];
-    const devices = new DeviceDriver({ home, manager: new DeviceManager([backend]), timers: new ManualTimers(), sleep: async () => undefined });
-    host = {
+    host = hostWith([backend]);
+});
+
+const hostWith = (backends: RecordingBackend[]): CanvasHost =>
+    ({
         locate: (id: string) => (id === 'chat-1' ? { projectId: 'p1', folder: '/tmp/p1', canvasId: 'main' } : null),
         read: async () => content(),
-        devices
-    } as unknown as CanvasHost;
-});
+        devices: new DeviceDriver({ home, manager: new DeviceManager(backends), timers: new ManualTimers(), sleep: async () => undefined })
+    }) as unknown as CanvasHost;
+
+/* A second device node beside the phone, linked to the caller, pointing at this device. */
+const linkedTo = (info: DeviceInfo): RecordingBackend => {
+    const other = new RecordingBackend(info);
+    other.shot = pngOf(1080, 2400);
+    nodes = [...nodes, { ...PHONE, id: 'other-1', device: { platform: info.platform, kind: info.kind, name: info.name, runtime: info.runtime } }];
+    edges = [...edges, { id: 'edge-2', from: 'chat-1', to: 'other-1' }];
+    host = hostWith([backend, other]);
+    return other;
+};
 
 afterEach(async () => {
     await rm(home, { recursive: true, force: true });
@@ -165,5 +177,46 @@ describe('ruimte-context device', () => {
     test('refuses a node that points at no device yet', async () => {
         nodes = [nodes[0]!, { ...PHONE, device: undefined }];
         expect((await run(['state', 'phone-1']))[0]).toBe('refused\tno-device\tphone-1 points at no device yet; a person picks one on the node');
+    });
+
+    test('drives an Android emulator the same way, with the buttons it announces', async () => {
+        const pixel = linkedTo({
+            ...SIMULATOR,
+            deviceId: 'Pixel_9_Pro_API_35',
+            backendId: 'android',
+            platform: 'android',
+            name: 'Pixel 9 Pro API 35',
+            runtime: 'API 35',
+            capabilities: { ...SIMULATOR.capabilities, buttons: ['back', 'home', 'appSwitcher', 'lock', 'siri'] }
+        });
+        expect((await run(['shot', 'other-1']))[0]).toContain('\t1080x2400\t');
+        expect((await run(['button', 'other-1', '--name', 'back']))[0]).toBe('done\tbutton\tother-1\tPixel 9 Pro API 35');
+        expect((await run(['tap', 'other-1', '--at', '540,1200']))[0]).toBe('done\ttap\tother-1\tPixel 9 Pro API 35');
+        expect(pixel.source.inputs).toEqual([
+            { kind: 'button', button: 'back' },
+            { kind: 'pointer', phase: 'down', x: 0.5, y: 0.5 },
+            { kind: 'pointer', phase: 'up', x: 0.5, y: 0.5 }
+        ]);
+        expect((await run(['launch', 'other-1', '--app', 'com.example.app']))[0]).toBe('done\tlaunch\tother-1\tPixel 9 Pro API 35');
+        expect(backend.source.inputs).toEqual([]);
+    });
+
+    test('taps a phone through its live stream, and refuses to open an app it has no tools for', async () => {
+        const phone = linkedTo({
+            ...SIMULATOR,
+            deviceId: 'coredevice-1',
+            backendId: 'coredevice',
+            kind: 'physical',
+            name: 'Test iPhone',
+            runtime: 'iOS 27.2',
+            capabilities: { boot: false, shutdown: false, stream: true, input: true, screenshot: true }
+        });
+        expect(await run(['state', 'other-1'])).toContain('can\tlaunch\tno');
+        await run(['shot', 'other-1']);
+        expect((await run(['tap', 'other-1', '--at', '10,10']))[0]).toBe('done\ttap\tother-1\tTest iPhone');
+        expect(phone.source.inputs).toHaveLength(2);
+        expect(await run(['launch', 'other-1', '--app', 'com.example.app'])).toEqual([
+            'refused\tdevice-action-unavailable\tRuimte cannot open an app on Test iPhone'
+        ]);
     });
 });

@@ -87,4 +87,20 @@ describe('IosPhysicalBackend', () => {
         expect(targets).toEqual([['coredevice-phone-1', 'hardware-phone-1']]);
         expect(await backend.list()).toMatchObject([{ capabilities: { input: true } }]);
     });
+
+    test('photographs the screen at its own resolution through the capture it was given', async () => {
+        const shots: string[] = [];
+        const backend = new IosPhysicalBackend(
+            async () => ({ exitCode: 0, stdout: listOutput, stderr: '' }),
+            undefined,
+            null,
+            async (deviceId) => {
+                shots.push(deviceId);
+                return new Uint8Array([0x89, 0x50]);
+            }
+        );
+
+        expect(await backend.screenshot('coredevice-phone-1')).toEqual(new Uint8Array([0x89, 0x50]));
+        expect(shots).toEqual(['coredevice-phone-1']);
+    });
 });

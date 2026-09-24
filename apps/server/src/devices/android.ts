@@ -19,6 +19,9 @@ import type { CommandResult } from './scrcpy-source.ts';
 
 export type AndroidRunner = (command: string, arguments_: string[]) => Promise<CommandResult>;
 
+/* The same for a command whose output is bytes, such as a png from `exec-out`, which a text decoder would mangle. */
+export type AndroidBytesRunner = (command: string, arguments_: string[]) => Promise<{ exitCode: number; stdout: Uint8Array; stderr: string }>;
+
 export interface EmulatorProcess {
     readonly exited: Promise<number>;
     output(): string;
@@ -35,6 +38,7 @@ export interface AvdInfo {
 export interface AndroidBackendOptions {
     locate?: () => AndroidSdk | null;
     run?: AndroidRunner;
+    runBytes?: AndroidBytesRunner;
     launch?: EmulatorLauncher;
     readAvds?: (avdHome: string) => Promise<AvdInfo[]>;
     /* Null when this machine has no screen server to push, which leaves a device listed but not viewable. */
@@ -191,6 +195,12 @@ const defaultRunner: AndroidRunner = async (command, arguments_) => {
     return { exitCode, stdout, stderr };
 };
 
+const defaultBytesRunner: AndroidBytesRunner = async (command, arguments_) => {
+    const child = Bun.spawn([command, ...arguments_], { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' });
+    const [exitCode, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).bytes(), new Response(child.stderr).text()]);
+    return { exitCode, stdout, stderr };
+};
+
 /*
  * Starts an emulator in its own session with its output in a file, so it outlives a daemon restart and
  * a closed pipe cannot take it down, while a start that fails still says why.
@@ -227,6 +237,7 @@ export class AndroidBackend implements DeviceBackend {
     readonly platform = 'android' as const;
     private readonly locate: () => AndroidSdk | null;
     private readonly run: AndroidRunner;
+    private readonly runBytes: AndroidBytesRunner;
     private readonly launch: EmulatorLauncher;
     private readonly readAvds: (avdHome: string) => Promise<AvdInfo[]>;
     private readonly createStreamSource: ((adb: string, serial: string) => DeviceSource) | null;
@@ -240,6 +251,7 @@ export class AndroidBackend implements DeviceBackend {
     constructor(options: AndroidBackendOptions = {}) {
         this.locate = options.locate ?? (() => locateAndroidSdk());
         this.run = options.run ?? defaultRunner;
+        this.runBytes = options.runBytes ?? defaultBytesRunner;
         this.launch = options.launch ?? defaultLaunch;
         this.readAvds = options.readAvds ?? readAvdFolder;
         this.createStreamSource = options.createSource ?? null;
@@ -451,6 +463,20 @@ export class AndroidBackend implements DeviceBackend {
         return this.detail(deviceId);
     }
 
+    async screenshot(deviceId: string): Promise<Uint8Array> {
+        const { serial } = await this.booted(deviceId);
+        let result: Awaited<ReturnType<AndroidBytesRunner>>;
+        try {
+            result = await this.runBytes(this.sdk().adb, ['-s', serial, 'exec-out', 'screencap', '-p']);
+        } catch {
+            throw new DeviceError('adb-unavailable', 'adb could not be started');
+        }
+        if (result.exitCode !== 0 || result.stdout.byteLength === 0) {
+            throw new DeviceError('device-capture-failed', result.stderr.trim() || 'adb could not capture the device screen');
+        }
+        return result.stdout;
+    }
+
     createSource(deviceId: string): DeviceSource {
         const serial = this.serials.get(deviceId);
         if (serial === undefined) {
@@ -553,7 +579,7 @@ export class AndroidBackend implements DeviceBackend {
                 shutdown: true,
                 stream: streaming,
                 input: streaming,
-                screenshot: false,
+                screenshot: true,
                 buttons: BUTTONS,
                 tools: [...BASE_TOOLS, ...(probe?.talkBack ? (['voiceOver'] as const) : []), 'location'],
                 permissions: PERMISSIONS
@@ -582,7 +608,7 @@ export class AndroidBackend implements DeviceBackend {
                 shutdown: false,
                 stream: streaming,
                 input: streaming,
-                screenshot: false,
+                screenshot: ready,
                 buttons: BUTTONS,
                 tools: [...BASE_TOOLS, ...(probe?.talkBack ? (['voiceOver'] as const) : [])],
                 permissions: PERMISSIONS
