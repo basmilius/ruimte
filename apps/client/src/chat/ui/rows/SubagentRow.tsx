@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Bot, ChevronDown } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem } from '@ruimte/contracts';
+import type { SubagentBranch } from '@/chat/logic/timeline';
 import { formatElapsedShort } from '@/format/duration';
 import { useOpenForFind } from '@/chat/ui/find-reveal';
 import { Markdown } from '@/chat/ui/Markdown';
@@ -146,5 +147,38 @@ export function SubagentRow({
                 </div>
             )}
         </div>
+    );
+}
+
+/*
+ * A sub-agent's row with the agents it opened in turn under it. Those stay in sight whether its own
+ * work is folded or not, since opening the parent shows its conversation and not theirs.
+ */
+export function SubagentBranchRow({
+    branch,
+    onToggle,
+    onOpenConversation
+}: {
+    branch: SubagentBranch;
+    onToggle(id: string): void;
+    onOpenConversation?(item: ChatSubagentItem): void;
+}) {
+    return (
+        <>
+            <SubagentRow
+                item={branch.item}
+                work={branch.children}
+                expanded={branch.expanded}
+                onToggle={() => onToggle(branch.id)}
+                onOpenConversation={onOpenConversation ? () => onOpenConversation(branch.item) : undefined}
+            />
+            {branch.nested.length > 0 && (
+                <div className="ml-6">
+                    {branch.nested.map((child) => (
+                        <SubagentBranchRow key={child.id} branch={child} onToggle={onToggle} onOpenConversation={onOpenConversation} />
+                    ))}
+                </div>
+            )}
+        </>
     );
 }

@@ -46,8 +46,7 @@ const fenced = (text: string): string => {
 };
 
 // The Agent tool is what Claude Code calls a delegation; older builds and other CLIs say Task.
-const isSubagentCall = (event: Extract<BackendEvent, { type: 'tool.started' }>): boolean =>
-    event.parentRef === null && (event.name === 'Agent' || event.name === 'Task');
+const isAgentTool = (name: string): boolean => name === 'Agent' || name === 'Task';
 
 // What the CLI answers a background launch with; the agent itself only settles much later.
 const LAUNCH_PLACEHOLDER = 'Async agent launched successfully';
@@ -119,6 +118,8 @@ export class ThreadProjector {
     private readonly budgets = new Map<string, { items: number; textBytes: number }>();
     // Calls whose command runs on past the turn that made them, so settling that turn leaves their rows running.
     private readonly backgroundCalls = new Set<string>();
+    // Agents a subagent opened whose call never reached the stream (a grandchild's own); only drill-in shows them.
+    private readonly unplacedCalls = new Set<string>();
     // The stretch of thinking still open: its item, and which refs already streamed into it.
     private thinking: { id: string; refs: Set<string>; last: string | null } | null = null;
 
@@ -134,6 +135,7 @@ export class ThreadProjector {
         this.taskToolUseId = null;
         this.budgets.clear();
         this.backgroundCalls.clear();
+        this.unplacedCalls.clear();
         this.thinking = null;
     }
 
@@ -169,7 +171,9 @@ export class ThreadProjector {
                 break;
             case 'text.done': {
                 if (event.parentRef) {
-                    this.appendSubagentText(generation, event.parentRef, event.ref, event.text, events);
+                    if (!this.insideNested(generation, event.parentRef)) {
+                        this.appendSubagentText(generation, event.parentRef, event.ref, event.text, events);
+                    }
                     break;
                 }
                 this.closeThinking(events);
@@ -188,13 +192,17 @@ export class ThreadProjector {
                 break;
             }
             case 'tool.started':
-                if (isSubagentCall(event)) {
-                    this.closeThinking(events);
+                if (isAgentTool(event.name) && (event.parentRef === null || this.subagent(generation, event.parentRef) !== null)) {
+                    if (event.parentRef === null) {
+                        this.closeThinking(events);
+                    }
                     this.startSubagent(generation, event, events);
                     break;
                 }
                 if (event.parentRef === null) {
                     this.closeThinking(events);
+                } else if (this.insideNested(generation, event.parentRef)) {
+                    break;
                 }
                 this.startTool(generation, event, events);
                 break;
@@ -264,10 +272,18 @@ export class ThreadProjector {
                 this.patchSubagentProgress(generation, event, events);
                 break;
             case 'task.done': {
-                // Keep one summary line for the next turn's header; the tool row already has the result.
+                // Keep one summary line for the next turn's header; the tool row already has the result. A nested
+                // agent reports to the agent that opened it, so it only names that turn when no row of the thread's own does.
+                const row = this.taskSubagent(generation, event.ref, event.taskId);
+                const nested = row?.parentToolUseId !== undefined || (event.ref !== null && this.unplacedCalls.has(event.ref));
                 const line = event.summary === null ? '' : summaryLine(event.summary);
-                this.taskSummary = line === '' ? this.taskSummary : line;
-                this.settleBackgroundSubagent(generation, event, events);
+                if (line !== '' && (!nested || this.taskSummary === null)) {
+                    this.taskSummary = line;
+                }
+                if (row && (!nested || this.taskToolUseId === null)) {
+                    this.taskToolUseId = row.toolUseId;
+                }
+                this.settleBackgroundSubagent(row, event, events);
                 break;
             }
             case 'background.started':
@@ -371,10 +387,20 @@ export class ThreadProjector {
                 events.push(this.thread.upsert({ ...item, state: 'cancelled' }));
             } else if (item.kind === 'tool' && item.state === 'running' && (processGone || !this.backgroundCalls.has(item.id))) {
                 events.push(this.thread.upsert({ ...item, state: 'error' }));
-            } else if (item.kind === 'subagent' && item.status === 'running' && (processGone || !item.background)) {
+            } else if (item.kind === 'subagent' && item.status === 'running' && (processGone || !this.outlivesTurn(item))) {
                 events.push(this.thread.upsert({ ...item, status: 'failed', finishedAt: this.now() }));
             }
         }
+    }
+
+    /* A background agent, or one working for an agent that still does, since the turn ending does not end its parent either. */
+    private outlivesTurn(item: ChatSubagentItem): boolean {
+        if (item.background) {
+            return true;
+        }
+        const parentRef = item.parentToolUseId;
+        const parent = parentRef === undefined ? undefined : this.thread.find('subagent', (candidate) => candidate.toolUseId === parentRef);
+        return parent?.status === 'running' && this.outlivesTurn(parent);
     }
 
     /* A call the thread already has a row for, told again after its turn ended (a snapshot Codex sends late), is no new work. */
@@ -531,6 +557,14 @@ export class ThreadProjector {
         return this.thread.list().findLast((item): item is ChatSubagentItem => item.kind === 'subagent' && item.native?.agentId === taskId) ?? null;
     }
 
+    /*
+     * Whether a frame belongs to an agent a subagent opened. Its work stays out of the thread, however
+     * much the CLI forwards: the row says it runs and how it ended, its own conversation says the rest.
+     */
+    private insideNested(generation: number, parentRef: string): boolean {
+        return this.subagent(generation, parentRef)?.parentToolUseId !== undefined;
+    }
+
     private budgetFor(parent: ChatSubagentItem): { items: number; textBytes: number } {
         const budget = this.budgets.get(parent.id) ?? { items: 0, textBytes: 0 };
         this.budgets.set(parent.id, budget);
@@ -554,17 +588,22 @@ export class ThreadProjector {
         return true;
     }
 
-    /* A delegation: the row that carries the agent's own work and the report it ends with. */
+    /*
+     * A delegation: the row that carries the agent's own work and the report it ends with. One a subagent
+     * opened hangs under that agent's row, in the turn its parent works in.
+     */
     private startSubagent(generation: number, event: Extract<BackendEvent, { type: 'tool.started' }>, events: ChatEvent[]): void {
         const id = this.itemId(generation, event.ref);
         const previous = this.subagent(generation, event.ref);
+        const parent = event.parentRef === null ? null : this.subagent(generation, event.parentRef);
         const input = isRecord(event.input) ? event.input : {};
         const now = this.now();
+        const parentToolUseId = previous?.parentToolUseId ?? parent?.toolUseId;
         const item: ChatSubagentItem = {
             id,
             kind: 'subagent',
             createdAt: previous?.createdAt ?? now,
-            turnId: previous?.turnId ?? this.thread.info.activeTurnId,
+            turnId: previous?.turnId ?? parent?.turnId ?? this.thread.info.activeTurnId,
             toolUseId: event.ref,
             description: previous?.description || str(input.description) || '',
             subagentType: previous?.subagentType ?? str(input.subagent_type),
@@ -579,7 +618,8 @@ export class ThreadProjector {
             lastTool: previous?.lastTool ?? null,
             itemsTruncated: previous?.itemsTruncated ?? false,
             ...(previous?.outputFile ? { outputFile: previous.outputFile } : {}),
-            ...(previous?.native ? { native: previous.native } : {})
+            ...(previous?.native ? { native: previous.native } : {}),
+            ...(parentToolUseId === undefined ? {} : { parentToolUseId })
         };
         events.push(this.thread.upsert(item));
     }
@@ -587,6 +627,11 @@ export class ThreadProjector {
     /* What the CLI itself says about the delegation: which agent it is, and whether it blocks the turn. */
     private patchSubagentStart(generation: number, event: Extract<BackendEvent, { type: 'task.started' }>, events: ChatEvent[]): void {
         const existing = this.thread.get(this.itemId(generation, event.ref));
+        // An agent a subagent opened, whose call the stream never showed, has no row to hang under.
+        if (!existing && (event.depth ?? 1) > 1) {
+            this.unplacedCalls.add(event.ref);
+            return;
+        }
         if (!existing) {
             this.startSubagent(generation, { type: 'tool.started', ref: event.ref, name: 'Agent', input: {}, parentRef: null }, events);
         }
@@ -681,12 +726,10 @@ export class ThreadProjector {
     }
 
     /* The notification a background agent settles with; its report is the last text it wrote. */
-    private settleBackgroundSubagent(generation: number, event: Extract<BackendEvent, { type: 'task.done' }>, events: ChatEvent[]): void {
-        const item = this.taskSubagent(generation, event.ref, event.taskId);
+    private settleBackgroundSubagent(item: ChatSubagentItem | null, event: Extract<BackendEvent, { type: 'task.done' }>, events: ChatEvent[]): void {
         if (!item) {
             return;
         }
-        this.taskToolUseId = item.toolUseId;
         const full = event.summary?.trim() ?? '';
         const line = full === '' ? null : summaryLine(full);
         // The row says in one line what the agent did. When the CLI put its whole report in the

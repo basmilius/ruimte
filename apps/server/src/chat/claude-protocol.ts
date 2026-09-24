@@ -247,7 +247,8 @@ export class ClaudeProtocol {
                     description: str(frame.description),
                     subagentType: str(frame.subagent_type),
                     prompt: str(frame.prompt),
-                    background: frame.is_backgrounded === true
+                    background: frame.is_backgrounded === true,
+                    ...(typeof frame.spawn_depth === 'number' ? { depth: frame.spawn_depth } : {})
                 });
             }
             return;

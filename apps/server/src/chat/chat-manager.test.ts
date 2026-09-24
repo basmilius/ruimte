@@ -480,6 +480,23 @@ describe('ChatManager', () => {
         expect(await manager.turnDiff('chat-diff', turn!.id)).toEqual(diff);
     });
 
+    test('an agent a background subagent opened hangs under it, and the turn it wakes is about its parent', async () => {
+        await manager.create({ chatId: 'chat-nested', cwd: home });
+        manager.attach('chat-nested', 'c1');
+        await manager.send('chat-nested', 'nested: the chain is done');
+        await recorder.until(idle);
+
+        claude.started[0]!.runLater();
+        await recorder.until(() => recorder.ofKind('turn').length === 2 && idle());
+        const [middle, leaf] = recorder.ofKind('subagent');
+        expect(middle).toMatchObject({ toolUseId: 'toolu_middle', status: 'done', background: true, result: 'the leaf said PONG' });
+        expect(middle).not.toHaveProperty('parentToolUseId');
+        expect(leaf).toMatchObject({ toolUseId: 'toolu_leaf', parentToolUseId: 'toolu_middle', status: 'done', result: 'PONG', turnId: middle!.turnId });
+        // No tool row for the grandchild's call, beside the row that already stands for it.
+        expect(recorder.ofKind('tool')).toEqual([]);
+        expect(recorder.ofKind('turn')[1]).toMatchObject({ origin: 'agent', label: 'the chain is done', taskToolUseId: 'toolu_middle' });
+    });
+
     test('a background subagent that settles opens a turn of the agent, with the summary as its label', async () => {
         await manager.create({ chatId: 'chat-bg', cwd: home });
         manager.attach('chat-bg', 'c1');

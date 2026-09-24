@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import type { ChatBookmark, ChatSubagentItem } from '@ruimte/contracts';
 import { useForkedTurns } from '@/chat/forks';
 import { bookmarkRows } from '@/chat/logic/bookmarks';
-import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
+import { deriveTimelineRows, findSubagentBranch, type TimelineRow } from '@/chat/logic/timeline';
 import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { registerItemJumper, registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
 import {
@@ -362,16 +362,15 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
         show(openFromMain(crumbOf(item)));
     };
 
-    /* The header of a turn a sub-agent woke. It points at the row that agent worked in. */
+    /* The header of a turn a sub-agent woke. It points at the row that agent worked in, or the one it hangs under. */
     const openSubagent = (toolUseId: string): void => {
-        const index = rows.findIndex((row) => row.kind === 'subagent' && row.item.toolUseId === toolUseId);
-        const row = rows[index];
-        if (!row) {
+        const found = findSubagentBranch(rows, toolUseId);
+        if (!found) {
             return;
         }
-        subagents.add(row.id);
+        subagents.add(found.branch.id);
         followRef.current = false;
-        virtualizer.scrollToIndex(index, { align: 'start' });
+        virtualizer.scrollToIndex(found.index, { align: 'start' });
     };
 
     return (

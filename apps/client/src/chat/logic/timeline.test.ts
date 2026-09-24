@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
 import { notResumedNote } from '@ruimte/contracts';
-import { agentTurnLabel, deriveTimelineRows, isBlock, summarizeGroup, summarizeTurn, turnLabel } from './timeline';
+import { agentTurnLabel, deriveTimelineRows, findSubagentBranch, isBlock, summarizeGroup, summarizeTurn, turnLabel } from './timeline';
 
 const tool = (id: string, name: string, input: unknown, state: ChatToolItem['state'] = 'done', turnId = 't1'): ChatToolItem => ({
     id,
@@ -188,6 +188,46 @@ describe('deriveTimelineRows', () => {
         expect(rows.map((row) => row.kind)).toEqual(['user', 'subagent', 'working']);
         expect(rows[1]).toMatchObject({ id: 'sa1', expanded: false, children: [{ id: 'c1' }, { id: 'c2' }] });
         expect(deriveTimelineRows(items, { ...options, activeTurnId: 't6', expandedSubagents: new Set(['sa1']) })[1]).toMatchObject({ expanded: true });
+    });
+
+    test('an agent a subagent opened is a row under its parent, found from a header that names it', () => {
+        const row = (id: string, toolUseId: string, parentToolUseId?: string): ChatItem => ({
+            id,
+            kind: 'subagent',
+            createdAt: 2,
+            turnId: 't7',
+            toolUseId,
+            description: id,
+            subagentType: null,
+            prompt: null,
+            background: false,
+            status: 'running',
+            startedAt: 2,
+            finishedAt: null,
+            summary: null,
+            result: null,
+            usage: null,
+            lastTool: null,
+            itemsTruncated: false,
+            ...(parentToolUseId === undefined ? {} : { parentToolUseId })
+        });
+        const items: ChatItem[] = [
+            { id: 't7', kind: 'turn', createdAt: 1, turnId: 't7', state: 'running', endedAt: null, costUsd: 0 },
+            { id: 'u7', kind: 'user', createdAt: 1, turnId: 't7', text: 'go' },
+            row('middle', 'toolu_mid'),
+            { ...tool('c1', 'Grep', { pattern: 'x' }, 'done', 't7'), parentToolUseId: 'toolu_mid' },
+            row('leaf', 'toolu_leaf', 'toolu_mid'),
+            row('deep', 'toolu_deep', 'toolu_leaf')
+        ];
+        const rows = deriveTimelineRows(items, { ...options, activeTurnId: 't7' });
+        expect(rows.map((entry) => entry.kind)).toEqual(['user', 'subagent', 'working']);
+        expect(rows[1]).toMatchObject({
+            id: 'middle',
+            children: [{ id: 'c1' }],
+            nested: [{ id: 'leaf', children: [], nested: [{ id: 'deep', nested: [] }] }]
+        });
+        expect(findSubagentBranch(rows, 'toolu_deep')).toMatchObject({ index: 1, branch: { id: 'deep' } });
+        expect(findSubagentBranch(rows, 'toolu_none')).toBeNull();
     });
 
     test('subagent tool calls of an older record stay hidden and items without a turn render as they are', () => {

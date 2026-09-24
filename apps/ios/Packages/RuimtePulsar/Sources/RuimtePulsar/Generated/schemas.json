@@ -9206,6 +9206,9 @@
                 },
                 "childId": {
                   "type": "string"
+                },
+                "parentToolUseId": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -10512,6 +10515,9 @@
                 },
                 "childId": {
                   "type": "string"
+                },
+                "parentToolUseId": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -11434,6 +11440,9 @@
                 },
                 "childId": {
                   "type": "string"
+                },
+                "parentToolUseId": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -12349,6 +12358,9 @@
                           ]
                         },
                         "childId": {
+                          "type": "string"
+                        },
+                        "parentToolUseId": {
                           "type": "string"
                         }
                       },
@@ -14003,6 +14015,9 @@
                             ]
                           },
                           "childId": {
+                            "type": "string"
+                          },
+                          "parentToolUseId": {
                             "type": "string"
                           }
                         },
@@ -16530,6 +16545,9 @@
                   ]
                 },
                 "childId": {
+                  "type": "string"
+                },
+                "parentToolUseId": {
                   "type": "string"
                 }
               },
@@ -33962,6 +33980,9 @@
                       },
                       "childId": {
                         "type": "string"
+                      },
+                      "parentToolUseId": {
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -35615,6 +35636,9 @@
                           ]
                         },
                         "childId": {
+                          "type": "string"
+                        },
+                        "parentToolUseId": {
                           "type": "string"
                         }
                       },

@@ -518,6 +518,130 @@ describe('subagents', () => {
     });
 });
 
+// The order Claude Code 2.1.282 streams a background agent that opens a foreground one of its own.
+describe('an agent a subagent opened', () => {
+    const launch = (): BackendEvent[] => [
+        { type: 'tool.started', ref: 'toolu_mid', name: 'Agent', input: { description: 'middle agent', run_in_background: true }, parentRef: null },
+        {
+            type: 'task.started',
+            ref: 'toolu_mid',
+            taskId: 'a-mid',
+            description: 'middle agent',
+            subagentType: 'general-purpose',
+            prompt: null,
+            background: true,
+            depth: 1
+        },
+        { type: 'tool.done', ref: 'toolu_mid', output: 'Async agent launched successfully.', state: 'done' },
+        { type: 'turn.done', state: 'done', costUsd: 0 },
+        { type: 'tool.started', ref: 'toolu_leaf', name: 'Agent', input: { description: 'leaf agent', prompt: 'echo PONG' }, parentRef: 'toolu_mid' },
+        {
+            type: 'task.started',
+            ref: 'toolu_leaf',
+            taskId: 'a-leaf',
+            description: 'leaf agent',
+            subagentType: 'general-purpose',
+            prompt: null,
+            background: false,
+            depth: 2
+        }
+    ];
+
+    test('hangs its row under the subagent that opened it, and keeps its own work out of the thread', () => {
+        const { thread, project } = setup();
+        project(...launch());
+        expect(thread.get('1:toolu_leaf')).toMatchObject({
+            kind: 'subagent',
+            parentToolUseId: 'toolu_mid',
+            description: 'leaf agent',
+            status: 'running',
+            turnId: 'turn-1',
+            native: { agentId: 'a-leaf' }
+        });
+        // The call that opened it is the row; no tool row stands beside it.
+        expect(thread.list().some((item) => item.kind === 'tool')).toBe(false);
+        // Only its parent's own row is a row of the thread.
+        expect(thread.get('1:toolu_mid')).not.toHaveProperty('parentToolUseId');
+
+        // Should the CLI forward the grandchild's own steps, they are drill-in's to show.
+        project(
+            { type: 'tool.started', ref: 'toolu_bash', name: 'Bash', input: { command: 'echo PONG' }, parentRef: 'toolu_leaf' },
+            { type: 'text.done', ref: 'msg_7:t0', text: 'PONG', parentRef: 'toolu_leaf' }
+        );
+        expect(thread.get('1:toolu_bash')).toBeUndefined();
+        expect(thread.get('1:msg_7:t0')).toBeUndefined();
+
+        // Its parent's turn ended long ago; the grandchild works on for as long as its parent does.
+        project({ type: 'turn.done', state: 'done', costUsd: 0 });
+        expect(thread.get('1:toolu_leaf')).toMatchObject({ status: 'running' });
+
+        project(
+            { type: 'task.done', ref: 'toolu_leaf', taskId: 'a-leaf', summary: 'PONG', ok: true },
+            { type: 'tool.done', ref: 'toolu_leaf', output: "PONG\n\nagentId: a-leaf (use SendMessage with to: 'a-leaf')", state: 'done' }
+        );
+        expect(thread.get('1:toolu_leaf')).toMatchObject({ status: 'done', result: 'PONG' });
+        expect(thread.get('1:toolu_mid')).toMatchObject({ status: 'running' });
+    });
+
+    test('a turn a person stops takes a foreground grandchild down with its foreground parent', () => {
+        const { thread, project } = setup();
+        project(
+            { type: 'tool.started', ref: 'toolu_mid', name: 'Agent', input: { description: 'middle agent' }, parentRef: null },
+            { type: 'tool.started', ref: 'toolu_leaf', name: 'Agent', input: { description: 'leaf agent' }, parentRef: 'toolu_mid' },
+            { type: 'turn.done', state: 'aborted', costUsd: 0 }
+        );
+        expect(thread.get('1:toolu_mid')).toMatchObject({ status: 'failed' });
+        expect(thread.get('1:toolu_leaf')).toMatchObject({ status: 'failed' });
+    });
+
+    test('its notification never takes the header of the turn its parent wakes', () => {
+        const { thread, project } = setup();
+        project(
+            ...launch(),
+            { type: 'task.done', ref: 'toolu_mid', taskId: 'a-mid', summary: 'The leaf said PONG', ok: true },
+            // A grandchild that outlived its parent reports after it.
+            { type: 'task.done', ref: 'toolu_leaf', taskId: 'a-leaf', summary: 'PONG', ok: true },
+            { type: 'text.done', ref: 'msg_9:t0', text: 'The chain is done' }
+        );
+        const woken = thread.list().find((item) => item.kind === 'turn' && item.origin === 'agent');
+        expect(woken).toMatchObject({ label: 'The leaf said PONG', taskToolUseId: 'toolu_mid' });
+        expect(thread.get('1:toolu_leaf')).toMatchObject({ status: 'done', summary: 'PONG' });
+    });
+
+    test('names the turn when a grandchild alone woke the agent', () => {
+        const { thread, project } = setup();
+        project(
+            ...launch(),
+            { type: 'task.done', ref: 'toolu_leaf', taskId: 'a-leaf', summary: 'PONG', ok: true },
+            { type: 'text.done', ref: 'msg_9:t0', text: 'The leaf is done' }
+        );
+        const woken = thread.list().find((item) => item.kind === 'turn' && item.origin === 'agent');
+        expect(woken).toMatchObject({ label: 'PONG', taskToolUseId: 'toolu_leaf' });
+    });
+
+    test('one opened by a grandchild, whose call the stream never showed, gets no row of its own', () => {
+        const { thread, project } = setup();
+        project(
+            ...launch(),
+            {
+                type: 'task.started',
+                ref: 'toolu_deep',
+                taskId: 'a-deep',
+                description: 'deep agent',
+                subagentType: null,
+                prompt: null,
+                background: false,
+                depth: 3
+            },
+            { type: 'task.done', ref: 'toolu_mid', taskId: 'a-mid', summary: 'The leaf said PONG', ok: true },
+            { type: 'task.done', ref: 'toolu_deep', taskId: 'a-deep', summary: 'deep', ok: true },
+            { type: 'text.done', ref: 'msg_9:t0', text: 'done' }
+        );
+        expect(thread.get('1:toolu_deep')).toBeUndefined();
+        expect(thread.list().find((item) => item.kind === 'turn' && item.origin === 'agent')).toMatchObject({ label: 'The leaf said PONG' });
+    });
+});
+
 describe('background tasks', () => {
     test('a task takes its kind and command from the call that started it and leaves with its process', () => {
         const { thread, project } = setup();

@@ -103,6 +103,8 @@ export type BackendEvent =
           taskId?: string | null;
           // The thread a CLI that keeps one per agent opened for it, which is where its whole conversation is read.
           threadId?: string | null;
+          // How many agents deep it runs: 1 for one the chat's own agent opened, 2 for one a subagent opened.
+          depth?: number;
       }
     | { type: 'task.progress'; ref: string; taskId?: string | null; summary: string | null; lastTool: string | null; usage: ChatSubagentUsage | null }
     // A task the CLI runs beside the turn (a background subagent, a backgrounded command) settled.

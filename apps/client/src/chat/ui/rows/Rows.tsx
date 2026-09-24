@@ -12,7 +12,7 @@ import {
     UserRow
 } from '@/chat/ui/rows/MessageRows';
 import { ForksRow } from '@/chat/ui/rows/ForksRow';
-import { SubagentRow } from '@/chat/ui/rows/SubagentRow';
+import { SubagentBranchRow } from '@/chat/ui/rows/SubagentRow';
 import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
 
 export interface RowProps {
@@ -48,15 +48,7 @@ export function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, open
         case 'work-group':
             return <WorkGroupRow tools={row.tools} summary={row.summary} expanded={row.expanded} onToggle={() => toggleGroup(row.id)} />;
         case 'subagent':
-            return (
-                <SubagentRow
-                    item={row.item}
-                    work={row.children}
-                    expanded={row.expanded}
-                    onToggle={() => toggleSubagent(row.id)}
-                    onOpenConversation={openConversation ? () => openConversation(row.item) : undefined}
-                />
-            );
+            return <SubagentBranchRow branch={row} onToggle={toggleSubagent} onOpenConversation={openConversation} />;
         case 'turn-fold':
             return <TurnFoldRow turn={row.turn} label={row.label} work={row.work} expanded={row.expanded} onToggle={() => toggleTurn(row.turn.id)} />;
         case 'forks':

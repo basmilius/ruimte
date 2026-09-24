@@ -27,8 +27,8 @@ export interface ChatSearch {
 
 const NOTHING: ChatSearch = { hits: [], invalid: false };
 
-/* A sub-agent's own steps belong to its row, which the thread keeps shut; they are its business. */
-const isChild = (item: ChatItem): boolean => (item.kind === 'tool' || item.kind === 'assistant') && Boolean(item.parentToolUseId);
+/* A sub-agent's own steps, and the agents it opened, belong to its row, which the thread keeps shut; they are its business. */
+const isChild = (item: ChatItem): boolean => (item.kind === 'tool' || item.kind === 'assistant' || item.kind === 'subagent') && Boolean(item.parentToolUseId);
 
 /* What a reader can find in an item, part by part, in the order its row draws them. */
 export const findableFields = (item: ChatItem): { field: ChatFindField; text: string }[] => {

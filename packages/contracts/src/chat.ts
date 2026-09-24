@@ -303,7 +303,9 @@ export const ChatSubagentItemSchema = z.object({
     // Who opened it: the CLI with its own tool, or a verb with `--task` that made a node; absent is `native`.
     origin: z.enum(['native', 'ruimte']).optional(),
     // The node a `--task` opened, whose own conversation this row stands for.
-    childId: z.string().optional()
+    childId: z.string().optional(),
+    // Set for an agent a subagent opened, with the id of that subagent's own Agent call; its row hangs under that one.
+    parentToolUseId: z.string().optional()
 });
 
 export const ChatApprovalDecisionSchema = z.enum(['pending', 'allow', 'allow-always', 'deny', 'cancelled']);

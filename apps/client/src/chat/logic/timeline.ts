@@ -17,6 +17,15 @@ import { handbackReportOf } from './handback';
 import { toolEntry } from './tool-catalog';
 import { hasFileChanges, isFileChange } from './tools';
 
+/* A subagent's row: the work the thread kept of it, and the agents it opened in turn, each a row of its own under it. */
+export interface SubagentBranch {
+    id: string;
+    item: ChatSubagentItem;
+    children: ChatItem[];
+    nested: SubagentBranch[];
+    expanded: boolean;
+}
+
 /*
  * What the thread shows, row by row. Items are what the daemon knows; rows are what a reader
  * wants: one line per tool call, runs of tool calls folded into a summary, past turns folded
@@ -32,7 +41,7 @@ export type TimelineRow =
     | { kind: 'work'; id: string; tool: ChatToolItem }
     | { kind: 'work-group'; id: string; tools: ChatToolItem[]; summary: string; expanded: boolean }
     | { kind: 'work-live'; id: string; tool: ChatToolItem }
-    | { kind: 'subagent'; id: string; item: ChatSubagentItem; children: ChatItem[]; expanded: boolean }
+    | ({ kind: 'subagent' } & SubagentBranch)
     | { kind: 'approval'; id: string; item: ChatApprovalItem }
     | { kind: 'question'; id: string; item: ChatQuestionItem }
     | { kind: 'note'; id: string; level: 'info' | 'warning' | 'error'; text: string; from?: string }
@@ -137,8 +146,50 @@ export const turnLabel = (turn: ChatTurnItem, items: readonly ChatItem[] = []): 
     }
 };
 
-// A subagent's own work belongs to its row, not to the thread; an old record has no row for it.
-const parentOf = (item: ChatItem): string | null => (item.kind === 'tool' || item.kind === 'assistant' ? (item.parentToolUseId ?? null) : null);
+// A subagent's own work, and an agent it opened, belong to its row, not to the thread; an old record has no row for it.
+const parentOf = (item: ChatItem): string | null =>
+    item.kind === 'tool' || item.kind === 'assistant' || item.kind === 'subagent' ? (item.parentToolUseId ?? null) : null;
+
+// Deeper than the CLI forwards any call; it also ends a chain of rows that would name each other.
+const MAX_NESTING = 8;
+
+const branchOf = (item: ChatSubagentItem, options: TimelineOptions, children: Map<string, ChatItem[]>, depth = 0): SubagentBranch => {
+    const own = children.get(item.toolUseId) ?? [];
+    return {
+        id: item.id,
+        item,
+        children: own.filter((child) => child.kind !== 'subagent'),
+        nested:
+            depth >= MAX_NESTING
+                ? []
+                : own.filter((child): child is ChatSubagentItem => child.kind === 'subagent').map((child) => branchOf(child, options, children, depth + 1)),
+        expanded: options.expandedSubagents.has(item.id)
+    };
+};
+
+/* The branch a subagent's row sits in, its own or one it hangs under, anywhere in the thread's rows. */
+export const findSubagentBranch = (rows: readonly TimelineRow[], toolUseId: string): { index: number; branch: SubagentBranch } | null => {
+    const search = (branch: SubagentBranch): SubagentBranch | null => {
+        if (branch.item.toolUseId === toolUseId) {
+            return branch;
+        }
+        for (const child of branch.nested) {
+            const found = search(child);
+            if (found) {
+                return found;
+            }
+        }
+        return null;
+    };
+    for (let index = 0; index < rows.length; index++) {
+        const row = rows[index]!;
+        const branch = row.kind === 'subagent' ? search(row) : null;
+        if (branch) {
+            return { index, branch };
+        }
+    }
+    return null;
+};
 
 /* What each subagent did, keyed by the call that spawned it, in the order it happened. */
 const groupChildren = (items: ChatItem[]): Map<string, ChatItem[]> => {
@@ -203,13 +254,7 @@ const rowsForItems = (items: ChatItem[], options: TimelineOptions, children: Map
         flushTools(tools, rows, options);
         switch (item.kind) {
             case 'subagent':
-                rows.push({
-                    kind: 'subagent',
-                    id: item.id,
-                    item,
-                    children: children.get(item.toolUseId) ?? [],
-                    expanded: options.expandedSubagents.has(item.id)
-                });
+                rows.push({ kind: 'subagent', ...branchOf(item, options, children) });
                 break;
             case 'user':
                 rows.push({ kind: 'user', id: item.id, item });

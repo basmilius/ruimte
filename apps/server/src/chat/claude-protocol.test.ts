@@ -128,7 +128,8 @@ describe('ClaudeProtocol', () => {
                 description: 'Run sleep',
                 subagentType: 'general-purpose',
                 prompt: 'sleep 20',
-                background: true
+                background: true,
+                depth: 1
             }
         ]);
 

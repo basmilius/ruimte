@@ -331,6 +331,106 @@ export const fakeClaude: FakeCli = (io) => {
             result();
             return;
         }
+        /*
+         * A background agent that opens a foreground one of its own, in the order Claude Code 2.1.282 streams it:
+         * the grandchild's call and result come as frames of its parent, its own steps not at all, and its
+         * `task_started` says how deep it runs and nothing of whose it is.
+         */
+        if (text.startsWith('nested:')) {
+            const summary = text.slice(7).trim() || 'done';
+            const task = (frame: Record<string, unknown>): void => {
+                out({ type: 'system', session_id: sessionId, ...frame });
+            };
+            const underMiddle = (message: Record<string, unknown>, type: 'assistant' | 'user'): void => {
+                out({ type, message, parent_tool_use_id: 'toolu_middle', session_id: sessionId });
+            };
+            out({
+                type: 'assistant',
+                message: {
+                    id: `msg_${nonce}_${++messageCounter}`,
+                    model,
+                    role: 'assistant',
+                    content: [
+                        {
+                            type: 'tool_use',
+                            id: 'toolu_middle',
+                            name: 'Agent',
+                            input: { description: 'middle agent', subagent_type: 'general-purpose', prompt: summary, run_in_background: true }
+                        }
+                    ],
+                    usage
+                },
+                session_id: sessionId
+            });
+            task({
+                subtype: 'task_started',
+                task_id: 'a-middle',
+                tool_use_id: 'toolu_middle',
+                description: 'middle agent',
+                subagent_type: 'general-purpose',
+                is_backgrounded: true,
+                spawn_depth: 1,
+                task_type: 'local_agent',
+                prompt: summary
+            });
+            out({
+                type: 'user',
+                message: {
+                    role: 'user',
+                    content: [{ type: 'tool_result', tool_use_id: 'toolu_middle', content: 'Async agent launched successfully.', is_error: false }]
+                },
+                session_id: sessionId
+            });
+            assistantText('sent');
+            result();
+            io.later(() => {
+                underMiddle(
+                    {
+                        id: `msg_${nonce}_${++messageCounter}`,
+                        model,
+                        role: 'assistant',
+                        content: [{ type: 'tool_use', id: 'toolu_leaf', name: 'Agent', input: { description: 'leaf agent', prompt: 'echo PONG' } }],
+                        usage
+                    },
+                    'assistant'
+                );
+                task({
+                    subtype: 'task_started',
+                    task_id: 'a-leaf',
+                    tool_use_id: 'toolu_leaf',
+                    description: 'leaf agent',
+                    subagent_type: 'general-purpose',
+                    is_backgrounded: false,
+                    spawn_depth: 2,
+                    task_type: 'local_agent',
+                    prompt: 'echo PONG'
+                });
+                task({ subtype: 'task_updated', task_id: 'a-leaf', patch: { status: 'completed', end_time: 0 } });
+                task({ subtype: 'task_notification', task_id: 'a-leaf', tool_use_id: 'toolu_leaf', status: 'completed', output_file: '', summary: 'PONG' });
+                underMiddle(
+                    { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_leaf', content: `PONG${agentFooter('a-leaf')}`, is_error: false }] },
+                    'user'
+                );
+                underMiddle(
+                    { id: `msg_${nonce}_${++messageCounter}`, model, role: 'assistant', content: [{ type: 'text', text: `the leaf said PONG` }], usage },
+                    'assistant'
+                );
+                task({ subtype: 'task_updated', task_id: 'a-middle', patch: { status: 'completed', end_time: 0 } });
+                task({
+                    subtype: 'task_notification',
+                    task_id: 'a-middle',
+                    tool_use_id: 'toolu_middle',
+                    status: 'completed',
+                    output_file: '',
+                    summary,
+                    usage: { total_tokens: 1500, tool_uses: 1, duration_ms: 250 }
+                });
+                out({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: io.cwd, tools: ['Bash'], slash_commands: [], argv: args });
+                assistantText(`done: ${summary}`);
+                result();
+            });
+            return;
+        }
         if (text.startsWith('background:')) {
             const summary = text.slice(11).trim() || 'done';
             const id = `msg_${nonce}_${++messageCounter}`;
