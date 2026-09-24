@@ -566,6 +566,13 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                 failed(e);
                 return;
             }
+            const taken: ChatDraft = { text: message.text, mentions: message.mentions ?? [], skills: message.skills ?? [], attachments: uploads };
+            // A file that would not fit is refused here, while the message still holds it on the machine.
+            const wouldReject = takeBackIntoDraft(draftRef.current, taken).rejected[0];
+            if (wouldReject) {
+                setNotice(t('composer.notice.queuedDoesNotFit', { name: wouldReject.name || t('composer.notice.thatFile'), reason: wouldReject.reason }));
+                return;
+            }
             try {
                 await performAsPerson('chat.unqueue', { chatId, messageId: message.id });
             } catch (e) {
@@ -576,12 +583,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                 }
                 return;
             }
-            const merged = takeBackIntoDraft(draftRef.current, {
-                text: message.text,
-                mentions: message.mentions ?? [],
-                skills: message.skills ?? [],
-                attachments: uploads
-            });
+            const merged = takeBackIntoDraft(draftRef.current, taken);
             setDraft(merged.draft);
             if (merged.rejected[0]) {
                 setNotice(t('composer.notice.rejected', { name: merged.rejected[0].name, reason: merged.rejected[0].reason }));

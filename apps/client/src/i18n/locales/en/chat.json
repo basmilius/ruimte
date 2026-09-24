@@ -210,6 +210,7 @@
       "noAttachments": "{{agent}} takes no attachments",
       "thisAgent": "This agent",
       "rejected": "{{name}}: {{reason}}",
+      "queuedDoesNotFit": "{{name}} does not fit beside this draft ({{reason}}). The message stays queued.",
       "thatFile": "That file",
       "unreadable": "That file could not be read"
     },

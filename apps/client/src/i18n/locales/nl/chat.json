@@ -210,6 +210,7 @@
       "noAttachments": "{{agent}} neemt geen bijlagen aan",
       "thisAgent": "Deze agent",
       "rejected": "{{name}}: {{reason}}",
+      "queuedDoesNotFit": "{{name}} past niet naast dit concept ({{reason}}). Het bericht blijft in de wachtrij.",
       "thatFile": "Dat bestand",
       "unreadable": "Dat bestand kon niet worden gelezen"
     },
