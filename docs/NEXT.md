@@ -19,7 +19,13 @@ larger ones becomes a GitHub issue when it starts.
    (or its worktree), so an edit the person made there during a turn lands in the card too.
 4. **A third chat provider** (Gemini, Copilot or opencode) as the proof that the backend seam
    holds: a provider value, a backend and a protocol mapper, plus one literal in `AgentKind`.
-   Hooks for Gemini and Copilot are a day per CLI on top.
+   Hooks for Gemini and Copilot are a day per CLI on top. Two things come before it. The iPhone
+   app with open enums (I1 in `docs/reports/2026-09-24-codebase-review.html`: `AgentKind`,
+   `RuntimeMode` and `AgentStatus` are `x-open-enum` in `schemas.json`) has to be out in an iOS
+   release first, since an older build refuses a whole answer over one value it does not know. And
+   the desktop client validates `AgentKind` with zod just as closed, so a newer machine elsewhere
+   with a third provider breaks the desktop the same way: decide how it reads an unknown provider
+   before this starts.
 5. **Approvals for the other terminal CLIs.** Hook-reply approvals are Claude Code's alone, because
    it is the only terminal CLI with a hook that offers one: Codex waits on such a contract, Gemini
    and Copilot on their hooks in 4.
@@ -87,14 +93,15 @@ larger ones becomes a GitHub issue when it starts.
     removing a clean worktree from the delete question of its node. Still open from the design: the
     iOS app shows none of it, and a merge into a branch checked out nowhere is refused rather than
     offered as a ref-only merge.
-12. **The editor and the diff node**, the half of this the file node does not cover. Saving is the
-    whole of it: there is no `fs.write` on the wire, and adding one is a decision about what a
-    client may change on a machine, with a conflict question under it (an agent rewrote the file
-    meanwhile). Plus a PDF renderer, a diff node that reuses the git panel's scopes, a line number
-    in a file node's path, and "open in editor": an editor probe and preference, `fs.open` with
-    `path:line`, used from menus, diff rows and paths in terminal output. Still unmeasured: what a
-    canvas of ten file nodes on the largest files of a repository costs, now that the plate and the
-    highlighting cap are the two things standing between it and the thirty-node goal.
+12. **The editor and the diff node**, the half of this the file node does not cover. Saving is on
+    the wire: `fs.write` saves a file `fs.read` answered as text, a draft goes to disk after a pause
+    in typing, and a file that moved since it was read (an agent rewrote it meanwhile) is refused as
+    `stale` and waits for a person. Left: a PDF renderer, a diff node that reuses the git panel's
+    scopes, a line number in a file node's path, and "open in editor": an editor probe and
+    preference, `fs.open` with `path:line`, used from menus, diff rows and paths in terminal output.
+    Still unmeasured: what a canvas of ten file nodes on the largest files of a repository costs,
+    now that the plate and the highlighting cap are the two things standing between it and the
+    thirty-node goal.
 13. **A test floor**: a dev-only 30-node palette command and whatever it finds; a DOM setup for
     `bun test` with first specs for the composer and the canvas wiring.
 14. **Usage v2**: a Days table, price and plan overrides, a currency setting, and an export.
