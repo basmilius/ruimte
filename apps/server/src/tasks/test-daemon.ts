@@ -140,7 +140,8 @@ export const bootTestDaemon = async ({
             allowed: () => machine.resumeAtReset,
             now: () => clock.now(),
             owe: (chatId, turnId, at) => outboxLink.oweLimitResume(chatId, turnId, at),
-            lapse: (chatId) => outboxLink.lapseLimitResume(chatId)
+            lapse: (chatId) => outboxLink.lapseLimitResume(chatId),
+            owed: (chatId) => outboxLink.owesLimitResume(chatId)
         }
     });
     let waiters: Array<{ check: () => boolean; resolve: () => void }> = [];

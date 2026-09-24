@@ -73,6 +73,7 @@ export interface LimitResumeHooks {
     // Owes the outbox entry that takes the turn up at `at`, in place of any this chat owed before.
     owe(turnId: string, at: number): Promise<void>;
     lapse(): Promise<void>;
+    owed(): boolean;
 }
 
 // Claude Code names a session about six seconds after its first prompt, and a first turn can run for minutes.
@@ -597,6 +598,25 @@ export class ChatSession {
         }
         this.emit([this.thread.patchInfo({ resumeAt: at })]);
         this.options.persist();
+        void hooks.owe(turn.id, at).catch((e: unknown) => console.error(`Owing a resume of chat ${this.id} failed:`, errorText(e)));
+    }
+
+    /*
+     * A resume time the record shows while the outbox holds no entry for it, which a daemon that went
+     * down between the two leaves: owed again at that time, or taken off when nothing may owe it now.
+     */
+    settleOwedResume(): void {
+        const hooks = this.options.limitResume;
+        const at = this.thread.info.resumeAt;
+        if (at === undefined || hooks?.owed() === true) {
+            return;
+        }
+        const turn = limitedTurn(this.thread.list());
+        if (!hooks || turn === null || this.thread.info.activeTurnId !== null || !this.resumeAllowed()) {
+            this.emit([this.thread.patchInfo({ resumeAt: undefined })]);
+            this.options.persist();
+            return;
+        }
         void hooks.owe(turn.id, at).catch((e: unknown) => console.error(`Owing a resume of chat ${this.id} failed:`, errorText(e)));
     }
 

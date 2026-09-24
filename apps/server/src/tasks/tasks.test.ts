@@ -630,6 +630,46 @@ describe('resume at reset', () => {
         expect(wakeTurns(second)).toHaveLength(1);
     });
 
+    /* A child limited with its resume owed, and the daemon gone after the chat showed the time but before the entry was written. */
+    const shownButNotOwed = async (next: () => Promise<Daemon>): Promise<{ daemon: Daemon; childId: string; taskId: string }> => {
+        const first = await bootOn();
+        first.worker.start();
+        await leadIdle(first);
+        const child = await delegate(first, 'Lexer', `fix the tokenizer\nlimit:${RESET_AT / 1000}`);
+        await first.until(() => owedResumes(first).length === 1);
+        await first.worker.settled();
+        await first.stop();
+        const daemon = await next();
+        for (const entry of owedResumes(daemon)) {
+            await daemon.outbox.remove(entry.id);
+        }
+        return { daemon, ...child };
+    };
+
+    test('a restart between showing the resume time and owing it owes it again at that time', async () => {
+        const { daemon, childId, taskId } = await shownButNotOwed(bootOn);
+        await daemon.chats.recoverInterrupted();
+        await daemon.until(() => owedResumes(daemon).length === 1);
+        expect(owedResumes(daemon)[0]).toMatchObject({ target: childId, notBefore: RESET_AT });
+        expect(daemon.chats.get(childId)?.info.resumeAt).toBe(RESET_AT);
+
+        daemon.worker.start();
+        clock.advance(RESET_AT - clock.now());
+        await daemon.until(() => daemon.tasks.get(taskId)?.wake === 'sent');
+        await daemon.worker.settled();
+        expect(daemon.tasks.get(taskId)?.status).toBe('done');
+        expect(turnsOf(daemon, childId).map((turn) => turn.label ?? turn.state)).toEqual(['error', 'Usage limit reset']);
+    });
+
+    test('a resume time left without its entry is taken off when the machine has the switch off by then', async () => {
+        const { daemon, childId } = await shownButNotOwed(boot);
+        await daemon.chats.recoverInterrupted();
+        const chat = daemon.chats.get(childId);
+        expect(chat?.info.limit).toMatchObject({ kind: 'usage' });
+        expect(chat?.info.resumeAt).toBeUndefined();
+        expect(owedResumes(daemon)).toEqual([]);
+    });
+
     test('a task that settles while the lead waits for its reset wakes it after the resume turn, which spends no try', async () => {
         const daemon = await bootOn();
         daemon.worker.start();

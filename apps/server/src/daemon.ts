@@ -333,7 +333,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             allowed: () => identity.resumeAtReset,
             now: () => Date.now(),
             owe: (chatId, turnId, at) => outboxLink.oweLimitResume(chatId, turnId, at),
-            lapse: (chatId) => outboxLink.lapseLimitResume(chatId)
+            lapse: (chatId) => outboxLink.lapseLimitResume(chatId),
+            owed: (chatId) => outboxLink.owesLimitResume(chatId)
         }
     });
     const projects = new ProjectStore(config.home);

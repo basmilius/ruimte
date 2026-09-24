@@ -149,6 +149,8 @@ interface ChatManagerOptions {
         now(): number;
         owe(chatId: string, turnId: string, at: number): Promise<void>;
         lapse(chatId: string): Promise<void>;
+        // Whether the outbox holds that entry for this chat now.
+        owed(chatId: string): boolean;
     };
 }
 
@@ -440,6 +442,7 @@ export class ChatManager {
         this.chats.set(session.id, session);
         if (stored) {
             session.settleStored(selection, resume);
+            session.settleOwedResume();
             await session.settleOrphanedSubagents();
         }
         for (const task of this.taskRows(payload.chatId)) {
@@ -999,9 +1002,9 @@ export class ChatManager {
     }
 
     /*
-     * Loads every stored chat whose turn was running when the daemon went down, so the rule in `create`
-     * decides whether it is resumed without waiting for a client to open it. One file at a time: it
-     * runs beside the daemon answering, not in front of it.
+     * Loads every stored chat whose turn was running when the daemon went down, or that shows a resume
+     * after a limit the outbox does not hold, so `create` decides what becomes of it without waiting for
+     * a client to open it. One file at a time: it runs beside the daemon answering, not in front of it.
      */
     async recoverInterrupted(): Promise<void> {
         if (!this.store) {
@@ -1012,7 +1015,8 @@ export class ChatManager {
                 continue;
             }
             const record = await this.store.read(chatId).catch(() => null);
-            if (record !== null && interruptedTurn(record) !== null) {
+            const unowed = record?.info.resumeAt !== undefined && this.limitResume?.owed(chatId) === false;
+            if (record !== null && (interruptedTurn(record) !== null || unowed)) {
                 await this.create({ chatId }).catch((e: unknown) => console.error(`Loading chat ${chatId} after a restart failed:`, errorText(e)));
             }
         }
@@ -1241,7 +1245,8 @@ const limitHooks = (hooks: NonNullable<ChatManagerOptions['limitResume']>, chatI
     allowed: () => hooks.allowed(),
     now: () => hooks.now(),
     owe: (turnId, at) => hooks.owe(chatId, turnId, at),
-    lapse: () => hooks.lapse(chatId)
+    lapse: () => hooks.lapse(chatId),
+    owed: () => hooks.owed(chatId)
 });
 
 /* The running turn of a stored chat, when it may be resumed and the resume is now owed; null otherwise. */

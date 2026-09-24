@@ -73,6 +73,10 @@ export class OutboxLink {
         this.onEnqueued?.({ kind: 'resume-limit', payload: { turnId } });
     }
 
+    owesLimitResume(chatId: string): boolean {
+        return this.outbox.list().some((entry) => entry.kind === 'resume-limit' && entry.target === chatId);
+    }
+
     /* Drops what a chat was owed after a limit; with no chat, what every chat was, as the machine's switch goes off. */
     async lapseLimitResume(chatId?: string): Promise<void> {
         for (const entry of this.outbox.list()) {
