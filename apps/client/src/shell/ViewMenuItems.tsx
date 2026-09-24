@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import {
+    ArrowRightToLine,
     Copy,
     CornerUpRight,
     Expand,
     Frame,
+    ListX,
     MessageSquare,
     PanelBottom,
     PanelRight,
@@ -24,7 +26,7 @@ import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from
 import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
-import { canSplit, cellAt, cellCount, freeViewFor, maximizedCell, type CellAt } from '@/shell/split';
+import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, maximizedCell, type CellAt } from '@/shell/split';
 import { useChatRow } from '@/state/chats';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
@@ -177,6 +179,7 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
     const cell = at ?? layout?.focus ?? null;
     const closable = layout !== null && cellCount(layout) > 1;
     const standing = layout !== null && cell !== null ? (cellAt(layout, cell)?.viewId ?? null) : null;
+    const closesRight = layout !== null && cell !== null && standing !== null && cellsRightOf(layout, cell) > 0;
     const room = (direction: 'right' | 'down'): boolean => layout !== null && free !== null && cell !== null && canSplit(layout, cell, direction, free);
     if (!room('right') && !room('down') && !closable) {
         return null;
@@ -214,6 +217,16 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
             {closable && standing !== null && (
                 <Menu.Item className="menu-item" onClick={() => closeCellAction(standing)}>
                     <Icon icon={X} size={14} /> {t('cellToolbar.closeCell')} <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
+                </Menu.Item>
+            )}
+            {closable && cell !== null && standing !== null && (
+                <Menu.Item className="menu-item" onClick={() => useDocument.getState().closeOtherCells(cell)}>
+                    <Icon icon={ListX} size={14} /> {t('viewMenu.closeOthers')}
+                </Menu.Item>
+            )}
+            {closesRight && cell !== null && (
+                <Menu.Item className="menu-item" onClick={() => useDocument.getState().closeCellsRightOf(cell)}>
+                    <Icon icon={ArrowRightToLine} size={14} /> {t('viewMenu.closeToRight')}
                 </Menu.Item>
             )}
             {/* The line under the group, drawn here rather than by the caller: with nothing to split

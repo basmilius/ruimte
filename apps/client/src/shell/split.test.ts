@@ -5,8 +5,11 @@ import {
     canSplit,
     cellAt,
     cellCount,
+    cellsRightOf,
     cleanLayout,
     closeCell,
+    closeCellsRightOf,
+    closeOtherCells,
     dropView,
     focusCell,
     focusDirection,
@@ -475,5 +478,63 @@ describe('maximizedCell', () => {
         expect(maximizedCell(gridOf([['a'], ['b']]), 'gone')).toBeNull();
         expect(maximizedCell(gridOf([['a']]), 'a')).toBeNull();
         expect(maximizedCell(null, 'a')).toBeNull();
+    });
+});
+
+describe('closeOtherCells', () => {
+    test('leaves the one cell, filling the grid and holding the focus', () => {
+        const next = closeOtherCells(gridOf([['a', 'b'], ['c']], { column: 1, cell: 0 }), { column: 0, cell: 1 });
+        expect(shapeOf(next)).toEqual([['b']]);
+        expect(focusedViewId(next)).toBe('b');
+        sums(next);
+    });
+
+    test('a cell alone, or one that is not there, changes nothing', () => {
+        const alone = gridOf([['a']]);
+        expect(closeOtherCells(alone, { column: 0, cell: 0 })).toBe(alone);
+        const two = gridOf([['a'], ['b']]);
+        expect(closeOtherCells(two, { column: 3, cell: 0 })).toBe(two);
+    });
+});
+
+describe('closeCellsRightOf', () => {
+    test('counts the cells in the columns to the right, never the ones under it', () => {
+        const layout = gridOf([['a', 'b'], ['c', 'd'], ['e']]);
+        expect(cellsRightOf(layout, { column: 0, cell: 1 })).toBe(3);
+        expect(cellsRightOf(layout, { column: 1, cell: 0 })).toBe(1);
+        expect(cellsRightOf(layout, { column: 2, cell: 0 })).toBe(0);
+    });
+
+    test('closes every column to the right, and the columns left keep their proportions', () => {
+        const layout: SplitLayout = {
+            columns: [
+                { size: 0.2, cells: [{ viewId: 'a', size: 1 }] },
+                { size: 0.3, cells: [{ viewId: 'b', size: 1 }] },
+                {
+                    size: 0.5,
+                    cells: [
+                        { viewId: 'c', size: 0.5 },
+                        { viewId: 'd', size: 0.5 }
+                    ]
+                }
+            ],
+            focus: { column: 0, cell: 0 }
+        };
+        const next = closeCellsRightOf(layout, { column: 1, cell: 0 });
+        expect(shapeOf(next)).toEqual([['a'], ['b']]);
+        expect(next.columns.map((column) => column.size)[0]).toBeCloseTo(0.4, 10);
+        expect(focusedViewId(next)).toBe('a');
+        sums(next);
+    });
+
+    test('a focus in a closed column comes to the cell the menu was on', () => {
+        const next = closeCellsRightOf(gridOf([['a', 'b'], ['c']], { column: 1, cell: 0 }), { column: 0, cell: 1 });
+        expect(shapeOf(next)).toEqual([['a', 'b']]);
+        expect(focusedViewId(next)).toBe('b');
+    });
+
+    test('the last column has nothing to its right', () => {
+        const layout = gridOf([['a'], ['b']]);
+        expect(closeCellsRightOf(layout, { column: 1, cell: 0 })).toBe(layout);
     });
 });

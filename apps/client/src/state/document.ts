@@ -38,6 +38,8 @@ import {
     cellAt,
     cellCount,
     closeCell,
+    closeCellsRightOf,
+    closeOtherCells,
     dropView,
     evenCells,
     evenColumns,
@@ -130,6 +132,10 @@ export interface DocumentState {
     splitFocused(direction: SplitDirection, viewId: string): void;
     /* Takes a cell off the grid; the neighbors grow into it. The last cell stays, there has to be one. */
     closeCellAt(at: CellAt): void;
+    /* Every cell but this one; the views stay in the project, as with closing one. */
+    closeOtherCells(at: CellAt): void;
+    /* The cells in the columns right of this one. */
+    closeCellsRightOf(at: CellAt): void;
     focusCellAt(at: CellAt): void;
     /* Fills the grid with the focused cell, or puts the grid back as it was. */
     toggleMaximized(): void;
@@ -606,6 +612,22 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 // The last cell stays, since a project always has a view open, and an empty grid is not a state.
                 const next = closeCell(state.layout, at);
                 if (next !== null) {
+                    commit(next);
+                }
+            },
+
+            closeOtherCells(at) {
+                const state = get();
+                const next = state.layout === null ? null : closeOtherCells(state.layout, at);
+                if (next !== null && next !== state.layout) {
+                    commit(next);
+                }
+            },
+
+            closeCellsRightOf(at) {
+                const state = get();
+                const next = state.layout === null ? null : closeCellsRightOf(state.layout, at);
+                if (next !== null && next !== state.layout) {
                     commit(next);
                 }
             },

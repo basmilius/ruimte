@@ -240,3 +240,23 @@ describe('maximizing a cell', () => {
         expect(JSON.stringify(useDocument.getState().exportLocal())).not.toContain('maximized');
     });
 });
+
+describe('closing more than one cell', () => {
+    test('the others go with their editors, and the one kept fills the grid', () => {
+        useDocument.getState().splitFocused('right', 'b');
+        useDocument.getState().splitFocused('down', 'c');
+        useDocument.getState().closeOtherCells({ column: 1, cell: 0 });
+        expect(shape()).toEqual([['b']]);
+        expect(openEditors()).toEqual(['b']);
+        expect(useDocument.getState().activeViewId).toBe('b');
+        expect(useDocument.getState().views.map((each) => each.id)).toEqual(['a', 'b', 'c', 'd']);
+    });
+
+    test('the columns to the right go and the focus comes along when it was there', () => {
+        useDocument.getState().splitFocused('right', 'b');
+        useDocument.getState().splitFocused('right', 'c');
+        useDocument.getState().closeCellsRightOf({ column: 0, cell: 0 });
+        expect(shape()).toEqual([['a']]);
+        expect(useDocument.getState().activeViewId).toBe('a');
+    });
+});

@@ -38,6 +38,8 @@ export interface MenuContext {
     split: { right: boolean; down: boolean };
     /* A cell fills the grid for now. */
     maximized: boolean;
+    /* Columns stand right of the focused cell. */
+    closesRight: boolean;
     /* The open panel, or null while none is. */
     panel: PanelKind | null;
     sidebar: boolean;
@@ -205,6 +207,11 @@ export const menuModel = (context: MenuContext): MenuSpec => {
             ...only(workspace, command('project-settings', t('projectSettings'))),
             separator,
             ...only(workspace || desktop, close),
+            ...only(
+                workspace,
+                command('cell-close-others', t('closeOtherCells'), { enabled: context.cells > 1 }),
+                command('cell-close-right', t('closeCellsRight'), { enabled: context.closesRight })
+            ),
             ...only(!apple, separator, command('settings', t('settings'), { shortcut: APP_SHORTCUTS.settings })),
             ...only(!apple && desktop, separator, shell('stop-machine-and-quit', t('stopAndQuit')), role('quit', t('quit')))
         ]

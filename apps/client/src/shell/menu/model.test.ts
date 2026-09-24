@@ -33,6 +33,7 @@ const context = (patch: Partial<MenuContext> = {}): MenuContext => ({
     cells: 1,
     split: { right: true, down: true },
     maximized: false,
+    closesRight: false,
     panel: null,
     sidebar: true,
     views: ['Main', 'Sketch'],
@@ -154,6 +155,16 @@ describe('the menus', () => {
         expect(find(menuModel(context({ cells: 1 })), 'cell-maximize')?.enabled).toBe(false);
         const two = find(menuModel(context({ cells: 2, maximized: true })), 'cell-maximize');
         expect(two).toMatchObject({ enabled: true, checked: true, accelerator: 'CommandOrControl+Shift+Enter' });
+    });
+
+    test('closing the other cells or those to the right sits under Close, greyed while there is nothing to close', () => {
+        const one = menuModel(context({ cells: 1 }));
+        expect(find(one, 'cell-close-others')?.enabled).toBe(false);
+        expect(find(one, 'cell-close-right')?.enabled).toBe(false);
+        const three = menuModel(context({ cells: 3, closesRight: true }));
+        expect(find(three, 'cell-close-others')?.enabled).toBe(true);
+        expect(find(three, 'cell-close-right')?.enabled).toBe(true);
+        expect(commandIds(menuModel(START_SCREEN))).not.toContain('cell-close-others');
     });
 
     test('zoom is offered on every view and only works where there is a camera', () => {

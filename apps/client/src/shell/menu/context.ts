@@ -4,7 +4,7 @@ import { forkRefusal, lastSettledTurn } from '@/chat/logic/fork';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { canOpenAsView, type SessionHandoff } from '@/project/views';
 import type { MenuContext, MenuHost } from '@/shell/menu/model';
-import { canSplit, cellCount, freeViewFor, maximizedCell } from '@/shell/split';
+import { canSplit, cellCount, cellsRightOf, freeViewFor, maximizedCell } from '@/shell/split';
 import { sessionHandoffs, viewOffers, type ViewOffers } from '@/shell/view-offers';
 import { focusedCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
@@ -90,6 +90,7 @@ export const menuContext = (host: MenuHost): MenuContext => {
         cells: layout === null ? 1 : cellCount(layout),
         split: { right: room('right'), down: room('down') },
         maximized: maximizedCell(layout, documentState.maximized) !== null,
+        closesRight: layout !== null && cellsRightOf(layout, layout.focus) > 0,
         panel: ui.panel.open ? ui.panel.kind : null,
         sidebar: ui.sidebarOpen,
         views: documentState.views.filter(isOpenableView).map(nameOf),

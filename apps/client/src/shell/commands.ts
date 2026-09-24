@@ -33,7 +33,7 @@ import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import { cellCount, maximizedCell } from '@/shell/split';
+import { cellCount, cellsRightOf, maximizedCell } from '@/shell/split';
 import type { Shortcut } from '@/ui/shortcut';
 
 export interface Command {
@@ -206,7 +206,21 @@ export const appCommands = (): Command[] => {
                                 label: i18next.t(filling ? 'shell:viewMenu.restoreSplit' : 'shell:viewMenu.maximizeCell'),
                                 shortcut: CANVAS_SHORTCUTS.maximizeCell,
                                 run: () => useDocument.getState().toggleMaximized()
-                            }
+                            },
+                            {
+                                id: 'cell-close-others',
+                                label: i18next.t('shell:palette.commands.closeOtherCells'),
+                                run: () => useDocument.getState().closeOtherCells(layout.focus)
+                            },
+                            ...(cellsRightOf(layout, layout.focus) > 0
+                                ? [
+                                      {
+                                          id: 'cell-close-right',
+                                          label: i18next.t('shell:palette.commands.closeCellsRight'),
+                                          run: () => useDocument.getState().closeCellsRightOf(layout.focus)
+                                      }
+                                  ]
+                                : [])
                         ]
                       : []),
                   {

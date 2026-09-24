@@ -199,6 +199,24 @@ export const closeCell = (layout: SplitLayout, at: CellAt): SplitLayout | null =
     return settled(columns, target);
 };
 
+/* Every cell but the one at `at`, which then fills the grid and has the focus. */
+export const closeOtherCells = (layout: SplitLayout, at: CellAt): SplitLayout => {
+    const kept = cellAt(layout, at);
+    return kept === null || cellCount(layout) === 1 ? layout : singleLayout(kept.viewId);
+};
+
+/* The cells in the columns right of the one `at` stands in, which is what "close to the right" closes. */
+export const cellsRightOf = (layout: SplitLayout, at: CellAt): number =>
+    layout.columns.slice(at.column + 1).reduce((total, column) => total + column.cells.length, 0);
+
+/* The columns left keep their proportions. A focus that was in a closed column comes to this cell. */
+export const closeCellsRightOf = (layout: SplitLayout, at: CellAt): SplitLayout => {
+    if (cellAt(layout, at) === null || cellsRightOf(layout, at) === 0) {
+        return layout;
+    }
+    return settled(layout.columns.slice(0, at.column + 1), layout.focus.column > at.column ? at : layout.focus);
+};
+
 export const focusCell = (layout: SplitLayout, at: CellAt): SplitLayout => (cellAt(layout, at) === null ? layout : { ...layout, focus: at });
 
 /* The span a cell covers on its column's axis, in shares, which is what makes two columns comparable. */
