@@ -233,6 +233,7 @@ import {
     ComputerAnswerResultSchema,
     ComputerApprovalsSchema,
     ComputerControlPayloadSchema,
+    ComputerRequestGrantPayloadSchema,
     ComputerUseSetEnabledPayloadSchema,
     ComputerUseStatusSchema
 } from './computer.ts';
@@ -420,6 +421,7 @@ export const REQUEST_SCHEMAS = {
     // Quits the helper and starts it again, which is when macOS applies a Screen Recording grant.
     'computer.restart': { payload: EmptySchema, result: ComputerUseStatusSchema },
     'computer.control': { payload: ComputerControlPayloadSchema, result: ComputerUseStatusSchema },
+    'computer.requestGrant': { payload: ComputerRequestGrantPayloadSchema, result: ComputerUseStatusSchema },
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
     'endpoint.signRegistration': { payload: EndpointSignRegistrationPayloadSchema, result: EndpointSignRegistrationResultSchema },

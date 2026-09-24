@@ -1,7 +1,7 @@
 import { mkdir, readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { ComputerApproval, ComputerApprovalChoice, ComputerControlAction, ComputerUseStatus } from '@ruimte/contracts';
+import type { ComputerApproval, ComputerApprovalChoice, ComputerControlAction, ComputerGrant, ComputerUseStatus } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { CodedError } from '../coded-error.ts';
 import { writeAtomic } from '../fs.ts';
@@ -283,6 +283,22 @@ export class ComputerUse {
         this.session = null;
         // Not asked again: the helper answers for a moment after it was told to quit.
         return this.setStatus({ ...this.current, enabled: false, running: false });
+    }
+
+    /* macOS lists an app in a pane of Privacy & Security only once it asked for that grant, so the person finds it there to switch on. */
+    async requestGrant(grant: ComputerGrant): Promise<ComputerUseStatus> {
+        if (!this.store.enabled || !this.helper.present) {
+            return this.refreshStatus();
+        }
+        const doctor = await this.helper.request({ command: 'doctor', prompt: true, grant }, DoctorResultSchema);
+        this.session = doctor.session ?? null;
+        return this.setStatus({
+            enabled: true,
+            present: true,
+            running: true,
+            accessibility: doctor.accessibility.granted,
+            screenRecording: doctor.screenRecording.granted
+        });
     }
 
     /* Screen Recording applies to a fresh launch of the helper only, so a person who just granted it gets one without a command. */

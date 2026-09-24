@@ -496,6 +496,24 @@ describe('a fresh helper for a new grant', () => {
     });
 });
 
+describe('asking macOS for a grant', () => {
+    test('has the helper ask for that one grant, starting it when it does not run', async () => {
+        const { computer, helper, launches } = await computerSetup();
+        helper.running = false;
+        helper.screenRecording = false;
+        const before = launches.length;
+        expect(await computer.requestGrant('screenRecording')).toMatchObject({ running: true, screenRecording: false });
+        expect(launches.length).toBe(before + 1);
+        expect(helper.requests.at(-1)).toMatchObject({ command: 'doctor', prompt: true, grant: 'screenRecording' });
+    });
+
+    test('asks nothing while computer use is off', async () => {
+        const { computer, helper } = await computerSetup({ enabled: false });
+        await computer.requestGrant('accessibility');
+        expect(helper.requests.some((request) => request.prompt === true)).toBe(false);
+    });
+});
+
 describe("the person's buttons in Ruimte", () => {
     test('pause and resume the session the way the session bar does', async () => {
         const setup = await computerSetup();

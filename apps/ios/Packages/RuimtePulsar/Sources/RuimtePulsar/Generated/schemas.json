@@ -29844,6 +29844,89 @@
       "screenRecording"
     ]
   },
+  "request.computer.requestGrant.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "grant": {
+        "type": "string",
+        "enum": [
+          "accessibility",
+          "screenRecording"
+        ]
+      }
+    },
+    "required": [
+      "grant"
+    ]
+  },
+  "request.computer.requestGrant.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean"
+      },
+      "present": {
+        "type": "boolean"
+      },
+      "running": {
+        "type": "boolean"
+      },
+      "accessibility": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "screenRecording": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "problem": {
+        "type": "string"
+      },
+      "session": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "paused",
+                  "takenOver"
+                ]
+              },
+              "nodeId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "mode",
+              "nodeId"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "enabled",
+      "present",
+      "running",
+      "accessibility",
+      "screenRecording"
+    ]
+  },
   "request.endpoint.info.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

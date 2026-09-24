@@ -8,6 +8,8 @@ export const registerComputerHandlers = (dispatcher: Dispatcher, computer: Compu
 
     dispatcher.register('computer.restart', () => computer.restart());
 
+    dispatcher.register('computer.requestGrant', (payload) => computer.requestGrant(payload.grant));
+
     dispatcher.register('computer.control', (payload) => computer.control(payload.action));
 
     dispatcher.register('computer.approvals', () => ({ approvals: computer.pendingApprovals() }));

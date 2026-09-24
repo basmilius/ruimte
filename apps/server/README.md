@@ -212,7 +212,7 @@ The person can pause the session (⌥Space), take the Mac over with their own mo
 
 `computer.status` answers whether the helper is there, whether it runs and what it reported about Accessibility and Screen Recording; asking it starts the helper only while computer use is on. `session` says how the helper's session stood when the machine last heard: `null` while none runs, otherwise its `mode` (`running`, `paused`, `takenOver`) and the `nodeId` of the chat or terminal that holds it.
 
-`computer.restart` quits the helper, waits until its socket closes and starts it again, since macOS applies a Screen Recording grant to a fresh launch only; the settings call it when a person comes back from System Settings. `computer.control` is the session bar's buttons pressed in Ruimte (`pause`, `resume`, `stop`): the daemon forwards the press to a helper that runs, starts none for it, and answers with the status after it.
+`computer.restart` quits the helper, waits until its socket closes and starts it again, since macOS applies a Screen Recording grant to a fresh launch only; the settings call it when a person comes back from System Settings. `computer.requestGrant` has the helper ask macOS for one grant, which is what lists it in that pane of System Settings for the person to switch on. `computer.control` is the session bar's buttons pressed in Ruimte (`pause`, `resume`, `stop`): the daemon forwards the press to a helper that runs, starts none for it, and answers with the status after it.
 
 ## Providers and models
 

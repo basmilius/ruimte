@@ -136,6 +136,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `computerAnswer` = "computer.answer"
     case `computerRestart` = "computer.restart"
     case `computerControl` = "computer.control"
+    case `computerRequestGrant` = "computer.requestGrant"
     case `endpointInfo` = "endpoint.info"
     case `endpointSetIdentity` = "endpoint.setIdentity"
     case `endpointSignRegistration` = "endpoint.signRegistration"

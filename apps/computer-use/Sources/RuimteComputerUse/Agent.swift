@@ -96,7 +96,7 @@ final class Agent {
         switch request.command {
         case "doctor":
             return await respond {
-                var result = Permissions.doctor(prompt: request.prompt ?? true)
+                var result = Permissions.doctor(prompt: request.prompt ?? true, only: request.grant)
                 result["session"] = self.overlay.control.summary
                 return result
             }

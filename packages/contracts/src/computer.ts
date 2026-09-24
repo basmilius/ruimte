@@ -37,6 +37,16 @@ export const ComputerUseSetEnabledPayloadSchema = z.object({
 });
 export type ComputerUseSetEnabledPayload = z.infer<typeof ComputerUseSetEnabledPayloadSchema>;
 
+/* The two macOS grants the helper needs; a person gives each in System Settings, on the Mac itself. */
+export const ComputerGrantSchema = z.enum(['accessibility', 'screenRecording']);
+export type ComputerGrant = z.infer<typeof ComputerGrantSchema>;
+
+// Has the helper ask macOS for one grant, which is what lists it in that pane of System Settings.
+export const ComputerRequestGrantPayloadSchema = z.object({
+    grant: ComputerGrantSchema
+});
+export type ComputerRequestGrantPayload = z.infer<typeof ComputerRequestGrantPayloadSchema>;
+
 /* The buttons of the helper's session bar, pressed by a person on the node whose agent holds the Mac. */
 export const ComputerControlActionSchema = z.enum(['pause', 'resume', 'stop']);
 export type ComputerControlAction = z.infer<typeof ComputerControlActionSchema>;

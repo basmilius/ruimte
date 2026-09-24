@@ -64,6 +64,8 @@ export interface HelperRequest extends StateOptions {
     // Words beside the cursor for a `presence` state, instead of the helper's own for it.
     label?: string;
     step?: string;
+    // For `doctor` with `prompt`: only this grant is asked for, and the pane is left to the caller.
+    grant?: 'accessibility' | 'screenRecording';
 }
 
 export const HelperReplySchema = z.union([

@@ -228,6 +228,7 @@
     "computer.answer",
     "computer.restart",
     "computer.control",
+    "computer.requestGrant",
     "endpoint.info",
     "endpoint.setIdentity",
     "endpoint.signRegistration",

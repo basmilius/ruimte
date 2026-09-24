@@ -42,7 +42,7 @@ screenshots/      window captures; one older than an hour goes at the next captu
 
 A connection carries one request. The client writes one JSON object and half-closes, the helper answers with one JSON object and closes. The request is `Request` in `Sources/ComputerUseCore/Wire.swift`. It holds `command`, the fields that command takes, and `secret`, the content of `$RUIMTE_HOME/local.key`. The helper accepts a connection only from a process of the same user. It accepts a request only when `secret` matches that file, which it reads again for every request and compares in constant time. Whoever can read `local.key` can drive the daemon already, so the helper is no weaker than the daemon. The reply is `{"ok": true, "result": {...}}` or `{"ok": false, "error": "...", "code": "..."}`. `code` is there only for a refusal a caller branches on (`paused`, `taken-over`, `stopped`); the message is for people and may change. A request without the secret gets `refused: ...` before the helper looks at anything else in it.
 
-The commands are the ones `cu` sends, listed below. `--state` is `withState`, a menu index or path is `path`, and the key combos of `key` are `combos`.
+The commands are the ones `cu` sends, listed below. `doctor` also takes `grant` (`accessibility` or `screenRecording`) beside `prompt`: then it asks macOS for that one grant only, which puts the helper in that list of System Settings, and leaves opening the pane to the caller. `cu` has no flag for it. `--state` is `withState`, a menu index or path is `path`, and the key combos of `key` are `combos`.
 
 ### The words
 

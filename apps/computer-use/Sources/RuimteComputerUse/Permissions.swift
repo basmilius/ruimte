@@ -22,15 +22,17 @@ enum Permissions {
         }
     }
 
-    static func doctor(prompt: Bool) -> [String: Any] {
+    static func doctor(prompt: Bool, only grant: String? = nil) -> [String: Any] {
         let accessibility = AXIsProcessTrusted()
         let screenRecording = CGPreflightScreenCaptureAccess()
+        let promptsAccessibility = prompt && (grant == nil || grant == "accessibility")
+        let promptsScreenRecording = prompt && (grant == nil || grant == "screenRecording")
         var steps: [String] = []
         var prompted: [String] = []
 
         if !accessibility {
             steps.append("Open System Settings > Privacy & Security > Accessibility and turn on \"\(appName)\" (\(appPath)). If it is not in the list, click +, choose that app and turn it on.")
-            if prompt {
+            if promptsAccessibility {
                 // The literal key: the imported kAXTrustedCheckOptionPrompt global is not concurrency-safe in Swift 6.
                 AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
                 prompted.append("accessibility prompt")
@@ -39,12 +41,12 @@ enum Permissions {
         if !screenRecording {
             steps.append("Open System Settings > Privacy & Security > Screen & System Audio Recording and turn on \"\(appName)\" (\(appPath)). If it is not in the list, click +, choose that app and turn it on.")
             steps.append("After granting Screen Recording, run `cu quit`; macOS only applies it to a fresh launch, and the next cu command starts the agent again.")
-            if prompt {
+            if promptsScreenRecording {
                 CGRequestScreenCaptureAccess()
                 prompted.append("screen recording prompt")
             }
         }
-        if prompt, let pane = !accessibility ? accessibilityPane : (!screenRecording ? screenRecordingPane : nil), let url = URL(string: pane) {
+        if prompt, grant == nil, let pane = !accessibility ? accessibilityPane : (!screenRecording ? screenRecordingPane : nil), let url = URL(string: pane) {
             NSWorkspace.shared.open(url)
             prompted.append(!accessibility ? "opened the Accessibility pane" : "opened the Screen Recording pane")
         }
