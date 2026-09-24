@@ -7,7 +7,7 @@ import type { GitConflictFile, GitConflictsResult, GitOperation } from '@ruimte/
 import { bothLines, sideLines, wandLines, type MergeSide } from '@ruimte/merge';
 import { ConflictEditor, type EditorHandle } from '@/conflicts/ConflictEditor';
 import { ConflictSides } from '@/conflicts/ConflictSides';
-import { conflictIndexes, contentOf, draftWith, fileOf, nextConflict, openInDraft, usableBlocks, type ConflictFile } from '@/conflicts/conflict-model';
+import { answerInto, conflictIndexes, contentOf, fileOf, nextConflict, openInDraft, usableBlocks, type ConflictFile } from '@/conflicts/conflict-model';
 import type { ConflictDraft } from '@/conflicts/editor';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { cancelGitRunAction, performAsPerson } from '@/actions/client-actions';
@@ -199,13 +199,15 @@ export function ConflictOverlay() {
         }
         const result = await performAsPerson('git.proposeResolution', { repository: cwd, path: target.path, run: actionId });
         const usable = usableBlocks(target, result.blocks);
-        if (target.path === activeFile) {
+        // Read when the answer lands, not when it was asked for: the file on screen may have changed since.
+        const onScreen = editor.current;
+        if (onScreen !== null && onScreen.path === target.path) {
             for (const entry of usable) {
-                apply(entry.index, entry.lines);
+                onScreen.apply(entry.index, entry.lines);
             }
         } else {
             const answered = new Map(usable.map((entry) => [entry.index, entry.lines] as const));
-            const next = draftWith(target, answered);
+            const next = answerInto(drafts.current.get(target.path), target, answered);
             drafts.current.set(target.path, next);
             setOpen((previous) => ({ ...previous, [target.path]: openInDraft(next).length }));
         }
@@ -287,7 +289,7 @@ export function ConflictOverlay() {
         }
         setBusy(true);
         try {
-            await performAsPerson('git.resolveConflict', { repository: cwd, path, content: null, take: side, hash: null });
+            await performAsPerson('git.resolveConflict', { repository: cwd, path, content: null, take: side, hash: files.current.get(path)?.hash ?? null });
             files.current.delete(path);
             drafts.current.delete(path);
             setActivePath(null);
@@ -379,12 +381,12 @@ export function ConflictOverlay() {
                                 </button>
                             </Tooltip>
                         </span>
-                        <Tooltip label={wandable === 0 ? t('wand.nothing') : t('wand.tip', { count: wandable })}>
+                        <Tooltip label={wandable === 0 ? t('wand.nothing') : t('wand.tip', { count: wandable })} name>
                             <button className="icon-btn h-7 w-7" disabled={wandable === 0 || busy} onClick={wand}>
                                 <Icon icon={Wand2} size={14} />
                             </button>
                         </Tooltip>
-                        <Tooltip label={t('ai.file')}>
+                        <Tooltip label={t('ai.file')} name>
                             <button
                                 className="icon-btn h-7 w-7"
                                 disabled={busy || file === null || file.whole}
@@ -415,6 +417,7 @@ export function ConflictOverlay() {
                                             'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-hover',
                                             entry.path === activeFile && 'bg-surface-active'
                                         )}
+                                        disabled={busy}
                                         onClick={() => setActivePath(entry.path)}
                                     >
                                         <Icon

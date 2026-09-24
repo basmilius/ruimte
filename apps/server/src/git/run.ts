@@ -1,8 +1,8 @@
 import { CodedError } from '../coded-error.ts';
 
-export interface GitResult {
+export interface GitResult<Output = string> {
     code: number;
-    stdout: string;
+    stdout: Output;
     stderr: string;
 }
 
@@ -19,6 +19,7 @@ export type GitErrorCode =
     | 'worktree-locked'
     | 'worktree-missing'
     | 'worktree-busy'
+    | 'worktree-taken'
     | 'no-branch'
     | 'target-not-checked-out'
     | 'target-busy'
@@ -30,10 +31,9 @@ export type GitErrorCode =
 
 export class GitError extends CodedError<GitErrorCode> {}
 
-/* One git call in a directory, with its exit code kept: `check-ignore` answers 1 for "nothing
-   matched", which is a result and not a failure. A git that cannot start reads as code 128, the
-   same code git itself uses for "this is not a repository". */
-export const runGit = async (args: string[], cwd: string, options: GitOptions = {}): Promise<GitResult> => {
+/* `runGit` with stdout as the bytes git wrote, for content that is not known to be text. A git that
+   cannot start reads as code 128, the same code git itself uses for "this is not a repository". */
+export const runGitBytes = async (args: string[], cwd: string, options: GitOptions = {}): Promise<GitResult<Uint8Array>> => {
     try {
         const proc = Bun.spawn(['git', ...args], {
             cwd,
@@ -42,11 +42,18 @@ export const runGit = async (args: string[], cwd: string, options: GitOptions = 
             stdout: 'pipe',
             stderr: 'pipe'
         });
-        const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+        const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).bytes(), new Response(proc.stderr).text(), proc.exited]);
         return { code, stdout, stderr };
     } catch {
-        return { code: 128, stdout: '', stderr: '' };
+        return { code: 128, stdout: new Uint8Array(), stderr: '' };
     }
+};
+
+/* One git call in a directory, with its exit code kept: `check-ignore` answers 1 for "nothing
+   matched", which is a result and not a failure. */
+export const runGit = async (args: string[], cwd: string, options: GitOptions = {}): Promise<GitResult> => {
+    const { code, stdout, stderr } = await runGitBytes(args, cwd, options);
+    return { code, stdout: new TextDecoder().decode(stdout), stderr };
 };
 
 /* The output of a git that succeeded, or null for every other outcome. */
@@ -79,6 +86,9 @@ export interface StreamOptions {
     onLine?(line: string): void;
     /* The process itself, so a caller that has to cancel can kill it. */
     onSpawn?(kill: () => void): void;
+    /* Runs it in a process group of its own, which `kill` ends whole: a hook git started keeps the
+       output pipes open after git itself is gone, and the call would never come back. */
+    group?: boolean;
 }
 
 /*
@@ -123,12 +133,21 @@ export const streamCommand = async (command: string, args: string[], cwd: string
             env: { ...process.env, GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C', ...options.env },
             stdin: 'ignore',
             stdout: 'pipe',
-            stderr: 'pipe'
+            stderr: 'pipe',
+            detached: options.group === true
         });
     } catch {
         return { code: 128, stdout: '', stderr: `${command} could not be started` };
     }
-    options.onSpawn?.(() => proc.kill());
+    const started = proc;
+    const killGroup = (): void => {
+        try {
+            process.kill(-started.pid, 'SIGTERM');
+        } catch {
+            started.kill();
+        }
+    };
+    options.onSpawn?.(options.group === true ? killGroup : () => started.kill());
     const [stdout, stderr, code] = await Promise.all([pump(proc.stdout, onLine), pump(proc.stderr, onLine), proc.exited]);
     return { code, stdout, stderr };
 };

@@ -125,6 +125,68 @@ describe('resolving', () => {
     });
 });
 
+describe('a choice of one side', () => {
+    test('is refused over an edit made on disk since the file was read, and goes through without a digest', async () => {
+        await merge('other');
+        const conflict = await readConflict(repo, 'file.txt');
+        await writeFile(join(repo, 'file.txt'), 'edited by hand\n');
+
+        await expect(resolveConflict({ cwd: repo, path: 'file.txt', take: 'theirs', hash: conflict.hash })).rejects.toThrow('changed on disk');
+        expect(await readFile(join(repo, 'file.txt'), 'utf8')).toBe('edited by hand\n');
+
+        // An iPhone that sends no digest takes the side as it always did.
+        await resolveConflict({ cwd: repo, path: 'file.txt', take: 'theirs' });
+        expect(await readFile(join(repo, 'file.txt'), 'utf8')).toBe('one\ntheir two\nthree\n');
+    });
+
+    test('is refused for a file that is no longer unmerged', async () => {
+        await merge('other');
+        await resolveConflict({ cwd: repo, path: 'file.txt', take: 'ours' });
+        await expect(resolveConflict({ cwd: repo, path: 'file.txt', take: 'theirs' })).rejects.toThrow('not waiting on a merge');
+        expect(await readFile(join(repo, 'file.txt'), 'utf8')).toBe('one\nour two\nthree\n');
+    });
+});
+
+describe('a file that is not plain UTF-8', () => {
+    /* A file added on main, changed one way on a side branch and another way on main, then merged. */
+    const conflictIn = async (name: string, base: Uint8Array, ours: Uint8Array, theirs: Uint8Array): Promise<void> => {
+        await writeFile(join(repo, name), base);
+        await run(['add', name]);
+        await run(['commit', '--quiet', '--message', `add ${name}`]);
+        await run(['checkout', '--quiet', '-b', 'side']);
+        await writeFile(join(repo, name), theirs);
+        await run(['commit', '--quiet', '--all', '--message', 'theirs']);
+        await run(['checkout', '--quiet', 'main']);
+        await writeFile(join(repo, name), ours);
+        await run(['commit', '--quiet', '--all', '--message', 'ours']);
+        expect((await merge('side')).conflicts).toEqual([name]);
+    };
+    const latin1 = (text: string): Uint8Array => Uint8Array.from(text, (char) => char.charCodeAt(0));
+    const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text);
+
+    test('in Latin-1 is a choice between whole sides, and taking one keeps its bytes', async () => {
+        const theirs = latin1('café\ntheir line\n');
+        await conflictIn('latin.txt', latin1('café\nline\n'), latin1('café\nour line\n'), theirs);
+
+        const conflict = await readConflict(repo, 'latin.txt');
+        expect(conflict).toMatchObject({ kind: 'binary', omitted: 'binary', ours: null, theirs: null });
+
+        await resolveConflict({ cwd: repo, path: 'latin.txt', take: 'theirs', hash: conflict.hash });
+        expect([...(await readFile(join(repo, 'latin.txt')))]).toEqual([...theirs]);
+    });
+
+    test('with a byte order mark keeps it through the merge and on disk', async () => {
+        await conflictIn('bom.txt', utf8('﻿one\ntwo\n'), utf8('﻿one\nour two\n'), utf8('﻿one\ntheir two\n'));
+
+        const conflict = await readConflict(repo, 'bom.txt');
+        expect(conflict.kind).toBe('text');
+        expect(conflict.ours).toBe('﻿one\nour two\n');
+
+        await resolveConflict({ cwd: repo, path: 'bom.txt', content: '﻿one\nboth two\n', hash: conflict.hash });
+        expect([...(await readFile(join(repo, 'bom.txt'))).subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    });
+});
+
 describe('finishing', () => {
     test('a merge only goes on once nothing conflicts', async () => {
         await merge('other');

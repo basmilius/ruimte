@@ -7,6 +7,8 @@ import type { ConflictFile } from '@/conflicts/conflict-model';
 import { applyBlock, blockAt, mergeDecorations, revealBlock, setSpans, spansField, spansOf, type ConflictDraft } from '@/conflicts/editor';
 
 export interface EditorHandle {
+    /* The file this editor holds, which is what an answer that arrives later is checked against. */
+    readonly path: string;
     apply(block: number, lines: readonly string[]): void;
     reveal(block: number): void;
 }
@@ -63,6 +65,7 @@ export function ConflictEditor({ file, held, onChange, onReady }: Props) {
         view.dispatch({ effects: setSpans.of(draft?.spans ?? spansOf(view.state.doc, file.spans)) });
         latest.current.onChange({ text: view.state.doc.toString(), spans: view.state.field(spansField) }, null);
         latest.current.onReady({
+            path: file.path,
             apply: (block, lines) => applyBlock(view, block, lines),
             reveal: (block) => revealBlock(view, block)
         });

@@ -88,6 +88,34 @@ export const draftWith = (file: ConflictFile, answered: ReadonlyMap<number, read
     };
 };
 
+/*
+ * Answers put into a file that is not on screen, the way the editor would put them in: only a
+ * conflict still open takes one, so what a person already wrote in the file stays as they left it.
+ * A file never opened starts from its merged draft.
+ */
+export const answerInto = (draft: ConflictDraft | undefined, file: ConflictFile, answered: ReadonlyMap<number, readonly string[]>): ConflictDraft => {
+    let { text, spans } = draft ?? draftWith(file, new Map());
+    for (const [block, lines] of answered) {
+        const span = spans.find((candidate) => candidate.block === block);
+        if (span === undefined || span.kind !== 'conflict' || span.settled) {
+            continue;
+        }
+        const ends = span.to >= text.length;
+        // A stretch that holds no line at the end of the file needs the break that would have preceded it.
+        const lead = lines.length > 0 && span.from === span.to && span.from === text.length && text.length > 0 ? '\n' : '';
+        const insert = lines.length === 0 ? '' : `${lead}${lines.join('\n')}${ends ? '' : '\n'}`;
+        const shift = insert.length - (span.to - span.from);
+        text = `${text.slice(0, span.from)}${insert}${text.slice(span.to)}`;
+        spans = spans.map((other) => {
+            if (other.block === block) {
+                return { ...other, to: other.from + insert.length, settled: true };
+            }
+            return other.block > block ? { ...other, from: other.from + shift, to: other.to + shift } : other;
+        });
+    }
+    return { text, spans };
+};
+
 /* The conflicts of a draft that still need a person. */
 export const openInDraft = (draft: ConflictDraft): number[] =>
     draft.spans.filter((span) => span.kind === 'conflict' && !span.settled).map((span) => span.block);

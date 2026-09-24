@@ -78,7 +78,7 @@
         "tip_other": "Resolve the {{count}} conflicts that need no choice"
     },
     "whole": {
-        "binary": "This file is not text. Keep one side whole or drop it.",
+        "binary": "This file is not UTF-8 text. Keep one side whole or drop it.",
         "deleted-by-them": "{{theirs}} deleted this file while it changed on {{ours}}.",
         "deleted-by-us": "{{ours}} deleted this file while it changed on {{theirs}}.",
         "drop": "Drop the file",

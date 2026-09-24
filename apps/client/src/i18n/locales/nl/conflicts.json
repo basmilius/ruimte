@@ -78,7 +78,7 @@
         "tip_other": "Los de {{count}} conflicten op die geen keuze vragen"
     },
     "whole": {
-        "binary": "Dit bestand is geen tekst. Houd een kant heel of gooi het weg.",
+        "binary": "Dit bestand is geen UTF-8-tekst. Houd een kant heel of gooi het weg.",
         "deleted-by-them": "{{theirs}} verwijderde dit bestand terwijl het op {{ours}} veranderde.",
         "deleted-by-us": "{{ours}} verwijderde dit bestand terwijl het op {{theirs}} veranderde.",
         "drop": "Bestand weggooien",

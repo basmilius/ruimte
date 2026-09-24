@@ -2198,7 +2198,7 @@ export const ACTION_DEFINITIONS = {
             path: z.string().min(1),
             content: z.string().nullable().describe('The merged file; needs hash'),
             take: z.enum(['ours', 'theirs', 'delete']).nullable().describe('One side whole, or the file taken out'),
-            hash: z.string().min(1).nullable().describe('The digest git.conflict read the file at')
+            hash: z.string().nullable().describe('The digest git.conflict read the file at, empty for a file that was not on disk')
         }),
         output: GitResolveResultSchema
     },

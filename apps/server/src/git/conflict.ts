@@ -12,7 +12,7 @@ import type {
 } from '@ruimte/contracts';
 import type { ProgressSink } from './actions.ts';
 import { parseNumstat } from './diff.ts';
-import { git, runGit, streamGit, toplevel, GitError } from './run.ts';
+import { git, runGit, runGitBytes, streamGit, toplevel, GitError } from './run.ts';
 
 // A side larger than this is one nobody merges line by line; the file is then a choice between whole sides.
 const MAX_SIDE_BYTES = 1024 * 1024;
@@ -167,6 +167,17 @@ export const readConflicts = async (cwd: string): Promise<GitConflictsResult> =>
     return { operation, ours: sides.ours, theirs: sides.theirs, files };
 };
 
+/* Written back as the same bytes: a file in another encoding is not text to merge, and a BOM stays in the text. */
+const UTF8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
+
+const decoded = (bytes: Uint8Array): string | null => {
+    try {
+        return UTF8.decode(bytes);
+    } catch {
+        return null;
+    }
+};
+
 /* One side out of the index, or null when that side has none. Binary and oversized sides read null
    as well: what comes back here is only ever text a person could merge by hand. */
 const sideText = async (root: string, stage: Stage | undefined): Promise<{ text: string | null; omitted: 'binary' | 'too-large' | null }> => {
@@ -177,11 +188,12 @@ const sideText = async (root: string, stage: Stage | undefined): Promise<{ text:
     if (Number.isFinite(size) && size > MAX_SIDE_BYTES) {
         return { text: null, omitted: 'too-large' };
     }
-    const text = await git(['cat-file', 'blob', stage.object], root);
-    if (text === null) {
+    const blob = await runGitBytes(['cat-file', 'blob', stage.object], root);
+    if (blob.code !== 0) {
         return { text: null, omitted: null };
     }
-    return text.includes('\0') ? { text: null, omitted: 'binary' } : { text, omitted: null };
+    const text = decoded(blob.stdout);
+    return text === null || text.includes('\0') ? { text: null, omitted: 'binary' } : { text, omitted: null };
 };
 
 const digest = (bytes: Uint8Array): string => new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
@@ -216,12 +228,19 @@ export const readConflict = async (cwd: string, path: string): Promise<GitConfli
 /*
  * A file settled: the merged text written as it stands, or one side taken whole. A write says what
  * it was written over, and a file that moved since it was read refuses rather than losing whatever
- * moved it. Staging is part of the same step, since git reads an unmerged file as resolved only
- * once it is in the index.
+ * moved it; a side taken whole is held to that digest too when the client sends one, which an older
+ * iPhone does not. Staging is part of the same step, since git reads an unmerged file as resolved
+ * only once it is in the index.
  */
 export const resolveConflict = async (payload: GitResolvePayload): Promise<number> => {
     const root = await toplevel(payload.cwd);
     const { path } = payload;
+    if ((await stagesOf(root, path)).get(path) === undefined) {
+        throw new GitError('git-failed', `${path} is not waiting on a merge anymore.`);
+    }
+    if (payload.hash !== undefined && (await workingDigest(root, path)) !== payload.hash) {
+        throw new GitError('git-failed', `${path} changed on disk while it was being resolved.`);
+    }
     if (payload.take === 'delete') {
         const removed = await runGit(['rm', '--force', '--', path], root);
         if (removed.code !== 0) {
@@ -237,9 +256,6 @@ export const resolveConflict = async (payload: GitResolvePayload): Promise<numbe
     } else {
         if (payload.content === undefined || payload.hash === undefined) {
             throw new GitError('git-failed', 'A resolution needs the merged file and the digest it was written over.');
-        }
-        if ((await workingDigest(root, path)) !== payload.hash) {
-            throw new GitError('git-failed', `${path} changed on disk while it was being resolved.`);
         }
         await writeFile(join(root, path), payload.content, 'utf8');
     }

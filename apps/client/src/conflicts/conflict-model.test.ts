@@ -1,7 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitConflictResult } from '@ruimte/contracts';
 import { fingerprint, splitBlocks, splitLines } from '@ruimte/merge';
-import { conflictIndexes, contentOf, draftWith, fileOf, nextConflict, openInDraft, usableBlocks } from '@/conflicts/conflict-model';
+import {
+    answerInto,
+    conflictIndexes,
+    contentOf,
+    draftWith,
+    fileOf,
+    nextConflict,
+    openInDraft,
+    usableBlocks,
+    type ConflictFile
+} from '@/conflicts/conflict-model';
+import type { ConflictDraft } from '@/conflicts/editor';
 
 const answer = (patch: Partial<GitConflictResult> = {}): GitConflictResult => ({
     path: 'file.txt',
@@ -56,6 +67,53 @@ describe('draftWith', () => {
 
     test('a file nobody answered still counts its conflicts', () => {
         expect(openInDraft(draftWith(fileOf(answer()), new Map()))).toEqual([1]);
+    });
+});
+
+describe('answerInto', () => {
+    const twice = (): ConflictFile => fileOf(answer({ base: 'a\nb\nc\nd\ne\n', ours: 'ours a\nb\nc\nd\nours e\n', theirs: 'theirs a\nb\nc\nd\ntheirs e\n' }));
+    const textOf = (draft: ConflictDraft, block: number): string => {
+        const span = draft.spans.find((entry) => entry.block === block)!;
+        return draft.text.slice(span.from, span.to);
+    };
+
+    test('a file never opened takes the answers into its merged draft', () => {
+        const file = fileOf(answer());
+        expect(answerInto(undefined, file, new Map([[1, ['merged two']]]))).toEqual(draftWith(file, new Map([[1, ['merged two']]])));
+    });
+
+    test('a stretch a person already answered keeps their words, and the open one after a longer answer still lines up', () => {
+        const file = twice();
+        const [first, last] = conflictIndexes(file) as [number, number];
+        const handWork = answerInto(undefined, file, new Map([[last, ['my own e']]]));
+
+        const next = answerInto(
+            handWork,
+            file,
+            new Map([
+                [first, ['agent a', 'and more']],
+                [last, ['agent e']]
+            ])
+        );
+
+        expect(next.text).toBe('agent a\nand more\nb\nc\nd\nmy own e');
+        expect(textOf(next, first)).toBe('agent a\nand more\n');
+        expect(textOf(next, last)).toBe('my own e');
+        expect(openInDraft(next)).toEqual([]);
+    });
+
+    test('an answer for a stretch that is not a conflict changes nothing', () => {
+        const file = fileOf(answer());
+        const draft = draftWith(file, new Map());
+        expect(answerInto(draft, file, new Map([[0, ['no']]]))).toEqual(draft);
+    });
+});
+
+describe('a file that starts with a byte order mark', () => {
+    test('keeps it in the editor and in what is written back', () => {
+        const file = fileOf(answer({ base: '﻿one\ntwo\n', ours: '﻿one\nour two\n', theirs: '﻿one\ntheir two\n' }));
+        expect(file.text.startsWith('﻿')).toBe(true);
+        expect(contentOf(file, file.text)).toBe('﻿one\nour two\n');
     });
 });
 
