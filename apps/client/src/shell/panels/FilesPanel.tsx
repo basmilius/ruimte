@@ -15,6 +15,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import { FileTree, useFileTree } from '@pierre/trees/react';
 import {
+    AtSign,
     Check,
     ChevronsDownUp,
     ChevronsUpDown,
@@ -45,6 +46,7 @@ import {
     compareRows,
     gitStatusEntries,
     isDirectoryPath,
+    mentionOf,
     mergeExpanded,
     newlyExpanded,
     relativeTo,
@@ -421,6 +423,9 @@ export function FilesPanel() {
     };
 
     /* Every menu item acts on the row that was right-clicked, absolute path and tree path both. */
+    /* Directories too, the way a row dragged into the composer mentions one. */
+    const menuMention = folder && menuPath ? mentionOf(folder, absoluteOf(folder, menuPath)) : null;
+
     const onMenuPath = (act: (absolute: string, treePath: string) => void) => (): void => {
         if (folder && menuPath) {
             act(absoluteOf(folder, menuPath), menuPath);
@@ -597,6 +602,11 @@ export function FilesPanel() {
                                 >
                                     <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
                                 </ContextMenu.Item>
+                                {menuMention !== null && (
+                                    <ContextMenu.Item className="menu-item" onClick={() => copyText(menuMention)}>
+                                        <Icon icon={AtSign} size={14} /> {t('file.menu.copyMention')}
+                                    </ContextMenu.Item>
+                                )}
                             </ContextMenu.Popup>
                         </ContextMenu.Positioner>
                     </ContextMenu.Portal>

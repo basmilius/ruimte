@@ -102,6 +102,7 @@
     "menu": {
       "copyPath": "Copy path",
       "copyRelativePath": "Copy relative path",
+      "copyMention": "Copy as @mention",
       "openAsView": "Open as a view",
       "openInBrowser": "Open in a browser node",
       "refresh": "Refresh",

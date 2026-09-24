@@ -102,6 +102,7 @@
     "menu": {
       "copyPath": "Pad kopiëren",
       "copyRelativePath": "Relatief pad kopiëren",
+      "copyMention": "Als @mention kopiëren",
       "openAsView": "Openen als weergave",
       "openInBrowser": "Openen in een browser node",
       "refresh": "Vernieuwen",

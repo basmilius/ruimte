@@ -5,6 +5,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import type { FileTree as FileTreeModel, FileTreeRowDecoration, FileTreeRowDecorationContext, FileTreeVisibleRow } from '@pierre/trees';
 import { FileTree, useFileTree, useFileTreeSelector } from '@pierre/trees/react';
 import {
+    AtSign,
     Boxes,
     ChevronsDownUp,
     ChevronsUpDown,
@@ -22,7 +23,7 @@ import {
 } from 'lucide-react';
 import type { GitFile, GitFileState } from '@ruimte/contracts';
 import { GIT_GROUP, GIT_REPO } from '@/shell/panels/classes';
-import { revealableInFiles } from '@/shell/panels/files-tree';
+import { mentionOf, revealableInFiles } from '@/shell/panels/files-tree';
 import {
     allDirs,
     branchesUnder,
@@ -519,6 +520,8 @@ function RowPathItems({
 }) {
     const { t } = useTranslation('panels');
     const transport = useTransport();
+    // A file that is gone is nothing to point a chat at.
+    const mention = gone ? null : mentionOf(folder, absolute);
     return (
         <>
             <ContextMenu.Item
@@ -544,6 +547,11 @@ function RowPathItems({
             <ContextMenu.Item className="menu-item" onClick={() => copyText(relative)}>
                 <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
             </ContextMenu.Item>
+            {mention !== null && (
+                <ContextMenu.Item className="menu-item" onClick={() => copyText(mention)}>
+                    <Icon icon={AtSign} size={14} /> {t('file.menu.copyMention')}
+                </ContextMenu.Item>
+            )}
         </>
     );
 }

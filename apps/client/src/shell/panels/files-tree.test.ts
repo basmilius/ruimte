@@ -8,6 +8,7 @@ import {
     dirnameOf,
     gitStatusEntries,
     isDirectoryPath,
+    mentionOf,
     mergeExpanded,
     newlyExpanded,
     treeGitStatus,
@@ -166,5 +167,19 @@ describe('gitStatusEntries', () => {
         expect(treeGitStatus('UU')).toBe('modified');
         expect(treeGitStatus('RM')).toBe('renamed');
         expect(treeGitStatus('A')).toBe('added');
+    });
+});
+
+describe('mentionOf', () => {
+    test('a file in the folder is an @ with its path from the folder, spaces and all', () => {
+        expect(mentionOf('/work/app', '/work/app/src/main.ts')).toBe('@src/main.ts');
+        expect(mentionOf('/work/app/', '/work/app/docs/read me.md')).toBe('@docs/read me.md');
+        expect(mentionOf('C:\\work\\app', 'C:\\work\\app\\src\\main.ts')).toBe('@src/main.ts');
+    });
+
+    test('nothing outside the folder, for the folder itself, or without one', () => {
+        expect(mentionOf('/work/app', '/work/other/main.ts')).toBeNull();
+        expect(mentionOf('/work/app', '/work/app')).toBeNull();
+        expect(mentionOf(null, '/work/app/main.ts')).toBeNull();
     });
 });

@@ -1,5 +1,6 @@
 import type { GitStatus, GitStatusEntry } from '@pierre/trees';
 import { absoluteOf, isAbsolutePath, relativeTo, resolveStoredPath, storedPathOf, type FsEntry, type GitFile } from '@ruimte/contracts';
+import { chipText } from '@/chat/mentions';
 
 /* A directory whose children have not arrived yet gets one child nobody sees, so the row keeps the
    chevron that lets a person expand it. The rule that hides the row lives in `TREE_CSS`. */
@@ -21,6 +22,18 @@ export { absoluteOf, isAbsolutePath, relativeTo, resolveStoredPath, storedPathOf
    or another checkout on the same machine is not. */
 export const revealableInFiles = (folder: string | null, path: string): boolean =>
     folder !== null && (path === folder || path.startsWith(`${folder}/`) || path.startsWith(`${folder}\\`));
+
+/*
+ * A path as the chat mention the composer writes for a row dragged out of the files panel: relative
+ * to the project folder, unquoted. Null outside the folder, where a mention would name nothing.
+ */
+export const mentionOf = (folder: string | null, path: string): string | null => {
+    if (folder === null) {
+        return null;
+    }
+    const relative = relativeTo(folder, path);
+    return relative === path || relative === '' ? null : chipText({ kind: 'mention', path: relative.replace(/\/$/, '') });
+};
 
 /* The tree marks a directory with a trailing slash, on a row and in a git status entry alike. */
 export const isDirectoryPath = (treePath: string): boolean => treePath.endsWith('/');
