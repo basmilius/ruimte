@@ -19,11 +19,24 @@ describe('an app that runs shells', () => {
         expect(runsShells(100, rows)).toBe(true);
     });
 
-    test('is not one that starts its shells under a process of its own, as Ruimte does under its daemon', () => {
+    test('is one whose shells run under a pty host of its own, down to three levels', () => {
         const rows: ProcessRow[] = [
             { pid: 200, ppid: 1, tty: null },
             { pid: 201, ppid: 200, tty: null },
-            { pid: 202, ppid: 201, tty: 'ttys002' }
+            { pid: 202, ppid: 201, tty: null },
+            { pid: 203, ppid: 202, tty: 'ttys002' }
+        ];
+        expect(runsShells(200, rows)).toBe(true);
+        expect(runsShells(200, rows.slice(0, 3))).toBe(false);
+    });
+
+    test('is not one whose only terminal sits deeper than three levels', () => {
+        const rows: ProcessRow[] = [
+            { pid: 200, ppid: 1, tty: null },
+            { pid: 201, ppid: 200, tty: null },
+            { pid: 202, ppid: 201, tty: null },
+            { pid: 203, ppid: 202, tty: null },
+            { pid: 204, ppid: 203, tty: 'ttys002' }
         ];
         expect(runsShells(200, rows)).toBe(false);
     });
@@ -31,7 +44,8 @@ describe('an app that runs shells', () => {
     test('is not one started from a shell whose children share that shell’s terminal', () => {
         const rows: ProcessRow[] = [
             { pid: 300, ppid: 50, tty: 'ttys003' },
-            { pid: 301, ppid: 300, tty: 'ttys003' }
+            { pid: 301, ppid: 300, tty: 'ttys003' },
+            { pid: 302, ppid: 301, tty: 'ttys003' }
         ];
         expect(runsShells(300, rows)).toBe(false);
     });

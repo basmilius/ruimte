@@ -26,14 +26,25 @@ export const readProcessTable: ProcessTable = async () => {
     return parseProcessTable(text);
 };
 
+/* How far below an app a shell may sit: a terminal that starts its shells under a pty host of its own puts them two or three levels down. */
+export const SHELL_DEPTH = 3;
+
 /*
  * Whether an app runs shells, read off what its own process does and never off its name. A terminal
- * starts every shell (or the `login` in front of one) itself, on a pty it opened, so one of its direct
- * children has a controlling terminal that the app itself does not share. Only direct children count:
- * the Ruimte desktop app has shells under its daemon, one step further down, and an app started from
- * a shell passes that shell's terminal on to its children, which share it.
+ * starts every shell (or the `login` in front of one) on a pty it opened, so a process below it has a
+ * controlling terminal that the app itself does not share. An app started from a shell passes that
+ * shell's terminal on to what it starts, which then shares it and does not count.
  */
-export const runsShells = (pid: number, rows: readonly ProcessRow[]): boolean => {
+export const runsShells = (pid: number, rows: readonly ProcessRow[], depth: number = SHELL_DEPTH): boolean => {
     const own = rows.find((row) => row.pid === pid)?.tty ?? null;
-    return rows.some((row) => row.ppid === pid && row.tty !== null && row.tty !== own);
+    let level = [pid];
+    for (let step = 0; step < depth && level.length > 0; step++) {
+        const parents = new Set(level);
+        const below = rows.filter((row) => parents.has(row.ppid));
+        if (below.some((row) => row.tty !== null && row.tty !== own)) {
+            return true;
+        }
+        level = below.map((row) => row.pid);
+    }
+    return false;
 };

@@ -581,8 +581,14 @@ export class ComputerUse {
         return { app: installed, pid: null };
     }
 
-    /* Whether an app is a terminal: seen running shells once, or doing so now. One seen now is remembered. */
+    /*
+     * Whether an app is a terminal: seen running shells once, or doing so now. One seen now is remembered.
+     * Ruimte never is: its shells run under the daemon, and `operated-ruimte.ts` holds its own limits.
+     */
     private async isTerminal(bundleId: string, name: string, pid: number | null, rows: readonly ProcessRow[]): Promise<boolean> {
+        if (RUIMTE_BUNDLE_IDS.has(bundleId)) {
+            return false;
+        }
         if (this.store.knownTerminal(bundleId)) {
             return true;
         }

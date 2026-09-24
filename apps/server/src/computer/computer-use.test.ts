@@ -357,6 +357,21 @@ describe('a terminal', () => {
         expect((await computer.apps('chat-1')).apps.find(({ app }) => app.name === 'Shells')?.access).toBe('terminal');
     });
 
+    test('is never Ruimte, whose shells sit under the daemon, and which asks like any other app', async () => {
+        const ruimte = { name: 'Ruimte', pid: 600, bundleId: 'app.ruimte.desktop.dev' };
+        const { computer, helper } = await computerSetup({
+            overrides: {
+                processes: async () => [
+                    { pid: 600, ppid: 1, tty: null },
+                    { pid: 601, ppid: 600, tty: null },
+                    { pid: 602, ppid: 601, tty: 'ttys009' }
+                ]
+            }
+        });
+        helper.apps = [TEXT_EDIT, ruimte];
+        expect((await computer.apps('chat-1')).apps.map(({ access }) => access)).toEqual(['ask', 'ask']);
+    });
+
     test('is refused before it is launched when it was seen before', async () => {
         const { computer } = await computerSetup();
         await computer.apps('chat-1');
