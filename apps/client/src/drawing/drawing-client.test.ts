@@ -301,6 +301,19 @@ describe('DrawingClient', () => {
         expect(drawing().viewId).toBe('view-2');
     });
 
+    test('a drawing whose view is trashed writes what is pending, so an undo brings the last stroke back', async () => {
+        useDocument.getState().setActiveView('view-1');
+        await tick();
+        drawing().addElement(rect('b'));
+        useDocument.getState().trashView('view-1');
+        await tick(20);
+        expect(transport.of('drawing.save')).toHaveLength(1);
+        expect(transport.of('drawing.save')[0]?.payload).toMatchObject({ viewId: 'view-1' });
+        expect(transport.of('drawing.close').map((call) => (call.payload as { viewId: string }).viewId)).toContain('view-1');
+        // A project loaded again keeps what is still trashed, so the next test would start without the view.
+        useDocument.getState().purgeTrash();
+    });
+
     test('a daemon that forgot the drawing gets it again, and the work that was waiting lands', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();

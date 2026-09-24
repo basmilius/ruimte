@@ -14,6 +14,8 @@ export interface DocumentAccess {
         layout: SplitLayout | null;
         viewLocal: Record<string, ProjectViewLocal>;
         loading: boolean;
+        /* Deleted views that can still come back; the file keeps them, so what they hold is still worth a save. */
+        trashed: ReadonlyArray<{ view: ProjectView }>;
         exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout'>;
     };
     subscribe: StoreApi<DocumentAccess extends { getState(): infer S } ? S : never>['subscribe'];
@@ -237,7 +239,8 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
     }
 
     private onDocument(state: ReturnType<DocumentAccess['getState']>, previous: ReturnType<DocumentAccess['getState']>): void {
-        const gone = [...this.open.keys()].some((viewId) => !state.views.some((view) => view.id === viewId && this.channel.isView(view)));
+        const held = [...state.views, ...state.trashed.map((entry) => entry.view)];
+        const gone = [...this.open.keys()].some((viewId) => !held.some((view) => view.id === viewId && this.channel.isView(view)));
         const wanted = this.wantedIn(state);
         // The ids rather than the layout itself, since a project read again from disk is a new layout
         // object holding the same views, and that is a reconnect, not a change to the grid.
