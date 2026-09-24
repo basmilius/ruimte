@@ -47,6 +47,7 @@ const PHONE: ClientAccess = { reachability: 'lan', sessionId: 'paired-phone' };
 const REFUSED: WireRequest[] = [
     { type: 'computer.answer', payload: { requestId: 'card-1', choice: 'always' } },
     { type: 'computer.revoke', payload: { bundleId: 'com.example.shells', kind: 'terminal' } },
+    { type: 'device.control', payload: { backendId: 'simctl', deviceId: 'sim-1', mode: 'resume' } },
     { type: 'chat.approve', payload: { chatId: 'chat-2', requestId: 'r1', decision: 'allow-always' } },
     { type: 'chat.approve', payload: { chatId: 'chat-1', requestId: 'plan', decision: 'allow' } },
     { type: 'chat.answer', payload: { chatId: 'chat-1', requestId: 'q1', answers: { a: 'yes' } } },

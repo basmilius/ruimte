@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import type { ServerFrame } from '@ruimte/contracts';
 import { DeviceError, type DeviceManager } from '../devices/manager.ts';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
-import { registerDeviceHandlers } from './device.ts';
+import { DeviceControl } from '../devices/control.ts';
+import { SIMULATOR } from '../devices/device-test-helpers.ts';
+import { registerDeviceControlHandlers, registerDeviceHandlers } from './device.ts';
 
 const request = (type: string, payload: unknown = {}): string => JSON.stringify({ id: type, type, payload });
 
@@ -127,5 +129,21 @@ describe('device handlers', () => {
             ['action', { ...target, action: 'setAppearance', value: 'light' }]
         ]);
         expect(frames.at(-1)).toMatchObject({ ok: true, result: { ...target, settings: { appearance: 'light' } } });
+    });
+
+    test('lets a person pause an agent and read who operates what, whatever the streaming policy', async () => {
+        const dispatcher = new Dispatcher();
+        const control = new DeviceControl();
+        registerDeviceControlHandlers(dispatcher, control);
+        const frames: ServerFrame[] = [];
+        const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
+        control.admit(SIMULATOR, 'chat-1', { kind: 'swipe' });
+
+        await dispatcher.handle(client, request('device.control', { backendId: 'simctl', deviceId: 'sim-1', mode: 'pause' }));
+        expect(frames.at(-1)).toMatchObject({ ok: true, result: { backendId: 'simctl', deviceId: 'sim-1', nodeId: 'chat-1', state: 'paused' } });
+
+        await dispatcher.handle(client, request('device.operations'));
+        expect(frames.at(-1)).toMatchObject({ ok: true, result: { devices: [{ deviceId: 'sim-1', state: 'paused', step: { kind: 'swipe' } }] } });
+        control.stop();
     });
 });

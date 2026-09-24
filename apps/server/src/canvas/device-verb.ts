@@ -12,10 +12,11 @@ const NODE_PARAM = { syntax: '<id>', need: 'required', field: 'nodeId', more: 'r
 const COMMON_DETAIL: readonly string[] = [
     'line\tA line between you and that node is what lets you operate its device, whichever way it was drawn, the same line that lets you read it',
     'device\tThe device is its own sandbox: no card asks the person, and computer use need not be on',
-    `session\tA tap works whether or not anyone has the node open; whoever does sees it happen. Your hold on the device ends ${AGENT_HOLD_IDLE_MS / 1000} s after your last call`,
+    `session\tA tap works whether or not anyone has the node open; whoever does sees it happen, and can pause you or take over. Your hold on the device ends ${AGENT_HOLD_IDLE_MS / 1000} s after your last call`,
     'refused\tdevice-not-booted\tthe device is not running: ask the person to start it from its node, since an agent never starts one',
     'refused\tdevice-missing\tthis machine does not have that device right now: tell the person',
     'refused\tno-shot, outside-shot\tcoordinates are pixels of the last shot: take one with device shot and count in it',
+    'refused\tpaused, taken-over\tthe person paused you or operates the device by hand from its node: wait and call again later, taking a shot first, or stop and tell them what is left. A shot still works',
     'see\truimte-context device state <id>\twhat the device can do, and the size of the last shot',
     SCOPE_LINE
 ];

@@ -129,6 +129,7 @@ import { registerBrowserHandlers } from './handlers/browser.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from './streams/http-stream.ts';
 import { DeviceManager } from './devices/manager.ts';
 import { DeviceDriver } from './devices/agent-driver.ts';
+import { DeviceControl } from './devices/control.ts';
 import { IosPhysicalBackend } from './devices/ios-physical.ts';
 import { IosSimulatorBackend } from './devices/ios-simulator.ts';
 import { createDeviceHelperLauncher } from './devices/helper-source.ts';
@@ -136,7 +137,7 @@ import { createPhysicalStreamSourceFactory, physicalStreamHelperPath } from './d
 import { AndroidBackend } from './devices/android.ts';
 import { ScrcpyServerFile, scrcpyServerDirectory } from './devices/scrcpy-server.ts';
 import { adbScrcpyHost, ScrcpySource } from './devices/scrcpy-source.ts';
-import { registerDeviceHandlers } from './handlers/device.ts';
+import { registerDeviceControlHandlers, registerDeviceHandlers } from './handlers/device.ts';
 import { LiveStreamHub } from './streams/live-stream.ts';
 
 // What `ruimte login` has the machine sign; local secret only, like the work.
@@ -402,7 +403,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
               : [],
         liveStreams
     );
-    const deviceDriver = new DeviceDriver({ home: config.home, manager: devices });
+    const deviceControl = new DeviceControl();
+    const deviceDriver = new DeviceDriver({ home: config.home, manager: devices, gate: deviceControl });
     const statuses = new GitStatusWatcher();
     const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
     const limits = new UsageMonitor({ providers });
@@ -575,6 +577,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerSessionHandlers(dispatcher, manager, endChildren.owe);
     registerBrowserHandlers(dispatcher, browsers, browserPages, () => identity.streamingAllowed);
     registerDeviceHandlers(dispatcher, devices, () => identity.streamingAllowed);
+    registerDeviceControlHandlers(dispatcher, deviceControl);
     const forkDeps = chatForkDeps({ chats, host: canvasHost, titleFor: (id) => projects.index.titleFor(id), lineage, worktrees, checkpoints });
     const beforeChatKill = (chatId: string): Promise<unknown> => {
         computer.nodeClosed(chatId);
@@ -716,6 +719,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         browsers,
         browserPages,
         devices,
+        deviceControl,
         identity,
         projects,
         drawings,
@@ -1030,6 +1034,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         manager.killAll();
         browsers.closeAll();
         deviceDriver.releaseAll();
+        deviceControl.stop();
         devices.closeAll();
         projects.closeAll();
         drawings.closeAll();

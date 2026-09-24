@@ -17,6 +17,7 @@ import {
 } from './browser.ts';
 import {
     DeviceActionPayloadSchema,
+    DeviceControlPayloadSchema,
     DeviceDetailPayloadSchema,
     DeviceDetailSchema,
     DeviceFrameSchema,
@@ -25,6 +26,8 @@ import {
     DeviceListResultSchema,
     DeviceOpenPayloadSchema,
     DeviceOpenResultSchema,
+    DeviceOperatedSchema,
+    DeviceOperationsResultSchema,
     DeviceTargetPayloadSchema
 } from './device.ts';
 import {
@@ -322,6 +325,8 @@ export const REQUEST_SCHEMAS = {
     'device.input': { payload: DeviceInputPayloadSchema, result: EmptySchema },
     'device.detail': { payload: DeviceDetailPayloadSchema, result: DeviceDetailSchema },
     'device.action': { payload: DeviceActionPayloadSchema, result: DeviceDetailSchema },
+    'device.operations': { payload: EmptySchema, result: DeviceOperationsResultSchema },
+    'device.control': { payload: DeviceControlPayloadSchema, result: DeviceOperatedSchema },
     'agent.resume': { payload: AgentResumePayloadSchema, result: EmptySchema },
     'agent.answerApproval': { payload: ApprovalAnswerPayloadSchema, result: ApprovalAnswerResultSchema },
     'agent.setApprovals': { payload: ApprovalPreferencePayloadSchema, result: EmptySchema },
@@ -466,6 +471,7 @@ export const EVENT_SCHEMAS = {
     'browser.status': BrowserInfoSchema,
     'browser.drive': BrowserDriveEventSchema,
     'device.frame': DeviceFrameSchema,
+    'device.operated': DeviceOperatedSchema,
     'chat.event': ChatEventEnvelopeSchema,
     'chat.status': ChatStatusEventSchema,
     'chat.subagentChanged': ChatSubagentChangedEventSchema,

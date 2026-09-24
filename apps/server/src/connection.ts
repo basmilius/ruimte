@@ -46,6 +46,8 @@ export interface ConnectionServices {
     /* The pages the clients hold themselves, which the daemon only knows of while they say so. */
     browserPages?: Attachable;
     devices?: Attachable & { requestKeyFrame(backendId: string, deviceId: string): void };
+    /* Who has each device an agent operates, which every client hears. */
+    deviceControl?: Subscribable;
     identity: Subscribable;
     projects: Subscribable;
     drawings: Subscribable;
@@ -105,6 +107,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             services.browsers?.subscribe(clientId, sink) ?? (() => undefined),
             services.browserPages?.subscribe(clientId, sink) ?? (() => undefined),
             services.devices?.subscribe(clientId, sink) ?? (() => undefined),
+            services.deviceControl?.subscribe(clientId, sink) ?? (() => undefined),
             services.identity.subscribe(clientId, sink),
             services.projects.subscribe(clientId, sink),
             services.drawings.subscribe(clientId, sink),

@@ -25,13 +25,14 @@ export interface OperatedContext {
 }
 
 /*
- * What a person alone decides: an answer to an agent's prompt or card, taking an app back from agents,
+ * What a person alone decides: an answer to an agent's prompt or card, taking an app or a device back from agents,
  * a command let into a terminal, who may reach this machine, and the git steps the catalog leaves to a
  * person. Ordinary work (editing, committing, moving the canvas) is not on the list, so Ruimte stays operable.
  */
 const ALWAYS: ReadonlySet<RequestType> = new Set<RequestType>([
     'computer.answer',
     'computer.revoke',
+    'device.control',
     'chat.approve',
     'chat.answer',
     'chat.dismiss',

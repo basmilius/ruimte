@@ -1,3 +1,4 @@
+import type { DeviceControl } from '../devices/control.ts';
 import type { DeviceManager } from '../devices/manager.ts';
 import { translate, type Dispatcher } from '../dispatcher.ts';
 import { streamingGate } from './streaming.ts';
@@ -46,4 +47,10 @@ export const registerDeviceHandlers = (dispatcher: Dispatcher, devices: DeviceMa
             settings: await devices.action(payload)
         }));
     });
+};
+
+/* Not held to the streaming policy: they carry no picture, and a person pauses an agent from wherever they are. */
+export const registerDeviceControlHandlers = (dispatcher: Dispatcher, control: DeviceControl): void => {
+    dispatcher.register('device.operations', () => ({ devices: control.list() }));
+    dispatcher.register('device.control', (payload) => control.control(payload, payload.mode));
 };

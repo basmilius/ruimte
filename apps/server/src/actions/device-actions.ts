@@ -116,17 +116,17 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
     },
     'device.screenshot': async ({ nodeId }, { actor, context }) => {
         const device = await bootedDevice(context, actor.id, nodeId);
-        const shot = await driverOf(context.host).shot(device, nodeId);
+        const shot = await driverOf(context.host).shot(actor.id, device, nodeId);
         return { output: { nodeId, ...shot } };
     },
     'device.tap': async ({ nodeId, x, y }, { actor, context }) => {
         const device = await bootedDevice(context, actor.id, nodeId);
-        await driverOf(context.host).tap(nodeId, actor.id, device, { x, y });
+        await driverOf(context.host).tap(actor.id, device, { x, y });
         return { output: { nodeId, device: device.name } };
     },
     'device.swipe': async ({ nodeId, fromX, fromY, toX, toY, ms }, { actor, context }) => {
         const device = await bootedDevice(context, actor.id, nodeId);
-        await driverOf(context.host).swipe(nodeId, actor.id, device, { x: fromX, y: fromY }, { x: toX, y: toY }, ms ?? undefined);
+        await driverOf(context.host).swipe(actor.id, device, { x: fromX, y: fromY }, { x: toX, y: toY }, ms ?? undefined);
         return { output: { nodeId, device: device.name } };
     },
     'device.button': async ({ nodeId, button }, { actor, context }) => {
@@ -143,12 +143,12 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
                 )
             );
         }
-        await driverOf(context.host).button(nodeId, actor.id, device, named);
+        await driverOf(context.host).button(actor.id, device, named);
         return { output: { nodeId, device: device.name } };
     },
     'device.type': async ({ nodeId, text }, { actor, context }) => {
         const device = await bootedDevice(context, actor.id, nodeId);
-        await driverOf(context.host).type(nodeId, actor.id, device, text);
+        await driverOf(context.host).type(actor.id, device, text);
         return { output: { nodeId, device: device.name } };
     },
     'device.launch': async ({ nodeId, app }, { actor, context }) => {
@@ -157,7 +157,7 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
         if (!driver.abilities(device).launch) {
             throw new VerbRefusal('device-action-unavailable', `Ruimte cannot open an app on ${device.name}`);
         }
-        await driver.launch(nodeId, device, app);
+        await driver.launch(actor.id, device, app);
         return { output: { nodeId, device: device.name } };
     }
 };

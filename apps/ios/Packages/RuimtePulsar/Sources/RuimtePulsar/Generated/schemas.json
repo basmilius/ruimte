@@ -8043,6 +8043,231 @@
       "settings"
     ]
   },
+  "request.device.operations.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.device.operations.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "devices": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "backendId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "deviceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "nodeId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "running",
+                "paused",
+                "takenOver",
+                "ended"
+              ]
+            },
+            "step": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 32
+                    },
+                    "target": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 300
+                    },
+                    "x": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "y": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "seq": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "description",
+                    "seq"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "backendId",
+            "deviceId",
+            "nodeId",
+            "state",
+            "step"
+          ]
+        }
+      }
+    },
+    "required": [
+      "devices"
+    ]
+  },
+  "request.device.control.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "mode": {
+        "type": "string",
+        "enum": [
+          "pause",
+          "resume",
+          "takeOver"
+        ]
+      }
+    },
+    "required": [
+      "backendId",
+      "deviceId",
+      "mode"
+    ]
+  },
+  "request.device.control.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "nodeId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "running",
+          "paused",
+          "takenOver",
+          "ended"
+        ]
+      },
+      "step": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "target": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "kind",
+              "description",
+              "seq"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "backendId",
+      "deviceId",
+      "nodeId",
+      "state",
+      "step"
+    ]
+  },
   "request.agent.resume.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -32806,6 +33031,96 @@
       "width",
       "height",
       "data"
+    ]
+  },
+  "event.device.operated": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "nodeId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "running",
+          "paused",
+          "takenOver",
+          "ended"
+        ]
+      },
+      "step": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "target": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "kind",
+              "description",
+              "seq"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "backendId",
+      "deviceId",
+      "nodeId",
+      "state",
+      "step"
     ]
   },
   "event.chat.event": {

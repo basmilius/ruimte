@@ -34,15 +34,25 @@ export interface DeviceAbilities {
     launch: boolean;
 }
 
+/* One step of an agent on a device; a tap in the share of the screen from its top-left corner. */
+export type AgentStep =
+    | { kind: 'tap'; x: number; y: number }
+    | { kind: 'swipe' }
+    | { kind: 'type' }
+    | { kind: 'button'; button: DeviceButton }
+    | { kind: 'launch'; app: string }
+    | { kind: 'shot' };
+
 /*
- * Whether a person lets an agent operate the device of a node right now. The one place a pause or a
- * take-over from the node answers, so every call that touches the device passes it first.
+ * Whether a person lets an agent take a step on a device right now. The one place a pause or a
+ * take-over from the node answers, so every step passes it before it touches the device; a shot
+ * passes it as well, so the person sees it, and is left to the gate to let through.
  */
 export interface DeviceGate {
-    refusal(nodeId: string): { code: string; message: string } | null;
+    admit(device: DeviceInfo, caller: string, step: AgentStep): { code: string; message: string } | null;
 }
 
-export const OPEN_GATE: DeviceGate = { refusal: () => null };
+export const OPEN_GATE: DeviceGate = { admit: () => null };
 
 type Manager = Pick<DeviceManager, 'find' | 'hold' | 'release' | 'input' | 'keys' | 'canType' | 'type' | 'screenshot' | 'action'>;
 
@@ -103,7 +113,9 @@ export class DeviceDriver {
         };
     }
 
-    async shot(device: DeviceInfo, id: string): Promise<DeviceShot> {
+    /* `id` is the device node's, which names the file. */
+    async shot(caller: string, device: DeviceInfo, id: string): Promise<DeviceShot> {
+        this.pass(caller, device, { kind: 'shot' });
         const image = await this.manager.screenshot(device.backendId, device.platform, device.deviceId);
         const size = pngSize(image);
         if (size === null) {
@@ -114,20 +126,20 @@ export class DeviceDriver {
         return { path, ...size };
     }
 
-    async tap(nodeId: string, caller: string, device: DeviceInfo, at: Pixel): Promise<void> {
+    async tap(caller: string, device: DeviceInfo, at: Pixel): Promise<void> {
         const point = this.normalized(device, at);
-        await this.operate(nodeId, caller, device, async (send) => {
+        await this.operate(caller, device, { kind: 'tap', ...point }, async (send) => {
             await send({ kind: 'pointer', phase: 'down', ...point });
             await this.sleep(TAP_MS);
             await send({ kind: 'pointer', phase: 'up', ...point });
         });
     }
 
-    async swipe(nodeId: string, caller: string, device: DeviceInfo, from: Pixel, to: Pixel, ms = SWIPE_DEFAULT_MS): Promise<void> {
+    async swipe(caller: string, device: DeviceInfo, from: Pixel, to: Pixel, ms = SWIPE_DEFAULT_MS): Promise<void> {
         const start = this.normalized(device, from);
         const end = this.normalized(device, to);
         const steps = Math.max(2, Math.round(ms / SWIPE_STEP_MS));
-        await this.operate(nodeId, caller, device, async (send) => {
+        await this.operate(caller, device, { kind: 'swipe' }, async (send) => {
             await send({ kind: 'pointer', phase: 'down', ...start });
             for (let step = 1; step <= steps; step += 1) {
                 await this.sleep(ms / steps);
@@ -138,15 +150,15 @@ export class DeviceDriver {
         });
     }
 
-    async button(nodeId: string, caller: string, device: DeviceInfo, button: DeviceButton): Promise<void> {
-        await this.operate(nodeId, caller, device, (send) => send({ kind: 'button', button }));
+    async button(caller: string, device: DeviceInfo, button: DeviceButton): Promise<void> {
+        await this.operate(caller, device, { kind: 'button', button }, (send) => send({ kind: 'button', button }));
     }
 
-    async type(nodeId: string, caller: string, device: DeviceInfo, text: string): Promise<void> {
-        this.pass(nodeId);
+    async type(caller: string, device: DeviceInfo, text: string): Promise<void> {
         if (!this.manager.canType(device)) {
             throw new CodedError('device-input-unavailable', `Ruimte cannot type on ${device.name}`);
         }
+        this.pass(caller, device, { kind: 'type' });
         const holder = `agent:${caller}`;
         let held = false;
         try {
@@ -162,8 +174,8 @@ export class DeviceDriver {
         }
     }
 
-    async launch(nodeId: string, device: DeviceInfo, app: string): Promise<void> {
-        this.pass(nodeId);
+    async launch(caller: string, device: DeviceInfo, app: string): Promise<void> {
+        this.pass(caller, device, { kind: 'launch', app });
         await this.manager.action({ action: 'launchApp', appId: app, backendId: device.backendId, platform: device.platform, deviceId: device.deviceId });
     }
 
@@ -174,8 +186,8 @@ export class DeviceDriver {
         }
     }
 
-    private pass(nodeId: string): void {
-        const refusal = this.gate.refusal(nodeId);
+    private pass(caller: string, device: DeviceInfo, step: AgentStep): void {
+        const refusal = this.gate.admit(device, caller, step);
         if (refusal !== null) {
             throw new CodedError(refusal.code, refusal.message);
         }
@@ -197,15 +209,15 @@ export class DeviceDriver {
 
     /* Holds the device for this caller, runs the gesture on it, and keeps the hold for a while after. */
     private async operate(
-        nodeId: string,
         caller: string,
         device: DeviceInfo,
+        step: AgentStep,
         gesture: (send: (input: DeviceInput) => Promise<void>) => Promise<void>
     ): Promise<void> {
-        this.pass(nodeId);
         if (!device.capabilities.input) {
             throw new CodedError('device-input-unavailable', `${device.name} takes no input from Ruimte on this machine`);
         }
+        this.pass(caller, device, step);
         const holder = `agent:${caller}`;
         await this.hold(device, holder);
         try {

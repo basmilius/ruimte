@@ -221,6 +221,46 @@ export const DeviceFrameSchema = z.object({
     data: z.string().max(11 * 1024 * 1024)
 });
 
+/*
+ * What an agent did last on a device, for the strip on its node. The kind is a plain string (tap,
+ * swipe, type, button, launch, shot), so a daemon that learns a new one does not make an older
+ * client refuse the event; the description says it in words for a client that does not know it.
+ */
+export const DeviceAgentStepSchema = z.object({
+    kind: z.string().min(1).max(32),
+    // The button pressed or the app opened; absent for the other kinds.
+    target: z.string().min(1).max(256).optional(),
+    description: z.string().min(1).max(300),
+    // Where a tap landed, as the share of the screen from its top-left corner; absent for the other kinds.
+    x: DeviceCoordinateSchema.optional(),
+    y: DeviceCoordinateSchema.optional(),
+    // Counts up with every step on the machine, so a second tap on the same spot reads as a new one.
+    seq: z.number().int().min(0)
+});
+
+/* Who has a device an agent operates: the agent, or the person, who paused it or took over by hand. `ended` once the agent let go. */
+export const DeviceOperatedStateSchema = z.enum(['running', 'paused', 'takenOver', 'ended']);
+
+export const DeviceOperatedSchema = z.object({
+    backendId: z.string().min(1).max(64),
+    deviceId: DeviceIdSchema,
+    // The chat or terminal whose agent operates the device; null when the machine does not know it.
+    nodeId: z.string().min(1).nullable(),
+    state: DeviceOperatedStateSchema,
+    step: DeviceAgentStepSchema.nullable()
+});
+
+export const DeviceOperationsResultSchema = z.object({ devices: z.array(DeviceOperatedSchema) });
+
+/* The buttons of the strip on a device node an agent operates, which any client of the person may press. */
+export const DeviceControlModeSchema = z.enum(['pause', 'resume', 'takeOver']);
+
+export const DeviceControlPayloadSchema = z.object({
+    backendId: z.string().min(1).max(64),
+    deviceId: DeviceIdSchema,
+    mode: DeviceControlModeSchema
+});
+
 /* The announced entries this version knows, in the order they were announced. */
 const known = <Value extends string>(schema: z.ZodEnum<Record<Value, Value>>, announced: readonly string[]): Value[] =>
     announced.filter((entry): entry is Value => schema.safeParse(entry).success);
@@ -248,13 +288,18 @@ export type DeviceUnavailable = z.infer<typeof DeviceUnavailableSchema>;
 export type DeviceVideoFormat = z.infer<typeof DeviceVideoFormatSchema>;
 export type DeviceCapabilities = z.infer<typeof DeviceCapabilitiesSchema>;
 export type DeviceAction = z.infer<typeof DeviceActionPayloadSchema>;
+export type DeviceAgentStep = z.infer<typeof DeviceAgentStepSchema>;
 export type DeviceAppearance = z.infer<typeof DeviceAppearanceSchema>;
 export type DeviceColorFilter = z.infer<typeof DeviceColorFilterSchema>;
+export type DeviceControlMode = z.infer<typeof DeviceControlModeSchema>;
+export type DeviceControlPayload = z.infer<typeof DeviceControlPayloadSchema>;
 export type DeviceDetail = z.infer<typeof DeviceDetailSchema>;
 export type DeviceInput = z.infer<typeof DeviceInputSchema>;
 export type DeviceFrame = z.infer<typeof DeviceFrameSchema>;
 export type DeviceKind = z.infer<typeof DeviceKindSchema>;
 export type DeviceOpenResult = z.infer<typeof DeviceOpenResultSchema>;
+export type DeviceOperated = z.infer<typeof DeviceOperatedSchema>;
+export type DeviceOperatedState = z.infer<typeof DeviceOperatedStateSchema>;
 export type DevicePermission = z.infer<typeof DevicePermissionSchema>;
 export type DevicePlatform = z.infer<typeof DevicePlatformSchema>;
 export type DeviceReference = z.infer<typeof DeviceReferenceSchema>;
