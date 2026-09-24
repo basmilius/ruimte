@@ -7,6 +7,7 @@ import {
     type AuthTicketPayload,
     type AuthTicketResult
 } from '@ruimte/contracts';
+import type { TicketGrant, TicketUse } from '../auth/handshake.ts';
 import { sameSecret } from '../auth/local-secret.ts';
 import type { ClientAccess } from '../dispatcher.ts';
 import { AUTHENTICATED_FRAME_CHARS, UNAUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
@@ -26,7 +27,7 @@ export interface ChannelAuthOptions {
         challenge(binding: string | null): AuthChallengeResult;
         redeem(payload: AuthTicketPayload, binding: string | null): Promise<AuthTicketResult | null>;
         spend(challenge: string, binding: string | null): boolean;
-        ticketSession(ticket: string): string | null;
+        ticketAccess(ticket: string, use: TicketUse): Promise<TicketGrant | null>;
     };
     daemonId: string;
     localSecret: string;
@@ -60,6 +61,8 @@ export const authenticateChannel = (options: ChannelAuthOptions): Promise<Client
             }
             settled = true;
             clearTimeout(timer);
+            // A channel that ends without a proof takes its challenge along, so the pool never outgrows the open attempts.
+            handshake.spend(issued.challenge, binding);
             resolve(access);
         };
 
@@ -96,7 +99,7 @@ export const authenticateChannel = (options: ChannelAuthOptions): Promise<Client
             }
             if (proof.type === 'direct.key') {
                 const ticket = await handshake.redeem({ publicKey: proof.publicKey, challenge: proof.challenge, signature: proof.signature }, binding);
-                const sessionId = ticket === null ? null : handshake.ticketSession(ticket.ticket);
+                const sessionId = ticket === null ? null : ((await handshake.ticketAccess(ticket.ticket, 'bytes'))?.sessionId ?? null);
                 if (ticket === null || sessionId === null) {
                     refuse('This machine does not recognize that signature. Pair again.');
                     return;

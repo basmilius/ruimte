@@ -8,7 +8,7 @@ import { handleLiveStreamRequest, LIVE_STREAM_PATH } from './http-stream.ts';
 import { LiveStreamHub } from './live-stream.ts';
 
 const LOCAL_SECRET = 'the-local-secret';
-const OPTIONS = { allowedOrigins: ['https://client.example'], localSecret: LOCAL_SECRET, tickets: { ticketSession: () => null } };
+const OPTIONS = { allowedOrigins: ['https://client.example'], localSecret: LOCAL_SECRET, tickets: { ticketAccess: async () => null } };
 
 let root: string;
 let auth: AuthStore;

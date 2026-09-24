@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { decideAccess, mayInvite, originAllowed, reachabilityOf } from './access.ts';
+import { decideAccess, handleLocalTicketRequest, mayInvite, originAllowed, reachabilityOf } from './access.ts';
 import { AuthStore, PAIRING_TTL_MS } from './auth-store.ts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { generateKeyPair, signMessage } from './keys.ts';
@@ -12,7 +12,7 @@ let clock: number;
 let store: AuthStore;
 
 // Nothing in these two blocks hands out a ticket, so a credential is only ever a session token here.
-const NO_TICKETS = { ticketSession: () => null };
+const NO_TICKETS = { ticketAccess: async () => null };
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-auth-'));
@@ -93,6 +93,55 @@ describe('AuthStore', () => {
         expect(await store.sessionForPublicKey(publicKey)).toBe(paired!.id);
     });
 
+    test('a session that has a key keeps it, and a revoked key is not registered anywhere', async () => {
+        const first = generateKeyPair();
+        const paired = await store.pair(store.issuePairingToken(), { label: 'phone', publicKey: first.publicKey });
+        expect(await store.registerKey(paired!.id, generateKeyPair().publicKey)).toBe(false);
+        expect(await store.sessionForPublicKey(first.publicKey)).toBe(paired!.id);
+
+        const legacy = await store.pair(store.issuePairingToken(), { label: 'container' });
+        await store.revoke(paired!.id);
+        expect(await store.registerKey(legacy!.id, first.publicKey)).toBe(false);
+        expect(await store.sessionForPublicKey(first.publicKey)).toBeNull();
+    });
+
+    test('pairing a known key again keeps its one record, and revoking it shuts that key out', async () => {
+        const key = generateKeyPair();
+        const first = await store.pair(store.issuePairingToken(), { label: 'phone', publicKey: key.publicKey });
+        clock += 1000;
+        const again = await store.pair(store.issuePairingToken(), { label: 'phone again', publicKey: key.publicKey });
+        expect(again!.id).toBe(first!.id);
+        expect((await store.list(null)).map((entry) => entry.label)).toEqual(['phone again']);
+
+        expect(await store.revoke(first!.id)).toBe(true);
+        expect(await store.sessionForPublicKey(key.publicKey)).toBeNull();
+    });
+
+    test('records an older daemon wrote twice for one key read back as one, and revoking it leaves none', async () => {
+        const { publicKey } = generateKeyPair();
+        const push = { handle: 'h'.repeat(43), publicKey: 'p'.repeat(43), follow: [], approvals: true };
+        await writeFile(
+            join(home, 'auth.json'),
+            JSON.stringify({
+                sessions: [
+                    { id: 'first', label: 'phone', publicKey, origin: 'link', createdAt: 1, lastSeenAt: 5, push },
+                    { id: 'legacy', label: 'docker', tokenHash: 'a'.repeat(64), createdAt: 2, lastSeenAt: 3 },
+                    { id: 'second', label: 'phone (2)', publicKey, origin: 'link', createdAt: 4, lastSeenAt: 9 }
+                ]
+            })
+        );
+        const again = new AuthStore(home, () => clock);
+        expect(await again.list(null)).toEqual([
+            { id: 'second', label: 'phone (2)', origin: 'link', createdAt: 1, lastSeenAt: 9, current: false },
+            { id: 'legacy', label: 'docker', origin: 'link', createdAt: 2, lastSeenAt: 3, current: false }
+        ]);
+        expect((await again.pushSubscriptions()).map((entry) => entry.sessionId)).toEqual(['second']);
+
+        await again.revoke('second');
+        expect(await again.sessionForPublicKey(publicKey)).toBeNull();
+        expect((await again.list(null)).map((entry) => entry.id)).toEqual(['legacy']);
+    });
+
     test('a key another client already registered is refused', async () => {
         const { publicKey } = generateKeyPair();
         const first = await store.pair(store.issuePairingToken(), { label: 'one', publicKey });
@@ -153,42 +202,65 @@ describe('access', () => {
             new Request(`http://box:4210/ws${token ? `?token=${token}` : ''}`, { headers: { host: 'box:4210', ...(origin ? { origin } : {}) } });
 
         // A tunnel or a reverse proxy makes every visitor loopback, so the address is no proof.
-        expect(await decideAccess(request(), '127.0.0.1', store, options)).toMatchObject({ ok: false, status: 401 });
-        expect(await decideAccess(request('the-local-secret'), '127.0.0.1', store, options)).toEqual({
+        expect(await decideAccess(request(), '127.0.0.1', store, options, 'socket')).toMatchObject({ ok: false, status: 401 });
+        expect(await decideAccess(request('the-local-secret'), '127.0.0.1', store, options, 'socket')).toEqual({
             ok: true,
             access: { reachability: 'loopback', sessionId: null }
         });
-        expect(await decideAccess(request('the-local-secre'), '127.0.0.1', store, options)).toMatchObject({ ok: false, status: 401 });
-        expect(await decideAccess(request(), '192.168.1.20', store, options)).toMatchObject({ ok: false, status: 401 });
-        expect(await decideAccess(request(undefined, 'https://evil.example'), '127.0.0.1', store, options)).toMatchObject({ ok: false, status: 403 });
+        expect(await decideAccess(request('the-local-secre'), '127.0.0.1', store, options, 'socket')).toMatchObject({ ok: false, status: 401 });
+        expect(await decideAccess(request(), '192.168.1.20', store, options, 'socket')).toMatchObject({ ok: false, status: 401 });
+        expect(await decideAccess(request(undefined, 'https://evil.example'), '127.0.0.1', store, options, 'socket')).toMatchObject({ ok: false, status: 403 });
 
         const paired = await store.pair(store.issuePairingToken(), { label: 'laptop' });
-        expect(await decideAccess(request(paired!.sessionToken!), '192.168.1.20', store, options)).toEqual({
+        expect(await decideAccess(request(paired!.sessionToken!), '192.168.1.20', store, options, 'socket')).toEqual({
             ok: true,
             access: { reachability: 'lan', sessionId: paired!.id }
         });
-        expect(await decideAccess(request('bogus'), '192.168.1.20', store, options)).toMatchObject({ ok: false, status: 401 });
+        expect(await decideAccess(request('bogus'), '192.168.1.20', store, options, 'socket')).toMatchObject({ ok: false, status: 401 });
     });
 
     test('a ticket opens the same door as a token, in the same place', async () => {
         const options = {
             allowedOrigins: [],
             localSecret: 'the-local-secret',
-            tickets: { ticketSession: (ticket: string) => (ticket === 'good-ticket' ? 'session-7' : null) }
+            tickets: { ticketAccess: async (ticket: string) => (ticket === 'good-ticket' ? { sessionId: 'session-7' } : null) }
         };
         const request = (token: string) => new Request(`http://box:4210/ws?token=${token}`, { headers: { host: 'box:4210' } });
 
-        expect(await decideAccess(request('good-ticket'), '192.168.1.20', store, options)).toEqual({
+        expect(await decideAccess(request('good-ticket'), '192.168.1.20', store, options, 'socket')).toEqual({
             ok: true,
-            access: { reachability: 'lan', sessionId: 'session-7' }
+            access: { reachability: 'lan', sessionId: 'session-7' },
+            ticket: 'good-ticket'
         });
-        expect(await decideAccess(request('stale-ticket'), '192.168.1.20', store, options)).toMatchObject({ ok: false, status: 401 });
+        expect(await decideAccess(request('stale-ticket'), '192.168.1.20', store, options, 'socket')).toMatchObject({ ok: false, status: 401 });
     });
 
     test('the secret travels as a bearer as well, which is how `ruimte pair` sends it', async () => {
         const options = { allowedOrigins: [], localSecret: 'the-local-secret', tickets: NO_TICKETS };
         const request = new Request('http://127.0.0.1:4210/auth/pairing-token', { method: 'POST', headers: { authorization: 'Bearer the-local-secret' } });
-        expect(await decideAccess(request, '127.0.0.1', store, options)).toMatchObject({ ok: true, access: { sessionId: null } });
+        expect(await decideAccess(request, '127.0.0.1', store, options, 'local')).toMatchObject({ ok: true, access: { sessionId: null } });
+    });
+
+    test('what only the app on this machine may ask takes the local secret itself, never a ticket that stands in for it', async () => {
+        const options = { allowedOrigins: [], localSecret: 'the-local-secret', tickets: { ticketAccess: async () => ({ sessionId: null }) } };
+        const request = new Request('http://127.0.0.1:4210/auth/pairing-token', { method: 'POST', headers: { authorization: 'Bearer local-ticket' } });
+        expect(await decideAccess(request, '127.0.0.1', store, options, 'bytes')).toMatchObject({ ok: true, access: { sessionId: null } });
+        expect(await decideAccess(request, '127.0.0.1', store, options, 'local')).toMatchObject({ ok: false, status: 403 });
+    });
+
+    test('the local secret trades for a ticket from the Authorization header only', async () => {
+        const options = { allowedOrigins: [], localSecret: 'the-local-secret', tickets: NO_TICKETS };
+        const tickets = { issueLocalTicket: () => ({ ticket: 'local-ticket', expiresIn: 1000 }) };
+        const trade = (init: RequestInit, query = '') =>
+            handleLocalTicketRequest(new Request(`http://127.0.0.1:4210/auth/local-ticket${query}`, init), options, tickets);
+
+        const traded = trade({ method: 'POST', headers: { authorization: 'Bearer the-local-secret' } });
+        expect(traded.status).toBe(200);
+        expect(await traded.json()).toEqual({ ticket: 'local-ticket', expiresIn: 1000 });
+        expect(trade({ method: 'POST' }, '?token=the-local-secret').status).toBe(401);
+        expect(trade({ method: 'POST', headers: { authorization: 'Bearer something-else' } }).status).toBe(401);
+        expect(trade({ method: 'GET', headers: { authorization: 'Bearer the-local-secret' } }).status).toBe(405);
+        expect(trade({ method: 'POST', headers: { authorization: 'Bearer the-local-secret', origin: 'https://evil.example' } }).status).toBe(403);
     });
 
     test('only the local secret may invite another machine', () => {

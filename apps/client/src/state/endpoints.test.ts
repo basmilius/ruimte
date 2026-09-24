@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { forgetTicket, rememberLocalSecret, rememberTicket } from '@/endpoint/credentials';
+import { forgetTicket, rememberLocalSecret, rememberSecretForUrls, rememberTicket } from '@/endpoint/credentials';
 import {
     LOCAL_ENDPOINT_ID,
     endpointForDaemon,
@@ -62,7 +62,7 @@ describe('endpoints', () => {
         expect(socketUrlFor({ ...base, token: 'a b' })).toBe('ws://box:4210/ws?token=a%20b');
     });
 
-    test('the local row presents the secret the desktop shell read, and nothing without one', () => {
+    test('the local row never puts the secret the desktop shell read in its URL, only the ticket it traded it for', () => {
         const local = {
             id: 'local',
             label: 'This machine',
@@ -75,8 +75,16 @@ describe('endpoints', () => {
         };
         expect(socketUrlFor(local)).toBe('ws://127.0.0.1:4211/ws');
         rememberLocalSecret('local', 'secret-1');
-        expect(socketUrlFor(local)).toBe('ws://127.0.0.1:4211/ws?token=secret-1');
+        expect(socketUrlFor(local)).toBe('ws://127.0.0.1:4211/ws');
+        rememberTicket('local', 'local-ticket');
+        expect(socketUrlFor(local)).toBe('ws://127.0.0.1:4211/ws?token=local-ticket');
+        forgetTicket('local');
         rememberLocalSecret('local', null);
+
+        // A daemon from before the trade takes the secret or nothing.
+        rememberSecretForUrls('local', 'secret-1');
+        expect(socketUrlFor(local)).toBe('ws://127.0.0.1:4211/ws?token=secret-1');
+        rememberSecretForUrls('local', null);
         expect(socketUrlFor(local)).toBe('ws://127.0.0.1:4211/ws');
     });
 });

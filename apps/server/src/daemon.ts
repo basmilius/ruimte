@@ -43,7 +43,7 @@ import { greetingLines } from './cli/greeting.ts';
 import { guardWeriftTurn } from './pulsar/turn-guard.ts';
 import { registerDirectHandlers } from './handlers/direct.ts';
 import { suggestChatTitle } from './chat/chat-title.ts';
-import { decideAccess, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
+import { decideAccess, handleLocalTicketRequest, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
 import { readOrCreateLocalSecret } from './auth/local-secret.ts';
 import { signLinkRequest, signRegistration } from './auth/registration.ts';
 import { AccountSchema } from '@ruimte/pulsar';
@@ -128,12 +128,15 @@ import { adbScrcpyHost, ScrcpySource } from './devices/scrcpy-source.ts';
 import { registerDeviceHandlers } from './handlers/device.ts';
 import { LiveStreamHub } from './streams/live-stream.ts';
 
-// A client on another origin pairs and signs in from its own page, so the auth routes answer preflights and open CORS.
 // What `ruimte login` has the machine sign; local secret only, like the work.
 const MACHINE_LINK_PATH = '/machine/link-request';
 const MACHINE_REGISTRATION_PATH = '/machine/registration';
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
 
+// Past anything a hook or a verb sends, and the ceiling on what an unauthenticated request can make the daemon buffer.
+const MAX_REQUEST_BODY_BYTES = 8 * 1024 * 1024;
+
+// A client on another origin pairs and signs in from its own page, so the auth routes answer preflights and open CORS.
 const AUTH_CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST', 'access-control-allow-headers': 'content-type' };
 
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
@@ -640,9 +643,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         ...brokerSwitch.describe()
     });
 
-    const server = Bun.serve<ClientAccess & { protocolRefused: boolean }>({
+    const server = Bun.serve<ClientAccess & { protocolRefused: boolean; ticket: string | null }>({
         hostname: config.host,
         port: config.port,
+        maxRequestBodySize: MAX_REQUEST_BODY_BYTES,
         async fetch(request, server) {
             const url = new URL(request.url);
             const remote = server.requestIP(request)?.address ?? '';
@@ -659,7 +663,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 if (request.method !== 'POST') {
                     return new Response('Method not allowed', { status: 405 });
                 }
-                const decision = await decideAccess(request, remote, auth, access);
+                const decision = await decideAccess(request, remote, auth, access, 'local');
                 if (!decision.ok || !mayInvite(decision.access)) {
                     return new Response('Forbidden', { status: 403 });
                 }
@@ -718,12 +722,16 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 return Response.json(ticket, { headers: AUTH_CORS });
             }
 
+            if (url.pathname === '/auth/local-ticket') {
+                return handleLocalTicketRequest(request, access, handshake);
+            }
+
             if (url.pathname === MACHINE_WORK_PATH) {
                 // Only for the local secret: the desktop app asks before it restarts the service, and nobody else needs to know.
                 if (request.method !== 'GET') {
                     return new Response('Method not allowed', { status: 405 });
                 }
-                const decision = await decideAccess(request, remote, auth, access);
+                const decision = await decideAccess(request, remote, auth, access, 'local');
                 if (!decision.ok || decision.access.sessionId !== null) {
                     return new Response('Forbidden', { status: 403 });
                 }
@@ -735,7 +743,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 if (request.method !== 'POST') {
                     return new Response('Method not allowed', { status: 405 });
                 }
-                const decision = await decideAccess(request, remote, auth, access);
+                const decision = await decideAccess(request, remote, auth, access, 'local');
                 if (!decision.ok || decision.access.sessionId !== null) {
                     return new Response('Forbidden', { status: 403 });
                 }
@@ -751,14 +759,17 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname === '/ws') {
-                const decision = await decideAccess(request, remote, auth, access);
+                const decision = await decideAccess(request, remote, auth, access, 'socket');
                 if (!decision.ok) {
                     return new Response(decision.reason, { status: decision.status });
                 }
                 // Upgraded and then closed, since a browser reads the code and reason of a close but never the status of a refused upgrade.
                 const protocolRefused = !acceptsOfferedProtocol(url.searchParams.get(PROTOCOL_PARAM));
-                if (server.upgrade(request, { data: { ...decision.access, protocolRefused } })) {
+                if (server.upgrade(request, { data: { ...decision.access, protocolRefused, ticket: decision.ticket ?? null } })) {
                     return undefined;
+                }
+                if (decision.ticket !== undefined) {
+                    handshake.socketClosed(decision.ticket);
                 }
                 return new Response('Expected a WebSocket upgrade', { status: 426 });
             }
@@ -836,6 +847,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 connections.get(ws)?.connection.receive(message);
             },
             close(ws) {
+                if (ws.data.ticket !== null) {
+                    handshake.socketClosed(ws.data.ticket);
+                }
                 const state = connections.get(ws);
                 if (!state) {
                     return;

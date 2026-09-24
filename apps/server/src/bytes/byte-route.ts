@@ -51,7 +51,7 @@ export const guardBytesRequest = async (request: Request, remoteAddress: string,
     if (request.method !== 'GET' && request.method !== 'HEAD') {
         return new Response('Method not allowed', { status: 405 });
     }
-    const decision = await decideAccess(request, remoteAddress, auth, options);
+    const decision = await decideAccess(request, remoteAddress, auth, options, 'bytes');
     return decision.ok ? null : new Response(decision.reason, { status: decision.status });
 };
 

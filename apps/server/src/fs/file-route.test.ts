@@ -15,7 +15,7 @@ const MP4 = Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x20]), Buffer.from('f
 // No handshake in these tests, so a credential is only ever a session token.
 // What the desktop app on this machine presents; a loopback address alone gets nothing.
 const LOCAL_SECRET = 'the-local-secret';
-const OPTIONS = { allowedOrigins: [], localSecret: LOCAL_SECRET, tickets: { ticketSession: () => null } };
+const OPTIONS = { allowedOrigins: [], localSecret: LOCAL_SECRET, tickets: { ticketAccess: async () => null } };
 
 let root: string;
 let auth: AuthStore;

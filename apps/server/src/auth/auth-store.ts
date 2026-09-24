@@ -80,6 +80,41 @@ export interface StatementEntry {
 export type StatementAdmission = { sessionId: string; created: boolean } | { refused: 'replayed' | 'revoked' | 'bad-key' };
 
 /*
+ * One record per key. A daemon from before `pair` looked for a known key wrote a second record for a
+ * client that paired again; the one seen last stays, and keeps the oldest creation time and any push
+ * subscription the others had.
+ */
+const mergeSharedKeys = (sessions: SessionRecord[]): SessionRecord[] => {
+    const byKey = new Map<string, SessionRecord[]>();
+    for (const record of sessions) {
+        if (record.publicKey !== undefined) {
+            byKey.set(record.publicKey, [...(byKey.get(record.publicKey) ?? []), record]);
+        }
+    }
+    const merged = new Map<string, SessionRecord>();
+    for (const [key, records] of byKey) {
+        const survivor = records.reduce((latest, record) => (record.lastSeenAt > latest.lastSeenAt ? record : latest));
+        const push = survivor.push ?? records.find((record) => record.push !== undefined)?.push;
+        merged.set(key, {
+            ...survivor,
+            createdAt: Math.min(...records.map((record) => record.createdAt)),
+            ...(push === undefined ? {} : { push })
+        });
+    }
+    return sessions.flatMap((record) => {
+        if (record.publicKey === undefined) {
+            return [record];
+        }
+        const survivor = merged.get(record.publicKey);
+        if (survivor === undefined) {
+            return [];
+        }
+        merged.delete(record.publicKey);
+        return [survivor];
+    });
+};
+
+/*
  * Who may talk to this daemon from another machine. A client registers a public key when it pairs
  * and proves it per connection; a client from before that holds a session token, stored as a hash
  * in `$RUIMTE_HOME/auth.json`. Either way it pairs once, for a token the daemon printed that dies
@@ -113,6 +148,17 @@ export class AuthStore {
         }
         this.pairing = null;
         const keyed = options.publicKey !== undefined && isPublicKey(options.publicKey);
+        const state = await this.load();
+        // A person handing out a link for a key they once revoked is taking that revocation back.
+        const revokedKeys = keyed ? state.revokedKeys.filter((key) => key !== options.publicKey) : state.revokedKeys;
+        // A client pairs again with the key it already had; a second record would outlive revoking the first.
+        const known = keyed ? state.sessions.find((entry) => entry.publicKey === options.publicKey) : undefined;
+        if (known) {
+            known.label = options.label;
+            known.lastSeenAt = this.now();
+            await this.save({ ...state, revokedKeys });
+            return { id: known.id };
+        }
         const sessionToken = keyed ? undefined : randomBytes(32).toString('base64url');
         const record: SessionRecord = {
             id: randomBytes(6).toString('base64url'),
@@ -122,9 +168,6 @@ export class AuthStore {
             createdAt: this.now(),
             lastSeenAt: this.now()
         };
-        const state = await this.load();
-        // A person handing out a link for a key they once revoked is taking that revocation back.
-        const revokedKeys = keyed ? state.revokedKeys.filter((key) => key !== options.publicKey) : state.revokedKeys;
         await this.save({ ...state, sessions: [...state.sessions, record], revokedKeys });
         return sessionToken === undefined ? { id: record.id } : { id: record.id, sessionToken };
     }
@@ -185,27 +228,34 @@ export class AuthStore {
         return state.sessions.find((entry) => entry.publicKey === publicKey)?.id ?? null;
     }
 
+    /* Whether a session is still paired, which a credential handed out before a revoke has to ask again. */
+    async hasSession(sessionId: string): Promise<boolean> {
+        return (await this.load()).sessions.some((entry) => entry.id === sessionId);
+    }
+
     /*
      * Marks a client as having signed for itself. The session token goes with it: keeping it until
      * this moment is what lets a client that paired before key pairs move over without pairing
      * again, and dropping it the moment a signature lands means the thing that used to sit in every
-     * socket URL stops working for good.
+     * socket URL stops working for good. False when the session was revoked since it was looked up.
      */
-    async noteSignedIn(sessionId: string): Promise<void> {
+    async noteSignedIn(sessionId: string): Promise<boolean> {
         const state = await this.load();
         const record = state.sessions.find((entry) => entry.id === sessionId);
         if (!record) {
-            return;
+            return false;
         }
         delete record.tokenHash;
         record.lastSeenAt = this.now();
         await this.save(state);
+        return true;
     }
 
     /*
      * Hangs a public key on a session that has none, which is how a client paired before key pairs
      * upgrades over its own authenticated connection. A key another session already holds is
      * refused: the daemon looks a client up by its key, so two records on one key is an ambiguity.
+     * A revoked key is refused too, since only a pairing link lets it back in, and a session that has a key keeps it.
      */
     async registerKey(sessionId: string, publicKey: string): Promise<boolean> {
         if (!isPublicKey(publicKey)) {
@@ -213,11 +263,11 @@ export class AuthStore {
         }
         const state = await this.load();
         const record = state.sessions.find((entry) => entry.id === sessionId);
-        if (!record || state.sessions.some((entry) => entry.id !== sessionId && entry.publicKey === publicKey)) {
+        if (!record || state.revokedKeys.includes(publicKey) || state.sessions.some((entry) => entry.id !== sessionId && entry.publicKey === publicKey)) {
             return false;
         }
-        if (record.publicKey === publicKey) {
-            return true;
+        if (record.publicKey !== undefined) {
+            return record.publicKey === publicKey;
         }
         record.publicKey = publicKey;
         await this.save(state);
@@ -261,16 +311,20 @@ export class AuthStore {
         }));
     }
 
-    /* Takes a client's access away. Its key is remembered, so a statement for it gets nothing until a person pairs it again with a link. */
+    /*
+     * Takes a client's access away, with every record on its key. Its key is remembered, so a statement
+     * for it gets nothing until a person pairs it again with a link.
+     */
     async revoke(id: string): Promise<boolean> {
         const state = await this.load();
         const record = state.sessions.find((entry) => entry.id === id);
         if (!record) {
             return false;
         }
-        const revokedKeys =
-            record.publicKey === undefined || state.revokedKeys.includes(record.publicKey) ? state.revokedKeys : [...state.revokedKeys, record.publicKey];
-        await this.save({ ...state, sessions: state.sessions.filter((entry) => entry.id !== id), revokedKeys });
+        const key = record.publicKey;
+        const revokedKeys = key === undefined || state.revokedKeys.includes(key) ? state.revokedKeys : [...state.revokedKeys, key];
+        const sessions = state.sessions.filter((entry) => entry.id !== id && (key === undefined || entry.publicKey !== key));
+        await this.save({ ...state, sessions, revokedKeys });
         return true;
     }
 
@@ -287,7 +341,7 @@ export class AuthStore {
         try {
             const parsed = FileSchema.safeParse(JSON.parse(await readFile(this.path, 'utf8')));
             this.state = parsed.success
-                ? { sessions: parsed.data.sessions, spentNonces: parsed.data.spentNonces ?? [], revokedKeys: parsed.data.revokedKeys ?? [] }
+                ? { sessions: mergeSharedKeys(parsed.data.sessions), spentNonces: parsed.data.spentNonces ?? [], revokedKeys: parsed.data.revokedKeys ?? [] }
                 : { sessions: [], spentNonces: [], revokedKeys: [] };
         } catch (e) {
             if (!isNotFound(e)) {

@@ -5,7 +5,7 @@ import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { clientKey, type ClientKey } from './client-key';
-import { forgetTicket, rememberLocalSecret, rememberTicket } from './credentials';
+import { forgetTicket, rememberLocalSecret, rememberSecretForUrls, rememberTicket } from './credentials';
 
 const post = async (httpBaseUrl: string, path: string, body: unknown): Promise<unknown | null> => {
     const response = await fetch(`${httpBaseUrl}${path}`, {
@@ -74,9 +74,33 @@ const reportImposter = (endpoint: Endpoint): void => {
 };
 
 /*
+ * Trades the local secret for a ticket over the Authorization header, so the secret never sits in a
+ * URL. A daemon from before the trade answers with its app shell or a 404; that one is sent the
+ * secret in the URL as before. A refusal or a daemon that does not answer leaves the last ticket.
+ */
+export const tradeLocalSecret = async (endpoint: Endpoint, secret: string): Promise<void> => {
+    const response = await fetch(`${endpoint.httpBaseUrl}/auth/local-ticket`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${secret}` }
+    }).catch(() => null);
+    if (response === null || (!response.ok && response.status !== 404)) {
+        return;
+    }
+    const ticket = AuthTicketResultSchema.safeParse(response.ok ? await response.json().catch(() => null) : null);
+    if (ticket.success) {
+        rememberTicket(endpoint.id, ticket.data.ticket);
+        rememberSecretForUrls(endpoint.id, null);
+        return;
+    }
+    forgetTicket(endpoint.id);
+    rememberSecretForUrls(endpoint.id, secret);
+};
+
+/*
  * The address a socket for this machine opens on, credential and all. This runs before every
- * connection and every reconnect, because the ticket it signs for is good for that connection only,
- * so nothing that lives longer than a connection ends up in a URL, a log or a process list.
+ * connection and every reconnect, because a ticket opens one socket only. What sits in the URL is a
+ * ticket, never the local secret, so a copied image address or a log gives away bytes for as long as
+ * that ticket lives and never a second socket or a pairing link.
  */
 export const socketAddressFor = async (endpointId: string): Promise<string> => {
     const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
@@ -89,6 +113,9 @@ export const socketAddressFor = async (endpointId: string): Promise<string> => {
             ?.localSecret?.()
             .catch(() => null);
         rememberLocalSecret(endpointId, secret ?? null);
+        if (secret) {
+            await tradeLocalSecret(endpoint, secret);
+        }
     }
     const key = endpoint.daemonPublicKey === null ? null : await clientKey();
     if (key) {

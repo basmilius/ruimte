@@ -31,6 +31,8 @@ const signIn = async (key: { publicKey: string; privateKey: string }, daemonId =
     });
 };
 
+const sessionOf = async (ticket: string) => (await handshake.ticketAccess(ticket, 'bytes'))?.sessionId;
+
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-handshake-'));
     clock = 5_000_000;
@@ -58,8 +60,8 @@ describe('Handshake', () => {
         const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
         const ticket = await signIn(key);
         expect(ticket?.expiresIn).toBe(TICKET_TTL_MS);
-        expect(handshake.ticketSession(ticket!.ticket)).toBe(paired!.id);
-        expect(handshake.ticketSession('made-up')).toBeNull();
+        expect(await sessionOf(ticket!.ticket)).toBe(paired!.id);
+        expect(await handshake.ticketAccess('made-up', 'bytes')).toBeNull();
         // Every connection signs again, and no two connections carry the same credential.
         const second = await signIn(key);
         expect(second!.ticket).not.toBe(ticket!.ticket);
@@ -112,7 +114,7 @@ describe('Handshake', () => {
 
         await store.revoke(paired!.id);
         handshake.revoke(paired!.id);
-        expect(handshake.ticketSession(ticket!.ticket)).toBeNull();
+        expect(await handshake.ticketAccess(ticket!.ticket, 'bytes')).toBeNull();
         expect(await signIn(key)).toBeNull();
     });
 
@@ -122,11 +124,11 @@ describe('Handshake', () => {
         const ticket = await signIn(key);
 
         clock += TICKET_TTL_MS - 1;
-        expect(handshake.ticketSession(ticket!.ticket)).toBe(paired!.id);
+        expect(await sessionOf(ticket!.ticket)).toBe(paired!.id);
         clock += TICKET_TTL_MS - 1;
-        expect(handshake.ticketSession(ticket!.ticket)).toBe(paired!.id);
+        expect(await sessionOf(ticket!.ticket)).toBe(paired!.id);
         clock += TICKET_TTL_MS + 1;
-        expect(handshake.ticketSession(ticket!.ticket)).toBeNull();
+        expect(await handshake.ticketAccess(ticket!.ticket, 'bytes')).toBeNull();
     });
 
     test('a client that keeps reconnecting does not pile up tickets on the daemon', async () => {
@@ -136,7 +138,12 @@ describe('Handshake', () => {
         for (let i = 0; i < 12; i++) {
             tickets.push((await signIn(key))!.ticket);
         }
-        const alive = tickets.filter((ticket) => handshake.ticketSession(ticket) !== null);
+        const alive = [];
+        for (const ticket of tickets) {
+            if ((await handshake.ticketAccess(ticket, 'bytes')) !== null) {
+                alive.push(ticket);
+            }
+        }
         expect(alive.length).toBe(8);
         expect(alive).toEqual(tickets.slice(-8));
     });
@@ -152,6 +159,88 @@ describe('Handshake', () => {
         expect(await handshake.redeem({ publicKey: key.publicKey, challenge: first, signature })).toBeNull();
         // The one that was just handed out still works, so a flood costs a re-ask and nothing more.
         expect(await signIn(key)).not.toBeNull();
+    });
+
+    test('a ticket opens one socket and serves bytes for as long as it lives', async () => {
+        const key = generateKeyPair();
+        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const { ticket } = (await signIn(key))!;
+
+        expect(await handshake.ticketAccess(ticket, 'socket')).toEqual({ sessionId: paired!.id });
+        expect(await handshake.ticketAccess(ticket, 'socket')).toBeNull();
+        expect(await sessionOf(ticket)).toBe(paired!.id);
+        handshake.socketClosed(ticket);
+        expect(await handshake.ticketAccess(ticket, 'socket')).toBeNull();
+        expect(await sessionOf(ticket)).toBe(paired!.id);
+    });
+
+    test('a ticket behind an open socket outlives its time, and lives its time again once the socket closes', async () => {
+        const key = generateKeyPair();
+        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const { ticket } = (await signIn(key))!;
+        await handshake.ticketAccess(ticket, 'socket');
+
+        clock += 3 * TICKET_TTL_MS;
+        // Reconnects elsewhere hand out tickets and sweep; neither takes the one the open socket stands on.
+        for (let i = 0; i < 12; i++) {
+            await signIn(key);
+        }
+        expect(await sessionOf(ticket)).toBe(paired!.id);
+        handshake.socketClosed(ticket);
+        clock += TICKET_TTL_MS + 1;
+        expect(await handshake.ticketAccess(ticket, 'bytes')).toBeNull();
+    });
+
+    test('the local secret trades for a ticket that lets in the app on this machine', async () => {
+        const { ticket, expiresIn } = handshake.issueLocalTicket();
+        expect(expiresIn).toBe(TICKET_TTL_MS);
+        expect(await handshake.ticketAccess(ticket, 'socket')).toEqual({ sessionId: null });
+        expect(await handshake.ticketAccess(ticket, 'socket')).toBeNull();
+        expect(await handshake.ticketAccess(ticket, 'bytes')).toEqual({ sessionId: null });
+    });
+
+    test('a revoke between looking the key up and handing out the ticket leaves no ticket', async () => {
+        const key = generateKeyPair();
+        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const racing = Object.create(store) as AuthStore;
+        racing.sessionForPublicKey = async (publicKey) => {
+            const sessionId = await store.sessionForPublicKey(publicKey);
+            await store.revoke(sessionId!);
+            handshake.revoke(sessionId!);
+            return sessionId;
+        };
+        handshake = new Handshake(racing, identity, () => clock);
+        expect(await signIn(key)).toBeNull();
+        expect(await store.hasSession(paired!.id)).toBe(false);
+    });
+
+    test('a revoke that lands while the ticket is written leaves a ticket that opens nothing', async () => {
+        const key = generateKeyPair();
+        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const racing = Object.create(store) as AuthStore;
+        racing.noteSignedIn = async (sessionId) => {
+            const noted = await store.noteSignedIn(sessionId);
+            await store.revoke(sessionId);
+            handshake.revoke(sessionId);
+            return noted;
+        };
+        handshake = new Handshake(racing, identity, () => clock);
+        const ticket = await signIn(key);
+        expect(ticket).not.toBeNull();
+        expect(await handshake.ticketAccess(ticket!.ticket, 'socket')).toBeNull();
+        expect(await handshake.ticketAccess(ticket!.ticket, 'bytes')).toBeNull();
+        expect(await store.hasSession(paired!.id)).toBe(false);
+    });
+
+    test('revoking a key that paired twice shuts out every record of it', async () => {
+        const key = generateKeyPair();
+        await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const again = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        expect(await signIn(key)).not.toBeNull();
+
+        await store.revoke(again!.id);
+        handshake.revoke(again!.id);
+        expect(await signIn(key)).toBeNull();
     });
 
     test('signing in for the first time drops the session token that client paired with', async () => {
@@ -197,6 +286,16 @@ describe('Handshake on a direct channel', () => {
         const plain = handshake.challenge(BINDING).challenge;
         const http = signMessage(key.privateKey, clientAuthMessage(DAEMON_ID, plain, key.publicKey));
         expect(await handshake.redeem({ publicKey: key.publicKey, challenge: plain, signature: http })).toBeNull();
+    });
+
+    test('a flood of challenges over HTTP never pushes out the one a channel is waiting on', async () => {
+        const key = await pairedKey();
+        const { challenge } = handshake.challenge(BINDING);
+        for (let i = 0; i < 2000; i++) {
+            handshake.challenge();
+        }
+        const signature = signMessage(key.privateKey, clientChannelMessage(DAEMON_ID, challenge, key.publicKey, BINDING));
+        expect(await handshake.redeem({ publicKey: key.publicKey, challenge, signature }, BINDING)).not.toBeNull();
     });
 
     test('a challenge from the HTTP route cannot be spent on a channel, nor one from a channel on another', () => {

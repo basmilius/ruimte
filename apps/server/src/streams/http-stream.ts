@@ -31,7 +31,7 @@ export const handleLiveStreamRequest = async (
     if (request.method !== 'GET') {
         return new Response('Method not allowed', { status: 405, headers });
     }
-    const decision = await decideAccess(request, remoteAddress, auth, options);
+    const decision = await decideAccess(request, remoteAddress, auth, options, 'bytes');
     if (!decision.ok) {
         return new Response(decision.reason, { status: decision.status, headers });
     }
