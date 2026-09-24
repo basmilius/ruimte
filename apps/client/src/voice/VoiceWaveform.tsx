@@ -83,10 +83,10 @@ export function VoiceWaveform({ phase, compact = false }: { phase: VoicePhase; c
             {!compact && (
                 <div className="flex items-center justify-between text-xs font-medium tabular-nums">
                     <span className={inputSpeaking ? 'text-text' : 'text-text-muted'}>
-                        {t('speaker.person')} · {inputLabel}
+                        {t('speaker.person')} · {t(`activity.${inputLabel}`)}
                     </span>
                     <span className={outputSpeaking ? 'text-accent' : 'text-text-muted'}>
-                        {t('speaker.assistant')} · {outputLabel}
+                        {t('speaker.assistant')} · {t(`activity.${outputLabel}`)}
                     </span>
                 </div>
             )}

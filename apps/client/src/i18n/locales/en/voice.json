@@ -18,6 +18,11 @@
         "person": "You",
         "interrupted": "Interrupted"
     },
+    "activity": {
+        "idle": "idle",
+        "listening": "listening",
+        "speaking": "speaking"
+    },
     "empty": {
         "listening": "Listening…",
         "title": "Talk to your workspace",
