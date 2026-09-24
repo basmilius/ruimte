@@ -23,6 +23,7 @@ usage: cu <command> [arguments]
   presence <state> [--label T] [--step T]
                                         show what the agent is doing: think, waiting, permission,
                                         error, done or idle
+  pause | resume | stop                  what the buttons of the session bar do
   quit                                  stop the agent
 
 Development only, drawn in this process without the agent:
@@ -146,7 +147,7 @@ func makeRequest(_ command: String, _ arguments: Arguments) -> Request {
     switch command {
     case "doctor":
         request.prompt = !arguments.flags.contains("no-prompt")
-    case "apps", "quit":
+    case "apps", "quit", "pause", "resume", "stop":
         break
     case "state", "open":
         request.app = requireApp(arguments, command)
@@ -282,7 +283,7 @@ func send(_ request: Request, home: Home) -> [String: Any] {
         fail("no local secret at \(home.secretPath); start the Ruimte daemon for this home first, or pass --home")
     }
     request.secret = secret
-    guard let descriptor = connectToAgent(home, launchIfNeeded: request.command != "quit") else {
+    guard let descriptor = connectToAgent(home, launchIfNeeded: !["quit", "pause", "resume", "stop"].contains(request.command)) else {
         return ["ok": true, "result": ["stopped": false, "message": "the agent was not running"]]
     }
     defer {

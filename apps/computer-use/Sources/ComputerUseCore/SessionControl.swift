@@ -7,6 +7,28 @@ public enum SessionMode: String, Sendable {
     case takenOver
 }
 
+/// A button of the session bar, pressed there or from Ruimte: the same three wherever the person is.
+public enum SessionAction: String, Sendable {
+    case pause
+    case resume
+    case stop
+
+    /// Whether pressing it now changes anything; a pause while paused is not a resume, and nothing acts without a session.
+    public func applies(to control: SessionControl) -> Bool {
+        guard control.isActive else {
+            return false
+        }
+        switch self {
+        case .pause:
+            return control.mode == .running
+        case .resume:
+            return control.mode != .running
+        case .stop:
+            return true
+        }
+    }
+}
+
 /// The person's control over a session and the clock of the session bar, apart from anything on screen.
 /// Times are seconds on one monotonic clock that the caller supplies.
 public struct SessionControl: Sendable {

@@ -135,6 +135,21 @@ struct SessionControlTests {
         #expect(control.summary["mode"] as? String == "running")
     }
 
+    @Test func sessionActionsApplyOnlyWhereTheyChangeSomething() {
+        var control = SessionControl()
+        #expect(!SessionAction.stop.applies(to: control))
+        control.begin(at: 0)
+        #expect(SessionAction.pause.applies(to: control))
+        #expect(!SessionAction.resume.applies(to: control))
+        control.pause(at: 1)
+        #expect(!SessionAction.pause.applies(to: control))
+        #expect(SessionAction.resume.applies(to: control))
+        control.resume(at: 2)
+        control.takeOver(at: 3)
+        #expect(SessionAction.resume.applies(to: control))
+        #expect(SessionAction.stop.applies(to: control))
+    }
+
     @Test func formatsTheClock() {
         #expect(SessionControl.clock(134) == "02:14")
         #expect(SessionControl.clock(3725) == "1:02:05")

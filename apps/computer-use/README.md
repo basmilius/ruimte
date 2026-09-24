@@ -103,6 +103,7 @@ cu menu <app>                            list the menu bar with indices
 cu menu <app> <index | "File > Save">    run a menu item
 cu presence <state> [--label T] [--step T]
                                          think, waiting, permission, error, done or idle
+cu pause | resume | stop                 what the buttons of the session bar do
 cu quit                                  stop the agent
 cu render sheet|<state>|bar [<state>]    development: the overlay as PNGs, see below
 ```
@@ -182,6 +183,7 @@ The session bar at the top of the screen shows a mini cursor with the state, the
 - The person's own mouse (a click, or a move of a few points) takes over, and so does Take over in the menu. The cursor turns hollow and gray. Waiting for the person does not count: then the hand on the mouse is expected. The helper's own events carry a marker and are never mistaken for the person.
 - While paused or taken over, every command that reads or operates an app, `state` included, is refused with "the person paused the session; wait until they resume" or "the person took over; wait until they resume", and an action under way is cancelled. Resume from the bar, the menu or ⌥Space.
 - A stop cancels what runs and ends the session. Every later command fails with "stopped by the person" until the next `cu state`.
+- `pause`, `resume` and `stop` on the socket are the same buttons for a person who presses them in Ruimte. Each answers `{"session": {...}}` in the shape of `doctor`, and one that would change nothing (a pause while paused, anything without a session) changes nothing.
 - These three refusals carry `code` `paused`, `taken-over` and `stopped`. `doctor` answers with `session`, `{"active": true, "mode": "running|paused|takenOver", "stopped": false}`, so a caller can see how the session stands without changing it.
 
 ### The look

@@ -308,6 +308,19 @@ final class Overlay {
         endSession()
     }
 
+    /// What the session bar's buttons do, for a person who presses them in Ruimte instead.
+    func press(_ action: SessionAction) -> [String: Any] {
+        if action.applies(to: control) {
+            switch action {
+            case .pause, .resume:
+                togglePause()
+            case .stop:
+                stop()
+            }
+        }
+        return ["session": control.summary]
+    }
+
     private func barButton(_ button: SessionBarLayer.Button) {
         switch button {
         case .pause:

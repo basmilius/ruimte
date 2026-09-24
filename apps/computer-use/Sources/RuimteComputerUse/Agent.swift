@@ -90,6 +90,9 @@ final class Agent {
         } catch {
             return Response.failure("malformed request: \(error)")
         }
+        if let action = SessionAction(rawValue: request.command) {
+            return Response.success(overlay.press(action))
+        }
         switch request.command {
         case "doctor":
             return await respond {
