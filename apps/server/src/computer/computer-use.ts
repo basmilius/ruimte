@@ -1,6 +1,6 @@
 import { mkdir, readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import type { ComputerApproval, ComputerApprovalChoice, ComputerControlAction, ComputerGrant, ComputerUseStatus } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { CodedError } from '../coded-error.ts';
@@ -61,18 +61,39 @@ const plistValue = async (plist: string, key: string): Promise<string | null> =>
     return (await child.exited) === 0 && text !== '' ? text : null;
 };
 
-/* An app that does not run yet, by the file name of its bundle, for `open`. */
-export const findInstalledApp = async (name: string): Promise<AppRef | null> => {
-    const wanted = name.toLowerCase().replace(/\.app$/, '');
-    for (const folder of applicationFolders()) {
-        const entries = await readdir(folder).catch(() => [] as string[]);
-        const match = entries.find((entry) => entry.toLowerCase() === `${wanted}.app`);
-        if (match === undefined) {
-            continue;
-        }
-        const bundleId = await plistValue(join(folder, match, 'Contents', 'Info.plist'), 'CFBundleIdentifier');
+const fileNameOf = (bundle: string): string => basename(bundle).replace(/\.app$/i, '');
+
+export interface InstalledAppSources {
+    folders?: string[];
+    read?: (plist: string, key: string) => Promise<string | null>;
+}
+
+/*
+ * An app that does not run yet, for `open`: by the file name of its bundle, or else by the name it
+ * shows (`CFBundleDisplayName`), which differs for some apps. Only the second reads every bundle.
+ */
+export const findInstalledApp = async (name: string, sources: InstalledAppSources = {}): Promise<AppRef | null> => {
+    const read = sources.read ?? plistValue;
+    const wanted = name
+        .trim()
+        .toLowerCase()
+        .replace(/\.app$/, '');
+    const listed = await Promise.all(
+        (sources.folders ?? applicationFolders()).map(async (folder) =>
+            (await readdir(folder).catch(() => [] as string[])).filter((entry) => entry.toLowerCase().endsWith('.app')).map((entry) => join(folder, entry))
+        )
+    );
+    const bundles = listed.flat();
+    const infoOf = (bundle: string): string => join(bundle, 'Contents', 'Info.plist');
+    let matches = bundles.filter((bundle) => fileNameOf(bundle).toLowerCase() === wanted);
+    if (matches.length === 0) {
+        const shown = await Promise.all(bundles.map((bundle) => read(infoOf(bundle), 'CFBundleDisplayName')));
+        matches = bundles.filter((_bundle, i) => shown[i]?.toLowerCase() === wanted);
+    }
+    for (const bundle of matches) {
+        const bundleId = await read(infoOf(bundle), 'CFBundleIdentifier');
         if (bundleId !== null) {
-            return { name: match.replace(/\.app$/i, ''), bundleId };
+            return { name: fileNameOf(bundle), bundleId };
         }
     }
     return null;
@@ -92,7 +113,10 @@ export interface AppsOutcome {
 
 export type Resolved = { kind: 'running'; app: RunningApp } | { kind: 'ambiguous'; matches: RunningApp[] } | { kind: 'none' };
 
-/* The app a query names, the way the helper reads one: a pid, a bundle id, or a name with or without `.app`. */
+/*
+ * The app a query names, the way the helper reads one: a pid, a bundle id, or a name with or without
+ * `.app`. The name is the one it shows, which macOS localizes, or the file name of its bundle, which it does not.
+ */
 export const resolveApp = (query: string, apps: readonly RunningApp[]): Resolved => {
     const wanted = query.trim().toLowerCase();
     if (/^\d+$/.test(wanted)) {
@@ -104,7 +128,7 @@ export const resolveApp = (query: string, apps: readonly RunningApp[]): Resolved
         return { kind: 'running', app: byBundle };
     }
     const bare = wanted.replace(/\.app$/, '');
-    const byName = apps.filter((app) => app.name.toLowerCase() === bare);
+    const byName = apps.filter((app) => app.name.toLowerCase() === bare || app.bundleName?.toLowerCase() === bare);
     if (byName.length > 1) {
         return { kind: 'ambiguous', matches: byName };
     }

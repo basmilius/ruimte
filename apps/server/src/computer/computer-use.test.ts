@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentStatus } from '@ruimte/contracts';
-import { readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { APPROVAL_WAIT_MS, CARD_MS } from './approvals.ts';
 import { computerSetup, SHELL_APP, TEXT_EDIT, until, type ComputerSetup } from './computer-test-helpers.ts';
-import { agentWords, resolveApp } from './computer-use.ts';
+import { agentWords, findInstalledApp, resolveApp } from './computer-use.ts';
 import { overlayWords } from './overlay-words.ts';
 
 const codeOf = async (work: Promise<unknown>): Promise<string> => {
@@ -254,6 +255,28 @@ describe('naming an app', () => {
         expect(resolveApp('textedit.app', apps)).toEqual({ kind: 'running', app: TEXT_EDIT });
         expect(resolveApp('Twin', apps).kind).toBe('ambiguous');
         expect(resolveApp('Nothing', apps)).toEqual({ kind: 'none' });
+    });
+
+    test('by the file name of its bundle where macOS shows the name localized', () => {
+        const calculator = { name: 'Rekenmachine', pid: 42, bundleId: 'com.apple.calculator', bundleName: 'Calculator' };
+        expect(resolveApp('Calculator', [TEXT_EDIT, calculator])).toEqual({ kind: 'running', app: calculator });
+        expect(resolveApp('calculator.app', [TEXT_EDIT, calculator])).toEqual({ kind: 'running', app: calculator });
+        expect(resolveApp('Rekenmachine', [TEXT_EDIT, calculator])).toEqual({ kind: 'running', app: calculator });
+    });
+
+    test('that does not run, by the file name of its bundle or the name it shows', async () => {
+        const folder = await mkdtemp(join(tmpdir(), 'ruimte-apps-'));
+        await mkdir(join(folder, 'Calculator.app'));
+        await mkdir(join(folder, 'zoom.us.app'));
+        const plists: Record<string, Record<string, string>> = {
+            [join(folder, 'Calculator.app', 'Contents', 'Info.plist')]: { CFBundleIdentifier: 'com.apple.calculator', CFBundleDisplayName: 'Calculator' },
+            [join(folder, 'zoom.us.app', 'Contents', 'Info.plist')]: { CFBundleIdentifier: 'us.zoom.xos', CFBundleDisplayName: 'Zoom' }
+        };
+        const sources = { folders: [folder], read: async (plist: string, key: string) => plists[plist]?.[key] ?? null };
+        expect(await findInstalledApp('calculator.app', sources)).toEqual({ name: 'Calculator', bundleId: 'com.apple.calculator' });
+        expect(await findInstalledApp('Zoom', sources)).toEqual({ name: 'zoom.us', bundleId: 'us.zoom.xos' });
+        expect(await findInstalledApp('zoom.us', sources)).toEqual({ name: 'zoom.us', bundleId: 'us.zoom.xos' });
+        expect(await findInstalledApp('Missing', sources)).toBeNull();
     });
 
     test('refuses an app that does not run, except for open, which finds it by bundle id or file name', async () => {

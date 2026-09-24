@@ -104,6 +104,8 @@ export const RunningAppSchema = z.object({
     name: z.string(),
     pid: z.number().int(),
     bundleId: z.string().optional(),
+    // The file name of the bundle without `.app`, which stays English where `name` is localized.
+    bundleName: z.string().optional(),
     frontmost: z.boolean().optional(),
     hidden: z.boolean().optional()
 });

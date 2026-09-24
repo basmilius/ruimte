@@ -90,7 +90,8 @@ Run `cu doctor`. It asks macOS for what is missing and opens System Settings. Th
 ```
 cu doctor [--no-prompt]                  check Accessibility and Screen Recording;
                                          without --no-prompt it asks macOS for what is missing
-cu apps                                  list running apps with name, bundle id, pid, frontmost
+cu apps                                  list running apps with name, bundle id, bundle file name
+                                         (bundleName), pid, frontmost
 cu open <app>                            launch an app, or bring it to the front (and unhide it)
 cu state <app>                           accessibility tree of the key window, plus a PNG of it
 cu click <app> --element N [--count 2] [--button right]
@@ -163,7 +164,7 @@ Every action result has `target`: role, label, identifier, and the window (and s
 - `scroll` sends scroll wheel events at the element or pixel. A page is 90 percent of the element's height (or width), or of the scroll area under the pixel. The pointer is put back afterwards.
 - `type` sends one unicode character per event; a newline becomes Return and a tab becomes Tab. `key` knows `cmd`, `shift`, `option`/`alt`, `ctrl` and `fn`, and the keys a-z, 0-9, punctuation, `return`, `escape`, `tab`, `space`, `delete`, `forwarddelete`, the arrows, `home`, `end`, `pageup`, `pagedown` and `f1`-`f12`. Use `cmd++` or `plus` for plus. Both bring the app to the front first and are refused when that fails. Their `target` is the focused element; they have no `point`, since nothing is clicked.
 - `set-value` works only where the app lets `AXValue` be set (text fields and areas, sliders). A number element takes a number, `true` or `false`.
-- `open` launches an app by name (searched in `/Applications`, `/System/Applications`, their `Utilities` folders and `~/Applications`) or bundle id, or activates and unhides it when it runs, then waits up to 5 seconds for a window.
+- `open` launches an app by the file name of its bundle or else its `CFBundleDisplayName` (searched in `/Applications`, `/System/Applications`, their `Utilities` folders and `~/Applications`) or bundle id, or activates and unhides it when it runs, then waits up to 5 seconds for a window.
 
 ### Menus
 

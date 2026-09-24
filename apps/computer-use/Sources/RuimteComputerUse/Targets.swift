@@ -26,6 +26,9 @@ enum Targets {
                 if let bundleIdentifier = app.bundleIdentifier {
                     entry["bundleId"] = bundleIdentifier
                 }
+                if let bundleName = app.bundleURL?.deletingPathExtension().lastPathComponent {
+                    entry["bundleName"] = bundleName
+                }
                 if app.isHidden {
                     entry["hidden"] = true
                 }
@@ -149,19 +152,24 @@ enum Targets {
         NSHomeDirectory() + "/Applications",
     ]
 
-    /// Finds an app that is not running by bundle id, or by bundle file name in the usual folders.
+    /// Finds an app that is not running by bundle id, or in the usual folders by the file name of its bundle,
+    /// else by the name it shows (`CFBundleDisplayName`): the same order the daemon looks in.
     static func applicationURL(for query: String) -> URL? {
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: query) {
             return url
         }
-        let wanted = (query.lowercased().hasSuffix(".app") ? query : query + ".app").lowercased()
+        let wanted = query.lowercased().hasSuffix(".app") ? String(query.lowercased().dropLast(4)) : query.lowercased()
         let manager = FileManager.default
-        for folder in applicationFolders {
-            let entries = (try? manager.contentsOfDirectory(atPath: folder)) ?? []
-            if let match = entries.first(where: { $0.lowercased() == wanted }) {
-                return URL(fileURLWithPath: folder).appendingPathComponent(match)
-            }
+        let bundles = applicationFolders.flatMap { folder in
+            ((try? manager.contentsOfDirectory(atPath: folder)) ?? [])
+                .filter { $0.lowercased().hasSuffix(".app") }
+                .map { URL(fileURLWithPath: folder).appendingPathComponent($0) }
         }
-        return nil
+        if let match = bundles.first(where: { $0.deletingPathExtension().lastPathComponent.lowercased() == wanted }) {
+            return match
+        }
+        return bundles.first { url in
+            (Bundle(url: url)?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)?.lowercased() == wanted
+        }
     }
 }
