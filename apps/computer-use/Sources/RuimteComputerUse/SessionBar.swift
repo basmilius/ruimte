@@ -1,7 +1,7 @@
 import AppKit
 import Phantom
 
-/// The session bar in a panel of its own: unlike the cursor it takes clicks, and it never takes the focus.
+/// The session bar in a panel of its own, on system glass: unlike the cursor it takes clicks, and it never takes the focus.
 @MainActor
 final class SessionBar {
     /// Room around the bar for its shadow.
@@ -87,12 +87,14 @@ final class SessionBar {
         if panel.frame != frame {
             panel.setFrame(frame, display: true)
         }
+        view.fitGlass()
         view.bar.setContentsScale(panel.backingScaleFactor)
     }
 }
 
 private final class BarView: NSView {
-    let bar = SessionBarLayer()
+    let bar = SessionBarLayer(ground: .glass)
+    private let glass = NSGlassEffectView()
     var onButton: ((SessionBarLayer.Button) -> Void)?
     var onHover: ((SessionBarLayer.Button?) -> Void)?
     private(set) var hovered: SessionBarLayer.Button?
@@ -103,8 +105,20 @@ private final class BarView: NSView {
         self.margin = margin
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.addSublayer(bar.layer)
-        bar.layer.position = CGPoint(x: margin, y: margin)
+        // Regular and untinted: clear glass needs a dimming layer to keep text legible over busy apps, and a tint
+        // would compete with the state color of the mini cursor.
+        glass.style = .regular
+        glass.cornerRadius = OverlayStyle.Bar.cornerRadius
+        let content = FlippedView()
+        content.wantsLayer = true
+        content.autoresizingMask = [.width, .height]
+        content.layer?.addSublayer(bar.layer)
+        glass.contentView = content
+        addSubview(glass)
+    }
+
+    func fitGlass() {
+        glass.frame = CGRect(origin: CGPoint(x: margin, y: margin), size: bar.size)
     }
 
     required init?(coder: NSCoder) {
@@ -113,6 +127,11 @@ private final class BarView: NSView {
 
     override var isFlipped: Bool {
         true
+    }
+
+    /// The glass and its content would take the clicks; the buttons are hit-tested here, against the bar's layout.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        super.hitTest(point) == nil ? nil : self
     }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
@@ -158,5 +177,11 @@ private final class BarView: NSView {
         }
         hovered = button
         onHover?(button)
+    }
+}
+
+private final class FlippedView: NSView {
+    override var isFlipped: Bool {
+        true
     }
 }

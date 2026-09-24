@@ -175,7 +175,7 @@ Every action result has `target`: role, label, identifier, and the window (and s
 
 During a session the helper draws its own cursor in a click-through window above everything; the real pointer only visits a point for a mouse event and goes back. The cursor glides to each target (700 ms with a light overshoot), points, and shows the action: a press and a ring for a click, chevrons for a scroll, the typed text letter by letter for `type`, `key` and `set-value`, and a viewfinder around the window for `state`. A moment after the action it rests again. Between actions the daemon's `presence` shows the agent working, waiting for the person, asking for permission, failing or done. The cursor follows the light or dark appearance of the system, and under Reduce Motion it drops every loop and reads by color and label alone. Nothing of the overlay appears in a screenshot.
 
-The session bar at the top of the screen shows a mini cursor with the state, the title, the time the agent held the Mac, a pause button and a stop button. The menu bar item shows the same mark and time, amber while the agent waits for the person, and a menu with the current step, Pause or Resume, Take over and Stop session. A session ends on a stop, on `done`, or two minutes after the last command unless it waits for the person or the person holds it.
+The session bar at the top of the screen shows a mini cursor with the state, the title, the time the agent held the Mac, a pause button and a stop button. It sits on the system's Liquid Glass, regular and untinted, with the title and time in the system's label colors; under Reduce Transparency macOS makes the glass opaque by itself. The menu bar item shows the same mark and time, amber while the agent waits for the person, and a menu with the current step, Pause or Resume, Take over and Stop session. A session ends on a stop, on `done`, or two minutes after the last command unless it waits for the person or the person holds it.
 
 ### Pause, take over, stop
 
@@ -198,7 +198,7 @@ cu render click --at 0.2 --scale 3                            # one state, 0.2 s
 cu render bar think --time 02:31                              # the session bar; --held shows it paused
 ```
 
-`--dots`, `--working`, `--direction`, `--label` and `--reduce-motion` pick the variants.
+`--dots`, `--working`, `--direction`, `--label` and `--reduce-motion` pick the variants. A render cannot draw glass, since the window server draws it from what lies behind a window, so the session bar in a render keeps the design's own surface.
 
 ## Known limitations
 

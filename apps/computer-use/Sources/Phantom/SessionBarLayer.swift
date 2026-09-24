@@ -11,6 +11,14 @@ public final class SessionBarLayer {
         case stop
     }
 
+    public enum Ground: Sendable {
+        /// The design's own surface. The renders keep it: the window server draws glass from what lies behind a
+        /// window, so an offscreen render has nothing to draw it from.
+        case drawn
+        /// The host puts system glass under the layer, so the bar draws no surface and its text takes label colors.
+        case glass
+    }
+
     public struct Content: Equatable {
         public var title: String
         public var state: PhantomState
@@ -32,6 +40,7 @@ public final class SessionBarLayer {
 
     public let layer = CALayer()
     public private(set) var size = CGSize.zero
+    private let ground: Ground
     private var surface: CALayer?
     private let mark = PhantomCursor()
     private let markHolder = CALayer()
@@ -46,7 +55,8 @@ public final class SessionBarLayer {
     private var markTheme: PhantomTheme?
     private var buttonFrames: [(Button, CGRect)] = []
 
-    public init() {
+    public init(ground: Ground = .drawn) {
+        self.ground = ground
         layer.anchorPoint = .zero
         markHolder.anchorPoint = .zero
         markHolder.addSublayer(mark.layer)
@@ -78,13 +88,15 @@ public final class SessionBarLayer {
         let width = style.leadingPadding + style.mark + style.gap + titleWidth + style.gap + timeWidth + style.gap + buttonsWidth + style.trailingPadding
         let newSize = CGSize(width: width, height: style.height)
 
-        if newSize != size || content.theme != self.content?.theme {
+        if ground == .drawn && (newSize != size || content.theme != self.content?.theme) {
             surface?.removeFromSuperlayer()
             let built = Layers.surface(size: newSize, radius: style.cornerRadius, fill: palette.raised, border: palette.border, shadow: palette.floatShadow)
             built.root.anchorPoint = .zero
             built.root.position = .zero
             layer.insertSublayer(built.root, at: 0)
             surface = built.root
+        }
+        if newSize != size {
             size = newSize
             layer.bounds = CGRect(origin: .zero, size: newSize)
         }
@@ -109,12 +121,13 @@ public final class SessionBarLayer {
         x += style.mark + style.gap
 
         let lineY = (style.height - 20) / 2
-        title.string = NSAttributedString(string: content.title, attributes: [.font: font, .foregroundColor: NSColor(cgColor: palette.text) ?? .labelColor])
-        title.frame = Layers.text(content.title, font: font, color: palette.text, origin: CGPoint(x: x, y: lineY), lineHeight: 20).frame
+        let ink = ink(content.theme, palette: palette)
+        title.string = NSAttributedString(string: content.title, attributes: [.font: font, .foregroundColor: NSColor(cgColor: ink.title) ?? .labelColor])
+        title.frame = Layers.text(content.title, font: font, color: ink.title, origin: CGPoint(x: x, y: lineY), lineHeight: 20).frame
         x += titleWidth + style.gap
 
-        time.string = NSAttributedString(string: content.time, attributes: [.font: timeFont, .foregroundColor: NSColor(cgColor: palette.faint) ?? .tertiaryLabelColor])
-        time.frame = Layers.text(content.time, font: timeFont, color: palette.faint, origin: CGPoint(x: x, y: lineY), lineHeight: 20, width: timeWidth).frame
+        time.string = NSAttributedString(string: content.time, attributes: [.font: timeFont, .foregroundColor: NSColor(cgColor: ink.time) ?? .tertiaryLabelColor])
+        time.frame = Layers.text(content.time, font: timeFont, color: ink.time, origin: CGPoint(x: x, y: lineY), lineHeight: 20, width: timeWidth).frame
         x += timeWidth + style.gap
 
         let buttonY = (style.height - style.button) / 2
@@ -137,6 +150,18 @@ public final class SessionBarLayer {
             icon.fillColor = hovered ? (button == .stop ? palette.error : palette.text) : palette.muted
         }
         self.content = content
+    }
+
+    /// Glass takes its tone from what lies behind it, so the design's fixed text colors give way to the system's.
+    private func ink(_ theme: PhantomTheme, palette: PhantomPalette) -> (title: CGColor, time: CGColor) {
+        var ink = (title: palette.text, time: palette.faint)
+        guard ground == .glass, let appearance = NSAppearance(named: theme == .dark ? .darkAqua : .aqua) else {
+            return ink
+        }
+        appearance.performAsCurrentDrawingAppearance {
+            ink = (NSColor.labelColor.cgColor, NSColor.secondaryLabelColor.cgColor)
+        }
+        return ink
     }
 
     /// Which button a point in the bar falls on, from its top-left corner.
