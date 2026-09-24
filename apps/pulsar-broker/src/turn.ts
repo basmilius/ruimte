@@ -76,7 +76,7 @@ const isIceServer = (value: unknown): value is IceServer =>
 
 /*
  * Cloudflare's TURN service. Its credentials are not bound to a key, so one set serves every peer
- * until two thirds of its lifetime, which keeps the API calls to a handful a day however many peers ask.
+ * until two thirds of its lifetime, so the API is asked once per that stretch however many peers ask.
  */
 export const cloudflareTurn = (options: CloudflareTurnOptions): TurnProvider => {
     const now = options.now ?? Date.now;

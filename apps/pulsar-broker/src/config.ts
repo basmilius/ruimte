@@ -12,6 +12,8 @@ export interface BrokerLimits {
     announcesPerMinutePerKey: number;
     /* A daemon asks after every announcement and before its credentials expire, a client once per attempt. */
     iceRequestsPerMinutePerKey: number;
+    /* Every key behind one address together, since a script can make as many keys as it likes. */
+    iceRequestsPerMinutePerIp: number;
     /* How often a socket is pinged; one that answers nothing for twice this long is dropped. */
     heartbeatMs: number;
     /* How long a socket may take from opening to a verified signature. */
@@ -41,7 +43,8 @@ export type TurnConfig =
     | { kind: 'shared-secret'; secretFile: string; urls: string[]; ttlSeconds: number }
     | { kind: 'cloudflare'; keyId: string; tokenFile: string; ttlSeconds: number };
 
-export const DEFAULT_TURN_TTL_SECONDS = 86_400;
+// A daemon asks again at two thirds of a lifetime and a client before an attempt, so an hour costs nobody a connection.
+export const DEFAULT_TURN_TTL_SECONDS = 3_600;
 
 export const DEFAULT_HOST = '127.0.0.1';
 export const DEFAULT_PORT = 4400;
@@ -54,6 +57,7 @@ export const DEFAULT_LIMITS: BrokerLimits = {
     relaysPerMinutePerKey: 60,
     announcesPerMinutePerKey: 10,
     iceRequestsPerMinutePerKey: 10,
+    iceRequestsPerMinutePerIp: 30,
     heartbeatMs: 25_000,
     helloTimeoutMs: 10_000
 };
@@ -88,6 +92,7 @@ const LIMIT_FLAGS = [
     'key-relays-per-minute',
     'key-announces-per-minute',
     'key-ice-per-minute',
+    'ip-ice-per-minute',
     'heartbeat-seconds',
     'hello-timeout-seconds'
 ] as const;
@@ -130,6 +135,7 @@ export const parseBrokerArgs = (argv: string[], env: Record<string, string | und
             relaysPerMinutePerKey: number('key-relays-per-minute', 1, 100_000, DEFAULT_LIMITS.relaysPerMinutePerKey),
             announcesPerMinutePerKey: number('key-announces-per-minute', 1, 100_000, DEFAULT_LIMITS.announcesPerMinutePerKey),
             iceRequestsPerMinutePerKey: number('key-ice-per-minute', 1, 100_000, DEFAULT_LIMITS.iceRequestsPerMinutePerKey),
+            iceRequestsPerMinutePerIp: number('ip-ice-per-minute', 1, 100_000, DEFAULT_LIMITS.iceRequestsPerMinutePerIp),
             // A peer gives up on a broker it has not heard from in 90 seconds, so a ping has to come well inside that.
             heartbeatMs: number('heartbeat-seconds', 1, 40, DEFAULT_LIMITS.heartbeatMs / 1000) * 1000,
             helloTimeoutMs: number('hello-timeout-seconds', 1, 120, DEFAULT_LIMITS.helloTimeoutMs / 1000) * 1000

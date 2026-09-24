@@ -66,6 +66,7 @@ export class Broker {
     private readonly relays: RateLimiter;
     private readonly announcements: RateLimiter;
     private readonly iceRequests: RateLimiter;
+    private readonly iceRequestsPerIp: RateLimiter;
     private readonly turn: TurnProvider;
     private readonly log: Pick<Console, 'warn'>;
 
@@ -75,6 +76,7 @@ export class Broker {
         this.turn = turn;
         this.log = log;
         this.iceRequests = new RateLimiter(limits.iceRequestsPerMinutePerKey, 60_000, now);
+        this.iceRequestsPerIp = new RateLimiter(limits.iceRequestsPerMinutePerIp, 60_000, now);
         this.connections = new RateLimiter(limits.connectionsPerMinutePerIp, 60_000, now);
         this.frames = new RateLimiter(limits.framesPerSecondPerIp, 1_000, now);
         this.relays = new RateLimiter(limits.relaysPerMinutePerKey, 60_000, now);
@@ -218,7 +220,7 @@ export class Broker {
                 peer.socket.ping();
             }
         }
-        for (const limiter of [this.connections, this.frames, this.relays, this.announcements, this.iceRequests]) {
+        for (const limiter of [this.connections, this.frames, this.relays, this.announcements, this.iceRequests, this.iceRequestsPerIp]) {
             limiter.prune();
         }
     }
@@ -263,11 +265,17 @@ export class Broker {
     /*
      * TURN credentials for a key that proved itself, and only for one: they are what lets a stranger
      * send traffic through the relay, so a socket that never signed gets none, and a key that asks too
-     * often waits like one that relays too often.
+     * often waits like one that relays too often. A key costs nothing to make, so an address that asks
+     * for many keys waits as well.
      */
     private async ice(peer: Peer, id: string): Promise<void> {
         if (peer.state !== 'ready' || peer.role === null || peer.publicKey === null) {
             this.refuseFrame(peer, 'Announce before asking for ICE servers');
+            return;
+        }
+        const waitIp = this.iceRequestsPerIp.take(peer.ip);
+        if (waitIp > 0) {
+            this.send(peer, { type: 'rate-limited', scope: 'ip', retryAfterMs: waitIp, id });
             return;
         }
         const wait = this.iceRequests.take(peer.publicKey);

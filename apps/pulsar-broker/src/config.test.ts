@@ -42,31 +42,32 @@ describe('parseBrokerArgs', () => {
 });
 
 describe('the TURN flags', () => {
-    test('pick a provider from a flag or the environment, with the ttl a day unless said', () => {
+    test('pick a provider from a flag or the environment, with the ttl an hour unless said', () => {
         expect(
             parseBrokerArgs(['--turn', 'shared-secret', '--turn-secret-file', '/etc/turn-secret', '--turn-url', 'turn:turn.example.com:3478?transport=udp'], {})
                 .turn
-        ).toEqual({ kind: 'shared-secret', secretFile: '/etc/turn-secret', urls: ['turn:turn.example.com:3478?transport=udp'], ttlSeconds: 86_400 });
+        ).toEqual({ kind: 'shared-secret', secretFile: '/etc/turn-secret', urls: ['turn:turn.example.com:3478?transport=udp'], ttlSeconds: 3_600 });
         expect(
             parseBrokerArgs([], {
                 PULSAR_BROKER_TURN: 'shared-secret',
                 PULSAR_BROKER_TURN_SECRET_FILE: '/etc/turn-secret',
                 PULSAR_BROKER_TURN_URLS: 'turn:a.example.com:3478, turns:a.example.com:5349?transport=tcp',
-                PULSAR_BROKER_TURN_TTL_SECONDS: '3600'
+                PULSAR_BROKER_TURN_TTL_SECONDS: '600'
             }).turn
         ).toEqual({
             kind: 'shared-secret',
             secretFile: '/etc/turn-secret',
             urls: ['turn:a.example.com:3478', 'turns:a.example.com:5349?transport=tcp'],
-            ttlSeconds: 3600
+            ttlSeconds: 600
         });
         expect(parseBrokerArgs(['--turn', 'cloudflare', '--cloudflare-turn-key-id', 'k', '--cloudflare-turn-token-file', '/etc/cf'], {}).turn).toEqual({
             kind: 'cloudflare',
             keyId: 'k',
             tokenFile: '/etc/cf',
-            ttlSeconds: 86_400
+            ttlSeconds: 3_600
         });
         expect(parseBrokerArgs(['--key-ice-per-minute', '3'], {}).limits.iceRequestsPerMinutePerKey).toBe(3);
+        expect(parseBrokerArgs([], { PULSAR_BROKER_IP_ICE_PER_MINUTE: '7' }).limits.iceRequestsPerMinutePerIp).toBe(7);
     });
 
     test('refuse a provider without what it needs, a URL that is no TURN URL and a kind they do not know', () => {

@@ -254,7 +254,10 @@ describe('the broker between peers', () => {
         const victim = newKey();
         for (let i = 0; i < 10; i++) {
             const socket = new FakeSocket();
-            broker.message(broker.open(socket, `198.51.100.${i}`, BROKER_NAME), JSON.stringify({ type: 'hello', role: 'machine', publicKey: victim.publicKey }));
+            broker.message(
+                broker.open(socket, `198.51.100.${i}`, BROKER_NAME),
+                JSON.stringify({ type: 'hello', role: 'machine', publicKey: victim.publicKey })
+            );
             expect(socket.sent.map((frame) => frame.type)).toEqual(['challenge']);
         }
         for (let i = 0; i < 10; i++) {
@@ -349,6 +352,21 @@ describe('ICE servers from the broker', () => {
         expect(turn.asked).toEqual([]);
         expect(socket.closed).toBe(CLOSE.badFrame);
         expect(socket.sent.map((frame) => frame.type)).toEqual(['error']);
+    });
+
+    test('an address that makes a key per question is told to wait, and another address is not', async () => {
+        const turn = fakeTurn();
+        const broker = newBroker({ iceRequestsPerMinutePerIp: 3 }, turn.provider);
+        const fresh = Array.from({ length: 4 }, () => connect(broker, 'client', newKey(), { ip: '203.0.113.7' }));
+        const elsewhere = connect(broker, 'client', newKey(), { ip: '203.0.113.8' });
+        await settle();
+        const ids = fresh.map((client) => client.peer.ice()!);
+        const otherId = elsewhere.peer.ice();
+        await settle();
+        expect(fresh.flatMap((client) => framesOf(client.state, 'ice').map((frame) => frame.id))).toEqual(ids.slice(0, 3));
+        expect(framesOf(fresh[3]!.state, 'rate-limited')).toEqual([expect.objectContaining({ scope: 'ip', id: ids[3] })]);
+        expect(framesOf(elsewhere.state, 'ice').map((frame) => frame.id)).toEqual([otherId!]);
+        expect(turn.asked).toHaveLength(4);
     });
 
     test('a key that asks too often is told to wait with the id, and a provider that fails is an internal error with the id', async () => {
