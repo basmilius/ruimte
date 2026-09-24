@@ -403,7 +403,8 @@ describe('the tree', () => {
             'done',
             'notify',
             'agent',
-            'team'
+            'team',
+            'flag'
         ]);
         for (const { noun, action } of allActions()) {
             expect(action.name).toBe(`${noun.name} ${action.word}`);
@@ -832,8 +833,8 @@ describe('scoping', () => {
         const { status, lines } = await post('node', ['list']);
         expect(status).toBe(200);
         expect(lines).toEqual([
-            'term-1\tterminal\tshell\t0\t0\t560\t360\t',
-            'note-1\tnote\tPlan with a tab\t0\t601\t320\t240\t',
+            'term-1\tterminal\tshell\t0\t0\t560\t360\t\t-',
+            'note-1\tnote\tPlan with a tab\t0\t601\t320\t240\t\t-',
             'self\tterm-1',
             'revision\t1'
         ]);
@@ -865,11 +866,11 @@ describe('scoping', () => {
 describe('view list', () => {
     test('lists every view in sidebar order, a separator with an empty name', async () => {
         expect((await post('view', ['list'])).lines).toEqual([
-            'main\tcanvas\tCanvas\tno\tyou are in it\t-',
-            'sep-1\tseparator\t\tno\ta person made it\t-',
-            'board\tcanvas\tBoard\tno\ta person made it\t-',
-            'chat-1\tchat\tPlanner\tno\ta person made it\t-',
-            'sketch-1\tdrawing\tSketch\tno\ta person made it\t-',
+            'main\tcanvas\tCanvas\tno\tyou are in it\t-\t-',
+            'sep-1\tseparator\t\tno\ta person made it\t-\t-',
+            'board\tcanvas\tBoard\tno\ta person made it\t-\t-',
+            'chat-1\tchat\tPlanner\tno\ta person made it\t-\t-',
+            'sketch-1\tdrawing\tSketch\tno\ta person made it\t-\t-',
             // The view the caller stands in, which it can read nowhere else.
             'self\tmain',
             'revision\t1'
@@ -2112,18 +2113,63 @@ describe('view rename', () => {
     });
 });
 
+describe('flag', () => {
+    test('flags a view and a node, lists them, and takes a flag off with null', async () => {
+        expect((await post('flag', ['board', 'red'])).lines).toEqual(['flagged\tboard\tview\tred']);
+        expect((await post('flag', ['note-1', 'blue'])).lines).toEqual(['flagged\tnote-1\tnode\tblue']);
+        expect((await post('view', ['list'])).lines.find((line) => line.startsWith('board\t'))).toBe('board\tcanvas\tBoard\tno\ta person made it\t-\tred');
+        expect((await post('node', ['list'])).lines).toContain('note-1\tnote\tPlan with a tab\t0\t601\t320\t240\t\tblue');
+        expect((await post('flag', ['board', 'null'])).lines).toEqual(['flagged\tboard\tview\tnull']);
+        expect((await onDisk()).flags).toEqual({ 'note-1': 'blue' });
+    });
+
+    test('a flag on a shared view or node stays in the private file and leaves the shared one as it was', async () => {
+        const opened = await store.openProject({ folder });
+        await store.save(projectId, opened.document.rev, content(), ['main']);
+        store.release(projectId);
+        const sharedPath = join(folder, '.ruimte', 'project.json');
+        // The first write through the daemon settles the key order the save above wrote; the flags come after.
+        await post('flag', ['board', 'red']);
+        const before = await readFile(sharedPath, 'utf8');
+        await post('flag', ['main', 'green']);
+        await post('flag', ['term-1', 'green']);
+        await post('flag', ['main', 'null']);
+        expect(await readFile(sharedPath, 'utf8')).toBe(before);
+        expect(before).not.toContain('green');
+        expect(JSON.parse(await readFile(join(folder, '.ruimte', 'private', 'project.json'), 'utf8')).flags).toEqual({ board: 'red', 'term-1': 'green' });
+    });
+
+    test('a save that says nothing about flags keeps them, the way a client from before flags saves', async () => {
+        await post('flag', ['board', 'red']);
+        const opened = await store.openProject({ folder });
+        const { flags: _flags, version: _version, rev: _rev, shared: _shared, ...older } = opened.document;
+        await store.save(projectId, opened.document.rev, older);
+        store.release(projectId);
+        expect((await onDisk()).flags).toEqual({ board: 'red' });
+    });
+
+    test('refuses an id that is no view or node, and a color that is not an accent', async () => {
+        const unknown = await post('flag', ['nothing', 'red']);
+        expect(unknown.status).toBe(422);
+        expect(unknown.lines[0]).toBe('refused\tunknown-target\tnothing is not a view or a node of this project');
+        const color = await post('flag', ['board', 'ultraviolet']);
+        expect(color.status).toBe(422);
+        expect(color.lines[0]).toStartWith('refused\tbad-arguments\t');
+    });
+});
+
 describe('view icon', () => {
     test('takes a Lucide name from the closed set', async () => {
         expect((await post('view', ['icon', 'board', 'rocket'])).lines).toEqual(['board\tcanvas\tlucide\trocket']);
         expect(await viewOnDisk('board')).toMatchObject({ icon: { kind: 'lucide', value: 'rocket' } });
     });
 
-    test('view list shows the mark in its last column, after every column it had before', async () => {
+    test('view list shows the mark in its own column, after every column it had before', async () => {
         await post('view', ['icon', 'board', 'rocket']);
         const board = (await post('view', ['list'])).lines.find((line) => line.startsWith('board\t'));
-        expect(board).toBe('board\tcanvas\tBoard\tno\ta person made it\trocket');
+        expect(board).toBe('board\tcanvas\tBoard\tno\ta person made it\trocket\t-');
         await post('view', ['icon', 'board', 'null']);
-        expect((await post('view', ['list'])).lines.find((line) => line.startsWith('board\t'))).toBe('board\tcanvas\tBoard\tno\ta person made it\t-');
+        expect((await post('view', ['list'])).lines.find((line) => line.startsWith('board\t'))).toBe('board\tcanvas\tBoard\tno\ta person made it\t-\t-');
     });
 
     test('null takes a mark away again', async () => {
@@ -2549,14 +2595,14 @@ describe('node group', () => {
         expect(lines.at(-1)).toBe(`edges\t1\t${edges[1]!.id}`);
         // The new frame stands in the old one, whose own line says nothing about what is inside it.
         const row = (await post('node', ['list'])).lines.find((line) => line.startsWith(`${inner}\t`))!;
-        expect(row.split('\t').at(-1)).toBe(outer);
+        expect(row.split('\t').at(-2)).toBe(outer);
     });
 });
 
 describe('node arrange', () => {
     test('lays the nodes out from the corner they already occupied and prints where each one went', async () => {
         await seed(box('a', 1000, 1000), box('b', 4000, 2000), box('c', 2000, 3000));
-        expect((await post('node', ['list'])).lines).toContain('b\tnote\tb\t4000\t2000\t200\t100\t');
+        expect((await post('node', ['list'])).lines).toContain('b\tnote\tb\t4000\t2000\t200\t100\t\t-');
 
         const { status, lines } = await post('node', ['arrange', '--nodes', 'a,b,c']);
         expect(status).toBe(200);

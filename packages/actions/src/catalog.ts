@@ -35,6 +35,7 @@ import {
     GitStatusSchema,
     ModelSelectionSchema,
     NodeKindSchema,
+    NODE_ACCENT_NAMES,
     NOTE_COLOR_NAMES,
     PROJECT_VIEW_KINDS,
     PlanChecksSchema,
@@ -175,6 +176,9 @@ const questionAnswers = z
     .array(z.object({ questionId: z.string().min(1), answer: z.string().trim().min(1).describe("The answer, in the user's own words") }))
     .min(1);
 const recentMessages = z.array(z.object({ role: z.enum(['user', 'assistant']), text: z.string(), createdAt: z.number() }));
+
+/* A flag wears one of the node accents, so the whole app paints from one palette. */
+const flagColor = z.enum(NODE_ACCENT_NAMES);
 
 const browserNode = nodeId.describe('The browser node, by id');
 const browserOutcome = z.object({
@@ -1271,7 +1275,8 @@ export const ACTION_DEFINITIONS = {
                     deletable: z.boolean(),
                     why: z.string(),
                     // The Lucide name of the mark view icon gave it; null for a view that wears the mark of its kind.
-                    icon: z.string().nullable()
+                    icon: z.string().nullable(),
+                    flag: flagColor.nullable()
                 })
             ),
             // The view the caller is in: the canvas it is a node on, or its own id when it is a view.
@@ -1316,7 +1321,8 @@ export const ACTION_DEFINITIONS = {
                     y: z.number(),
                     w: z.number(),
                     h: z.number(),
-                    groupId: z.string().nullable()
+                    groupId: z.string().nullable(),
+                    flag: flagColor.nullable()
                 })
             ),
             // The caller when it is one of these nodes.
@@ -1339,6 +1345,22 @@ export const ACTION_DEFINITIONS = {
             append: z.boolean().describe('Adds the text as a line under what is there instead of replacing the body')
         }),
         output: z.object({ viewId, nodeId, lines: z.number().int(), characters: z.number().int(), changed: z.boolean() })
+    },
+    'flag.set': {
+        title: 'Flag',
+        description: 'Puts a colored flag on views and nodes, or takes it off with null. A flag is personal: it never goes into the shared project file.',
+        effect: 'shared',
+        domain: 'views',
+        actors: PERSON_AND_AGENT,
+        input: z.object({
+            ids: z.array(z.string().min(1)).min(1).describe('The views and nodes to flag, by id'),
+            color: flagColor.nullable().describe('The color of the flag; null takes it off')
+        }),
+        output: z.object({
+            flags: z.array(z.object({ id: z.string(), target: z.enum(['view', 'node']), previous: flagColor.nullable() })),
+            color: flagColor.nullable(),
+            changed: z.boolean()
+        })
     },
     'note.setColor': {
         title: 'Color a note',
@@ -1721,7 +1743,7 @@ export const ACTION_DEFINITIONS = {
         domain: 'communicate',
         actors: AGENT,
         input: z.object({}),
-        output: z.object({ sources: z.array(ContextSourceSchema.pick({ id: true, kind: true, title: true })) })
+        output: z.object({ sources: z.array(ContextSourceSchema.pick({ id: true, kind: true, title: true, flag: true })) })
     },
     'context.read': {
         title: 'Read linked context',

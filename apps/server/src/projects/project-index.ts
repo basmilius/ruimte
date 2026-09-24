@@ -1,11 +1,13 @@
 import {
     deriveProjectContextSources,
+    flagOf,
     isCanvasView,
     isSessionView,
     sessionNodesOfView,
     type ContextSource,
     type ProjectCanvasView,
     type ProjectContent,
+    type ProjectFlags,
     type ViewSessionNode
 } from '@ruimte/contracts';
 
@@ -19,10 +21,28 @@ export interface IndexedPlace {
 
 interface IndexedProject {
     folder: string;
-    content: Pick<ProjectContent, 'views'>;
+    content: Pick<ProjectContent, 'views' | 'flags'>;
     sources: Map<string, ContextSource[]>;
     places: Map<string, string | null>;
 }
+
+/* A drawing or a diagram is read by its view id, but what the person flagged on the canvas is the node. */
+const flaggedSources = (sources: Map<string, ContextSource[]>, flags: ProjectFlags | undefined): Map<string, ContextSource[]> => {
+    if (!flags) {
+        return sources;
+    }
+    const flagged = new Map<string, ContextSource[]>();
+    for (const [targetId, list] of sources) {
+        flagged.set(
+            targetId,
+            list.map((source) => {
+                const flag = flagOf(flags, source.nodeId ?? source.id);
+                return flag === null ? source : { ...source, flag };
+            })
+        );
+    }
+    return flagged;
+};
 
 /*
  * The last known document of every project the daemon knows, open or not. A session outlives the
@@ -37,7 +57,7 @@ export class ProjectIndex {
     onPlaces: ((projectId: string, ids: ReadonlySet<string>) => void) | null = null;
 
     /* The content in its daemon-side form: cwds absolute, file paths still as stored. */
-    set(projectId: string, folder: string, content: Pick<ProjectContent, 'views'>): void {
+    set(projectId: string, folder: string, content: Pick<ProjectContent, 'views' | 'flags'>): void {
         const places = new Map<string, string | null>();
         for (const view of content.views) {
             if (isCanvasView(view)) {
@@ -48,7 +68,7 @@ export class ProjectIndex {
                 places.set(view.id, null);
             }
         }
-        this.projects.set(projectId, { folder, content, sources: deriveProjectContextSources(content.views, folder), places });
+        this.projects.set(projectId, { folder, content, sources: flaggedSources(deriveProjectContextSources(content.views, folder), content.flags), places });
         this.onPlaces?.(projectId, new Set(places.keys()));
     }
 
@@ -59,6 +79,10 @@ export class ProjectIndex {
 
     has(projectId: string): boolean {
         return this.projects.has(projectId);
+    }
+
+    flagsOf(projectId: string): ProjectFlags | undefined {
+        return this.projects.get(projectId)?.content.flags;
     }
 
     /* What the agent under this id may read. Empty for an id no known project places on a canvas. */

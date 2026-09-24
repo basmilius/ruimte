@@ -369,7 +369,7 @@ export class ProjectStore {
             for (const summary of summaries) {
                 try {
                     const { content, shared } = await this.readCurrent(summary.projectId, true);
-                    projects.push({ summary, views: projectSidebarViews(content.views, shared) });
+                    projects.push({ summary, views: projectSidebarViews(content.views, shared, content.flags) });
                 } catch {
                     // One missing or newer project must not hide the other projects on this machine.
                     projects.push({ summary, views: null });
@@ -509,7 +509,9 @@ export class ProjectStore {
         const ids = [...(shared ?? state.shared)];
         // The views that changed sides, so their drawing or diagram file can follow them over.
         const moved = [...new Set([...ids, ...state.shared])].filter((id) => ids.includes(id) !== state.shared.includes(id));
-        const portable = toPortable(content, state.entry.folder);
+        // A client from before flags sends none and would otherwise take every flag away.
+        const flags = content.flags ?? this.index.flagsOf(projectId);
+        const portable = toPortable({ ...content, ...(flags ? { flags } : {}) }, state.entry.folder);
         const document: ProjectDocument = { version: PROJECT_VERSION, rev: state.rev + 1, ...portable, shared: ids };
         const written = await this.writeFiles(this.documentPath(state.entry), portable, ids, document.rev, {
             text: state.lastText,

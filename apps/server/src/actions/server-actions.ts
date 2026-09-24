@@ -5,6 +5,7 @@ import { browserActions } from './browser-actions.ts';
 import type { ServerActionContext } from './context.ts';
 import { contextActions } from './context-actions.ts';
 import { diagramActions } from './diagram-actions.ts';
+import { flagActions } from './flag-actions.ts';
 import { linkActions } from './link-actions.ts';
 import { nodeActions } from './node-actions.ts';
 import { operationActions } from './operation-actions.ts';
@@ -22,6 +23,7 @@ import { worktreeActions } from './worktree-actions.ts';
 export const serverActions = new ActionRegistry<ServerActionContext>(
     {
         ...viewActions,
+        ...flagActions,
         ...nodeActions,
         ...linkActions,
         ...agentActions,

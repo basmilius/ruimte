@@ -230,7 +230,8 @@ export const serializePrivateFile = (file: ProjectPrivateFile): string => {
         `${INDENT}"rev": ${file.rev}`,
         `${INDENT}"views": ${viewsOnLines(file.views, INDENT)}`,
         `${INDENT}"order": ${itemsOnLines(file.order, INDENT)}`,
-        `${INDENT}"overlay": ${JSON.stringify(file.overlay, null, 2).split('\n').join(`\n${INDENT}`)}`
+        `${INDENT}"overlay": ${JSON.stringify(file.overlay, null, 2).split('\n').join(`\n${INDENT}`)}`,
+        ...(file.flags ? [`${INDENT}"flags": ${JSON.stringify(file.flags, null, 2).split('\n').join(`\n${INDENT}`)}`] : [])
     ];
     return `{\n${fields.join(',\n')}\n}\n`;
 };

@@ -119,7 +119,7 @@ describe('runContext', () => {
     test('bare and list still list the linked sources', async () => {
         expect(await runContext([], env)).toBe(0);
         expect(await runContext(['list'], env)).toBe(0);
-        expect(stdout).toBe('n1\ttext\tPlan\nn1\ttext\tPlan\n');
+        expect(stdout).toBe('n1\ttext\tPlan\t-\nn1\ttext\tPlan\t-\n');
         expect(seen).toEqual([]);
     });
 

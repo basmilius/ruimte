@@ -4,6 +4,7 @@ import {
     DEFAULT_TITLES,
     NODE_ACCENT_NAMES,
     NODE_SIZE,
+    flagOf,
     groupFrame,
     isCanvasView,
     isDiagramView,
@@ -98,7 +99,8 @@ const placeName = (container: ProjectNode | undefined): string => (container ===
 export const nodeActions: ActionHandlers<ServerActionContext> = {
     'node.list': async ({ viewId }, { actor, context }) => {
         const revision = await context.host.revision(context.place.projectId);
-        const canvas = canvasNamed(await context.host.read(context.place.projectId), viewId);
+        const content = await context.host.read(context.place.projectId);
+        const canvas = canvasNamed(content, viewId);
         const containers = containersOf(canvas.nodes);
         return {
             output: {
@@ -111,7 +113,8 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                     y: node.y,
                     w: node.w,
                     h: node.h,
-                    groupId: containers.get(node.id)?.id ?? null
+                    groupId: containers.get(node.id)?.id ?? null,
+                    flag: flagOf(content.flags, node.id)
                 })),
                 self: canvas.nodes.some((node) => node.id === actor.id) ? actor.id : null,
                 revision

@@ -156,13 +156,14 @@ export const nodeListAction = defineActionVerb('node', {
     usage: '[--view V]',
     params: [{ syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas to list, by view id', more: LISTED }],
     detail: [
-        'prints\tid\tkind\ttitle\tx\ty\tw\th\tgroup\tone line per node, rounded to whole pixels',
+        'prints\tid\tkind\ttitle\tx\ty\tw\th\tgroup\tflag\tone line per node, rounded to whole pixels',
         'units\tx and y are the top left corner of the node in canvas pixels, w and h its size; the canvas has no edges and x or y may be negative',
         'where\tWithout --view the view you are in, when that is a canvas; from any other view, name one with --view',
         'self\tThe row after the nodes is not a node: it is self and your own id, or self, a dash and a sentence saying so when none of these nodes is you',
         REVISION_ROW,
         'self\tA terminal session also carries its own id in $RUIMTE_SESSION_ID; a chat backend is given none, which is what the self row is for',
         'groups\tA group is a row of kind group; its id is what --group takes on agent, and the group column names the frame a node stands in, empty on the canvas itself',
+        'flag\tThe color of the flag the person put on the node, or - for none; ruimte-context flag sets one',
         'see\truimte-context link list\tthe lines of the same canvas, which this list does not show',
         'note\tA tab or a newline in a title is printed as a space, so a node is always one row',
         SCOPE_LINE
@@ -178,7 +179,8 @@ export const nodeListAction = defineActionVerb('node', {
                     node.kind,
                     field(node.title),
                     ...[node.x, node.y, node.w, node.h].map((value) => String(Math.round(value))),
-                    node.groupId ?? ''
+                    node.groupId ?? '',
+                    node.flag ?? '-'
                 ].join('\t')
             ),
             // Which row is the caller, which it can read nowhere else: a chat backend has no $RUIMTE_SESSION_ID.

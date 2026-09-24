@@ -8,6 +8,7 @@ import { agentVerb } from './agent-verb.ts';
 import { arrangeAction } from './arrange-verb.ts';
 import { BROWSER_ACTIONS, BROWSER_DETAIL, BROWSER_SUMMARY } from './browser-verb.ts';
 import { diagramAction } from './diagram-verb.ts';
+import { flagVerb } from './flag-verb.ts';
 import { nodeEditAction } from './edit-verb.ts';
 import { groupAction } from './group-verb.ts';
 import { linkDeleteAction, linkListAction, linkNewAction } from './link-verb.ts';
@@ -131,7 +132,7 @@ const listVerb: ContextVerb = {
     usage: '',
     summary: `${actionDescription('context.list', 'agent')} Also what ruimte-context prints without a verb.`,
     detail: [
-        'prints\tid\tkind\ttitle\tone line per linked source, nothing when the person linked none',
+        'prints\tid\tkind\ttitle\tflag\tone line per linked source, nothing when the person linked none; flag is the color the person flagged it with, or -',
         `kinds\t${ContextSourceSchema.shape.kind.options.join('\t')}\ta note and a text on the canvas both arrive as text`,
         'note\tThe id is what ruimte-context read takes; this list is the whole of what you may read',
         'note\tA line from a group lists what lies inside that frame, each on a line of its own, a frame inside it included; the group itself is never a line here',
@@ -217,6 +218,7 @@ export const VERBS: readonly VerbEntry[] = [
     notifyVerb,
     agentVerb,
     teamVerb,
+    flagVerb,
     nodeNoun,
     linkNoun,
     browserNoun,

@@ -42,6 +42,13 @@ describe('ProjectIndex', () => {
         expect(index.sourcesFor('nobody')).toEqual([]);
     });
 
+    test('a linked source carries the flag the person put on it, and a color this version cannot paint is none', () => {
+        const index = new ProjectIndex();
+        index.set('p1', '/repo', { views: views('x'), flags: { note: 'red', readme: 'ultraviolet' } });
+        expect(index.sourcesFor('agent').map((source) => source.flag)).toEqual(['red', undefined]);
+        expect(index.flagsOf('p1')).toEqual({ note: 'red', readme: 'ultraviolet' });
+    });
+
     test('a later set replaces what the project said before, and remove forgets it', () => {
         const index = new ProjectIndex();
         index.set('p1', '/repo', { views: views('first') });

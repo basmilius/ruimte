@@ -25,7 +25,7 @@ export const runContext = async (args: string[], env: Environment = process.env,
             console.log('Nothing is linked to this session.');
         }
         for (const source of sources) {
-            console.log(`${source.id}\t${source.kind}\t${source.title}`);
+            console.log(`${source.id}\t${source.kind}\t${source.title}\t${source.flag ?? '-'}`);
         }
         return 0;
     }
@@ -123,6 +123,7 @@ interface ContextRow {
     id: string;
     kind: string;
     title: string;
+    flag?: string;
 }
 
 const READ_USAGE = 'usage\tread\t<id> [--tail N] [--subagent T]';

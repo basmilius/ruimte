@@ -9,6 +9,7 @@ export const PROJECT_WRITES: ReadonlySet<ActionName> = new Set<ActionName>([
     'view.create',
     'view.rename',
     'view.setIcon',
+    'flag.set',
     'view.move',
     'view.delete',
     'node.create',
