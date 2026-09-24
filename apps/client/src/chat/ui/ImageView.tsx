@@ -49,11 +49,10 @@ function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; 
     const frameRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 
-    useEffect(() => {
-        if (!open) {
-            setView(START);
-        }
-    }, [open]);
+    // A closed lightbox opens again unzoomed.
+    if (!open && view !== START) {
+        setView(START);
+    }
 
     /* Where the pointer sits against the middle of the frame, which is what the transform counts from. */
     const pointIn = (event: { clientX: number; clientY: number }): { x: number; y: number } => {

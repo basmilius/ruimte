@@ -64,6 +64,8 @@ export const usePreviewFind = (find: FindState, page: RefObject<FindablePage | n
         if (text === '') {
             asked.current = null;
             element?.stopFindInPage('clearSelection');
+            // The counts belong to the page's own find, which is stopped in the same breath.
+            // oxlint-disable-next-line react/set-state-in-effect
             setState(NOTHING);
             return;
         }

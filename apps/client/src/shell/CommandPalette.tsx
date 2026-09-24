@@ -413,11 +413,12 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
 
     useEffect(() => {
         /* A folders step that has not been anywhere yet is one the palette still has to open. The
-           request goes out here rather than where the step was made, because that is a render.
-           oxlint reads the call as a setState in an effect; every write in it is behind an await. */
+           request goes out here rather than where the step was made, because that is a render. */
         if (browse === null || browse.machines || browse.link !== undefined || query !== '' || listing !== null) {
             return;
         }
+        // Every state write in it is behind an await, which the rule does not see.
+        // oxlint-disable-next-line react/set-state-in-effect
         void startBrowsing(browse.endpointId);
     }, [browse, listing, query, startBrowsing]);
 

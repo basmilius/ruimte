@@ -67,6 +67,8 @@ export const useDomFind = (find: FindState, content: RefObject<HTMLElement | nul
         if (element === null || box === null || pattern === null) {
             ranges.current = [];
             currentRef.current = null;
+            // The counts describe the ranges over the rendered DOM, which are dropped here with them.
+            // oxlint-disable-next-line react/set-state-in-effect
             setTotal(0);
             setCurrent(null);
             setMarks([]);

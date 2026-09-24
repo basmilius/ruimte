@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { TriangleAlert } from 'lucide-react';
 import type { ProcessAlert } from '@ruimte/contracts';
 import { alertText } from '@/processes/format';
+import { useMinute } from '@/shell/usage/limits';
 import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -16,8 +17,14 @@ export function ProcessAlertMark({ alerts, className }: { alerts: readonly Proce
     if (first === undefined) {
         return null;
     }
-    const text = alertText(first, Date.now());
-    const label = alerts.length === 1 ? text : i18next.t('processes:alert.more', { count: alerts.length - 1, text });
+    return <AlertMark first={first} count={alerts.length} className={className} />;
+}
+
+/* Only a node with a warning keeps a clock, which moves the elapsed time in its label once a minute. */
+function AlertMark({ first, count, className }: { first: ProcessAlert; count: number; className?: string }) {
+    const now = useMinute();
+    const text = alertText(first, now);
+    const label = count === 1 ? text : i18next.t('processes:alert.more', { count: count - 1, text });
     return (
         <Tooltip label={label} name>
             <span

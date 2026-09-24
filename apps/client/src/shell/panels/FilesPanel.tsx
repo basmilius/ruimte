@@ -341,6 +341,8 @@ export function FilesPanel() {
             return;
         }
         if (searching) {
+            // A reveal can wait on more than one listing, so the filter is cleared where that wait is.
+            // oxlint-disable-next-line react/set-state-in-effect
             setQuery('');
             return;
         }

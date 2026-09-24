@@ -23,7 +23,7 @@ interface SlidingColumnProps {
         ref: RefObject<HTMLDivElement | null>;
         onKeyDown(event: ReactKeyboardEvent<HTMLDivElement>): void;
     };
-    children: ReactNode;
+    children?: ReactNode;
 }
 
 /*

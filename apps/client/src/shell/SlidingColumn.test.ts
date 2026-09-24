@@ -5,14 +5,17 @@ import { SlidingColumn } from './SlidingColumn';
 
 const renderColumn = (open: boolean, restoreWithProject?: boolean): string =>
     renderToStaticMarkup(
-        createElement(SlidingColumn, {
-            open,
-            restoreWithProject,
-            width: 380,
-            bounds: { min: 320, max: () => 800 },
-            onWidth: () => {},
-            children: 'Voice Control'
-        })
+        createElement(
+            SlidingColumn,
+            {
+                open,
+                restoreWithProject,
+                width: 380,
+                bounds: { min: 320, max: () => 800 },
+                onWidth: () => {}
+            },
+            'Voice Control'
+        )
     );
 
 describe('column animations during initial project restoration', () => {

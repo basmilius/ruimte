@@ -90,6 +90,8 @@ export function ConflictOverlay() {
     useEffect(() => {
         files.current.clear();
         drafts.current.clear();
+        // The caches are refs, which a render may not touch, and they go together with the state they fed.
+        // oxlint-disable-next-line react/set-state-in-effect
         setHeld(null);
         setOpen({});
         setRun(null);
@@ -107,6 +109,8 @@ export function ConflictOverlay() {
 
     useEffect(() => {
         if (cwd === null || activeFile === null) {
+            // The file in hand comes from the cache or from the request below, and both are answered here.
+            // oxlint-disable-next-line react/set-state-in-effect
             setHeld(null);
             return;
         }

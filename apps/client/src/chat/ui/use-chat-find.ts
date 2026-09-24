@@ -88,7 +88,9 @@ export const useChatFind = (options: ChatFindOptions): ChatFind => {
     const pendingScroll = useRef<{ key: string; tries: number } | null>(null);
     const queryRef = useRef(find.query);
     const optionsRef = useRef(options);
-    optionsRef.current = options;
+    useLayoutEffect(() => {
+        optionsRef.current = options;
+    });
 
     /* A new query moves to the first hit from the one the bar was on, or from the top of the screen,
        so each letter typed keeps the place; a thread that only grew keeps the hit it was on. */
@@ -96,6 +98,8 @@ export const useChatFind = (options: ChatFindOptions): ChatFind => {
         const fresh = queryRef.current !== find.query;
         queryRef.current = find.query;
         if (ordered.length === 0) {
+            // The hit to go to is picked against the rows on screen, which only an effect can read.
+            // oxlint-disable-next-line react/set-state-in-effect
             setCurrentKey(null);
             return;
         }
@@ -133,6 +137,8 @@ export const useChatFind = (options: ChatFindOptions): ChatFind => {
         const place = placeOfHit(rows, rowIndex, item);
         const { openTurn, openGroup, openSubagent, scrollToRow, stopFollowing } = optionsRef.current;
         if (entry === undefined || place === null || seeking.steps >= MAX_SEEK_STEPS) {
+            // Each step opens a turn, a group or a sub-agent in the virtualizer and waits for the rows that brings.
+            // oxlint-disable-next-line react/set-state-in-effect
             setSeeking(null);
             return;
         }
@@ -161,38 +167,6 @@ export const useChatFind = (options: ChatFindOptions): ChatFind => {
     const pattern = find.open && compiled.kind === 'pattern' ? compiled.pattern : null;
     const withHits = useMemo(() => new Set(search.hits.map((hit) => hit.itemId)), [search]);
     const paintRef = useRef<() => void>(() => undefined);
-    paintRef.current = () => {
-        const thread = options.thread.current;
-        if (thread === null || pattern === null) {
-            return;
-        }
-        const matches: Range[] = [];
-        let currentRange: Range | null = null;
-        for (const field of thread.querySelectorAll<HTMLElement>('[data-find-field]')) {
-            // The nearest owner, so a sub-agent's own step inside its row never counts as the row.
-            const itemId = field.closest<HTMLElement>('[data-find-item]')?.dataset.findItem;
-            if (itemId === undefined || !withHits.has(itemId)) {
-                continue;
-            }
-            const ranges = findRanges(field, pattern);
-            matches.push(...ranges);
-            if (current !== null && current.itemId === itemId && current.field === field.dataset.findField && ranges.length > 0) {
-                // Rendered markdown can drop a match the source has; the last one on screen is the nearest.
-                currentRange = ranges[Math.min(current.occurrence, ranges.length - 1)]!;
-            }
-        }
-        setFindHighlights(chatId, matches, currentRange);
-        const pending = pendingScroll.current;
-        if (currentRange === null || pending === null || pending.key !== currentKey) {
-            return;
-        }
-        if (bringIntoView(currentRange) || pending.tries + 1 >= MAX_SCROLL_TRIES) {
-            pendingScroll.current = null;
-        } else {
-            pendingScroll.current = { key: pending.key, tries: pending.tries + 1 };
-            schedulePaint();
-        }
-    };
 
     /* True when the match already stands clear of the edges and of the composer; otherwise it is centered. */
     const bringIntoView = (range: Range): boolean => {
@@ -221,6 +195,41 @@ export const useChatFind = (options: ChatFindOptions): ChatFind => {
             });
         }
     };
+
+    useLayoutEffect(() => {
+        paintRef.current = () => {
+            const thread = options.thread.current;
+            if (thread === null || pattern === null) {
+                return;
+            }
+            const matches: Range[] = [];
+            let currentRange: Range | null = null;
+            for (const field of thread.querySelectorAll<HTMLElement>('[data-find-field]')) {
+                // The nearest owner, so a sub-agent's own step inside its row never counts as the row.
+                const itemId = field.closest<HTMLElement>('[data-find-item]')?.dataset.findItem;
+                if (itemId === undefined || !withHits.has(itemId)) {
+                    continue;
+                }
+                const ranges = findRanges(field, pattern);
+                matches.push(...ranges);
+                if (current !== null && current.itemId === itemId && current.field === field.dataset.findField && ranges.length > 0) {
+                    // Rendered markdown can drop a match the source has; the last one on screen is the nearest.
+                    currentRange = ranges[Math.min(current.occurrence, ranges.length - 1)]!;
+                }
+            }
+            setFindHighlights(chatId, matches, currentRange);
+            const pending = pendingScroll.current;
+            if (currentRange === null || pending === null || pending.key !== currentKey) {
+                return;
+            }
+            if (bringIntoView(currentRange) || pending.tries + 1 >= MAX_SCROLL_TRIES) {
+                pendingScroll.current = null;
+            } else {
+                pendingScroll.current = { key: pending.key, tries: pending.tries + 1 };
+                schedulePaint();
+            }
+        };
+    });
 
     useEffect(() => {
         const thread = options.thread.current;
