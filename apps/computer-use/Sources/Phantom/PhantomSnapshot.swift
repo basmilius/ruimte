@@ -30,8 +30,10 @@ public enum PhantomSnapshot {
             return "report.pdf"
         case .error:
             return "Could not find Send"
+        case .permission:
+            return "Waiting for permission for Mail"
         default:
-            return OverlayConfig().label(for: state)
+            return nil
         }
     }
 

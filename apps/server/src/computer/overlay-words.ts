@@ -10,7 +10,6 @@ export interface OverlayWords {
     resume: string;
     takeOver: string;
     stop: string;
-    labels: Record<string, string>;
     // `{target}` is the element or app an action is aimed at; the helper drops it when there is none.
     steps: Record<string, string>;
 }
@@ -27,19 +26,6 @@ const ENGLISH: OverlayWords = {
     resume: 'Resume',
     takeOver: 'Take over',
     stop: 'Stop session',
-    labels: {
-        click: 'Click',
-        scroll: 'Scroll',
-        look: 'Looking',
-        think: 'Working',
-        waiting: 'Needs you',
-        permission: 'Waiting for permission',
-        error: 'Something went wrong',
-        done: 'Done',
-        takeover: 'You have control',
-        paused: 'Paused',
-        tap: 'Tap'
-    },
     steps: {
         idle: 'Ready',
         move: 'Moving to {target}',
@@ -67,19 +53,6 @@ const DUTCH: OverlayWords = {
     resume: 'Hervatten',
     takeOver: 'Overnemen',
     stop: 'Sessie stoppen',
-    labels: {
-        click: 'Klik',
-        scroll: 'Scrollen',
-        look: 'Kijken',
-        think: 'Bezig',
-        waiting: 'Wacht op jou',
-        permission: 'Wacht op toestemming',
-        error: 'Er ging iets mis',
-        done: 'Klaar',
-        takeover: 'Jij hebt de controle',
-        paused: 'Gepauzeerd',
-        tap: 'Tik'
-    },
     steps: {
         idle: 'Gereed',
         move: 'Gaat naar {target}',

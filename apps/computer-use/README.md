@@ -62,7 +62,7 @@ The commands are the ones `cu` sends, listed below. `doctor` also takes `grant` 
 }
 ```
 
-`title` is the session bar, `menuTitle` the first line of the menu. `labels` is the pill beside the cursor per state; a state without one shows no label. `steps` is the second line of the menu per state, with `{target}` for the element or app an action is aimed at. The full lists are in `Sources/ComputerUseCore/OverlayConfig.swift`. `accent` replaces the accent of the cursor.
+`title` is the session bar, `menuTitle` the first line of the menu. The label beside the cursor only says what the state itself cannot: the typed text, or a `label` the daemon sends with `presence`. `steps` is the second line of the menu per state, with `{target}` for the element or app an action is aimed at. The full lists are in `Sources/ComputerUseCore/OverlayConfig.swift`. `accent` replaces the accent of the cursor.
 
 ### Presence
 

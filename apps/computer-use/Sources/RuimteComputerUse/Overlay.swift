@@ -370,9 +370,9 @@ final class Overlay {
         case .type, .drag:
             return look.text
         case .think, .waiting, .permission, .error, .done:
-            return presenceLabel ?? config.label(for: state)
+            return presenceLabel
         default:
-            return config.label(for: state)
+            return nil
         }
     }
 

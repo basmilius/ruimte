@@ -45,10 +45,7 @@ describe('computer use', () => {
         const dutch = await read('nl-NL');
         const english = await read('en');
         for (const words of [dutch, english]) {
-            expect(Object.keys(words).sort()).toEqual(['labels', 'menuTitle', 'pause', 'resume', 'steps', 'stop', 'takeOver', 'title']);
-            expect(Object.keys(words.labels as object).sort()).toEqual(
-                ['click', 'done', 'error', 'look', 'paused', 'permission', 'scroll', 'takeover', 'tap', 'think', 'waiting'].sort()
-            );
+            expect(Object.keys(words).sort()).toEqual(['menuTitle', 'pause', 'resume', 'steps', 'stop', 'takeOver', 'title']);
             expect(Object.keys(words.steps as object)).toHaveLength(16);
         }
         expect(dutch).toMatchObject({ title: 'Ruimte bedient je computer', pause: 'Pauzeren', stop: 'Sessie stoppen' });

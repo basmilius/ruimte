@@ -11,20 +11,6 @@ public struct OverlayConfig: Decodable, Equatable, Sendable {
     public var stop = "Stop session"
     /// `#RRGGBB`.
     public var accent: String?
-    /// The label beside the cursor, per state. A state without one shows no label.
-    public var labels: [String: String] = [
-        "click": "Click",
-        "scroll": "Scroll",
-        "look": "Looking",
-        "think": "Working",
-        "waiting": "Needs you",
-        "permission": "Waiting for permission",
-        "error": "Something went wrong",
-        "done": "Done",
-        "takeover": "You have control",
-        "paused": "Paused",
-        "tap": "Tap",
-    ]
     /// The step line in the menu, per state; `{target}` becomes what the action is aimed at.
     public var steps: [String: String] = [
         "idle": "Ready",
@@ -59,9 +45,6 @@ public struct OverlayConfig: Decodable, Equatable, Sendable {
             }
         }
         accent = try? container.decodeIfPresent(String.self, forKey: .accent)
-        for (key, value) in (try? container.decodeIfPresent([String: String].self, forKey: .labels)) ?? [:] where !value.isEmpty {
-            labels[key] = value
-        }
         for (key, value) in (try? container.decodeIfPresent([String: String].self, forKey: .steps)) ?? [:] where !value.isEmpty {
             steps[key] = value
         }
@@ -75,7 +58,6 @@ public struct OverlayConfig: Decodable, Equatable, Sendable {
         case takeOver
         case stop
         case accent
-        case labels
         case steps
     }
 
@@ -85,10 +67,6 @@ public struct OverlayConfig: Decodable, Equatable, Sendable {
             return OverlayConfig()
         }
         return config
-    }
-
-    public func label(for state: PhantomState) -> String? {
-        labels[state.rawValue]
     }
 
     public func step(for state: PhantomState, target: String?) -> String {

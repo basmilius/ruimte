@@ -39,18 +39,14 @@ struct OverlayConfigTests {
         let config = OverlayConfig()
         #expect(config.title == "Ruimte is using your computer")
         #expect(config.menuTitle == "Ruimte is using this Mac")
-        #expect(config.label(for: .think) == "Working")
-        #expect(config.label(for: .idle) == nil)
         #expect(OverlayConfig.load(from: "/nonexistent/overlay.json") == config)
     }
 
     @Test func readsTranslatedWordsAndKeepsDefaultsForTheRest() throws {
-        let data = Data(#"{"title": "Ruimte gebruikt je computer", "pause": "", "labels": {"think": "Bezig", "done": ""}}"#.utf8)
+        let data = Data(#"{"title": "Ruimte gebruikt je computer", "pause": ""}"#.utf8)
         let config = try JSONDecoder().decode(OverlayConfig.self, from: data)
         #expect(config.title == "Ruimte gebruikt je computer")
         #expect(config.pause == "Pause")
-        #expect(config.label(for: .think) == "Bezig")
-        #expect(config.label(for: .done) == "Done")
         #expect(config.accentComponents == nil)
     }
 
