@@ -1,6 +1,7 @@
 import type { WebglAddon } from '@xterm/addon-webgl';
 import type { Terminal } from '@xterm/xterm';
 import { DEFAULT_WEBGL_CONTEXTS, WebglSlots, type SlotChange } from '@/terminal/webgl-slots';
+import { prefetcher } from '@/ui/prefetch';
 
 /* Flip to true while debugging the budget; false logs nothing. */
 const DEBUG: boolean = false;
@@ -13,9 +14,10 @@ const debug = (message: string, id: string): void => {
 
 let webgl2Available: boolean | null = null;
 
-/* The addon is loaded with the first terminal that is granted a context, so a page without terminals never fetches it. */
+/* The addon is prefetched once a workspace is idle, and only a terminal granted a context before that waits on it. */
 let Addon: typeof WebglAddon | null = null;
 let addonLoad: Promise<void> | null = null;
+prefetcher.register(() => import('@xterm/addon-webgl'));
 
 /* Probed once for the page; the probe context is released so it does not count against the browser's cap. */
 const hasWebgl2 = (): boolean => {

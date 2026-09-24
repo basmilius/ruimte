@@ -27,6 +27,7 @@ import type { Workspace } from '@/transport/connections';
 import { ConnectionProvider } from '@/transport/ConnectionProvider';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { lazyDialog } from '@/ui/lazy';
+import { prefetcher } from '@/ui/prefetch';
 import { stopVoice } from '@/voice/controller';
 import { VoiceOverlay } from '@/voice/VoiceOverlay';
 import { VoicePanel } from '@/voice/VoicePanel';
@@ -48,6 +49,10 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     /* The window's toolbar is where a file view puts its controls, and the body that draws them sits
        under the same column, so the element they portal into is held here. */
     const [fileToolbarHost, setFileToolbarHost] = useState<HTMLElement | null>(null);
+
+    useEffect(() => {
+        void prefetcher.prefetchEverything();
+    }, []);
     useEffect(() => () => stopVoice(), []);
     return (
         <ConnectionProvider connection={workspace.connection}>

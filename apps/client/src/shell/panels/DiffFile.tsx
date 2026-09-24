@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Columns2, FileDiff, FileWarning, GitBranch, GitCompare, LoaderCircle, RefreshCw, Rows2, Space, WrapText } from 'lucide-react';
@@ -19,8 +19,9 @@ import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
+import { lazyNamed } from '@/ui/lazy';
 
-const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
+const UnifiedDiff = lazyNamed(() => import('@/chat/ui/UnifiedDiff'), 'default');
 
 type DiffState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
 

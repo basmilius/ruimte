@@ -1,5 +1,5 @@
 import { DictationTextarea } from '@/dictation/DictationTextarea';
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { ChatApprovalItem } from '@ruimte/contracts';
@@ -9,9 +9,10 @@ import { isPrimaryKey } from '@/prompts/logic/keys';
 import type { PromptDraft } from '@/prompts/logic/prompts';
 import { Button } from '@/ui/Button';
 import { TextMenu } from '@/ui/TextMenu';
+import { lazyNamed } from '@/ui/lazy';
 
-const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
-const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
+const EditDiff = lazyNamed(() => import('@/chat/ui/EditDiff'), 'default');
+const UnifiedDiff = lazyNamed(() => import('@/chat/ui/UnifiedDiff'), 'default');
 
 /* A command in the sunken box a person reads before allowing it, with the folder it runs in when that is known. */
 export function CommandBox({ command, cwd }: { command: string; cwd?: string }) {

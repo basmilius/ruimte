@@ -30,6 +30,7 @@ import { refuseStrayDrops } from '@/canvas/drop';
 import { useTheme } from '@/state/theme';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
 import { reloadOnStaleChunk } from '@/stale-chunks';
+import { prefetcher } from '@/ui/prefetch';
 import '@/state/theme';
 import '@/state/settings';
 import '@fontsource-variable/geist';
@@ -44,7 +45,8 @@ if (!desktop()) {
         storage: { getItem: (key) => sessionStorage.getItem(key), setItem: (key, value) => sessionStorage.setItem(key, value) },
         reload: () => window.location.reload(),
         // The entry chunk's address carries the hash of the build.
-        build: import.meta.url
+        build: import.meta.url,
+        prefetching: () => prefetcher.busy
     });
 }
 startSessionLifecycle();

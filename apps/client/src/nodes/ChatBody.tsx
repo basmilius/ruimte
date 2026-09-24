@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import i18next from 'i18next';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -17,9 +17,10 @@ import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { lazyNamed } from '@/ui/lazy';
 
 // The worker pool and its highlighter load with the first chat node, not with the app.
-const DiffPool = lazy(() => import('@/chat/ui/DiffPool'));
+const DiffPool = lazyNamed(() => import('@/chat/ui/DiffPool'), 'default');
 
 /* The body of a chat, the same on a canvas inside a frame and filling a view of its own. */
 export function ChatBody({ id, focused, onCanvas = false }: { id: string; focused: boolean; onCanvas?: boolean }) {

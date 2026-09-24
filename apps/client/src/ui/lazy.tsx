@@ -1,10 +1,15 @@
 import { Suspense, lazy, useState, type ComponentType, type LazyExoticComponent } from 'react';
+import { prefetcher } from '@/ui/prefetch';
 
-/* `React.lazy` for a module that exports its component by name, which is how every component here is exported. */
+/*
+ * `React.lazy` for a module that exports its component by name, `default` included. Every module
+ * loaded through here, or through `lazyDialog`, is prefetched once a workspace is idle.
+ */
 export function lazyNamed<Module extends Record<Name, ComponentType<any>>, Name extends keyof Module>(
     load: () => Promise<Module>,
     name: Name
 ): LazyExoticComponent<Module[Name]> {
+    prefetcher.register(load);
     return lazy(async () => ({ default: (await load())[name] }));
 }
 
@@ -24,6 +29,7 @@ export function lazyDialog<Module extends Record<Name, ComponentType>, Name exte
     useStore: (select: (state: State) => boolean) => boolean,
     isOpen: (state: State) => boolean
 ): ComponentType {
+    prefetcher.register(load);
     const Dialog = lazy(async (): Promise<{ default: ComponentType }> => ({ default: (await load())[name] }));
     const LazyDialog = () => {
         const opened = useOpenedOnce(useStore(isOpen));

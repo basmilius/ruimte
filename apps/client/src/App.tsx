@@ -20,10 +20,12 @@ import { startUpdates } from '@/state/updates';
 import { useWindow } from '@/state/window';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { lazyDialog, lazyNamed } from '@/ui/lazy';
+import { prefetcher } from '@/ui/prefetch';
 import { ShortcutHints } from '@/ui/ShortcutHints';
 import { TooltipProvider } from '@/ui/Tooltip';
 
-const WorkspaceShell = lazyNamed(() => import('@/shell/WorkspaceShell'), 'WorkspaceShell');
+const loadWorkspaceShell = () => import('@/shell/WorkspaceShell');
+const WorkspaceShell = lazyNamed(loadWorkspaceShell, 'WorkspaceShell');
 const CommandPalette = lazyDialog(
     () => import('@/shell/CommandPalette'),
     'CommandPalette',
@@ -59,6 +61,13 @@ const ReleaseNotesDialog = lazyDialog(
 function WindowContent() {
     const content = useWindow((s) => s.content);
     const booting = useWindow((s) => s.booting);
+    const onStartScreen = content.kind !== 'workspace' && !booting;
+    // The start screen is the first load, so the workspace follows only once that has painted.
+    useEffect(() => {
+        if (onStartScreen) {
+            void prefetcher.prefetch(loadWorkspaceShell);
+        }
+    }, [onStartScreen]);
     if (content.kind === 'workspace') {
         return (
             <Suspense fallback={<div className="h-full w-full bg-bg" />}>

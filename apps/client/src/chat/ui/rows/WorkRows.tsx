@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -12,10 +12,11 @@ import { formatClockDuration, formatElapsedShort } from '@/format/duration';
 import { ROW_GUTTER, toolIcon } from '@/chat/ui/icons';
 import { Icon } from '@/ui/Icon';
 import { useTickingText } from '@/ui/useNow';
+import { lazyNamed } from '@/ui/lazy';
 
 // The diff renderers carry shiki; they only load once a thread shows a file change.
-const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
-const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
+const EditDiff = lazyNamed(() => import('@/chat/ui/EditDiff'), 'default');
+const UnifiedDiff = lazyNamed(() => import('@/chat/ui/UnifiedDiff'), 'default');
 
 const OUTPUT_LIMIT = 4000;
 
