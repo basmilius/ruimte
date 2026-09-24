@@ -28,7 +28,6 @@
   },
   "flag": {
     "menu": "Vlag",
-    "more": "Meer kleuren",
     "remove": "Vlag weghalen",
     "flagged": "Vlag: {{color}}"
   }

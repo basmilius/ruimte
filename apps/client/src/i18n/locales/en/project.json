@@ -28,7 +28,6 @@
   },
   "flag": {
     "menu": "Flag",
-    "more": "More colors",
     "remove": "Remove flag",
     "flagged": "Flagged {{color}}"
   }
