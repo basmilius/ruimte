@@ -1,3 +1,6 @@
+// Enough to hide the round trips of a slow link, few enough that a first screen is not queued behind twenty.
+const REATTACH_CONCURRENCY = 4;
+
 export interface MountedEntry {
     /* False between a lost connection (or a failed attach) and the next successful attach. */
     attached: boolean;
@@ -18,20 +21,26 @@ export class MountedRegistry<T extends MountedEntry> extends Map<string, T> {
     }
 
     /*
-     * One pass over what is mounted but not attached, in the order it was mounted. The list is
-     * copied first, because attaching mounts and unmounts as it goes, and an entry that went in the
-     * meantime is left alone, since a node may leave the canvas while its attach is still on the wire.
+     * One pass over what is mounted but not attached, started in the order it was mounted, a few
+     * at a time. The list is copied first, because attaching mounts and unmounts as it goes, and an
+     * entry that went in the meantime is left alone, since a node may leave the canvas while its
+     * attach is still on the wire.
      */
     async reattachAll(reattach: (id: string, entry: T) => Promise<void>): Promise<void> {
-        for (const [id, entry] of [...this]) {
-            if (entry.attached || this.get(id) !== entry) {
-                continue;
+        const queue = [...this];
+        const work = async (): Promise<void> => {
+            for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
+                const [id, entry] = next;
+                if (entry.attached || this.get(id) !== entry) {
+                    continue;
+                }
+                try {
+                    await reattach(id, entry);
+                } catch {
+                    // A socket that dropped again brings the next pass; anything else surfaces on the next mount.
+                }
             }
-            try {
-                await reattach(id, entry);
-            } catch {
-                // A socket that dropped again brings the next pass; anything else surfaces on the next mount.
-            }
-        }
+        };
+        await Promise.all(Array.from({ length: REATTACH_CONCURRENCY }, work));
     }
 }

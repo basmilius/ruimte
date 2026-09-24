@@ -180,8 +180,8 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             webglBudget.touch(id);
         });
         const offScreen = sessionClient.onScreen(id, ({ screen }) => {
-            term.reset();
-            term.write(screen);
+            // A reset through the parser (RIS), since `term.reset()` runs at once and output still queued would land on the fresh screen.
+            term.write(`\x1bc${screen}`);
         });
 
         const spec = readNodeHost(id);

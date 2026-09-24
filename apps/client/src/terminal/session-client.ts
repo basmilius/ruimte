@@ -97,33 +97,12 @@ export class SessionClient {
         }
     }
 
-    async attach(nodeId: string, cols: number, rows: number): Promise<SessionAttachResult> {
-        // Registered before the request, so a socket that drops mid-flight still brings this node back.
-        this.mounted.set(nodeId, { ...this.opens.get(nodeId), cols, rows, attached: false });
-        try {
-            const result = await this.transport.request('session.attach', { sessionId: nodeId, cols, rows });
-            const entry = this.mounted.get(nodeId);
-            if (entry) {
-                entry.attached = true;
-                this.sink.setAttached(nodeId, true);
-            }
-            const info = await this.infoOf(nodeId);
-            if (result.exited) {
-                this.sink.setExited(nodeId, info?.exitCode ?? 0);
-            }
-            this.sink.setAgent(nodeId, info?.agent ?? null);
-            if (info?.agent && !info.agent.live && !result.exited && !this.resumed.has(nodeId)) {
-                // The daemon came back with a record of the agent that ran here; pick it up where it left off.
-                this.resumed.add(nodeId);
-                void this.resumeAgent(nodeId);
-            }
-            return result;
-        } catch (e) {
-            if (!isConnectionError(e)) {
-                this.mounted.delete(nodeId);
-            }
-            throw e;
-        }
+    /*
+     * Answers with the screen as soon as the daemon does: it streams from that moment, and output
+     * written before the screen would be wiped by it. What the list says about the session follows.
+     */
+    attach(nodeId: string, cols: number, rows: number): Promise<SessionAttachResult> {
+        return this.attachWith(nodeId, cols, rows, () => this.listSessions());
     }
 
     async detach(nodeId: string): Promise<void> {
@@ -234,26 +213,61 @@ export class SessionClient {
     private onStatus(status: TransportStatus): void {
         if (status === 'open') {
             this.sendApprovals();
-            void this.mounted.reattachAll((nodeId, entry) => this.reattach(nodeId, entry));
+            let listed: Promise<SessionInfo[] | null> | null = null;
+            // One list for the whole pass, asked for once the first attach has answered.
+            const sessions = (): Promise<SessionInfo[] | null> => (listed ??= this.listSessions());
+            void this.mounted.reattachAll((nodeId, entry) => this.reattach(nodeId, entry, sessions));
             return;
         }
         this.mounted.detachAll((nodeId) => this.sink.setAttached(nodeId, false));
     }
 
-    private async reattach(nodeId: string, entry: Mounted): Promise<void> {
+    private async reattach(nodeId: string, entry: Mounted, sessions: () => Promise<SessionInfo[] | null>): Promise<void> {
         await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command, agent: entry.agent }, entry.cols, entry.rows);
         // The node may have left the canvas while the create was on the wire.
         if (!this.mounted.has(nodeId)) {
             return;
         }
-        this.screenHandlers.fanOut(nodeId, await this.attach(nodeId, entry.cols, entry.rows));
+        this.screenHandlers.fanOut(nodeId, await this.attachWith(nodeId, entry.cols, entry.rows, sessions));
+    }
+
+    private async attachWith(nodeId: string, cols: number, rows: number, sessions: () => Promise<SessionInfo[] | null>): Promise<SessionAttachResult> {
+        // Registered before the request, so a socket that drops mid-flight still brings this node back.
+        this.mounted.set(nodeId, { ...this.opens.get(nodeId), cols, rows, attached: false });
+        try {
+            const result = await this.transport.request('session.attach', { sessionId: nodeId, cols, rows });
+            const entry = this.mounted.get(nodeId);
+            if (entry) {
+                entry.attached = true;
+                this.sink.setAttached(nodeId, true);
+            }
+            void this.settle(nodeId, result, sessions);
+            return result;
+        } catch (e) {
+            if (!isConnectionError(e)) {
+                this.mounted.delete(nodeId);
+            }
+            throw e;
+        }
     }
 
     // The attach reply says only that the shell ended; the exit code and the agent are on the list entry.
-    private async infoOf(nodeId: string): Promise<SessionInfo | null> {
+    private async settle(nodeId: string, result: SessionAttachResult, sessions: () => Promise<SessionInfo[] | null>): Promise<void> {
+        const info = (await sessions())?.find((session) => session.sessionId === nodeId) ?? null;
+        if (result.exited) {
+            this.sink.setExited(nodeId, info?.exitCode ?? 0);
+        }
+        this.sink.setAgent(nodeId, info?.agent ?? null);
+        if (info?.agent && !info.agent.live && !result.exited && !this.resumed.has(nodeId)) {
+            // The daemon came back with a record of the agent that ran here; pick it up where it left off.
+            this.resumed.add(nodeId);
+            void this.resumeAgent(nodeId);
+        }
+    }
+
+    private async listSessions(): Promise<SessionInfo[] | null> {
         try {
-            const { sessions } = await this.transport.request('session.list', {});
-            return sessions.find((session) => session.sessionId === nodeId) ?? null;
+            return (await this.transport.request('session.list', {})).sessions;
         } catch {
             return null;
         }
