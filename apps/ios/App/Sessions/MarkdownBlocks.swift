@@ -196,7 +196,40 @@ enum MarkdownSegments {
         return chunks
     }
 
-    static func settled(_ text: String) -> [String] { Array(split(text).dropLast()) }
+    /// Every chunk but the one still growing. A section title waits for the chunk under it, so it never sits
+    /// alone above a chunk that is still streaming.
+    static func settled(_ text: String) -> [String] {
+        var chunks = Array(split(text).dropLast())
+        while let last = chunks.popLast() {
+            let kept = withoutTrailingTitles(last)
+            if !kept.isEmpty { chunks.append(kept) }
+            if kept == last { break }
+        }
+        return chunks
+    }
+
+    static func withoutTrailingTitles(_ chunk: String) -> String {
+        let lines = chunk.components(separatedBy: "\n")
+        var end = lines.count
+        for index in lines.indices.reversed() {
+            let line = lines[index]
+            if isBlank(line) { continue }
+            guard isTitle(line, after: index > 0 ? lines[index - 1] : nil) else { break }
+            end = index
+        }
+        if end == lines.count { return chunk }
+        return lines[..<end].map { $0 + "\n" }.joined()
+    }
+
+    /// An ATX heading, or a line of only bold text, which models write as a heading too.
+    static func isTitle(_ line: String, after previous: String?) -> Bool {
+        if line.range(of: #"^ {0,3}#{1,6}(?:[ \t]|$)"#, options: .regularExpression) != nil { return true }
+        // A bold line right under a line of text continues that paragraph.
+        if let previous, !isBlank(previous) { return false }
+        return line.range(of: #"^ {0,3}\*\*(?:[^*]|\*(?!\*))+\*\*:?[ \t]*$"#, options: .regularExpression) != nil
+    }
+
+    static func isBlank(_ line: String) -> Bool { line.allSatisfy { $0 == " " || $0 == "\t" } }
 }
 
 actor MarkdownBlockCache {

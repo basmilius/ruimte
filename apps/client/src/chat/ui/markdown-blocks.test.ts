@@ -73,4 +73,27 @@ describe('settledBlocksText', () => {
     test('an open fence is never settled, blank lines inside it included', () => {
         expect(settledBlocksText('Intro\n\n```ts\nconst a = 1;\n\nconst b')).toBe('Intro\n\n');
     });
+
+    test('holds a heading until the block under it settles', () => {
+        expect(settledBlocksText('Intro\n\n## Setup\n\nInstall it')).toBe('Intro\n\n');
+        expect(settledBlocksText('Intro\n\n# Plan\n\n## Setup\n\nInstall it')).toBe('Intro\n\n');
+        expect(settledBlocksText('Intro\n\n# Plan\n\n## Setup\n\nInstall it.\n\nNext')).toBe('Intro\n\n# Plan\n\n## Setup\n\nInstall it.\n\n');
+    });
+
+    test('settles the paragraph above a heading with no blank line between them', () => {
+        expect(settledBlocksText('Intro\n## Setup\n\nInstall')).toBe('Intro\n');
+    });
+
+    test('holds a line of only bold text like a heading', () => {
+        expect(settledBlocksText('**Risk by area:**\n\n| a |\n|---|\n')).toBe('');
+        expect(settledBlocksText('Intro\n\n**Use *bun* now**\n\nInstall it')).toBe('Intro\n\n');
+        expect(settledBlocksText('**Note:** read this.\n\nNext')).toBe('**Note:** read this.\n\n');
+        // Right under a line of text, a bold line continues that paragraph.
+        expect(settledBlocksText('Intro\n**Setup**\n\nInstall')).toBe('Intro\n**Setup**\n\n');
+    });
+
+    test('holds a heading above a code block until the fence closes', () => {
+        expect(settledBlocksText('## Code\n\n```ts\na\n\nb\n')).toBe('');
+        expect(settledBlocksText('## Code\n\n```ts\na\n```\n\nAfter')).toBe('## Code\n\n```ts\na\n```\n\n');
+    });
 });

@@ -35,6 +35,18 @@ final class ChatContentTests: XCTestCase {
         XCTAssertEqual(MarkdownSegments.settled("An unfinished paragraph\n\n"), [])
     }
 
+    func testSettledSectionTitlesWaitForTheChunkUnderThem() {
+        XCTAssertEqual(MarkdownSegments.settled("Intro\n\n# Plan\n\n## Setup\n\nInstall it"), ["Intro\n\n"])
+        XCTAssertEqual(
+            MarkdownSegments.settled("Intro\n\n## Setup\n\nInstall it.\n\nNext"),
+            ["Intro\n\n", "## Setup\n\n", "Install it.\n\n"])
+        XCTAssertEqual(MarkdownSegments.settled("Intro\n## Setup\n\nInstall"), ["Intro\n"])
+        XCTAssertEqual(MarkdownSegments.settled("**Risk by area:**\n\n| a |\n|---|\n"), [])
+        XCTAssertEqual(MarkdownSegments.settled("**Note:** read this.\n\nNext"), ["**Note:** read this.\n\n"])
+        XCTAssertEqual(MarkdownSegments.settled("Intro\n**Setup**\n\nInstall"), ["Intro\n**Setup**\n\n"])
+        XCTAssertEqual(MarkdownSegments.settled("## Code\n\n```swift\nlet a = 1\n\n"), [])
+    }
+
     func testCachedParsingUpdatesTheOpenBlockAndHandlesReplacement() async {
         let cache = MarkdownBlockCache()
         let first = await cache.parse("# Title\n\nFirst")
