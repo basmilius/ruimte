@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toolSummary } from '@/chat/logic/tools';
 import { answerValue, promptAnswers, questionAnswer, type PromptAction, type PromptDraft } from '@/prompts/logic/prompts';
+import { useOperatedHere } from '@/computer/operated';
 import { approvalButtons, type PromptSubject } from '@/prompts/logic/subjects';
 import { ApprovalBody, CommandBox } from '@/prompts/ui/ApprovalBody';
 import { ApprovalActions, PromptPrimary, QuestionActions } from '@/prompts/ui/PromptActions';
@@ -26,8 +27,11 @@ interface Props {
 
 /* A permission request or question, answered in place: a chat's, or a terminal's drawn the same way. */
 export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, denyReason, disabled, sending, error, top, onReveal }: Props) {
-    const { t } = useTranslation('prompts');
-    const locked = sending || disabled;
+    const { t } = useTranslation(['prompts', 'common']);
+    // The machine refuses an answer from a window an agent operates, so the card says so before a press.
+    const operated = useOperatedHere();
+    const locked = sending || disabled || operated;
+    const notice = operated ? t('common:state.agentOperating') : disabled ? t('error.notConnected') : null;
     const buttons = approvalButtons(subject, draft.reason).map(({ action, ...button }) => ({ ...button, onPress: () => onAction(action) }));
 
     if (subject.kind === 'terminal-waiting') {
@@ -37,7 +41,7 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
                 heading={t('waiting.heading')}
                 top={top}
                 busy={false}
-                disabled={false}
+                notice={null}
                 error={null}
                 actions={
                     <div className="ml-auto flex items-center">
@@ -58,7 +62,7 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
                 heading={request.toolName === 'Bash' ? t('approval.runCommand') : request.toolName}
                 top={top}
                 busy={sending}
-                disabled={disabled}
+                notice={notice}
                 error={error}
                 actions={<ApprovalActions buttons={buttons} locked={locked} sending={sending} />}
             >
@@ -76,7 +80,7 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
                 heading={t('computer.heading', { app: request.app.name })}
                 top={top}
                 busy={sending}
-                disabled={disabled}
+                notice={notice}
                 error={error}
                 actions={<ApprovalActions buttons={buttons} locked={locked} sending={sending} />}
             >
@@ -125,7 +129,7 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
                 meta={meta}
                 top={top}
                 busy={sending}
-                disabled={disabled}
+                notice={notice}
                 error={error}
                 actions={
                     <ApprovalActions
@@ -148,7 +152,7 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
             meta={meta}
             top={top}
             busy={sending}
-            disabled={disabled}
+            notice={notice}
             error={error}
             actions={
                 <QuestionActions

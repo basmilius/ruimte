@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ApprovalChoice } from '@ruimte/contracts';
+import { useOperatedHere } from '@/computer/operated';
 import { useSessionRow } from '@/state/sessions';
 import { useEndpointId } from '@/state/keys';
 import { useSettings } from '@/state/settings';
@@ -19,8 +20,9 @@ const variantOf = (kind: ApprovalChoice['kind']): 'primary' | 'ghost' => (kind =
  * when the person types into the terminal instead, or when another client is first.
  */
 export function ApprovalStrip({ id }: { id: string }) {
-    const { t } = useTranslation('canvas');
+    const { t } = useTranslation(['canvas', 'common']);
     const endpointId = useEndpointId();
+    const operated = useOperatedHere();
     const request = useSessionRow(id, (row) => row?.approvals?.[0]);
     const more = useSessionRow(id, (row) => Math.max((row?.approvals?.length ?? 0) - 1, 0));
     // The daemon is told as well, so it holds nothing for this client; this is what takes a strip off
@@ -41,7 +43,7 @@ export function ApprovalStrip({ id }: { id: string }) {
 
     return (
         <div
-            className="flex shrink-0 items-center gap-2 border-b border-border bg-surface-raised px-3 py-2 text-xs"
+            className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-surface-raised px-3 py-2 text-xs"
             role="group"
             aria-label={t('approval.wantsPermission', { tool: request.toolName })}
             onPointerDown={(e) => e.stopPropagation()}
@@ -51,12 +53,20 @@ export function ApprovalStrip({ id }: { id: string }) {
             <span className="min-w-0 grow truncate font-mono text-text-muted">{request.summary || t('approval.wantsToRun')}</span>
             {more > 0 && <span className="shrink-0 tabular-nums text-text-faint">{t('approval.more', { count: more })}</span>}
             {request.choices.map((choice) => (
-                <Button key={choice.id} size="sm" variant={variantOf(choice.kind)} disabled={answering} className="shrink-0" onClick={() => answer(choice.id)}>
+                <Button
+                    key={choice.id}
+                    size="sm"
+                    variant={variantOf(choice.kind)}
+                    disabled={answering || operated}
+                    className="shrink-0"
+                    onClick={() => answer(choice.id)}
+                >
                     {choice.kind === 'allow' && <Icon icon={Check} size={12} />}
                     {choice.kind === 'deny' && <Icon icon={X} size={12} />}
                     {choice.label}
                 </Button>
             ))}
+            {operated && <p className="basis-full text-text-muted">{t('common:state.agentOperating')}</p>}
         </div>
     );
 }

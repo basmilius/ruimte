@@ -22,7 +22,8 @@ interface PromptCardProps {
     top?: ReactNode;
     actions: ReactNode;
     busy: boolean;
-    disabled: boolean;
+    /* Why the card cannot be answered from here, in a quiet line; null while it can. */
+    notice: string | null;
     error: string | null;
     children?: ReactNode;
 }
@@ -59,7 +60,7 @@ function onCardKeyDown(event: KeyboardEvent<HTMLDivElement>) {
 }
 
 /* What every prompt looks like, whatever asked it: in a chat's composer and in a canvas's stack. */
-export function PromptCard({ kind, heading, meta, top, actions, busy, disabled, error, children }: PromptCardProps) {
+export function PromptCard({ kind, heading, meta, top, actions, busy, notice, error, children }: PromptCardProps) {
     const { t } = useTranslation('prompts');
     const card = (
         <div className="prompt-card flex min-h-0 flex-col gap-2 p-3" role="group" aria-label={t(`card.${kind}`)} aria-busy={busy} onKeyDown={onCardKeyDown}>
@@ -75,7 +76,7 @@ export function PromptCard({ kind, heading, meta, top, actions, busy, disabled, 
                     </div>
                     {meta && <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted">{meta}</div>}
                     {children}
-                    {disabled && <p className="text-xs text-text-muted">{t('error.notConnected')}</p>}
+                    {notice && <p className="text-xs text-text-muted">{notice}</p>}
                     {error && (
                         <p role="alert" className="text-xs text-status-error">
                             {error}

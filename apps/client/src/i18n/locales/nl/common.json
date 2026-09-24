@@ -23,6 +23,7 @@
         "undo": "Ongedaan maken"
     },
     "state": {
+        "agentOperating": "Een agent bedient Ruimte. Neem het over om zelf te beslissen.",
         "loading": "Laden",
         "empty": "Hier staat nog niets",
         "error": "Er ging iets mis",

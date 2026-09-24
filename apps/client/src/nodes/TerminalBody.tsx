@@ -9,6 +9,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Terminal } from '@xterm/xterm';
 import { ClipboardPaste, Copy, Play, RotateCw, Scan } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useOperatedHere } from '@/computer/operated';
 import { useEndpointId } from '@/state/keys';
 import { useSessionRestarts, useSessionRow } from '@/state/sessions';
 import { useProject } from '@/state/project';
@@ -82,7 +83,7 @@ export function TerminalPlate({ id }: { id: string }) {
 
 /* The body of a terminal, the same on a canvas inside a frame and filling a view of its own. */
 export function TerminalBody({ id, focused }: { id: string; focused: boolean }) {
-    const { t } = useTranslation('canvas');
+    const { t } = useTranslation(['canvas', 'common']);
     const hostRef = useRef<HTMLDivElement>(null);
     const dictationRoot = useRef<HTMLDivElement>(null);
     const termRef = useRef<Terminal | null>(null);
@@ -99,6 +100,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const exited = useSessionRow(id, (row) => row?.exited);
     const agentRecord = useSessionRow(id, (row) => row?.agent);
     const heldCommand = useSessionRow(id, (row) => row?.heldCommand);
+    const operated = useOperatedHere();
     // Claude Code and Codex write a name down; the daemon sends none for Gemini or Copilot.
     useSuggestedTitle(id, agentRecord?.kind === 'claude' || agentRecord?.kind === 'codex' ? agentRecord.suggestedTitle : undefined);
     const resolvedTheme = useTheme((t) => t.resolved);
@@ -307,8 +309,10 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                         )}
                         {heldCommand !== undefined && exited === undefined && (
                             <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-text">
-                                <span className="grow truncate">{t('terminal.held', { command: heldCommand })}</span>
-                                <Button size="sm" onClick={() => void sessionClient.runHeld(id).catch(() => undefined)}>
+                                <span className="grow truncate">
+                                    {operated ? t('common:state.agentOperating') : t('terminal.held', { command: heldCommand })}
+                                </span>
+                                <Button size="sm" disabled={operated} onClick={() => void sessionClient.runHeld(id).catch(() => undefined)}>
                                     <Icon icon={Play} size={12} /> {t('terminal.run')}
                                 </Button>
                             </div>
