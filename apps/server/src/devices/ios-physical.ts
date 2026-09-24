@@ -54,6 +54,7 @@ const defaultRunner: DevicectlRunner = async (arguments_) => {
 export class IosPhysicalBackend implements DeviceBackend {
     readonly id = 'coredevice';
     readonly platform = 'ios' as const;
+    readonly kinds = ['physical'] as const;
     private readonly capture: PhysicalFrameCapture;
     private readonly createLiveSource: PhysicalStreamSourceFactory | null;
     private readonly udids = new Map<string, string>();

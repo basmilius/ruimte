@@ -1,16 +1,19 @@
 import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
-import type {
-    DeviceAction,
-    DeviceFrame,
-    DeviceInfo,
-    DeviceInput,
-    DeviceOpenResult,
-    DevicePlatform,
-    DeviceSettings,
-    DeviceUnavailable,
-    DeviceVideoFormat,
-    LiveStreamFrame
+import {
+    deviceMatches,
+    type DeviceAction,
+    type DeviceFrame,
+    type DeviceInfo,
+    type DeviceInput,
+    type DeviceKind,
+    type DeviceOpenResult,
+    type DevicePlatform,
+    type DeviceReference,
+    type DeviceSettings,
+    type DeviceUnavailable,
+    type DeviceVideoFormat,
+    type LiveStreamFrame
 } from '@ruimte/contracts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
@@ -25,16 +28,22 @@ export interface DeviceSource extends LiveFrameSource {
 export interface DeviceBackend {
     readonly id: string;
     readonly platform: DevicePlatform;
+    /* The kinds of device this backend finds; absent finds both, so a lookup cannot skip it. */
+    readonly kinds?: readonly DeviceKind[];
     list(): Promise<DeviceInfo[]>;
     boot?(deviceId: string): Promise<DeviceInfo>;
     shutdown?(deviceId: string): Promise<DeviceInfo>;
     detail?(deviceId: string): Promise<DeviceSettings>;
     action?(deviceId: string, action: DeviceAction): Promise<DeviceSettings>;
     createSource?(deviceId: string): DeviceSource;
+    /* A png of the screen as it is now, at the device's own resolution. */
+    screenshot?(deviceId: string): Promise<Uint8Array>;
 }
 
 interface DeviceSession {
     clients: Set<string>;
+    /* The daemon's own holders, each a viewer of the stream, since input only reaches a running source. */
+    holds: Map<string, Promise<() => void>>;
     info: DeviceInfo;
     source: DeviceSource;
     streamId: string;
@@ -169,46 +178,92 @@ export class DeviceManager {
         stream: 'http' | 'events' = 'http',
         formats: readonly DeviceVideoFormat[] = FORMATS_BEFORE_H264
     ): Promise<DeviceOpenResult> {
-        const key = sessionKey(backendId, deviceId);
-        let session = this.sessions.get(key);
-        if (session) {
-            requireFormat(session.source, formats);
-        } else {
-            const backend = this.backend(backendId, platform);
-            if (!backend.createSource) {
-                throw new DeviceError('device-capture-unavailable', 'Device capture is not installed on this machine');
-            }
-            const device = (await backend.list()).find((candidate) => candidate.deviceId === deviceId);
-            if (!device) {
-                throw new DeviceError('device-not-found', 'The device is no longer available');
-            }
-            if (device.state !== 'booted') {
-                throw new DeviceError('device-not-booted', 'Start the device before opening it');
-            }
-            let source: DeviceSource;
-            try {
-                source = backend.createSource(deviceId);
-            } catch (error) {
-                throw this.sourceError(error);
-            }
-            requireFormat(source, formats);
-            const streamId = `device:${randomUUID()}`;
-            session = { clients: new Set(), info: device, source, streamId, unregister: () => undefined };
-            session.unregister = this.streams.register(streamId, source);
-            this.sessions.set(key, session);
-        }
+        const session = await this.sessionFor(backendId, platform, deviceId, formats);
         session.clients.add(clientId);
         try {
             if (stream === 'events') {
                 await this.startFrameEvents(session, clientId);
             } else {
-                this.frames.stop(key, clientId);
+                this.frames.stop(sessionKey(backendId, deviceId), clientId);
             }
         } catch (error) {
             session.clients.delete(clientId);
             throw error;
         }
         return { ...session.info, streamId: session.streamId };
+    }
+
+    /*
+     * A session the daemon keeps for a holder of its own, such as an agent, whether or not a client
+     * has the device open; a client that opens it too shares the one session and sees the input live.
+     */
+    async hold(backendId: string, platform: DevicePlatform, deviceId: string, holderId: string): Promise<DeviceInfo> {
+        const key = sessionKey(backendId, deviceId);
+        const session = await this.sessionFor(backendId, platform, deviceId, null);
+        let holding = session.holds.get(holderId);
+        if (!holding) {
+            session.clients.add(holderId);
+            const subscribed = this.streams.subscribe(session.streamId, () => undefined);
+            holding = subscribed;
+            session.holds.set(holderId, subscribed);
+            subscribed.catch(() => {
+                if (session.holds.get(holderId) === subscribed) {
+                    session.holds.delete(holderId);
+                    this.leave(key, holderId);
+                }
+            });
+        }
+        try {
+            await holding;
+        } catch (error) {
+            throw this.sourceError(error);
+        }
+        return session.info;
+    }
+
+    release(backendId: string, deviceId: string, holderId: string): void {
+        const key = sessionKey(backendId, deviceId);
+        const session = this.sessions.get(key);
+        const holding = session?.holds.get(holderId);
+        if (!session || !holding) {
+            return;
+        }
+        session.holds.delete(holderId);
+        void holding.then(
+            (unsubscribe) => unsubscribe(),
+            () => undefined
+        );
+        this.leave(key, holderId);
+    }
+
+    /* The device a reference points at on this machine, asking only the backends that could have it; null when none has it. */
+    async find(reference: DeviceReference): Promise<DeviceInfo | null> {
+        const backends = [...this.backends.values()].filter(
+            (backend) => backend.platform === reference.platform && (backend.kinds === undefined || backend.kinds.includes(reference.kind))
+        );
+        const results = await Promise.allSettled(backends.map((backend) => backend.list()));
+        const devices = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
+        const found = devices.find((device) => deviceMatches(device, reference));
+        if (found) {
+            return found;
+        }
+        const failure = results.find((result) => result.status === 'rejected');
+        if (failure?.status === 'rejected') {
+            throw this.sourceError(failure.reason);
+        }
+        return null;
+    }
+
+    async screenshot(backendId: string, platform: DevicePlatform, deviceId: string): Promise<Uint8Array> {
+        const backend = this.backend(backendId, platform);
+        if (!backend.screenshot) {
+            throw new DeviceError('device-capture-unavailable', 'This device cannot be photographed by Ruimte');
+        }
+        try {
+            return await backend.screenshot(deviceId);
+        } catch (error) {
+            throw this.sourceError(error);
+        }
     }
 
     detach(backendId: string, deviceId: string, clientId: string): void {
@@ -218,13 +273,8 @@ export class DeviceManager {
     }
 
     detachAll(clientId: string): void {
-        for (const [key, session] of [...this.sessions]) {
-            session.clients.delete(clientId);
-            this.frames.stop(key, clientId);
-            // The source keeps producing frames while it is registered, so the last client leaving ends the session.
-            if (session.clients.size === 0) {
-                this.destroy(key);
-            }
+        for (const key of [...this.sessions.keys()]) {
+            this.leave(key, clientId);
         }
     }
 
@@ -250,6 +300,69 @@ export class DeviceManager {
 
     closeAll(): void {
         for (const key of [...this.sessions.keys()]) {
+            this.destroy(key);
+        }
+    }
+
+    /* The running session of a device, or a new one; `formats` is what the client that asks can draw, null for a holder that draws nothing. */
+    private async sessionFor(
+        backendId: string,
+        platform: DevicePlatform,
+        deviceId: string,
+        formats: readonly DeviceVideoFormat[] | null
+    ): Promise<DeviceSession> {
+        const key = sessionKey(backendId, deviceId);
+        const joined = (session: DeviceSession): DeviceSession => {
+            if (formats !== null) {
+                requireFormat(session.source, formats);
+            }
+            return session;
+        };
+        const running = this.sessions.get(key);
+        if (running) {
+            return joined(running);
+        }
+        const backend = this.backend(backendId, platform);
+        if (!backend.createSource) {
+            throw new DeviceError('device-capture-unavailable', 'Device capture is not installed on this machine');
+        }
+        const device = (await backend.list()).find((candidate) => candidate.deviceId === deviceId);
+        if (!device) {
+            throw new DeviceError('device-not-found', 'The device is no longer available');
+        }
+        if (device.state !== 'booted') {
+            throw new DeviceError('device-not-booted', 'Start the device before opening it');
+        }
+        // Another open may have made the session while this one listed the devices.
+        const raced = this.sessions.get(key);
+        if (raced) {
+            return joined(raced);
+        }
+        let source: DeviceSource;
+        try {
+            source = backend.createSource(deviceId);
+        } catch (error) {
+            throw this.sourceError(error);
+        }
+        if (formats !== null) {
+            requireFormat(source, formats);
+        }
+        const streamId = `device:${randomUUID()}`;
+        const session: DeviceSession = { clients: new Set(), holds: new Map(), info: device, source, streamId, unregister: () => undefined };
+        session.unregister = this.streams.register(streamId, source);
+        this.sessions.set(key, session);
+        return session;
+    }
+
+    /* One client or holder out; the source keeps producing frames while it is registered, so the last one leaving ends the session. */
+    private leave(key: string, clientId: string): void {
+        const session = this.sessions.get(key);
+        if (!session) {
+            return;
+        }
+        session.clients.delete(clientId);
+        this.frames.stop(key, clientId);
+        if (session.clients.size === 0) {
             this.destroy(key);
         }
     }

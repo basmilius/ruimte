@@ -239,4 +239,33 @@ describe('DeviceManager', () => {
             new DeviceError('device-not-open', 'Open the device before sending input')
         );
     });
+
+    test('finds the device a reference names by asking only the backends that could have it', async () => {
+        const backend = new FakeBackend();
+        let physicalLists = 0;
+        const physical: DeviceBackend = {
+            id: 'coredevice',
+            platform: 'ios',
+            kinds: ['physical'],
+            list: () => {
+                physicalLists += 1;
+                return Promise.resolve([]);
+            }
+        };
+        const manager = new DeviceManager([backend, physical]);
+
+        expect(await manager.find({ platform: 'ios', kind: 'simulator', name: 'iPhone 18 Pro', runtime: 'iOS 27.0' })).toEqual(phone);
+        expect(await manager.find({ platform: 'ios', kind: 'simulator', name: 'iPhone 12', runtime: 'iOS 27.0' })).toBeNull();
+        expect(physicalLists).toBe(0);
+    });
+
+    test('a holder that fails to start the stream is not left holding the device', async () => {
+        const backend = new FakeBackend();
+        backend.info = { ...phone, state: 'booted' };
+        backend.source.start = () => Promise.reject(new Error('capture failed'));
+        const manager = new DeviceManager([backend]);
+
+        await expect(manager.hold('simctl', 'ios', 'phone-1', 'agent:chat-1')).rejects.toEqual(new DeviceError('device-helper-failed', 'capture failed'));
+        await expect(manager.input('simctl', 'phone-1', 'agent:chat-1', { kind: 'button', button: 'home' })).rejects.toMatchObject({ code: 'device-not-open' });
+    });
 });

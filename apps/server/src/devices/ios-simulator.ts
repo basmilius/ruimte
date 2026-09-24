@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { existsSync } from 'node:fs';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
     DevicePermissionSchema,
@@ -115,6 +117,7 @@ const axHelperPath = (): string | null => {
 export class IosSimulatorBackend implements DeviceBackend {
     readonly id = 'simctl';
     readonly platform = 'ios' as const;
+    readonly kinds = ['simulator'] as const;
     private readonly run: SimctlRunner;
     private readonly launch: DeviceHelperLauncher | null;
 
@@ -277,6 +280,17 @@ export class IosSimulatorBackend implements DeviceBackend {
             throw new DeviceError('device-capture-unavailable', 'The native iOS simulator helper is not installed');
         }
         return new DeviceHelperSource(deviceId, this.launch);
+    }
+
+    async screenshot(deviceId: string): Promise<Uint8Array> {
+        const directory = await mkdtemp(join(tmpdir(), 'ruimte-simulator-shot-'));
+        try {
+            const path = join(directory, 'screen.png');
+            await this.command(['io', deviceId, 'screenshot', '--type=png', path]);
+            return new Uint8Array(await readFile(path));
+        } finally {
+            await rm(directory, { recursive: true, force: true });
+        }
     }
 
     private async ax(deviceId: string, arguments_: string[]): Promise<void> {

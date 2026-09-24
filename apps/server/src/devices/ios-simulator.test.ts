@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { writeFile } from 'node:fs/promises';
+import { pngOf } from './device-test-helpers.ts';
 import { IosSimulatorBackend, type SimctlRunner } from './ios-simulator.ts';
 
 const listOutput = JSON.stringify({
@@ -116,5 +118,18 @@ describe('IosSimulatorBackend', () => {
         });
 
         expect(calls[0]).toEqual(['location', 'phone-1', 'set', '52.3676,4.9041']);
+    });
+
+    test('photographs the screen through simctl into a file of its own and hands back the png', async () => {
+        const calls: string[][] = [];
+        const backend = new IosSimulatorBackend(async (arguments_) => {
+            calls.push(arguments_);
+            await writeFile(arguments_.at(-1)!, pngOf(1206, 2622));
+            return { exitCode: 0, stdout: '', stderr: '' };
+        });
+
+        expect(await backend.screenshot('phone-1')).toEqual(pngOf(1206, 2622));
+        expect(calls[0]!.slice(0, 4)).toEqual(['io', 'phone-1', 'screenshot', '--type=png']);
+        expect(calls[0]!.at(-1)).toEndWith('/screen.png');
     });
 });

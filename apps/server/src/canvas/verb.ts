@@ -19,6 +19,7 @@ import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { z } from 'zod';
 import type { DriveOutcome, ShotOutcome } from '../browser/drive.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
+import type { DeviceDriver } from '../devices/agent-driver.ts';
 import type { NoticeDelivery, Notice } from '../context/notices.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -98,6 +99,8 @@ export interface CanvasHost {
     agents?: AgentStateHost;
     /* Operating the apps of this machine through its helper; absent on a host without one. */
     computer?: ComputerHost;
+    /* Seeing and operating the device under a device node; absent on a host without devices. */
+    devices?: DeviceDriveHost;
     /* What a person linked into a session, which `list` and `read` answer with. */
     context?: ContextHost;
 }
@@ -135,6 +138,9 @@ export interface BrowserDriveHost {
 
 /* What an agent's `computer` call reaches: the setting, and the rules every call passes before the helper acts. */
 export type ComputerHost = Pick<ComputerUse, 'enabled' | 'apps' | 'operate' | 'treeView'>;
+
+/* What an agent's `device` call reaches: the device a node points at, a shot of it and the gestures on it. */
+export type DeviceDriveHost = Pick<DeviceDriver, 'find' | 'screen' | 'abilities' | 'shot' | 'tap' | 'swipe' | 'button' | 'launch'>;
 
 export interface WorktreeHost {
     /* Every worktree of the repository a folder is in, with the work each holds. */
@@ -227,7 +233,7 @@ export type VerbEntry = Verb | Noun | ContextVerb;
 
 /* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
 export const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; node, link, browser, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
 
 export const DRY_RUN_FLAG = 'dry-run';
 

@@ -42,6 +42,19 @@ describe('verbsNote', () => {
         expect(chatPrompt({ sources: [], depth: 0, computer: true })).toContain('`ruimte-context computer`');
     });
 
+    test('names the device noun only while a device node is linked in', () => {
+        const phone = {
+            id: 'phone-1',
+            kind: 'device' as const,
+            title: 'Phone',
+            device: { platform: 'ios' as const, kind: 'simulator' as const, name: 'iPhone', runtime: 'iOS 27.0' }
+        };
+        expect(chatPrompt({ sources: [], depth: 0 })).not.toContain('ruimte-context device');
+        expect(chatPrompt({ sources: [phone], depth: 0 })).toContain('`ruimte-context device`');
+        expect(hookContext('SessionStart', [phone])).toContain('`ruimte-context device`');
+        expect(verbsNote({ depth: 0, standalone: true, device: true })).toContain('`ruimte-context device`');
+    });
+
     test('offers team and agent at depth 0, only agent at depth 1 and neither below', () => {
         expect(VERBS_NOTE).toContain('`agent <cli>` for one, `team` for several in parallel');
         expect(VERBS_NOTE).toContain('answer yourself whatever you can');
@@ -113,7 +126,7 @@ describe('chatPrompt', () => {
     test('always names the verbs for its depth, and the links by name only when there are some', () => {
         expect(chatPrompt({ sources: [], depth: 0 })).toBe(VERBS_NOTE);
         expect(chatPrompt({ sources: [], depth: 2 })).toBe(verbsNote({ depth: 2 }));
-        expect(chatPrompt({ sources: [device, terminal], depth: 0 })).toBe(`${VERBS_NOTE} ${contextPrompt([device, terminal])}`);
+        expect(chatPrompt({ sources: [device, terminal], depth: 0 })).toBe(`${verbsNote({ depth: 0, device: true })} ${contextPrompt([device, terminal])}`);
         expect(chatPrompt({ sources: [device], depth: 0 })).toContain('"iPhone 18 Pro Max" (device)');
     });
 });

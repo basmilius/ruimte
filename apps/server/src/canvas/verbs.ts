@@ -8,6 +8,7 @@ import { agentVerb } from './agent-verb.ts';
 import { arrangeAction } from './arrange-verb.ts';
 import { BROWSER_ACTIONS, BROWSER_DETAIL, BROWSER_SUMMARY } from './browser-verb.ts';
 import { COMPUTER_ACTIONS, COMPUTER_DETAIL, COMPUTER_SUMMARY } from './computer-verb.ts';
+import { DEVICE_ACTIONS, DEVICE_DETAIL, DEVICE_SUMMARY } from './device-verb.ts';
 import { diagramAction } from './diagram-verb.ts';
 import { flagVerb } from './flag-verb.ts';
 import { nodeEditAction } from './edit-verb.ts';
@@ -160,6 +161,7 @@ const readVerb: ContextVerb = {
         'kind\tbrowser\tThe address of the page and, under it, the text of that page as this machine has it open, read the moment you ask; the address alone when no page of it is open here\t--tail counts lines of the page text and keeps the address',
         'kind\tbrowser\tReading leaves the page where it is; ruimte-context browser is what sends it somewhere, over the same line',
         'kind\tdevice\tWhich device the node points at: its name, platform, kind and runtime, and the state, deviceId and backendId this machine knows it by, or a line saying the device is not here right now\t--tail does nothing here',
+        'kind\tdevice\tReading leaves the device alone; ruimte-context device is what photographs and operates it, over the same line',
         'cheap\tThe last fifteen lines of a neighbour is usually the whole answer; read the source whole only when it is not',
         'direction\tBetween two agents a line runs one way: the one you draw into another agent lets it read you, and reading it back takes a line from it into you, which ruimte-context link new --from <id> --to <you> draws',
         'direction\tA node that is no agent, a note, a page, a file, a drawing or a diagram, you read over a line whichever way that line runs',
@@ -190,6 +192,13 @@ const browserNoun = defineNoun({
     summary: BROWSER_SUMMARY,
     detail: BROWSER_DETAIL,
     actions: [...BROWSER_ACTIONS]
+});
+
+const deviceNoun = defineNoun({
+    name: 'device',
+    summary: DEVICE_SUMMARY,
+    detail: DEVICE_DETAIL,
+    actions: [...DEVICE_ACTIONS]
 });
 
 const computerNoun = defineNoun({
@@ -230,6 +239,7 @@ export const VERBS: readonly VerbEntry[] = [
     nodeNoun,
     linkNoun,
     browserNoun,
+    deviceNoun,
     viewNoun,
     taskNoun,
     planVerb,

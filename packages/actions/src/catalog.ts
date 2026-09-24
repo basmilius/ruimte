@@ -190,6 +190,10 @@ const browserOutcome = z.object({
     error: z.string().nullable()
 });
 
+const deviceNode = nodeId.describe('The device node, by id');
+const devicePixel = z.number().min(0).describe('A pixel of the last device shot, counted from its top-left corner');
+const deviceDone = z.object({ nodeId, device: z.string() });
+
 const computerApp = z.string().min(1).describe('The app: its name, bundle id or pid, as computer apps lists them');
 const computerAppRef = z.object({ name: z.string(), bundleId: z.string().nullable(), pid: z.number().int() });
 /* How long a call may hold for a card or the person's pause, which every call that reads or operates an app can meet. */
@@ -2027,6 +2031,78 @@ export const ACTION_DEFINITIONS = {
         actors: AGENT,
         input: z.object({ app: computerApp, ...computerThenState }),
         output: computerOutcome
+    },
+    'device.inspect': {
+        title: 'Read a device',
+        description: 'Which device a device node holds on this machine, whether it runs, its screen and buttons, and what an agent can do on it.',
+        effect: 'read',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ nodeId: deviceNode }),
+        output: z.object({
+            nodeId,
+            device: DeviceReferenceSchema,
+            // False when this machine has no such device right now; everything below is then empty.
+            present: z.boolean(),
+            state: z.enum(['booted', 'shutdown', 'transitioning']).nullable(),
+            // The picture the last shot took, which is what coordinates are counted in; null before a shot.
+            screen: z.object({ width: z.number().int(), height: z.number().int() }).nullable(),
+            buttons: z.array(z.string()),
+            can: z.object({ shot: z.boolean(), input: z.boolean(), type: z.boolean(), launch: z.boolean() })
+        })
+    },
+    'device.screenshot': {
+        title: 'Photograph a device',
+        description: 'Writes a png of the screen of a device node and answers where it is and how many pixels it has.',
+        effect: 'read',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ nodeId: deviceNode }),
+        // On this machine, outside the project folder.
+        output: z.object({ nodeId, path: z.string(), width: z.number().int(), height: z.number().int() })
+    },
+    'device.tap': {
+        title: 'Tap a device',
+        description: 'Taps the screen of a device node at a pixel of its last shot.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ nodeId: deviceNode, x: devicePixel, y: devicePixel }),
+        output: deviceDone
+    },
+    'device.swipe': {
+        title: 'Swipe on a device',
+        description: 'Presses on the screen of a device node at one pixel of its last shot, moves to another and lets go there.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({
+            nodeId: deviceNode,
+            fromX: devicePixel,
+            fromY: devicePixel,
+            toX: devicePixel,
+            toY: devicePixel,
+            ms: z.number().int().min(50).max(5000).nullish().describe('How long the finger takes from one to the other, in milliseconds; 300 without it')
+        }),
+        output: deviceDone
+    },
+    'device.button': {
+        title: 'Press a device button',
+        description: 'Presses one of the buttons a device announces, such as home or lock.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ nodeId: deviceNode, button: z.string().min(1).describe('A button the device announces, as device.inspect lists them') }),
+        output: deviceDone
+    },
+    'device.launch': {
+        title: 'Open an app on a device',
+        description: 'Opens an app on a device node by its bundle id or package name.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ nodeId: deviceNode, app: z.string().trim().min(1).max(256).describe('A bundle id on iOS or a package name on Android') }),
+        output: deviceDone
     },
     'context.list': {
         title: 'List linked context',

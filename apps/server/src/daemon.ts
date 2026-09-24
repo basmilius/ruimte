@@ -128,6 +128,7 @@ import { BrowserPages } from './browser/pages.ts';
 import { registerBrowserHandlers } from './handlers/browser.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from './streams/http-stream.ts';
 import { DeviceManager } from './devices/manager.ts';
+import { DeviceDriver } from './devices/agent-driver.ts';
 import { IosPhysicalBackend } from './devices/ios-physical.ts';
 import { IosSimulatorBackend } from './devices/ios-simulator.ts';
 import { createDeviceHelperLauncher } from './devices/helper-source.ts';
@@ -401,6 +402,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
               : [],
         liveStreams
     );
+    const deviceDriver = new DeviceDriver({ home: config.home, manager: devices });
     const statuses = new GitStatusWatcher();
     const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
     const limits = new UsageMonitor({ providers });
@@ -480,6 +482,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         removeWorktree: (folder: string, path: string) => worktrees.remove(folder, path),
         worktrees: worktreeHost(worktrees, merges),
         browsers: browserDriver,
+        devices: deviceDriver,
         agents: agentStates({ outbox, lineage, chats, sessions: manager }),
         computer,
         context: {
@@ -1026,6 +1029,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         await computer.stop();
         manager.killAll();
         browsers.closeAll();
+        deviceDriver.releaseAll();
         devices.closeAll();
         projects.closeAll();
         drawings.closeAll();
