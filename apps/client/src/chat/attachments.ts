@@ -25,6 +25,16 @@ interface AttachmentCheck<T extends IncomingFile> {
 
 export const isImageAttachment = (mime: string): boolean => mime.startsWith('image/');
 
+/* The type on a file card: the extension, as long as it is short enough to read as one. */
+export const fileBadge = (name: string): string | null => {
+    const dot = name.lastIndexOf('.');
+    if (dot <= 0 || dot === name.length - 1) {
+        return null;
+    }
+    const extension = name.slice(dot + 1);
+    return extension.length <= 5 ? extension.toUpperCase() : null;
+};
+
 /* Whole kilobytes, which is all a row under a file name has room for, and a decimal once it runs into megabytes. */
 export const formatBytes = (bytes: number): string => bytesOf(bytes, bytes < 1024 * 1024);
 

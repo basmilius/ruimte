@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Bot, Brain, Check, ChevronDown, CircleAlert, Info, MessageCircleQuestionMark, Paperclip, TriangleAlert, X } from 'lucide-react';
+import { Bot, Brain, Check, ChevronDown, CircleAlert, File, Info, MessageCircleQuestionMark, TriangleAlert, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatAttachment, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
-import { formatBytes, isImageAttachment } from '@/chat/attachments';
+import { fileBadge, formatBytes, isImageAttachment } from '@/chat/attachments';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useProviders } from '@/state/providers';
@@ -37,19 +37,24 @@ const FOLD = 'max-h-[10em] overflow-hidden [mask-image:linear-gradient(to_bottom
  */
 function AttachmentLink({ chatId, endpointId, attachment }: { chatId: string; endpointId: string; attachment: ChatAttachment }) {
     const { url } = useMachineUrl({ kind: 'attachment', chatId, attachmentId: attachment.id }, endpointId);
+    const badge = fileBadge(attachment.name);
     return (
-        <a
-            href={url ?? undefined}
-            download={attachment.name}
-            target="_blank"
-            rel="noreferrer"
-            aria-disabled={url === null}
-            className="flex max-w-56 items-center gap-1.5 rounded-lg border border-border bg-surface-sunken px-2.5 py-1.5 text-xs text-text-muted hover:text-text"
-        >
-            <Icon icon={Paperclip} size={12} className="shrink-0 text-text-faint" />
-            <span className="truncate">{attachment.name}</span>
-            <span className="shrink-0 text-text-faint">{formatBytes(attachment.size)}</span>
-        </a>
+        <Tooltip label={attachment.name}>
+            <a
+                href={url ?? undefined}
+                download={attachment.name}
+                target="_blank"
+                rel="noreferrer"
+                aria-disabled={url === null}
+                className="flex h-28 w-36 flex-col rounded-xl border border-border bg-surface-raised bg-clip-padding p-2.5 text-left hover:bg-surface-hover"
+            >
+                <span className="flex h-6 min-w-6 items-center justify-center self-start rounded-md border border-border px-1.5 text-xs font-medium text-text-muted">
+                    {badge ?? <Icon icon={File} size={12} />}
+                </span>
+                <span className="mt-auto line-clamp-2 text-xs break-all text-text">{attachment.name}</span>
+                <span className="text-xs text-text-faint">{formatBytes(attachment.size)}</span>
+            </a>
+        </Tooltip>
     );
 }
 

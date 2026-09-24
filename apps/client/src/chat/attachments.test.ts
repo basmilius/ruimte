@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { CHAT_ATTACHMENTS_MAX_BYTES, CHAT_ATTACHMENTS_MAX_COUNT } from '@ruimte/contracts';
-import { checkAttachmentLimits, formatBytes, isImageAttachment, uploadBytes } from './attachments';
+import { checkAttachmentLimits, fileBadge, formatBytes, isImageAttachment, uploadBytes } from './attachments';
 
 const file = (name: string, mime: string, bytes: number) => ({ name, mime, bytes });
 
@@ -43,6 +43,23 @@ describe('isImageAttachment', () => {
     test('only an image mime draws as a thumbnail', () => {
         expect(isImageAttachment('image/webp')).toBe(true);
         expect(isImageAttachment('application/pdf')).toBe(false);
+    });
+});
+
+describe('fileBadge', () => {
+    test('reads the extension in capitals', () => {
+        expect(fileBadge('ruimte-codebase-review.pdf')).toBe('PDF');
+        expect(fileBadge('report.v2.html')).toBe('HTML');
+    });
+
+    test('has none for a dotfile, a trailing dot or no extension', () => {
+        expect(fileBadge('.env')).toBeNull();
+        expect(fileBadge('notes.')).toBeNull();
+        expect(fileBadge('Makefile')).toBeNull();
+    });
+
+    test('has none for an extension too long to read as a type', () => {
+        expect(fileBadge('backup.20260924')).toBeNull();
     });
 });
 
