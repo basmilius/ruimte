@@ -223,13 +223,13 @@ const constantSource = Object.entries(constants)
             `    public static let ${name}: ${Array.isArray(value) ? '[String]' : typeof value === 'string' ? 'String' : name === 'protocolVersion' ? 'Int64' : name === 'directPieceChars' ? 'Int' : 'Double'} = ${JSON.stringify(value)}`
     )
     .join('\n');
-// Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
 /*
  * Vocabularies a newer machine may extend without asking this app first. A released app validates whole replies,
- * so one closed literal it never saw would refuse every `chat.list` or `project.open` holding it; on the wire these
+ * so one closed literal it never saw would refuse every `chat.list` or `project.open` holding it. On the wire these
  * are any string, and the known words ride along as `x-open-enum` for the app to fall back from.
  */
 const openVocabularies: ReadonlySet<unknown> = new Set([agent.AgentKindSchema, agent.AgentStatusSchema, RuntimeModeSchema]);
+// Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
 const apiRoots: Record<string, z.ZodType> = {};
 for (const [name, pair] of Object.entries(REQUEST_SCHEMAS)) {
     apiRoots[`request.${name}.payload`] = pair.payload;

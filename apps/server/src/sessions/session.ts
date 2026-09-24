@@ -180,10 +180,9 @@ export class Session {
 
     /*
      * A screen for one client and the stream that continues it, as one step. From this call on the
-     * client's output is held instead of sent, and what it had buffered goes: the emulator parses
-     * that before the marker, so the screen holds it. The screen is taken in the marker's callback,
-     * where every byte fed before the marker is parsed and none after it, and `onScreen` runs right
-     * there, before the held output may flow.
+     * client's output is held, and what it had buffered is dropped, since the screen holds it. The
+     * screen is taken in the marker's callback, where every byte fed before the marker is parsed and
+     * none after it, and `onScreen` runs there, before the held output flows.
      */
     snapshotFor(clientId: string, onScreen: (screen: string) => void): void {
         let stream = this.clients.get(clientId);

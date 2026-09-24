@@ -22,7 +22,7 @@ export interface EndChildrenDeps {
     stop(nodeId: string): Promise<void>;
 }
 
-/* The work that would start or wake an agent again, a message or a task for it included; an agent that was ended has none of it left. */
+/* The work that would start or wake an agent again; an agent that was ended has none of it left. */
 const REVIVING: ReadonlySet<OutboxEntry['kind']> = new Set(['start-agent', 'resume-run', 'wake-parent', 'deliver-message', 'give-task']);
 
 /*

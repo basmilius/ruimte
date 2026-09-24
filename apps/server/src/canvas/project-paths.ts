@@ -71,8 +71,8 @@ export interface StartCwdDeps {
 
 /*
  * The cwd check again, at every start of a node an agent made. The verb checked a path that may be
- * a symlink, and whoever can write in the folder can point it elsewhere before the start or the
- * restart after it, so the check that counts is the one right before the shell or the CLI spawns.
+ * a symlink, which anyone who can write in the folder can point elsewhere before a start, so only
+ * the check right before the shell or the CLI spawns counts.
  */
 export const startCwdGuard =
     (deps: StartCwdDeps) =>

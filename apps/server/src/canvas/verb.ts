@@ -71,7 +71,7 @@ export interface CanvasHost {
     depthOf(nodeId: string): number;
     /* The agent nodes this caller has opened and not lost, which is what caps one caller in a loop. */
     openedCount(callerId: string): number;
-    /* Writes down who made a node, how deep it sits and the widest mode it may start in, outside the project and across a restart. */
+    /* Writes down who made a node, outside the project and across a restart. */
     recordMade(record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean; ceiling?: RuntimeMode }): Promise<void>;
     /* Who made a node, or null for one a person made; what `node delete` asks before it removes one. */
     madeBy(nodeId: string): string | null;

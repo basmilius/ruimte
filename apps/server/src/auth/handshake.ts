@@ -31,10 +31,7 @@ const TICKETS_PER_SESSION = 8;
 // How many nonces asked for over HTTP can be waiting to be signed at once, over every client together.
 const MAX_OPEN_CHALLENGES = 512;
 
-/*
- * A ticket opens one socket and serves bytes for as long as it lives. `open` while that socket is,
- * which keeps the ticket alive however long the page goes without fetching anything.
- */
+// `open` while the socket a ticket opened is, which keeps the ticket alive however long the page fetches nothing.
 type TicketSocket = 'unused' | 'open' | 'closed';
 
 interface Ticket {
@@ -94,9 +91,9 @@ export class Handshake {
         const challenge = randomBytes(32).toString('base64url');
         const expiresAt = this.now() + CHALLENGE_TTL_MS;
         if (binding === null) {
-            /* Nobody has to be paired to ask for one, so the list is capped as well as swept: without it
-               a caller that never signs anything decides how much memory this daemon holds. Dropping the
-               oldest costs a re-ask to whoever was slowest, and the client asks again on its next try. */
+            /* Nobody has to be paired to ask for one, so the list is capped as well as swept, or a caller
+               that never signs decides how much memory this daemon holds. The slowest caller loses its
+               nonce and asks again on its next try. */
             for (const stale of [...this.challenges.keys()].slice(0, Math.max(0, this.challenges.size - (MAX_OPEN_CHALLENGES - 1)))) {
                 this.challenges.delete(stale);
             }

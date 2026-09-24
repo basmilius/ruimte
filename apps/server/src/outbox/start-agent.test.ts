@@ -58,7 +58,7 @@ const link = async (path: string, to: string): Promise<void> => {
 /* One run of the daemon over a home. The stores read from disk, the managers empty, nothing kept from a run before. */
 interface Daemon {
     prompts: PendingPromptStore;
-    /* What the start-agent handler logged, a start it gave up on among it. */
+    /* What the start-agent handler logged, including a start it gave up on. */
     logged: string[];
     outbox: OutboxStore;
     worker: OutboxWorker;

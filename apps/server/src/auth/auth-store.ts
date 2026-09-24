@@ -255,7 +255,8 @@ export class AuthStore {
      * Hangs a public key on a session that has none, which is how a client paired before key pairs
      * upgrades over its own authenticated connection. A key another session already holds is
      * refused: the daemon looks a client up by its key, so two records on one key is an ambiguity.
-     * A revoked key is refused too, since only a pairing link lets it back in, and a session that has a key keeps it.
+     * A revoked key is refused too, since only a pairing link lets it back in. A session that has a
+     * key keeps it.
      */
     async registerKey(sessionId: string, publicKey: string): Promise<boolean> {
         if (!isPublicKey(publicKey)) {

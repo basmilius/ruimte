@@ -256,7 +256,7 @@ export const writePrivateFile = (path: string, file: ProjectPrivateFile): Promis
 
 const toPosix = (path: string): string => path.split(sep).join('/');
 
-/* Maps the folder of everything that has one: every node of every canvas, every standalone view. Undefined takes the folder away. */
+/* Maps the folder of a node or a standalone view; undefined takes the folder away. */
 const mapCwd = <T extends { cwd?: string }>(carrier: T, map: (cwd: string) => string | undefined): T => {
     if (!carrier.cwd) {
         return carrier;

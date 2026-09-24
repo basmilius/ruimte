@@ -95,13 +95,11 @@ export class CodexTransport {
         this.child.process.kill(signal);
     }
 
-    /* Closes stdin and ends the app-server if it has not left on its own once the grace is over. */
     stop(): void {
         this.end();
         this.child.endAfterGrace();
     }
 
-    /* Ends the app-server and whatever it started; settles once it exited or was sent the SIGKILL. */
     dispose(): Promise<void> {
         return this.child.end();
     }

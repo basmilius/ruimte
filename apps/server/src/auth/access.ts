@@ -56,9 +56,8 @@ export interface AccessOptions {
 }
 
 /*
- * What a request is for, which decides the credentials it takes. A socket takes a ticket once, bytes
- * take one as often as it lives, and `local` takes the local secret itself and nothing that stands
- * in for it, since a ticket sits in URLs that get copied.
+ * What a request is for, which decides the credentials it takes. `local` takes the local secret
+ * itself and never a ticket, since a ticket sits in URLs that get copied.
  */
 export type AccessUse = TicketUse | 'local';
 
