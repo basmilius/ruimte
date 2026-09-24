@@ -167,8 +167,8 @@ export function VoicePane() {
                         </Button>
                         {displayStatus?.configured && (
                             <Tooltip label={t('voice.key.remove')} name>
-                                <button type="button" className="icon-btn h-8 w-8 shrink-0" disabled={busy} onClick={() => void remove()}>
-                                    <Icon icon={Trash2} size={14} />
+                                <button type="button" className="icon-btn shrink-0" disabled={busy} onClick={() => void remove()}>
+                                    <Icon icon={Trash2} size={16} />
                                 </button>
                             </Tooltip>
                         )}

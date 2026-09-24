@@ -210,7 +210,7 @@ function AccountOutcome() {
             <span className={clsx('min-w-0 grow text-sm break-words', failed ? 'text-status-error' : 'text-text')}>{text}</span>
             <Tooltip label={t('common:action.dismiss')} name>
                 <button
-                    className="icon-btn -my-0.5 h-6 w-6 shrink-0"
+                    className="icon-btn icon-btn-xs -my-0.5"
                     onClick={() => (failed ? usePulsarAccount.setState({ error: null }) : dismissAccountConfirmation())}
                 >
                     <Icon icon={X} size={12} />

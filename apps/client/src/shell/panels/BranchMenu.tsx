@@ -2,7 +2,6 @@ import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
-import clsx from 'clsx';
 import { ChevronDown, ChevronRight, Copy, GitBranch, Plus, Search } from 'lucide-react';
 import type { GitRef } from '@ruimte/contracts';
 import { basenameOf } from '@/shell/panels/files-tree';
@@ -305,8 +304,8 @@ function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProp
                 </span>
                 {/* An item and not a plain button, so it keeps the keyboard and the closing a menu row has. */}
                 <Tooltip label={t('git.branchMenu.create')} name>
-                    <Menu.Item className="icon-btn h-8 w-8" onClick={() => onCreate(cwd)}>
-                        <Icon icon={Plus} size={14} />
+                    <Menu.Item className="icon-btn" onClick={() => onCreate(cwd)}>
+                        <Icon icon={Plus} size={16} />
                     </Menu.Item>
                 </Tooltip>
             </div>
@@ -322,12 +321,7 @@ function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProp
                 }}
             >
                 {shown.map((ref) => (
-                    <Menu.RadioItem
-                        key={`${ref.kind}:${ref.name}`}
-                        value={ref.name}
-                        disabled={ref.worktree !== undefined}
-                        className={clsx('menu-item', ref.worktree !== undefined && 'opacity-45')}
-                    >
+                    <Menu.RadioItem key={`${ref.kind}:${ref.name}`} value={ref.name} disabled={ref.worktree !== undefined} className="menu-item">
                         <MenuCheck kind="radio" />
                         <span className="truncate font-mono text-xs">{ref.name}</span>
                         {ref.isDefault && <span className={MENU_HINT}>{t('git.branchMenu.default')}</span>}

@@ -166,7 +166,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                     {hasViewToolbar && folded && (
                         <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
                             <Tooltip label={t('cellToolbar.moreActions')}>
-                                <Popover.Trigger className="icon-btn h-7 w-7 cursor-default" aria-label={t('cellToolbar.moreActions')}>
+                                <Popover.Trigger className="icon-btn icon-btn-sm cursor-default" aria-label={t('cellToolbar.moreActions')}>
                                     <Icon icon={MoreHorizontal} size={14} />
                                 </Popover.Trigger>
                             </Tooltip>
@@ -188,7 +188,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         </span>
                     )}
                     <Tooltip label={t('cellToolbar.closeCell')} name>
-                        <button type="button" className="icon-btn h-7 w-7 cursor-default" onClick={() => closeCellAction(view.id)}>
+                        <button type="button" className="icon-btn icon-btn-sm cursor-default" onClick={() => closeCellAction(view.id)}>
                             <Icon icon={X} size={14} />
                         </button>
                     </Tooltip>

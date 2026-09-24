@@ -491,15 +491,20 @@
            button answering late. */
         transition: scale 120ms ease;
     }
+    /* The size decides the radius, and the icon inside: 16 in the default of 32, 14 in 28, 12 below. */
+    .icon-btn-sm { width: 28px; height: 28px; border-radius: 6px; }
+    .icon-btn-xs { width: 24px; height: 24px; border-radius: 6px; }
+    .icon-btn-2xs { width: 20px; height: 20px; border-radius: 4px; }
     .icon-btn:hover { background: var(--surface-hover); color: var(--text); }
     .icon-btn:active { scale: 0.96; }
     /* Pressed, not important: a toggle that is on reads as a filled gray key. The accent stays for
        the focus ring, the primary button, canvas selection and agent status. */
     .icon-btn[data-active="true"], .icon-btn[aria-pressed="true"] { background: var(--surface-active); color: var(--text); }
-    /* A button with nothing to do says so and stays quiet under the pointer. */
-    .icon-btn:disabled { color: var(--text-faint); cursor: default; }
-    .icon-btn:disabled:hover { background: transparent; color: var(--text-faint); }
-    .icon-btn:disabled:active { scale: 1; }
+    /* A button with nothing to do says so and stays quiet under the pointer. `aria-disabled` is the
+       one that keeps its focus and its tooltip. */
+    .icon-btn:disabled, .icon-btn[aria-disabled="true"] { color: var(--text-faint); cursor: default; }
+    .icon-btn:disabled:hover, .icon-btn[aria-disabled="true"]:hover { background: transparent; color: var(--text-faint); }
+    .icon-btn:disabled:active, .icon-btn[aria-disabled="true"]:active { scale: 1; }
 
     /* Every text input in the app: one border and one focus ring, at the one height or the compact
        one, so a field in a dialog, in settings and next to a chat answer cannot drift apart. */
@@ -580,7 +585,7 @@
        mark that has to be findable, the pointer's is the lift under the cursor. */
     .menu-item[data-highlighted] { background: var(--surface-active); }
     :root[data-modality='pointer'] .menu-item[data-highlighted] { background: var(--surface-hover); }
-    .menu-item[data-disabled] { opacity: .45; }
+    .menu-item[data-disabled] { opacity: .5; }
     /* Two lines against each other divide nothing, and so does a line at the top or the bottom of a
        menu. A menu is composed out of rows that each decide whether they are there, so the last word
        on this is here rather than in every list that draws one. */

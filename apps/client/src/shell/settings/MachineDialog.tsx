@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { CloudUpload, Plug, X } from 'lucide-react';
+import { CloudUpload, Plug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { forgetEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
@@ -21,6 +21,7 @@ import { useToasts } from '@/state/toasts';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { FORM_ERROR } from '@/ui/classes';
+import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
 
 const ACTION_DEPS: MachineActionDeps = {
@@ -84,9 +85,7 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
                     <Dialog.Title className="truncate text-base font-semibold text-text">{name}</Dialog.Title>
                     <Dialog.Description className="mt-0.5 text-xs break-words text-text-muted">{reachLabel(entry)}</Dialog.Description>
                 </div>
-                <Dialog.Close className="icon-btn h-7 w-7 shrink-0" aria-label={t('common:action.close')}>
-                    <Icon icon={X} size={16} />
-                </Dialog.Close>
+                <CloseButton label={t('common:action.close')} dialog />
             </div>
             <div className="flex min-h-0 min-w-0 flex-col gap-5 overflow-y-auto px-5 pb-5">
                 {entry.endpoint === null && (

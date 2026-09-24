@@ -29,8 +29,8 @@ export function IconPicker({ value, onChange, disabled = false, onClear, gridLab
                     <>
                         <span className="grow" />
                         <Tooltip label={t('icon.none')} name>
-                            <button className="icon-btn -my-1 h-7 w-7" disabled={disabled || value === null} onClick={onClear}>
-                                <Icon icon={Ban} size={16} />
+                            <button className="icon-btn icon-btn-sm -my-1" disabled={disabled || value === null} onClick={onClear}>
+                                <Icon icon={Ban} size={14} />
                             </button>
                         </Tooltip>
                     </>

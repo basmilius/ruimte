@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CircleAlert, LoaderCircle, X } from 'lucide-react';
+import { CircleAlert, LoaderCircle } from 'lucide-react';
 import {
     devicePermissions,
     deviceTools,
@@ -17,9 +17,9 @@ import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
 import { Segmented, Toggle } from '@/shell/settings/controls';
 import { Button } from '@/ui/Button';
+import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
-import { Tooltip } from '@/ui/Tooltip';
 
 type ActionBody = DeviceAction extends infer Action ? (Action extends DeviceAction ? Omit<Action, 'backendId' | 'platform' | 'deviceId'> : never) : never;
 
@@ -97,11 +97,7 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
             <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3">
                 <span className="text-xs font-medium text-text">{t('device.tools.title')}</span>
                 {pending && <Icon icon={LoaderCircle} size={14} className="animate-spin text-text-muted" />}
-                <Tooltip label={t('device.tools.close')} name>
-                    <button className="icon-btn ml-auto" onClick={onClose}>
-                        <Icon icon={X} size={15} />
-                    </button>
-                </Tooltip>
+                <CloseButton label={t('device.tools.close')} className="ml-auto" onClick={onClose} />
             </header>
             <div className="min-h-0 grow overflow-y-auto">
                 {error && (

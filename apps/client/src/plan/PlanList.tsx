@@ -474,6 +474,7 @@ function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { typ
     }
     const label = stateLabel(plan.meta.kind, state);
     const stopped = state === 'active' && !context.working;
+    // The state mark, not a button's icon: it keeps the size a locked step shows it at.
     const glyph = stopped ? (
         <Icon icon={CirclePause} size={16} className="text-text-muted" />
     ) : (
@@ -497,12 +498,7 @@ function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { typ
                         : [setBy, t('step.markAs', { state: stateLabel('steps', next).toLowerCase() })].filter(Boolean).join('. ')
                 }
             >
-                <button
-                    type="button"
-                    aria-label={label}
-                    className="grid h-5 w-5 place-items-center rounded-full hover:bg-surface-hover"
-                    onClick={() => context.setState([row.item.id], next)}
-                >
+                <button type="button" aria-label={label} className="icon-btn icon-btn-2xs" onClick={() => context.setState([row.item.id], next)}>
                     {glyph}
                 </button>
             </Tooltip>
@@ -511,10 +507,7 @@ function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { typ
     return (
         <Menu.Root>
             <Tooltip label={stopped ? t('agent.stoppedHere', { agent: context.agent }) : [label, setBy].filter(Boolean).join('. ')}>
-                <Menu.Trigger
-                    aria-label={label}
-                    className="grid h-5 w-5 place-items-center rounded-full hover:bg-surface-hover data-[popup-open]:bg-surface-active"
-                >
+                <Menu.Trigger aria-label={label} className="icon-btn icon-btn-2xs data-[popup-open]:bg-surface-active">
                     {glyph}
                 </Menu.Trigger>
             </Tooltip>

@@ -53,7 +53,7 @@ function TimerRing({ id, deadline }: { id: string; deadline: ToastDeadline }) {
     const [elapsed] = useState(() => elapsedOf(deadline, Date.now()));
     return (
         <Tooltip label={t('action.dismiss')} name>
-            <button className="group/ring icon-btn relative h-(--text-sm--line-height) w-6 shrink-0" onClick={() => useToasts.getState().dismiss(id)}>
+            <button className="group/ring icon-btn icon-btn-xs relative -my-px" onClick={() => useToasts.getState().dismiss(id)}>
                 <svg width={16} height={16} viewBox="0 0 16 16" className="-rotate-90" aria-hidden>
                     <circle cx={8} cy={8} r={6} fill="none" strokeWidth={2} className="stroke-border" />
                     <circle
@@ -111,10 +111,7 @@ function ToastCard({ toast }: { toast: Toast }) {
             ) : (
                 <Tooltip label={t('action.dismiss')} name>
                     <button
-                        className={clsx(
-                            'icon-btn h-(--text-sm--line-height) w-6 shrink-0',
-                            leaves && 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
-                        )}
+                        className={clsx('icon-btn icon-btn-xs -my-px', leaves && 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100')}
                         onClick={() => useToasts.getState().dismiss(toast.id)}
                     >
                         <Icon icon={X} size={12} />

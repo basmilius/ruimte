@@ -15,13 +15,13 @@ import {
     StickyNote,
     Terminal,
     Trash2,
-    X,
     type LucideIcon
 } from 'lucide-react';
 import { FadingWords } from '@/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { formatClockDuration } from '@/format/duration';
 import { Button } from '@/ui/Button';
+import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { useNow } from '@/ui/useNow';
@@ -60,7 +60,7 @@ function ActionEvent({ action }: { action: VoiceAction }) {
 
     return (
         <div className="group/action flex min-h-11 items-center gap-2.5 rounded-lg border border-border bg-surface-raised px-3 py-1.5">
-            <Icon icon={actionIcons[action.kind]} size={15} className="shrink-0 text-text-muted" />
+            <Icon icon={actionIcons[action.kind]} size={14} className="shrink-0 text-text-muted" />
             <p className="min-w-0 grow truncate text-xs text-text">
                 <span className="font-medium">{action.label}</span>
                 <span className="text-text-muted"> · {action.detail}</span>
@@ -70,20 +70,20 @@ function ActionEvent({ action }: { action: VoiceAction }) {
                     <>
                         <Icon
                             icon={Check}
-                            size={15}
+                            size={14}
                             className="col-start-1 row-start-1 text-positive transition-opacity group-hover/action:opacity-0 group-focus-within/action:opacity-0"
                         />
                         <Tooltip label={t('actions.undo')} name>
                             <button
-                                className="icon-btn col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action:pointer-events-auto group-hover/action:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                                className="icon-btn icon-btn-sm col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action:pointer-events-auto group-hover/action:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
                                 onClick={() => undoVoiceAction(action.id)}
                             >
-                                <Icon icon={RotateCcw} size={13} />
+                                <Icon icon={RotateCcw} size={14} />
                             </button>
                         </Tooltip>
                     </>
                 ) : completed ? (
-                    <Icon icon={Check} size={15} className="text-positive" />
+                    <Icon icon={Check} size={14} className="text-positive" />
                 ) : (
                     <span className="text-xs text-text-faint">{t(`actions.status.${action.status}`)}</span>
                 )}
@@ -110,7 +110,7 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
         <div className="group/action-group rounded-lg border border-border bg-surface-raised px-3 py-1.5">
             <div className="flex min-h-8 items-center gap-2.5">
                 <button
-                    className="-m-1 grid h-6 w-6 shrink-0 place-items-center rounded-md p-1 hover:bg-surface-hover"
+                    className="icon-btn icon-btn-sm -m-1.5 grid place-items-center"
                     type="button"
                     aria-label={open ? t('actions.collapse') : t('actions.expand')}
                     aria-expanded={open}
@@ -118,7 +118,7 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
                 >
                     <Icon
                         icon={StickyNote}
-                        size={15}
+                        size={14}
                         className="col-start-1 row-start-1 text-text-muted group-hover/action-group:hidden group-focus-within/action-group:hidden"
                     />
                     <Icon
@@ -141,20 +141,20 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
                         <>
                             <Icon
                                 icon={Check}
-                                size={15}
+                                size={14}
                                 className="col-start-1 row-start-1 text-positive transition-opacity group-hover/action-group:opacity-0 group-focus-within/action-group:opacity-0"
                             />
                             <Tooltip label={t('actions.undoGroup', { count: actions.length })} name>
                                 <button
-                                    className="icon-btn col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action-group:pointer-events-auto group-hover/action-group:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                                    className="icon-btn icon-btn-sm col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action-group:pointer-events-auto group-hover/action-group:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
                                     onClick={() => undoVoiceActions(undoableIds)}
                                 >
-                                    <Icon icon={RotateCcw} size={13} />
+                                    <Icon icon={RotateCcw} size={14} />
                                 </button>
                             </Tooltip>
                         </>
                     ) : completed ? (
-                        <Icon icon={Check} size={15} className="text-positive" />
+                        <Icon icon={Check} size={14} className="text-positive" />
                     ) : (
                         <span className="text-xs text-text-faint">{t('actions.status.undone')}</span>
                     )}
@@ -228,11 +228,7 @@ export function VoicePanelBody() {
                     {t('title')}
                 </span>
                 <VoiceStatus elapsedMs={elapsedMs} phase={phase} />
-                <Tooltip label={t('close')} name>
-                    <button className="icon-btn" onClick={closeVoicePanel}>
-                        <Icon icon={X} size={16} />
-                    </button>
-                </Tooltip>
+                <CloseButton label={t('close')} onClick={closeVoicePanel} />
             </header>
             <VoiceWaveform phase={phase} />
             <div className="min-h-0 grow overflow-y-auto px-4 py-5" role="log" aria-live="polite">
@@ -240,7 +236,7 @@ export function VoicePanelBody() {
                     <div className="flex min-h-48 flex-col items-center justify-center gap-2 text-center">
                         {!active && (
                             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-raised text-text-muted">
-                                <Icon icon={Mic} size={17} />
+                                <Icon icon={Mic} size={16} />
                             </div>
                         )}
                         <p className="text-sm font-medium text-text">{active ? t('empty.listening') : t('empty.title')}</p>

@@ -65,7 +65,7 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                                 type="button"
                                 aria-pressed={recording}
                                 aria-busy={working}
-                                className={`icon-btn h-7 w-7 ${error ? 'text-status-error' : recording ? 'text-accent' : ''}`}
+                                className={`icon-btn icon-btn-sm ${error ? 'text-status-error' : recording ? 'text-accent' : ''}`}
                                 disabled={active && phase === 'finishing'}
                                 onPointerDown={(event) => {
                                     event.preventDefault();
@@ -80,7 +80,7 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                             >
                                 <Icon
                                     icon={working ? LoaderCircle : recording ? Square : error ? CircleAlert : Mic}
-                                    size={16}
+                                    size={14}
                                     className={working ? 'animate-spin motion-reduce:animate-none' : undefined}
                                 />
                             </button>
@@ -111,7 +111,7 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                         <button
                             type="button"
                             aria-pressed={active && phase !== 'error'}
-                            className="icon-btn h-8 w-8"
+                            className="icon-btn"
                             disabled={active && phase === 'finishing'}
                             onPointerDown={(event) => event.preventDefault()}
                             onClick={() => {
@@ -126,7 +126,7 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                     </Tooltip>
                     {active && (
                         <Tooltip label={t('dictation.cancel')} name>
-                            <button type="button" className="icon-btn h-8 w-8" onClick={cancelDictation}>
+                            <button type="button" className="icon-btn" onClick={cancelDictation}>
                                 <Icon icon={X} size={16} />
                             </button>
                         </Tooltip>

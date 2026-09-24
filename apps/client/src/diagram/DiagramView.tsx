@@ -57,7 +57,7 @@ function DiagramControls({ viewId }: { viewId: string }) {
     return (
         <Menu.Root>
             <Tooltip label={t('common:action.more')} name>
-                <Menu.Trigger className="icon-btn h-7 w-7">
+                <Menu.Trigger className="icon-btn icon-btn-sm">
                     <Icon icon={MoreHorizontal} size={14} />
                 </Menu.Trigger>
             </Tooltip>

@@ -171,6 +171,52 @@ const classesIn = (value: unknown): string =>
    with its left-aligned text; neither is a Button. */
 const ROW_ATTRIBUTES = new Set(['role', 'aria-pressed', 'aria-checked']);
 
+/* An icon button takes its size, and with it its radius, from a modifier in `styles.css`. `w-auto` is
+   the one way it widens, for a label beside its icon. */
+const ICON_BUTTON_SIZE = /^(?:h|w|size|min-h|min-w|max-h|max-w)-(?!auto$)|^rounded/;
+
+/* The icon each size of icon button draws, by the modifier on it; no modifier is the default of 32. */
+const ICON_IN_BUTTON: Record<string, number> = { 'icon-btn-sm': 14, 'icon-btn-xs': 12, 'icon-btn-2xs': 12 };
+
+/* Sizes between the steps of 12, 14, 16 and 20, which is what an icon anywhere keeps to. */
+const OFF_SCALE_ICON = new Set([13, 15, 17, 18]);
+
+const isIconButton = (classes: string): boolean => classes.split(/\s+/).includes('icon-btn');
+
+const attributeOf = (node: JSXElement, name: string): unknown =>
+    node.openingElement.attributes.find(
+        (attribute) => attribute.type === 'JSXAttribute' && attribute.name.type === 'JSXIdentifier' && attribute.name.name === name
+    );
+
+const classesOf = (node: JSXElement): string => {
+    const attribute = attributeOf(node, 'className') as { value: unknown } | undefined;
+    return classesIn(attribute?.value);
+};
+
+/* The size an icon is drawn at, when the source says it as a number: 16 when it says nothing, null when it is computed. */
+const iconSizeOf = (node: JSXElement): number | null => {
+    const attribute = attributeOf(node, 'size') as { value: unknown } | undefined;
+    if (attribute === undefined) {
+        return 16;
+    }
+    const value = attribute.value as { type: string; expression?: { type: string; value?: unknown } } | null;
+    return value?.type === 'JSXExpressionContainer' && value.expression?.type === 'Literal' && typeof value.expression.value === 'number'
+        ? value.expression.value
+        : null;
+};
+
+/* The icons a button draws itself, not those of a button inside it. */
+const iconsIn = (node: Tree): JSXElement[] =>
+    elementsIn(node.children).flatMap((child) => {
+        if (child.type === 'JSXElement' && nameOf(child.openingElement.name) === 'Icon') {
+            return [child];
+        }
+        if (child.type === 'JSXElement' && isIconButton(classesOf(child))) {
+            return [];
+        }
+        return iconsIn(child);
+    });
+
 /* The window's own tree and the workspace's, which is where a failure would reach every parked page. */
 const SHELLS = [
     ['App.tsx', 'App'],
@@ -251,6 +297,71 @@ describe('the conventions of the client', () => {
                 return found;
             });
         expect(built).toEqual([]);
+    });
+
+    test('an icon button is sized by its modifier, never a height, a width or a radius of its own', () => {
+        const sized = sources().flatMap(({ path, text }) =>
+            nodesIn(programOf(path, text)).flatMap((node) => {
+                const classes = classesIn(node.type === 'Literal' || node.type === 'TemplateElement' ? [node] : []);
+                if (!isIconButton(classes)) {
+                    return [];
+                }
+                const own = classes.split(/\s+/).filter((utility) => ICON_BUTTON_SIZE.test(utility.slice(utility.lastIndexOf(':') + 1)));
+                return own.length > 0 ? [`${path}:${lineOf(text, (node as unknown as { start: number }).start)}: ${own.join(' ')}`] : [];
+            })
+        );
+        expect(sized).toEqual([]);
+    });
+
+    test('an icon button draws the icon of its size', () => {
+        const mismatched = sources()
+            .filter(({ path }) => path.endsWith('.tsx'))
+            .flatMap(({ path, text }) =>
+                nodesIn(programOf(path, text)).flatMap((node) => {
+                    if (node.type !== 'JSXElement') {
+                        return [];
+                    }
+                    const button = node as JSXElement;
+                    const classes = classesOf(button).split(/\s+/);
+                    if (!classes.includes('icon-btn') || classes.includes('w-auto')) {
+                        return [];
+                    }
+                    const modifiers = classes.filter((utility) => utility in ICON_IN_BUTTON);
+                    // A size chosen at run time says so in a computed icon size, which is not read here.
+                    if (modifiers.length > 1) {
+                        return [];
+                    }
+                    const expected = modifiers.length === 1 ? ICON_IN_BUTTON[modifiers[0] as string] : 16;
+                    return (
+                        iconsIn(button)
+                            // An icon laid over another drawing, such as the cross inside a toast's timer ring, is part of that drawing.
+                            .filter((icon) => !classesOf(icon).split(/\s+/).includes('absolute'))
+                            .filter((icon) => {
+                                const size = iconSizeOf(icon);
+                                return size !== null && size !== expected;
+                            })
+                            .map((icon) => `${path}:${lineOf(text, icon.start)}: ${iconSizeOf(icon)} in ${modifiers[0] ?? 'icon-btn'}`)
+                    );
+                })
+            );
+        expect(mismatched).toEqual([]);
+    });
+
+    test('an icon is 12, 14, 16 or 20 pixels, never a size between the steps', () => {
+        const between = sources()
+            .filter(({ path }) => path.endsWith('.tsx'))
+            .flatMap(({ path, text }) =>
+                nodesIn(programOf(path, text)).flatMap((node) => {
+                    if (node.type !== 'JSXElement') {
+                        return [];
+                    }
+                    const size = iconSizeOf(node as JSXElement);
+                    return size !== null && OFF_SCALE_ICON.has(size) && attributeOf(node as JSXElement, 'size') !== undefined
+                        ? [`${path}:${lineOf(text, (node as JSXElement).start)}: ${size}`]
+                        : [];
+                })
+            );
+        expect(between).toEqual([]);
     });
 
     test('only src/format builds a formatter out of Intl', () => {

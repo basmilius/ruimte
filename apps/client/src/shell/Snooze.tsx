@@ -38,8 +38,8 @@ export function SnoozeButton({ endpointId, nodeId, tabIndex }: { endpointId: str
     return (
         <Menu.Root onOpenChange={onOpenChange}>
             <Tooltip label={t('snooze.action')} name>
-                <Menu.Trigger className="icon-btn h-6 w-6 hover:bg-surface-active" tabIndex={tabIndex}>
-                    <Icon icon={AlarmClock} size={14} />
+                <Menu.Trigger className="icon-btn icon-btn-xs hover:bg-surface-active" tabIndex={tabIndex}>
+                    <Icon icon={AlarmClock} size={12} />
                 </Menu.Trigger>
             </Tooltip>
             <MenuPopup align="end" className="min-w-44">

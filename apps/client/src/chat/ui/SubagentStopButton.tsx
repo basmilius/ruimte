@@ -13,7 +13,17 @@ import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
 /* Stops one active sub-agent of a chat, or says nothing when stopping it is not on offer. */
-export function SubagentStopButton({ chatId, item, className }: { chatId: string; item: ChatSubagentItem; className?: string }) {
+export function SubagentStopButton({
+    chatId,
+    item,
+    size = 'xs',
+    className
+}: {
+    chatId: string;
+    item: ChatSubagentItem;
+    size?: 'sm' | 'xs';
+    className?: string;
+}) {
     const { t } = useTranslation('chat');
     const endpointId = useEndpointId();
     const turnRunning = useChatRow(chatId, (row) => (row?.info.activeTurnId ?? null) !== null);
@@ -36,8 +46,8 @@ export function SubagentStopButton({ chatId, item, className }: { chatId: string
     };
     return (
         <Tooltip label={stopLabel(stop)} name>
-            <button type="button" className={clsx('icon-btn h-6 w-6 shrink-0', className)} onClick={run}>
-                <Icon icon={Square} size={12} />
+            <button type="button" className={clsx('icon-btn', size === 'sm' ? 'icon-btn-sm' : 'icon-btn-xs', className)} onClick={run}>
+                <Icon icon={Square} size={size === 'sm' ? 14 : 12} />
             </button>
         </Tooltip>
     );

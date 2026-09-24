@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send, X } from 'lucide-react';
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send } from 'lucide-react';
 import type { Plan } from '@ruimte/contracts';
 import { allSteps, effectiveChecks } from '@ruimte/plan';
 import { forkOriginIn } from '@/chat/logic/fork';
@@ -29,6 +29,7 @@ import { useChatPlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
 import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
 import { MenuCheck } from '@/ui/MenuCheck';
 import { Tooltip } from '@/ui/Tooltip';
@@ -177,11 +178,7 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                         </Menu.Item>
                     </MenuPopup>
                 </Menu.Root>
-                <Tooltip label={t('planPanel.close')} name>
-                    <button type="button" className="icon-btn" onClick={closePlanPanel}>
-                        <Icon icon={X} size={16} />
-                    </button>
-                </Tooltip>
+                <CloseButton label={t('planPanel.close')} onClick={closePlanPanel} />
             </div>
         </header>
     );

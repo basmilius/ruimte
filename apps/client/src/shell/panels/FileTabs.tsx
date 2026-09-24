@@ -27,8 +27,7 @@ const TAB_OPEN =
 
 /* The close button is the tab's own: it shows while the pointer is on the tab, while the tab is the
    open one, and while it has focus. */
-const TAB_CLOSE =
-    'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] text-text-faint opacity-0 group-hover:opacity-100 hover:bg-surface-active hover:text-text focus-visible:opacity-100 group-data-[active=true]:opacity-100';
+const TAB_CLOSE = 'icon-btn icon-btn-2xs opacity-0 group-hover:opacity-100 focus-visible:opacity-100 group-data-[active=true]:opacity-100';
 
 /*
  * The open files as a strip of tabs, inside the preview panel's own header. A double-click pins a

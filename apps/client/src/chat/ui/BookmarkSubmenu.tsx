@@ -64,12 +64,12 @@ export function BookmarkSubmenu({ chatId }: { chatId: string }) {
                                 </span>
                                 <span className={`${BTN_GROUP} -my-1 ml-2 shrink-0 opacity-0 group-data-[highlighted]/bookmark:opacity-100`}>
                                     <Tooltip label={t('bookmarks.rename')} name>
-                                        <button type="button" tabIndex={-1} data-bookmark-action="rename" className="icon-btn h-6 w-6 rounded">
+                                        <button type="button" tabIndex={-1} data-bookmark-action="rename" className="icon-btn icon-btn-xs">
                                             <Icon icon={Pencil} size={12} />
                                         </button>
                                     </Tooltip>
                                     <Tooltip label={t('bookmarks.remove')} name>
-                                        <button type="button" tabIndex={-1} data-bookmark-action="remove" className="icon-btn h-6 w-6 rounded">
+                                        <button type="button" tabIndex={-1} data-bookmark-action="remove" className="icon-btn icon-btn-xs">
                                             <Icon icon={X} size={12} />
                                         </button>
                                     </Tooltip>

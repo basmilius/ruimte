@@ -166,7 +166,7 @@ function AlertLine({ alert, now, onAction, onDismiss }: { alert: ProcessAlert; n
                 <Icon icon={TriangleAlert} size={12} className="mt-0.5 text-status-needs-you" />
                 <p className="grow text-xs text-text">{alertText(alert, now)}</p>
                 <Tooltip label={t('action.dismiss')} name>
-                    <button className="icon-btn -my-1 h-6 w-6 shrink-0" onClick={onDismiss}>
+                    <button className="icon-btn icon-btn-xs -my-1" onClick={onDismiss}>
                         <Icon icon={X} size={12} />
                     </button>
                 </Tooltip>
@@ -397,12 +397,12 @@ export function ProcessesPanel() {
                     const groupRow = (
                         <div className="flex h-8 items-center gap-1.5 pr-3 pl-1 hover:bg-surface-hover">
                             <button
-                                className="icon-btn h-6 w-6 shrink-0"
+                                className="icon-btn icon-btn-xs"
                                 aria-expanded={open}
                                 aria-label={open ? t('processes.collapse', { name: title }) : t('processes.expand', { name: title })}
                                 onClick={() => toggle(group.id)}
                             >
-                                <Icon icon={ChevronRight} size={14} className={clsx(open && 'rotate-90')} />
+                                <Icon icon={ChevronRight} size={12} className={clsx(open && 'rotate-90')} />
                             </button>
                             <Icon icon={GROUP_ICONS[group.kind]} size={14} className="shrink-0 text-text-muted" />
                             {reveal !== null ? (

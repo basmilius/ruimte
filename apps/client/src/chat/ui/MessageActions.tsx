@@ -71,21 +71,21 @@ export function MessageActions({ chatId, row }: { chatId: string; row: MessageRo
                 <span className={BTN_GROUP}>
                     {bookmark === null && (
                         <Tooltip label={t('bookmarks.add')} name>
-                            <button type="button" className="icon-btn h-7 w-7 rounded-md" onClick={() => void placeBookmark(endpointId, chatId, row.id)}>
+                            <button type="button" className="icon-btn icon-btn-sm" onClick={() => void placeBookmark(endpointId, chatId, row.id)}>
                                 <Icon icon={Bookmark} size={14} />
                             </button>
                         </Tooltip>
                     )}
                     {canFork && turnId !== null && (
                         <Tooltip label={t('timeline.menu.forkFromHere')} name>
-                            <button type="button" className="icon-btn h-7 w-7 rounded-md" onClick={() => useUi.getState().setForkDialog({ chatId, turnId })}>
+                            <button type="button" className="icon-btn icon-btn-sm" onClick={() => useUi.getState().setForkDialog({ chatId, turnId })}>
                                 <Icon icon={GitFork} size={14} />
                             </button>
                         </Tooltip>
                     )}
                     {hasText && (
                         <Tooltip label={copied ? t('timeline.actions.copied') : t('timeline.menu.copyMessage')} name>
-                            <button type="button" className="icon-btn h-7 w-7 rounded-md" onClick={(e) => copy(e.shiftKey)}>
+                            <button type="button" className="icon-btn icon-btn-sm" onClick={(e) => copy(e.shiftKey)}>
                                 <Icon icon={copied ? Check : Copy} size={14} />
                             </button>
                         </Tooltip>

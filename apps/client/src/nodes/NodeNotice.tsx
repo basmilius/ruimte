@@ -35,8 +35,8 @@ export function NodeNotice({ tone = 'muted', children, onRetry, retryLabel }: No
             </span>
             {onRetry && (
                 <Tooltip label={retryLabel ?? t('common:action.retry')} name>
-                    <button className="icon-btn h-7 w-7 shrink-0" onClick={onRetry}>
-                        <Icon icon={RotateCw} size={16} />
+                    <button className="icon-btn icon-btn-sm" onClick={onRetry}>
+                        <Icon icon={RotateCw} size={14} />
                     </button>
                 </Tooltip>
             )}

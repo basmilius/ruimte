@@ -97,7 +97,7 @@ export function TextToolbar() {
         >
             <Menu.Root>
                 <Tooltip label={t('text.font')} name>
-                    <Menu.Trigger className="icon-btn h-8 w-auto gap-1 px-2">
+                    <Menu.Trigger className="icon-btn w-auto gap-1 px-2">
                         <span className="text-xs" style={{ fontFamily: FONT_STACK[font] }}>
                             {t(`text.fonts.${font}`)}
                         </span>
@@ -122,7 +122,7 @@ export function TextToolbar() {
             <span className="mx-0.5 h-4 w-px bg-border-soft" />
             <Menu.Root>
                 <Tooltip label={t('text.size')} name>
-                    <Menu.Trigger className="icon-btn h-8 w-auto gap-1 px-2 text-xs tabular-nums">
+                    <Menu.Trigger className="icon-btn w-auto gap-1 px-2 text-xs tabular-nums">
                         {text.size}
                         <Icon icon={ChevronDown} size={12} />
                     </Menu.Trigger>
@@ -146,12 +146,12 @@ export function TextToolbar() {
             <span className="mx-0.5 h-4 w-px bg-border-soft" />
             <div className={BTN_GROUP}>
                 <Tooltip label={t('text.bold')} name>
-                    <button className="icon-btn h-8 w-8" aria-pressed={text.bold === true} onClick={() => style({ bold: !text.bold })}>
+                    <button className="icon-btn" aria-pressed={text.bold === true} onClick={() => style({ bold: !text.bold })}>
                         <Icon icon={Bold} size={16} />
                     </button>
                 </Tooltip>
                 <Tooltip label={t('text.italic')} name>
-                    <button className="icon-btn h-8 w-8" aria-pressed={text.italic === true} onClick={() => style({ italic: !text.italic })}>
+                    <button className="icon-btn" aria-pressed={text.italic === true} onClick={() => style({ italic: !text.italic })}>
                         <Icon icon={Italic} size={16} />
                     </button>
                 </Tooltip>
@@ -162,7 +162,7 @@ export function TextToolbar() {
                     ] as const
                 ).map(({ key, icon }) => (
                     <Tooltip key={key} label={t(`text.${key}`)} name>
-                        <button className="icon-btn h-8 w-8" aria-pressed={text[key] === true} onClick={() => style({ [key]: !text[key] })}>
+                        <button className="icon-btn" aria-pressed={text[key] === true} onClick={() => style({ [key]: !text[key] })}>
                             <Icon icon={icon} size={16} />
                         </button>
                     </Tooltip>

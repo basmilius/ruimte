@@ -63,7 +63,7 @@ export function ComputerIndicator({ nodeId }: { nodeId: string }) {
             <Tooltip label={look.label} name>
                 <Menu.Trigger
                     className={clsx(
-                        'icon-btn h-7 w-7 data-[popup-open]:bg-surface-active',
+                        'icon-btn icon-btn-sm data-[popup-open]:bg-surface-active',
                         look.tone === 'accent' ? 'text-accent hover:text-accent' : 'text-text-muted'
                     )}
                 >

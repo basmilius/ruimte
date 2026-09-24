@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { ChartSpline, X } from 'lucide-react';
+import { ChartSpline } from 'lucide-react';
 import { AddressBookRequestError, type ModelBenchmarksResult } from '@ruimte/pulsar';
 import { formatNumber } from '@/format/number';
 import { publicAddressBook } from '@/pulsar/account';
@@ -14,6 +14,7 @@ import { useUi } from '@/state/ui';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
 
 const SCALES: readonly CostScale[] = ['log', 'linear'];
@@ -136,9 +137,7 @@ function Body() {
                         label={t('dialog.scale')}
                         disabled={load.status !== 'ready'}
                     />
-                    <Dialog.Close className="icon-btn shrink-0" aria-label={t('dialog.close')}>
-                        <Icon icon={X} size={16} />
-                    </Dialog.Close>
+                    <CloseButton label={t('dialog.close')} dialog />
                 </div>
             </header>
             {load.status === 'loading' && (

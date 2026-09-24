@@ -290,8 +290,8 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                 >
                     {isGroup && (
                         <Tooltip label={collapsed ? t('group.expand') : t('group.collapse')} name>
-                            <button className="icon-btn h-7 w-7" onClick={() => canvasStore.getState().toggleGroupCollapse(id)}>
-                                {collapsed ? <Icon icon={ChevronRight} size={16} /> : <Icon icon={ChevronDown} size={16} />}
+                            <button className="icon-btn icon-btn-sm" onClick={() => canvasStore.getState().toggleGroupCollapse(id)}>
+                                {collapsed ? <Icon icon={ChevronRight} size={14} /> : <Icon icon={ChevronDown} size={14} />}
                             </button>
                         </Tooltip>
                     )}
@@ -367,13 +367,13 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     {node.kind === 'device' && <DeviceToolbar id={id} />}
                     <div className={`${BTN_GROUP} shrink-0`}>
                         <Tooltip label={t('node.zoomTo')} name>
-                            <button className="icon-btn h-7 w-7" onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
-                                <Icon icon={Maximize2} size={16} />
+                            <button className="icon-btn icon-btn-sm" onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
+                                <Icon icon={Maximize2} size={14} />
                             </button>
                         </Tooltip>
                         <Tooltip label={t('node.close')} name>
-                            <button className="icon-btn h-7 w-7" onClick={remove}>
-                                <Icon icon={X} size={16} />
+                            <button className="icon-btn icon-btn-sm" onClick={remove}>
+                                <Icon icon={X} size={14} />
                             </button>
                         </Tooltip>
                     </div>

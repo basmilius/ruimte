@@ -42,11 +42,11 @@ export function KeyboardPane() {
                 />
                 {query && (
                     <button
-                        className="icon-btn absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
+                        className="icon-btn icon-btn-sm absolute top-1/2 right-1 -translate-y-1/2"
                         aria-label={t('keyboard.clearSearch')}
                         onClick={() => setQuery('')}
                     >
-                        <Icon icon={X} size={16} />
+                        <Icon icon={X} size={14} />
                     </button>
                 )}
             </div>

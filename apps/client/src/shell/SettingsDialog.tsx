@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Tabs } from '@base-ui-components/react/tabs';
-import { X } from 'lucide-react';
 import { SettingsNav } from '@/shell/settings/SettingsNav';
 import { AboutPane } from '@/shell/settings/panes/AboutPane';
 import { AgentsPane } from '@/shell/settings/panes/AgentsPane';
@@ -15,7 +14,7 @@ import { ViewsPane } from '@/shell/settings/panes/ViewsPane';
 import { VoicePane } from '@/shell/settings/panes/VoicePane';
 import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { useUi, type SettingsSectionId } from '@/state/ui';
-import { Icon } from '@/ui/Icon';
+import { CloseButton } from '@/ui/CloseButton';
 import { Select } from '@/ui/Select';
 
 const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
@@ -76,9 +75,7 @@ export function SettingsDialog() {
                                     <h2 className="text-base font-semibold text-text">{sectionLabel(meta.id)}</h2>
                                     <p className="mt-0.5 text-xs break-words text-text-muted">{sectionDescription(meta.id)}</p>
                                 </div>
-                                <Dialog.Close className="icon-btn h-7 w-7 shrink-0" aria-label={t('settingsDialog.close')}>
-                                    <Icon icon={X} size={16} />
-                                </Dialog.Close>
+                                <CloseButton label={t('settingsDialog.close')} dialog />
                             </div>
                             {ALL_SETTINGS_SECTIONS.map((entry) => {
                                 const Pane = PANES[entry.id];

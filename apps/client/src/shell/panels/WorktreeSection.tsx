@@ -200,7 +200,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                                 )}
                                 <Menu.Root>
                                     <Tooltip label={t('worktree.section.actions')} name>
-                                        <Menu.Trigger className="icon-btn h-7 w-7 shrink-0" disabled={busy}>
+                                        <Menu.Trigger className="icon-btn icon-btn-sm" disabled={busy}>
                                             <Icon icon={MoreHorizontal} size={14} />
                                         </Menu.Trigger>
                                     </Tooltip>

@@ -164,7 +164,7 @@ function SearchToggle({ icon, label, active, onClick }: { icon: LucideIcon; labe
     return (
         <Tooltip label={label} name>
             <button
-                className="icon-btn h-7 w-7"
+                className="icon-btn icon-btn-sm"
                 aria-pressed={active}
                 // The field keeps the keys; a toggle that takes focus would swallow the next arrow.
                 onMouseDown={(e) => e.preventDefault()}

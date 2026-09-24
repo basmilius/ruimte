@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
-import { ImageOff, Minus, Plus, RotateCcw, X } from 'lucide-react';
+import { ImageOff, Minus, Plus, RotateCcw } from 'lucide-react';
 import { isImageMime, type FsReadResult } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl, type MachineResource } from '@/transport/machine-url';
 import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
+import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
 
 const MIN_SCALE = 1;
@@ -77,26 +78,22 @@ function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; 
                         <span className="tabular-nums text-xs text-text-faint">{Math.round(view.scale * 100)}%</span>
                         <span className={BTN_GROUP}>
                             <Tooltip label={t('image.zoomOut')} name>
-                                <button className="icon-btn size-7 rounded" disabled={view.scale <= MIN_SCALE} onClick={() => zoomButton(1 / BUTTON_STEP)}>
-                                    <Icon icon={Minus} size={16} />
+                                <button className="icon-btn icon-btn-sm" disabled={view.scale <= MIN_SCALE} onClick={() => zoomButton(1 / BUTTON_STEP)}>
+                                    <Icon icon={Minus} size={14} />
                                 </button>
                             </Tooltip>
                             <Tooltip label={t('image.zoomIn')} name>
-                                <button className="icon-btn size-7 rounded" disabled={view.scale >= MAX_SCALE} onClick={() => zoomButton(BUTTON_STEP)}>
-                                    <Icon icon={Plus} size={16} />
+                                <button className="icon-btn icon-btn-sm" disabled={view.scale >= MAX_SCALE} onClick={() => zoomButton(BUTTON_STEP)}>
+                                    <Icon icon={Plus} size={14} />
                                 </button>
                             </Tooltip>
                             <Tooltip label={t('image.reset')} name>
-                                <button className="icon-btn size-7 rounded" disabled={view.scale === MIN_SCALE} onClick={() => setView(START)}>
-                                    <Icon icon={RotateCcw} size={16} />
+                                <button className="icon-btn icon-btn-sm" disabled={view.scale === MIN_SCALE} onClick={() => setView(START)}>
+                                    <Icon icon={RotateCcw} size={14} />
                                 </button>
                             </Tooltip>
                         </span>
-                        <Tooltip label={t('common:action.close')} kbd="esc" name>
-                            <Dialog.Close className="icon-btn ml-1 size-8 rounded-lg">
-                                <Icon icon={X} size={16} />
-                            </Dialog.Close>
-                        </Tooltip>
+                        <CloseButton label={t('common:action.close')} kbd="esc" className="ml-1" dialog />
                     </div>
                     <div
                         ref={frameRef}

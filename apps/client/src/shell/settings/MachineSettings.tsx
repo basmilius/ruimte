@@ -396,8 +396,8 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
                     <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface-sunken p-2.5">
                         <code className="min-w-0 grow truncate font-mono text-code text-text select-text">{link}</code>
                         <Tooltip label={copied ? t('machine.access.link.copied') : t('machine.access.link.copy')} name>
-                            <button className="icon-btn h-7 w-7 shrink-0" onClick={copyLink}>
-                                {copied ? <Icon icon={Check} size={16} /> : <Icon icon={Copy} size={16} />}
+                            <button className="icon-btn icon-btn-sm" onClick={copyLink}>
+                                {copied ? <Icon icon={Check} size={14} /> : <Icon icon={Copy} size={14} />}
                             </button>
                         </Tooltip>
                     </div>
@@ -427,7 +427,7 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
                     control={
                         <Tooltip label={t('machine.access.revoke')}>
                             <button
-                                className="icon-btn h-8 w-8 shrink-0"
+                                className="icon-btn shrink-0"
                                 aria-label={t('machine.access.revokeOne', { label: session.label })}
                                 onClick={() => setTarget(session)}
                             >

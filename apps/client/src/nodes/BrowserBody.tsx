@@ -74,20 +74,20 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
         <>
             <div className={BTN_GROUP}>
                 <Tooltip label={t('browser.back')} name>
-                    <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoBack} onClick={() => command('back')}>
-                        <Icon icon={ArrowLeft} size={16} />
+                    <button className="icon-btn icon-btn-sm" disabled={!state?.canGoBack} onClick={() => command('back')}>
+                        <Icon icon={ArrowLeft} size={14} />
                     </button>
                 </Tooltip>
                 <Tooltip label={t('browser.forward')} name>
-                    <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoForward} onClick={() => command('forward')}>
-                        <Icon icon={ArrowRight} size={16} />
+                    <button className="icon-btn icon-btn-sm" disabled={!state?.canGoForward} onClick={() => command('forward')}>
+                        <Icon icon={ArrowRight} size={14} />
                     </button>
                 </Tooltip>
                 {/* While a page is on its way the same square ends it, the way every browser does it. */}
                 {state?.loading ? (
                     <Tooltip label={t('browser.stop')} name>
-                        <button className="icon-btn h-7 w-7" onClick={() => command('stop')}>
-                            <Icon icon={X} size={16} />
+                        <button className="icon-btn icon-btn-sm" onClick={() => command('stop')}>
+                            <Icon icon={X} size={14} />
                         </button>
                     </Tooltip>
                 ) : (
@@ -96,8 +96,8 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                         kbd={t('browser.reloadHint', { shortcut: formatShortcut(KEY_SHORTCUTS.shift, isApplePlatform()) })}
                         name
                     >
-                        <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!hasPage} onClick={(e) => command('reload', e.shiftKey)}>
-                            <Icon icon={RotateCw} size={16} />
+                        <button className="icon-btn icon-btn-sm" disabled={!hasPage} onClick={(e) => command('reload', e.shiftKey)}>
+                            <Icon icon={RotateCw} size={14} />
                         </button>
                     </Tooltip>
                 )}
@@ -155,7 +155,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                 )}
                 <Tooltip label={t('browser.openExternal')} name>
                     <button
-                        className="icon-btn h-7 w-7 disabled:opacity-40"
+                        className="icon-btn icon-btn-sm"
                         disabled={!hasPage}
                         onClick={() => {
                             const target = state?.url ?? url;
@@ -166,13 +166,13 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                             }
                         }}
                     >
-                        <Icon icon={ExternalLink} size={16} />
+                        <Icon icon={ExternalLink} size={14} />
                     </button>
                 </Tooltip>
                 {native && (
                     <Tooltip label={t('browser.inspect')} name>
-                        <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!hasPage} onClick={() => browserRegistry.inspect(key)}>
-                            <Icon icon={Code} size={16} />
+                        <button className="icon-btn icon-btn-sm" disabled={!hasPage} onClick={() => browserRegistry.inspect(key)}>
+                            <Icon icon={Code} size={14} />
                         </button>
                     </Tooltip>
                 )}

@@ -114,7 +114,7 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
                                 aria-label={reason === null ? undefined : t(option.label)}
                                 aria-pressed={reason === null && query[option.key]}
                                 aria-disabled={reason !== null}
-                                className="icon-btn h-7 w-7 aria-disabled:cursor-default aria-disabled:opacity-40 aria-disabled:hover:bg-transparent"
+                                className="icon-btn icon-btn-sm"
                                 onClick={() => {
                                     if (reason === null) {
                                         setQuery({ ...query, [option.key]: !query[option.key] });
@@ -130,17 +130,17 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
             <Separator />
             <div className={BTN_GROUP}>
                 <Tooltip label={t('find.previous')} kbd={FIND_SHORTCUTS.previous} name>
-                    <button type="button" className="icon-btn h-7 w-7 disabled:opacity-40" disabled={disabled || total === 0} onClick={() => onStep(-1)}>
+                    <button type="button" className="icon-btn icon-btn-sm" disabled={disabled || total === 0} onClick={() => onStep(-1)}>
                         <Icon icon={ChevronUp} size={14} />
                     </button>
                 </Tooltip>
                 <Tooltip label={t('find.next')} kbd={FIND_SHORTCUTS.next} name>
-                    <button type="button" className="icon-btn h-7 w-7 disabled:opacity-40" disabled={disabled || total === 0} onClick={() => onStep(1)}>
+                    <button type="button" className="icon-btn icon-btn-sm" disabled={disabled || total === 0} onClick={() => onStep(1)}>
                         <Icon icon={ChevronDown} size={14} />
                     </button>
                 </Tooltip>
                 <Tooltip label={t('find.close')} kbd={FIND_SHORTCUTS.close} name>
-                    <button type="button" className="icon-btn h-7 w-7" onClick={find.close}>
+                    <button type="button" className="icon-btn icon-btn-sm" onClick={find.close}>
                         <Icon icon={X} size={14} />
                     </button>
                 </Tooltip>

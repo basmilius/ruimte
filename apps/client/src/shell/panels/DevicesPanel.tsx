@@ -182,7 +182,7 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
         <ContextMenu.Root>
             <ContextMenu.Trigger render={<article />} className="flex min-w-0 items-center gap-3 px-3 py-3">
                 <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-border bg-surface-raised text-text-muted">
-                    <Icon icon={Smartphone} size={18} />
+                    <Icon icon={Smartphone} size={20} />
                 </span>
                 <div className="min-w-0 grow">
                     <h3 className="truncate text-sm font-medium text-text">{device.name}</h3>
@@ -193,7 +193,7 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                 <div className={BTN_GROUP}>
                     {device.state === 'shutdown' && device.capabilities.boot && (
                         <Tooltip label={changing === 'boot' ? t('devices.starting') : t('devices.start')} name>
-                            <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => control('boot')}>
+                            <button className="icon-btn icon-btn-sm" disabled={changing !== null} onClick={() => control('boot')}>
                                 <Icon
                                     icon={changing === 'boot' ? LoaderCircle : Power}
                                     size={14}
@@ -204,7 +204,7 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                     )}
                     {device.state === 'booted' && device.capabilities.shutdown && (
                         <Tooltip label={t('devices.shutdown')} name>
-                            <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => control('shutdown')}>
+                            <button className="icon-btn icon-btn-sm" disabled={changing !== null} onClick={() => control('shutdown')}>
                                 <Icon
                                     icon={changing === 'shutdown' ? LoaderCircle : PowerOff}
                                     size={14}
@@ -220,7 +220,7 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                     )}
                     {canOpen && (
                         <Tooltip label={device.capabilities.input ? t('devices.openInPanel') : t('devices.openPreview')} name>
-                            <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => onOpen(device)}>
+                            <button className="icon-btn icon-btn-sm" disabled={changing !== null} onClick={() => onOpen(device)}>
                                 <Icon icon={ChevronRight} size={14} />
                             </button>
                         </Tooltip>
@@ -260,7 +260,7 @@ function DeviceSection({
                 >
                     <span className="grid size-4 shrink-0 place-items-center">
                         <span className="col-start-1 row-start-1 grid place-items-center group-hover:hidden group-focus-visible:hidden">
-                            {group.platform === 'ios' ? <SignInMark provider="apple" size={15} /> : <AndroidMark size={15} />}
+                            {group.platform === 'ios' ? <SignInMark provider="apple" size={14} /> : <AndroidMark size={14} />}
                         </span>
                         <Icon
                             icon={ChevronRight}
@@ -439,7 +439,7 @@ export function DevicesPanel() {
                             .catch(() => undefined)
                     }
                 >
-                    <Icon icon={row.loading ? LoaderCircle : RefreshCw} size={14} className={row.loading ? 'animate-spin' : undefined} />
+                    <Icon icon={row.loading ? LoaderCircle : RefreshCw} size={16} className={row.loading ? 'animate-spin' : undefined} />
                 </button>
             </Tooltip>
         </PanelHeaderSlot>

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { ExternalLink, X } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { Markdown } from '@/chat/ui/Markdown';
 import { formatDay, formatDayWithYear } from '@/format/datetime';
 import { UpdateAction } from '@/shell/settings/panes/AboutPane';
@@ -9,6 +9,7 @@ import { closeReleaseNotes, missingNotesNotice, notesView, RELEASES_PAGE, useRel
 import { useUpdates } from '@/state/updates';
 import { Button } from '@/ui/Button';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
 
@@ -102,9 +103,7 @@ export function ReleaseNotesDialog() {
                 >
                     <div className="flex items-center gap-4 border-b border-border px-5 py-4">
                         <Dialog.Title className="grow text-base font-semibold text-text">{t('releaseNotes.title')}</Dialog.Title>
-                        <Dialog.Close className="icon-btn h-7 w-7" aria-label={t('releaseNotes.close')}>
-                            <Icon icon={X} size={16} />
-                        </Dialog.Close>
+                        <CloseButton label={t('releaseNotes.close')} dialog />
                     </div>
                     <div ref={listRef} className="relative min-h-0 grow overflow-y-auto">
                         <ErrorBoundary label={t('releaseNotes.failed')} resetKeys={[notes]}>

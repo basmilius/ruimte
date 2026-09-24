@@ -998,17 +998,17 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                                                 className={`${BTN_GROUP} opacity-0 transition-opacity group-hover/queued:opacity-100 focus-within:opacity-100`}
                                             >
                                                 <Tooltip label={t('composer.queue.sendNow')} name>
-                                                    <button className="icon-btn h-5 w-5 rounded" onClick={sendNow}>
+                                                    <button className="icon-btn icon-btn-2xs" onClick={sendNow}>
                                                         <Icon icon={FastForward} size={12} />
                                                     </button>
                                                 </Tooltip>
                                                 <Tooltip label={t('common:action.edit')} name>
-                                                    <button className="icon-btn h-5 w-5 rounded" disabled={takingBack !== null} onClick={edit}>
+                                                    <button className="icon-btn icon-btn-2xs" disabled={takingBack !== null} onClick={edit}>
                                                         <Icon icon={Pencil} size={12} />
                                                     </button>
                                                 </Tooltip>
                                                 <Tooltip label={t('common:action.remove')} name>
-                                                    <button className="icon-btn h-5 w-5 rounded" onClick={unqueue}>
+                                                    <button className="icon-btn icon-btn-2xs" onClick={unqueue}>
                                                         <Icon icon={X} size={12} />
                                                     </button>
                                                 </Tooltip>
@@ -1046,7 +1046,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                         <div className="flex items-center gap-2 px-5 pt-4 @max-md/composer:px-3.5 @max-md/composer:pt-3">
                             <span className="min-w-0 grow truncate border-l-2 border-border-strong pl-2.5 text-xs text-text-muted">{quote}</span>
                             <Tooltip label={t('composer.quote.remove')} name>
-                                <button className="icon-btn h-5 w-5 shrink-0 rounded" onClick={removeQuote}>
+                                <button className="icon-btn icon-btn-2xs" onClick={removeQuote}>
                                     <Icon icon={X} size={12} />
                                 </button>
                             </Tooltip>
@@ -1069,7 +1069,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                                     )}
                                     <Tooltip label={t('composer.removeAttachment', { name: attachment.name })}>
                                         <button
-                                            className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-raised text-text-muted opacity-0 transition-opacity hover:text-text group-hover/thumb:opacity-100 focus-visible:opacity-100"
+                                            className="icon-btn icon-btn-2xs absolute -top-1.5 -right-1.5 border border-border bg-surface-raised opacity-0 transition-opacity group-hover/thumb:opacity-100 focus-visible:opacity-100"
                                             onClick={() => removeAttachment(index)}
                                         >
                                             <Icon icon={X} size={12} />
@@ -1116,12 +1116,13 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                             {guard.tooLong && ` ${t('composer.tooLong')}`}
                         </div>
                     )}
+                    {/* The composer's controls are round, from attach to send, so they keep their own shape instead of `.icon-btn`'s. */}
                     <div className="flex items-center gap-2 pt-3 pr-3.5 pb-3.5 pl-5 @max-md/composer:gap-1.5 @max-md/composer:p-3 @max-md/composer:pt-2.5">
                         {attachable && (
                             <Tooltip label={t('composer.attach')} name>
                                 <button
                                     type="button"
-                                    className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-40"
+                                    className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50"
                                     disabled={disabled}
                                     onClick={() => fileInputRef.current?.click()}
                                 >
@@ -1173,7 +1174,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                             {(!busy || !isEmptyDraft(draft)) && (
                                 <Tooltip label={busy ? t('composer.queueButton') : t('composer.send')} kbd={KEY_SHORTCUTS.modEnter} name>
                                     <button
-                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text hover:brightness-90 disabled:opacity-40 disabled:hover:brightness-100"
+                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text hover:brightness-90 disabled:opacity-50 disabled:hover:brightness-100"
                                         disabled={isEmptyDraft(draft) || disabled || guard.tooLong}
                                         onClick={submit}
                                     >

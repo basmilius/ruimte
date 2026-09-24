@@ -61,7 +61,7 @@ export function FileToolbarToggle({ icon, label, active, disabled = false, onCli
     return (
         <Tooltip label={label} name>
             <button
-                className="icon-btn h-7 w-7 aria-disabled:cursor-default aria-disabled:opacity-40 aria-disabled:hover:bg-transparent"
+                className="icon-btn icon-btn-sm"
                 aria-pressed={active}
                 aria-disabled={disabled}
                 onClick={() => {
@@ -93,7 +93,7 @@ function FileMenu() {
     return (
         <Menu.Root>
             <Tooltip label={t('action.more')} name>
-                <Menu.Trigger className="icon-btn h-7 w-7">
+                <Menu.Trigger className="icon-btn icon-btn-sm">
                     <Icon icon={MoreHorizontal} size={14} />
                 </Menu.Trigger>
             </Tooltip>

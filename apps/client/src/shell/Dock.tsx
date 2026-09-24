@@ -181,14 +181,14 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                                         <Tooltip label={t('common:action.delete')} name>
                                             <span
                                                 role="button"
-                                                className="ml-auto grid h-5 w-5 place-items-center rounded text-text-faint opacity-0 hover:bg-surface-hover hover:text-text group-hover:opacity-100 group-data-[highlighted]:opacity-100"
+                                                className="icon-btn icon-btn-2xs ml-auto opacity-0 hover:bg-surface-active group-hover:opacity-100 group-data-[highlighted]:opacity-100"
                                                 onClick={(e) => {
                                                     // The row applies; only the corner deletes.
                                                     e.stopPropagation();
                                                     deleteLayoutAction(layout.name);
                                                 }}
                                             >
-                                                <Icon icon={X} size={14} />
+                                                <Icon icon={X} size={12} />
                                             </span>
                                         </Tooltip>
                                     </Menu.Item>

@@ -180,7 +180,7 @@ export function GitFileList({ checkouts, collapsed, reading, reposTruncated, bus
                             {state !== 'conflicted' && (
                                 <Tooltip label={staged ? t('git.list.unstageGroup', { group: label }) : t('git.list.stageGroup', { group: label })} name>
                                     <button
-                                        className="icon-btn h-6 w-6"
+                                        className="icon-btn icon-btn-xs"
                                         disabled={busy}
                                         onClick={() => {
                                             for (const section of sections) {
@@ -421,7 +421,7 @@ function GitRepoTree({ state, checkout, files, named, folder, platform, collapse
                     {!conflicted && (
                         <Tooltip label={staged ? t('git.repo.unstageAll', { repo: checkout.label }) : t('git.repo.stageAll', { repo: checkout.label })} name>
                             <button
-                                className="icon-btn h-5 w-5"
+                                className="icon-btn icon-btn-2xs"
                                 disabled={busy}
                                 onClick={() =>
                                     onStage(

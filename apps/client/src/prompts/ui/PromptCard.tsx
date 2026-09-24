@@ -69,7 +69,7 @@ export function PromptCard({ kind, heading, meta, top, actions, busy, notice, er
             <div className="-m-1.5 max-h-[min(50dvh,480px)] overflow-auto overscroll-contain p-1.5">
                 <div className="flex flex-col gap-2">
                     <div className="flex items-start gap-2">
-                        <Icon icon={ICONS[kind]} size={18} className="mt-0.5 shrink-0 text-status-needs-you" />
+                        <Icon icon={ICONS[kind]} size={16} className="mt-[3px] shrink-0 text-status-needs-you" />
                         <h3 tabIndex={-1} className="prompt-heading min-w-0 break-words text-sm font-semibold text-text outline-offset-4">
                             {heading}
                         </h3>

@@ -451,13 +451,13 @@ export function GitPanel() {
                     {changes > 0 && (
                         <span className={BTN_GROUP}>
                             <Tooltip label={t('git.panel.expandAll')} name>
-                                <button className="icon-btn h-7 w-7" onClick={() => useGit.getState().setCollapsedDirs([])}>
+                                <button className="icon-btn icon-btn-sm" onClick={() => useGit.getState().setCollapsedDirs([])}>
                                     <Icon icon={ChevronsUpDown} size={14} />
                                 </button>
                             </Tooltip>
                             <Tooltip label={t('git.panel.collapseAll')} name>
                                 <button
-                                    className="icon-btn h-7 w-7"
+                                    className="icon-btn icon-btn-sm"
                                     onClick={() =>
                                         useGit
                                             .getState()
@@ -474,7 +474,7 @@ export function GitPanel() {
                     <span className="grow" />
                     <Tooltip label={t('file.menu.refresh')} name>
                         <button
-                            className="icon-btn h-7 w-7"
+                            className="icon-btn icon-btn-sm"
                             disabled={busy}
                             onClick={() => {
                                 void refresh();
@@ -516,7 +516,7 @@ export function GitPanel() {
                 }
                 return (
                     <div key={checkout.path} className="flex items-center gap-2 border-b border-border bg-surface-sunken px-3 py-2">
-                        <Icon icon={GitMerge} size={13} className="shrink-0 text-status-needs-you" />
+                        <Icon icon={GitMerge} size={14} className="shrink-0 text-status-needs-you" />
                         <span className="min-w-0 grow truncate text-xs text-text">
                             {operation === undefined ? t('git.conflict.plain') : t(`git.conflict.${operation}`)}
                             {named ? ` (${checkout.label})` : ''}
@@ -791,7 +791,7 @@ function ActionsMenu({ busy, hidden, onOpen, onAll, onShowRepos, children }: Act
     return (
         <Menu.Root onOpenChange={(open) => open && onOpen()}>
             <Tooltip label={t('git.actions.more')} name>
-                <Menu.Trigger className="icon-btn h-7 w-7" disabled={busy}>
+                <Menu.Trigger className="icon-btn icon-btn-sm" disabled={busy}>
                     <Icon icon={MoreHorizontal} size={14} />
                 </Menu.Trigger>
             </Tooltip>

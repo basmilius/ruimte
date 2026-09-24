@@ -327,7 +327,7 @@ function ContextUsage({ usage, disabled, onCompact }: { usage: ChatUsage; disabl
                     {usage.contextWindow ? t('contextMeter.percentUsed', { percent: formatPercent(fraction * 100) }) : null}
                 </span>
                 <Menu.Item
-                    className="flex shrink-0 cursor-default items-center gap-0.5 rounded font-medium text-accent outline-none data-disabled:opacity-40 data-highlighted:underline"
+                    className="flex shrink-0 cursor-default items-center gap-0.5 rounded font-medium text-accent outline-none data-disabled:opacity-50 data-highlighted:underline"
                     disabled={disabled || usage.contextTokens === 0}
                     onClick={onCompact}
                 >

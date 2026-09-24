@@ -82,7 +82,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                         )}
                         <div className={BTN_GROUP}>
                             <Tooltip label={i18next.t('common:action.copyError')} name>
-                                <button className="icon-btn h-7 w-7" onClick={() => copyText(errorReport(label, error, componentStack))}>
+                                <button className="icon-btn icon-btn-sm" onClick={() => copyText(errorReport(label, error, componentStack))}>
                                     <Icon icon={Copy} size={14} />
                                 </button>
                             </Tooltip>

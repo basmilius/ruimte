@@ -62,14 +62,14 @@ function SourceRow({
             {count > 1 && (
                 <span className={`${BTN_GROUP} shrink-0`}>
                     <Tooltip label={t('promptStack.previous')} name>
-                        <button type="button" className="icon-btn h-6 w-6" disabled={index === 0} onClick={() => onStep(-1)}>
-                            <Icon icon={ChevronLeft} size={14} />
+                        <button type="button" className="icon-btn icon-btn-xs" disabled={index === 0} onClick={() => onStep(-1)}>
+                            <Icon icon={ChevronLeft} size={12} />
                         </button>
                     </Tooltip>
                     <span className="px-1 tabular-nums">{t('promptStack.position', { index: index + 1, count })}</span>
                     <Tooltip label={t('promptStack.next')} name>
-                        <button type="button" className="icon-btn h-6 w-6" disabled={index === count - 1} onClick={() => onStep(1)}>
-                            <Icon icon={ChevronRight} size={14} />
+                        <button type="button" className="icon-btn icon-btn-xs" disabled={index === count - 1} onClick={() => onStep(1)}>
+                            <Icon icon={ChevronRight} size={12} />
                         </button>
                     </Tooltip>
                 </span>

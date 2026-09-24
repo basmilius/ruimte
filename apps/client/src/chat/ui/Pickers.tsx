@@ -228,10 +228,10 @@ export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): v
                                     </Popover.Close>
                                     <Tooltip label={t('common:action.delete')} name>
                                         <button
-                                            className="icon-btn mt-1 h-6 w-6 shrink-0 rounded opacity-0 group-hover/stash:opacity-100 focus-visible:opacity-100"
+                                            className="icon-btn icon-btn-xs mt-1 opacity-0 group-hover/stash:opacity-100 focus-visible:opacity-100"
                                             onClick={() => forgetStashed(prompt.id)}
                                         >
-                                            <Icon icon={Trash2} size={14} />
+                                            <Icon icon={Trash2} size={12} />
                                         </button>
                                     </Tooltip>
                                 </div>

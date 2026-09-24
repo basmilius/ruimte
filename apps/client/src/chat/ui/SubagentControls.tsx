@@ -60,9 +60,9 @@ export function SubagentBreadcrumb({ chatId, title, className }: { chatId: strin
                     )}
                 </Fragment>
             ))}
-            {shown !== undefined && <SubagentStopButton chatId={chatId} item={shown} className="h-7 w-7" />}
+            {shown !== undefined && <SubagentStopButton chatId={chatId} item={shown} size="sm" />}
             <Tooltip label={t('subagents.backToMain')} name>
-                <button type="button" className="icon-btn h-7 w-7 shrink-0" onClick={() => show(MAIN_AGENT)}>
+                <button type="button" className="icon-btn icon-btn-sm" onClick={() => show(MAIN_AGENT)}>
                     <Icon icon={X} size={14} />
                 </button>
             </Tooltip>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
-import { Ban, Check, ChevronDown, ChevronUp, FileWarning, LoaderCircle, Sparkles, Wand2, X } from 'lucide-react';
+import { Ban, Check, ChevronDown, ChevronUp, FileWarning, LoaderCircle, Sparkles, Wand2 } from 'lucide-react';
 import type { GitConflictFile, GitConflictsResult, GitOperation } from '@ruimte/contracts';
 import { bothLines, sideLines, wandLines, type MergeSide } from '@ruimte/merge';
 import { ConflictEditor, type EditorHandle } from '@/conflicts/ConflictEditor';
@@ -18,6 +18,7 @@ import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, FORM_ERROR } from '@/ui/classes';
+import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -375,24 +376,24 @@ export function ConflictOverlay() {
                         )}
                         <span className={BTN_GROUP}>
                             <Tooltip label={t('nav.previous')} name>
-                                <button className="icon-btn h-7 w-7" disabled={conflicts.length === 0} onClick={() => go(-1)}>
+                                <button className="icon-btn icon-btn-sm" disabled={conflicts.length === 0} onClick={() => go(-1)}>
                                     <Icon icon={ChevronUp} size={14} />
                                 </button>
                             </Tooltip>
                             <Tooltip label={t('nav.next')} name>
-                                <button className="icon-btn h-7 w-7" disabled={conflicts.length === 0} onClick={() => go(1)}>
+                                <button className="icon-btn icon-btn-sm" disabled={conflicts.length === 0} onClick={() => go(1)}>
                                     <Icon icon={ChevronDown} size={14} />
                                 </button>
                             </Tooltip>
                         </span>
                         <Tooltip label={wandable === 0 ? t('wand.nothing') : t('wand.tip', { count: wandable })} name>
-                            <button className="icon-btn h-7 w-7" disabled={wandable === 0 || busy} onClick={wand}>
+                            <button className="icon-btn icon-btn-sm" disabled={wandable === 0 || busy} onClick={wand}>
                                 <Icon icon={Wand2} size={14} />
                             </button>
                         </Tooltip>
                         <Tooltip label={t('ai.file')} name>
                             <button
-                                className="icon-btn h-7 w-7"
+                                className="icon-btn icon-btn-sm"
                                 disabled={busy || file === null || file.whole}
                                 onClick={() => void ask(activeFile === null ? [] : [activeFile])}
                             >
@@ -402,11 +403,7 @@ export function ConflictOverlay() {
                         <Button size="sm" disabled={busy || textFiles.length === 0} onClick={() => void ask(textFiles)}>
                             {t('ai.all', { count: textFiles.length })}
                         </Button>
-                        <Tooltip label={t('common:action.close')} name>
-                            <button className="icon-btn h-7 w-7" onClick={close}>
-                                <Icon icon={X} size={14} />
-                            </button>
-                        </Tooltip>
+                        <CloseButton label={t('common:action.close')} onClick={close} />
                     </header>
 
                     <div className="flex min-h-0 grow">
@@ -426,7 +423,7 @@ export function ConflictOverlay() {
                                     >
                                         <Icon
                                             icon={remaining === 0 ? Check : FileWarning}
-                                            size={13}
+                                            size={14}
                                             className={remaining === 0 ? 'shrink-0 text-status-idle' : 'shrink-0 text-status-needs-you'}
                                         />
                                         <span className="min-w-0 grow">
@@ -495,7 +492,7 @@ export function ConflictOverlay() {
                         <span className="grow" />
                         {operation !== null && (
                             <Button variant="ghost" disabled={busy} onClick={() => void finish('abort', operation)}>
-                                <Icon icon={Ban} size={13} />
+                                <Icon icon={Ban} size={14} />
                                 {t(`footer.abort.${operation}`)}
                             </Button>
                         )}

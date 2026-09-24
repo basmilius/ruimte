@@ -58,12 +58,12 @@ export function BookmarkMarker({ chatId, itemId, bookmark }: BookmarkMarkerProps
                     )}
                 >
                     <Tooltip label={t('bookmarks.rename')} name>
-                        <button type="button" className="icon-btn h-6 w-6 rounded-md" onClick={() => useBookmarkNaming.getState().open(chatKey, itemId)}>
+                        <button type="button" className="icon-btn icon-btn-xs" onClick={() => useBookmarkNaming.getState().open(chatKey, itemId)}>
                             <Icon icon={Pencil} size={12} />
                         </button>
                     </Tooltip>
                     <Tooltip label={t('bookmarks.remove')} name>
-                        <button type="button" className="icon-btn h-6 w-6 rounded-md" onClick={() => void removeBookmark(endpointId, chatId, bookmark)}>
+                        <button type="button" className="icon-btn icon-btn-xs" onClick={() => void removeBookmark(endpointId, chatId, bookmark)}>
                             <Icon icon={X} size={12} />
                         </button>
                     </Tooltip>

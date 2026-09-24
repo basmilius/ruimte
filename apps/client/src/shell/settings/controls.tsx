@@ -87,22 +87,22 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
             <div className={`${BTN_GROUP} rounded-lg bg-surface-sunken p-0.5`}>
                 <Tooltip label={t('controls.stepper.smaller')}>
                     <button
-                        className="icon-btn h-7 w-7"
+                        className="icon-btn icon-btn-sm"
                         aria-label={t('controls.stepper.smallerFor', { label })}
                         disabled={value <= min}
                         onClick={() => nudge(-1)}
                     >
-                        <Icon icon={Minus} size={16} />
+                        <Icon icon={Minus} size={14} />
                     </button>
                 </Tooltip>
                 <Tooltip label={t('controls.stepper.larger')}>
                     <button
-                        className="icon-btn h-7 w-7"
+                        className="icon-btn icon-btn-sm"
                         aria-label={t('controls.stepper.largerFor', { label })}
                         disabled={value >= max}
                         onClick={() => nudge(1)}
                     >
-                        <Icon icon={Plus} size={16} />
+                        <Icon icon={Plus} size={14} />
                     </button>
                 </Tooltip>
             </div>

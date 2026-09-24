@@ -195,7 +195,7 @@ function BackgroundTaskRows({ chatId, tasks }: { chatId: string; tasks: readonly
             time={formatElapsedShort(now - task.startedAt)}
         >
             <Tooltip label={t('activity.stop')} name>
-                <button type="button" className="icon-btn mr-1.5 h-6 w-6 shrink-0" onClick={() => stop(task.id)}>
+                <button type="button" className="icon-btn icon-btn-xs mr-1.5" onClick={() => stop(task.id)}>
                     <Icon icon={Square} size={12} />
                 </button>
             </Tooltip>

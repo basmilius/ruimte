@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { ChartNoAxesColumn, LoaderCircle, RefreshCw, TriangleAlert, Unplug, X } from 'lucide-react';
+import { ChartNoAxesColumn, LoaderCircle, RefreshCw, TriangleAlert, Unplug } from 'lucide-react';
 import { Segmented, Skeleton } from '@/shell/settings/controls';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { useEndpoints } from '@/state/endpoints';
@@ -22,6 +22,7 @@ import { EmptyState } from '@/ui/EmptyState';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
+import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
 import { formatClock, formatCount, formatDate, formatTokens } from '@/shell/usage/format';
 import { useMoney } from '@/shell/usage/money';
@@ -274,9 +275,7 @@ function Page({ endpointId }: { endpointId: string }) {
                             <Icon icon={RefreshCw} size={16} className={clsx(loading && 'animate-spin')} />
                         </button>
                     </Tooltip>
-                    <Dialog.Close className="icon-btn shrink-0" aria-label={t('dialog.close')}>
-                        <Icon icon={X} size={16} />
-                    </Dialog.Close>
+                    <CloseButton label={t('dialog.close')} dialog />
                 </div>
             </header>
             <div className="flex min-h-0 grow flex-col gap-6 overflow-y-auto px-6 pt-4 pb-6 max-[960px]:px-4">
