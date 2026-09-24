@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import type { ComputerApproval, ComputerApprovalChoice, ComputerControlAction, ComputerGrant, ComputerUseStatus } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { CodedError } from '../coded-error.ts';
+import { errorText } from '../error-text.ts';
 import { writeAtomic } from '../fs.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { APPROVAL_WAIT_MS, ComputerApprovals, realTimers, type AppRef, type CallerInfo, type Timers } from './approvals.ts';
@@ -158,10 +159,15 @@ export class ComputerUse {
     private readonly now: () => number;
     private readonly timers: Timers;
     private readonly waitMs: number;
+    private readonly log: (message: string) => void;
     private readonly sinks = new ClientSinks();
     private readonly presence: ComputerPresence;
     // The helper's session as last heard: from doctor, a presence reply or a refusal. Null while the helper does not run.
     private session: HelperSession | null = null;
+    // Nodes whose agent held the session when the person stopped it, and has not heard so yet.
+    private readonly stopped = new Set<string>();
+    // The helper forgetting the last stop; a call waits for it, or the helper would refuse it for that stop too.
+    private clearing: Promise<void> = Promise.resolve();
     private current: ComputerUseStatus;
 
     constructor(options: ComputerUseOptions) {
@@ -175,6 +181,7 @@ export class ComputerUse {
         this.now = options.now ?? Date.now;
         this.timers = options.timers ?? realTimers;
         this.waitMs = options.waitMs ?? APPROVAL_WAIT_MS;
+        this.log = options.log ?? console.warn;
         this.current = { enabled: options.store.enabled, present: options.helper.present, running: false, accessibility: null, screenRecording: null };
         this.presence = new ComputerPresence({
             send: (show) => this.showPresence(show),
@@ -241,6 +248,7 @@ export class ComputerUse {
 
     /* A chat or terminal goes; a chat says nothing to an observer when it does. */
     nodeClosed(nodeId: string): void {
+        this.stopped.delete(nodeId);
         this.presence.closed(nodeId);
     }
 
@@ -254,7 +262,7 @@ export class ComputerUse {
             const doctor = this.store.enabled
                 ? await this.helper.request({ command: 'doctor', prompt: false }, DoctorResultSchema)
                 : await this.helper.ask({ command: 'doctor', prompt: false }, DoctorResultSchema);
-            this.session = doctor?.session ?? null;
+            this.noteSession(doctor?.session ?? null);
             return this.setStatus(
                 doctor === null
                     ? { ...base, running: false, accessibility: null, screenRecording: null }
@@ -278,6 +286,8 @@ export class ComputerUse {
             return this.refreshStatus();
         }
         this.approvals.dropAll();
+        this.approvals.dropThisTime();
+        this.stopped.clear();
         this.presence.drop();
         await this.helper.quit();
         this.session = null;
@@ -291,7 +301,7 @@ export class ComputerUse {
             return this.refreshStatus();
         }
         const doctor = await this.helper.request({ command: 'doctor', prompt: true, grant }, DoctorResultSchema);
-        this.session = doctor.session ?? null;
+        this.noteSession(doctor.session ?? null);
         return this.setStatus({
             enabled: true,
             present: true,
@@ -318,14 +328,7 @@ export class ComputerUse {
             return this.current;
         }
         const reply = await this.helper.ask({ command: action }, PressResultSchema);
-        if (reply === null) {
-            this.heard(null);
-            return this.current;
-        }
-        if (reply.session.stopped) {
-            this.presence.drop();
-        }
-        this.heard(reply.session);
+        this.heard(reply?.session ?? null);
         return this.current;
     }
 
@@ -345,6 +348,7 @@ export class ComputerUse {
     /* Every app that runs, with how this caller stands with it. Asks nothing of a person. */
     async apps(callerId: string): Promise<AppsOutcome> {
         const doctor = await this.ready();
+        this.refuseOnceIfStopped(callerId);
         const { apps } = await this.call(() => this.helper.request({ command: 'apps' }, AppsResultSchema));
         const rows = await this.processes();
         const run = this.runOf(callerId);
@@ -378,6 +382,7 @@ export class ComputerUse {
         // One budget for the card and the person's pause together, so a held call still ends inside the CLI's own limit.
         const deadline = this.now() + this.waitMs;
         await this.ready();
+        this.refuseOnceIfStopped(callerId);
         const run = this.runOf(callerId);
         if (run === null) {
             throw new ComputerRefusal('not-in-session', 'Only an agent in a chat or a terminal that runs now operates an app');
@@ -465,6 +470,10 @@ export class ComputerUse {
             if (code === 'app-refused') {
                 this.presence.failed(callerId, appName);
             }
+            if (code === 'stopped') {
+                // This refusal is how the agent hears of the stop, so its next call is not refused for it again.
+                this.stopped.delete(callerId);
+            }
             if (code === 'paused' || code === 'taken-over') {
                 // Never sent again: the person may have cut it off halfway, so the agent reads the state first.
                 await this.heldUntil(deadline);
@@ -505,8 +514,39 @@ export class ComputerUse {
     }
 
     private heard(session: HelperSession | null): void {
-        this.session = session;
+        this.noteSession(session);
         this.setStatus(this.current);
+    }
+
+    private noteSession(session: HelperSession | null): void {
+        const stoppedNow = session?.stopped === true && this.session?.stopped !== true;
+        this.session = session;
+        if (stoppedNow) {
+            this.personStopped();
+        }
+    }
+
+    /*
+     * The person stopped the session, from the bar, a key, the menu or Ruimte. The agent that held it
+     * hears so on its next call, whatever that is; the helper forgets the stop, so no other agent does.
+     */
+    private personStopped(): void {
+        const holder = this.presence.holder;
+        if (holder !== null) {
+            this.stopped.add(holder);
+        }
+        this.approvals.dropThisTime();
+        this.presence.drop();
+        this.clearing = this.helper
+            .ask({ command: 'clear-stop' }, PressResultSchema)
+            .then((reply) => this.heard(reply?.session ?? null))
+            .catch((error: unknown) => this.log(`Clearing the stop of the computer use helper failed: ${errorText(error)}`));
+    }
+
+    private refuseOnceIfStopped(callerId: string): void {
+        if (this.stopped.delete(callerId)) {
+            throw new ComputerRefusal('stopped', STOPPED_WORDS);
+        }
     }
 
     private async showPresence(show: PresenceShow): Promise<void> {
@@ -517,7 +557,6 @@ export class ComputerUse {
         } catch (error) {
             if (error instanceof HelperFailure && error.helperCode === 'stopped') {
                 this.heard({ active: false, mode: 'running', stopped: true });
-                this.presence.drop();
             }
             throw error;
         }
@@ -535,7 +574,7 @@ export class ComputerUse {
             throw new ComputerRefusal('computer-use-off', 'Computer use is off on this machine; only a person turns it on, in Ruimte');
         }
         const doctor = await this.call(() => this.helper.request({ command: 'doctor', prompt: false }, DoctorResultSchema));
-        this.session = doctor.session ?? null;
+        this.noteSession(doctor.session ?? null);
         this.setStatus({
             enabled: true,
             present: true,
@@ -550,6 +589,7 @@ export class ComputerUse {
                 `Ruimte Computer Use does not have the ${missing.join(' and ')} ${missing.length === 1 ? 'permission' : 'permissions'} yet; only a person grants ${missing.length === 1 ? 'it' : 'them'}, in the Computer use settings of Ruimte`
             );
         }
+        await this.clearing;
         return doctor;
     }
 
@@ -568,7 +608,6 @@ export class ComputerUse {
             // A helper from before the codes worded a stop both ways.
             if (error.helperCode === 'stopped' || /^stopped by the (user|person)\b/.test(error.message)) {
                 this.heard({ active: false, mode: 'running', stopped: true });
-                this.presence.drop();
                 throw new ComputerRefusal('stopped', STOPPED_WORDS);
             }
             throw new ComputerRefusal('app-refused', agentWords(error.message));

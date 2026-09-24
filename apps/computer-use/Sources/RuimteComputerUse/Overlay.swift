@@ -129,7 +129,7 @@ final class Overlay {
         control.refusal
     }
 
-    /// A new `state` is how an agent picks up again after the person stopped it.
+    /// A new `state` is how an agent picks up again after the person stopped it, or the daemon, which took the stop over.
     func clearStop() {
         control.clearStop()
     }

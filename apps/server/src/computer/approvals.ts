@@ -178,6 +178,11 @@ export class ComputerApprovals {
         return [...this.pending.values()].map((pending) => pending.request).sort((a, b) => a.createdAt - b.createdAt);
     }
 
+    /* Every grant for this time, after a person stopped a session: going on asks again. */
+    dropThisTime(): void {
+        this.thisTime.clear();
+    }
+
     /* Takes every card down, when a person turns computer use off; nothing waits for an answer after that. */
     dropAll(): void {
         const all = [...this.pending.values()];

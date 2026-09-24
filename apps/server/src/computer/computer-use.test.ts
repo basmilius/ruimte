@@ -272,7 +272,8 @@ describe('naming an app', () => {
         const { computer, helper } = await computerSetup();
         const call = computer.operate('chat-1', 'state', 'TextEdit', {});
         await until(() => computer.pendingApprovals().length === 1);
-        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
+        // For always: a stop takes back what was allowed this time.
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'always');
         await call;
         helper.error = 'element 3 is no longer at (1, 2); Run `cu state` again';
         expect(await codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 3 }))).toBe('app-refused');
@@ -446,6 +447,44 @@ describe('the person holding the Mac', () => {
         expect(helper.presences).toEqual([]);
         await computer.operate('chat-1', 'state', 'TextEdit', {});
         expect(computer.status().session).toEqual({ mode: 'running', nodeId: 'chat-1' });
+    });
+});
+
+describe('a stop by the person', () => {
+    test('reaches the agent that held the session on its next call, state included, once', async () => {
+        const setup = await computerSetup();
+        const { computer, helper } = setup;
+        await letIn(setup);
+        // From the bar or a key while the agent thinks: the machine hears of it only when it next asks.
+        helper.stop();
+        expect(await codeOf(computer.operate('chat-1', 'state', 'TextEdit', {}))).toBe('stopped');
+        expect(helper.session.stopped).toBe(false);
+        expect((await computer.operate('chat-1', 'state', 'TextEdit', {})).tree).toHaveLength(2);
+    });
+
+    test('is not told to another agent, whatever it calls', async () => {
+        const setup = await computerSetup();
+        const { computer, helper } = setup;
+        await letIn(setup);
+        helper.stop();
+        await computer.operate('term-1', 'click', 'TextEdit', { element: 1 });
+        expect(helper.acted.at(-1)).toMatchObject({ command: 'click' });
+        expect(await codeOf(computer.apps('chat-1'))).toBe('stopped');
+        expect((await computer.apps('chat-1')).apps).toHaveLength(2);
+    });
+
+    test('takes back what was allowed this time', async () => {
+        const { computer, timers } = await computerSetup();
+        const call = computer.operate('chat-1', 'state', 'TextEdit', {});
+        await until(() => computer.pendingApprovals().length === 1);
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
+        await call;
+        await computer.control('stop');
+        expect(await codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 1 }))).toBe('stopped');
+        const again = codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 1 }));
+        await until(() => computer.pendingApprovals().length === 1);
+        timers.advance(APPROVAL_WAIT_MS);
+        expect(await again).toBe('awaiting-approval');
     });
 });
 

@@ -95,6 +95,10 @@ export class FakeHelper implements HelperTransport {
             this.press(request.command);
             return { ok: true, result: { session: this.session } };
         }
+        if (request.command === 'clear-stop') {
+            this.session = { ...this.session, stopped: false };
+            return { ok: true, result: { session: this.session } };
+        }
         if (request.command === 'doctor') {
             return {
                 ok: true,
@@ -143,7 +147,7 @@ export class FakeHelper implements HelperTransport {
 
     /* The requests that acted on an app, leaving out the doctor and apps calls every action makes first. */
     get acted(): HelperRequest[] {
-        return this.requests.filter((request) => !['doctor', 'apps', 'quit', 'presence', 'pause', 'resume', 'stop'].includes(request.command));
+        return this.requests.filter((request) => !['doctor', 'apps', 'quit', 'presence', 'pause', 'resume', 'stop', 'clear-stop'].includes(request.command));
     }
 
     /* What the daemon showed at the cursor, as `state` or `state: label`. */

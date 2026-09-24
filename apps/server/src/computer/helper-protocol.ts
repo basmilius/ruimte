@@ -14,6 +14,7 @@ export const HELPER_COMMANDS = [
     'pause',
     'resume',
     'stop',
+    'clear-stop',
     'state',
     'click',
     'scroll',

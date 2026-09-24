@@ -110,6 +110,10 @@ final class Agent {
             return Response.success(["stopped": true])
         case "presence":
             return await respond { try self.overlay.presence(request.state, label: request.label, step: request.step) }
+        case "clear-stop":
+            // The daemon tells the stopped agent itself, so another agent it serves is not refused for that stop.
+            overlay.clearStop()
+            return Response.success(["session": overlay.control.summary])
         case let command where Self.queuedCommands.contains(command):
             return await enqueue {
                 await self.respond { try await self.perform(request) }
