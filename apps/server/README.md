@@ -102,6 +102,11 @@ $RUIMTE_HOME/
     <chatId>/<id>.<ext>            one file someone attached to a message in that chat
   checkpoints/                     mode 0700
     <repo>-<hash>.index            the private git index a turn's checkpoint is written through
+  computer-use/                    mode 0700, shared with the computer use helper
+    settings.json                  whether a person turned computer use on for this machine, and the language they did it in
+    grants.json                    the apps a person let every agent into for always, and the apps once seen running shells
+    overlay.json                   the words of the helper's pill, written by the daemon
+    agent.sock, screenshots/       the helper's own, see apps/computer-use/README.md
   usage/                           mode 0700
     index.json                     every transcript the scanner read, with where it stopped in each
     prices.json                    the last LiteLLM price table, with when it was fetched
@@ -192,6 +197,16 @@ The request goes out as `session.approvals` with the whole pending list of that 
 The record is also written to `sessions/<id>.agent.json`. When the daemon starts again and the session is restored from its snapshot, the agent comes back with `live: false`; the client answers with `agent.resume`, which types `claude --resume <id>` (or `codex resume <id>`) into the shell. One at a time: a second `agent.resume` is refused with `agent-resuming` while a typed resume has not produced a live agent, and allowed again 15 seconds later, so a CLI that never starts can still be retried.
 
 A recorded session id is not a conversation, so the daemon looks before it resumes. The transcript path the hooks reported is the evidence: the file is still there and the resume line is typed; the file is gone (a CLI that was started and never used persists nothing, and a transcript can be deleted) and the session's own launch line is typed instead, so the node ends up with a working CLI rather than a bare shell. A hook that names no transcript at all leaves the choice to the shell, as `<resume> || <launch>`. Either way it is one line: two would land in the input box of the CLI the first one started.
+
+## Computer use
+
+An agent operates the apps of this Mac through `ruimte-context computer <action>`, which the daemon carries out through the helper app in `apps/computer-use` (`src/computer`). It is off until a person turns it on for the machine (`computer.setEnabled`), and while it is off every action refuses with `computer-use-off`, the helper is never started and the verbs note does not mention the noun. On, the daemon starts the helper with `open -g <app> --args --home $RUIMTE_HOME` the first time it needs it, puts the local secret on every request, and quits it when the feature is turned off or the daemon stops. The helper is `Contents/Helpers/Ruimte Computer Use.app` in Ruimte.app and `apps/computer-use/dist/Ruimte Computer Use Dev.app` in a checkout; a daemon from npm and one on Linux have none and refuse with `unavailable`.
+
+`apps` asks nobody. Everything that reads or operates an app needs a person's yes for that app, by bundle id, in every permission mode. The first call raises a card (`computer.approvals`, to every client, answered with `computer.answer`) and holds for 6 seconds, under the 10 seconds Codex gives a shell command by default; past that it refuses with `awaiting-approval` and the card stays up for ten minutes after the agent last asked. "This time" holds for the run of that terminal (its shell) or chat (its CLI conversation) and lives in memory; "always" is written to `computer-use/grants.json`, which no verb writes. A no reaches the agent once, as `declined`. The helper is told the pid the person let in, never the name the agent typed.
+
+An app that runs shells is refused with `terminal`, whatever was granted. The daemon reads that off the process table: one of the app's own children has a controlling terminal the app does not share. An app once seen doing so is remembered in `grants.json`, so it stays refused between its shells. The Ruimte desktop app keeps its shells under the daemon, a level further down, and gets a card like any other app.
+
+`computer.status` answers whether the helper is there, whether it runs and what it reported about Accessibility and Screen Recording; asking it starts the helper only while computer use is on.
 
 ## Providers and models
 
