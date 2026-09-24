@@ -10,12 +10,14 @@ export interface ChatDraft {
     mentions: string[];
     skills: string[];
     attachments: ChatAttachmentUpload[];
+    /* A piece of an answer that goes above the text as a blockquote; empty for none. */
+    quote: string;
 }
 
-export const EMPTY_DRAFT: ChatDraft = { text: '', mentions: [], skills: [], attachments: [] };
+export const EMPTY_DRAFT: ChatDraft = { text: '', mentions: [], skills: [], attachments: [], quote: '' };
 
-// Older records only had text; the arrays are filled in on read.
-type DraftRecord = { text: string; mentions?: string[]; skills?: string[]; attachments?: ChatAttachmentUpload[] };
+// Older records only had text; the rest is filled in on read.
+type DraftRecord = { text: string; mentions?: string[]; skills?: string[]; attachments?: ChatAttachmentUpload[]; quote?: string };
 
 const storage = persistedJson<Record<string, DraftRecord>>(STORAGE_KEY, (raw) => (raw ? (JSON.parse(raw) as Record<string, DraftRecord>) : {}), {});
 
@@ -23,7 +25,7 @@ const readAll = (): Record<string, DraftRecord> => storage.read();
 
 const store = (drafts: Record<string, DraftRecord>): boolean => storage.write(drafts);
 
-export const isEmptyDraft = (draft: ChatDraft): boolean => draft.text.trim() === '' && draft.attachments.length === 0;
+export const isEmptyDraft = (draft: ChatDraft): boolean => draft.text.trim() === '' && draft.attachments.length === 0 && draft.quote === '';
 
 /*
  * Which chats hold an unsent prompt, for the dot on their row in the sidebar. The drafts themselves
@@ -44,7 +46,9 @@ const trackDraft = (chatId: string, held: boolean): void => {
 /* An unsent prompt per chat node, kept across reloads so a half-written message is never lost. */
 export const readDraft = (chatId: string): ChatDraft => {
     const record = readAll()[chatId];
-    return record ? { text: record.text, mentions: record.mentions ?? [], skills: record.skills ?? [], attachments: record.attachments ?? [] } : EMPTY_DRAFT;
+    return record
+        ? { text: record.text, mentions: record.mentions ?? [], skills: record.skills ?? [], attachments: record.attachments ?? [], quote: record.quote ?? '' }
+        : EMPTY_DRAFT;
 };
 
 export const writeDraft = (chatId: string, draft: ChatDraft): void => {
@@ -55,12 +59,12 @@ export const writeDraft = (chatId: string, draft: ChatDraft): void => {
         store(drafts);
         return;
     }
-    drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills, attachments: draft.attachments };
+    drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills, attachments: draft.attachments, quote: draft.quote };
     if (store(drafts)) {
         return;
     }
     // A file can outgrow the storage quota; the text is the part worth keeping then.
-    drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills };
+    drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills, quote: draft.quote };
     store(drafts);
 };
 
@@ -71,9 +75,13 @@ const union = (first: readonly string[], second: readonly string[]): string[] =>
 
 /*
  * A queued message taken back to edit goes above what was typed since. Its files join the draft's as
- * far as the limits let them, and the rest come back rejected, the way a dropped file would.
+ * far as the limits let them, and the rest come back rejected, the way a dropped file would. A quote
+ * it was sent with is part of its text; the draft keeps the one it holds.
  */
-export const takeBackIntoDraft = (current: ChatDraft, taken: ChatDraft): { draft: ChatDraft; rejected: Array<{ name: string; reason: string }> } => {
+export const takeBackIntoDraft = (
+    current: ChatDraft,
+    taken: Omit<ChatDraft, 'quote'>
+): { draft: ChatDraft; rejected: Array<{ name: string; reason: string }> } => {
     const checked = checkAttachmentLimits(
         current.attachments.length,
         taken.attachments.map((upload) => ({ name: upload.name, mime: upload.mime, bytes: uploadBytes(upload), upload })),
@@ -84,7 +92,8 @@ export const takeBackIntoDraft = (current: ChatDraft, taken: ChatDraft): { draft
             text: current.text.trim() === '' ? taken.text : joinDraftText(taken.text, current.text),
             mentions: union(taken.mentions, current.mentions),
             skills: union(taken.skills, current.skills),
-            attachments: [...checked.accepted.map((entry) => entry.upload), ...current.attachments]
+            attachments: [...checked.accepted.map((entry) => entry.upload), ...current.attachments],
+            quote: current.quote
         },
         rejected: checked.rejected
     };

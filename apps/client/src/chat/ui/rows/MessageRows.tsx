@@ -125,7 +125,7 @@ export function ReportRow({ id, text }: { id: string; text: string }) {
             <div aria-hidden className="mb-1 text-xs font-medium text-text-faint select-none">
                 {t('rows.report.heading')}
             </div>
-            <div data-find-field="text" className="contents">
+            <div data-find-field="text" data-quote-answer className="contents">
                 <ReplyMarkdown text={text} streaming={false} />
             </div>
         </div>
@@ -165,7 +165,7 @@ export function AssistantRow({ chatId, item: derived }: { chatId: string; item: 
             <div data-find-item={item.id} className="-mx-1 px-1 pb-2">
                 <ReplyHeading chatId={chatId} />
                 {settled !== '' && (
-                    <div data-find-field="text" className="contents">
+                    <div data-find-field="text" data-quote-answer className="contents">
                         <ReplyMarkdown text={settled} streaming={false} arriving={sawWriting} />
                     </div>
                 )}
@@ -184,7 +184,7 @@ export function AssistantRow({ chatId, item: derived }: { chatId: string; item: 
     return (
         <div data-find-item={item.id} className={clsx('-mx-1 px-1 pb-2', mode === 'whole' && sawWriting && WHOLE_FADE_CLASS)}>
             <ReplyHeading chatId={chatId} />
-            <div data-find-field="text" className="contents">
+            <div data-find-field="text" data-quote-answer className="contents">
                 <ReplyMarkdown text={reveal.text} streaming={reveal.active} />
             </div>
             {live && item.text === '' && <span className="inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-text-faint align-middle" />}

@@ -46,7 +46,8 @@ describe('stashedFrom', () => {
             text: 'look at @src/a.ts',
             mentions: ['src/a.ts'],
             skills: ['unslop'],
-            attachments: [{ name: 'shot.png', mime: 'image/png', data: 'AAAA' }]
+            attachments: [{ name: 'shot.png', mime: 'image/png', data: 'AAAA' }],
+            quote: ''
         };
         expect(stashedFrom(draft, 'id-1', 5)).toEqual({
             id: 'id-1',
@@ -56,6 +57,10 @@ describe('stashedFrom', () => {
             attachments: [{ name: 'shot.png', mime: 'image/png', size: 3 }],
             createdAt: 5
         });
+    });
+
+    test('keeps a quote as the blockquote it would have been sent as', () => {
+        expect(stashedFrom({ ...EMPTY_DRAFT, text: 'Why?', quote: 'One.' }, 'id-1', 5)?.text).toBe('> One.\n\nWhy?');
     });
 
     test('a draft with nothing in it is not worth a slot', () => {

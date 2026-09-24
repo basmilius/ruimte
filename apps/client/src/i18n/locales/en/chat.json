@@ -239,6 +239,9 @@
       "editFailed": "The message could not be taken back to edit",
       "sendNow": "Send now"
     },
+    "quote": {
+      "remove": "Remove quote"
+    },
     "removeAttachment": "Remove {{name}}",
     "attach": "Attach files",
     "tooLong": "characters, too long to send",

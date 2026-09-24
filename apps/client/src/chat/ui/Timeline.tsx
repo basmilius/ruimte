@@ -28,6 +28,7 @@ import { MessageActions } from '@/chat/ui/MessageActions';
 import { Scrubber, type CardChat } from '@/chat/ui/Scrubber';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { FOLLOW_THRESHOLD_PX, rowRhythm } from '@/chat/ui/rows/row-rhythm';
+import { QuoteThreadContext } from '@/chat/ui/quote-selection';
 import { useChatFind } from '@/chat/ui/use-chat-find';
 import { useToggleSet } from '@/chat/ui/useToggleSet';
 import { Row } from '@/chat/ui/rows/Rows';
@@ -446,7 +447,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                 className={clsx('relative z-10 shrink-0', composer && 'px-3 pb-3 pt-3')}
                                 style={{ position: stickyComposer ? 'sticky' : 'relative', bottom: 0 }}
                             >
-                                {composer}
+                                <QuoteThreadContext.Provider value={threadRef}>{composer}</QuoteThreadContext.Provider>
                             </div>
                         </div>
                     </div>

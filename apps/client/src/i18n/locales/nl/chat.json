@@ -239,6 +239,9 @@
       "editFailed": "Het bericht kon niet worden teruggehaald om te bewerken",
       "sendNow": "Nu versturen"
     },
+    "quote": {
+      "remove": "Citaat verwijderen"
+    },
     "removeAttachment": "{{name}} verwijderen",
     "attach": "Bestanden toevoegen",
     "tooLong": "tekens, te lang om te versturen",

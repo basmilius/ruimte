@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Dialog } from '@base-ui-components/react/dialog';
@@ -42,6 +42,7 @@ import { RESUME_COMPACTION_TOKENS, resumeCompactionOffer } from '@/chat/logic/re
 import { dismissResumeCompaction, useResumeCompactionDismissal } from '@/chat/resume-compaction-dismissals';
 import { composerStopLabel, composerStopOf } from '@/chat/subagent-list';
 import { PROMPT_MAX_CHARS, pasteBecomesAttachment, pastedTextName, promptGuard, usableSlashCommands } from '@/chat/guards';
+import { withQuote } from '@/chat/quote';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
@@ -50,6 +51,7 @@ import { chipDecorations } from '@/chat/ui/composer/chips';
 import { enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirection, tabSpaces } from '@/chat/ui/composer/keys';
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
 import { PromptComposer } from '@/chat/ui/PromptComposer';
+import { QuoteThreadContext, selectedAnswerQuote } from '@/chat/ui/quote-selection';
 import { ResumeCompactionDock } from '@/chat/ui/ResumeCompactionDock';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { StashPicker } from '@/chat/ui/Pickers';
@@ -157,7 +159,11 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const [modelPickerOpen, setModelPickerOpen] = useState(false);
     const [confirmClear, setConfirmClear] = useState(false);
     const [takingBack, setTakingBack] = useState<string | null>(null);
+    // A quote nobody typed under yet; the draft holds it from the first keystroke on.
+    const [liveQuote, setLiveQuote] = useState<string | null>(null);
     const endpointId = useEndpointId();
+    const thread = useContext(QuoteThreadContext);
+    const rootRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<ComposerInputHandle>(null);
     // Taking a queued message back waits on the machine, and what was typed meanwhile is what it merges with.
     const draftRef = useRef(draft);
@@ -195,6 +201,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const busy = info.activeTurnId !== null;
     const queue = info.queue ?? [];
     const text = draft.text;
+    const quote = draft.quote !== '' ? draft.quote : (liveQuote ?? '');
     // The CLI announces its session on the first message, so anything before that is still a blank chat.
     const started = info.agentSessionId !== null || info.usage.turns > 0;
     /*
@@ -227,6 +234,32 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             }),
         [chatId]
     );
+
+    /*
+     * The quote follows the selection in an answer until the person types, and from then on only
+     * another selection replaces it. Clicking into this composer to write about it moves the
+     * selection here, which is no reason to drop it.
+     */
+    useEffect(() => {
+        if (thread === null) {
+            return;
+        }
+        const follow = (): void => {
+            const selection = document.getSelection();
+            const anchor = selection?.anchorNode ?? null;
+            if (anchor !== null && rootRef.current?.contains(anchor)) {
+                return;
+            }
+            const selected = selectedAnswerQuote(selection, thread.current);
+            if (draftRef.current.quote === '') {
+                setLiveQuote(selected);
+            } else if (selected !== null) {
+                setDraft((current) => ({ ...current, quote: selected }));
+            }
+        };
+        document.addEventListener('selectionchange', follow);
+        return () => document.removeEventListener('selectionchange', follow);
+    }, [thread]);
 
     useEffect(() => {
         if (!notice) {
@@ -330,10 +363,21 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
         () => [chipDecorations({ mentions: draft.mentions, skills: draft.skills }), LEAVE_DROPS_TO_THE_CARD],
         [draft.mentions, draft.skills]
     );
-    const guard = promptGuard(text);
+    const guard = promptGuard(withQuote(quote, text));
 
     const setText = (next: string, mentions = draft.mentions, chosen = draft.skills): void => {
         setDraft((current) => ({ ...current, text: next, mentions, skills: chosen }));
+    };
+
+    const clearDraft = (): void => {
+        setDraft(EMPTY_DRAFT);
+        setLiveQuote(null);
+    };
+
+    const removeQuote = (): void => {
+        setDraft((current) => ({ ...current, quote: '' }));
+        setLiveQuote(null);
+        inputRef.current?.focus();
     };
 
     const configure = (patch: { selection?: ModelSelection; runtimeMode?: RuntimeMode }): void => {
@@ -505,7 +549,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
         }
         const chosen = commands[menuIndex];
         if (commandQuery !== null && chosen?.local && runCommand(chosen.name)) {
-            setDraft(EMPTY_DRAFT);
+            clearDraft();
             return;
         }
         if (commandQuery !== null && chosen?.skill) {
@@ -514,15 +558,15 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
         }
         if (commandQuery !== null && chosen && !chosen.local) {
             onSend(`/${chosen.name}`, {});
-            setDraft(EMPTY_DRAFT);
+            clearDraft();
             return;
         }
-        onSend(trimmed, {
+        onSend(withQuote(quote, trimmed), {
             mentions: presentMentions(trimmed, draft.mentions),
             skills: presentSkills(trimmed, draft.skills),
             attachments: draft.attachments
         });
-        setDraft(EMPTY_DRAFT);
+        clearDraft();
         setMention(null);
         setSkillQuery(null);
         setHistoryIndex(null);
@@ -566,7 +610,12 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                 failed(e);
                 return;
             }
-            const taken: ChatDraft = { text: message.text, mentions: message.mentions ?? [], skills: message.skills ?? [], attachments: uploads };
+            const taken: Omit<ChatDraft, 'quote'> = {
+                text: message.text,
+                mentions: message.mentions ?? [],
+                skills: message.skills ?? [],
+                attachments: uploads
+            };
             // A file that would not fit is refused here, while the message still holds it on the machine.
             const wouldReject = takeBackIntoDraft(draftRef.current, taken).rejected[0];
             if (wouldReject) {
@@ -604,8 +653,8 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             }
             return;
         }
-        if (stashDraft(draft)) {
-            setDraft(EMPTY_DRAFT);
+        if (stashDraft({ ...draft, quote })) {
+            clearDraft();
             setMention(null);
             setSkillQuery(null);
         }
@@ -811,7 +860,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const attachable = capabilities?.attachments !== false;
 
     return (
-        <div className="chat-composer-content pointer-events-none relative z-10 w-full">
+        <div ref={rootRef} className="chat-composer-content pointer-events-none relative z-10 w-full">
             {/* Only while there is something below the fold. It sits over the composer rather than
                 in the thread, because the composer is the one thing whose height it always clears. */}
             {!atEnd && (
@@ -1013,6 +1062,16 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                             })}
                         </div>
                     )}
+                    {quote !== '' && (
+                        <div className="flex items-center gap-2 px-5 pt-4 @max-md/composer:px-3.5 @max-md/composer:pt-3">
+                            <span className="min-w-0 grow truncate border-l-2 border-border-strong pl-2.5 text-xs text-text-muted">{quote}</span>
+                            <Tooltip label={t('composer.quote.remove')} name>
+                                <button className="icon-btn h-5 w-5 shrink-0 rounded" onClick={removeQuote}>
+                                    <Icon icon={X} size={12} />
+                                </button>
+                            </Tooltip>
+                        </div>
+                    )}
                     {draft.attachments.length > 0 && (
                         <div className="flex flex-wrap gap-2 px-5 pt-4 @max-md/composer:px-3.5 @max-md/composer:pt-3">
                             {draft.attachments.map((attachment, index) => (
@@ -1051,6 +1110,10 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                         extensions={editorExtensions}
                         onChange={(value, selection, state) => {
                             setText(value);
+                            if (liveQuote !== null) {
+                                setDraft((current) => ({ ...current, quote: liveQuote }));
+                                setLiveQuote(null);
+                            }
                             setMenuIndex(0);
                             trackTriggers(value, selection, state);
                             if (historyIndex !== null && value !== history[historyIndex]?.text) {

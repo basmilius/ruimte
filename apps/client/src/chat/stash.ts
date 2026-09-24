@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { uploadBytes } from '@/chat/attachments';
-import type { ChatDraft } from '@/chat/drafts';
+import { isEmptyDraft, type ChatDraft } from '@/chat/drafts';
 import { isRecord } from '@/chat/logic/json';
 import { persistedJson } from '@/chat/persisted-json';
+import { withQuote } from '@/chat/quote';
 import { shortcut } from '@/ui/shortcut';
 
 /* Puts the draft away, or takes the last one back on an empty box. */
@@ -72,14 +73,14 @@ export const parseStash = (raw: string | null): StashedPrompt[] => {
 /* Newest first, capped: the entry that has been waiting longest is the one nobody comes back for. */
 export const withStashed = (prompts: StashedPrompt[], entry: StashedPrompt): StashedPrompt[] => [entry, ...prompts].slice(0, STASH_LIMIT);
 
-/* What a draft looks like on the shelf; null when there is nothing worth putting there. */
+/* What a draft looks like on the shelf, its quote folded into the text; null when there is nothing worth putting there. */
 export const stashedFrom = (draft: ChatDraft, id: string, now: number): StashedPrompt | null => {
-    if (draft.text.trim() === '' && draft.attachments.length === 0) {
+    if (isEmptyDraft(draft)) {
         return null;
     }
     return {
         id,
-        text: draft.text,
+        text: withQuote(draft.quote, draft.text),
         mentions: [...draft.mentions],
         skills: [...draft.skills],
         attachments: draft.attachments.map((attachment) => ({ name: attachment.name, mime: attachment.mime, size: uploadBytes(attachment) })),
