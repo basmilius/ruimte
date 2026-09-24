@@ -1,4 +1,4 @@
-import { WebglAddon } from '@xterm/addon-webgl';
+import type { WebglAddon } from '@xterm/addon-webgl';
 import type { Terminal } from '@xterm/xterm';
 import { DEFAULT_WEBGL_CONTEXTS, WebglSlots, type SlotChange } from '@/terminal/webgl-slots';
 
@@ -12,6 +12,10 @@ const debug = (message: string, id: string): void => {
 };
 
 let webgl2Available: boolean | null = null;
+
+/* The addon is loaded with the first terminal that is granted a context, so a page without terminals never fetches it. */
+let Addon: typeof WebglAddon | null = null;
+let addonLoad: Promise<void> | null = null;
 
 /* Probed once for the page; the probe context is released so it does not count against the browser's cap. */
 const hasWebgl2 = (): boolean => {
@@ -104,8 +108,22 @@ class WebglBudget {
         if (!entry || entry.addon) {
             return;
         }
+        if (Addon === null) {
+            addonLoad ??= import('@xterm/addon-webgl').then((module) => {
+                Addon = module.WebglAddon;
+            });
+            void addonLoad.then(
+                () => {
+                    if (this.slots.holders().includes(id)) {
+                        this.load(id);
+                    }
+                },
+                () => this.apply(this.slots.lost(id))
+            );
+            return;
+        }
         try {
-            const addon = new WebglAddon();
+            const addon = new Addon();
             addon.onContextLoss(() => this.handleLoss(id));
             entry.term.loadAddon(addon);
             entry.addon = addon;
