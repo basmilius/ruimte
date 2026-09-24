@@ -198,3 +198,38 @@ describe('a port a person drew from', () => {
         expect(held.to).toEqual(portPoint(target, 'bottom'));
     });
 });
+
+describe('a line leaving the bottom of a node', () => {
+    /* The first point a route turns on, which is where the piece it keeps straight out of the port ends. */
+    const firstTurn = (d: string): [number, number] => turns(d)[0]!;
+
+    test('goes out past its stub before it turns, while it is being drawn beside the node', () => {
+        // The pointer sits to the right of the node and above its bottom, where a rail would run under it.
+        const route = routeDraft(box, { x: 130, y: 80 }, [], { fromSide: 'bottom' });
+        expect(route.from).toEqual(portPoint(box, 'bottom'));
+        expect(route.to).toEqual({ x: 130, y: 80 });
+        expect(firstTurn(route.d)[1]).toBeGreaterThanOrEqual(box.h + NODE_GAP + 24);
+    });
+
+    test('does not turn inside its stub toward a node just below it', () => {
+        const route = routeEdge(box, { x: 300, y: 70, w: 100, h: 100 }, [], { fromSide: 'bottom' });
+        expect(firstTurn(route.d)[1]).toBeGreaterThanOrEqual(box.h + NODE_GAP + 24);
+    });
+
+    test('runs straight to a pointer just out from the port, closer than its stub', () => {
+        const route = routeDraft(box, { x: 50, y: -20 }, [], { fromSide: 'top' });
+        expect(route.d).toBe('M 50 -9 L 50 -20');
+    });
+
+    test('stops at the edge of the gap around its own node while the pointer is over it', () => {
+        const route = routeDraft(box, { x: 104, y: 60 }, [], { fromSide: 'bottom' });
+        expect(route.to).toEqual({ x: 109, y: 60 });
+        expect(firstTurn(route.d)[1]).toBeGreaterThanOrEqual(box.h + NODE_GAP + 24);
+    });
+
+    test('lands on a node under the pointer instead of going round it', () => {
+        const target = at(300, 0);
+        const route = routeDraft(box, { x: 350, y: 50 }, [target], { fromSide: 'right' });
+        expect(turns(route.d)).toEqual([]);
+    });
+});

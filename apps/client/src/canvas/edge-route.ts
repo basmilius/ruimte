@@ -111,24 +111,79 @@ export const portPoint = (rect: Rect, side: Side): Point => push(sidePoint(rect,
  * would draw. Only when something is in the way do the other sides of the two nodes get a turn: a
  * line that has to go around a node reads better leaving over the top than squeezing past its side.
  */
-export const routeEdge = (a: Rect, b: Rect, obstacles: readonly Obstacle[] = [], fixed: FixedSides = {}): EdgeRoute => {
+export const routeEdge = (a: Rect, b: Rect, obstacles: readonly Obstacle[] = [], fixed: FixedSides = {}): EdgeRoute =>
+    route({ rect: a, gap: NODE_GAP }, { rect: b, gap: NODE_GAP }, obstacles, fixed);
+
+/*
+ * A line being drawn: it leaves its node the way a finished one does and ends under the pointer,
+ * which is the one endpoint that keeps no gap. A node under the pointer is where the line is about
+ * to land, so it is no longer in the way.
+ */
+export const routeDraft = (a: Rect, point: Point, obstacles: readonly Obstacle[] = [], fixed: FixedSides = {}): EdgeRoute => {
+    const end = outsideOf(grow(a, NODE_GAP), point);
+    return route(
+        { rect: a, gap: NODE_GAP },
+        { rect: { x: end.x, y: end.y, w: 0, h: 0 }, gap: 0 },
+        obstacles.filter((obstacle) => !contains(obstacle, end)),
+        fixed
+    );
+};
+
+/* The point itself, or where it leaves the box the nearest way: a line has no way to a pointer over its own node. */
+const outsideOf = (box: Bounds, point: Point): Point => {
+    if (point.x <= box.minX || point.x >= box.maxX || point.y <= box.minY || point.y >= box.maxY) {
+        return point;
+    }
+    const exits: Point[] = [
+        { x: box.minX, y: point.y },
+        { x: box.maxX, y: point.y },
+        { x: point.x, y: box.minY },
+        { x: point.x, y: box.maxY }
+    ];
+    return exits.reduce((nearest, exit) =>
+        Math.hypot(exit.x - point.x, exit.y - point.y) < Math.hypot(nearest.x - point.x, nearest.y - point.y) ? exit : nearest
+    );
+};
+
+/* One end of a route: the box it belongs to, and how far out from its border the line stops. */
+interface End {
+    rect: Rect;
+    gap: number;
+}
+
+const endPoint = (end: End, side: Side): Point => push(sidePoint(end.rect, side), side, end.gap);
+
+const route = (a: End, b: End, obstacles: readonly Obstacle[], fixed: FixedSides): EdgeRoute => {
     const blocked = obstacles.map((obstacle) => grow(obstacle, OBSTACLE_MARGIN));
     /* The two nodes the line belongs to are in the way as much as any other: a route that leaves one
        side and comes back over the node it just left is no route. They keep the gap as their margin,
        so a leg may still run right beside the node it starts from. */
-    const closed = [...blocked, grow(a, NODE_GAP), grow(b, NODE_GAP)];
-    const candidates = sideCandidates(a, b, fixed);
+    const own = [grow(a.rect, a.gap), grow(b.rect, b.gap)];
+    const candidates = sideCandidates(a.rect, b.rect, fixed);
+    /* A canvas with no way through the others still gets a line that stays out from under its own
+       two nodes; it tucks in behind the rest, which it is drawn under anyway. */
+    const best = search(a, b, candidates, blocked, own) ?? search(a, b, candidates, [], own);
+    if (best !== null) {
+        return pathThrough(best.points, best.sides);
+    }
+    // Nothing works, not even around the two nodes themselves: the line it would have drawn anyway.
+    return pathThrough(plainRoute(a, b, candidates[0]!, blocked), candidates[0]!);
+};
+
+/* The cheapest route between the two ends that keeps clear of every node, or `null` when there is none. */
+const search = (a: End, b: End, candidates: readonly SidePair[], blocked: readonly Bounds[], own: readonly Bounds[]): Attempt | null => {
+    const closed = [...blocked, ...own];
     const facing = candidates[0]!;
     const direct = plainRoute(a, b, facing, closed);
     // The plain line between the sides the two nodes face, which nothing has to beat when it is clear.
-    if (isClear(direct, closed) && !detours(direct, blocked)) {
-        return pathThrough(direct, facing);
+    if (fits(direct, facing, closed) && !detours(direct, blocked)) {
+        return { points: direct, sides: facing, cost: 0 };
     }
 
     let best: Attempt | null = null;
     for (const sides of candidates) {
         const points = plainRoute(a, b, sides, closed);
-        if (isClear(points, closed)) {
+        if (fits(points, sides, closed)) {
             best = cheaper(best, points, sides, blocked);
         }
     }
@@ -137,15 +192,33 @@ export const routeEdge = (a: Rect, b: Rect, obstacles: readonly Obstacle[] = [],
            than coming back down to squeeze into the side it faces. Only the pairs whose ports lie
            nearest, since each one costs a search of its own. */
         for (const sides of nearestPairs(a, b, candidates)) {
-            const points = routeAround(portPoint(a, sides[0]), sides[0], portPoint(b, sides[1]), sides[1], closed);
+            const points = routeAround(endPoint(a, sides[0]), sides[0], endPoint(b, sides[1]), sides[1], closed);
             if (points !== null) {
                 best = cheaper(best, points, sides, blocked);
             }
         }
     }
-    // Nothing works: the line it would have drawn anyway, which tucks in behind the nodes it crosses.
-    return best === null ? pathThrough(direct, facing) : pathThrough(best.points, best.sides);
+    return best;
 };
+
+/* A plain route that keeps clear of every node, and turns nowhere inside the piece either end keeps straight. */
+const fits = (points: readonly Point[], [fromSide, toSide]: SidePair, closed: readonly Bounds[]): boolean => {
+    if (!isClear(points, closed)) {
+        return false;
+    }
+    const from = points[0]!;
+    const to = points[points.length - 1]!;
+    // Ends on the same axis meet in a channel, whose rail may sit in a gap narrower than two stubs but never behind a port.
+    if (isVertical(fromSide) === isVertical(toSide)) {
+        return outFrom(from, fromSide, points[1]!) > 0 && outFrom(to, toSide, points[points.length - 2]!) > 0;
+    }
+    return outFrom(from, fromSide, points[1]!) >= STUB && outFrom(to, toSide, points[1]!) >= STUB;
+};
+
+/* How far a point lies out from a port, along the way its side faces: negative is behind it. */
+const outFrom = (port: Point, side: Side, point: Point): number => (point.x - port.x) * SIDE_NORMAL[side].x + (point.y - port.y) * SIDE_NORMAL[side].y;
+
+const contains = (rect: Rect, point: Point): boolean => point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
 
 /* Whether a route had to work for it: it turns more than a channel does, or it passes a node close by. */
 const detours = (points: readonly Point[], blocked: readonly Bounds[]): boolean => {
@@ -218,18 +291,18 @@ const sideCandidates = (a: Rect, b: Rect, fixed: FixedSides = {}): readonly Side
 };
 
 /* The pairs whose two ports lie closest, which is as much of the list as the search can pay for. */
-const nearestPairs = (a: Rect, b: Rect, candidates: readonly SidePair[]): readonly SidePair[] =>
+const nearestPairs = (a: End, b: End, candidates: readonly SidePair[]): readonly SidePair[] =>
     [...candidates].sort((one, other) => reach(a, b, one) - reach(a, b, other)).slice(0, SEARCHED_PAIRS);
 
-const reach = (a: Rect, b: Rect, [fromSide, toSide]: SidePair): number => {
-    const from = portPoint(a, fromSide);
-    const to = portPoint(b, toSide);
+const reach = (a: End, b: End, [fromSide, toSide]: SidePair): number => {
+    const from = endPoint(a, fromSide);
+    const to = endPoint(b, toSide);
     return Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
 };
 
-const plainRoute = (a: Rect, b: Rect, [fromSide, toSide]: SidePair, blocked: readonly Bounds[]): Point[] => {
-    const from = portPoint(a, fromSide);
-    const to = portPoint(b, toSide);
+const plainRoute = (a: End, b: End, [fromSide, toSide]: SidePair, blocked: readonly Bounds[]): Point[] => {
+    const from = endPoint(a, fromSide);
+    const to = endPoint(b, toSide);
     return [from, ...between(from, fromSide, to, toSide, blocked), to];
 };
 
@@ -237,6 +310,11 @@ const plainRoute = (a: Rect, b: Rect, [fromSide, toSide]: SidePair, blocked: rea
 const between = (from: Point, fromSide: Side, to: Point, toSide: Side, blocked: readonly Bounds[]): Point[] => {
     const fromStub = push(from, fromSide, STUB);
     const toStub = push(to, toSide, STUB);
+    // Two ports straight across from each other: the line between them is the route, however short.
+    const lined = isVertical(fromSide) ? Math.abs(from.x - to.x) < 1 : Math.abs(from.y - to.y) < 1;
+    if (lined && toSide === OPPOSITE[fromSide] && outFrom(from, fromSide, to) > 0 && !blocked.some((box) => crosses(from, to, box))) {
+        return [];
+    }
     if (isVertical(fromSide) === isVertical(toSide)) {
         return channel(fromStub, toStub, blocked, isVertical(fromSide), railWindow([fromStub, fromSide], [toStub, toSide]));
     }
@@ -267,18 +345,6 @@ interface Window {
     min: number;
     max: number;
 }
-
-/*
- * A line being drawn: it leaves its node the way a finished one does and ends under the pointer,
- * which is the one endpoint that keeps no gap. It only slides its rail, since it is redrawn on every
- * sample of a drag and lands on whatever is under the pointer anyway.
- */
-export const routeDraft = (a: Rect, point: Point, obstacles: readonly Obstacle[] = [], fixed: FixedSides = {}): EdgeRoute => {
-    const [fromSide, toSide] = sideCandidates(a, { x: point.x, y: point.y, w: 0, h: 0 }, fixed)[0]!;
-    const from = portPoint(a, fromSide);
-    const blocked = obstacles.map((obstacle) => grow(obstacle, OBSTACLE_MARGIN));
-    return pathThrough([from, ...between(from, fromSide, point, toSide, blocked), point], [fromSide, toSide]);
-};
 
 /*
  * A connector onto its own node leaves the right side low and comes back in high, so the loop reads
@@ -400,8 +466,14 @@ const routeAround = (from: Point, fromSide: Side, to: Point, toSide: Side, block
     const height = ys.length;
     const vertexAt = (point: Point): number => xs.indexOf(point.x) * height + ys.indexOf(point.y);
     const pointAt = (vertex: number): Point => ({ x: xs[Math.floor(vertex / height)]!, y: ys[vertex % height]! });
+    // A stub that ends inside the other one has no lane to start or finish on.
+    if (!xs.includes(start.x) || !ys.includes(start.y) || !xs.includes(goal.x) || !ys.includes(goal.y)) {
+        return null;
+    }
     const startVertex = vertexAt(start);
     const goalVertex = vertexAt(goal);
+    const fromNormal = SIDE_NORMAL[fromSide];
+    const toNormal = SIDE_NORMAL[toSide];
 
     /* A state is a vertex reached along an axis, so a route that has to turn to carry on pays for it
        here and not once for the whole vertex. */
@@ -434,16 +506,26 @@ const routeAround = (from: Point, fromSide: Side, to: Point, toSide: Side, block
         const point = pointAt(vertex);
         const column = Math.floor(vertex / height);
         const row = vertex % height;
-        for (const [nextColumn, nextRow, axis] of [
-            [column - 1, row, 0],
-            [column + 1, row, 0],
-            [column, row - 1, 1],
-            [column, row + 1, 1]
+        for (const [dx, dy, axis] of [
+            [-1, 0, 0],
+            [1, 0, 0],
+            [0, -1, 1],
+            [0, 1, 1]
         ] as const) {
+            const nextColumn = column + dx;
+            const nextRow = row + dy;
             if (nextColumn < 0 || nextColumn >= xs.length || nextRow < 0 || nextRow >= height) {
                 continue;
             }
             const nextVertex = nextColumn * height + nextRow;
+            /* No turning back along a stub: the leg next to a node's border misses it, so without this
+               a route leaves its port and runs straight back along that border. */
+            if (
+                (vertex === startVertex && dx === -fromNormal.x && dy === -fromNormal.y) ||
+                (nextVertex === goalVertex && dx === toNormal.x && dy === toNormal.y)
+            ) {
+                continue;
+            }
             const next = stateAt(nextVertex, axis);
             if (done[next] === 1) {
                 continue;
