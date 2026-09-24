@@ -30,18 +30,18 @@
         "failed": {
             "toolbar": "De toolbar kon niet worden getekend",
             "pages": "De browserpagina's konden niet worden getekend",
-            "cellChrome": "De knoppen boven de views konden niet worden getekend",
+            "cellChrome": "De knoppen boven de weergaven konden niet worden getekend",
             "machine": "De status van de machine kon niet worden getekend",
-            "projectSwitch": "Het wisselen van project kon niet worden getekend",
+            "projectSwitch": "Het scherm voor het wisselen van project kon niet worden getekend",
             "projectBanner": "De projectbanner kon niet worden getekend",
             "voice": "Het Voice-paneel kon niet worden getekend",
             "dialog": "Dit venster kon niet worden getekend",
             "conflicts": "Het conflictoverzicht kon niet worden getekend",
-            "palette": "Het command palette kon niet worden getekend",
+            "palette": "Het opdrachtenpalet kon niet worden getekend",
             "settings": "De instellingen konden niet worden getekend",
             "toasts": "De meldingen konden niet worden getekend",
-            "machineUpdate": "De update van de machine kon niet worden getekend",
-            "link": "Een machine koppelen kon niet worden getekend",
+            "machineUpdate": "De vraag over de update van de machine kon niet worden getekend",
+            "link": "Het venster om een machine te koppelen kon niet worden getekend",
             "shortcutHints": "De sneltoetshints konden niet worden getekend",
             "deviceTools": "De apparaattools konden niet worden getekend"
         }

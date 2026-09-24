@@ -83,7 +83,7 @@
             "overrun": "Speech recognition could not keep up with the microphone. Try again.",
             "recognition": "Speech recognition stopped with an error. Try again.",
             "unknown": "Dictation stopped unexpectedly. Try again.",
-            "targetChanged": "The text field changed. Please dictate again."
+            "targetChanged": "The text field changed. Dictate again."
         }
     },
     "activity": {

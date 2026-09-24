@@ -32,7 +32,7 @@
             "pages": "The browser pages failed to render",
             "cellChrome": "The controls over the views failed to render",
             "machine": "The machine status failed to render",
-            "projectSwitch": "The project switch failed to render",
+            "projectSwitch": "The project switch screen failed to render",
             "projectBanner": "The project banner failed to render",
             "voice": "The Voice panel failed to render",
             "dialog": "This dialog failed to render",
@@ -40,8 +40,8 @@
             "palette": "The command palette failed to render",
             "settings": "Settings failed to render",
             "toasts": "The notifications failed to render",
-            "machineUpdate": "The machine update failed to render",
-            "link": "Linking a machine failed to render",
+            "machineUpdate": "The machine update prompt failed to render",
+            "link": "The dialog for linking a machine failed to render",
             "shortcutHints": "The shortcut hints failed to render",
             "deviceTools": "The device tools failed to render"
         }

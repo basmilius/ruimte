@@ -5,7 +5,7 @@ import { dictationFailureText } from './failure';
 describe('what a failed dictation says', () => {
     test('a code of its own reads as a sentence', () => {
         expect(dictationFailureText(new DictationError('noBridge'))).toBe('Speech to Text needs the desktop app.');
-        expect(dictationFailureText(new DictationError('targetChanged'))).toBe('The text field changed. Please dictate again.');
+        expect(dictationFailureText(new DictationError('targetChanged'))).toBe('The text field changed. Dictate again.');
     });
 
     test('a microphone that would not open says why, in the words the interface uses', () => {
