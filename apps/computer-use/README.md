@@ -1,6 +1,6 @@
 # Computer use
 
-This macOS-only app lets an agent see and operate another Mac app. It reads the accessibility tree of a window, captures the window, and clicks, types, scrolls and runs menu items in it. It is an app of its own because macOS attaches the Accessibility and Screen Recording grants to a bundle, so they belong to **Ruimte Computer Use** and not to the daemon, a terminal or the agent that asks. It runs in the background (`LSUIElement`), draws a virtual pointer and a status pill while it acts, and stops on Esc.
+This macOS-only app lets an agent see and operate another Mac app. It reads the accessibility tree of a window, captures the window, and clicks, types, scrolls and runs menu items in it. It is an app of its own because macOS attaches the Accessibility and Screen Recording grants to a bundle, so they belong to **Ruimte Computer Use** and not to the daemon, a terminal or the agent that asks. It runs in the background (`LSUIElement`). While it acts it draws the phantom cursor, a session bar at the top of the screen and an item in the menu bar, and the person can pause it, take over or stop it at any time.
 
 The daemon talks to it over a Unix socket. `cu` is a command line for the same socket, for development and debugging only; it is built into the dev app and never ships.
 
@@ -14,7 +14,7 @@ This builds the package with Swift Package Manager and assembles `dist/Ruimte Co
 
 The script signs with the first Apple Development identity in the keychain (`security find-identity -v -p codesigning`), with the hardened runtime and the empty entitlements in `Resources/entitlements.plist`. A stable identity keeps the grants across rebuilds. Without one it signs ad hoc and says so; macOS then asks for the grants again after every build. `--identity <name|hash|->` or `RUIMTE_COMPUTER_USE_IDENTITY` picks another identity, and `-` signs ad hoc.
 
-`swift test` covers the parts that do not need a screen: key combos, menu paths, mapping screenshot pixels to screen points, the overlay config, the home and the local secret.
+`swift test` covers the parts that do not need a screen: key combos, menu paths, mapping screenshot pixels to screen points, the overlay config, the session control, the home and the local secret, and in `PhantomTests` the forms of the cursor against the design's path strings, the state table, the easings and where the label flips.
 
 ### In Ruimte.app
 
@@ -36,7 +36,7 @@ Everything it keeps sits under `$RUIMTE_HOME/computer-use/` (mode `0700`):
 
 ```
 agent.sock        the socket, mode 0600
-overlay.json      the words of the pill, written by the daemon
+overlay.json      the words of the overlay, written by the daemon
 screenshots/      window captures; one older than an hour goes at the next capture
 ```
 
@@ -44,15 +44,35 @@ A connection carries one request. The client writes one JSON object and half-clo
 
 The commands are the ones `cu` sends, listed below. `--state` is `withState`, a menu index or path is `path`, and the key combos of `key` are `combos`.
 
-### The pill
+### The words
 
-`overlay.json` is optional and read again at the start of every sequence of actions, so a language switched in Ruimte reaches a helper that is already running:
+`overlay.json` is optional and read again at the start of every session and every `presence`, so a language switched in Ruimte reaches a helper that is already running. Every key is optional; a missing file or key keeps the English default:
 
 ```json
-{ "title": "Ruimte is using your computer", "hint": "Esc to stop", "accent": "#5A66FF" }
+{
+  "title": "Ruimte is using your computer",
+  "menuTitle": "Ruimte is using this Mac",
+  "pause": "Pause",
+  "resume": "Resume",
+  "takeOver": "Take over",
+  "stop": "Stop session",
+  "accent": "#155dfc",
+  "labels": { "click": "Click", "scroll": "Scroll", "look": "Looking", "think": "Working", "waiting": "Needs you", "permission": "Waiting for permission", "error": "Something went wrong", "done": "Done", "takeover": "You have control", "paused": "Paused", "tap": "Tap" },
+  "steps": { "idle": "Ready", "click": "Clicking {target}", "type": "Typing in {target}", "think": "Deciding what to do next", "...": "..." }
+}
 ```
 
-The pill reads `<title> · <hint>`. A missing file or key keeps the English default; `accent` colors the built-in pointer and the click ring.
+`title` is the session bar, `menuTitle` the first line of the menu. `labels` is the pill beside the cursor per state; a state without one shows no label. `steps` is the second line of the menu per state, with `{target}` for the element or app an action is aimed at. The full lists are in `Sources/ComputerUseCore/OverlayConfig.swift`. `accent` replaces the accent of the cursor.
+
+### Presence
+
+The helper sets the action states itself from the commands it runs. What it cannot see, the daemon tells it:
+
+```json
+{ "command": "presence", "state": "think", "label": "Reading the inbox", "step": "Step 12 · Reading the inbox", "secret": "..." }
+```
+
+`state` is `think`, `waiting`, `permission`, `error`, `done` or `idle`; `label` replaces the words beside the cursor and `step` the step line of the menu, both optional. The reply is `{"session": true, "shown": "<state on screen>", "mode": "running|paused|takenOver"}`. While the person holds the session, the state is kept and shows once they resume. `think`, `waiting`, `permission` and `error` start a session when none runs; `done` and `idle` without one answer `{"session": false}`. After a stop the first four are refused like an action. `done` ends the session once its cursor has faded.
 
 ## Grant the permissions
 
@@ -81,7 +101,10 @@ cu key <app> <combo> [<combo>...]        press keys: cmd+n, return, escape, tab,
 cu set-value <app> --element N <value>   set the AXValue of element N
 cu menu <app>                            list the menu bar with indices
 cu menu <app> <index | "File > Save">    run a menu item
+cu presence <state> [--label T] [--step T]
+                                         think, waiting, permission, error, done or idle
 cu quit                                  stop the agent
+cu render sheet|<state>|bar [<state>]    development: the overlay as PNGs, see below
 ```
 
 Every command takes `--home <dir>`; without it `cu` uses `RUIMTE_HOME`, else the default of the app it sits in. Options for `state`, and for every action together with `--state`:
@@ -147,13 +170,32 @@ Every action result has `target`: role, label, identifier, and the window (and s
 
 `disabled` is what the app reported when it last refreshed the menu, which it usually does only when the menu opens, so the agent tries a disabled item anyway.
 
-### Overlay and stop
+### The phantom cursor
 
-During an action the agent draws its own pointer in a click-through window above everything. The pointer glides to the target before the action. A pill at the top of the screen reads "Ruimte is using your computer · Esc to stop", or what `overlay.json` says. Both stay about three seconds after the last action and then fade. The overlay never appears in a screenshot.
+During a session the helper draws its own cursor in a click-through window above everything; the real pointer only visits a point for a mouse event and goes back. The cursor glides to each target (700 ms with a light overshoot), points, and shows the action: a press and a ring for a click, chevrons for a scroll, the typed text letter by letter for `type`, `key` and `set-value`, and a viewfinder around the window for `state`. A moment after the action it rests again. Between actions the daemon's `presence` shows the agent working, waiting for the person, asking for permission, failing or done. The cursor follows the light or dark appearance of the system, and under Reduce Motion it drops every loop and reads by color and label alone. Nothing of the overlay appears in a screenshot.
 
-Esc while the pill is up cancels what is running. Every later action fails with "stopped by the user" until the next `cu state`. The Esc also reaches the app in front, since a global monitor cannot swallow it.
+The session bar at the top of the screen shows a mini cursor with the state, the title, the time the agent held the Mac, a pause button and a stop button. The menu bar item shows the same mark and time, amber while the agent waits for the person, and a menu with the current step, Pause or Resume, Take over and Stop session. A session ends on a stop, on `done`, or two minutes after the last command unless it waits for the person or the person holds it.
 
-The look lives in `Sources/RuimteComputerUse/OverlayStyle.swift`. `PillStyle` holds the font, colors, border, height, padding, corner radius and margin. For the cursor, put `Resources/cursor.pdf` or `Resources/cursor.png` in this folder (`scripts/build.ts` copies it into the app) and set `CursorStyle.hotspot` to the point of the image that touches the target, in points from its top-left corner. `CursorStyle.size` scales it. Without an asset the built-in arrow is drawn.
+### Pause, take over, stop
+
+- ⌥Space, the pause button or the menu pauses the session and resumes it again. ⌥⎋, the stop button or the menu stops it. Both keys are registered only while a session runs and never reach the app in front.
+- The person's own mouse (a click, or a move of a few points) takes over, and so does Take over in the menu. The cursor turns hollow and gray. Waiting for the person does not count: then the hand on the mouse is expected. The helper's own events carry a marker and are never mistaken for the person.
+- While paused or taken over, every command that reads or operates an app, `state` included, is refused with "the person paused the session; wait until they resume" or "the person took over; wait until they resume", and an action under way is cancelled. Resume from the bar, the menu or ⌥Space.
+- A stop cancels what runs and ends the session. Every later command fails with "stopped by the person" until the next `cu state`.
+
+### The look
+
+The look lives in `Sources/Phantom`, apart from how the helper moves it. `OverlayStyle.swift` holds the tokens per theme, sizes, durations and easings under the design's names; `PhantomForms.swift` the forms (every one four cubic segments, so any two morph into each other); `PhantomLook.swift` the state table: form, color, glyph, effect, motion and label per state. Every animation is a `Track` in `Motion.swift`, so the overlay plays it and a snapshot draws the same value at any moment.
+
+`cu render` draws it offscreen in its own process, without the agent, a grant or a screen:
+
+```sh
+cu render sheet --theme both --scale all --out /tmp/phantom   # every state, the forms, the session bar
+cu render click --at 0.2 --scale 3                            # one state, 0.2 s after it began
+cu render bar think --time 02:31                              # the session bar; --held shows it paused
+```
+
+`--dots`, `--working`, `--direction`, `--label` and `--reduce-motion` pick the variants.
 
 ## Known limitations
 
@@ -163,5 +205,5 @@ The look lives in `Sources/RuimteComputerUse/OverlayStyle.swift`. `PillStyle` ho
 - The screenshot composes the app's windows in their own stacking order. Another window of the same app behind the key window shows where the key window does not cover it.
 - Autocorrect and smart substitutions in the target app still apply to typed text.
 - Some apps report an `AXPress` as done without acting on it. Then click on coordinates instead.
-- The Esc stop relies on a global key monitor, which needs the Accessibility grant. The agent sets it up again once the grant appears; if Esc does nothing, run `cu quit` and try again.
+- Only a click or a move of the mouse takes over; typing does not.
 - `cu doctor` exits 0 even when a grant is missing; read `ready`.

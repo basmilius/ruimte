@@ -42,6 +42,11 @@ extension Agent {
         return capture.screenPoint(pixelX: pixelX, pixelY: pixelY)
     }
 
+    /// What the menu's step line names: the element's label, or the app.
+    func targetName(_ element: AXUIElement, _ app: NSRunningApplication) -> String {
+        (AX.summary(element)["label"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? Targets.name(app)
+    }
+
     func focusedElement(_ app: NSRunningApplication) -> AXUIElement? {
         AX.element(AXUIElementCreateApplication(app.processIdentifier), kAXFocusedUIElementAttribute)
     }
@@ -66,11 +71,12 @@ extension Agent {
         if let index = request.element {
             let element = try snapshot.element(index)
             let point = visibleCenter(of: element, frame: try liveFrame(element, index: index))
-            return try await act(app, at: point) {
+            return try await act(app, at: point, as: ActionLook(state: .click, target: targetName(element, app))) {
                 let axAction = right ? kAXShowMenuAction : (count == 1 ? kAXPressAction : nil)
                 if let axAction, AX.actions(element).contains(axAction) {
                     // Read before acting: a button that closes its sheet takes its window and label with it.
                     let target = AX.summary(element)
+                    self.overlay.press(target: nil)
                     let result = AXUIElementPerformAction(element, axAction as CFString)
                     if result == .success || result == .cannotComplete {
                         var answer: [String: Any] = ["method": axAction, "element": index, "target": target]
@@ -83,14 +89,16 @@ extension Agent {
                 }
                 let hit = try await self.prepareMouse(app, at: point, window: snapshot.window, expecting: element, index: index)
                 let target = AX.summary(hit)
+                self.overlay.press(target: nil)
                 try await SyntheticInput.click(at: point, count: count, button: button)
                 return ["method": "mouse", "button": buttonName, "element": index, "count": count, "target": target]
             }
         }
         let point = try screenPoint(snapshot, request)
-        return try await act(app, at: point) {
+        return try await act(app, at: point, as: ActionLook(state: .click, target: Targets.name(app))) {
             let hit = try await self.prepareMouse(app, at: point, window: snapshot.window, expecting: nil, index: nil)
             let target = AX.summary(hit)
+            self.overlay.press(target: target["label"] as? String)
             try await SyntheticInput.click(at: point, count: count, button: button)
             return ["method": "mouse", "button": buttonName, "count": count, "target": target]
         }
@@ -122,7 +130,8 @@ extension Agent {
             point = try screenPoint(snapshot, request)
         }
         let index = request.element
-        return try await act(app, at: point) {
+        let look = ActionLook(state: .scroll, target: expected.map { targetName($0, app) } ?? Targets.name(app), direction: ScrollDirection(rawValue: direction) ?? .down)
+        return try await act(app, at: point, as: look) {
             let hit = try await self.prepareMouse(app, at: point, window: snapshot.window, expecting: expected, index: index)
             let target = AX.summary(hit)
             let length = pageLength ?? Self.scrollAreaLength(around: hit, vertical: vertical) ?? AX.frame(snapshot.window).map { vertical ? $0.height : $0.width } ?? 400
@@ -158,7 +167,8 @@ extension Agent {
             throw AgentError("type needs text")
         }
         let window = snapshots[app.processIdentifier]?.window
-        return try await act(app, at: focusPoint(app), reportPoint: false) {
+        let look = ActionLook(state: .type, target: focusedElement(app).map { targetName($0, app) } ?? Targets.name(app), text: text)
+        return try await act(app, at: focusPoint(app), as: look, reportPoint: false) {
             try await Targets.activate(app, window: window)
             try self.checkStopped()
             let target = AX.summary(self.focusedElement(app))
@@ -173,7 +183,8 @@ extension Agent {
             throw AgentError("key needs at least one combo")
         }
         let window = snapshots[app.processIdentifier]?.window
-        return try await act(app, at: focusPoint(app), reportPoint: false) {
+        let look = ActionLook(state: .type, target: focusedElement(app).map { targetName($0, app) } ?? Targets.name(app), text: combos.map(\.name).joined(separator: " "))
+        return try await act(app, at: focusPoint(app), as: look, reportPoint: false) {
             try await Targets.activate(app, window: window)
             let target = AX.summary(self.focusedElement(app))
             for combo in combos {
@@ -210,7 +221,7 @@ extension Agent {
         } else {
             newValue = text as CFString
         }
-        return try await act(app, at: visibleCenter(of: element, frame: frame)) {
+        return try await act(app, at: visibleCenter(of: element, frame: frame), as: ActionLook(state: .type, target: targetName(element, app), text: text)) {
             let target = AX.summary(element)
             let result = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, newValue)
             guard result == .success else {
@@ -298,10 +309,11 @@ extension Agent {
         // Apps refresh AXEnabled of menu items only when a menu opens, so a stale "disabled" is not a reason to refuse.
         let reportedDisabled = !(AX.attribute(item, kAXEnabledAttribute) as? Bool ?? true)
         let point = (topItem.flatMap(AX.frame) ?? AX.frame(item)).map { CGPoint(x: $0.midX, y: $0.midY) }
-        return try await act(app, at: point, reportPoint: false) {
+        return try await act(app, at: point, as: ActionLook(state: .click, target: path), reportPoint: false) {
             try await Targets.activate(app, window: nil)
             try self.checkStopped()
             let target = AX.summary(item)
+            self.overlay.press(target: nil)
             let result = AXUIElementPerformAction(item, kAXPressAction as CFString)
             guard result == .success || result == .cannotComplete else {
                 let reason = reportedDisabled ? "; the item is disabled" : ""

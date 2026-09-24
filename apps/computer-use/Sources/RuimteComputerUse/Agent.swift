@@ -1,6 +1,7 @@
 import AppKit
 import ApplicationServices
 import ComputerUseCore
+import Phantom
 
 struct Snapshot {
     let window: AXUIElement
@@ -54,17 +55,21 @@ final class Agent {
     var snapshots: [pid_t: Snapshot] = [:]
     var menuTables: [pid_t: HandleTable] = [:]
     private var chromium: [pid_t: ChromiumMode] = [:]
-    private var stopped = false
     private var queueTail: Task<Void, Never>?
     private var queued: [UUID: Task<Data, Never>] = [:]
-    private var escapeMonitor: Any?
-    private var escapeMonitorTrusted = false
 
     init(home: Home) {
         self.home = home
         overlay = Overlay(configPath: home.overlayConfigPath)
         AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 1.5)
-        installEscapeMonitor()
+        overlay.onInterrupt = { [weak self] _ in
+            guard let self else {
+                return
+            }
+            for task in self.queued.values {
+                task.cancel()
+            }
+        }
     }
 
     func handle(_ data: Data) async -> Data {
@@ -88,6 +93,8 @@ final class Agent {
                 NSApp.terminate(nil)
             }
             return Response.success(["stopped": true])
+        case "presence":
+            return await respond { try self.overlay.presence(request.state, label: request.label, step: request.step) }
         case let command where Self.queuedCommands.contains(command):
             return await enqueue {
                 await self.respond { try await self.perform(request) }
@@ -115,7 +122,7 @@ final class Agent {
         do {
             return Response.success(try await body())
         } catch is CancellationError {
-            return Response.failure(AgentError.stopped.message)
+            return Response.failure((overlay.refusal ?? AgentError.stopped).message)
         } catch let error as AgentError {
             return Response.failure(error.message)
         } catch {
@@ -148,8 +155,9 @@ final class Agent {
             app = try Targets.resolve(request.app)
             switch request.command {
             case "state":
-                stopped = false
-                return try await buildState(app, request)
+                overlay.clearStop()
+                try checkStopped()
+                return try await look(app, request)
             case "click":
                 result = try await click(app, request)
             case "scroll":
@@ -354,63 +362,47 @@ final class Agent {
     }
 
     func checkStopped() throws {
-        if stopped || Task.isCancelled {
-            throw AgentError.stopped
+        if let refusal = overlay.refusal {
+            throw refusal
+        }
+        if Task.isCancelled {
+            throw overlay.refusal ?? AgentError.stopped
         }
     }
 
-    /// Wraps one action in the overlay: the pointer glides to the target first, the pill stays while actions follow.
-    func act(_ app: NSRunningApplication, at point: CGPoint?, reportPoint: Bool = true, _ body: () async throws -> [String: Any]) async throws -> [String: Any] {
+    /// A `state` shows as looking: the viewfinder goes around the window the agent captures.
+    private func look(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
+        let frame = AX.keyWindow(of: AXUIElementCreateApplication(app.processIdentifier)).flatMap(AX.frame)
+        overlay.begin(near: frame.map { CGPoint(x: $0.midX, y: $0.midY) })
+        defer {
+            overlay.finishAction()
+        }
+        overlay.show(ActionLook(state: .look, target: Targets.name(app), frame: frame))
+        return try await buildState(app, request)
+    }
+
+    /// Wraps one action in the overlay: the cursor glides to the target first and shows the action there.
+    func act(_ app: NSRunningApplication, at point: CGPoint?, as action: ActionLook, reportPoint: Bool = true, _ body: () async throws -> [String: Any]) async throws -> [String: Any] {
         try checkStopped()
-        installEscapeMonitor()
         overlay.begin(near: point)
         defer {
-            overlay.linger()
+            overlay.finishAction()
         }
         if let point {
             try await overlay.glide(to: point)
         }
         try checkStopped()
+        var shown = action
+        // A click points first and presses at the moment the event goes out.
+        if action.state == .click {
+            shown.state = .hover
+        }
+        overlay.show(shown)
         var result = try await body()
-        if let point {
-            overlay.pulse()
-            if reportPoint {
-                result["point"] = ["x": Double(point.x.rounded()), "y": Double(point.y.rounded())]
-            }
+        if let point, reportPoint {
+            result["point"] = ["x": Double(point.x.rounded()), "y": Double(point.y.rounded())]
         }
         result["app"] = Targets.descriptor(app)
         return result
-    }
-
-    private func installEscapeMonitor() {
-        let trusted = AXIsProcessTrusted()
-        // Installed before the grant, a monitor never sees keys, so it is replaced once the grant is there.
-        if escapeMonitor != nil && (escapeMonitorTrusted || !trusted) {
-            return
-        }
-        if let escapeMonitor {
-            NSEvent.removeMonitor(escapeMonitor)
-        }
-        escapeMonitorTrusted = trusted
-        escapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard event.keyCode == KeyCombo.escapeKeyCode,
-                  event.cgEvent?.getIntegerValueField(.eventSourceUserData) != SyntheticInput.marker else {
-                return
-            }
-            MainActor.assumeIsolated {
-                self?.userPressedEscape()
-            }
-        }
-    }
-
-    private func userPressedEscape() {
-        guard overlay.isActive else {
-            return
-        }
-        stopped = true
-        for task in queued.values {
-            task.cancel()
-        }
-        overlay.dismiss()
     }
 }

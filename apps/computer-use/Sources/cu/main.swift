@@ -1,5 +1,7 @@
 import ComputerUseCore
+import CoreGraphics
 import Foundation
+import Phantom
 
 let usage = """
 usage: cu <command> [arguments]
@@ -18,7 +20,16 @@ usage: cu <command> [arguments]
   set-value <app> --element N <value>   set the AXValue of element N
   menu <app>                            list the menu bar with indices
   menu <app> <index | "File > Save">    run a menu item
+  presence <state> [--label T] [--step T]
+                                        show what the agent is doing: think, waiting, permission,
+                                        error, done or idle
   quit                                  stop the agent
+
+Development only, drawn in this process without the agent:
+  render sheet|<state>|bar [<state>]    PNGs of the overlay: every state, one state, or the session bar
+      [--theme light|dark|both] [--scale 1|2|3|all] [--at SECONDS] [--label T] [--held]
+      [--dots wave|fade|grow|orbit|gather] [--working dots|arc|sway]
+      [--direction up|down|left|right] [--reduce-motion] [--out DIR]
 
 Every command takes --home <dir>: the RUIMTE_HOME whose local.key it presents and whose
 socket it uses. Without it, RUIMTE_HOME, else ~/.ruimte-dev for the dev app and ~/.ruimte otherwise.
@@ -33,7 +44,7 @@ Output is JSON on stdout. On failure the exit code is 1, stdout holds {"error": 
 and stderr repeats the message. Put `--` before text that starts with `--`.
 """
 
-let flagNames: Set<String> = ["text", "no-prompt", "no-screenshot", "state", "help"]
+let flagNames: Set<String> = ["text", "no-prompt", "no-screenshot", "state", "help", "held", "reduce-motion"]
 
 struct Arguments {
     var positionals: [String] = []
@@ -189,6 +200,13 @@ func makeRequest(_ command: String, _ arguments: Arguments) -> Request {
         if !rest.isEmpty {
             request.path = rest.joined(separator: " ")
         }
+    case "presence":
+        guard let state = arguments.positionals.first else {
+            fail("`cu presence` needs a state: \(PhantomState.presenceStates.map(\.rawValue).joined(separator: ", "))")
+        }
+        request.state = state
+        request.label = arguments.options["label"]
+        request.step = arguments.options["step"]
     default:
         fail("unknown command \"\(command)\"; run `cu help`")
     }
@@ -288,6 +306,87 @@ func send(_ request: Request, home: Home) -> [String: Any] {
     return object
 }
 
+func choice<Value: RawRepresentable>(_ arguments: Arguments, _ name: String, _ type: Value.Type) -> Value? where Value.RawValue == String {
+    guard let raw = arguments.options[name] else {
+        return nil
+    }
+    guard let value = Value(rawValue: raw) else {
+        fail("--\(name) does not take \"\(raw)\"")
+    }
+    return value
+}
+
+/// Draws the overlay into PNGs in this process: nothing needs the agent, a grant or a screen.
+@MainActor
+func render(_ arguments: Arguments) {
+    guard let what = arguments.positionals.first else {
+        fail("`cu render` needs sheet, bar or a state: \(PhantomState.allCases.map(\.rawValue).joined(separator: ", "))")
+    }
+    let barState = arguments.positionals.dropFirst().first
+    if what != "sheet" && what != "bar" && PhantomState(rawValue: what) == nil {
+        fail("unknown state \"\(what)\"")
+    }
+    let scales: [CGFloat]
+    switch arguments.options["scale"] ?? "2" {
+    case "all":
+        scales = [1, 2, 3]
+    case let raw:
+        guard let scale = Double(raw), [1.0, 2.0, 3.0].contains(scale) else {
+            fail("--scale is 1, 2, 3 or all")
+        }
+        scales = [CGFloat(scale)]
+    }
+    let themes: [PhantomTheme]
+    switch arguments.options["theme"] ?? "light" {
+    case "both":
+        themes = PhantomTheme.allCases
+    case let raw:
+        guard let theme = PhantomTheme(rawValue: raw) else {
+            fail("--theme is light, dark or both")
+        }
+        themes = [theme]
+    }
+    let directory = URL(fileURLWithPath: arguments.options["out"] ?? FileManager.default.currentDirectoryPath, isDirectory: true)
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    var files: [String] = []
+    for theme in themes {
+        for scale in scales {
+            var options = PhantomSnapshot.Options()
+            options.theme = theme
+            options.scale = scale
+            options.time = doubleOption(arguments, "at")
+            options.label = arguments.options["label"]
+            options.dots = choice(arguments, "dots", DotMotion.self) ?? .wave
+            options.working = choice(arguments, "working", WorkingStyle.self) ?? .dots
+            options.scrollDirection = choice(arguments, "direction", ScrollDirection.self) ?? .down
+            options.reduceMotion = arguments.flags.contains("reduce-motion")
+            let image: CGImage?
+            var name = "phantom-\(what)"
+            switch what {
+            case "sheet":
+                image = PhantomSnapshot.sheet(options: options)
+            case "bar":
+                let state = barState.flatMap(PhantomState.init(rawValue:)) ?? .idle
+                name += "-\(state.rawValue)"
+                image = PhantomSnapshot.bar(state: state, held: arguments.flags.contains("held"), time: arguments.options["time"] ?? "02:14", options: options)
+            default:
+                image = PhantomSnapshot.state(PhantomState(rawValue: what) ?? .idle, options: options)
+            }
+            guard let image else {
+                fail("could not draw \(what)")
+            }
+            let url = directory.appendingPathComponent("\(name)-\(theme.rawValue)@\(Int(scale))x.png")
+            do {
+                try PhantomSnapshot.writePNG(image, to: url)
+            } catch {
+                fail("could not write \(url.path): \(error)")
+            }
+            files.append(url.path)
+        }
+    }
+    printJSON(["files": files])
+}
+
 func printStateAsText(_ result: [String: Any]) {
     var lines: [String] = []
     if let app = result["app"] as? [String: Any] {
@@ -327,6 +426,11 @@ tokens.removeFirst()
 let arguments = parse(tokens)
 if arguments.flags.contains("help") {
     print(usage)
+    exit(0)
+}
+
+if command == "render" {
+    render(arguments)
     exit(0)
 }
 

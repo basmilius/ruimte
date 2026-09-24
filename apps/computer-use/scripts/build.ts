@@ -110,11 +110,6 @@ if (existsSync(icon)) {
     await copyFile(icon, join(contents, 'Resources', 'AppIcon.icns'));
     run(['plutil', '-replace', 'CFBundleIconFile', '-string', 'AppIcon', plist]);
 }
-for (const asset of ['cursor.pdf', 'cursor.png']) {
-    if (existsSync(join(root, 'Resources', asset))) {
-        await copyFile(join(root, 'Resources', asset), join(contents, 'Resources', asset));
-    }
-}
 
 const { identity, label } = signingIdentity();
 const sign = ['codesign', '--force', '--options', 'runtime', '--timestamp=none', '--entitlements', entitlements, '--sign', identity];

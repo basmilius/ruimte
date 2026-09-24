@@ -4,13 +4,21 @@ import Foundation
 
 @MainActor
 enum SyntheticInput {
-    /// Stamped on every event this agent posts, so its own Escape is not taken for the person pressing Esc.
+    /// Stamped on every event this agent posts, so its own clicks are not taken for the person taking over.
     static let marker: Int64 = 0x5275_696D_7465
+    /// How long after its own input a mouse event may still be the system's echo of it, such as the warp back.
+    private static let echo: TimeInterval = 0.35
+    private static var lastPost: TimeInterval = 0
+
+    static var postedRecently: Bool {
+        ProcessInfo.processInfo.systemUptime - lastPost < echo
+    }
 
     private static func post(_ event: CGEvent?) {
         guard let event else {
             return
         }
+        lastPost = ProcessInfo.processInfo.systemUptime
         event.setIntegerValueField(.eventSourceUserData, value: marker)
         event.post(tap: .cghidEventTap)
     }
@@ -87,6 +95,7 @@ enum SyntheticInput {
     }
 
     private static func restorePointer(_ point: CGPoint) {
+        lastPost = ProcessInfo.processInfo.systemUptime
         CGWarpMouseCursorPosition(point)
         CGAssociateMouseAndMouseCursorPosition(1)
     }

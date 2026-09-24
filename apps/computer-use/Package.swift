@@ -6,8 +6,10 @@ let package = Package(
     platforms: [.macOS("26.0")],
     targets: [
         .target(name: "ComputerUseCore"),
-        .executableTarget(name: "RuimteComputerUse", dependencies: ["ComputerUseCore"]),
-        .executableTarget(name: "cu", dependencies: ["ComputerUseCore"]),
+        .target(name: "Phantom", dependencies: ["ComputerUseCore"]),
+        .executableTarget(name: "RuimteComputerUse", dependencies: ["ComputerUseCore", "Phantom"]),
+        .executableTarget(name: "cu", dependencies: ["ComputerUseCore", "Phantom"]),
         .testTarget(name: "ComputerUseCoreTests", dependencies: ["ComputerUseCore"]),
+        .testTarget(name: "PhantomTests", dependencies: ["Phantom", "ComputerUseCore"]),
     ]
 )

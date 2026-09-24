@@ -25,6 +25,12 @@ public struct Request: Codable, Sendable {
     public var path: String?
     /// Wait for the UI to settle after the action and answer with a fresh state.
     public var withState: Bool?
+    /// The `presence` state: one of `PhantomState.presenceStates`.
+    public var state: String?
+    /// Words beside the cursor for a `presence` state, instead of the default for it.
+    public var label: String?
+    /// The step line of the menu bar item for a `presence` state.
+    public var step: String?
 
     public init(command: String) {
         self.command = command
@@ -43,5 +49,7 @@ public struct AgentError: Error, Sendable {
         self.message = message
     }
 
-    public static let stopped = AgentError("stopped by the user (Esc). Run `cu state <app>` to continue.")
+    public static let stopped = AgentError("stopped by the person (⌥⎋ or the stop button). Run `cu state <app>` to continue.")
+    public static let paused = AgentError("the person paused the session; wait until they resume")
+    public static let takenOver = AgentError("the person took over; wait until they resume")
 }

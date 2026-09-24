@@ -36,16 +36,29 @@ struct CaptureResultTests {
 
 struct OverlayConfigTests {
     @Test func defaultsAreEnglish() {
-        #expect(OverlayConfig().pillText == "Ruimte is using your computer · Esc to stop")
-        #expect(OverlayConfig.load(from: "/nonexistent/overlay.json") == OverlayConfig())
+        let config = OverlayConfig()
+        #expect(config.title == "Ruimte is using your computer")
+        #expect(config.menuTitle == "Ruimte is using this Mac")
+        #expect(config.label(for: .think) == "Working")
+        #expect(config.label(for: .idle) == nil)
+        #expect(OverlayConfig.load(from: "/nonexistent/overlay.json") == config)
     }
 
     @Test func readsTranslatedWordsAndKeepsDefaultsForTheRest() throws {
-        let data = Data(#"{"title": "Ruimte gebruikt je computer", "hint": ""}"#.utf8)
+        let data = Data(#"{"title": "Ruimte gebruikt je computer", "pause": "", "labels": {"think": "Bezig", "done": ""}}"#.utf8)
         let config = try JSONDecoder().decode(OverlayConfig.self, from: data)
         #expect(config.title == "Ruimte gebruikt je computer")
-        #expect(config.hint == "Esc to stop")
+        #expect(config.pause == "Pause")
+        #expect(config.label(for: .think) == "Bezig")
+        #expect(config.label(for: .done) == "Done")
         #expect(config.accentComponents == nil)
+    }
+
+    @Test func fillsTheTargetIntoASteps() {
+        let config = OverlayConfig()
+        #expect(config.step(for: .click, target: "Export") == "Clicking Export")
+        #expect(config.step(for: .click, target: nil) == "Clicking")
+        #expect(config.step(for: .think, target: "Export") == "Deciding what to do next")
     }
 
     @Test func parsesAccent() {
@@ -54,6 +67,59 @@ struct OverlayConfigTests {
         #expect(RGB(hex: "#fff") == nil)
         #expect(RGB(hex: "#GG0000") == nil)
         #expect(RGB(hex: "+12345") == nil)
+    }
+}
+
+struct SessionControlTests {
+    @Test func pausingHoldsTheClockAndRefuses() {
+        var control = SessionControl()
+        control.begin(at: 100)
+        control.show(.click)
+        #expect(control.refusal == nil)
+        control.pause(at: 110)
+        #expect(control.shownState == .paused)
+        #expect(control.refusal?.message == AgentError.paused.message)
+        #expect(control.elapsed(at: 200) == 10)
+        control.resume(at: 200)
+        #expect(control.shownState == .click)
+        #expect(control.elapsed(at: 205) == 15)
+    }
+
+    @Test func takingOverRefusesWithItsOwnMessage() {
+        var control = SessionControl()
+        control.begin(at: 0)
+        #expect(control.acceptsTakeover)
+        control.takeOver(at: 5)
+        #expect(control.shownState == .takeover)
+        #expect(control.refusal?.message == AgentError.takenOver.message)
+        #expect(!control.acceptsTakeover)
+        control.togglePause(at: 6)
+        #expect(control.mode == .running)
+    }
+
+    @Test func waitingOnThePersonIsNotTakingOver() {
+        var control = SessionControl()
+        control.begin(at: 0)
+        control.show(.waiting)
+        #expect(!control.acceptsTakeover)
+        control.show(.think)
+        #expect(control.acceptsTakeover)
+    }
+
+    @Test func stopEndsTheSessionUntilCleared() {
+        var control = SessionControl()
+        control.begin(at: 0)
+        control.stop(at: 3)
+        #expect(!control.isActive)
+        #expect(control.refusal?.message == AgentError.stopped.message)
+        control.clearStop()
+        #expect(control.refusal == nil)
+    }
+
+    @Test func formatsTheClock() {
+        #expect(SessionControl.clock(134) == "02:14")
+        #expect(SessionControl.clock(3725) == "1:02:05")
+        #expect(SessionControl.clock(-4) == "00:00")
     }
 }
 

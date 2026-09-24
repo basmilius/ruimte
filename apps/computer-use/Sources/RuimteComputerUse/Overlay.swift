@@ -1,5 +1,6 @@
 import AppKit
 import ComputerUseCore
+import Phantom
 import QuartzCore
 
 /// AX and CGEvent use global points with the origin at the top-left of the primary screen; AppKit uses the bottom-left.
@@ -21,150 +22,433 @@ enum Geometry {
         let cocoaPoint = cocoa(fromGlobal: point)
         return NSScreen.screens.first { NSMouseInRect(cocoaPoint, $0.frame, false) } ?? NSScreen.main
     }
+
+    /// A global point in the screen's own space: y down from its top-left corner.
+    static func local(_ point: CGPoint, on screen: NSScreen) -> CGPoint {
+        CGPoint(x: point.x - screen.frame.minX, y: point.y - (primaryHeight - screen.frame.maxY))
+    }
 }
 
-/// The visible part of the agent: a virtual pointer and a status pill in a click-through window above everything.
+/// What an action shows at the cursor.
+struct ActionLook {
+    var state: PhantomState
+    /// What the action is aimed at, for the step line of the menu.
+    var target: String?
+    /// The text of `type`, the name on the card of `drag`.
+    var text: String?
+    var direction = ScrollDirection.down
+    /// The global frame `look` puts its viewfinder around.
+    var frame: CGRect?
+}
+
+/// The visible session: the phantom cursor, the session bar, the menu bar item, the hot keys, and noticing the
+/// person's own hand on the mouse. It also holds the person's control over the session, which the agent obeys.
 @MainActor
 final class Overlay {
-    private static let linger: Duration = .seconds(3)
+    /// A session nobody sends a command to for this long ends on its own, unless it waits for the person.
+    private static let idleTimeout: Duration = .seconds(120)
+    /// Points the person's mouse travels before it counts as taking over, so a nudged desk does not.
+    private static let takeoverDistance: CGFloat = 12
 
-    private(set) var isActive = false
-    private var window: NSWindow?
-    private var screen: NSScreen?
+    /// Called when the person pauses, takes over or stops, with what an agent command answers from then on.
+    var onInterrupt: ((AgentError) -> Void)?
+    private(set) var control = SessionControl()
     private let configPath: String
     private var config = OverlayConfig()
-    private var accent = OverlayStyle.cursor.accent
-    private var cursor: CALayer
-    private var pill: PillView
+    private var window: NSWindow?
+    private let stage = CALayer()
+    private let cursor = PhantomCursor()
+    private var screen: NSScreen?
+    /// Screen-local, y down; nil until the cursor first goes somewhere.
     private var cursorPoint: CGPoint?
-    private var generation = 0
-    private var lingerTask: Task<Void, Never>?
+    private var look = ActionLook(state: .idle)
+    private var presenceLabel: String?
+    private var step = ""
+    private var thinkTurn = -1
+    private var movedByPerson: CGFloat = 0
+    private var mouseMonitor: Any?
+    private var tick: Timer?
+    private var holdTask: Task<Void, Never>?
+    private var idleTask: Task<Void, Never>?
+    private var endTask: Task<Void, Never>?
+    private lazy var bar = SessionBar { [weak self] button in
+        self?.barButton(button)
+    }
+    private let menu = StatusMenu()
+    private lazy var hotkeys = Hotkeys { [weak self] action in
+        switch action {
+        case .togglePause:
+            self?.togglePause()
+        case .stop:
+            self?.stop()
+        }
+    }
 
     init(configPath: String) {
         self.configPath = configPath
-        cursor = CursorArtwork.makeLayer(style: OverlayStyle.cursor, accent: accent)
-        pill = PillView(style: OverlayStyle.pill, text: config.pillText)
-        cursor.isHidden = true
+        stage.isGeometryFlipped = true
+        stage.addSublayer(cursor.layer)
+        cursor.layer.isHidden = true
+        menu.onTogglePause = { [weak self] in
+            self?.togglePause()
+        }
+        menu.onTakeOver = { [weak self] in
+            self?.takeOver()
+        }
+        menu.onStop = { [weak self] in
+            self?.stop()
+        }
+        DistributedNotificationCenter.default().addObserver(forName: Notification.Name("AppleInterfaceThemeChangedNotification"), object: nil, queue: .main) { [weak self] _ in
+            // The appearance of the app follows a moment after the notification.
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(150))
+                self?.render(animated: false)
+            }
+        }
     }
 
+    private var now: TimeInterval {
+        ProcessInfo.processInfo.systemUptime
+    }
+
+    private var theme: PhantomTheme {
+        PhantomTheme.current(NSApp.effectiveAppearance)
+    }
+
+    private var reduceMotion: Bool {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    }
+
+    private var accent: CGColor? {
+        config.accentComponents.map { CGColor(srgbRed: $0.red, green: $0.green, blue: $0.blue, alpha: 1) }
+    }
+
+
+    /// Why an agent command may not run now; nil when it may.
+    var refusal: AgentError? {
+        control.refusal
+    }
+
+    /// A new `state` is how an agent picks up again after the person stopped it.
+    func clearStop() {
+        control.clearStop()
+    }
+
+    /// Starts the session, or keeps it going, on the screen of the point.
     func begin(near globalPoint: CGPoint?) {
-        lingerTask?.cancel()
-        generation += 1
-        let anchor = globalPoint ?? SyntheticInput.currentPointer()
+        endTask?.cancel()
+        holdTask?.cancel()
+        movedByPerson = 0
+        config = OverlayConfig.load(from: configPath)
+        let anchor = globalPoint ?? cursorGlobalPoint ?? SyntheticInput.currentPointer()
         guard let target = Geometry.screen(containingGlobal: anchor) else {
             return
         }
-        applyConfig(OverlayConfig.load(from: configPath))
         if window == nil {
             window = makeWindow()
         }
         if screen != target {
             place(on: target)
         }
-        guard let window else {
-            return
+        window?.alphaValue = 1
+        window?.orderFrontRegardless()
+        if !control.isActive {
+            control.begin(at: now)
+            hotkeys.register()
+            installMouseMonitor()
+            tick = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.refreshChrome()
+                }
+            }
         }
-        // Through the animator, so a fade-out still running from the previous sequence is replaced instead of finishing.
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.1
-            window.animator().alphaValue = 1
-        }
-        window.orderFrontRegardless()
-        isActive = true
+        armIdleTimeout()
+        refreshChrome()
     }
 
-    /// Eases the virtual pointer from where it last stood to the target; the real pointer stays put.
+    /// Moves the cursor to the target; the real pointer stays put.
     func glide(to globalPoint: CGPoint) async throws {
-        guard let window, let screen else {
+        guard let screen else {
             return
         }
-        let target = local(globalPoint, on: screen)
+        let target = Geometry.local(globalPoint, on: screen)
+        let pointer = Geometry.local(SyntheticInput.currentPointer(), on: screen)
         let bounds = CGRect(origin: .zero, size: screen.frame.size)
-        let pointer = local(SyntheticInput.currentPointer(), on: screen)
-        let start = cursorPoint ?? (bounds.contains(pointer) ? pointer : CGPoint(x: target.x + 120, y: target.y - 90))
-        let distance = hypot(target.x - start.x, target.y - start.y)
-        let duration = min(0.7, max(0.25, Double(distance) / 1600))
-
-        cursor.contentsScale = window.backingScaleFactor
+        let wasHidden = cursor.layer.isHidden
+        let start = (cursor.layer.presentation()?.position).flatMap { wasHidden ? nil : $0 }
+            ?? cursorPoint
+            ?? (bounds.contains(pointer) ? pointer : CGPoint(x: target.x + 120, y: target.y + 90))
+        cursorPoint = target
+        show(ActionLook(state: .move, target: look.target))
+        let timing = OverlayStyle.Motion.move
+        let motion = LiveMotion(reduceMotion: reduceMotion)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        cursor.isHidden = false
-        cursor.position = target
-        let animation = CABasicAnimation(keyPath: "position")
-        animation.fromValue = NSValue(point: start)
-        animation.toValue = NSValue(point: target)
-        animation.duration = duration
-        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        cursor.add(animation, forKey: "glide")
+        cursor.layer.isHidden = false
+        cursor.layer.position = start
+        motion.run(Track(keyPath: "position", duration: timing.duration) { time in
+            let progress = timing.easing.progress(CGFloat(time / timing.duration))
+            return NSValue(point: CGPoint(x: start.x + (target.x - start.x) * progress, y: start.y + (target.y - start.y) * progress))
+        }, on: cursor.layer)
         CATransaction.commit()
-        cursorPoint = target
-        try await Task.sleep(for: .milliseconds(Int(duration * 1000)))
-    }
-
-    func pulse() {
-        guard let root = window?.contentView?.layer, let cursorPoint else {
-            return
-        }
-        let ring = CAShapeLayer()
-        ring.path = CGPath(ellipseIn: CGRect(x: -16, y: -16, width: 32, height: 32), transform: nil)
-        ring.fillColor = nil
-        ring.strokeColor = accent.cgColor
-        ring.lineWidth = 2
-        ring.position = cursorPoint
-        ring.opacity = 0
-        root.insertSublayer(ring, below: cursor)
-
-        let scale = CABasicAnimation(keyPath: "transform.scale")
-        scale.fromValue = 0.3
-        scale.toValue = 1.4
-        let fade = CABasicAnimation(keyPath: "opacity")
-        fade.fromValue = 0.9
-        fade.toValue = 0
-        let group = CAAnimationGroup()
-        group.animations = [scale, fade]
-        group.duration = 0.4
-        group.timingFunction = CAMediaTimingFunction(name: .easeOut)
-        ring.add(group, forKey: "pulse")
-        Task {
-            try? await Task.sleep(for: .milliseconds(450))
-            ring.removeFromSuperlayer()
+        if motion.moves && hypot(target.x - start.x, target.y - start.y) > 1 {
+            try await Task.sleep(for: .milliseconds(Int(timing.duration * 1000)))
         }
     }
 
-    /// Keeps the overlay up for a moment after the last action so a sequence reads as one, then fades it.
-    func linger() {
-        lingerTask?.cancel()
-        lingerTask = Task { [weak self] in
-            try? await Task.sleep(for: Self.linger)
-            guard !Task.isCancelled else {
+    /// Shows an action at the cursor.
+    func show(_ action: ActionLook) {
+        holdTask?.cancel()
+        look = action
+        presenceLabel = nil
+        control.show(action.state)
+        step = config.step(for: action.state, target: action.target)
+        render(animated: true)
+    }
+
+    /// The moment of a click: the press and the ring, again for each click.
+    func press(target: String?) {
+        if control.agentState == .click {
+            cursor.replayClick(scene: scene(for: .click), motion: LiveMotion(reduceMotion: reduceMotion))
+        } else {
+            show(ActionLook(state: .click, target: target ?? look.target))
+        }
+    }
+
+    /// The action is over: after a moment the cursor rests again.
+    func finishAction() {
+        armIdleTimeout()
+        holdTask?.cancel()
+        var hold = OverlayStyle.Motion.actionHold
+        if look.state == .type, let text = look.text {
+            hold += OverlayStyle.Motion.typedLetter * Double(min(text.count, OverlayStyle.Label.maxTypedCharacters))
+        }
+        holdTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(Int(hold * 1000)))
+            guard !Task.isCancelled, let self, self.control.isActive, self.control.agentState.isAction else {
                 return
             }
-            self?.fadeOut(duration: 0.4)
+            self.control.show(.idle)
+            self.look = ActionLook(state: .idle)
+            self.step = self.config.step(for: .idle, target: nil)
+            self.render(animated: true)
         }
     }
 
-    func dismiss() {
-        lingerTask?.cancel()
-        fadeOut(duration: 0.15)
+    /// What the agent is when it is not acting: set by the daemon, which knows.
+    func presence(_ name: String?, label: String?, step stepText: String?) throws -> [String: Any] {
+        guard let name, let state = PhantomState(rawValue: name), PhantomState.presenceStates.contains(state) else {
+            throw AgentError("presence takes one of \(PhantomState.presenceStates.map(\.rawValue).joined(separator: ", "))")
+        }
+        let settles = state == .done || state == .idle
+        if control.stopped && !settles {
+            throw AgentError.stopped
+        }
+        if !control.isActive {
+            guard !settles else {
+                return ["session": false, "shown": NSNull()]
+            }
+            begin(near: nil)
+        }
+        config = OverlayConfig.load(from: configPath)
+        holdTask?.cancel()
+        armIdleTimeout()
+        if state == .think && control.agentState != .think {
+            thinkTurn += 1
+        }
+        look = ActionLook(state: state)
+        presenceLabel = label.flatMap { $0.isEmpty ? nil : $0 }
+        control.show(state)
+        step = stepText.flatMap { $0.isEmpty ? nil : $0 } ?? config.step(for: state, target: nil)
+        render(animated: true)
+        if state == .done {
+            endTask?.cancel()
+            let linger = OverlayStyle.Motion.doneFadeDelay + OverlayStyle.Motion.doneFade.duration
+            endTask = Task { [weak self] in
+                try? await Task.sleep(for: .milliseconds(Int(linger * 1000)))
+                guard !Task.isCancelled, let self, self.control.agentState == .done else {
+                    return
+                }
+                self.endSession()
+            }
+        }
+        return ["session": true, "shown": control.shownState.rawValue, "mode": control.mode.rawValue]
     }
 
-    private func fadeOut(duration: Double) {
+
+    func togglePause() {
+        guard control.isActive else {
+            return
+        }
+        let wasRunning = control.mode == .running
+        control.togglePause(at: now)
+        if wasRunning {
+            onInterrupt?(.paused)
+        } else {
+            armIdleTimeout()
+        }
+        render(animated: true)
+    }
+
+    func takeOver() {
+        guard control.isActive, control.mode != .takenOver else {
+            return
+        }
+        control.takeOver(at: now)
+        onInterrupt?(.takenOver)
+        render(animated: true)
+    }
+
+    func stop() {
+        guard control.isActive else {
+            return
+        }
+        control.stop(at: now)
+        onInterrupt?(.stopped)
+        endSession()
+    }
+
+    private func barButton(_ button: SessionBarLayer.Button) {
+        switch button {
+        case .pause:
+            togglePause()
+        case .stop:
+            stop()
+        }
+    }
+
+    /// Only the person's own input: the helper's events carry the marker, and the grace after them covers what
+    /// the system derives from them.
+    private func installMouseMonitor() {
+        guard mouseMonitor == nil else {
+            return
+        }
+        let kinds: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDown, .rightMouseDown, .otherMouseDown, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
+        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: kinds) { [weak self] event in
+            let synthetic = event.cgEvent?.getIntegerValueField(.eventSourceUserData) == SyntheticInput.marker
+            let isPress = [.leftMouseDown, .rightMouseDown, .otherMouseDown].contains(event.type)
+            let distance = hypot(event.deltaX, event.deltaY)
+            MainActor.assumeIsolated {
+                self?.personMoved(synthetic: synthetic, press: isPress, distance: distance)
+            }
+        }
+    }
+
+    private func personMoved(synthetic: Bool, press: Bool, distance: CGFloat) {
+        guard !synthetic, !SyntheticInput.postedRecently, control.acceptsTakeover else {
+            return
+        }
+        movedByPerson += distance
+        if press || movedByPerson > Self.takeoverDistance {
+            takeOver()
+        }
+    }
+
+
+    private var cursorGlobalPoint: CGPoint? {
+        guard let cursorPoint, let screen else {
+            return nil
+        }
+        return CGPoint(x: cursorPoint.x + screen.frame.minX, y: cursorPoint.y + (Geometry.primaryHeight - screen.frame.maxY))
+    }
+
+    private func labelText(for state: PhantomState) -> String? {
+        switch state {
+        case .type, .drag:
+            return look.text
+        case .think, .waiting, .permission, .error, .done:
+            return presenceLabel ?? config.label(for: state)
+        default:
+            return config.label(for: state)
+        }
+    }
+
+    private func scene(for state: PhantomState) -> PhantomScene {
+        var scene = PhantomScene()
+        scene.theme = theme
+        scene.accent = accent
+        scene.label = labelText(for: state)
+        scene.scrollDirection = look.direction
+        scene.dots = DotMotion.rotating(max(thinkTurn, 0))
+        if let screen, let point = cursorPoint {
+            scene.room = CGRect(origin: CGPoint(x: -point.x, y: -point.y), size: screen.frame.size)
+            if let frame = look.frame {
+                let origin = Geometry.local(frame.origin, on: screen)
+                scene.viewfinder = CGRect(x: origin.x - point.x, y: origin.y - point.y, width: frame.width, height: frame.height)
+            }
+        }
+        return scene
+    }
+
+    private func render(animated: Bool) {
+        guard control.isActive else {
+            return
+        }
+        let state = control.shownState
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        cursor.show(state, scene: scene(for: state), motion: LiveMotion(reduceMotion: reduceMotion), animated: animated && !cursor.layer.isHidden)
+        CATransaction.commit()
+        refreshChrome()
+    }
+
+    private func refreshChrome() {
+        guard control.isActive, let screen else {
+            return
+        }
+        let shown = control.shownState
+        let time = SessionControl.clock(control.elapsed(at: now))
+        let held = control.mode != .running
+        bar.show(on: screen, SessionBarLayer.Content(title: config.title, state: shown, held: held, time: time, theme: theme), accent: accent, reduceMotion: reduceMotion)
+        let stepLine = held ? config.step(for: shown, target: nil) : step
+        menu.show(StatusMenu.Content(state: shown, mode: control.mode, time: time, step: stepLine), config: config, accent: accent)
+    }
+
+    private func armIdleTimeout() {
+        idleTask?.cancel()
+        idleTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.idleTimeout)
+            guard !Task.isCancelled, let self, self.control.isActive, self.control.mode == .running, !self.control.agentState.waitsOnPerson else {
+                return
+            }
+            self.endSession()
+        }
+    }
+
+    private func endSession() {
+        if control.isActive {
+            control.end(at: now)
+        }
+        for task in [holdTask, idleTask, endTask] {
+            task?.cancel()
+        }
+        tick?.invalidate()
+        tick = nil
+        hotkeys.unregister()
+        if let mouseMonitor {
+            NSEvent.removeMonitor(mouseMonitor)
+        }
+        mouseMonitor = nil
+        bar.hide()
+        menu.hide()
+        look = ActionLook(state: .idle)
+        presenceLabel = nil
+        cursorPoint = nil
         guard let window else {
             return
         }
-        isActive = false
-        let fadingGeneration = generation
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = duration
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.15
             window.animator().alphaValue = 0
-        }
-        Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(Int(duration * 1000) + 50))
-            guard let self, self.generation == fadingGeneration else {
-                return
+        }, completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, !self.control.isActive else {
+                    return
+                }
+                self.window?.orderOut(nil)
+                self.cursor.layer.isHidden = true
             }
-            self.window?.orderOut(nil)
-        }
+        })
     }
 
     private func makeWindow() -> NSWindow {
@@ -180,8 +464,7 @@ final class Overlay {
         let root = NSView()
         root.wantsLayer = true
         window.contentView = root
-        root.addSubview(pill)
-        root.layer?.addSublayer(cursor)
+        root.layer?.addSublayer(stage)
         return window
     }
 
@@ -191,43 +474,13 @@ final class Overlay {
         }
         self.screen = screen
         cursorPoint = nil
-        cursor.isHidden = true
+        cursor.layer.isHidden = true
         window.setFrame(screen.frame, display: false)
         window.contentView?.frame = CGRect(origin: .zero, size: screen.frame.size)
-        positionPill(on: screen)
-    }
-
-    private func positionPill(on screen: NSScreen) {
-        let top = screen.visibleFrame.maxY - screen.frame.minY
-        pill.frame.origin = CGPoint(x: floor((screen.frame.width - pill.frame.width) / 2), y: top - pill.frame.height - OverlayStyle.pill.topMargin)
-    }
-
-    /// Read at the start of every sequence, so a language switched in Ruimte reaches a helper that is already running.
-    private func applyConfig(_ latest: OverlayConfig) {
-        guard latest != config else {
-            return
-        }
-        config = latest
-        accent = latest.accentComponents.map { NSColor(srgbRed: $0.red, green: $0.green, blue: $0.blue, alpha: 1) } ?? OverlayStyle.cursor.accent
-
-        let newPill = PillView(style: OverlayStyle.pill, text: latest.pillText)
-        pill.removeFromSuperview()
-        window?.contentView?.addSubview(newPill)
-        pill = newPill
-
-        let newCursor = CursorArtwork.makeLayer(style: OverlayStyle.cursor, accent: accent)
-        newCursor.isHidden = true
-        cursor.superlayer?.replaceSublayer(cursor, with: newCursor)
-        cursor = newCursor
-        cursorPoint = nil
-
-        if let screen {
-            positionPill(on: screen)
-        }
-    }
-
-    private func local(_ globalPoint: CGPoint, on screen: NSScreen) -> CGPoint {
-        let cocoaPoint = Geometry.cocoa(fromGlobal: globalPoint)
-        return CGPoint(x: cocoaPoint.x - screen.frame.minX, y: cocoaPoint.y - screen.frame.minY)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        stage.frame = CGRect(origin: .zero, size: screen.frame.size)
+        CATransaction.commit()
+        Layers.setScale(stage, screen.backingScaleFactor)
     }
 }
