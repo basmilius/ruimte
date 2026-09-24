@@ -35,7 +35,7 @@
       "orphaned": "{{when}}. The original is no longer in this project."
     },
     "menu": {
-      "fork": "Fork conversation...",
+      "fork": "Fork conversation…",
       "summarize": "Summarize for the original",
       "summarizeFor": "Summarize for {{title}}",
       "showOriginal": "Show original",
@@ -74,10 +74,10 @@
     },
     "reply": {
       "agent": "Agent",
-      "writing": "Writing..."
+      "writing": "Writing…"
     },
     "thinking": {
-      "live": "Thinking...",
+      "live": "Thinking…",
       "thoughtFor": "Thought for {{duration}}"
     },
     "note": {
@@ -280,10 +280,10 @@
     },
     "title": "Sub-agents",
     "backToMain": "Back to the main agent",
-    "loading": "Loading the conversation...",
+    "loading": "Loading the conversation…",
     "loadEarlier": "Load earlier",
-    "loadingEarlier": "Loading...",
-    "working": "Working...",
+    "loadingEarlier": "Loading…",
+    "working": "Working…",
     "unsupported": "This machine cannot open a sub-agent's conversation. Update Ruimte there to read it.",
     "unreadable": "The conversation could not be read.",
     "noAnswer": "The machine did not answer",

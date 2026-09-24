@@ -48,7 +48,7 @@
         "none": "No files conflict.",
         "pick": "Pick a file to resolve."
     },
-    "loading": "Reading the file...",
+    "loading": "Reading the file…",
     "nav": {
         "next": "Next conflict",
         "previous": "Previous conflict"

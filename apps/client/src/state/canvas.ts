@@ -196,7 +196,7 @@ export interface CanvasState extends CameraSlice {
     removeEdge(id: string): void;
     setEdgeLabel(id: string, label: string): void;
     setLinkDraft(draft: LinkDraft | null): void;
-    /* "Connect to..." from a menu: the line follows the pointer until a click lands on a target. */
+    /* "Connect to…" from a menu: the line follows the pointer until a click lands on a target. */
     startLink(from: string): void;
     saveLayout(name: string): void;
     /* A layout as it was, for an undo that brings back what a save replaced or a delete took. */

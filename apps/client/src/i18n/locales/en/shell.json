@@ -58,7 +58,7 @@
         "namePlaceholder": "Name"
     },
     "machineLost": {
-        "retrying": "Trying to reach the machine again...",
+        "retrying": "Trying to reach the machine again…",
         "silent": "This machine is not answering.",
         "openAnother": "Open another project"
     },
@@ -110,7 +110,7 @@
     },
     "browse": {
         "machineSilent": "That machine is not answering",
-        "connecting": "Connecting...",
+        "connecting": "Connecting…",
         "notReachable": "Not reachable: {{reason}}",
         "throughAccount": "Connects through your account",
         "notConnected": "Not connected",
@@ -198,7 +198,7 @@
         "branchLabel": "Branch name",
         "branchPlaceholder": "branch name",
         "noFolder": "Open a project to create a worktree.",
-        "creating": "Creating checkout...",
+        "creating": "Creating checkout…",
         "bind": "Bind",
         "failed": "Could not create the worktree"
     },
@@ -227,7 +227,7 @@
         "subheader": "Subheader"
     },
     "viewMenu": {
-        "filePick": "File...",
+        "filePick": "File…",
         "splitRight": "Split to the right",
         "splitDown": "Split downwards",
         "maximizeCell": "Maximize cell",
@@ -327,7 +327,7 @@
         "title": "Link a machine with a code",
         "description": "For a machine without the app: run `ruimte login` there, and enter the code it prints.",
         "unavailable": "Approving a machine works in the desktop app and at station.ruimte.app.",
-        "signingIn": "Signing in...",
+        "signingIn": "Signing in…",
         "signIn": "Sign in to the account the machine should join.",
         "codeLabel": "Code from the terminal",
         "badCode": "That is not a code. It is eight letters, like BCDF-GHJK, as the terminal printed it.",
@@ -341,9 +341,9 @@
         "approve": "Add to my account"
     },
     "switch": {
-        "connecting": "Connecting to {{machine}}...",
-        "opening": "Opening {{title}}...",
-        "returning": "Going back...",
+        "connecting": "Connecting to {{machine}}…",
+        "opening": "Opening {{title}}…",
+        "returning": "Going back…",
         "viaRelay": "via relay",
         "goBack": "Go back"
     },
@@ -363,13 +363,13 @@
     },
     "removeWorktree": {
         "title": "Remove this worktree?",
-        "counting": "Counting what is in it...",
+        "counting": "Counting what is in it…",
         "alreadyGone": "This worktree is already gone.",
         "unreadable": "Could not read the worktree.",
         "removed": "Removed worktree {{branch}}",
         "failed": "Removing the worktree failed",
         "didNotWork": "That did not work.",
-        "mergeFirst": "Merge first..."
+        "mergeFirst": "Merge first…"
     },
     "fork": {
         "title": "Fork this conversation",
@@ -388,10 +388,10 @@
             "node": "A node beside it",
             "view": "A new view"
         },
-        "forking": "Forking...",
+        "forking": "Forking…",
         "fork": "Fork",
         "failed": "The fork could not be made",
-        "lookingAtFolder": "Looking at the folder...",
+        "lookingAtFolder": "Looking at the folder…",
         "sharedNote": "The files stay as they are now; the agent is told the folder is newer than this turn.",
         "noRepository": "This folder is not in a git repository; the fork works in the same folder.",
         "useWorktree": "Work in a git worktree",
@@ -453,7 +453,7 @@
         "signIn": "Sign in",
         "signInForMachines": "Sign in to open the machines on your account from this browser.",
         "reachMachines": "Reach the machines on your account.",
-        "lookingUpMachines": "Looking up your machines...",
+        "lookingUpMachines": "Looking up your machines…",
         "waitsForMachines": "Everything else waits for your machines",
         "openFolderFirst": "The folder of something you work on",
         "onAMachine": "On a machine",
@@ -527,7 +527,7 @@
             "toggleProcesses": "Toggle processes panel",
             "toggleTheme": "Toggle light and dark",
             "keyboardShortcuts": "Keyboard shortcuts",
-            "remote": "Remote",
+            "remote": "Machines",
             "computerUse": "Computer use settings",
             "find": "Find in chat or file",
             "keepAwakeOff": "Let this computer sleep",
@@ -569,7 +569,7 @@
         "typeToSearch": "Type to search every file in this folder.",
         "noMachineYet": "No machine yet. Sign in to open the machines on your account.",
         "noMachineMatch": "No machine matches",
-        "connectingThroughAccount": "Connecting to {{machine}} through your account...",
+        "connectingThroughAccount": "Connecting to {{machine}} through your account…",
         "notReachable": "{{machine}} is not reachable",
         "createHint": "Press Enter to create this folder and open it as a project",
         "nothingYet": "Nothing yet",

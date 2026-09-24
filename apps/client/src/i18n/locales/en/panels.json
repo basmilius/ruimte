@@ -2,14 +2,14 @@
   "devices": {
     "addToCanvas": "Add to canvas",
     "back": "Back to devices",
-    "finding": "Finding devices...",
+    "finding": "Finding devices…",
     "group": {
-      "androidDevices": "Android Devices",
-      "androidEmulators": "Android Emulators",
-      "iosDevices": "iOS Devices",
-      "iosSimulators": "iOS Simulators",
-      "runningAndroid": "Running Android Emulators",
-      "runningIos": "Running iOS Simulators"
+      "androidDevices": "Android devices",
+      "androidEmulators": "Android emulators",
+      "iosDevices": "iOS devices",
+      "iosSimulators": "iOS simulators",
+      "runningAndroid": "Running Android emulators",
+      "runningIos": "Running iOS simulators"
     },
     "none": "No devices were found on this machine.",
     "openAsView": "Open as view",
@@ -56,7 +56,7 @@
     },
     "readAgain": "Read again",
     "readFailed": "Could not read the diff.",
-    "reading": "Reading the diff of {{path}}...",
+    "reading": "Reading the diff of {{path}}…",
     "readingChanges": "Reading the changes.",
     "readingCommit": "Reading the commit.",
     "scope": {
@@ -111,7 +111,7 @@
     },
     "noFile": "No file to show.",
     "readFailed": "Could not read the file",
-    "reading": "Reading {{name}}...",
+    "reading": "Reading {{name}}…",
     "revealIn": "Reveal in {{app}}",
     "tab": {
       "close": "Close tab",
@@ -198,27 +198,27 @@
     },
     "actionFailed": "{{action}} failed",
     "actions": {
-      "deleteBranch": "Delete branch...",
+      "deleteBranch": "Delete branch…",
       "fetch": "Fetch",
       "fetchAll": "Fetch all",
       "forcePush": "Force push",
-      "merge": "Merge branch...",
+      "merge": "Merge branch…",
       "more": "More git actions",
       "popStash": "Pop stash",
       "pull": "Pull",
       "pullAll": "Pull all",
-      "pullRequest": "Create pull request...",
+      "pullRequest": "Create pull request…",
       "push": "Push",
-      "rebase": "Rebase onto...",
-      "renameBranch": "Rename branch...",
-      "stash": "Stash changes...",
+      "rebase": "Rebase onto…",
+      "renameBranch": "Rename branch…",
+      "stash": "Stash changes…",
       "sync": "Sync",
       "syncAll": "Sync all",
       "syncHint": "pull, then push"
     },
     "branchMenu": {
       "checkout": "Checkout",
-      "create": "Create branch...",
+      "create": "Create branch…",
       "copyName": "Copy branch name",
       "default": "default",
       "detached": "detached",
@@ -236,7 +236,7 @@
     },
     "commit": {
       "commit": "Commit",
-      "commitAndPush": "Commit & Push",
+      "commitAndPush": "Commit and push",
       "commitAndPushHint": "Commit and push",
       "commitStagedHint": "Commit what is staged",
       "in": "Commit in {{repos}}",
@@ -461,7 +461,7 @@
     "legend": {
       "machine": "This machine"
     },
-    "measuring": "Measuring processes...",
+    "measuring": "Measuring processes…",
     "memoryHeadline": "{{used}} of {{total}}",
     "range": {
       "coarse": "Last 24 hours",
@@ -473,7 +473,7 @@
     },
     "scopeLabel": "Which processes",
     "signal": {
-      "forceQuit": "Force quit...",
+      "forceQuit": "Force quit…",
       "interrupt": "Interrupt",
       "terminate": "Terminate"
     },
@@ -548,16 +548,16 @@
       "actions": "Worktree actions",
       "folderMissing": "folder missing",
       "locked": "Locked",
-      "merge": "Merge...",
+      "merge": "Merge…",
       "noNode": "no node",
-      "remove": "Remove...",
+      "remove": "Remove…",
       "title": "Worktrees",
       "view": "View"
     },
     "share": {
       "description": "Each path is linked from the project folder into every worktree made from now on, such as node_modules. Git has to ignore it; a worktree that exists keeps what it has.",
       "field": "Paths, separated by commas",
-      "none": "Share paths with new worktrees...",
+      "none": "Share paths with new worktrees…",
       "saveFailed": "Saving the shared paths failed",
       "some": "Shares {{paths}}",
       "title": "Share paths with new worktrees",

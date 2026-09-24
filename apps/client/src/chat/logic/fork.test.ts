@@ -72,7 +72,7 @@ describe('fork', () => {
             last: false,
             prompt: 'Make the lexer handle unicode identifiers everywhere it reads a name'
         });
-        expect(forkPointLabel(first)).toBe('After turn 1 of 3: "Make the lexer handle unicode identifiers everywhere it r..."');
+        expect(forkPointLabel(first)).toBe('After turn 1 of 3: "Make the lexer handle unicode identifiers everywhere it rea…"');
         expect(forkPointLabel(forkPointOf(items, order, 't3')!)).toBe('After the last turn');
         expect(forkPointOf(items, order, 't2')!.prompt).toBe('Woken by 2 tasks');
         expect(forkPointOf(items, order, 'missing')).toBeNull();

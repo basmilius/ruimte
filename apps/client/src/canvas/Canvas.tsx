@@ -246,7 +246,7 @@ export function Canvas() {
             return;
         }
 
-        // "Connect to..." is waiting for this click; on empty canvas it is a cancel.
+        // "Connect to…" is waiting for this click; on empty canvas it is a cancel.
         if (s.linkDraft?.aiming) {
             e.preventDefault();
             const targetId = nodeId;

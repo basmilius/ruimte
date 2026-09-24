@@ -110,7 +110,7 @@ export const forkPointLabel = (point: ForkPoint, maxPrompt = 60): string => {
     if (point.prompt === null) {
         return where;
     }
-    const prompt = point.prompt.length > maxPrompt ? `${point.prompt.slice(0, maxPrompt - 3)}...` : point.prompt;
+    const prompt = point.prompt.length > maxPrompt ? `${point.prompt.slice(0, maxPrompt - 1)}…` : point.prompt;
     return i18next.t('chat:fork.point.about', { where, prompt });
 };
 

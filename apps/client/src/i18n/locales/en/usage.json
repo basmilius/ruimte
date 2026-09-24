@@ -31,7 +31,7 @@
   "machineNote": {
     "unnamed": "This machine",
     "disconnected": "{{machine}} is not connected.",
-    "connecting": "Connecting to {{machine}}...",
+    "connecting": "Connecting to {{machine}}…",
     "silent": "{{machine}} is not answering.",
     "stale": "These are the numbers of the last scan that reached it."
   },
@@ -89,7 +89,7 @@
   "limits": {
     "title": "Limits",
     "explain": "The mark on a bar shows how much of its window has passed. A bar past its mark is spending faster than the window gives back.",
-    "loading": "Loading limits...",
+    "loading": "Loading limits…",
     "used": "{{percent}}% used",
     "bar": "{{window}}, {{percent}}% used",
     "windowPassed": "{{percent}}% of the window passed",

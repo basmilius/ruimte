@@ -31,7 +31,7 @@
   "machineNote": {
     "unnamed": "Deze machine",
     "disconnected": "{{machine}} is niet verbonden.",
-    "connecting": "Verbinden met {{machine}}...",
+    "connecting": "Verbinden met {{machine}}…",
     "silent": "{{machine}} antwoordt niet.",
     "stale": "Dit zijn de getallen van de laatste scan die hem bereikte."
   },
@@ -89,7 +89,7 @@
   "limits": {
     "title": "Limieten",
     "explain": "Het streepje op een balk laat zien hoeveel van het venster voorbij is. Een balk voorbij dat streepje verbruikt sneller dan het venster teruggeeft.",
-    "loading": "Limieten laden...",
+    "loading": "Limieten laden…",
     "used": "{{percent}}% gebruikt",
     "bar": "{{window}}, {{percent}}% gebruikt",
     "windowPassed": "{{percent}}% van het venster voorbij",

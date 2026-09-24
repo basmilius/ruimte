@@ -11,7 +11,7 @@
     "image": {
       "copy": "Copy image",
       "copyAddress": "Copy image address",
-      "save": "Save image as..."
+      "save": "Save image as…"
     },
     "selection": {
       "search": "Search the web for \"{{text}}\""

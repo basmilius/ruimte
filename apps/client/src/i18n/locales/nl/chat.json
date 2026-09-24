@@ -35,7 +35,7 @@
       "orphaned": "{{when}}. Het origineel zit niet meer in dit project."
     },
     "menu": {
-      "fork": "Gesprek forken...",
+      "fork": "Gesprek forken…",
       "summarize": "Samenvatten voor het origineel",
       "summarizeFor": "Samenvatten voor {{title}}",
       "showOriginal": "Origineel tonen",
@@ -74,10 +74,10 @@
     },
     "reply": {
       "agent": "Agent",
-      "writing": "Schrijft..."
+      "writing": "Schrijft…"
     },
     "thinking": {
-      "live": "Denkt na...",
+      "live": "Denkt na…",
       "thoughtFor": "Nagedacht, {{duration}}"
     },
     "note": {
@@ -280,10 +280,10 @@
     },
     "title": "Sub-agents",
     "backToMain": "Terug naar de main agent",
-    "loading": "Gesprek laden...",
+    "loading": "Gesprek laden…",
     "loadEarlier": "Eerdere laden",
-    "loadingEarlier": "Laden...",
-    "working": "Bezig...",
+    "loadingEarlier": "Laden…",
+    "working": "Bezig…",
     "unsupported": "Deze machine kan het gesprek van een sub-agent niet openen. Werk Ruimte daar bij om het te lezen.",
     "unreadable": "Het gesprek kon niet worden gelezen.",
     "noAnswer": "De machine antwoordde niet",

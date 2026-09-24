@@ -20,6 +20,16 @@ const keysOf = (value: unknown, prefix = ''): string[] => {
     return Object.entries(value).flatMap(([key, child]) => keysOf(child, prefix === '' ? key : `${prefix}.${key}`));
 };
 
+const strings = (value: unknown, prefix = ''): Array<[string, string]> => {
+    if (typeof value === 'string') {
+        return [[prefix, value]];
+    }
+    if (typeof value !== 'object' || value === null) {
+        return [];
+    }
+    return Object.entries(value).flatMap(([key, child]) => strings(child, prefix === '' ? key : `${prefix}.${key}`));
+};
+
 const namespacesOn = (language: string): string[] =>
     readdirSync(localeDir(language))
         .filter((name) => name.endsWith('.json'))
@@ -61,15 +71,6 @@ describe('the translation files', () => {
 
     test('interpolate the same names on both sides', async () => {
         const placeholders = (value: string): string[] => [...value.matchAll(/\{\{(\w+)/g)].map((match) => match[1]!).sort();
-        const strings = (value: unknown, prefix = ''): Array<[string, string]> => {
-            if (typeof value === 'string') {
-                return [[prefix, value]];
-            }
-            if (typeof value !== 'object' || value === null) {
-                return [];
-            }
-            return Object.entries(value).flatMap(([key, child]) => strings(child, prefix === '' ? key : `${prefix}.${key}`));
-        };
         for (const namespace of namespacesOn(FALLBACK_LANGUAGE)) {
             const english = new Map(strings(await read(FALLBACK_LANGUAGE, namespace)));
             for (const language of APP_LANGUAGES) {
@@ -79,6 +80,17 @@ describe('the translation files', () => {
                 for (const [key, value] of strings(await read(language, namespace))) {
                     expect({ key, names: placeholders(value) }).toEqual({ key, names: placeholders(english.get(key) ?? '') });
                 }
+            }
+        }
+    });
+
+    test('write an ellipsis as one character, never as three dots', async () => {
+        for (const language of APP_LANGUAGES) {
+            for (const namespace of namespacesOn(language)) {
+                const dotted = strings(await read(language, namespace))
+                    .filter(([, value]) => value.includes('...'))
+                    .map(([key]) => key);
+                expect({ namespace, language, dotted }).toEqual({ namespace, language, dotted: [] });
             }
         }
     });

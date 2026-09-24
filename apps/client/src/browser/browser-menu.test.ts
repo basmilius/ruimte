@@ -79,7 +79,7 @@ describe('buildBrowserMenu', () => {
         );
         expect(ids(menu)[1]).toEqual(['copy', 'search']);
         expect(find(menu, 'copy')?.disabled).toBe(false);
-        expect(find(menu, 'search')?.label).toBe('Search the web for "the quick brown fox jump..."');
+        expect(find(menu, 'search')?.label).toBe('Search the web for "the quick brown fox jump…"');
         expect(find(menu, 'search')?.action).toEqual({
             kind: 'open-external',
             url: 'https://www.google.com/search?q=the%20%20quick%20brown%20fox%20jumps%20over%20the%20lazy%20dog'

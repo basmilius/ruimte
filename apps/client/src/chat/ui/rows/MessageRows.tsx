@@ -153,7 +153,7 @@ function Writing() {
 
 /*
  * A reply. A word at a time, it follows the text as it arrives. A block at a time, the blocks that
- * closed are drawn and fade in as they land, with "Writing..." where the next one will stand. Whole,
+ * closed are drawn and fade in as they land, with "Writing…" where the next one will stand. Whole,
  * it says it is being written and fades in once it is done. Only a row that saw the reply being
  * written fades anything: an old reply scrolled back into view just stands there.
  */
@@ -209,7 +209,7 @@ export function ThinkingRow({ chatId, item: derived }: { chatId: string; item: C
     const reveal = useRevealedText(item.text, mode === 'words' && item.streaming);
     // A block at a time, the paragraphs of the thought that closed are shown as they land.
     const settled = mode === 'blocks' && item.streaming ? settledBlocksText(item.text) : null;
-    // Whole, the thought stays behind "Thinking..." until it is done and then folds like any other.
+    // Whole, the thought stays behind "Thinking…" until it is done and then folds like any other.
     const shown = open || reveal.active || (settled !== null && settled !== '');
     const text = settled ?? reveal.text;
     useOpenForFind(item.id, 'text', setOpen);

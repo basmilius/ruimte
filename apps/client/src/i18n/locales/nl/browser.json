@@ -11,7 +11,7 @@
     "image": {
       "copy": "Afbeelding kopiëren",
       "copyAddress": "Afbeeldingsadres kopiëren",
-      "save": "Afbeelding opslaan als..."
+      "save": "Afbeelding opslaan als…"
     },
     "selection": {
       "search": "Zoek op het web naar \"{{text}}\""

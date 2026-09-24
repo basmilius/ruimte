@@ -58,7 +58,7 @@
         "namePlaceholder": "Naam"
     },
     "machineLost": {
-        "retrying": "Bezig de machine opnieuw te bereiken...",
+        "retrying": "Bezig de machine opnieuw te bereiken…",
         "silent": "Deze machine antwoordt niet.",
         "openAnother": "Ander project openen"
     },
@@ -110,7 +110,7 @@
     },
     "browse": {
         "machineSilent": "Die machine antwoordt niet",
-        "connecting": "Verbinden...",
+        "connecting": "Verbinden…",
         "notReachable": "Niet bereikbaar: {{reason}}",
         "throughAccount": "Verbindt via je account",
         "notConnected": "Niet verbonden",
@@ -198,7 +198,7 @@
         "branchLabel": "Naam van de branch",
         "branchPlaceholder": "naam van de branch",
         "noFolder": "Open een project om een worktree aan te maken.",
-        "creating": "Checkout maken...",
+        "creating": "Checkout maken…",
         "bind": "Koppelen",
         "failed": "Kon de worktree niet maken"
     },
@@ -227,7 +227,7 @@
         "subheader": "Kopje"
     },
     "viewMenu": {
-        "filePick": "Bestand...",
+        "filePick": "Bestand…",
         "splitRight": "Rechts splitsen",
         "splitDown": "Naar beneden splitsen",
         "maximizeCell": "Cel maximaliseren",
@@ -327,7 +327,7 @@
         "title": "Een machine koppelen met een code",
         "description": "Voor een machine zonder de app: draai daar `ruimte login` en vul de code in die hij toont.",
         "unavailable": "Een machine goedkeuren kan in de desktop-app en op station.ruimte.app.",
-        "signingIn": "Inloggen...",
+        "signingIn": "Inloggen…",
         "signIn": "Log in op het account waar de machine bij hoort.",
         "codeLabel": "Code uit de terminal",
         "badCode": "Dat is geen code. Het zijn acht letters, zoals BCDF-GHJK, precies zoals de terminal hem toonde.",
@@ -341,9 +341,9 @@
         "approve": "Aan mijn account toevoegen"
     },
     "switch": {
-        "connecting": "Verbinden met {{machine}}...",
-        "opening": "{{title}} openen...",
-        "returning": "Terug...",
+        "connecting": "Verbinden met {{machine}}…",
+        "opening": "{{title}} openen…",
+        "returning": "Terug…",
         "viaRelay": "via relay",
         "goBack": "Terug"
     },
@@ -363,13 +363,13 @@
     },
     "removeWorktree": {
         "title": "Deze worktree verwijderen?",
-        "counting": "Tellen wat erin zit...",
+        "counting": "Tellen wat erin zit…",
         "alreadyGone": "Deze worktree bestaat al niet meer.",
         "unreadable": "Kon de worktree niet lezen.",
         "removed": "Worktree {{branch}} verwijderd",
         "failed": "De worktree verwijderen is mislukt",
         "didNotWork": "Dat werkte niet.",
-        "mergeFirst": "Eerst mergen..."
+        "mergeFirst": "Eerst mergen…"
     },
     "fork": {
         "title": "Dit gesprek forken",
@@ -388,10 +388,10 @@
             "node": "Een node ernaast",
             "view": "Een nieuwe weergave"
         },
-        "forking": "Forken...",
+        "forking": "Forken…",
         "fork": "Fork",
         "failed": "De fork kon niet worden gemaakt",
-        "lookingAtFolder": "De map bekijken...",
+        "lookingAtFolder": "De map bekijken…",
         "sharedNote": "De bestanden blijven zoals ze nu zijn; de agent krijgt te horen dat de map nieuwer is dan deze turn.",
         "noRepository": "Deze map zit niet in een git-repository; de fork werkt in dezelfde map.",
         "useWorktree": "In een git-worktree werken",
@@ -453,7 +453,7 @@
         "signIn": "Inloggen",
         "signInForMachines": "Log in om de machines op je account vanuit deze browser te openen.",
         "reachMachines": "Bereik de machines op je account.",
-        "lookingUpMachines": "Je machines opzoeken...",
+        "lookingUpMachines": "Je machines opzoeken…",
         "waitsForMachines": "De rest wacht op je machines",
         "openFolderFirst": "De map van iets waar je aan werkt",
         "onAMachine": "Op een machine",
@@ -527,7 +527,7 @@
             "toggleProcesses": "Processen-paneel aan of uit",
             "toggleTheme": "Licht of donker",
             "keyboardShortcuts": "Sneltoetsen",
-            "remote": "Remote",
+            "remote": "Machines",
             "computerUse": "Instellingen voor computer use",
             "find": "Zoeken in chat of bestand",
             "keepAwakeOff": "Deze computer laten slapen",
@@ -569,7 +569,7 @@
         "typeToSearch": "Typ om elk bestand in deze map te doorzoeken.",
         "noMachineYet": "Nog geen machine. Log in om de machines op je account te openen.",
         "noMachineMatch": "Geen machine komt overeen",
-        "connectingThroughAccount": "Verbinden met {{machine}} via je account...",
+        "connectingThroughAccount": "Verbinden met {{machine}} via je account…",
         "notReachable": "{{machine}} is niet bereikbaar",
         "createHint": "Druk op Enter om deze map te maken en als project te openen",
         "nothingYet": "Nog niets",

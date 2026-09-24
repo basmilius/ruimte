@@ -597,7 +597,7 @@ const SEARCH_URL = 'https://www.google.com/search?q=';
 
 const menuLabel = (text: string): string => {
     const line = text.trim().replace(/\s+/g, ' ');
-    return line.length > 24 ? `${line.slice(0, 24)}...` : line;
+    return line.length > 24 ? `${line.slice(0, 24)}…` : line;
 };
 
 /*
@@ -1028,7 +1028,7 @@ const describeUpdateError = (message: string): string => {
     if (first.startsWith('404')) {
         return 'No release feed found. There is no published release yet, or the repository is private.';
     }
-    return first.length > 200 ? `${first.slice(0, 200)}...` : first;
+    return first.length > 200 ? `${first.slice(0, 200)}…` : first;
 };
 
 /*

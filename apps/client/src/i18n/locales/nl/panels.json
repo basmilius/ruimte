@@ -2,14 +2,14 @@
   "devices": {
     "addToCanvas": "Toevoegen aan canvas",
     "back": "Terug naar apparaten",
-    "finding": "Apparaten zoeken...",
+    "finding": "Apparaten zoeken…",
     "group": {
       "androidDevices": "Android-apparaten",
-      "androidEmulators": "Android Emulators",
+      "androidEmulators": "Android-emulators",
       "iosDevices": "iOS-apparaten",
-      "iosSimulators": "iOS Simulators",
-      "runningAndroid": "Actieve Android Emulators",
-      "runningIos": "Actieve iOS Simulators"
+      "iosSimulators": "iOS-simulators",
+      "runningAndroid": "Actieve Android-emulators",
+      "runningIos": "Actieve iOS-simulators"
     },
     "none": "Er zijn geen apparaten gevonden op deze machine.",
     "openAsView": "Openen als weergave",
@@ -56,7 +56,7 @@
     },
     "readAgain": "Opnieuw lezen",
     "readFailed": "Kon de diff niet lezen.",
-    "reading": "De diff van {{path}} lezen...",
+    "reading": "De diff van {{path}} lezen…",
     "readingChanges": "De wijzigingen lezen.",
     "readingCommit": "De commit lezen.",
     "scope": {
@@ -111,7 +111,7 @@
     },
     "noFile": "Geen bestand om te tonen.",
     "readFailed": "Kon het bestand niet lezen",
-    "reading": "{{name}} lezen...",
+    "reading": "{{name}} lezen…",
     "revealIn": "Tonen in {{app}}",
     "tab": {
       "close": "Tab sluiten",
@@ -198,27 +198,27 @@
     },
     "actionFailed": "{{action}} mislukt",
     "actions": {
-      "deleteBranch": "Branch verwijderen...",
+      "deleteBranch": "Branch verwijderen…",
       "fetch": "Fetch",
       "fetchAll": "Fetch alles",
       "forcePush": "Force push",
-      "merge": "Branch mergen...",
+      "merge": "Branch mergen…",
       "more": "Meer git-acties",
       "popStash": "Stash poppen",
       "pull": "Pull",
       "pullAll": "Pull alles",
-      "pullRequest": "Pull request aanmaken...",
+      "pullRequest": "Pull request aanmaken…",
       "push": "Push",
-      "rebase": "Rebasen op...",
-      "renameBranch": "Branch hernoemen...",
-      "stash": "Wijzigingen stashen...",
+      "rebase": "Rebasen op…",
+      "renameBranch": "Branch hernoemen…",
+      "stash": "Wijzigingen stashen…",
       "sync": "Sync",
       "syncAll": "Sync alles",
       "syncHint": "eerst pull, dan push"
     },
     "branchMenu": {
       "checkout": "Checkout",
-      "create": "Branch aanmaken...",
+      "create": "Branch aanmaken…",
       "copyName": "Branchnaam kopiëren",
       "default": "standaard",
       "detached": "detached",
@@ -236,7 +236,7 @@
     },
     "commit": {
       "commit": "Commit",
-      "commitAndPush": "Commit & Push",
+      "commitAndPush": "Committen en pushen",
       "commitAndPushHint": "Committen en pushen",
       "commitStagedHint": "Committen wat gestaged is",
       "in": "Commit in {{repos}}",
@@ -461,7 +461,7 @@
     "legend": {
       "machine": "Deze machine"
     },
-    "measuring": "Processen meten...",
+    "measuring": "Processen meten…",
     "memoryHeadline": "{{used}} van {{total}}",
     "range": {
       "coarse": "Laatste 24 uur",
@@ -473,7 +473,7 @@
     },
     "scopeLabel": "Welke processen",
     "signal": {
-      "forceQuit": "Geforceerd stoppen...",
+      "forceQuit": "Geforceerd stoppen…",
       "interrupt": "Onderbreken",
       "terminate": "Beëindigen"
     },
@@ -548,16 +548,16 @@
       "actions": "Worktree-acties",
       "folderMissing": "map ontbreekt",
       "locked": "Vergrendeld",
-      "merge": "Mergen...",
+      "merge": "Mergen…",
       "noNode": "geen node",
-      "remove": "Verwijderen...",
+      "remove": "Verwijderen…",
       "title": "Worktrees",
       "view": "Bekijken"
     },
     "share": {
       "description": "Elk pad wordt vanuit de projectmap in elke worktree gelinkt die vanaf nu gemaakt wordt, zoals node_modules. Git moet het negeren; een worktree die er al staat houdt wat hij heeft.",
       "field": "Paden, gescheiden door komma's",
-      "none": "Paden delen met nieuwe worktrees...",
+      "none": "Paden delen met nieuwe worktrees…",
       "saveFailed": "Gedeelde paden opslaan mislukt",
       "some": "Deelt {{paths}}",
       "title": "Paden delen met nieuwe worktrees",

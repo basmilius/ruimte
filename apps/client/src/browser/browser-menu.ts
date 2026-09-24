@@ -38,7 +38,7 @@ export interface BrowserMenuItem {
 
 const asLabel = (text: string): string => {
     const line = text.trim().replace(/\s+/g, ' ');
-    return line.length > 24 ? `${line.slice(0, 24)}...` : line;
+    return line.length > 24 ? `${line.slice(0, 24)}…` : line;
 };
 
 // http(s) only, matching the window open handler's rule. A link the page carries itself (file:,

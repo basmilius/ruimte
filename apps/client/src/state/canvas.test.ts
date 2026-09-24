@@ -152,7 +152,7 @@ describe('edges', () => {
         expect(store.getState().exportContent().edges).toEqual([{ ...edge, label: 'reads' }]);
     });
 
-    test('"Connect to..." aims a draft from the node until a target is added', () => {
+    test('"Connect to…" aims a draft from the node until a target is added', () => {
         seed();
         canvas().startLink('page');
         expect(canvas().linkDraft).toMatchObject({ from: 'page', aiming: true, to: { x: 500, y: 50 } });

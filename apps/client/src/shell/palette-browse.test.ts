@@ -168,7 +168,7 @@ describe('machineLink', () => {
     });
 
     test('a link under way or one that failed says so, with the reason the attempt gave', () => {
-        expect(linkHint(machineLink(byId('studio'), { status: 'connecting', attempts: 0, retryAt: null }, null))).toBe('Connecting...');
+        expect(linkHint(machineLink(byId('studio'), { status: 'connecting', attempts: 0, retryAt: null }, null))).toBe('Connecting…');
         const failed = machineLink(byId('studio'), { status: 'closed', attempts: 2, retryAt: 1, failure: 'ICE failed' }, null);
         expect(linkHint(failed)).toBe('Not reachable: ICE failed');
         expect(linkDot(failed)).toBe('bg-status-error');
