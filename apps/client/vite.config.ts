@@ -37,6 +37,10 @@ export default defineConfig(({ mode }) => ({
         }
     },
     server: {
+        // Vite compiles a module on its first request; this does all of them while `bun dev` starts, so the first open is not the slow one.
+        warmup: {
+            clientFiles: ['./src/**/*.{ts,tsx}', '!./src/**/*.test.{ts,tsx}']
+        },
         proxy: {
             // Keep the client same-origin in development; `RUIMTE_DAEMON` can target another daemon.
             '/ws': {
