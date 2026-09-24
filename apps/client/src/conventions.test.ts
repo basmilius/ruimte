@@ -49,8 +49,7 @@ const TITLE_AS_NAME = new Set(['iframe']);
  * draws one inside its own module passes without being listed here.
  */
 const UNGUARDED: Record<string, string> = {
-    WindowContent: 'the window itself, under the last resort: the start screen has no page to lose, and a workspace guards each of its own surfaces',
-    WebviewParking: 'the layer the pages are parked in; when it fails, it loses those pages with or without a boundary around it'
+    WindowContent: 'the window itself, under the last resort: the start screen has no page to lose, and a workspace guards each of its own surfaces'
 };
 
 const nameOf = (name: JSXElementName): string => {

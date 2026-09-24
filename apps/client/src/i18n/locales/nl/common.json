@@ -29,6 +29,7 @@
         "sidebarFailed": "De sidebar kon niet worden getekend",
         "failed": {
             "toolbar": "De toolbar kon niet worden getekend",
+            "pages": "De browserpagina's konden niet worden getekend",
             "cellChrome": "De knoppen boven de views konden niet worden getekend",
             "machine": "De status van de machine kon niet worden getekend",
             "projectSwitch": "Het wisselen van project kon niet worden getekend",

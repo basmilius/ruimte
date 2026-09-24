@@ -29,6 +29,7 @@
         "sidebarFailed": "The sidebar failed to render",
         "failed": {
             "toolbar": "The toolbar failed to render",
+            "pages": "The browser pages failed to render",
             "cellChrome": "The controls over the views failed to render",
             "machine": "The machine status failed to render",
             "projectSwitch": "The project switch failed to render",

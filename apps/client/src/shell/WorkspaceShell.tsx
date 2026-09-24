@@ -63,7 +63,9 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                             </ErrorBoundary>
                             <div className="relative min-h-0 grow">
                                 <ViewHost />
-                                <WebviewParking />
+                                <ErrorBoundary label={failed('pages')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                                    <WebviewParking />
+                                </ErrorBoundary>
                                 {/* The chrome of a cell, over the pages a cell cannot draw over itself. */}
                                 <ErrorBoundary label={failed('cellChrome')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                                     <CellOverlayLayer />
