@@ -11,10 +11,10 @@ import type { ProcessRow } from './terminal-apps.ts';
 /* Timers that only move when a test says so, with the clock the approvals read beside them. */
 export class ManualTimers implements Timers {
     now = 1_000;
-    private entries: { at: number; run: () => void }[] = [];
+    private entries: { at: number; ms: number; run: () => void }[] = [];
 
     set(run: () => void, ms: number): () => void {
-        const entry = { at: this.now + ms, run };
+        const entry = { at: this.now + ms, ms, run };
         this.entries.push(entry);
         return () => {
             this.entries = this.entries.filter((candidate) => candidate !== entry);
@@ -23,6 +23,11 @@ export class ManualTimers implements Timers {
 
     get waiting(): number {
         return this.entries.length;
+    }
+
+    /* The timers set for this long, apart from the others that run meanwhile. */
+    waitingFor(ms: number): number {
+        return this.entries.filter((entry) => entry.ms === ms).length;
     }
 
     advance(ms: number): void {

@@ -35,6 +35,9 @@ export class ComputerRefusal extends CodedError {}
 /* How often a call held by the person's pause asks the helper whether they resumed. */
 const HOLD_POLL_MS = 500;
 
+/* How often the machine asks how a running session stands, so a pause, a stop or the helper's own end shows without a call. */
+export const SESSION_POLL_MS = 2_000;
+
 type HeldCode = 'paused' | 'taken-over';
 
 /* The person holds the Mac. Nothing the agent does changes that, so the words steer it away from trying. */
@@ -198,6 +201,7 @@ export class ComputerUse {
     private readonly stopped = new Set<string>();
     // The helper forgetting the last stop; a call waits for it, or the helper would refuse it for that stop too.
     private clearing: Promise<void> = Promise.resolve();
+    private cancelPoll: (() => void) | null = null;
     private current: ComputerUseStatus;
 
     constructor(options: ComputerUseOptions) {
@@ -381,6 +385,8 @@ export class ComputerUse {
 
     /* The daemon stops, and the helper with it: nobody is left to ask it anything. */
     async stop(): Promise<void> {
+        this.cancelPoll?.();
+        this.cancelPoll = null;
         await this.helper.quit();
     }
 
@@ -665,7 +671,26 @@ export class ComputerUse {
             this.current = next;
             this.sinks.emit({ event: 'computer.status', payload: next });
         }
+        this.pollWhileSession();
         return this.current;
+    }
+
+    private pollWhileSession(): void {
+        if (!this.current.session) {
+            this.cancelPoll?.();
+            this.cancelPoll = null;
+            return;
+        }
+        if (this.cancelPoll !== null) {
+            return;
+        }
+        this.cancelPoll = this.timers.set(() => {
+            this.cancelPoll = null;
+            void this.helper
+                .ask({ command: 'doctor', prompt: false }, DoctorResultSchema)
+                .catch(() => null)
+                .then((doctor) => this.heard(doctor?.session ?? null));
+        }, SESSION_POLL_MS);
     }
 
     private async writeOverlay(): Promise<void> {

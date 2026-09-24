@@ -6,8 +6,11 @@ import { join } from 'node:path';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { APPROVAL_WAIT_MS, CARD_MS } from './approvals.ts';
 import { computerSetup, SHELL_APP, TEXT_EDIT, until, type ComputerSetup } from './computer-test-helpers.ts';
-import { agentWords, findInstalledApp, resolveApp } from './computer-use.ts';
+import { agentWords, findInstalledApp, resolveApp, SESSION_POLL_MS } from './computer-use.ts';
 import { overlayWords } from './overlay-words.ts';
+
+// How long a call held by the person waits before it asks the helper again.
+const HOLD_MS = 500;
 
 const codeOf = async (work: Promise<unknown>): Promise<string> => {
     try {
@@ -525,10 +528,10 @@ describe('the person holding the Mac', () => {
         await letIn(setup);
         helper.hold('paused');
         const call = computer.operate('chat-1', 'click', 'TextEdit', { element: 1 });
-        await until(() => timers.waiting > 0);
+        await until(() => timers.waitingFor(HOLD_MS) > 0);
         expect(computer.status().session).toEqual({ mode: 'paused', nodeId: 'chat-1' });
         timers.advance(500);
-        await until(() => timers.waiting > 0);
+        await until(() => timers.waitingFor(HOLD_MS) > 0);
         helper.hold('running');
         timers.advance(500);
         await call;
@@ -547,7 +550,7 @@ describe('the person holding the Mac', () => {
             helper.hold(mode);
             const call = codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 1 }));
             for (let waited = 0; waited < APPROVAL_WAIT_MS; waited += 500) {
-                await until(() => timers.waiting > 0);
+                await until(() => timers.waitingFor(HOLD_MS) > 0);
                 timers.advance(500);
             }
             expect(await call).toBe(code);
@@ -565,7 +568,7 @@ describe('the person holding the Mac', () => {
             helper.hold('takenOver');
         };
         const call = computer.operate('chat-1', 'type', 'TextEdit', { text: 'hello' }).catch((error: unknown) => error as { code: string; message: string });
-        await until(() => timers.waiting > 0);
+        await until(() => timers.waitingFor(HOLD_MS) > 0);
         helper.hold('running');
         timers.advance(500);
         const refusal = await call;
@@ -646,6 +649,39 @@ describe('the status of the session', () => {
         const sessions = events.flatMap((event) => (event.event === 'computer.status' ? [event.payload.session] : []));
         expect(sessions).toContainEqual({ mode: 'paused', nodeId: 'chat-1' });
         expect(sessions.at(-1)).toBeNull();
+    });
+});
+
+describe('watching a session that runs', () => {
+    test('shows a pause, a stop or the helper ending it by itself without a call, and stops asking once none runs', async () => {
+        const setup = await computerSetup();
+        const { computer, helper, timers } = setup;
+        await letIn(setup);
+        expect(timers.waitingFor(SESSION_POLL_MS)).toBe(1);
+        helper.hold('paused');
+        timers.advance(SESSION_POLL_MS);
+        await until(() => computer.status().session?.mode === 'paused');
+        helper.hold('running');
+        timers.advance(SESSION_POLL_MS);
+        await until(() => computer.status().session?.mode === 'running');
+        // The helper's own end after two quiet minutes.
+        helper.session = { active: false, mode: 'running', stopped: false };
+        timers.advance(SESSION_POLL_MS);
+        await until(() => computer.status().session === null);
+        expect(timers.waitingFor(SESSION_POLL_MS)).toBe(0);
+        const asked = helper.requests.length;
+        timers.advance(SESSION_POLL_MS * 3);
+        expect(helper.requests).toHaveLength(asked);
+    });
+
+    test('hears a stop from the bar, which the agent then hears on its next call', async () => {
+        const setup = await computerSetup();
+        const { computer, helper, timers } = setup;
+        await letIn(setup);
+        helper.stop();
+        timers.advance(SESSION_POLL_MS);
+        await until(() => computer.status().session === null && !helper.session.stopped);
+        expect(await codeOf(computer.operate('chat-1', 'state', 'TextEdit', {}))).toBe('stopped');
     });
 });
 
