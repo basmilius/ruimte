@@ -565,7 +565,7 @@ export class ComputerUse {
             return;
         }
         // The helper ends a session once `done` has faded, so it runs no more as far as anyone should show.
-        this.heard({ active: show.state !== 'done', mode: reply.mode, stopped: false });
+        this.heard({ active: show.state !== 'done' && show.state !== 'end', mode: reply.mode, stopped: false });
     }
 
     /* On, present and able to read another app; anything short of that is refused before an app is named. */

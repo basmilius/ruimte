@@ -237,10 +237,17 @@ final class Overlay {
 
     /// What the agent is when it is not acting: set by the daemon, which knows.
     func presence(_ name: String?, label: String?, step stepText: String?) throws -> [String: Any] {
-        guard let name, let state = PhantomState(rawValue: name), PhantomState.presenceStates.contains(state) else {
-            throw AgentError("presence takes one of \(PhantomState.presenceStates.map(\.rawValue).joined(separator: ", "))")
+        guard let request = PresenceRequest(name) else {
+            throw AgentError("presence takes one of \(PresenceRequest.names.joined(separator: ", "))")
         }
-        let settles = state == .done || state == .idle
+        guard case let .show(state) = request else {
+            // In any mode: with the agent gone there is nothing left for the person to hold or resume.
+            if control.isActive {
+                endSession()
+            }
+            return ["session": false, "shown": NSNull()]
+        }
+        let settles = state == .done
         if control.stopped && !settles {
             throw AgentError.stopped
         }

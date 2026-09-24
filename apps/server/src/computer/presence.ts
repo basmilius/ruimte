@@ -96,7 +96,7 @@ export class ComputerPresence {
             return;
         }
         if (status === 'exited') {
-            this.end('idle');
+            this.end('end');
         } else if (status === 'idle' || status === 'error') {
             this.end('done');
         } else {
@@ -112,7 +112,7 @@ export class ComputerPresence {
     turnEnded(nodeId: string, interrupted: boolean): void {
         this.statuses.set(nodeId, 'idle');
         if (nodeId === this.holderId) {
-            this.end(interrupted ? 'idle' : 'done');
+            this.end(interrupted ? 'end' : 'done');
         }
     }
 
@@ -120,7 +120,7 @@ export class ComputerPresence {
         this.statuses.delete(nodeId);
         this.inFlight.delete(nodeId);
         if (nodeId === this.holderId) {
-            this.end('idle');
+            this.end('end');
         }
     }
 
@@ -140,7 +140,7 @@ export class ComputerPresence {
         this.setHolder(nodeId);
     }
 
-    private end(state: 'done' | 'idle'): void {
+    private end(state: 'done' | 'end'): void {
         this.ending = { state };
         this.failedIn = null;
         this.setHolder(null);

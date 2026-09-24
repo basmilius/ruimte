@@ -72,7 +72,7 @@ The helper sets the action states itself from the commands it runs. What it cann
 { "command": "presence", "state": "think", "label": "Reading the inbox", "step": "Step 12 · Reading the inbox", "secret": "..." }
 ```
 
-`state` is `think`, `waiting`, `permission`, `error`, `done` or `idle`; `label` replaces the words beside the cursor and `step` the step line of the menu, both optional. The reply is `{"session": true, "shown": "<state on screen>", "mode": "running|paused|takenOver"}`. While the person holds the session, the state is kept and shows once they resume. `think`, `waiting`, `permission` and `error` start a session when none runs; `done` and `idle` without one answer `{"session": false, "shown": null}`. After a stop the first four are refused like an action. `done` ends the session once its cursor has faded.
+`state` is `think`, `waiting`, `permission`, `error`, `done` or `end`; `label` replaces the words beside the cursor and `step` the step line of the menu, both optional. The reply is `{"session": true, "shown": "<state on screen>", "mode": "running|paused|takenOver"}`. While the person holds the session, the state is kept and shows once they resume. `think`, `waiting`, `permission` and `error` start a session when none runs; `done` without one answers `{"session": false, "shown": null}`. After a stop the first four are refused like an action. `done` ends the session once its cursor has faded. `end` is for an agent that went without finishing: it ends the session at once, paused or taken over too, without the checkmark, and answers `{"session": false, "shown": null}`.
 
 ## Grant the permissions
 
@@ -102,7 +102,7 @@ cu set-value <app> --element N <value>   set the AXValue of element N
 cu menu <app>                            list the menu bar with indices
 cu menu <app> <index | "File > Save">    run a menu item
 cu presence <state> [--label T] [--step T]
-                                         think, waiting, permission, error, done or idle
+                                         think, waiting, permission, error, done or end
 cu pause | resume | stop                 what the buttons of the session bar do
 cu quit                                  stop the agent
 cu render sheet|<state>|bar [<state>]    development: the overlay as PNGs, see below

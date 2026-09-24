@@ -325,7 +325,7 @@ describe('the presence at the cursor', () => {
         expect(helper.presences.every((presence) => !presence.startsWith('undefined'))).toBe(true);
     });
 
-    test('is idle when a chat is interrupted or a terminal goes, and ignores whoever does not hold it', async () => {
+    test('ends the session when a chat is interrupted or a terminal goes, and ignores whoever does not hold it', async () => {
         const setup = await computerSetup();
         const { computer, helper } = setup;
         await letIn(setup);
@@ -333,19 +333,30 @@ describe('the presence at the cursor', () => {
         computer.observe(chatInfo('chat-2', 'idle'));
         computer.observe(turnEnded('chat-1', 'aborted'));
         await until(() => helper.presences.length === 1);
-        expect(helper.presences).toEqual(['idle']);
+        expect(helper.presences).toEqual(['end']);
+        await until(() => computer.status().session === null);
 
         await computer.operate('term-1', 'state', 'TextEdit', {});
         computer.observe(terminalStatus('term-1', 'running'));
         await until(() => helper.presences.at(-1) === 'think');
         computer.observe({ event: 'session.exit', payload: { sessionId: 'term-1' } } as unknown as SessionEvent);
-        await until(() => helper.presences.at(-1) === 'idle');
+        await until(() => helper.presences.at(-1) === 'end');
         const shown = helper.presences.length;
         computer.observe(terminalStatus('term-1', 'running'));
         await new Promise<void>((resolve) => setImmediate(resolve));
         expect(helper.presences).toHaveLength(shown);
-        // The helper keeps an idle session until its own timeout, but no node holds it any more.
-        expect(computer.status().session).toEqual({ mode: 'running', nodeId: null });
+        expect(computer.status().session).toBeNull();
+    });
+
+    test('ends a session the person paused as well, once the turn is interrupted', async () => {
+        const setup = await computerSetup();
+        const { computer, helper } = setup;
+        await letIn(setup);
+        await computer.control('pause');
+        computer.observe(turnEnded('chat-1', 'aborted'));
+        await until(() => computer.status().session === null);
+        expect(helper.presences).toEqual(['end']);
+        expect(helper.session.active).toBe(false);
     });
 
     test('shows an error in the app when the helper refused the action, and never for a card', async () => {

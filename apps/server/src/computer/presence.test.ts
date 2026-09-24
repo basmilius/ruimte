@@ -115,7 +115,7 @@ describe('the presence of the agent that holds the session', () => {
         expect(shown.at(-1)).toBe('waiting');
         presence.status('term-1', 'exited');
         await until(() => shown.length === 3);
-        expect(shown.at(-1)).toBe('idle');
+        expect(shown.at(-1)).toBe('end');
     });
 
     test('asks for permission with the app while a card of the holder stands, and a card claims a session nobody holds', async () => {
@@ -151,7 +151,7 @@ describe('the presence of the agent that holds the session', () => {
         expect(shown.at(-1)).toBe('think');
     });
 
-    test('is idle when the turn is interrupted, the node closes or it goes without a word', async () => {
+    test('ends the session when the turn is interrupted, the node closes or it goes without a word', async () => {
         const { presence, shown, alive } = setup();
         const hold = async (nodeId: string): Promise<void> => {
             presence.calling(nodeId);
@@ -161,17 +161,17 @@ describe('the presence of the agent that holds the session', () => {
         };
         await hold('chat-1');
         presence.turnEnded('chat-1', true);
-        await until(() => shown.at(-1) === 'idle');
+        await until(() => shown.at(-1) === 'end');
         await hold('chat-2');
         presence.turnEnded('chat-2', false);
         await until(() => shown.at(-1) === 'done');
         await hold('term-1');
         presence.closed('term-1');
-        await until(() => shown.at(-1) === 'idle');
+        await until(() => shown.at(-1) === 'end');
         await hold('chat-1');
         alive.delete('chat-1');
         presence.status('chat-1', 'running');
-        await until(() => shown.at(-1) === 'idle');
+        await until(() => shown.at(-1) === 'end');
         expect(presence.holder).toBeNull();
     });
 

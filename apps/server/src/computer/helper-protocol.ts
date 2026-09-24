@@ -38,8 +38,8 @@ export interface StateOptions {
     screenshot?: boolean;
 }
 
-/* What the daemon shows at the cursor between actions, which the helper cannot see for itself. */
-export const PRESENCE_STATES = ['think', 'waiting', 'permission', 'error', 'done', 'idle'] as const;
+/* What the daemon shows at the cursor between actions, which the helper cannot see for itself; `end` ends the session at once. */
+export const PRESENCE_STATES = ['think', 'waiting', 'permission', 'error', 'done', 'end'] as const;
 export type PresenceState = (typeof PRESENCE_STATES)[number];
 
 export interface HelperRequest extends StateOptions {

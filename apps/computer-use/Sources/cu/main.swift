@@ -22,7 +22,7 @@ usage: cu <command> [arguments]
   menu <app> <index | "File > Save">    run a menu item
   presence <state> [--label T] [--step T]
                                         show what the agent is doing: think, waiting, permission,
-                                        error, done or idle
+                                        error or done; end ends the session at once
   pause | resume | stop                  what the buttons of the session bar do
   quit                                  stop the agent
 
@@ -203,7 +203,7 @@ func makeRequest(_ command: String, _ arguments: Arguments) -> Request {
         }
     case "presence":
         guard let state = arguments.positionals.first else {
-            fail("`cu presence` needs a state: \(PhantomState.presenceStates.map(\.rawValue).joined(separator: ", "))")
+            fail("`cu presence` needs a state: \(PresenceRequest.names.joined(separator: ", "))")
         }
         request.state = state
         request.label = arguments.options["label"]

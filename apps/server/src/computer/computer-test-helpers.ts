@@ -181,11 +181,16 @@ export class FakeHelper implements HelperTransport {
     }
 
     private presence(request: HelperRequest): unknown {
-        const settles = request.state === 'done' || request.state === 'idle';
+        const settles = request.state === 'done' || request.state === 'end';
         if (this.session.stopped && !settles) {
             return STOPPED_REFUSAL;
         }
         if (!this.session.active && settles) {
+            return { ok: true, result: { session: false, shown: null } };
+        }
+        if (request.state === 'end') {
+            this.shown = null;
+            this.session = { active: false, mode: 'running', stopped: false };
             return { ok: true, result: { session: false, shown: null } };
         }
         const { mode } = this.session;

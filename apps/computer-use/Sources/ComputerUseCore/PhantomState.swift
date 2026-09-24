@@ -20,7 +20,7 @@ public enum PhantomState: String, CaseIterable, Sendable {
     case tap
 
     /// What a caller sets with `presence`: the helper cannot see these itself. The action states it sets from the commands it runs.
-    public static let presenceStates: [PhantomState] = [.think, .waiting, .permission, .error, .done, .idle]
+    public static let presenceStates: [PhantomState] = [.think, .waiting, .permission, .error, .done]
 
     public var isAction: Bool {
         switch self {
@@ -34,6 +34,24 @@ public enum PhantomState: String, CaseIterable, Sendable {
     /// The agent waits for the person, so the person's hand on the mouse is expected and not taking over.
     public var waitsOnPerson: Bool {
         self == .waiting || self == .permission
+    }
+}
+
+/// What `presence` asks for: a state to show, or the end of the session for an agent that went without finishing.
+public enum PresenceRequest: Equatable, Sendable {
+    case show(PhantomState)
+    case end
+
+    public static let names = PhantomState.presenceStates.map(\.rawValue) + ["end"]
+
+    public init?(_ name: String?) {
+        if name == "end" {
+            self = .end
+        } else if let name, let state = PhantomState(rawValue: name), PhantomState.presenceStates.contains(state) {
+            self = .show(state)
+        } else {
+            return nil
+        }
     }
 }
 

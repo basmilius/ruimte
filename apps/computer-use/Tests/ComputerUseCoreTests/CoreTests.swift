@@ -146,6 +146,16 @@ struct SessionControlTests {
         #expect(SessionAction.stop.applies(to: control))
     }
 
+    @Test func presenceShowsAStateOrEndsTheSession() {
+        #expect(PresenceRequest("end") == .end)
+        #expect(PresenceRequest("think") == .show(.think))
+        #expect(PresenceRequest("done") == .show(.done))
+        #expect(PresenceRequest("idle") == nil)
+        #expect(PresenceRequest("click") == nil)
+        #expect(PresenceRequest(nil) == nil)
+        #expect(PresenceRequest.names == ["think", "waiting", "permission", "error", "done", "end"])
+    }
+
     @Test func formatsTheClock() {
         #expect(SessionControl.clock(134) == "02:14")
         #expect(SessionControl.clock(3725) == "1:02:05")
