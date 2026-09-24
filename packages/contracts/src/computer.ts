@@ -29,7 +29,9 @@ export const ComputerUseStatusSchema = z.object({
             operatingRuimte: z.boolean().optional()
         })
         .nullable()
-        .optional()
+        .optional(),
+    // The chats and terminals whose agents wait for the Mac while another holds it, first in line first; absent when none does.
+    waiting: z.array(z.string()).optional()
 });
 export type ComputerUseStatus = z.infer<typeof ComputerUseStatusSchema>;
 
