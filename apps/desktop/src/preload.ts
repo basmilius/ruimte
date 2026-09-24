@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     systemLanguages: argument(LANGUAGES_ARGUMENT)?.split(','),
     pickFolder: (initialPath?: string): Promise<string | null> => ipcRenderer.invoke('dialog:pick-folder', initialPath),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
+    openSystemSettings: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-system-settings', url),
     /* Only this side can say where a dragged file came from: `File.path` was taken out of Electron
        and the renderer has no `webUtils`. Empty for anything that is not a file on disk. */
     pathForFile: (file: File): string | null => webUtils.getPathForFile(file) || null,

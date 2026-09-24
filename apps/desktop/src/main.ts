@@ -34,6 +34,7 @@ import {
     hardenGuestPreferences,
     isAppSender,
     isExternalLink,
+    isSystemSettingsPane,
     PREVIEW_PARTITION
 } from './web-guards';
 
@@ -761,6 +762,12 @@ handleFromApp('dialog:save-file', async (_event, suggestedName: string, bytes: U
 
 handleFromApp('shell:open-external', async (_event, url: string) => {
     if (/^https?:\/\//.test(url)) {
+        await shell.openExternal(url);
+    }
+});
+
+handleFromApp('shell:open-system-settings', async (_event, url: string) => {
+    if (process.platform === 'darwin' && isSystemSettingsPane(url)) {
         await shell.openExternal(url);
     }
 });

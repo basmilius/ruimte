@@ -119,6 +119,9 @@ export interface DesktopBridge {
     systemLanguages?: string[];
     pickFolder(initialPath?: string): Promise<string | null>;
     openExternal(url: string): Promise<void>;
+    /* Opens a pane of System Settings on macOS, only the ones the shell allows (`isSystemSettingsPane`).
+       Optional for the same reason `onBrowserContextMenu` is. */
+    openSystemSettings?(url: string): Promise<void>;
     openGuestDevTools(webContentsId: number): void;
     /* A png of a guest page, which is how an agent gets a picture of the page it drives. Optional
        for the same reason `onBrowserContextMenu` is. */

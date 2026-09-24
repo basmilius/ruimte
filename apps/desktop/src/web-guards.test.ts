@@ -6,6 +6,7 @@ import {
     hardenGuestPreferences,
     isAppSender,
     isExternalLink,
+    isSystemSettingsPane,
     originOf,
     type GuestWebPreferences
 } from './web-guards';
@@ -117,6 +118,27 @@ describe('isExternalLink', () => {
         expect(isExternalLink('file:///Applications/Calculator.app')).toBe(false);
         expect(isExternalLink('ssh://host')).toBe(false);
         expect(isExternalLink('javascript:alert(1)')).toBe(false);
+    });
+});
+
+describe('isSystemSettingsPane', () => {
+    test('opens the Accessibility and Screen Recording panes', () => {
+        expect(isSystemSettingsPane('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility')).toBe(true);
+        expect(isSystemSettingsPane('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')).toBe(true);
+    });
+
+    test('and no other pane, scheme or URL dressed up as one', () => {
+        for (const url of [
+            'x-apple.systempreferences:com.apple.preference.security?Privacy_Camera',
+            'x-apple.systempreferences:com.apple.preference.security',
+            'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility&x=1',
+            'X-APPLE.SYSTEMPREFERENCES:com.apple.preference.security?Privacy_Accessibility',
+            'https://example.com/?x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility',
+            'file:///System/Applications/System%20Settings.app',
+            ''
+        ]) {
+            expect(isSystemSettingsPane(url)).toBe(false);
+        }
     });
 });
 

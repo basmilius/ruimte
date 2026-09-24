@@ -25,6 +25,14 @@ export const isWebLink = (url: string): boolean => /^https?:\/\//i.test(url);
 /* What the system browser or mail app may be handed; a `file:` link could open an application. */
 export const isExternalLink = (url: string): boolean => isWebLink(url) || /^mailto:/i.test(url);
 
+/* The System Settings panes the app's page may open: the two grants computer use needs, and nothing a URL could smuggle beside them. */
+const SYSTEM_SETTINGS_PANES: ReadonlySet<string> = new Set([
+    'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility',
+    'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
+]);
+
+export const isSystemSettingsPane = (url: string): boolean => SYSTEM_SETTINGS_PANES.has(url);
+
 export type NavigationVerdict = 'allow' | 'external' | 'refuse';
 
 /*
