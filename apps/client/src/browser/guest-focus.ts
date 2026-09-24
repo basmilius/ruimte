@@ -1,5 +1,6 @@
 import { isCanvasView } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
+import { FILES_VIEW_ID } from '@/shell/files-view';
 import { locateView } from '@/shell/split';
 import { useDocument } from '@/state/document';
 
@@ -58,12 +59,13 @@ export const watchGuestFocus = (element: HTMLElement, onFocus: () => void): (() 
 export const focusCellOfView = (viewId: string): void => {
     const document = useDocument.getState();
     const at = document.layout === null ? null : locateView(document.layout, viewId);
-    const view = document.views.find((candidate) => candidate.id === viewId);
-    if (at === null || !view) {
+    if (at === null) {
         return;
     }
     document.focusCellAt(at);
-    if (!isCanvasView(view)) {
+    // The files stand in a cell without being a view of the document, and they are no canvas either.
+    const view = document.views.find((candidate) => candidate.id === viewId);
+    if (viewId === FILES_VIEW_ID || (view !== undefined && !isCanvasView(view))) {
         useDocument.getState().setBodyFocused(true);
     }
 };
