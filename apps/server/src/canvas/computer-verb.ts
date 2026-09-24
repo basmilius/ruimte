@@ -113,7 +113,7 @@ const COMMON_DETAIL: readonly string[] = [
     `approval\tThe first call in an app a person has not let you into puts a card in front of them and waits up to ${APPROVAL_WAIT_MS / 1000} s; refused awaiting-approval means the card is up: tell the person, and call again once they answered`,
     'approval\tA yes holds for this chat or terminal session, or for always on this machine; a no reaches you once, as declined. Every permission mode asks, full-access included',
     'terminal\tAn app that runs shells is refused whatever the person says; run commands in your own shell',
-    'stop\tThe person stops you with Esc; every action after that refuses with stopped until they ask again',
+    'stop\tThe person can stop you at any moment; every action after that refuses with stopped until they ask again',
     'elements\tAn element keeps its number while it is the same element; after a new window or sheet read the state again',
     'see\truimte-context computer apps\tthe apps that run, and which of them you may operate without asking'
 ];

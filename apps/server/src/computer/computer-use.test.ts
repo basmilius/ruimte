@@ -240,6 +240,8 @@ describe('naming an app', () => {
         expect(await codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 3 }))).toBe('app-refused');
         helper.error = 'stopped by the user (Esc). Run `cu state <app>` to continue.';
         expect(await codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 3 }))).toBe('stopped');
+        helper.error = 'stopped by the person (the stop button). Run `cu state <app>` to continue.';
+        expect(await codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 3 }))).toBe('stopped');
         expect(agentWords('Run `cu state` again')).toBe('Run `ruimte-context computer state` again');
     });
 });

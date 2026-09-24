@@ -366,8 +366,9 @@ export class ComputerUse {
             if (!(error instanceof HelperFailure) || error.code !== 'helper-error') {
                 throw error;
             }
-            if (error.message.startsWith('stopped by the user')) {
-                throw new ComputerRefusal('stopped', 'The person stopped you with Esc; ask them before you operate this app again');
+            // The helper has worded it both ways.
+            if (/^stopped by the (user|person)\b/.test(error.message)) {
+                throw new ComputerRefusal('stopped', 'The person stopped you; ask them before you operate this app again');
             }
             throw new ComputerRefusal('app-refused', agentWords(error.message));
         }
