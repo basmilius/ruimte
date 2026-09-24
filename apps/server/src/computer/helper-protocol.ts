@@ -6,7 +6,7 @@ import { z } from 'zod';
  * The reply schemas keep only what the daemon reads; a field the helper adds later passes unseen.
  */
 
-export const HELPER_COMMANDS = ['doctor', 'apps', 'quit', 'state', 'click', 'scroll', 'type', 'key', 'set-value', 'open', 'menu'] as const;
+export const HELPER_COMMANDS = ['doctor', 'apps', 'quit', 'presence', 'state', 'click', 'scroll', 'type', 'key', 'set-value', 'open', 'menu'] as const;
 export type HelperCommand = (typeof HELPER_COMMANDS)[number];
 
 /* The commands that read or operate one app, which is what a person has to let an agent into. */
@@ -20,6 +20,10 @@ export interface StateOptions {
     maxText?: number;
     screenshot?: boolean;
 }
+
+/* What the daemon shows at the cursor between actions, which the helper cannot see for itself. */
+export const PRESENCE_STATES = ['think', 'waiting', 'permission', 'error', 'done', 'idle'] as const;
+export type PresenceState = (typeof PRESENCE_STATES)[number];
 
 export interface HelperRequest extends StateOptions {
     command: HelperCommand;
@@ -40,17 +44,35 @@ export interface HelperRequest extends StateOptions {
     pages?: number;
     path?: string;
     withState?: boolean;
+    state?: PresenceState;
+    // Words beside the cursor for a `presence` state, instead of the helper's own for it.
+    label?: string;
+    step?: string;
 }
 
 export const HelperReplySchema = z.union([
     z.object({ ok: z.literal(true), result: z.record(z.string(), z.unknown()) }),
-    z.object({ ok: z.literal(false), error: z.string() })
+    // `code` names the refusals a caller branches on (paused, taken-over, stopped); the text is for people.
+    z.object({ ok: z.literal(false), error: z.string(), code: z.string().optional() })
 ]);
+
+const SessionModeSchema = z.enum(['running', 'paused', 'takenOver']);
+
+export const HelperSessionSchema = z.object({ active: z.boolean(), mode: SessionModeSchema, stopped: z.boolean() });
+export type HelperSession = z.infer<typeof HelperSessionSchema>;
+
+export const PresenceResultSchema = z.union([
+    z.object({ session: z.literal(true), shown: z.string(), mode: SessionModeSchema }),
+    z.object({ session: z.literal(false), shown: z.null() })
+]);
+export type PresenceResult = z.infer<typeof PresenceResultSchema>;
 
 export const DoctorResultSchema = z.object({
     accessibility: z.object({ granted: z.boolean() }),
     screenRecording: z.object({ granted: z.boolean() }),
-    ready: z.boolean()
+    ready: z.boolean(),
+    // Absent from a helper older than the session bar.
+    session: HelperSessionSchema.optional()
 });
 export type DoctorResult = z.infer<typeof DoctorResultSchema>;
 

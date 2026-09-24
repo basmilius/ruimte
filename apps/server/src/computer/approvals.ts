@@ -44,7 +44,7 @@ export interface Timers {
     set(run: () => void, ms: number): () => void;
 }
 
-const realTimers: Timers = {
+export const realTimers: Timers = {
     set: (run, ms) => {
         const timer = setTimeout(run, ms);
         return () => clearTimeout(timer);

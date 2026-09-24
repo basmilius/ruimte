@@ -345,6 +345,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     /* A node that has never been shown has no session, and a project going down is not the place to
        fail over one, so an id neither manager knows is already ended as far as the caller goes. */
     const endSession = async (kind: 'terminal' | 'chat', nodeId: string): Promise<void> => {
+        computer.nodeClosed(nodeId);
         await endChildren.owe(nodeId);
         await (kind === 'terminal' ? manager.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
     };
@@ -552,6 +553,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.observe((event) => push.consume(event));
     manager.observe((event) => taskWiring.coordinator.sessionEvent(event));
     chats.observe((event) => push.consume(event));
+    manager.observe((event) => computer.observe(event));
+    chats.observe((event) => computer.observe(event));
     manager.offlineApprovals = () => push.hasOfflineApprovals();
 
     const dispatcher = new Dispatcher();
@@ -561,7 +564,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerBrowserHandlers(dispatcher, browsers, browserPages, () => identity.streamingAllowed);
     registerDeviceHandlers(dispatcher, devices, () => identity.streamingAllowed);
     const forkDeps = chatForkDeps({ chats, host: canvasHost, titleFor: (id) => projects.index.titleFor(id), lineage, worktrees, checkpoints });
-    registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, {
+    const beforeChatKill = (chatId: string): Promise<unknown> => {
+        computer.nodeClosed(chatId);
+        return endChildren.owe(chatId);
+    };
+    registerChatHandlers(dispatcher, chats, providers, beforeChatKill, endChildren.stopNode, {
         fork: (payload) => forkChat(forkDeps, payload),
         info: (payload) => readForkInfo(forkDeps, payload),
         summarize: (chatId) => summaries.summarize(chatId)

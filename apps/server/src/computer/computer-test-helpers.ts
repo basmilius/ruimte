@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { Timers } from './approvals.ts';
 import { ComputerUse, type ComputerUseOptions } from './computer-use.ts';
 import { ComputerHelper, HelperUnreachable, type HelperTransport } from './helper.ts';
-import type { HelperRequest, RunningApp } from './helper-protocol.ts';
+import type { HelperRequest, HelperSession, RunningApp } from './helper-protocol.ts';
 import { ComputerUseStore } from './store.ts';
 import type { ProcessRow } from './terminal-apps.ts';
 
@@ -19,6 +19,10 @@ export class ManualTimers implements Timers {
         return () => {
             this.entries = this.entries.filter((candidate) => candidate !== entry);
         };
+    }
+
+    get waiting(): number {
+        return this.entries.length;
     }
 
     advance(ms: number): void {
@@ -42,7 +46,14 @@ export const SAMPLE_STATE = {
     tree: ['[0] Window:StandardWindow "Untitled" (292,161 586x488)', '  [1] TextArea value="hi" (292,261 586x382) focused']
 };
 
-/* The helper app as a socket that answers from a script; it records every request it got. */
+const HELD_REFUSALS = {
+    paused: { ok: false, error: 'the person paused the session; wait until they resume', code: 'paused' },
+    takenOver: { ok: false, error: 'the person took over; wait until they resume', code: 'taken-over' }
+} as const;
+
+const STOPPED_REFUSAL = { ok: false, error: 'stopped by the person (⌥⎋ or the stop button). Run `cu state <app>` to continue.', code: 'stopped' };
+
+/* The helper app as a socket that answers from a script, its session kept the way the helper keeps it; it records every request it got. */
 export class FakeHelper implements HelperTransport {
     running = true;
     readonly requests: HelperRequest[] = [];
@@ -50,6 +61,10 @@ export class FakeHelper implements HelperTransport {
     accessibility = true;
     screenRecording = true;
     error: string | null = null;
+    session: HelperSession = { active: false, mode: 'running', stopped: false };
+    shown: string | null = null;
+    // Runs as an app command arrives, before the helper looks at its session: the person's hand in between.
+    onAct: (() => void) | null = null;
 
     async send(request: HelperRequest): Promise<unknown> {
         if (!this.running) {
@@ -66,13 +81,28 @@ export class FakeHelper implements HelperTransport {
                 result: {
                     accessibility: { granted: this.accessibility },
                     screenRecording: { granted: this.screenRecording },
-                    ready: this.accessibility && this.screenRecording
+                    ready: this.accessibility && this.screenRecording,
+                    session: this.session
                 }
             };
         }
         if (request.command === 'apps') {
             return { ok: true, result: { apps: this.apps } };
         }
+        if (request.command === 'presence') {
+            return this.presence(request);
+        }
+        this.onAct?.();
+        if (request.command === 'state') {
+            this.session = { ...this.session, stopped: false };
+        }
+        if (this.session.stopped) {
+            return STOPPED_REFUSAL;
+        }
+        if (this.session.active && this.session.mode !== 'running') {
+            return HELD_REFUSALS[this.session.mode];
+        }
+        this.session = { ...this.session, active: true };
         if (this.error !== null) {
             return { ok: false, error: this.error };
         }
@@ -93,7 +123,38 @@ export class FakeHelper implements HelperTransport {
 
     /* The requests that acted on an app, leaving out the doctor and apps calls every action makes first. */
     get acted(): HelperRequest[] {
-        return this.requests.filter((request) => !['doctor', 'apps', 'quit'].includes(request.command));
+        return this.requests.filter((request) => !['doctor', 'apps', 'quit', 'presence'].includes(request.command));
+    }
+
+    /* What the daemon showed at the cursor, as `state` or `state: label`. */
+    get presences(): string[] {
+        return this.requests
+            .filter((request) => request.command === 'presence')
+            .map((request) => (request.label === undefined ? `${request.state}` : `${request.state}: ${request.label}`));
+    }
+
+    /* The person's own hand: pausing, taking over or stopping from the bar, the menu or a key. */
+    hold(mode: 'paused' | 'takenOver' | 'running'): void {
+        this.session = { ...this.session, active: true, mode };
+    }
+
+    stop(): void {
+        this.session = { active: false, mode: 'running', stopped: true };
+    }
+
+    private presence(request: HelperRequest): unknown {
+        const settles = request.state === 'done' || request.state === 'idle';
+        if (this.session.stopped && !settles) {
+            return STOPPED_REFUSAL;
+        }
+        if (!this.session.active && settles) {
+            return { ok: true, result: { session: false, shown: null } };
+        }
+        const { mode } = this.session;
+        this.shown = request.state ?? null;
+        // The real helper ends the session once `done` has faded.
+        this.session = request.state === 'done' ? { active: false, mode: 'running', stopped: false } : { ...this.session, active: true };
+        return { ok: true, result: { session: true, shown: mode === 'running' ? request.state : mode === 'paused' ? 'paused' : 'takeover', mode } };
     }
 }
 

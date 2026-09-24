@@ -8,7 +8,15 @@ import { HelperReplySchema, type HelperRequest } from './helper-protocol.ts';
 
 export type HelperFailureCode = 'unavailable' | 'helper-unreachable' | 'helper-busy' | 'helper-error' | 'helper-invalid';
 
-export class HelperFailure extends CodedError<HelperFailureCode> {}
+export class HelperFailure extends CodedError<HelperFailureCode> {
+    /* The helper's own code for a refusal, when it gave one. */
+    readonly helperCode: string | null;
+
+    constructor(code: HelperFailureCode, message: string, helperCode: string | null = null) {
+        super(code, message);
+        this.helperCode = helperCode;
+    }
+}
 
 /* Nothing listens on the socket: the helper is not running, or went away between two requests. */
 export class HelperUnreachable extends Error {}
@@ -163,7 +171,7 @@ export class ComputerHelper {
                     'Ruimte Computer Use is running for another Ruimte on this Mac; it has to quit before this machine can use it'
                 );
             }
-            throw new HelperFailure('helper-error', message);
+            throw new HelperFailure('helper-error', message, parsed.data.code ?? null);
         }
         const result = schema.safeParse(parsed.data.result);
         if (!result.success) {
