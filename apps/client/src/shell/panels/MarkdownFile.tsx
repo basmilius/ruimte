@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Code, Eye } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
+import { FindBar } from '@/find/FindBar';
+import { FindMarks } from '@/find/FindMarks';
+import { useDomFind } from '@/find/use-dom-find';
+import { useFind } from '@/find/use-find';
 import { FileMarkdown } from '@/shell/panels/FileMarkdown';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { FileLinkContext } from '@/shell/panels/file-links';
@@ -24,6 +28,11 @@ export function MarkdownFile({ path, read }: { path: string; read: FsReadText })
     // The preview draws what is on disk, so a file with unsaved changes stays in the editor until they are saved.
     const unsaved = useUnsaved(useEndpointId(), path);
     const view = unsaved ? 'source' : chosen;
+    const surface = useRef<HTMLDivElement>(null);
+    const content = useRef<HTMLDivElement>(null);
+    // The source is the editor's to search; this one is the text the preview draws.
+    const find = useFind(surface, view === 'preview');
+    const domFind = useDomFind(find, content);
     const toggle = (
         <div className={BTN_GROUP}>
             <FileToolbarToggle
@@ -46,15 +55,19 @@ export function MarkdownFile({ path, read }: { path: string; read: FsReadText })
             {/* Prose is read in the same column the standalone chat view gives a thread, at the
                 app's own type. The scroller keeps the panel's full width, so its scrollbar stays at
                 the panel's edge; only the text inside it is centered. */}
-            <FileScroll className="px-4 py-3">
-                <div className="mx-auto max-w-[768px]">
-                    {/* A link in a document counts from the folder that document sits in, the way it
-                        would on a forge. */}
-                    <FileLinkContext.Provider value={dirnameOf(path)}>
-                        <FileMarkdown text={read.text} />
-                    </FileLinkContext.Provider>
-                </div>
-            </FileScroll>
+            <div ref={surface} className="relative flex min-h-0 min-w-0 grow flex-col">
+                {find.open && <FindBar find={find} total={domFind.total} current={domFind.current} invalid={domFind.invalid} onStep={domFind.step} />}
+                <FileScroll className="px-4 py-3">
+                    <div ref={content} className="mx-auto max-w-[768px]">
+                        {/* A link in a document counts from the folder that document sits in, the way it
+                            would on a forge. */}
+                        <FileLinkContext.Provider value={dirnameOf(path)}>
+                            <FileMarkdown text={read.text} />
+                        </FileLinkContext.Provider>
+                    </div>
+                </FileScroll>
+                {find.open && <FindMarks marks={domFind.marks} current={domFind.currentMark} />}
+            </div>
         </div>
     );
 }

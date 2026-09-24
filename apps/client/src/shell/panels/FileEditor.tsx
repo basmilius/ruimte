@@ -22,13 +22,15 @@ interface FileEditorProps {
     /* Whether the node it sits in has the keyboard; null outside a node, where only a click gives it. */
     focused: boolean | null;
     reveal: RevealLineRequest | null;
+    /* The editor once it is mounted, and null once it is gone, for what drives it from outside, such as the find bar. */
+    onEditor?(editor: Editor | null): void;
 }
 
 /*
  * The file as an editor. Its text is the file's one draft, so another surface on the same file types
  * into the same text, and leaving it saves.
  */
-export function FileEditor({ engine, endpointId, path, disk, language, wrap, readOnlyReason, placeholderScroll, focused, reveal }: FileEditorProps) {
+export function FileEditor({ engine, endpointId, path, disk, language, wrap, readOnlyReason, placeholderScroll, focused, reveal, onEditor }: FileEditorProps) {
     const host = useRef<HTMLDivElement>(null);
     const editorRef = useRef<Editor | null>(null);
     const theme = useCodeTheme();
@@ -58,11 +60,13 @@ export function FileEditor({ engine, endpointId, path, disk, language, wrap, rea
         );
         revealed.current = first.reveal?.nonce ?? null;
         editorRef.current = editor;
+        onEditor?.(editor);
         return () => {
             editorRef.current = null;
+            onEditor?.(null);
             unmount();
         };
-    }, [engine, endpointId, path, placeholderScroll]);
+    }, [engine, endpointId, path, placeholderScroll, onEditor]);
 
     useEffect(() => {
         editorRef.current?.setTheme(theme);

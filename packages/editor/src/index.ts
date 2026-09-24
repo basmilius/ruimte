@@ -25,6 +25,20 @@ export interface EditorOptions {
     readonly scrollTop?: number;
 }
 
+/* What a find bar asks the editor; the editor's own matcher reads it. */
+export interface EditorFindQuery {
+    readonly text: string;
+    readonly caseSensitive: boolean;
+    readonly wholeWord: boolean;
+    readonly regex: boolean;
+}
+
+export interface EditorFindState {
+    readonly count: number;
+    /* Zero-based; null without a match. */
+    readonly current: number | null;
+}
+
 export interface Editor {
     getText(): string;
     /* A change from outside, such as a reload after `fs.changed` or another surface's edit. It is never
@@ -33,9 +47,16 @@ export interface Editor {
     onChange(listener: () => void): () => void;
     /* Mod+S from inside the editor; what happens then is the client's. */
     onSave(listener: () => void): () => void;
-    /* The focus left the editor and every widget of its own, such as its find bar. */
+    /* The focus left the editor and every widget of its own, such as its suggestions. */
     onBlur(listener: () => void): () => void;
     revealLine(line: number): void;
+    /* Marks every match and moves to the first one from the cursor on; null takes the marks away. The
+       count comes back through `onFind`, and again whenever an edit changes it. */
+    find(query: EditorFindQuery | null): void;
+    findStep(direction: 1 | -1): void;
+    onFind(listener: (state: EditorFindState) => void): () => void;
+    /* Takes the marks away and selects the match the find was on, so the cursor is where it stopped. */
+    endFind(): void;
     setWrap(wrap: boolean): void;
     setTheme(theme: EditorTheme): void;
     setReadOnly(readOnly: boolean, reason?: string): void;

@@ -8,7 +8,7 @@ import * as monaco from 'monaco-editor/editor';
 import 'monaco-editor/features/register.all';
 import type { Highlighter } from 'shiki';
 import { readChromeColors, readEditorFont } from './chrome.ts';
-import type { Editor, EditorEngine, EditorOptions, EditorTheme, MonacoEngineOptions } from './index.ts';
+import type { Editor, EditorEngine, EditorFindQuery, EditorFindState, EditorOptions, EditorTheme, MonacoEngineOptions } from './index.ts';
 import { monacoKeyOf } from './keys.ts';
 import { modelPath, type WorkerKind, workerFor } from './languages.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
@@ -26,6 +26,23 @@ const WORKERS: Readonly<Record<WorkerKind, () => Worker>> = {
 };
 
 let models = 0;
+
+// Monaco's own separators, so a whole word in the bar is the word a double click selects.
+const WORD_SEPARATORS = '`~!@#$%^&*()-=+[{]}\\|;:\'",.<>/?';
+// Past this a count means nothing to a reader, and marking every match would stall the editor.
+const FIND_LIMIT = 10000;
+const FIND_RULER = { color: { id: 'editorOverviewRuler.findMatchForeground' }, position: monaco.editor.OverviewRulerLane.Center };
+const FIND_MATCH: monaco.editor.IModelDecorationOptions = {
+    className: 'find-hit',
+    stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+    overviewRuler: FIND_RULER
+};
+const FIND_CURRENT: monaco.editor.IModelDecorationOptions = {
+    ...FIND_MATCH,
+    className: 'find-hit-current',
+    inlineClassName: 'find-hit-current-text',
+    zIndex: 1
+};
 
 /* Without a reason Monaco answers typing in a read-only editor with a sentence of its own, in English. */
 const readOnlyOptions = (readOnly: boolean, reason: string | undefined): monaco.editor.IEditorOptions => ({
@@ -87,6 +104,11 @@ class MonacoEditor implements Editor {
     private readonly changes = new Set<Listener>();
     private readonly saves = new Set<Listener>();
     private readonly blurs = new Set<Listener>();
+    private readonly finds = new Set<(state: EditorFindState) => void>();
+    private readonly findMarks: monaco.editor.IEditorDecorationsCollection;
+    private findQuery: EditorFindQuery | null = null;
+    private findMatches: monaco.Range[] = [];
+    private findCurrent: number | null = null;
     private settingText = false;
     private disposed = false;
 
@@ -120,9 +142,13 @@ class MonacoEditor implements Editor {
             quickSuggestions: { other: 'on', comments: 'off', strings: 'off' },
             wordBasedSuggestions: 'matchingDocuments'
         });
+        this.findMarks = this.editor.createDecorationsCollection();
         this.editor.onDidChangeModelContent(() => {
             if (!this.settingText) {
                 emit(this.changes);
+            }
+            if (this.findQuery !== null) {
+                this.search(false);
             }
         });
         this.editor.onDidBlurEditorWidget(() => emit(this.blurs));
@@ -194,6 +220,35 @@ class MonacoEditor implements Editor {
         this.editor.revealLineInCenter(lineNumber);
     }
 
+    find(query: EditorFindQuery | null): void {
+        this.findQuery = query === null || query.text === '' ? null : query;
+        this.search(true);
+    }
+
+    findStep(direction: 1 | -1): void {
+        const count = this.findMatches.length;
+        if (count === 0) {
+            return;
+        }
+        this.findCurrent = this.findCurrent === null ? (direction === 1 ? 0 : count - 1) : (this.findCurrent + direction + count) % count;
+        this.paintFind(true);
+    }
+
+    onFind(listener: (state: EditorFindState) => void): () => void {
+        this.finds.add(listener);
+        return () => {
+            this.finds.delete(listener);
+        };
+    }
+
+    endFind(): void {
+        const range = this.findCurrent === null ? null : this.findMatches[this.findCurrent];
+        if (range) {
+            this.editor.setSelection(range);
+        }
+        this.find(null);
+    }
+
     setWrap(wrap: boolean): void {
         this.editor.updateOptions({ wordWrap: wrap ? 'on' : 'off' });
     }
@@ -218,8 +273,49 @@ class MonacoEditor implements Editor {
         this.changes.clear();
         this.saves.clear();
         this.blurs.clear();
+        this.finds.clear();
         this.editor.dispose();
         this.model.dispose();
+    }
+
+    /*
+     * The matches again, after a new query or an edit. A new query moves to the first match from the
+     * one it was on, or from the cursor, so each letter typed keeps the place instead of starting over;
+     * an edit keeps the place and leaves the view alone.
+     */
+    private search(move: boolean): void {
+        const query = this.findQuery;
+        const previous = this.findCurrent === null ? null : (this.findMatches[this.findCurrent] ?? null);
+        if (query === null) {
+            this.findMatches = [];
+            this.findCurrent = null;
+            this.paintFind(false);
+            return;
+        }
+        let found: monaco.editor.FindMatch[] = [];
+        try {
+            found = this.model.findMatches(query.text, false, query.regex, query.caseSensitive, query.wholeWord ? WORD_SEPARATORS : null, false, FIND_LIMIT);
+        } catch {
+            // A pattern Monaco cannot read finds nothing; the bar says it is invalid.
+        }
+        this.findMatches = found.map((match) => match.range);
+        const anchor = previous?.getStartPosition() ?? this.editor.getSelection()?.getStartPosition() ?? null;
+        const next = anchor === null ? -1 : this.findMatches.findIndex((range) => !range.getStartPosition().isBefore(anchor));
+        this.findCurrent = this.findMatches.length === 0 ? null : Math.max(0, next);
+        this.paintFind(move);
+    }
+
+    private paintFind(reveal: boolean): void {
+        const current = this.findCurrent;
+        this.findMarks.set(this.findMatches.map((range, index) => ({ range, options: index === current ? FIND_CURRENT : FIND_MATCH })));
+        const range = current === null ? undefined : this.findMatches[current];
+        if (reveal && range) {
+            this.editor.revealRangeInCenterIfOutsideViewport(range, monaco.editor.ScrollType.Smooth);
+        }
+        const state: EditorFindState = { count: this.findMatches.length, current };
+        for (const listener of [...this.finds]) {
+            listener(state);
+        }
     }
 
     private clampLine(line: number): number {

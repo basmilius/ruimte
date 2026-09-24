@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FsReadText } from '@ruimte/contracts';
+import type { Editor } from '@ruimte/editor';
+import { FindBar } from '@/find/FindBar';
+import { useFind } from '@/find/use-find';
 import { formatNumber } from '@/format/number';
 import { DraftBar, EditorNotice } from '@/shell/panels/DraftBar';
 import type { EditBlock } from '@/shell/panels/edit-gate';
@@ -9,6 +12,7 @@ import { FileEditor } from '@/shell/panels/FileEditor';
 import { FileScroll } from '@/shell/panels/FileScroll';
 import { FileToolbar } from '@/shell/panels/FileToolbar';
 import { highlightCode } from '@/shell/panels/highlight';
+import { useEditorFind } from '@/shell/panels/use-editor-find';
 import { useFileEditing } from '@/shell/panels/use-file-editing';
 import { useCodeTheme } from '@/state/code-theme';
 import { useFiles } from '@/state/files';
@@ -193,6 +197,11 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const editing = useFileEditing(path, read, plain);
     const disk = useMemo(() => ({ text: read.text, mtime: read.mtime }), [read]);
     const readOnlyReason = editing.block === null ? null : t(BLOCK_LABELS[editing.block], { lines: formatNumber(HIGHLIGHT_MAX_LINES) });
+    const [editor, setEditor] = useState<Editor | null>(null);
+    const surface = useRef<HTMLDivElement>(null);
+    // Only the editor can be searched; the viewer that stands in while it loads, and for a finger, cannot.
+    const find = useFind(surface, editor !== null);
+    const editorFind = useEditorFind(find, editor);
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
@@ -212,40 +221,46 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     </Button>
                 </EditorNotice>
             )}
-            {!editing.viewer && editing.engine !== null ? (
-                <ErrorBoundary label={t('file.edit.failed')} resetKeys={[path, editing.engine]} className="min-h-0 grow">
-                    <FileEditor
-                        engine={editing.engine}
-                        endpointId={editing.endpointId}
-                        path={path}
-                        disk={disk}
-                        language={plain ? undefined : read.language}
-                        wrap={wrap}
-                        readOnlyReason={readOnlyReason}
-                        placeholderScroll={viewerScroll}
-                        focused={editing.focused}
-                        reveal={reveal}
-                    />
-                </ErrorBoundary>
-            ) : (
-                <FileScroll className="file-code" data-wrap={wrap} onScroll={(event) => (viewerScroll.current = event.currentTarget.scrollTop)}>
-                    {chunks.map((chunk) => {
-                        const inChunk = reveal !== null && reveal.line >= chunk.start && reveal.line < chunk.start + chunk.lines;
-                        return (
-                            <CodeChunk
-                                key={chunk.start}
-                                code={chunk.code}
-                                lines={chunk.lines}
-                                start={chunk.start}
-                                language={language}
-                                theme={theme}
-                                reveal={inChunk ? reveal.line : undefined}
-                                revealNonce={inChunk ? reveal.nonce : undefined}
-                            />
-                        );
-                    })}
-                </FileScroll>
-            )}
+            <div ref={surface} className="relative flex min-h-0 min-w-0 grow flex-col">
+                {find.open && (
+                    <FindBar find={find} total={editorFind.total} current={editorFind.current} invalid={editorFind.invalid} onStep={editorFind.step} />
+                )}
+                {!editing.viewer && editing.engine !== null ? (
+                    <ErrorBoundary label={t('file.edit.failed')} resetKeys={[path, editing.engine]} className="min-h-0 grow">
+                        <FileEditor
+                            engine={editing.engine}
+                            endpointId={editing.endpointId}
+                            path={path}
+                            disk={disk}
+                            language={plain ? undefined : read.language}
+                            wrap={wrap}
+                            readOnlyReason={readOnlyReason}
+                            placeholderScroll={viewerScroll}
+                            focused={editing.focused}
+                            reveal={reveal}
+                            onEditor={setEditor}
+                        />
+                    </ErrorBoundary>
+                ) : (
+                    <FileScroll className="file-code" data-wrap={wrap} onScroll={(event) => (viewerScroll.current = event.currentTarget.scrollTop)}>
+                        {chunks.map((chunk) => {
+                            const inChunk = reveal !== null && reveal.line >= chunk.start && reveal.line < chunk.start + chunk.lines;
+                            return (
+                                <CodeChunk
+                                    key={chunk.start}
+                                    code={chunk.code}
+                                    lines={chunk.lines}
+                                    start={chunk.start}
+                                    language={language}
+                                    theme={theme}
+                                    reveal={inChunk ? reveal.line : undefined}
+                                    revealNonce={inChunk ? reveal.nonce : undefined}
+                                />
+                            );
+                        })}
+                    </FileScroll>
+                )}
+            </div>
         </div>
     );
 }

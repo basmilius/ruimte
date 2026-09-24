@@ -941,9 +941,13 @@
         from { background: var(--accent-soft); }
         to { background: transparent; }
     }
-    /* Find marks over rendered text (`find/highlights.ts`). */
+    /* Find marks over rendered text (`find/highlights.ts`) and in the editor (`@ruimte/editor`). */
     ::highlight(find-match) { background-color: var(--find-match); }
     ::highlight(find-current) { background-color: var(--find-current); color: var(--find-current-text); }
+    .monaco-editor .find-hit { background: var(--find-match); }
+    .monaco-editor .find-hit-current { background: var(--find-current); }
+    /* Over Shiki's token colors, which sit on the spans of the line with a class each. */
+    .monaco-editor .find-hit-current-text { color: var(--find-current-text) !important; }
     /* A code theme in settings, on the app's code background like the viewer, so shiki's own is dropped.
        The token is read under the side's own `data-theme`; a utility would resolve it at the root. */
     .code-theme-preview > [data-theme] { background: var(--term-bg); }
