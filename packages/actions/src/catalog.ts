@@ -193,6 +193,8 @@ const browserOutcome = z.object({
 const deviceNode = nodeId.describe('The device node, by id');
 const devicePixel = z.number().min(0).describe('A pixel of the last device shot, counted from its top-left corner');
 const deviceDone = z.object({ nodeId, device: z.string() });
+const deviceElement = z.number().int().min(0).describe('An element by the number in brackets the last device state gave it');
+const deviceSize = z.object({ width: z.number().int(), height: z.number().int() });
 
 const computerApp = z.string().min(1).describe('The app: its name, bundle id or pid, as computer apps lists them');
 const computerAppRef = z.object({ name: z.string(), bundleId: z.string().nullable(), pid: z.number().int() });
@@ -2038,7 +2040,14 @@ export const ACTION_DEFINITIONS = {
         effect: 'read',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ nodeId: deviceNode }),
+        input: z.object({
+            nodeId: deviceNode,
+            find: z
+                .string()
+                .min(1)
+                .nullish()
+                .describe('Only the elements whose label, value or identifier holds this text, ignoring case, and what they sit in')
+        }),
         output: z.object({
             nodeId,
             device: DeviceReferenceSchema,
@@ -2046,9 +2055,33 @@ export const ACTION_DEFINITIONS = {
             present: z.boolean(),
             state: z.enum(['booted', 'shutdown', 'transitioning']).nullable(),
             // The picture the last shot took, which is what coordinates are counted in; null before a shot.
-            screen: z.object({ width: z.number().int(), height: z.number().int() }).nullable(),
+            screen: deviceSize.nullable(),
             buttons: z.array(z.string()),
-            can: z.object({ shot: z.boolean(), input: z.boolean(), type: z.boolean(), launch: z.boolean() })
+            can: z.object({ shot: z.boolean(), input: z.boolean(), type: z.boolean(), launch: z.boolean(), tree: z.boolean() }),
+            // What the device shows as elements, frames in pixels of its screen; null when it has no tree, and treeError says why when reading one failed.
+            tree: z
+                .object({
+                    screen: deviceSize,
+                    truncated: z.boolean(),
+                    count: z.number().int(),
+                    matches: z.number().int().nullable(),
+                    elements: z.array(
+                        z.object({
+                            handle: z.number().int(),
+                            depth: z.number().int(),
+                            role: z.string(),
+                            subrole: z.string().nullable(),
+                            label: z.string().nullable(),
+                            value: z.string().nullable(),
+                            identifier: z.string().nullable(),
+                            frame: z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() }),
+                            enabled: z.boolean(),
+                            offscreen: z.boolean()
+                        })
+                    )
+                })
+                .nullable(),
+            treeError: z.string().nullable()
         })
     },
     'device.screenshot': {
@@ -2063,11 +2096,11 @@ export const ACTION_DEFINITIONS = {
     },
     'device.tap': {
         title: 'Tap a device',
-        description: 'Taps the screen of a device node at a pixel of its last shot.',
+        description: 'Taps the screen of a device node at a pixel of its last shot, or in the middle of an element of its last state.',
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ nodeId: deviceNode, x: devicePixel, y: devicePixel }),
+        input: z.object({ nodeId: deviceNode, x: devicePixel.nullish(), y: devicePixel.nullish(), element: deviceElement.nullish() }),
         output: deviceDone
     },
     'device.swipe': {

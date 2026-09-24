@@ -134,6 +134,7 @@ import { IosPhysicalBackend } from './devices/ios-physical.ts';
 import { IosSimulatorBackend } from './devices/ios-simulator.ts';
 import { createDeviceHelperLauncher } from './devices/helper-source.ts';
 import { createPhysicalStreamSourceFactory, physicalStreamHelperPath } from './devices/physical-stream-source.ts';
+import { createTreeLauncher, SimulatorTreeReader } from './devices/simulator-tree.ts';
 import { AndroidBackend } from './devices/android.ts';
 import { ScrcpyServerFile, scrcpyServerDirectory } from './devices/scrcpy-server.ts';
 import { adbScrcpyHost, ScrcpySource } from './devices/scrcpy-source.ts';
@@ -385,7 +386,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const browserPages = new BrowserPages();
     const browserDriver = new BrowserDriver(config.home, browsers, browserPages);
     const deviceHelperCommand = compiled ? [process.execPath, 'device-helper'] : [process.execPath, resolve(import.meta.dir, 'main.ts'), 'device-helper'];
-    const physicalStreamSource = createPhysicalStreamSourceFactory(physicalStreamHelperPath(compiled, process.execPath, resolve(import.meta.dir, '../..')));
+    const deviceBridge = physicalStreamHelperPath(compiled, process.execPath, resolve(import.meta.dir, '../..'));
+    const physicalStreamSource = createPhysicalStreamSourceFactory(deviceBridge);
+    const treeLauncher = createTreeLauncher(deviceBridge);
     // A development checkout fetches the pinned screen server on first use; a build carries it.
     const scrcpyServer = new ScrcpyServerFile(scrcpyServerDirectory(compiled, process.execPath, resolve(import.meta.dir, '..')), !compiled);
     const android = new AndroidBackend({
@@ -394,7 +397,12 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const devices = new DeviceManager(
         process.platform === 'darwin'
             ? [
-                  new IosSimulatorBackend(undefined, createDeviceHelperLauncher(deviceHelperCommand)),
+                  new IosSimulatorBackend(
+                      undefined,
+                      createDeviceHelperLauncher(deviceHelperCommand),
+                      undefined,
+                      treeLauncher === null ? null : (udid) => new SimulatorTreeReader(udid, treeLauncher)
+                  ),
                   new IosPhysicalBackend(undefined, undefined, physicalStreamSource),
                   android
               ]

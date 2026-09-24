@@ -20,6 +20,7 @@ import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
 import { CodedError } from '../coded-error.ts';
 import { FrameFanout, streamKeyOf } from '../streams/frame-fanout.ts';
 import { ClientSinks } from '../client-sinks.ts';
+import type { DeviceTree } from './device-tree.ts';
 
 export interface DeviceSource extends LiveFrameSource {
     input(input: DeviceInput): void | Promise<void>;
@@ -48,6 +49,10 @@ export interface DeviceBackend {
      * `keyboard` holds a session and answers its keys, for a backend that types through them.
      */
     type?(deviceId: string, text: string, keyboard: () => Promise<DeviceKeyboard>): Promise<void>;
+    /* The accessibility tree of what the device shows now; absent on a backend that cannot read one. */
+    tree?(deviceId: string): Promise<DeviceTree>;
+    /* Ends whatever `tree` keeps running for this device. */
+    closeTree?(deviceId: string): void;
 }
 
 interface DeviceSession {
@@ -84,6 +89,8 @@ const DEVICE_ERROR_CODES = [
     'device-helper-running',
     'device-helper-unavailable',
     'device-not-streaming',
+    'device-tree-failed',
+    'device-tree-unavailable',
     'device-format-unsupported',
     'adb-unavailable',
     'adb-failed',
@@ -161,6 +168,7 @@ export class DeviceManager {
             throw new DeviceError('device-action-unavailable', 'This device cannot be shut down by Ruimte');
         }
         this.destroy(sessionKey(backendId, deviceId));
+        backend.closeTree?.(deviceId);
         return backend.shutdown(deviceId);
     }
 
@@ -338,6 +346,26 @@ export class DeviceManager {
         } catch (error) {
             throw this.sourceError(error);
         }
+    }
+
+    canTree(device: DeviceInfo): boolean {
+        return this.backends.get(device.backendId)?.tree !== undefined;
+    }
+
+    async tree(backendId: string, platform: DevicePlatform, deviceId: string): Promise<DeviceTree> {
+        const backend = this.backend(backendId, platform);
+        if (!backend.tree) {
+            throw new DeviceError('device-tree-unavailable', 'Ruimte cannot read the accessibility tree of this device');
+        }
+        try {
+            return await backend.tree(deviceId);
+        } catch (error) {
+            throw this.sourceError(error);
+        }
+    }
+
+    closeTree(backendId: string, deviceId: string): void {
+        this.backends.get(backendId)?.closeTree?.(deviceId);
     }
 
     closeAll(): void {

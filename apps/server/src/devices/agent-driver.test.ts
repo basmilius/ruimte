@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
 import { AGENT_HOLD_IDLE_MS, DeviceDriver, type AgentStep, type DeviceGate } from './agent-driver.ts';
-import { RecordingBackend, SIMULATOR, pngOf } from './device-test-helpers.ts';
+import { ReadingBackend, RecordingBackend, SAMPLE_TREE, SIMULATOR, pngOf } from './device-test-helpers.ts';
 import { DeviceManager } from './manager.ts';
 
 let home: string;
@@ -147,8 +147,8 @@ describe('DeviceDriver', () => {
         backend.info = readOnly;
         await driver.shot('chat-1', readOnly, 'phone-node');
         await expect(driver.tap('chat-1', readOnly, { x: 10, y: 10 })).rejects.toMatchObject({ code: 'device-input-unavailable' });
-        expect(driver.abilities(readOnly)).toEqual({ shot: true, input: false, type: false, launch: true });
-        expect(driver.abilities({ ...SIMULATOR, state: 'shutdown' })).toEqual({ shot: false, input: false, type: false, launch: false });
+        expect(driver.abilities(readOnly)).toEqual({ shot: true, input: false, type: false, launch: true, tree: false });
+        expect(driver.abilities({ ...SIMULATOR, state: 'shutdown' })).toEqual({ shot: false, input: false, type: false, launch: false, tree: false });
     });
 
     test('opens an app through the device tools', async () => {
@@ -172,5 +172,96 @@ describe('DeviceDriver', () => {
         gate = { admit: () => ({ code: 'taken-over', message: 'The person took this device over' }) };
         await expect(driver.type('chat-1', SIMULATOR, 'hi')).rejects.toMatchObject({ code: 'taken-over' });
         expect(backend.typed).toEqual([]);
+    });
+});
+
+describe('DeviceDriver on a device with a tree', () => {
+    let reading: ReadingBackend;
+
+    beforeEach(() => {
+        reading = new ReadingBackend();
+        backend = reading;
+        driver = new DeviceDriver({
+            home,
+            manager: new DeviceManager([reading]),
+            timers,
+            sleep: async () => undefined,
+            gate: {
+                admit: (device, caller, step) => {
+                    admitted.push({ caller, step });
+                    return gate.admit(device, caller, step);
+                }
+            }
+        });
+    });
+
+    test('reads the elements as looking, and filters them to a text with what they sit in', async () => {
+        expect(driver.abilities(SIMULATOR).tree).toBe(true);
+        const whole = await driver.tree('chat-1', SIMULATOR);
+        expect(whole).toMatchObject({ screen: { width: 1000, height: 2000 }, truncated: false, count: 7, matches: null });
+        expect(whole.elements).toHaveLength(7);
+        const found = await driver.tree('chat-1', SIMULATOR, 'wi-fi');
+        expect(found.matches).toBe(1);
+        expect(found.elements.map((element) => element.handle)).toEqual([0, 2, 4]);
+        expect(admitted).toEqual([
+            { caller: 'chat-1', step: { kind: 'shot' } },
+            { caller: 'chat-1', step: { kind: 'shot' } }
+        ]);
+    });
+
+    test('taps the middle of an element without a shot, counted in the screen the tree has', async () => {
+        await driver.tree('chat-1', SIMULATOR);
+        await driver.tapElement('chat-1', SIMULATOR, 4);
+        expect(backend.source.inputs).toEqual([
+            { kind: 'pointer', phase: 'down', x: 0.5, y: 695 / 2000 },
+            { kind: 'pointer', phase: 'up', x: 0.5, y: 695 / 2000 }
+        ]);
+        expect(admitted.at(-1)).toEqual({ caller: 'chat-1', step: { kind: 'tap', x: 0.5, y: 695 / 2000 } });
+    });
+
+    test('refuses an element without a state, one the state does not have, and one off the screen', async () => {
+        await expect(driver.tapElement('chat-1', SIMULATOR, 3)).rejects.toMatchObject({ code: 'stale-element' });
+        await driver.tree('chat-1', SIMULATOR);
+        await expect(driver.tapElement('chat-1', SIMULATOR, 7)).rejects.toMatchObject({ code: 'unknown-element', message: expect.stringContaining('0 to 6') });
+        await expect(driver.tapElement('chat-1', SIMULATOR, 5)).rejects.toMatchObject({ code: 'offscreen-element' });
+        expect(backend.source.inputs).toEqual([]);
+    });
+
+    test('points the handles into the newest state, and drops them when a read fails', async () => {
+        await driver.tree('chat-1', SIMULATOR);
+        reading.screen = { ...SAMPLE_TREE, root: { ...SAMPLE_TREE.root, children: [] } };
+        await driver.tree('chat-1', SIMULATOR);
+        await expect(driver.tapElement('chat-1', SIMULATOR, 3)).rejects.toMatchObject({ code: 'unknown-element' });
+        reading.failure = new Error('The simulator did not answer');
+        await expect(driver.tree('chat-1', SIMULATOR)).rejects.toMatchObject({ code: 'device-helper-failed' });
+        await expect(driver.tapElement('chat-1', SIMULATOR, 0)).rejects.toMatchObject({ code: 'stale-element' });
+    });
+
+    test('keeps the reader while the agent calls, and ends it a minute after the last call or when the daemon stops', async () => {
+        await driver.tree('chat-1', SIMULATOR);
+        timers.advance(AGENT_HOLD_IDLE_MS - 1);
+        await driver.shot('chat-1', SIMULATOR, 'phone-node');
+        timers.advance(AGENT_HOLD_IDLE_MS - 1);
+        expect(reading.closed).toEqual([]);
+        timers.advance(1);
+        expect(reading.closed).toEqual(['sim-1']);
+        await expect(driver.tapElement('chat-1', SIMULATOR, 3)).rejects.toMatchObject({ code: 'stale-element' });
+
+        await driver.tree('chat-1', SIMULATOR);
+        driver.releaseAll();
+        expect(reading.closed).toEqual(['sim-1', 'sim-1']);
+    });
+
+    test('reads while the person holds the device, but does not tap', async () => {
+        await driver.tree('chat-1', SIMULATOR);
+        gate = { admit: (_device, _caller, step) => (step.kind === 'shot' ? null : { code: 'paused', message: 'The person paused you' }) };
+        expect((await driver.tree('chat-1', SIMULATOR)).count).toBe(7);
+        await expect(driver.tapElement('chat-1', SIMULATOR, 3)).rejects.toMatchObject({ code: 'paused' });
+    });
+
+    test('refuses a tree on a device that has none', async () => {
+        const plain = new DeviceDriver({ home, manager: new DeviceManager([new RecordingBackend()]), timers });
+        expect(plain.abilities(SIMULATOR).tree).toBe(false);
+        await expect(plain.tree('chat-1', SIMULATOR)).rejects.toMatchObject({ code: 'device-tree-unavailable' });
     });
 });

@@ -16,8 +16,9 @@ const COMMON_DETAIL: readonly string[] = [
     'refused\tdevice-not-booted\tthe device is not running: ask the person to start it from its node, since an agent never starts one',
     'refused\tdevice-missing\tthis machine does not have that device right now: tell the person',
     'refused\tno-shot, outside-shot\tcoordinates are pixels of the last shot: take one with device shot and count in it',
+    'refused\tstale-element, unknown-element, offscreen-element\tan element is a number of the last device state of that device: read the state again',
     'refused\tpaused, taken-over\tthe person paused you or operates the device by hand from its node: wait and call again later, taking a shot first, or stop and tell them what is left. A shot still works',
-    'see\truimte-context device state <id>\twhat the device can do, and the size of the last shot',
+    'see\truimte-context device state <id>\twhat the device can do, the size of the last shot and the elements on screen',
     SCOPE_LINE
 ];
 
@@ -36,6 +37,60 @@ const nodeTuple = (word: string, rest: string) =>
         error: (issue) => (issue.code === 'too_big' ? `device ${word} takes one node id${rest}` : `device ${word} needs the id of a device node`)
     });
 
+/* Text past this many characters is cut in a state line, which says how long it was. */
+const MAX_TEXT = 200;
+
+const quote = (text: string): string => {
+    const clipped = text.length > MAX_TEXT ? `${text.slice(0, MAX_TEXT)}…` : text;
+    const escaped = clipped
+        .replaceAll('\\', '\\\\')
+        .replaceAll('"', '\\"')
+        .replace(/\r\n|\r|\n/g, '\\n')
+        .replaceAll('\t', '\\t');
+    return text.length > MAX_TEXT ? `"${escaped}"(cut: ${text.length} chars)` : `"${escaped}"`;
+};
+
+type TreeElement = NonNullable<ActionOutput<'device.inspect'>['tree']>['elements'][number];
+
+/* One element on one line, as a state of an app on this Mac writes it, indented by its depth. */
+export const elementLine = (element: TreeElement): string => {
+    const parts = [`[${element.handle}]`, element.subrole === null ? element.role : `${element.role}:${element.subrole}`];
+    if (element.label !== null) {
+        parts.push(quote(element.label));
+    }
+    if (element.value !== null && element.value !== element.label) {
+        parts.push(`value=${quote(element.value)}`);
+    }
+    if (element.identifier !== null && element.identifier !== element.label) {
+        parts.push(`id=${quote(element.identifier)}`);
+    }
+    const { x, y, width, height } = element.frame;
+    parts.push(`(${Math.round(x)},${Math.round(y)} ${Math.round(width)}x${Math.round(height)})`);
+    if (element.offscreen) {
+        parts.push('offscreen');
+    }
+    if (!element.enabled) {
+        parts.push('disabled');
+    }
+    return `${'  '.repeat(element.depth)}${parts.join(' ')}`;
+};
+
+const treeLines = (state: ActionOutput<'device.inspect'>): string[] => {
+    if (state.treeError !== null) {
+        return [`tree\tnone\t${field(state.treeError)}`];
+    }
+    if (state.tree === null) {
+        return [];
+    }
+    const { tree } = state;
+    return [
+        `elements\t${tree.count}\t${tree.screen.width}x${tree.screen.height}`,
+        ...(tree.matches === null ? [] : [`matches\t${tree.matches}`]),
+        ...(tree.truncated ? ['truncated\tyes\tThe tree was cut off after the elements above; use --find for the rest'] : []),
+        ...tree.elements.map((element) => `tree\t${field(elementLine(element))}`)
+    ];
+};
+
 const doneLine = (word: string, outcome: ActionOutput<'device.tap'>): string[] => [
     `done\t${word}\t${outcome.nodeId}\t${field(outcome.device)}`,
     'next\truimte-context device shot <id>\tshows what it did'
@@ -44,20 +99,27 @@ const doneLine = (word: string, outcome: ActionOutput<'device.tap'>): string[] =
 const stateAction = defineActionVerb('device', {
     name: 'state',
     action: 'device.inspect',
-    usage: '<id>',
-    params: [NODE_PARAM],
+    usage: '<id> [--find T]',
+    params: [NODE_PARAM, { syntax: '--find T', need: 'optional', field: 'find', more: 'prints matches, the number of elements that hold it' }],
     detail: [
         'prints\tdevice\tid\tname\tplatform\tkind\truntime\twhich device the node points at',
         'prints\tstate\tbooted|shutdown|transitioning|missing\twhether it runs; missing when this machine does not have it right now',
-        'prints\tscreen\twidthxheight|unknown\tthe size of the last shot, which every coordinate is counted in; unknown until you take one',
+        'prints\tscreen\twidthxheight|unknown\tthe size of the last shot, which --at, --from and --to are counted in; unknown until you take one',
         'prints\tbuttons\tname ...\tthe buttons device button takes on this device',
-        'prints\tcan\tshot|input|type|launch\tyes|no\twhat works on it now; input is tap, swipe and button',
+        'prints\tcan\tshot|input|type|launch|tree\tyes|no\twhat works on it now; input is tap, swipe and button, tree the elements below',
+        'prints\telements\tN\twidthxheight\thow many elements the screen holds, and its size in pixels',
+        'prints\ttree\tline\tone row per element: [N] role, label, value=, id=, frame as x,y widthxheight, and offscreen or disabled; the indent after the tab is its depth',
+        'prints\ttree\tnone\twhy\twhen the elements could not be read; a shot still shows the screen',
+        'read\t[N] is the number device tap takes with --element, until the next device state of this device',
+        'read\tA frame is in pixels of the screen, the pixels a shot has, so it lines up with device shot and tap --at',
+        'note\tThe tree holds only the app in front, or an alert over it; no web content, and of a long list only the rows on screen. Take a shot for those',
+        'note\tA simulator and an Android device have a tree; an iPhone has shots only',
         ...COMMON_DETAIL
     ],
     positionals: nodeTuple('state', ' and nothing else'),
-    flags: z.object({}),
-    async run({ positionals: [id] }, call) {
-        const state = await runAction(call, 'device.inspect', { nodeId: id });
+    flags: z.object({ find: z.string({ error: '--find needs the text to look for' }).min(1, '--find needs the text to look for').optional() }),
+    async run({ positionals: [id], flags }, call) {
+        const state = await runAction(call, 'device.inspect', { nodeId: id, find: flags.find ?? null });
         const { device } = state;
         return [
             `device\t${id}\t${field(device.name)}\t${device.platform}\t${device.kind}\t${field(device.runtime)}`,
@@ -67,7 +129,9 @@ const stateAction = defineActionVerb('device', {
             `can\tshot\t${yesNo(state.can.shot)}`,
             `can\tinput\t${yesNo(state.can.input)}`,
             `can\ttype\t${yesNo(state.can.type)}`,
-            `can\tlaunch\t${yesNo(state.can.launch)}`
+            `can\tlaunch\t${yesNo(state.can.launch)}`,
+            `can\ttree\t${yesNo(state.can.tree)}`,
+            ...treeLines(state)
         ];
     }
 });
@@ -94,13 +158,35 @@ const shotAction = defineActionVerb('device', {
 const tapAction = defineActionVerb('device', {
     name: 'tap',
     action: 'device.tap',
-    usage: '<id> --at X,Y',
-    params: [NODE_PARAM, { syntax: '--at X,Y', need: 'required', text: 'A pixel of the last shot, counted from its top-left corner' }],
-    detail: ['prints\tdone\ttap\tid\tdevice', ...COMMON_DETAIL],
-    positionals: nodeTuple('tap', ' and the pixel in --at'),
-    flags: z.object({ at: pixelPair('at') }),
+    usage: '<id> (--element N | --at X,Y)',
+    params: [
+        NODE_PARAM,
+        { syntax: '--element N', need: 'or --at', field: 'element' },
+        { syntax: '--at X,Y', need: 'or --element', text: 'A pixel of the last shot, counted from its top-left corner' }
+    ],
+    detail: [
+        'note\tBy element it taps the middle of that element of the last device state, and needs no shot',
+        'note\tA tap changes the screen, so read the state again before the next --element',
+        'prints\tdone\ttap\tid\tdevice',
+        ...COMMON_DETAIL
+    ],
+    positionals: nodeTuple('tap', ' and the element in --element or the pixel in --at'),
+    flags: z.object({
+        at: pixelPair('at').optional(),
+        element: z
+            .string({ error: '--element needs the number of an element, as device state lists it' })
+            .regex(/^\d+$/, '--element takes the number in brackets that device state gave the element')
+            .transform(Number)
+            .optional()
+    }),
     async run({ positionals: [id], flags }, call) {
-        return doneLine('tap', await runAction(call, 'device.tap', { nodeId: id, x: flags.at.x, y: flags.at.y }));
+        const outcome = await runAction(call, 'device.tap', {
+            nodeId: id,
+            x: flags.at?.x ?? null,
+            y: flags.at?.y ?? null,
+            element: flags.element ?? null
+        });
+        return doneLine('tap', outcome);
     }
 });
 
@@ -197,10 +283,10 @@ const launchAction = defineActionVerb('device', {
 export const DEVICE_ACTIONS = [stateAction, shotAction, tapAction, swipeAction, buttonAction, typeAction, launchAction] as const;
 
 export const DEVICE_SUMMARY =
-    'Sees and operates the device under a device node you have a line to: a picture of its screen, taps, swipes, buttons, text and apps';
+    'Sees and operates the device under a device node you have a line to: the elements and a picture of its screen, taps, swipes, buttons, text and apps';
 
 export const DEVICE_DETAIL: readonly string[] = [
-    'note\tWork in shots: take one, decide on it, act in its pixels, and take the next to see what happened',
+    'note\tRead the elements with device state and tap one by its number; take a shot for what the tree does not hold, act in its pixels, and read again to see what happened',
     'note\tA simulator, an emulator or a phone, as long as it runs on this machine; an agent never starts or stops one',
     'see\truimte-context read <id>\twhich device the node points at, without touching it',
     SCOPE_LINE

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import { pngOf } from './device-test-helpers.ts';
 import { IosSimulatorBackend, type SimctlRunner } from './ios-simulator.ts';
+import type { SimulatorTreeReader } from './simulator-tree.ts';
 
 const listOutput = JSON.stringify({
     devices: {
@@ -162,5 +163,53 @@ describe('IosSimulatorBackend', () => {
             'keys 227,25',
             'sleep 150'
         ]);
+    });
+
+    test('reads a tree through one reader per simulator, kept until it is closed', async () => {
+        const made: string[] = [];
+        let closed = 0;
+        const backend = new IosSimulatorBackend(
+            async () => ({ exitCode: 0, stdout: listOutput, stderr: '' }),
+            null,
+            undefined,
+            (udid) => {
+                made.push(udid);
+                return {
+                    read: async () => ({
+                        type: 'tree',
+                        id: 1,
+                        scale: 2,
+                        root: {
+                            role: 'AXApplication',
+                            subrole: null,
+                            label: 'Maps',
+                            value: null,
+                            identifier: null,
+                            frame: { x: 0, y: 0, width: 400, height: 800 },
+                            enabled: true,
+                            children: []
+                        },
+                        truncated: false,
+                        ms: 20
+                    }),
+                    close: () => {
+                        closed += 1;
+                    }
+                } as unknown as SimulatorTreeReader;
+            }
+        );
+        expect((await backend.tree('phone-1')).screen).toEqual({ width: 800, height: 1600 });
+        await backend.tree('phone-1');
+        expect(made).toEqual(['phone-1']);
+        backend.closeTree('phone-1');
+        backend.closeTree('phone-1');
+        expect(closed).toBe(1);
+        await backend.tree('phone-1');
+        expect(made).toEqual(['phone-1', 'phone-1']);
+    });
+
+    test('says a tree needs the device bridge where it is not installed', async () => {
+        const backend = new IosSimulatorBackend(async () => ({ exitCode: 0, stdout: listOutput, stderr: '' }));
+        await expect(backend.tree('phone-1')).rejects.toMatchObject({ code: 'device-tree-unavailable' });
     });
 });

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { DeviceInfo, ProjectContent, ProjectEdge, ProjectNode } from '@ruimte/contracts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
 import { DeviceDriver } from '../devices/agent-driver.ts';
-import { RecordingBackend, SIMULATOR, pngOf } from '../devices/device-test-helpers.ts';
+import { ReadingBackend, RecordingBackend, SIMULATOR, pngOf } from '../devices/device-test-helpers.ts';
 import { DeviceManager } from '../devices/manager.ts';
 import { refusalBody } from '../refusal.ts';
 import { VerbRefusal, type CanvasHost, type Noun } from './verb.ts';
@@ -96,7 +96,8 @@ describe('ruimte-context device', () => {
             'can\tshot\tyes',
             'can\tinput\tyes',
             'can\ttype\tyes',
-            'can\tlaunch\tyes'
+            'can\tlaunch\tyes',
+            'can\ttree\tno'
         ]);
         await run(['shot', 'phone-1']);
         expect(await run(['state', 'phone-1'])).toContain('screen\t1000x2000');
@@ -152,7 +153,9 @@ describe('ruimte-context device', () => {
     test('refuses a tap before any shot and a pixel written the wrong way', async () => {
         expect((await run(['tap', 'phone-1', '--at', '10,10']))[0]).toStartWith('refused\tno-shot\t');
         expect((await run(['tap', 'phone-1', '--at', '10']))[0]).toStartWith('refused\tbad-arguments\t--at takes a pixel of the last shot as x,y');
-        expect((await run(['tap', 'phone-1']))[0]).toBe('refused\tbad-arguments\t--at needs a pixel of the last shot, as x,y');
+        expect((await run(['tap', 'phone-1']))[0]).toBe(
+            'refused\tbad-arguments\tA tap takes either an element of the last state or a pixel of the last shot as x and y'
+        );
     });
 
     test('only a line lets the caller operate a device, and a refusal offers the ones it has', async () => {
@@ -224,5 +227,73 @@ describe('ruimte-context device', () => {
         expect(await run(['launch', 'other-1', '--app', 'com.example.app'])).toEqual([
             'refused\tdevice-action-unavailable\tRuimte cannot open an app on Test iPhone'
         ]);
+    });
+});
+
+describe('ruimte-context device on a device with a tree', () => {
+    let reading: ReadingBackend;
+
+    beforeEach(() => {
+        reading = new ReadingBackend();
+        backend = reading;
+        host = hostWith([reading]);
+    });
+
+    test('prints the elements under the state, numbered, in pixels of the screen', async () => {
+        const lines = await run(['state', 'phone-1']);
+        expect(lines.slice(lines.indexOf('can\ttree\tyes'))).toEqual([
+            'can\ttree\tyes',
+            'elements\t7\t1000x2000',
+            'tree\t[0] Application "Settings" (0,0 1000x2000)',
+            'tree\t  [1] Heading "Settings" (40,300 460x100)',
+            'tree\t  [2] Group (0,400 1000x1600)',
+            'tree\t    [3] Button "General" id="com.example.general" (40,500 920x130)',
+            'tree\t    [4] Button "Wi-Fi" value="Home network" (40,630 920x130)',
+            'tree\t    [5] Button "Privacy" (40,2100 920x130) offscreen',
+            'tree\t  [6] Button "Done" (800,100 160x80) disabled'
+        ]);
+    });
+
+    test('finds the elements that hold a text, with what they sit in and the numbers they have', async () => {
+        const lines = await run(['state', 'phone-1', '--find', 'general']);
+        expect(lines.slice(lines.indexOf('elements\t7\t1000x2000'))).toEqual([
+            'elements\t7\t1000x2000',
+            'matches\t1',
+            'tree\t[0] Application "Settings" (0,0 1000x2000)',
+            'tree\t  [2] Group (0,400 1000x1600)',
+            'tree\t    [3] Button "General" id="com.example.general" (40,500 920x130)'
+        ]);
+    });
+
+    test('quotes text on one line and cuts a long one', async () => {
+        const long = 'x'.repeat(250);
+        reading.screen = { ...reading.screen, root: { ...reading.screen.root, label: 'Say "hi"\tnow\nplease', value: long, children: [] } };
+        const lines = await run(['state', 'phone-1']);
+        expect(lines.at(-1)).toBe(`tree\t[0] Application "Say \\"hi\\"\\tnow\\nplease" value="${'x'.repeat(200)}…"(cut: 250 chars) (0,0 1000x2000)`);
+    });
+
+    test('taps an element of the last state without a shot, and refuses a stale one or two targets at once', async () => {
+        expect((await run(['tap', 'phone-1', '--element', '3']))[0]).toStartWith('refused\tstale-element\t');
+        await run(['state', 'phone-1']);
+        expect(await run(['tap', 'phone-1', '--element', '3'])).toEqual([
+            'done\ttap\tphone-1\tiPhone 18 Pro',
+            'next\truimte-context device shot <id>\tshows what it did'
+        ]);
+        expect(backend.source.inputs[0]).toEqual({ kind: 'pointer', phase: 'down', x: 0.5, y: 565 / 2000 });
+        expect((await run(['tap', 'phone-1', '--element', '9']))[0]).toStartWith('refused\tunknown-element\t');
+        expect((await run(['tap', 'phone-1', '--element', 'two']))[0]).toStartWith('refused\tbad-arguments\t--element takes the number in brackets');
+        expect((await run(['tap', 'phone-1', '--element', '3', '--at', '1,1']))[0]).toStartWith('refused\tbad-arguments\tA tap takes either');
+    });
+
+    test('still prints the state when the tree will not come, and says why', async () => {
+        reading.failure = new Error('The simulator did not answer within 15 s');
+        const lines = await run(['state', 'phone-1']);
+        expect(lines.slice(-2)).toEqual(['can\ttree\tyes', 'tree\tnone\tThe simulator did not answer within 15 s']);
+    });
+
+    test('tells what the tree does not hold, and that a shot is for that', async () => {
+        const help = noun.actions.find((action) => action.word === 'state')!.detail.join('\n');
+        expect(help).toContain('no web content, and of a long list only the rows on screen. Take a shot for those');
+        expect(help).toContain('an iPhone has shots only');
     });
 });

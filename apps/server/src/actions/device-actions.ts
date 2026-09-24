@@ -1,6 +1,7 @@
 import type { ActionHandlers } from '@ruimte/actions';
 import { deriveProjectContextSources, deviceButtons, isCanvasView, type ContextSource, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
 import { VerbRefusal, field, orNote, type CanvasHost, type DeviceDriveHost } from '../canvas/verb.ts';
+import { CodedError } from '../coded-error.ts';
 import type { ServerActionContext } from './context.ts';
 
 /* Every device node this caller may operate, for a refusal that offers what the next call takes. */
@@ -85,7 +86,7 @@ const bootedDevice = async (context: ServerActionContext, caller: string, nodeId
 };
 
 export const deviceActions: ActionHandlers<ServerActionContext> = {
-    'device.inspect': async ({ nodeId }, { actor, context }) => {
+    'device.inspect': async ({ nodeId, find }, { actor, context }) => {
         const reference = await referenceOf(context, actor.id, nodeId);
         const driver = driverOf(context.host);
         const device = await driver.find(reference);
@@ -98,9 +99,25 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
                     state: null,
                     screen: null,
                     buttons: [],
-                    can: { shot: false, input: false, type: false, launch: false }
+                    can: { shot: false, input: false, type: false, launch: false, tree: false },
+                    tree: null,
+                    treeError: null
                 }
             };
+        }
+        const can = driver.abilities(device);
+        let tree: Awaited<ReturnType<DeviceDriveHost['tree']>> | null = null;
+        let treeError: string | null = null;
+        if (can.tree) {
+            try {
+                tree = await driver.tree(actor.id, device, find ?? null);
+            } catch (error) {
+                // The rest of the state still holds, so a tree that would not come is said, not refused.
+                if (!(error instanceof CodedError)) {
+                    throw error;
+                }
+                treeError = error.message;
+            }
         }
         return {
             output: {
@@ -110,7 +127,15 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
                 state: device.state,
                 screen: driver.screen(device),
                 buttons: deviceButtons(device),
-                can: driver.abilities(device)
+                can,
+                tree:
+                    tree === null
+                        ? null
+                        : {
+                              ...tree,
+                              elements: tree.elements.map(({ parent: _parent, ...element }) => element)
+                          },
+                treeError
             }
         };
     },
@@ -119,9 +144,22 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
         const shot = await driverOf(context.host).shot(actor.id, device, nodeId);
         return { output: { nodeId, ...shot } };
     },
-    'device.tap': async ({ nodeId, x, y }, { actor, context }) => {
+    'device.tap': async ({ nodeId, x, y, element }, { actor, context }) => {
+        const handle = element ?? null;
+        const pixel = x === null || x === undefined || y === null || y === undefined ? null : { x, y };
+        if (handle === null ? pixel === null : (x ?? y ?? null) !== null) {
+            throw new VerbRefusal('bad-arguments', 'A tap takes either an element of the last state or a pixel of the last shot as x and y', [
+                'see\truimte-context device state <id>\tnumbers the elements',
+                'see\truimte-context device shot <id>\ttakes a picture to count pixels in'
+            ]);
+        }
         const device = await bootedDevice(context, actor.id, nodeId);
-        await driverOf(context.host).tap(actor.id, device, { x, y });
+        const driver = driverOf(context.host);
+        if (handle !== null) {
+            await driver.tapElement(actor.id, device, handle);
+        } else if (pixel !== null) {
+            await driver.tap(actor.id, device, pixel);
+        }
         return { output: { nodeId, device: device.name } };
     },
     'device.swipe': async ({ nodeId, fromX, fromY, toX, toY, ms }, { actor, context }) => {

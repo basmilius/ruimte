@@ -1,4 +1,5 @@
 import type { DeviceAction, DeviceInfo, DeviceInput, DeviceSettings, LiveStreamFrame } from '@ruimte/contracts';
+import type { DeviceTree, DeviceTreeNode } from './device-tree.ts';
 import type { DeviceBackend, DeviceKeyboard, DeviceSource } from './manager.ts';
 
 /* The first bytes of a png of this size: the signature and a header chunk, which is all a size is read from. */
@@ -103,5 +104,58 @@ export class RecordingBackend implements DeviceBackend {
     action(_deviceId: string, action: DeviceAction): Promise<DeviceSettings> {
         this.actions.push(action);
         return Promise.resolve({});
+    }
+}
+
+const node = (role: string, label: string | null, frame: [number, number, number, number], children: DeviceTreeNode[] = []): DeviceTreeNode => ({
+    role,
+    subrole: null,
+    label,
+    value: null,
+    identifier: null,
+    frame: { x: frame[0], y: frame[1], width: frame[2], height: frame[3] },
+    enabled: true,
+    children
+});
+
+/* A screen of 1000x2000 pixels: an app with a heading, a list holding two rows and a row scrolled off the bottom, and a disabled button. */
+export const SAMPLE_TREE: DeviceTree = {
+    screen: { width: 1000, height: 2000 },
+    truncated: false,
+    root: node(
+        'Application',
+        'Settings',
+        [0, 0, 1000, 2000],
+        [
+            node('Heading', 'Settings', [40, 300, 460, 100]),
+            node(
+                'Group',
+                null,
+                [0, 400, 1000, 1600],
+                [
+                    { ...node('Button', 'General', [40, 500, 920, 130]), identifier: 'com.example.general' },
+                    { ...node('Button', 'Wi-Fi', [40, 630, 920, 130]), value: 'Home network' },
+                    node('Button', 'Privacy', [40, 2100, 920, 130])
+                ]
+            ),
+            { ...node('Button', 'Done', [800, 100, 160, 80]), enabled: false }
+        ]
+    )
+};
+
+/* A device whose backend reads a tree as well, and remembers which readers it was told to end. */
+export class ReadingBackend extends RecordingBackend {
+    screen: DeviceTree = SAMPLE_TREE;
+    failure: Error | null = null;
+    reads = 0;
+    readonly closed: string[] = [];
+
+    tree(): Promise<DeviceTree> {
+        this.reads += 1;
+        return this.failure === null ? Promise.resolve(this.screen) : Promise.reject(this.failure);
+    }
+
+    closeTree(deviceId: string): void {
+        this.closed.push(deviceId);
     }
 }

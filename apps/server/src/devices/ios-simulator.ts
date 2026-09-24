@@ -14,8 +14,10 @@ import {
     type DeviceTextSize,
     type DeviceToggleSetting
 } from '@ruimte/contracts';
+import { simulatorTree, type DeviceTree } from './device-tree.ts';
 import { DeviceHelperSource, type DeviceHelperLauncher } from './helper-source.ts';
 import { DeviceError, type DeviceBackend, type DeviceKeyboard } from './manager.ts';
+import type { SimulatorTreeReader } from './simulator-tree.ts';
 
 interface CommandResult {
     exitCode: number;
@@ -136,11 +138,19 @@ export class IosSimulatorBackend implements DeviceBackend {
     private readonly run: SimctlRunner;
     private readonly launch: DeviceHelperLauncher | null;
     private readonly sleep: (ms: number) => Promise<void>;
+    private readonly treeReader: ((udid: string) => SimulatorTreeReader) | null;
+    private readonly readers = new Map<string, SimulatorTreeReader>();
 
-    constructor(run: SimctlRunner = defaultRunner, launch: DeviceHelperLauncher | null = null, sleep: (ms: number) => Promise<void> = (ms) => Bun.sleep(ms)) {
+    constructor(
+        run: SimctlRunner = defaultRunner,
+        launch: DeviceHelperLauncher | null = null,
+        sleep: (ms: number) => Promise<void> = (ms) => Bun.sleep(ms),
+        treeReader: ((udid: string) => SimulatorTreeReader) | null = null
+    ) {
         this.run = run;
         this.launch = launch;
         this.sleep = sleep;
+        this.treeReader = treeReader;
     }
 
     async list(): Promise<DeviceInfo[]> {
@@ -308,6 +318,24 @@ export class IosSimulatorBackend implements DeviceBackend {
         } finally {
             await rm(directory, { recursive: true, force: true });
         }
+    }
+
+    /* Read through the device bridge, which stays running for this simulator until `closeTree`. */
+    async tree(deviceId: string): Promise<DeviceTree> {
+        if (this.treeReader === null) {
+            throw new DeviceError('device-tree-unavailable', "The device bridge that reads a simulator's accessibility is not installed on this machine");
+        }
+        let reader = this.readers.get(deviceId);
+        if (!reader) {
+            reader = this.treeReader(deviceId);
+            this.readers.set(deviceId, reader);
+        }
+        return simulatorTree(await reader.read());
+    }
+
+    closeTree(deviceId: string): void {
+        this.readers.get(deviceId)?.close();
+        this.readers.delete(deviceId);
     }
 
     /*
