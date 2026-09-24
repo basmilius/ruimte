@@ -1,19 +1,20 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronRight, FlagOff, Flag } from 'lucide-react';
+import { ChevronRight, FlagOff, Flag } from 'lucide-react';
 import { flagOf } from '@ruimte/contracts';
 import { flagAction } from '@/actions/client-actions';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { useDocument } from '@/state/document';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 
 function ColorItem({ ids, entry, picked }: { ids: readonly string[]; entry: (typeof NODE_ACCENTS)[number]; picked: boolean }) {
     return (
         <Menu.Item className="menu-item" onClick={() => flagAction(ids, entry.id)}>
+            <MenuCheck kind="radio" checked={picked} />
             <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: entry.color }} aria-hidden />
             <span className="grow">{accentLabel(entry.id)}</span>
-            {picked && <Icon icon={Check} size={14} className="shrink-0" />}
         </Menu.Item>
     );
 }

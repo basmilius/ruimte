@@ -2,7 +2,7 @@ import { Fragment, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, FileText, Frame, Globe, Heading, Minus, PenTool, Workflow, Terminal } from 'lucide-react';
+import { ChevronDown, FileText, Frame, Globe, Heading, Minus, PenTool, Workflow, Terminal } from 'lucide-react';
 import { isOpenableView, viewIconOf, type ProjectView, type ProviderInfo } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { AgentSubmenu } from '@/agents/AgentMenus';
@@ -20,6 +20,7 @@ import { labelCollator } from '@/format/locale';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { cameThroughPortal } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { CANVAS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
 import { MenuPopup } from '@/ui/MenuPopup';
@@ -281,6 +282,7 @@ export function ViewMenu() {
                         <div className={MENU_LABEL}>{t('viewMenu.views')}</div>
                         {views.filter(isOpenableView).map((view, index) => (
                             <Menu.Item key={view.id} className="menu-item" onClick={() => showView(view.id)}>
+                                <MenuCheck kind="radio" checked={view.id === activeViewId} />
                                 <ViewGlyph
                                     id={view.id}
                                     kind={view.kind}
@@ -289,13 +291,8 @@ export function ViewMenu() {
                                     path={view.kind === 'file' ? view.path : null}
                                 />
                                 <ViewName view={view} className="truncate" />
-                                {view.id === activeViewId && (
-                                    <span className="ml-auto flex shrink-0 items-center">
-                                        <Icon icon={Check} size={14} />
-                                    </span>
-                                )}
                                 {/* The first nine have a shortcut of their own; the rest are one click away. */}
-                                {index < 9 && view.id !== activeViewId && <Kbd shortcut={viewShortcut(index)!} />}
+                                {index < 9 && <Kbd shortcut={viewShortcut(index)!} />}
                             </Menu.Item>
                         ))}
                         <Menu.Separator className={MENU_SEPARATOR} />

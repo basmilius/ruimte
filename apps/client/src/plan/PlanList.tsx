@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import {
-    Check,
     CheckCheck,
     ChevronDown,
     ChevronRight,
@@ -56,6 +55,7 @@ import { useChatRow } from '@/state/chats';
 import { MENU_LABEL, MENU_SEPARATOR, MULTILINE_FIELD } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { TextMenu } from '@/ui/TextMenu';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -398,9 +398,9 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                                             }
                                         }}
                                     >
+                                        <MenuCheck kind="radio" checked={row.state === state} />
                                         <Icon icon={STATE_ICON[state]} size={14} className={STATE_TONE[state]} />
                                         {stateLabel(plan.meta.kind, state)}
-                                        {row.state === state && <Icon icon={Check} size={14} className="ml-auto" />}
                                     </ContextMenu.Item>
                                 ))}
                                 <ContextMenu.Separator className={MENU_SEPARATOR} />
@@ -532,9 +532,9 @@ function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { typ
                                     }
                                 }}
                             >
+                                <MenuCheck kind="radio" checked={state === outcome} />
                                 <Icon icon={STATE_ICON[outcome]} size={14} className={STATE_TONE[outcome]} />
                                 {stateLabel('test', outcome)}
-                                {state === outcome && <Icon icon={Check} size={14} className="ml-auto" />}
                             </Menu.Item>
                         ))}
                     </Menu.Popup>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronRight, Menu as MenuGlyph } from 'lucide-react';
+import { ChevronRight, Menu as MenuGlyph } from 'lucide-react';
 import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { runMenuCommand } from '@/shell/menu/actions';
@@ -12,6 +12,7 @@ import { menuModel } from '@/shell/menu/model';
 import { Brand } from '@/ui/Brand';
 import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { MenuPopup } from '@/ui/MenuPopup';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -19,7 +20,7 @@ import { Tooltip } from '@/ui/Tooltip';
 function RowIcon({ id }: { id: string }) {
     const icon = menuIconOf(id);
     return (
-        <span className="grid w-3.5 shrink-0 place-items-center text-text-muted">
+        <span className="grid w-4 shrink-0 place-items-center text-text-muted">
             {icon !== null && ('agent' in icon ? <AgentIcon kind={icon.agent} size={14} /> : <Icon icon={icon.icon} size={14} />)}
         </span>
     );
@@ -59,9 +60,8 @@ function MenuRows({ items }: { items: MenuNode[] }) {
                         disabled={node.enabled === false}
                         onClick={() => runMenuCommand(node.id)}
                     >
-                        <RowIcon id={node.id} />
+                        {node.checked === undefined ? <RowIcon id={node.id} /> : <MenuCheck kind={node.radio ? 'radio' : 'checkbox'} checked={node.checked} />}
                         <span className="min-w-0 grow truncate">{node.label}</span>
-                        {node.checked && <Icon icon={Check} size={14} className="shrink-0 text-text-muted" />}
                         {node.keys && <span className={MENU_HINT}>{node.keys}</span>}
                     </Menu.Item>
                 );

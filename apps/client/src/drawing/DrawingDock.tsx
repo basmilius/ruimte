@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import {
-    Check,
     Circle,
     Diamond,
     Eraser,
@@ -30,6 +29,7 @@ import { useDrawing, useDrawingStore, type DrawingStyle, type DrawingTool } from
 import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { DockShell } from '@/ui/DockShell';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
@@ -86,11 +86,7 @@ const SWATCH = 'h-5 w-5 rounded-full border border-border-strong';
 function RadioRow({ label, value }: { label: string; value: string | number }) {
     return (
         <Menu.RadioItem value={value} className="menu-item">
-            <span className="grid h-4 w-4 place-items-center">
-                <Menu.RadioItemIndicator>
-                    <Icon icon={Check} size={14} />
-                </Menu.RadioItemIndicator>
-            </span>
+            <MenuCheck kind="radio" />
             <span>{label}</span>
         </Menu.RadioItem>
     );
@@ -286,11 +282,7 @@ export function DrawingDock() {
                                     closeOnClick={false}
                                     onCheckedChange={(checked) => drawingStore.getState().setExportBackground(checked)}
                                 >
-                                    <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
-                                        <Menu.CheckboxItemIndicator>
-                                            <Icon icon={Check} size={12} />
-                                        </Menu.CheckboxItemIndicator>
-                                    </span>
+                                    <MenuCheck kind="checkbox" />
                                     {t('export.withBackground')}
                                 </Menu.CheckboxItem>
                             </Menu.Popup>

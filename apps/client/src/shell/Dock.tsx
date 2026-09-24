@@ -2,7 +2,7 @@ import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
 import { useDictation } from '@/dictation/controller';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, Globe, LayoutGrid, LayoutTemplate, Lock, LockOpen, MessageSquare, Plus, Save, StickyNote, Terminal, Type, X } from 'lucide-react';
+import { Globe, LayoutGrid, LayoutTemplate, Lock, LockOpen, MessageSquare, Plus, Save, StickyNote, Terminal, Type, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { isCanvasView } from '@ruimte/contracts';
 import { applyLayoutAction, createNodeAction, createTextAction, deleteLayoutAction, fitAction, setLocksAction } from '@/actions/client-actions';
@@ -16,6 +16,7 @@ import { BTN_GROUP, MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { DockShell } from '@/ui/DockShell';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { Separator } from '@/ui/Separator';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
@@ -139,16 +140,12 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                                 {LOCK_KEYS.map((key) => (
                                     <Menu.CheckboxItem
                                         key={key}
-                                        className="menu-item"
+                                        className="menu-item items-start"
                                         checked={locks[key]}
                                         onCheckedChange={() => setLocksAction(!locks[key], [key])}
                                         closeOnClick={false}
                                     >
-                                        <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
-                                            <Menu.CheckboxItemIndicator>
-                                                <Icon icon={Check} size={12} />
-                                            </Menu.CheckboxItemIndicator>
-                                        </span>
+                                        <MenuCheck kind="checkbox" />
                                         <span>
                                             <span className="block">{lockLabel(key)}</span>
                                             <span className="block text-xs text-text-faint">{lockHint(key)}</span>

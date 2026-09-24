@@ -2,9 +2,10 @@ import type { ReactNode } from 'react';
 import { Select as BaseSelect } from '@base-ui-components/react/select';
 import i18next from 'i18next';
 import clsx from 'clsx';
-import { Check, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { MENU_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 
 export interface SelectItem<T extends string> {
     value: T;
@@ -51,17 +52,12 @@ const TRIGGER_VARIANT = {
 /* The dimmed look `Toggle` and `Button` wear when disabled, so a select that cannot open reads as such. */
 const TRIGGER_DISABLED = 'data-disabled:cursor-default data-disabled:opacity-50';
 
-/* A description makes the row two lines high; the check and the icon then belong on the label's
-   line box, which the 20 pixel boxes around them give them. */
-function Row<T extends string>({ item }: { item: SelectItem<T> }) {
+/* A description makes the row two lines high; the box keeps the icon on the label's line. */
+function Row<T extends string>({ item, picked }: { item: SelectItem<T>; picked: boolean }) {
     return (
         <BaseSelect.Item className={clsx('menu-item', item.description && 'items-start')} value={item.value} label={item.label} disabled={item.disabled}>
-            <span className="grid h-5 w-4 shrink-0 place-items-center">
-                <BaseSelect.ItemIndicator>
-                    <Icon icon={Check} size={14} />
-                </BaseSelect.ItemIndicator>
-            </span>
-            {item.icon && <span className="flex h-5 shrink-0 items-center">{item.icon}</span>}
+            <MenuCheck kind="radio" checked={picked} />
+            {item.icon && <span className="flex h-lh shrink-0 items-center">{item.icon}</span>}
             <span className="flex min-w-0 flex-col">
                 <BaseSelect.ItemText>{item.label}</BaseSelect.ItemText>
                 {item.description && <span className="text-xs text-text-faint">{item.description}</span>}
@@ -122,11 +118,11 @@ export function Select<T extends string>({
                                       <BaseSelect.Group key={group.label}>
                                           <BaseSelect.GroupLabel className={MENU_LABEL}>{group.label}</BaseSelect.GroupLabel>
                                           {group.items.map((item) => (
-                                              <Row key={item.value} item={item} />
+                                              <Row key={item.value} item={item} picked={item.value === value} />
                                           ))}
                                       </BaseSelect.Group>
                                   ))
-                                : flat.map((item) => <Row key={item.value} item={item} />)}
+                                : flat.map((item) => <Row key={item.value} item={item} picked={item.value === value} />)}
                         </BaseSelect.List>
                     </BaseSelect.Popup>
                 </BaseSelect.Positioner>

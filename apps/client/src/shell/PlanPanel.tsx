@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send, X } from 'lucide-react';
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send, X } from 'lucide-react';
 import type { Plan } from '@ruimte/contracts';
 import { allSteps, effectiveChecks } from '@ruimte/plan';
 import { forkOriginIn } from '@/chat/logic/fork';
@@ -30,6 +30,7 @@ import { useUi } from '@/state/ui';
 import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { Tooltip } from '@/ui/Tooltip';
 import { MenuPopup } from '@/ui/MenuPopup';
 
@@ -123,7 +124,7 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                     <MenuPopup className="min-w-56">
                         {plans.map((entry) => (
                             <Menu.Item key={entry.id} className="menu-item" onClick={() => pickPlan(entry.id)}>
-                                <span className="grid h-4 w-4 shrink-0 place-items-center">{entry.id === plan.id && <Icon icon={Check} size={14} />}</span>
+                                <MenuCheck kind="radio" checked={entry.id === plan.id} />
                                 <span className="min-w-0 truncate">{entry.meta.title}</span>
                             </Menu.Item>
                         ))}
@@ -143,11 +144,7 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                         <Menu.RadioGroup value={filter} onValueChange={(value: PlanFilter) => usePlanViewPrefs.getState().setFilter(value)}>
                             {FILTERS.map((id) => (
                                 <Menu.RadioItem key={id} value={id} className="menu-item">
-                                    <span className="grid h-4 w-4 place-items-center">
-                                        <Menu.RadioItemIndicator>
-                                            <Icon icon={Check} size={14} />
-                                        </Menu.RadioItemIndicator>
-                                    </span>
+                                    <MenuCheck kind="radio" />
                                     {t(`planPanel.filters.${id}`)}
                                 </Menu.RadioItem>
                             ))}
@@ -158,11 +155,7 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                             checked={collapseDone}
                             onCheckedChange={(checked) => usePlanViewPrefs.getState().setCollapseDone(checked)}
                         >
-                            <span className="grid h-4 w-4 place-items-center">
-                                <Menu.CheckboxItemIndicator>
-                                    <Icon icon={Check} size={14} />
-                                </Menu.CheckboxItemIndicator>
-                            </span>
+                            <MenuCheck kind="checkbox" />
                             {t('planPanel.collapseDone')}
                         </Menu.CheckboxItem>
                         <Menu.Item className="menu-item" onClick={() => expandAll(planKey)}>

@@ -11,6 +11,7 @@ import { FONT_STACK } from '@/canvas/text-font';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, BTN_GROUP, FLOAT } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { Tooltip } from '@/ui/Tooltip';
 
 const FONTS: readonly DrawingFont[] = ['sans', 'hand', 'mono'];
@@ -108,11 +109,7 @@ export function TextToolbar() {
                             <Menu.RadioGroup value={font} onValueChange={(value: DrawingFont) => style({ font: value })}>
                                 {FONTS.map((value) => (
                                     <Menu.RadioItem key={value} value={value} className="menu-item">
-                                        <span className="grid h-4 w-4 place-items-center">
-                                            <Menu.RadioItemIndicator>
-                                                <Icon icon={Check} size={14} />
-                                            </Menu.RadioItemIndicator>
-                                        </span>
+                                        <MenuCheck kind="radio" />
                                         <span style={{ fontFamily: FONT_STACK[value] }}>{t(`text.fonts.${value}`)}</span>
                                     </Menu.RadioItem>
                                 ))}
@@ -136,11 +133,7 @@ export function TextToolbar() {
                             <Menu.RadioGroup value={text.size} onValueChange={(value: number) => style({ size: value })}>
                                 {SIZES.map((size) => (
                                     <Menu.RadioItem key={size} value={size} className="menu-item">
-                                        <span className="grid h-4 w-4 place-items-center">
-                                            <Menu.RadioItemIndicator>
-                                                <Icon icon={Check} size={14} />
-                                            </Menu.RadioItemIndicator>
-                                        </span>
+                                        <MenuCheck kind="radio" />
                                         <span>{size} px</span>
                                     </Menu.RadioItem>
                                 ))}
@@ -195,11 +188,9 @@ export function TextToolbar() {
                                     ] as const
                                 ).map(({ value, icon }) => (
                                     <Menu.RadioItem key={value} value={value} className="menu-item" closeOnClick={false}>
+                                        <MenuCheck kind="radio" />
                                         <Icon icon={icon} size={16} />
                                         {t(`text.align.${value}`)}
-                                        <Menu.RadioItemIndicator className="ml-auto">
-                                            <Icon icon={Check} size={14} />
-                                        </Menu.RadioItemIndicator>
                                     </Menu.RadioItem>
                                 ))}
                             </Menu.RadioGroup>

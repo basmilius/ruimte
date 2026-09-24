@@ -1,20 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
-import {
-    Activity,
-    Check,
-    ChevronDown,
-    ChevronRight,
-    ChevronUp,
-    FilePen,
-    Gauge,
-    Hand,
-    Shield,
-    ShieldAlert,
-    SlidersHorizontal,
-    type LucideIcon
-} from 'lucide-react';
+import { Activity, ChevronDown, ChevronRight, ChevronUp, FilePen, Gauge, Hand, Shield, ShieldAlert, SlidersHorizontal, type LucideIcon } from 'lucide-react';
 import type { AgentKind, ChatUsage, ModelInfo, ModelOptionDescriptor, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { modelName, shortModelName } from '@/agents/model-name';
@@ -23,6 +10,7 @@ import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { formatPercent, formatTokens } from '@/format/number';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { Tooltip } from '@/ui/Tooltip';
 
 const MODE_ICONS: Record<RuntimeMode, LucideIcon> = {
@@ -139,12 +127,10 @@ export function RunSettings({
                 )}
                 {models.map((row) => (
                     <Menu.RadioItem key={row.slug} value={modelValue(entry.kind, row.slug)} closeOnClick className="menu-item">
+                        <MenuCheck kind="radio" />
                         <AgentIcon kind={entry.kind} size={14} className="shrink-0" />
                         <span className="min-w-0 truncate">{row.name}</span>
                         {row.badge && <span className="rounded bg-accent-soft px-1 text-xs font-medium text-accent">{row.badge}</span>}
-                        <Menu.RadioItemIndicator className="ml-auto flex">
-                            <Icon icon={Check} size={14} className="text-accent" />
-                        </Menu.RadioItemIndicator>
                     </Menu.RadioItem>
                 ))}
             </Menu.Group>
@@ -229,8 +215,9 @@ export function RunSettings({
                                         <Menu.RadioGroup value={runtimeMode} onValueChange={(mode: RuntimeMode) => onMode(mode)}>
                                             {RUNTIME_MODES.map((mode) => (
                                                 <Menu.RadioItem key={mode} value={mode} className="menu-item items-start">
-                                                    {/* The hint makes the row two lines high; the boxes keep the icon and the check on the label's line. */}
-                                                    <span className="grid h-5 w-4 shrink-0 place-items-center">
+                                                    <MenuCheck kind="radio" />
+                                                    {/* The hint makes the row two lines high; the box keeps the icon on the label's line. */}
+                                                    <span className="grid h-lh w-4 shrink-0 place-items-center">
                                                         <Icon
                                                             icon={MODE_ICONS[mode]}
                                                             size={14}
@@ -240,11 +227,6 @@ export function RunSettings({
                                                     <span className="flex min-w-0 grow flex-col">
                                                         {t(`modes.${mode}.label`)}
                                                         <span className="text-xs text-text-faint">{t(`modes.${mode}.hint`)}</span>
-                                                    </span>
-                                                    <span className="grid h-5 w-4 shrink-0 place-items-center">
-                                                        <Menu.RadioItemIndicator className="flex">
-                                                            <Icon icon={Check} size={14} className="text-accent" />
-                                                        </Menu.RadioItemIndicator>
                                                     </span>
                                                 </Menu.RadioItem>
                                             ))}
@@ -358,7 +340,7 @@ function ContextUsage({ usage, disabled, onCompact }: { usage: ChatUsage; disabl
 }
 
 /*
- * One of the model's own knobs: a few choices side by side, more of them in a submenu, a switch for
+ * One of the model's own knobs: a few choices side by side, more of them in a submenu, a checkbox for
  * a boolean. Every choice is a menu item, so the arrow keys reach it.
  */
 function OptionRow({ option, selection, onChange }: { option: ModelOptionDescriptor; selection: ModelSelection; onChange(value: string | boolean): void }) {
@@ -369,12 +351,8 @@ function OptionRow({ option, selection, onChange }: { option: ModelOptionDescrip
             <Menu.CheckboxItem className="menu-item text-text-muted" checked={checked} onCheckedChange={onChange} closeOnClick={false}>
                 {icon}
                 <span className="min-w-0 grow truncate">{option.label}</span>
-                <span
-                    aria-hidden="true"
-                    className={clsx('relative h-5 w-9 shrink-0 rounded-full p-0.5 transition-colors', checked ? 'bg-accent' : 'bg-border-strong')}
-                >
-                    <span className={clsx('block h-4 w-4 rounded-full bg-surface-raised shadow-node transition-transform', checked && 'translate-x-4')} />
-                </span>
+                {/* At the end of the row, where the other knobs of this group keep their control. */}
+                <MenuCheck kind="checkbox" />
             </Menu.CheckboxItem>
         );
         return option.description ? (
@@ -401,15 +379,10 @@ function OptionRow({ option, selection, onChange }: { option: ModelOptionDescrip
                             <Menu.RadioGroup value={value} onValueChange={(next: string) => onChange(next)}>
                                 {option.choices.map((choice) => (
                                     <Menu.RadioItem key={choice.id} value={choice.id} className={clsx('menu-item', choice.description && 'items-start')}>
+                                        <MenuCheck kind="radio" />
                                         <span className="flex min-w-0 grow flex-col">
                                             {choice.label}
                                             {choice.description && <span className="text-xs text-text-faint">{choice.description}</span>}
-                                        </span>
-                                        {/* A description makes the row two lines high; the box keeps the check on the label's line. */}
-                                        <span className="grid h-5 w-4 shrink-0 place-items-center">
-                                            <Menu.RadioItemIndicator className="flex">
-                                                <Icon icon={Check} size={14} className="text-accent" />
-                                            </Menu.RadioItemIndicator>
                                         </span>
                                     </Menu.RadioItem>
                                 ))}

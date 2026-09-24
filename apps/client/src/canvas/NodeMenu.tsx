@@ -48,6 +48,7 @@ import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
 import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { Tooltip } from '@/ui/Tooltip';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
@@ -264,9 +265,9 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
                                         <ContextMenu.Popup className="menu-popup min-w-40">
                                             {NOTE_COLORS.map((color) => (
                                                 <ContextMenu.Item key={color.id} className="menu-item" onClick={() => colorNoteAction(viewId, id, color.id)}>
+                                                    <MenuCheck kind="radio" checked={(node.color ?? DEFAULT_NOTE_COLOR) === color.id} />
                                                     <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} />{' '}
                                                     {t(`noteColors.${color.id}`)}
-                                                    {(node.color ?? DEFAULT_NOTE_COLOR) === color.id && <Icon icon={Check} size={14} className="ml-auto" />}
                                                 </ContextMenu.Item>
                                             ))}
                                         </ContextMenu.Popup>

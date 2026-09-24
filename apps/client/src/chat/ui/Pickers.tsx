@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Popover } from '@base-ui-components/react/popover';
-import { Bookmark, Check, ChevronDown, ChevronRight, Search, Trash2 } from 'lucide-react';
+import { Bookmark, ChevronDown, ChevronRight, Search, Trash2 } from 'lucide-react';
 import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { modelName } from '@/agents/model-name';
@@ -9,6 +9,7 @@ import { forgetStashed, STASH_SHORTCUT, useStash, type StashedPrompt } from '@/c
 import { MENU_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 
 const triggerClass =
     'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text';
@@ -171,7 +172,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                             onMouseEnter={() => setIndex(i)}
                                             onClick={() => choose(entry)}
                                         >
-                                            <span className="grid h-4 w-4 shrink-0 place-items-center">{chosen && <Icon icon={Check} size={14} />}</span>
+                                            <MenuCheck kind="radio" checked={chosen} />
                                             <span className="min-w-0 truncate">{entry.model.name}</span>
                                             {entry.model.badge && (
                                                 <span className="rounded bg-accent-soft px-1 text-xs font-medium text-accent">{entry.model.badge}</span>

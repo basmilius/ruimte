@@ -16,7 +16,6 @@ import { Menu } from '@base-ui-components/react/menu';
 import { FileTree, useFileTree } from '@pierre/trees/react';
 import {
     AtSign,
-    Check,
     ChevronsDownUp,
     ChevronsUpDown,
     Columns2,
@@ -71,6 +70,7 @@ import { copyText } from '@/ui/clipboard';
 import { EmptyState } from '@/ui/EmptyState';
 import { FILE_TREE_ICONS } from '@/ui/file-icon';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { Tooltip } from '@/ui/Tooltip';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { Kbd } from '@/ui/Kbd';
@@ -509,11 +509,7 @@ export function FilesPanel() {
                             onCheckedChange={(checked) => useSettings.getState().update({ filesShowHidden: checked })}
                             closeOnClick={false}
                         >
-                            <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
-                                <Menu.CheckboxItemIndicator>
-                                    <Icon icon={Check} size={12} />
-                                </Menu.CheckboxItemIndicator>
-                            </span>
+                            <MenuCheck kind="checkbox" />
                             {t('files.showHidden')}
                         </Menu.CheckboxItem>
                         <Menu.Separator className={MENU_SEPARATOR} />

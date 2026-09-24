@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
-import { Check, ChevronDown, ChevronRight, Copy, GitBranch, Plus, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, Copy, GitBranch, Plus, Search } from 'lucide-react';
 import type { GitRef } from '@ruimte/contracts';
 import { basenameOf } from '@/shell/panels/files-tree';
 import type { GitTarget } from '@/state/git-target';
@@ -11,6 +11,7 @@ import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { cameThroughPortal } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { Tooltip } from '@/ui/Tooltip';
 import { MenuPopup } from '@/ui/MenuPopup';
 
@@ -204,11 +205,7 @@ function CheckoutChoice({ targets, target, onPickTarget }: { targets: readonly G
         >
             {targets.map((entry) => (
                 <Menu.RadioItem key={entry.cwd ?? entry.label} value={entry.cwd ?? ''} className="menu-item">
-                    <span className="grid h-5 w-4 shrink-0 place-items-center">
-                        <Menu.RadioItemIndicator>
-                            <Icon icon={Check} size={14} />
-                        </Menu.RadioItemIndicator>
-                    </span>
+                    <MenuCheck kind="radio" />
                     <span className="truncate">{entry.label}</span>
                     {entry.group !== undefined && <span className={`${MENU_HINT} truncate`}>{entry.group}</span>}
                 </Menu.RadioItem>
@@ -331,11 +328,7 @@ function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProp
                         disabled={ref.worktree !== undefined}
                         className={clsx('menu-item', ref.worktree !== undefined && 'opacity-45')}
                     >
-                        <span className="grid h-5 w-4 shrink-0 place-items-center">
-                            <Menu.RadioItemIndicator>
-                                <Icon icon={Check} size={14} />
-                            </Menu.RadioItemIndicator>
-                        </span>
+                        <MenuCheck kind="radio" />
                         <span className="truncate font-mono text-xs">{ref.name}</span>
                         {ref.isDefault && <span className={MENU_HINT}>{t('git.branchMenu.default')}</span>}
                         {ref.worktree !== undefined && <span className={`${MENU_HINT} truncate`}>{t('git.branchMenu.inWorktree')}</span>}

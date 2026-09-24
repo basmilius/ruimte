@@ -1,8 +1,9 @@
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, Maximize, Minus, Plus, Scan } from 'lucide-react';
+import { Maximize, Minus, Plus, Scan } from 'lucide-react';
 import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
 import { BTN_GROUP, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { Kbd } from '@/ui/Kbd';
 import { Tooltip } from '@/ui/Tooltip';
 import type { Shortcut } from '@/ui/shortcut';
@@ -64,11 +65,7 @@ export function ZoomControls({ zoom, labels, shortcuts, onZoomTo, onFitAll, sele
                             <Menu.RadioGroup value={preset} onValueChange={(value: number) => onZoomTo(value / 100)}>
                                 {ZOOM_PRESETS.map((pct) => (
                                     <Menu.RadioItem key={pct} value={pct} className="menu-item">
-                                        <span className="grid h-4 w-4 place-items-center">
-                                            <Menu.RadioItemIndicator>
-                                                <Icon icon={Check} size={14} />
-                                            </Menu.RadioItemIndicator>
-                                        </span>
+                                        <MenuCheck kind="radio" />
                                         <span className="tabular-nums">{pct}%</span>
                                         {pct === 100 && <Kbd shortcut={shortcuts.zoomReset} />}
                                     </Menu.RadioItem>

@@ -19,6 +19,7 @@ import { ACCENT_SWATCH } from '@/ui/classes';
 import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
+import { MenuCheck } from '@/ui/MenuCheck';
 import { MenuPopup } from '@/ui/MenuPopup';
 
 /* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */
@@ -69,13 +70,9 @@ function AccentSwatches() {
                     <Menu.RadioGroup value={accent} onValueChange={(value: AccentId) => pick(value)}>
                         {NODE_ACCENTS.map((entry) => (
                             <Menu.RadioItem key={entry.id} value={entry.id} className="menu-item">
+                                <MenuCheck kind="radio" />
                                 <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: entry.color }} aria-hidden />
                                 <span className="grow">{accentLabel(entry.id)}</span>
-                                <span className="grid h-5 w-4 shrink-0 place-items-center">
-                                    <Menu.RadioItemIndicator>
-                                        <Icon icon={Check} size={14} />
-                                    </Menu.RadioItemIndicator>
-                                </span>
                             </Menu.RadioItem>
                         ))}
                     </Menu.RadioGroup>
