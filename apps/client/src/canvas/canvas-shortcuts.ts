@@ -370,12 +370,8 @@ export const useCanvasShortcuts = (): void => {
                 s.zoomTo(Math.round(s.camera.zoom * 100 - 10) / 100);
             }
         };
-        /*
-         * Escape in a chat that shows a sub-agent goes one level back up before it does anything else,
-         * the way a drawing clears its selection before it lets go of the keyboard. It listens in the
-         * capture phase, because leaving the node and leaving a view of its own (below) listen on the
-         * window too, and only stopping the key here keeps them from also acting on it.
-         */
+        /* In the capture phase, because leaving the node and leaving a view of its own listen on the
+           window too, and only stopping the key here keeps them from also acting on it. */
         const onEscapeCapture = (e: KeyboardEvent): void => {
             if (!e.isComposing && !isInFloatingLayer(e.target) && matchesShortcut(CANVAS_SHORTCUTS.voiceControl, e, isApplePlatform())) {
                 if (voiceShortcut.press(e.timeStamp, e.repeat)) {
@@ -434,6 +430,7 @@ export const useCanvasShortcuts = (): void => {
             if (isTypingTarget(e.target)) {
                 return;
             }
+            // A chat that shows a sub-agent goes one level back up first, the way a drawing clears its selection before it lets go of the keyboard.
             const key = focusedChatKey();
             if (key !== null && useSubagentView.getState().back(key)) {
                 e.preventDefault();

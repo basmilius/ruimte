@@ -97,10 +97,10 @@ export const tradeLocalSecret = async (endpoint: Endpoint, secret: string): Prom
 };
 
 /*
- * The address a socket for this machine opens on, credential and all. This runs before every
- * connection and every reconnect, because a ticket opens one socket only. What sits in the URL is a
- * ticket, never the local secret, so a copied image address or a log gives away bytes for as long as
- * that ticket lives and never a second socket or a pairing link.
+ * The address a socket for this machine opens on, credential and all. Runs before every connection
+ * and every reconnect, because a ticket opens one socket only. The URL carries a ticket and not the
+ * local secret (except for a daemon from before the trade), so a leaked address gives away bytes
+ * while that ticket lives, and never a second socket or a pairing link.
  */
 export const socketAddressFor = async (endpointId: string): Promise<string> => {
     const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);

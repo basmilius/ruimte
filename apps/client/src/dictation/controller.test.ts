@@ -3,7 +3,6 @@ import type { SpeechState } from '@ruimte/desktop-bridge';
 import { cancelDictation, registerDictationTarget, setDictationEngine, stopDictation, toggleDictation, useDictation, type DictationTarget } from './controller';
 import { DictationError, type DictationHandlers } from './engine';
 
-/* A recognizer that does what a test tells it to, when the test tells it to. */
 const fakeEngine = () => {
     let handlers: DictationHandlers | null = null;
     const calls: string[] = [];

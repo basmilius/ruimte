@@ -179,7 +179,7 @@ function SearchToggle({ icon, label, active, onClick }: { icon: LucideIcon; labe
 /*
  * Cmd+K: jump to a node, run an action, or type a path to open a folder as a project. The body follows
  * the canvas, the machines and the projects, so it is mounted only while the palette is up or on its
- * way out. The browse ask it saw last stays here, so a body that mounts knows whether this opening is one.
+ * way out. The last browse request it saw stays here, so a body that mounts knows whether this opening browses.
  */
 export function CommandPalette() {
     const open = useUi((s) => s.paletteOpen);

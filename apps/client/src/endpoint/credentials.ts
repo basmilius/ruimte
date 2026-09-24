@@ -27,7 +27,8 @@ export const rekeyTicket = (oldId: string, newId: string): void => {
 /*
  * The local secret the desktop shell read from the daemon's home, for the row of the daemon that
  * served this page. It lives in memory only, like a ticket, and is asked for again on every connection.
- * It never goes in a URL: it is traded for a ticket over a header, or proved on a direct channel.
+ * It is traded for a ticket over a header or proved on a direct channel; only a daemon from before
+ * the trade gets it in a URL (`secretsForUrls`).
  */
 const localSecrets = new Map<string, string>();
 
@@ -42,10 +43,7 @@ export const rememberLocalSecret = (endpointId: string, secret: string | null): 
 /* The local secret this client holds for a row, which a direct connection proves it has without sending it. */
 export const localSecretOf = (endpointId: string): string | null => localSecrets.get(endpointId) ?? null;
 
-/*
- * The local secret of a row whose daemon predates trading it for a ticket, which takes nothing else
- * in a URL. Only ever set for such a daemon; any newer one gets a ticket in the secret's place.
- */
+/* The local secret of a daemon from before the ticket trade, which takes nothing else in a URL. A newer daemon gets a ticket instead. */
 const secretsForUrls = new Map<string, string>();
 
 export const rememberSecretForUrls = (endpointId: string, secret: string | null): void => {

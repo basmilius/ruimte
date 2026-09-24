@@ -28,7 +28,7 @@ const end: NodeEnder = (endpointId, id, kind, exit) => {
     }
 };
 
-/* Ends the daemon session of every node this client takes out of the document. The watching itself is testable on its own. */
+/* Ends the daemon session of every node this client takes out of the document. */
 export const startSessionLifecycle = (): (() => void) => watchNodes(end);
 
 /*

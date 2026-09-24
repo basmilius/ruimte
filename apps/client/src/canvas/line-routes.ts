@@ -6,8 +6,8 @@ import { memoByIdentity } from '@/state/identity-memo';
 
 export interface LineRoutes {
     lines: EdgeLine[];
-    /* What a line routes around. A group is a frame under its nodes, so a line between two of them
-       would be pushed out of the group it belongs to. */
+    /* Groups are left out, since a group is a frame under its nodes and a line between two of them
+       would be pushed out of it. */
     obstacles: Obstacle[];
     /* By the id of the edge a line is drawn from; a line with a hidden end has none. */
     routes: Map<string, EdgeRoute>;

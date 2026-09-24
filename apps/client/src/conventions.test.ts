@@ -78,7 +78,7 @@ const elementsIn = (node: unknown): Tree[] => {
 };
 
 /*
- * Every component a tree draws, and whether a boundary holds it alone. An element, a provider or a
+ * Every component a tree draws, and whether a boundary holds it alone. A DOM element, a provider or a
  * Suspense draws nothing of its own, so what is inside it is looked at instead.
  */
 const surfacesIn = (node: Tree, guarded: boolean): { name: string; guarded: boolean }[] => {

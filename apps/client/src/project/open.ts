@@ -155,7 +155,7 @@ const putAway = async (): Promise<void> => {
     showStart();
 };
 
-/* Puts the open project away and goes back to the start screen. Its sessions end, and it moves to Recent. */
+/* Puts the open project away and goes back to the start screen. The machine ends its sessions only once no other client has it open. */
 export const closeProject = async (): Promise<void> => {
     if (windowWorkspace() && (await confirmLeavingConflict())) {
         await putAway();

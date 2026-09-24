@@ -156,7 +156,6 @@ function RowIcon({ id, kind, provider, className }: { id: string; kind: CanvasNo
     return <Icon icon={ROW_ICON[kind]} size={14} className={className} />;
 }
 
-/* Answers with the name that was typed, or null when the field is left empty, which unnames it. */
 /* The whole text of a row that truncates it, on hover; a row with nothing more to say has no tooltip. */
 function MaybeTooltip({ label, children }: { label: string | null | undefined; children: ReactElement<Record<string, unknown>> }) {
     if (!label) {

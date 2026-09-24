@@ -21,7 +21,7 @@ export interface ChatState {
 /* Rows keyed with `endpointKey`, so a thread says which daemon it runs on. */
 export type ChatsById = Record<string, ChatState>;
 
-/* What a chat is doing, without its thread: all a header, the sidebar or a counter reads. */
+/* What a chat is doing, without its thread. */
 export type ChatStatuses = Record<string, Pick<ChatState, 'info'>>;
 
 /* What a chat client writes. It owns one machine's socket, so it speaks in node ids alone. */

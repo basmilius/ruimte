@@ -70,7 +70,7 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                                 <ErrorBoundary label={failed('cellChrome')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                                     <CellOverlayLayer />
                                 </ErrorBoundary>
-                                {/* After the parked pages, which carry no z-index of their own and would otherwise draw over it. */}
+                                {/* After the parked pages, which carry no z-index of their own and would otherwise draw over these screens. */}
                                 <ErrorBoundary label={failed('machine')} resetKeys={[workspace]} className="absolute inset-0 z-10">
                                     <MachineLostScreen />
                                 </ErrorBoundary>

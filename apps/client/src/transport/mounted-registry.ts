@@ -21,10 +21,9 @@ export class MountedRegistry<T extends MountedEntry> extends Map<string, T> {
     }
 
     /*
-     * One pass over what is mounted but not attached, started in the order it was mounted, a few
-     * at a time. The list is copied first, because attaching mounts and unmounts as it goes, and an
-     * entry that went in the meantime is left alone, since a node may leave the canvas while its
-     * attach is still on the wire.
+     * One pass over what is mounted but not attached, in mount order, a few at a time. It works on a
+     * copy, because attaching mounts and unmounts as it goes. An entry that left in the meantime is
+     * skipped, since a node may leave the canvas while its attach is on the wire.
      */
     async reattachAll(reattach: (id: string, entry: T) => Promise<void>): Promise<void> {
         const queue = [...this];

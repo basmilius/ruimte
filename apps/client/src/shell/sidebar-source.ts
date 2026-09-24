@@ -27,7 +27,7 @@ const project = (node: CanvasNode): SidebarCanvasNode => ({
     status: node.status
 });
 
-// Every change of a canvas store asks again, a pan included; the order and the nodes are the same objects then.
+/* Every change of a canvas store asks again, a pan included; the order and the nodes are the same objects then. */
 const projectCanvas = memoByIdentity((order: string[], nodes: Record<string, CanvasNode>): SidebarCanvasNode[] =>
     order.flatMap((id) => (nodes[id] ? [project(nodes[id])] : []))
 );
@@ -44,7 +44,7 @@ const sameNode = (before: SidebarCanvasNode | undefined, next: SidebarCanvasNode
 const sameNodes = (before: SidebarCanvasNode[] | undefined, next: SidebarCanvasNode[]): boolean =>
     before === next || (before !== undefined && before.length === next.length && next.every((node, at) => sameNode(before[at], node)));
 
-// Camera, selection, geometry and save-state changes do not change any sidebar rows.
+/* The camera, the selection, geometry and the save state change no sidebar row. */
 export const sameSidebarSource = (before: SidebarSource, next: SidebarSource): boolean =>
     before.views === next.views &&
     before.activeViewId === next.activeViewId &&

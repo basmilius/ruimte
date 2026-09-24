@@ -49,7 +49,6 @@ function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; 
     const frameRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 
-    // A closed lightbox opens again unzoomed.
     if (!open && view !== START) {
         setView(START);
     }
