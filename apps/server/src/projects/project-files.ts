@@ -53,8 +53,15 @@ export type JsonDocumentRead<T> =
     | { kind: 'ok'; document: T; text: string }
     | { kind: 'missing' }
     | { kind: 'corrupt'; setAside: string }
+    // Only for a read that was told to leave the file where it is.
+    | { kind: 'unreadable' }
     | { kind: 'invalid'; message: string }
     | { kind: 'too-new'; version: number };
+
+export interface JsonDocumentReadOptions {
+    /* False for a read that follows someone else's write: a file caught halfway is whole on the next event. */
+    setAside?: boolean;
+}
 
 /*
  * How the project file, a drawing and a diagram are all read. A file that is not one of ours at all
@@ -63,7 +70,11 @@ export type JsonDocumentRead<T> =
  * where it is: only a person can decide which of the two things sharing an id was meant. One from a
  * newer Ruimte stays too, and untouched: a file a later release reads is not a file to move aside.
  */
-export const readJsonDocument = async <T>(path: string, parse: (text: string) => JsonDocumentParse<T>): Promise<JsonDocumentRead<T>> => {
+export const readJsonDocument = async <T>(
+    path: string,
+    parse: (text: string) => JsonDocumentParse<T>,
+    options: JsonDocumentReadOptions = {}
+): Promise<JsonDocumentRead<T>> => {
     let text: string;
     try {
         text = await readFile(path, 'utf8');
@@ -80,6 +91,9 @@ export const readJsonDocument = async <T>(path: string, parse: (text: string) =>
     if (parsed.kind === 'invalid' || parsed.kind === 'too-new') {
         return parsed;
     }
+    if (options.setAside === false) {
+        return { kind: 'unreadable' };
+    }
     const setAside = `${path}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`;
     await rename(path, setAside);
     return { kind: 'corrupt', setAside };
@@ -89,7 +103,7 @@ export const readJsonDocument = async <T>(path: string, parse: (text: string) =>
 export const writeJsonDocument = async <T>(path: string, document: T, serialize: (document: T) => string): Promise<string> => {
     await mkdir(dirname(path), { recursive: true });
     const text = serialize(document);
-    await writeAtomic(path, text, 0o644);
+    await writeAtomic(path, text, 0o644, { durable: true });
     return text;
 };
 
@@ -242,10 +256,21 @@ export const writePrivateFile = (path: string, file: ProjectPrivateFile): Promis
 
 const toPosix = (path: string): string => path.split(sep).join('/');
 
-/* Maps the folder of everything that has one: every node of every canvas, every standalone view. */
-const mapCwd = <T extends { cwd?: string }>(carrier: T, map: (cwd: string) => string): T => (carrier.cwd ? { ...carrier, cwd: map(carrier.cwd) } : carrier);
+/* Maps the folder of everything that has one: every node of every canvas, every standalone view. Undefined takes the folder away. */
+const mapCwd = <T extends { cwd?: string }>(carrier: T, map: (cwd: string) => string | undefined): T => {
+    if (!carrier.cwd) {
+        return carrier;
+    }
+    const cwd = map(carrier.cwd);
+    if (cwd !== undefined) {
+        return { ...carrier, cwd };
+    }
+    const rest = { ...carrier };
+    delete rest.cwd;
+    return rest;
+};
 
-const mapViews = (views: ProjectView[], map: (cwd: string) => string): ProjectView[] =>
+const mapViews = (views: ProjectView[], map: (cwd: string) => string | undefined): ProjectView[] =>
     views.map((view) => {
         if (isCanvasView(view)) {
             return { ...view, nodes: view.nodes.map((node: ProjectNode) => mapCwd(node, map)) };
@@ -277,11 +302,22 @@ export const toPortable = (content: ProjectContent, folder: string | null): Proj
     };
 };
 
+/* A relative folder that climbs out of the project is one `toPortable` never writes, so it is somebody else's and goes. */
 export const fromPortable = <T extends ProjectContent>(content: T, folder: string | null): T => {
     if (!folder) {
         return content;
     }
-    return { ...content, views: mapViews(content.views, (cwd) => (isAbsolute(cwd) ? cwd : resolve(folder, cwd))) };
+    return {
+        ...content,
+        views: mapViews(content.views, (cwd) => {
+            if (isAbsolute(cwd)) {
+                return cwd;
+            }
+            const resolved = resolve(folder, cwd);
+            const rel = relative(folder, resolved);
+            return rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel) ? undefined : resolved;
+        })
+    };
 };
 
 export const drawingsDirOf = (documentPath: string): string => join(dirname(documentPath), DRAWINGS_DIR);
@@ -344,7 +380,8 @@ export const parseDrawing = (text: string): DrawingParse => {
     return { kind: 'ok', document };
 };
 
-export const readDrawing = (path: string): Promise<JsonDocumentRead<DrawingDocument>> => readJsonDocument(path, parseDrawing);
+export const readDrawing = (path: string, options?: JsonDocumentReadOptions): Promise<JsonDocumentRead<DrawingDocument>> =>
+    readJsonDocument(path, parseDrawing, options);
 
 export const writeDrawing = (path: string, document: DrawingDocument): Promise<string> => writeJsonDocument(path, document, serializeDrawing);
 
@@ -387,7 +424,8 @@ export const parseDiagram = (text: string): DiagramParse => {
     return { kind: 'ok', document };
 };
 
-export const readDiagram = (path: string): Promise<JsonDocumentRead<DiagramDocument>> => readJsonDocument(path, parseDiagram);
+export const readDiagram = (path: string, options?: JsonDocumentReadOptions): Promise<JsonDocumentRead<DiagramDocument>> =>
+    readJsonDocument(path, parseDiagram, options);
 
 export const writeDiagram = (path: string, document: DiagramDocument): Promise<string> => writeJsonDocument(path, document, serializeDiagram);
 

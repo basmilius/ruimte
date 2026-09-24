@@ -150,6 +150,41 @@ describe('DrawingStore', () => {
         expect(await exists(drawingFile('view-a'))).toBe(true);
     });
 
+    test('a save right after an outside write is refused, and the write is taken in', async () => {
+        await drawings.open(projectId, 'view-a');
+        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')));
+        const theirs = serializeDrawing({ version: 1, rev: 4, elements: [element('el-9')] });
+        await writeFile(drawingFile('view-a'), theirs);
+
+        // The watcher has not settled yet.
+        await expect(drawings.save(projectId, 'view-a', 1, drawn())).rejects.toMatchObject({ code: 'rev-conflict' });
+        expect(await readFile(drawingFile('view-a'), 'utf8')).toBe(theirs);
+        expect(events).toEqual([
+            { event: 'drawing.changed', payload: { projectId, viewId: 'view-a', document: { version: 1, rev: 4, elements: [element('el-9')] } } }
+        ]);
+
+        fake.on(drawingsDir()).emit('view-a.json');
+        await fake.settle();
+        expect(events).toHaveLength(1);
+        expect(await drawings.save(projectId, 'view-a', 4, drawn())).toBe(5);
+    });
+
+    test('a file caught halfway through an outside write stays where it is until the write is whole', async () => {
+        await drawings.open(projectId, 'view-a');
+        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')));
+        await writeFile(drawingFile('view-a'), '{ "version": 1, "rev": 3, "elem');
+        fake.on(drawingsDir()).emit('view-a.json');
+        await fake.settle();
+        expect(events).toEqual([]);
+        expect(await readdir(drawingsDir())).toEqual(['view-a.json']);
+
+        await writeFile(drawingFile('view-a'), serializeDrawing({ version: 1, rev: 3, elements: [element('el-3')] }));
+        fake.on(drawingsDir()).emit('view-a.json');
+        await fake.settle();
+        expect(events).toHaveLength(1);
+        expect(events[0]).toMatchObject({ payload: { document: { rev: 3, elements: [{ id: 'el-3' }] } } });
+    });
+
     test('a save that drops the view removes its file, an outside edit that drops it does not', async () => {
         await drawings.open(projectId, 'view-a');
         await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')));

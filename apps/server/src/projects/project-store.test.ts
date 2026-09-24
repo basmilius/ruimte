@@ -624,6 +624,32 @@ describe('portable paths', () => {
         expect(canvas(back).nodes.map((node) => node.cwd)).toEqual(['/repo/apps', '/repo', '/elsewhere', undefined]);
         expect(back.views[1]).toMatchObject({ node: { cwd: '/repo/apps/server' } });
     });
+
+    test('a relative folder that climbs out of the project is dropped on the way in', () => {
+        const back = fromPortable(
+            {
+                name: 'x',
+                color: '',
+                views: [
+                    {
+                        kind: 'canvas',
+                        id: 'main',
+                        name: 'Canvas',
+                        nodes: [
+                            { id: 'a', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: '../../etc' },
+                            { id: 'b', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: './apps/../server' }
+                        ],
+                        texts: [],
+                        edges: [],
+                        layouts: []
+                    }
+                ]
+            },
+            '/repo'
+        );
+        expect(canvas(back).nodes[0]).not.toHaveProperty('cwd');
+        expect(canvas(back).nodes[1]!.cwd).toBe('/repo/server');
+    });
 });
 
 describe('mutate', () => {
@@ -819,6 +845,154 @@ describe('the two files of a project', () => {
 
         expect(await sharedText()).toContain('by an agent');
         expect((await documentOnDisk(folder)).shared).toEqual(['main']);
+    });
+});
+
+describe('what the shared file may decide', () => {
+    const sharedPath = (): string => documentPathInFolder(folder);
+
+    /* The shared file as a pull or an agent with a shell would leave it: the same file, one node changed by hand. */
+    const editShared = async (edit: (node: Record<string, unknown>) => Record<string, unknown>): Promise<void> => {
+        const file = JSON.parse(await readFile(sharedPath(), 'utf8')) as { views: { nodes: Record<string, unknown>[] }[] };
+        const view = file.views[0]!;
+        view.nodes = [edit(view.nodes[0]!), ...view.nodes.slice(1)];
+        await writeFile(sharedPath(), JSON.stringify(file, null, 2));
+    };
+
+    test('a mode, a session and a folder off the disk in the shared file are never handed on', async () => {
+        const opened = await store.openProject({ folder });
+        await store.save(opened.summary.projectId, 0, content(), ['main']);
+        await editShared((node) => ({ ...node, runtimeMode: 'full-access', resume: 'theirs', cwd: '/' }));
+        store.closeAll();
+
+        const again = await store.openProject({ folder });
+        const node = canvas(again.document).nodes[0]!;
+        expect(node).not.toHaveProperty('runtimeMode');
+        expect(node).not.toHaveProperty('resume');
+        expect(node).not.toHaveProperty('cwd');
+        // An agent reads the same document, so a verb never sees them either.
+        expect(canvas(await store.read(opened.summary.projectId)).nodes[0]).not.toHaveProperty('runtimeMode');
+    });
+
+    test('a folder that climbs out of the project is dropped, and the overlay of this person still applies', async () => {
+        const opened = await store.openProject({ folder });
+        const mine = content();
+        canvas(mine).nodes[0] = { ...canvas(mine).nodes[0]!, runtimeMode: 'auto' };
+        await store.save(opened.summary.projectId, 0, mine, ['main']);
+        await editShared((node) => ({ ...node, cwd: '../../..' }));
+        store.closeAll();
+
+        const node = canvas((await store.openProject({ folder })).document).nodes[0]!;
+        expect(node).not.toHaveProperty('cwd');
+        expect(node.runtimeMode).toBe('auto');
+    });
+
+    test('a version-2 file git tracks moves what belonged to this person into the overlay', async () => {
+        await mkdir(join(folder, '.ruimte'));
+        const views = content().views as ProjectCanvasView[];
+        const node = { ...views[0]!.nodes[0]!, cwd: '/elsewhere', resume: 'sess-1', runtimeMode: 'auto' as const };
+        await writeFile(
+            documentPathInFolder(folder),
+            JSON.stringify({ version: 2, rev: 5, name: 'repo', color: '#123456', views: [{ ...views[0]!, nodes: [node] }] })
+        );
+        store.attachTracked(async () => true);
+
+        const opened = await store.openProject({ folder });
+        expect(canvas(opened.document).nodes[0]).toMatchObject({ cwd: '/elsewhere', resume: 'sess-1', runtimeMode: 'auto' });
+        expect((await privateFileOnDisk(folder)).overlay.n1).toEqual({ cwd: '/elsewhere', resume: 'sess-1', runtimeMode: 'auto' });
+        expect(await readFile(sharedPath(), 'utf8')).not.toContain('sess-1');
+    });
+
+    test('a version-2 file that turns up after the split came from a colleague, and keeps nothing of theirs', async () => {
+        store.attachTracked(async () => true);
+        const opened = await store.openProject({ folder });
+        await store.save(opened.summary.projectId, 0, content(), ['main']);
+        store.closeAll();
+        const views = content().views as ProjectCanvasView[];
+        const node = { ...views[0]!.nodes[0]!, resume: 'theirs', runtimeMode: 'full-access' as const };
+        await writeFile(sharedPath(), JSON.stringify({ version: 2, rev: 9, name: 'repo', color: '#123456', views: [{ ...views[0]!, nodes: [node] }] }));
+
+        const again = await store.openProject({ folder });
+        expect(canvas(again.document).nodes[0]).not.toHaveProperty('resume');
+        expect(canvas(again.document).nodes[0]).not.toHaveProperty('runtimeMode');
+    });
+});
+
+describe('saves and outside edits', () => {
+    const addNote = (id: string) => (current: ProjectContent) => {
+        const view = current.views[0] as ProjectCanvasView;
+        const note = { id, kind: 'note' as const, title: 'Note', x: 0, y: 400, w: 320, h: 240, body: 'hello' };
+        return { content: { ...current, views: [{ ...view, nodes: [...view.nodes, note] }, ...current.views.slice(1)] }, result: id };
+    };
+
+    const pull = async (name: string): Promise<void> => {
+        const path = documentPathInFolder(folder);
+        const pulled = { ...(JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>), name };
+        await writeFile(path, JSON.stringify(pulled, null, 2));
+    };
+
+    test('after a pull, a node an agent adds is not lost to an autosave based on the pull', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        await store.save(projectId, 0, content(), ['main'], 'c1');
+
+        await pull('from git');
+        projectDirWatcher().emit('project.json');
+        await fake.settle();
+        expect(changed.at(-1)).toMatchObject({ payload: { document: { rev: 2, name: 'from git' } } });
+        // The bump is on disk too, which is where a verb reads the rev.
+        expect((await privateFileOnDisk(folder)).rev).toBe(2);
+        expect(await store.revision(projectId)).toBe(2);
+
+        await store.mutate(projectId, addNote('by-agent'));
+        expect(changed.at(-1)).toMatchObject({ payload: { document: { rev: 3 } } });
+
+        // The client autosaves the screen it had after the pull, which has no agent node yet.
+        await expect(store.save(projectId, 2, content('from git'), ['main'], 'c1')).rejects.toMatchObject({ code: 'rev-conflict' });
+        expect(canvas(await documentOnDisk(folder)).nodes.map((node) => node.id)).toEqual(['n1', 'by-agent']);
+    });
+
+    test('a save right after an outside edit is refused, and the edit is taken in for every client', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        await store.save(projectId, 0, content(), ['main'], 'c1');
+
+        // Pulled, but the watcher has not settled yet.
+        await pull('from git');
+        projectDirWatcher().emit('project.json');
+        await expect(store.save(projectId, 1, content(), ['main'], 'c1')).rejects.toMatchObject({ code: 'rev-conflict' });
+        expect(changed).toHaveLength(1);
+        // The sender hears it too, since that is what it has to save against.
+        expect(changed[0]).toMatchObject({ event: 'project.changed', payload: { document: { rev: 2, name: 'from git' } } });
+        expect((await documentOnDisk(folder)).name).toBe('from git');
+
+        // The watcher arrives late and finds nothing it has not seen.
+        await fake.settle();
+        expect(changed).toHaveLength(1);
+        expect(await store.save(projectId, 2, content('from git'), ['main'], 'c1')).toBe(3);
+    });
+
+    test('a save over a shared file that is broken right now writes nothing', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        await store.save(projectId, 0, content(), ['main']);
+        changed = [];
+        await writeFile(documentPathInFolder(folder), '{ "version": 3, "na');
+
+        await expect(store.save(projectId, 1, content('mine'))).rejects.toMatchObject({ code: 'rev-conflict' });
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).toBe('{ "version": 3, "na');
+        expect(changed).toEqual([]);
+    });
+
+    test('a save that gives two things one id is refused and writes nothing', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        const twice = content();
+        canvas(twice).nodes.push({ ...canvas(twice).nodes[0]!, title: 'again' });
+
+        await expect(store.save(projectId, 0, twice)).rejects.toMatchObject({ code: 'project-invalid', message: expect.stringContaining('"n1"') });
+        expect((await documentOnDisk(folder)).views).toEqual([]);
+        expect(await store.save(projectId, 0, content())).toBe(1);
     });
 });
 

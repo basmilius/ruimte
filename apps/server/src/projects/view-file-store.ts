@@ -2,9 +2,10 @@ import { mkdir, readdir, rename, rm } from 'node:fs/promises';
 import { basename, dirname } from 'node:path';
 import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '../fs/watch-seam.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
-import { tooNewMessage, viewFilePathIn, viewIdOfFile, type JsonDocumentRead } from './project-files.ts';
+import { tooNewMessage, viewFilePathIn, viewIdOfFile, type JsonDocumentRead, type JsonDocumentReadOptions } from './project-files.ts';
 import type { ProjectStore, ProjectViewFiles } from './project-store.ts';
 import { ClientSinks } from '../client-sinks.ts';
+import { errorText } from '../error-text.ts';
 import { Serializer } from '../serializer.ts';
 
 // The same burst rule the project file follows: an editor or git writes more than once per save.
@@ -37,7 +38,7 @@ export interface ViewFileKind<TDocument extends TContent & { rev: number }, TCon
     /* Where the files of shared views sit, and where the ones of private views sit beside it. */
     dirOf(documentPath: string): string;
     privateDirOf(documentPath: string): string;
-    read(path: string): Promise<JsonDocumentRead<TDocument>>;
+    read(path: string, options?: JsonDocumentReadOptions): Promise<JsonDocumentRead<TDocument>>;
     write(path: string, document: TDocument): Promise<string>;
     /* Only the fields of the document, so a payload never carries anything else into the file. */
     documentOf(content: TContent, rev: number): TDocument;
@@ -118,8 +119,15 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
             if (problem) {
                 throw this.kind.invalid(problem);
             }
+            const path = this.pathOf(projectId, state, viewId);
+            // Never over a write the watcher has not reported yet: that one is taken in and the save refused.
+            const onDisk = await this.kind.read(path, { setAside: false });
+            if (onDisk.kind === 'ok' && onDisk.text !== current.lastText) {
+                this.takeOutsideEdit(projectId, state, viewId, onDisk.document, onDisk.text);
+                throw this.kind.revConflict(`The ${this.kind.noun} changed on disk; it is now at rev ${onDisk.document.rev}`);
+            }
             const document = this.kind.documentOf(content, current.rev + 1);
-            const text = await this.kind.write(this.pathOf(projectId, state, viewId), document);
+            const text = await this.kind.write(path, document);
             state.open.set(viewId, { rev: document.rev, lastText: text });
             return document.rev;
         });
@@ -267,7 +275,12 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
         if (known) {
             return known;
         }
-        const settle = settled(this.seams, WATCH_SETTLE_MS, () => this.reload(projectId, state, viewId));
+        // Under the lock, so a save never reads the file between someone else's write and this reload.
+        const settle = settled(this.seams, WATCH_SETTLE_MS, () =>
+            this.locked(() => this.reload(projectId, state, viewId)).catch((e: unknown) => {
+                console.warn(`An outside edit to the ${this.kind.noun} ${viewId} could not be taken in:`, errorText(e));
+            })
+        );
         state.settles.set(viewId, settle);
         return settle;
     }
@@ -305,21 +318,26 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
         if (!current) {
             return;
         }
-        const outcome = await this.kind.read(this.pathOf(projectId, state, viewId));
+        const outcome = await this.kind.read(this.pathOf(projectId, state, viewId), { setAside: false });
         if (outcome.kind === 'invalid' || outcome.kind === 'too-new') {
             const why = outcome.kind === 'invalid' ? outcome.message : tooNewMessage(this.kind.noun, outcome.version, this.kind.version);
             console.warn(`An outside edit to the ${this.kind.noun} ${viewId} was ignored: ${why}`);
             return;
         }
         if (outcome.kind !== 'ok') {
-            // Gone or half-written. A deleted file leaves what is on screen as it is: only the
-            // project file says the view exists, and the next save writes it back.
+            // Gone or half-written, and left where it is: a checkout caught halfway is whole on the
+            // next event. A deleted file leaves what is on screen as it is: only the project file
+            // says the view exists, and the next save writes it back.
             return;
         }
         if (outcome.text === current.lastText) {
             return;
         }
-        state.open.set(viewId, { rev: outcome.document.rev, lastText: outcome.text });
-        this.emit(this.kind.changed(projectId, viewId, outcome.document));
+        this.takeOutsideEdit(projectId, state, viewId, outcome.document, outcome.text);
+    }
+
+    private takeOutsideEdit(projectId: string, state: OpenProjectFiles, viewId: string, document: TDocument, text: string): void {
+        state.open.set(viewId, { rev: document.rev, lastText: text });
+        this.emit(this.kind.changed(projectId, viewId, document));
     }
 }

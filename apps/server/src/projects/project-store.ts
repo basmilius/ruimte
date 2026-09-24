@@ -14,6 +14,7 @@ import {
     duplicateIdIn,
     mergeFiles,
     migrateLocal,
+    overlayOfLegacy,
     privateFileOf,
     splitContent,
     type ProjectCloseResult,
@@ -28,12 +29,13 @@ import {
     type ProjectSetIconPayload,
     type ProjectSetIdentityPayload,
     type ProjectSharedFile,
+    type SharedFileRead,
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
 import { revisionConflictMessage } from '@ruimte/actions';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '../fs.ts';
+import { fileExists, isNotFound, writeAtomic } from '../fs.ts';
 import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watch-seam.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import {
@@ -231,7 +233,11 @@ export class ProjectStore {
         const fallback = { name: entry.name, color: entry.color };
         if (read?.legacyRev !== null && read !== null) {
             const shared = (await this.tracked(path)) ? read.file.views.map((view: ProjectView) => view.id) : [];
-            const merged = mergeFiles(read.file, privateFileOf(shared.length > 0 ? [] : read.file.views, read.legacyRev), fallback);
+            const file = privateFileOf(shared.length > 0 ? [] : read.file.views, read.legacyRev);
+            /* The one file was this person's until the folder was split. Once a private file exists,
+               an old-format file is a colleague's on an older Ruimte, and what it holds is theirs. */
+            const migrating = shared.length > 0 && !(await fileExists(privatePathOf(path)));
+            const merged = mergeFiles(read.file, migrating ? { ...file, overlay: overlayOfLegacy(read.file.views) } : file, fallback);
             return { content: merged.content, shared, rev: read.legacyRev, privateText: null };
         }
         const outcome = readOnly ? await this.readPrivateWithoutRepair(privatePathOf(path)) : await readPrivateFile(privatePathOf(path));
@@ -504,6 +510,11 @@ export class ProjectStore {
         if (baseRev !== state.rev) {
             throw new ProjectError('rev-conflict', `The canvas is at rev ${state.rev}, the save was based on ${baseRev}`);
         }
+        const duplicate = duplicateIdIn(content.views);
+        if (duplicate) {
+            throw new ProjectError('project-invalid', `The save would give two things the id "${duplicate}"`);
+        }
+        await this.refuseOverOutsideEdit(state);
         /* Only a person's save moves a view between the two files. A payload without a list leaves
            the folder as it is, which is what an older client and every other writer amount to. */
         const ids = [...(shared ?? state.shared)];
@@ -937,7 +948,10 @@ export class ProjectStore {
                 state.cancelSettle?.();
                 state.cancelSettle = this.seams.schedule(() => {
                     state.cancelSettle = null;
-                    return this.reload(state, path);
+                    // Under the lock, so a save or a verb never reads the rev between the file and the bump.
+                    return this.locked(() => this.reload(state, path)).catch((e: unknown) => {
+                        console.warn(`An outside edit to ${path} could not be taken in:`, errorText(e));
+                    });
                 }, WATCH_SETTLE_MS);
             });
             state.watcher.on('error', () => undefined);
@@ -975,12 +989,58 @@ export class ProjectStore {
             // Half-written by someone else; the event that follows the finished write reads it whole.
             return;
         }
-        /* The rev goes up for this machine: what arrived is a state no client here has, and every
-           one of them has to base its next save on it. The private file keeps its own views. */
-        const loaded = await this.loadFiles(path, state.entry, parsed.document);
+        await this.takeOutsideEdit(state, path, text, parsed.document);
+    }
+
+    /*
+     * A save goes over what this daemon last saw of the shared file, never over something a pull
+     * put there since: the watcher only hears of that a moment later. What is found is taken in the
+     * way the watcher would have, so the client that is refused has the new rev to save against.
+     */
+    private async refuseOverOutsideEdit(state: OpenProject): Promise<void> {
+        const path = this.documentPath(state.entry);
+        let text: string;
+        try {
+            text = await readFile(path, 'utf8');
+        } catch (e) {
+            // A file that is gone has nothing in it to lose, and the save puts it back.
+            if (isNotFound(e)) {
+                return;
+            }
+            throw e;
+        }
+        if (text === state.lastText) {
+            return;
+        }
+        const parsed = parseSharedFile(text);
+        if (parsed.kind === 'invalid') {
+            throw new ProjectError('project-invalid', parsed.message);
+        }
+        if (parsed.kind === 'too-new') {
+            throw new ProjectError('project-too-new', tooNewMessage('project', parsed.version, PROJECT_VERSION));
+        }
+        if (parsed.kind === 'ok') {
+            await this.takeOutsideEdit(state, path, text, parsed.document);
+        }
+        throw new ProjectError('rev-conflict', `The project file changed on disk; the canvas is now at rev ${state.rev}`);
+    }
+
+    /*
+     * The rev goes up for this machine: what arrived is a state no client here has, and every one of
+     * them has to base its next save on it. It goes into the private file too, since a verb reads the
+     * rev from disk and would otherwise hand a different document out under the same number.
+     */
+    private async takeOutsideEdit(state: OpenProject, path: string, text: string, read: SharedFileRead): Promise<void> {
+        const loaded = await this.loadFiles(path, state.entry, read);
         const rev = state.rev + 1;
+        const privateFile = splitContent(loaded.content, loaded.shared, rev).private;
+        const privateText = serializePrivateFile(privateFile);
+        if (privateText !== state.lastPrivate) {
+            await writePrivateFile(privatePathOf(path), privateFile);
+        }
         const document: ProjectDocument = { version: PROJECT_VERSION, rev, ...loaded.content, shared: loaded.shared };
         state.lastText = text;
+        state.lastPrivate = privateText;
         state.shared = loaded.shared;
         state.rev = rev;
         state.drawingIds = drawingIdsIn(document.views);
