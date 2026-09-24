@@ -331,6 +331,19 @@ describe('a terminal', () => {
         expect(await codeOf(computer.operate('chat-1', 'key', 'Shells', { combos: ['cmd+n'] }))).toBe('terminal');
     });
 
+    test('launched by open is refused before its tree goes back, and known from then on', async () => {
+        const { computer, helper } = await computerSetup({
+            overrides: { findApp: async (name) => (name === 'Shells' ? { name: 'Shells', bundleId: SHELL_APP.bundleId! } : null) }
+        });
+        helper.apps = [TEXT_EDIT];
+        helper.launchable = SHELL_APP;
+        const open = codeOf(computer.operate('chat-1', 'open', 'Shells', { withState: true }));
+        await until(() => computer.pendingApprovals().length === 1);
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
+        expect(await open).toBe('terminal');
+        expect((await computer.apps('chat-1')).apps.find(({ app }) => app.name === 'Shells')?.access).toBe('terminal');
+    });
+
     test('is refused before it is launched when it was seen before', async () => {
         const { computer } = await computerSetup();
         await computer.apps('chat-1');

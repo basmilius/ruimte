@@ -65,6 +65,8 @@ export class FakeHelper implements HelperTransport {
     shown: string | null = null;
     // Runs as an app command arrives, before the helper looks at its session: the person's hand in between.
     onAct: (() => void) | null = null;
+    // An app that does not run until `open` names its bundle id, which then answers with it.
+    launchable: RunningApp | null = null;
     // How many requests a helper told to quit still answers, the way the real one does for a moment.
     lingerAfterQuit = 0;
     private lingering: number | null = null;
@@ -133,10 +135,14 @@ export class FakeHelper implements HelperTransport {
         if (request.command === 'state') {
             return { ok: true, result: SAMPLE_STATE };
         }
+        const launched = request.command === 'open' && this.launchable?.bundleId === request.app ? this.launchable : null;
+        if (launched !== null) {
+            this.apps = [...this.apps, launched];
+        }
         return {
             ok: true,
             result: {
-                app: SAMPLE_STATE.app,
+                app: launched === null ? SAMPLE_STATE.app : { name: launched.name, pid: launched.pid, bundleId: launched.bundleId },
                 method: 'AXPress',
                 target: { role: 'Button', label: 'Save', window: 'Untitled' },
                 point: { x: 400, y: 300 },

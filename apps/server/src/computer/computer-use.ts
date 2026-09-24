@@ -46,6 +46,12 @@ const HELD_WORDS: Record<HeldCode, string> = {
 
 const STOPPED_WORDS = 'The person stopped you; ask them before you operate an app again, and once they agree start with computer state';
 
+const terminalRefusal = (name: string): ComputerRefusal =>
+    new ComputerRefusal(
+        'terminal',
+        `${name} runs shells, and an agent never operates a terminal, not even with a person's yes; run commands in your own shell instead`
+    );
+
 /* Where the helper looks for an app by name; the same folders, so a name the daemon finds is the app the helper opens. */
 const applicationFolders = (): string[] => [
     '/Applications',
@@ -422,10 +428,7 @@ export class ComputerUse {
         }
         const { app, pid } = await this.target(command, query);
         if (await this.isTerminal(app.bundleId, app.name, pid, pid === null ? [] : await this.processes())) {
-            throw new ComputerRefusal(
-                'terminal',
-                `${app.name} runs shells, and an agent never operates a terminal, not even with a person's yes; run commands in your own shell instead`
-            );
+            throw terminalRefusal(app.name);
         }
         const outcome = await this.approvals.ask({ callerId, run, app, command, caller: await this.describe(callerId) });
         if (outcome === 'waiting') {
@@ -442,9 +445,11 @@ export class ComputerUse {
         const result = await this.act<StateResult | ActionResult>(callerId, deadline, () =>
             command === 'state' ? this.helper.request(request, StateResultSchema) : this.helper.request(request, ActionResultSchema)
         );
-        if (command === 'open' && result.app?.bundleId !== undefined) {
-            // A terminal that did not run until now is one from here on, even between its shells.
-            await this.isTerminal(result.app.bundleId, result.app.name, result.app.pid, await this.processes());
+        // An app that did not run until now is checked once it does, before its tree or anything else of it goes back.
+        if (command === 'open' && pid === null && result.app?.bundleId !== undefined) {
+            if (await this.isTerminal(result.app.bundleId, result.app.name, result.app.pid, await this.processes())) {
+                throw terminalRefusal(result.app.name);
+            }
         }
         return result;
     }
