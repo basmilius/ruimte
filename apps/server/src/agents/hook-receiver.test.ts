@@ -6,6 +6,7 @@ const target = (result: HookResult) => {
     const calls: Array<{ kind: string; token: string; body: unknown }> = [];
     return {
         calls,
+        knows: () => result !== 'unknown-token',
         async applyHook(kind: 'claude' | 'codex', token: string, body: unknown): Promise<HookResult> {
             calls.push({ kind, token, body });
             return result;
@@ -33,6 +34,34 @@ describe('handleHookRequest', () => {
         expect((await handleHookRequest(post('/hooks/claude', '{}', 'x'), '/hooks/claude', target('unknown-token'))).status).toBe(401);
         expect((await handleHookRequest(post('/hooks/nope', '{}', 'x'), '/hooks/nope', target('applied'))).status).toBe(404);
         expect((await handleHookRequest(post('/hooks/codex', 'nope', 'x'), '/hooks/codex', target('applied'))).status).toBe(400);
+    });
+
+    test('turns away a made-up token before it reads a byte of a chunked body', async () => {
+        let pulls = 0;
+        const body = new ReadableStream<Uint8Array>(
+            {
+                pull(controller) {
+                    pulls++;
+                    controller.enqueue(new Uint8Array(1024 * 1024));
+                    if (pulls === 4) {
+                        controller.close();
+                    }
+                }
+            },
+            { highWaterMark: 0 }
+        );
+        const request = new Request('http://127.0.0.1/hooks/claude', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: 'Bearer made-up' },
+            body
+        });
+        const unknown = target('unknown-token');
+
+        expect(request.headers.get('content-length')).toBeNull();
+        expect((await handleHookRequest(request, '/hooks/claude', unknown)).status).toBe(401);
+        expect(pulls).toBe(0);
+        expect(request.bodyUsed).toBe(false);
+        expect(unknown.calls).toEqual([]);
     });
 
     test('turns away a CLI whose hooks the daemon has no normalizer for', async () => {

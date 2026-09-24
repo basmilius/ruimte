@@ -4,6 +4,8 @@ import type { ApprovalDecision } from './approvals.ts';
 import { hasHooks, takesHookContext } from './hooks.ts';
 
 interface HookTarget {
+    // Asked before the body is read, so a request with a made-up token costs no buffering.
+    knows(token: string): boolean;
     applyHook(kind: AgentKind, token: string, body: unknown): Promise<HookResult>;
 }
 
@@ -55,6 +57,9 @@ export const handleHookRequest = async (
     const token = bearer(request);
     if (!token) {
         return new Response('Missing bearer token', { status: 401 });
+    }
+    if (!target.knows(token)) {
+        return new Response('Unknown token', { status: 401 });
     }
     const length = Number(request.headers.get('content-length') ?? 0);
     if (length > MAX_BODY_BYTES) {

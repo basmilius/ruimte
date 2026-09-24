@@ -157,6 +157,12 @@ export class SessionManager {
         return this.tokens.get(token) ?? null;
     }
 
+    /* Whether a hook token belongs to a live session, which is what `applyHook` goes on to ask. */
+    knows(token: string): boolean {
+        const sessionId = this.tokens.get(token);
+        return sessionId !== undefined && this.sessions.has(sessionId);
+    }
+
     private readonly observers = new Set<SessionSink>();
     offlineApprovals: (() => Promise<boolean>) | null = null;
 
