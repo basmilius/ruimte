@@ -9539,6 +9539,24 @@
                 "summaryFor": {
                   "type": "string",
                   "minLength": 1
+                },
+                "limit": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "usage",
+                        "overload"
+                      ]
+                    },
+                    "resetsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
                 }
               },
               "required": [
@@ -10803,6 +10821,24 @@
                 "summaryFor": {
                   "type": "string",
                   "minLength": 1
+                },
+                "limit": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "usage",
+                        "overload"
+                      ]
+                    },
+                    "resetsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
                 }
               },
               "required": [
@@ -11707,6 +11743,24 @@
                 "summaryFor": {
                   "type": "string",
                   "minLength": 1
+                },
+                "limit": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "usage",
+                        "overload"
+                      ]
+                    },
+                    "resetsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
                 }
               },
               "required": [
@@ -12605,6 +12659,24 @@
                         "summaryFor": {
                           "type": "string",
                           "minLength": 1
+                        },
+                        "limit": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "usage",
+                                "overload"
+                              ]
+                            },
+                            "resetsAt": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ]
                         }
                       },
                       "required": [
@@ -14193,6 +14265,24 @@
                           "summaryFor": {
                             "type": "string",
                             "minLength": 1
+                          },
+                          "limit": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "usage",
+                                  "overload"
+                                ]
+                              },
+                              "resetsAt": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ]
                           }
                         },
                         "required": [
@@ -16651,6 +16741,24 @@
                 "summaryFor": {
                   "type": "string",
                   "minLength": 1
+                },
+                "limit": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "usage",
+                        "overload"
+                      ]
+                    },
+                    "resetsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
                 }
               },
               "required": [
@@ -34013,6 +34121,24 @@
                       "summaryFor": {
                         "type": "string",
                         "minLength": 1
+                      },
+                      "limit": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "usage",
+                              "overload"
+                            ]
+                          },
+                          "resetsAt": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ]
                       }
                     },
                     "required": [
@@ -35601,6 +35727,24 @@
                         "summaryFor": {
                           "type": "string",
                           "minLength": 1
+                        },
+                        "limit": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "usage",
+                                "overload"
+                              ]
+                            },
+                            "resetsAt": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ]
                         }
                       },
                       "required": [

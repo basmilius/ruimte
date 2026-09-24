@@ -75,6 +75,30 @@ export const fakeClaude: FakeCli = (io) => {
         });
     };
 
+    // A request the API turned away: a synthetic message with the reason, then a result that failed without saying which error.
+    const refusal = (text: string, error: string, status: number): void => {
+        const id = `msg_${nonce}_${++messageCounter}`;
+        out({
+            type: 'assistant',
+            uuid: `${id}-text`,
+            message: { id, model: '<synthetic>', role: 'assistant', content: [{ type: 'text', text }] },
+            parent_tool_use_id: null,
+            error,
+            session_id: sessionId
+        });
+        out({
+            type: 'result',
+            subtype: 'success',
+            is_error: true,
+            api_error_status: status,
+            result: text,
+            num_turns: 1,
+            total_cost_usd: 0,
+            usage,
+            session_id: sessionId
+        });
+    };
+
     // What a subagent's own work looks like on the wire: frames of its own, under the call that spawned it.
     const subagentWork = (agentToolUseId: string, report: string): void => {
         const child = (content: unknown[]): void => {
@@ -141,6 +165,23 @@ export const fakeClaude: FakeCli = (io) => {
         if (text.split('\n').some((line) => line === 'slow')) {
             slow = true;
             out({ type: 'stream_event', event: { type: 'message_start', message: { id: `msg_${nonce}_${++messageCounter}`, model } }, session_id: sessionId });
+            return;
+        }
+        // Lines of their own, as the two ways Claude Code 2.1.281 ends a turn it could not get an answer for.
+        const limit = text.split('\n').find((line) => line.startsWith('limit:'));
+        if (limit !== undefined) {
+            const resetsAt = Number(limit.slice(6));
+            out({
+                type: 'rate_limit_event',
+                rate_limit_info: { status: 'rejected', resetsAt, rateLimitType: 'five_hour', utilization: 1 },
+                uuid: `rate-${nonce}`,
+                session_id: sessionId
+            });
+            refusal("You've hit your session limit · resets 3pm", 'rate_limit', 429);
+            return;
+        }
+        if (text.split('\n').includes('overloaded')) {
+            refusal('API Error: Repeated 529 Overloaded errors', 'overloaded', 529);
             return;
         }
         if (text === 'compact') {

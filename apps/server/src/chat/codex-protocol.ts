@@ -1,4 +1,4 @@
-import type { ChatFileChange, ChatQuestion } from '@ruimte/contracts';
+import type { ChatFileChange, ChatQuestion, ChatTurnLimit, UsageWindow } from '@ruimte/contracts';
 import { readCodexLimits } from '../usage/limits/normalize.ts';
 import type { ApprovalDecision, BackendEvent } from './backend.ts';
 import type { CodexFrame } from './codex-transport.ts';
@@ -152,6 +152,12 @@ const elicitationInput = (meta: Frame): Frame => {
     return input;
 };
 
+/* The latest reset among the windows a rate limit update shows spent, since the request waits for all of them. */
+const spentUntil = (windows: readonly UsageWindow[]): number | null => {
+    const resets = windows.flatMap((window) => (window.used >= 1 && window.resetsAt !== null ? [window.resetsAt] : []));
+    return resets.length === 0 ? null : Math.max(...resets);
+};
+
 /*
  * The `codex app-server` protocol, in and out. Notifications and the server's own requests become
  * backend events, and an answer becomes the reply or the steer that settles one. One instance belongs
@@ -166,6 +172,8 @@ export class CodexProtocol {
     // Command items with a terminal session of their own, by item id, to the process id that ending one names.
     private readonly openTerminals = new Map<string, string>();
     private readonly backgroundTerminals = new Map<string, string>();
+    // When the plan's spent window lifts, from its last rate limit update; null while no window is spent.
+    private spentUntil: number | null = null;
 
     constructor(generation: number) {
         this.generation = generation;
@@ -286,6 +294,7 @@ export class CodexProtocol {
                 // The plan's own numbers, sent beside a token usage tick; the usage monitor keeps them.
                 const reading = readCodexLimits(isRecord(params.rateLimits) ? params.rateLimits : params);
                 if (reading !== null && reading.windows.length > 0) {
+                    this.spentUntil = spentUntil(reading.windows);
                     events.push({ type: 'limits', update: { kind: 'codex', plan: reading.plan, windows: reading.windows } });
                 }
                 break;
@@ -561,6 +570,7 @@ export class CodexProtocol {
         const turn = isRecord(params.turn) ? params.turn : {};
         const status = str(turn.status);
         const error = isRecord(turn.error) ? str(turn.error.message) : null;
+        const limit = status === 'failed' && isRecord(turn.error) ? this.limitOf(turn.error.codexErrorInfo) : null;
         const turnId = str(turn.id) ?? this.codexTurnId;
         this.codexTurnId = null;
         this.pending.clear();
@@ -576,8 +586,24 @@ export class CodexProtocol {
             // Codex reports no cost; the turn keeps a zero so the fold label can still say how long it took.
             costUsd: 0,
             ...(status === 'failed' ? { error: error ?? 'The turn failed' } : {}),
-            ...(turnId === null ? {} : { native: { turnId } })
+            ...(turnId === null ? {} : { native: { turnId } }),
+            ...(limit === null ? {} : { limit })
         });
+    }
+
+    /*
+     * The `codexErrorInfo` of a failed turn, as Codex 0.156.1 names it: `usageLimitExceeded` is the plan's
+     * limit, with the reset of the window its last update showed spent, and `serverOverloaded` or
+     * `rateLimitExceeded` a model too busy to answer now.
+     */
+    private limitOf(info: unknown): ChatTurnLimit | null {
+        if (info === 'usageLimitExceeded') {
+            return { kind: 'usage', ...(this.spentUntil === null ? {} : { resetsAt: this.spentUntil }) };
+        }
+        if (info === 'serverOverloaded' || info === 'rateLimitExceeded') {
+            return { kind: 'overload' };
+        }
+        return null;
     }
 
     private text(ref: string, text: string, completed: boolean, events: BackendEvent[]): void {

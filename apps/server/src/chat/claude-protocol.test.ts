@@ -353,6 +353,50 @@ describe('ClaudeProtocol', () => {
         expect(protocol.handle('junk')).toEqual([]);
     });
 
+    // The frames Claude Code 2.1.281 writes when the API turns a request away.
+    const refused = (protocol: ClaudeProtocol, error: string, text: string): unknown[] => {
+        protocol.handle({ type: 'assistant', uuid: 'u-1', message: { id: 'm1', model: '<synthetic>', content: [{ type: 'text', text }] }, error });
+        return protocol.handle({ type: 'result', subtype: 'success', is_error: true, api_error_status: 429, result: text, total_cost_usd: 0 });
+    };
+
+    test('a turn a spent window of the plan refused ends with a usage limit and its reset', () => {
+        const protocol = new ClaudeProtocol();
+        protocol.handle({
+            type: 'rate_limit_event',
+            rate_limit_info: { status: 'rejected', resetsAt: 1_789_000_000, rateLimitType: 'five_hour', utilization: 1 }
+        });
+        expect(refused(protocol, 'rate_limit', "You've hit your session limit · resets 3pm")).toEqual([
+            {
+                type: 'turn.done',
+                state: 'error',
+                costUsd: 0,
+                error: "You've hit your session limit · resets 3pm",
+                native: { lastUuid: 'u-1' },
+                limit: { kind: 'usage', resetsAt: 1_789_000_000_000 }
+            }
+        ]);
+        // What the turn heard is its own: the next one fails for another reason and names no limit.
+        expect(protocol.handle({ type: 'result', subtype: 'error_during_execution', is_error: true, errors: ['boom'] })).toEqual([
+            { type: 'turn.done', state: 'error', costUsd: 0, error: 'boom' }
+        ]);
+    });
+
+    test('an overloaded model, or a 429 the plan did not explain, is an overload without a reset', () => {
+        const protocol = new ClaudeProtocol();
+        expect(refused(protocol, 'overloaded', 'API Error: Repeated 529 Overloaded errors')).toMatchObject([{ state: 'error', limit: { kind: 'overload' } }]);
+        protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', resetsAt: 1_789_000_000, rateLimitType: 'five_hour' } });
+        protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', resetsAt: 1_789_000_000, rateLimitType: 'five_hour' } });
+        expect(refused(protocol, 'rate_limit', 'Request rejected (429)')).toMatchObject([{ state: 'error', limit: { kind: 'overload' } }]);
+    });
+
+    test('a refused window on a turn that still answered is no limit', () => {
+        const protocol = new ClaudeProtocol();
+        protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', resetsAt: 1_789_000_000, rateLimitType: 'five_hour' } });
+        expect(protocol.handle({ type: 'result', subtype: 'success', is_error: false, total_cost_usd: 0 })).toEqual([
+            { type: 'turn.done', state: 'done', costUsd: 0 }
+        ]);
+    });
+
     test('what a turn says about the plan leaves the chat as a limits event', () => {
         const protocol = new ClaudeProtocol();
         expect(

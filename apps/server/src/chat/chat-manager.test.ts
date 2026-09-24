@@ -413,6 +413,19 @@ describe('ChatManager', () => {
         expect(claude.started).toHaveLength(2);
     });
 
+    test('a turn the plan refused ends in an error that names the limit and its reset, and the chat can go on', async () => {
+        await manager.create({ chatId: 'chat-limit', cwd: home });
+        manager.attach('chat-limit', 'c1');
+        await manager.send('chat-limit', 'limit:1789000000');
+        await recorder.until(idle);
+        expect(recorder.ofKind('turn')[0]).toMatchObject({ state: 'error', limit: { kind: 'usage', resetsAt: 1_789_000_000_000 } });
+        expect(recorder.ofKind('note').map((note) => note.text)).toContain("You've hit your session limit · resets 3pm");
+
+        await manager.send('chat-limit', 'overloaded');
+        await recorder.until(() => recorder.info?.usage.turns === 2 && idle());
+        expect(recorder.ofKind('turn')[1]).toMatchObject({ state: 'error', limit: { kind: 'overload' } });
+    });
+
     test('a CLI that dies with something on stderr leaves the last lines of it in the note', async () => {
         await manager.create({ chatId: 'chat-loud', cwd: home });
         manager.attach('chat-loud', 'c1');

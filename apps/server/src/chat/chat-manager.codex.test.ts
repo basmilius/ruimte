@@ -492,6 +492,16 @@ describe('ChatManager with Codex', () => {
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: hi (medium)']);
     });
 
+    test('a turn over the usage limit or on an overloaded server ends in an error that names it', async () => {
+        await open('chat-limit');
+        await manager.send('chat-limit', 'limit:1789000000');
+        await recorder.until(idle);
+        expect(recorder.ofKind('turn')[0]).toMatchObject({ state: 'error', limit: { kind: 'usage', resetsAt: 1_789_000_000_000 } });
+        await manager.send('chat-limit', 'overloaded');
+        await recorder.until(() => recorder.info?.usage.turns === 2 && idle());
+        expect(recorder.ofKind('turn')[1]).toMatchObject({ state: 'error', limit: { kind: 'overload' } });
+    });
+
     test('compaction shows up as a marker in a turn of its own', async () => {
         await open('chat-k');
         await manager.send('chat-k', 'x');

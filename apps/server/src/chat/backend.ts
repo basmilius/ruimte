@@ -1,4 +1,14 @@
-import type { ChatAttachment, ChatFileChange, ChatQuestion, ChatSkill, ChatSubagentUsage, ContextSource, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type {
+    ChatAttachment,
+    ChatFileChange,
+    ChatQuestion,
+    ChatSkill,
+    ChatSubagentUsage,
+    ChatTurnLimit,
+    ContextSource,
+    ModelSelection,
+    RuntimeMode
+} from '@ruimte/contracts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
 
@@ -117,7 +127,14 @@ export type BackendEvent =
     | { type: 'model'; model: string }
     | { type: 'note'; level: 'info' | 'warning' | 'error'; text: string }
     // `native` is the CLI's own name for where the turn ended, which a fork of the chat is cut at.
-    | { type: 'turn.done'; state: 'done' | 'aborted' | 'error'; costUsd: number; error?: string; native?: { turnId?: string; lastUuid?: string } }
+    | {
+          type: 'turn.done';
+          state: 'done' | 'aborted' | 'error';
+          costUsd: number;
+          error?: string;
+          native?: { turnId?: string; lastUuid?: string };
+          limit?: ChatTurnLimit;
+      }
     // The CLI could not be reached or refused the request; the turn ends and the chat needs a new one.
     | { type: 'failed'; message: string }
     // `stderr` is the last of what the CLI wrote there, for an exit with an error code.

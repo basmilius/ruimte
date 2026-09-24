@@ -1,4 +1,4 @@
-import type { ChatQuestion, ChatSubagentUsage } from '@ruimte/contracts';
+import type { ChatQuestion, ChatSubagentUsage, ChatTurnLimit } from '@ruimte/contracts';
 import { readClaudeEvent } from '../usage/limits/normalize.ts';
 import type { ApprovalDecision, BackendEvent } from './backend.ts';
 
@@ -76,6 +76,9 @@ export class ClaudeProtocol {
     private readonly backgroundTasks = new Set<string>();
     // The uuid of the last main-chain assistant frame of the turn, which is the line of the transcript the turn ends on.
     private lastUuid: string | null = null;
+    // What this turn heard about a limit: the API error of a main-chain frame, and a window the plan refused, with its reset in seconds.
+    private apiError: string | null = null;
+    private refused: { resetsAt: number | null } | null = null;
 
     handle(frame: unknown): BackendEvent[] {
         const events: BackendEvent[] = [];
@@ -113,6 +116,7 @@ export class ClaudeProtocol {
                 this.handleToolProgress(frame, events);
                 break;
             case 'rate_limit_event': {
+                this.noteRefusal(frame.rate_limit_info);
                 // The plan's own numbers, streamed while a turn runs; the usage monitor keeps them.
                 const update = readClaudeEvent(frame.rate_limit_info);
                 if (update !== null) {
@@ -352,6 +356,9 @@ export class ClaudeProtocol {
         if (!parentRef && uuid) {
             this.lastUuid = uuid;
         }
+        if (!parentRef && typeof frame.error === 'string') {
+            this.apiError = frame.error;
+        }
         for (const block of content) {
             if (!isRecord(block)) {
                 continue;
@@ -418,13 +425,40 @@ export class ClaudeProtocol {
         const errors = Array.isArray(frame.errors) ? frame.errors.filter((error): error is string => typeof error === 'string') : [];
         const lastUuid = this.lastUuid;
         this.lastUuid = null;
+        const limit = failed ? this.limit() : null;
+        this.apiError = null;
+        this.refused = null;
         events.push({
             type: 'turn.done',
             state: failed ? 'error' : 'done',
             costUsd: num(frame.total_cost_usd),
-            ...(failed ? { error: errors[0] ?? `The turn ended with ${str(frame.subtype) ?? 'an error'}` } : {}),
-            ...(lastUuid === null ? {} : { native: { lastUuid } })
+            ...(failed ? { error: errors[0] ?? str(frame.result) ?? `The turn ended with ${str(frame.subtype) ?? 'an error'}` } : {}),
+            ...(lastUuid === null ? {} : { native: { lastUuid } }),
+            ...(limit === null ? {} : { limit })
         });
+    }
+
+    /* The last word of the plan on its windows this turn: `rejected` is a window that refused the request. */
+    private noteRefusal(info: unknown): void {
+        if (!isRecord(info) || typeof info.status !== 'string') {
+            return;
+        }
+        this.refused = info.status === 'rejected' ? { resetsAt: typeof info.resetsAt === 'number' ? info.resetsAt : null } : null;
+    }
+
+    /*
+     * What stopped a failed turn, in the words of Claude Code 2.1.281: a window of the plan that refused
+     * the request is a usage limit, and an API error of `rate_limit` without one (a 429 the plan did
+     * not explain) or of `overloaded` is a model too busy to answer.
+     */
+    private limit(): ChatTurnLimit | null {
+        if (this.refused !== null) {
+            return { kind: 'usage', ...(this.refused.resetsAt === null ? {} : { resetsAt: this.refused.resetsAt * 1000 }) };
+        }
+        if (this.apiError === 'rate_limit' || this.apiError === 'overloaded') {
+            return { kind: 'overload' };
+        }
+        return null;
     }
 
     private handleControlRequest(frame: Frame, events: BackendEvent[]): void {

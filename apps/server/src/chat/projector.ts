@@ -1,4 +1,13 @@
-import type { ChatBackgroundTask, ChatEvent, ChatItem, ChatSubagentItem, ChatSubagentUsage, ChatToolItem, ChatToolProgress } from '@ruimte/contracts';
+import type {
+    ChatBackgroundTask,
+    ChatEvent,
+    ChatItem,
+    ChatSubagentItem,
+    ChatSubagentUsage,
+    ChatToolItem,
+    ChatToolProgress,
+    ChatTurnLimit
+} from '@ruimte/contracts';
 import type { BackendEvent } from './backend.ts';
 import { estimateContextBreakdown } from './context-breakdown.ts';
 import type { ChatThread } from './thread.ts';
@@ -304,7 +313,7 @@ export class ThreadProjector {
                 events.push(this.note(event.level, event.text));
                 break;
             case 'turn.done':
-                this.finishTurn(event.state, event.costUsd, event.error, events, event.native);
+                this.finishTurn(event.state, event.costUsd, event.error, events, event.native, event.limit);
                 break;
             case 'failed':
                 events.push(this.note('error', event.message));
@@ -741,13 +750,14 @@ export class ThreadProjector {
         costUsd: number,
         error: string | undefined,
         events: ChatEvent[],
-        native: { turnId?: string; lastUuid?: string } | undefined
+        native: { turnId?: string; lastUuid?: string } | undefined,
+        limit: ChatTurnLimit | undefined
     ): void {
         if (error) {
             events.push(this.note('error', error));
         }
         this.settleOpenItems(events);
-        this.closeTurn(state, costUsd, events, native);
+        this.closeTurn(state, costUsd, events, native, limit);
         const usage = this.thread.info.usage;
         events.push(
             this.thread.patchInfo({
@@ -778,7 +788,13 @@ export class ThreadProjector {
         );
     }
 
-    private closeTurn(state: 'done' | 'aborted' | 'error', costUsd: number, events: ChatEvent[], native?: { turnId?: string; lastUuid?: string }): void {
+    private closeTurn(
+        state: 'done' | 'aborted' | 'error',
+        costUsd: number,
+        events: ChatEvent[],
+        native?: { turnId?: string; lastUuid?: string },
+        limit?: ChatTurnLimit
+    ): void {
         const turnId = this.thread.info.activeTurnId;
         const turn = turnId ? this.thread.get(turnId) : undefined;
         if (turn?.kind !== 'turn') {
@@ -791,7 +807,8 @@ export class ThreadProjector {
                 state,
                 endedAt: this.now(),
                 costUsd: Math.max(0, costUsd - this.thread.info.usage.costUsd),
-                ...(native === undefined ? {} : { native })
+                ...(native === undefined ? {} : { native }),
+                ...(limit === undefined || state !== 'error' ? {} : { limit })
             })
         );
     }

@@ -91,7 +91,7 @@ export const fakeCodex: FakeCli = (io) => {
         notify('turn/started', { threadId, turn: { id: turnId, items: [], itemsView: 'notLoaded', status: 'inProgress', error: null } });
     };
 
-    const turnCompleted = (status: 'completed' | 'interrupted' | 'failed', error: string | null = null): void => {
+    const turnCompleted = (status: 'completed' | 'interrupted' | 'failed', error: string | null = null, codexErrorInfo: string | null = null): void => {
         usage();
         notify('thread/status/changed', { threadId, status: { type: 'idle' } });
         notify('turn/completed', {
@@ -101,7 +101,7 @@ export const fakeCodex: FakeCli = (io) => {
                 items: [],
                 itemsView: 'summary',
                 status,
-                error: error ? { message: error, codexErrorInfo: null, additionalDetails: null } : null
+                error: error ? { message: error, codexErrorInfo, additionalDetails: null } : null
             }
         });
         turnId = '';
@@ -160,6 +160,24 @@ export const fakeCodex: FakeCli = (io) => {
         }
         if (text === 'fail') {
             turnCompleted('failed', 'The model is overloaded');
+            return;
+        }
+        // Lines of their own, so a task brief around them still fails the way Codex 0.156.1 does.
+        const lines = text.split('\n');
+        if (lines.includes('overloaded')) {
+            turnCompleted('failed', 'Selected model is at capacity. Please try a different model.', 'serverOverloaded');
+            return;
+        }
+        const limit = lines.find((line) => line.startsWith('limit:'));
+        if (limit !== undefined) {
+            notify('account/rateLimits/updated', {
+                rateLimits: {
+                    limitId: 'codex',
+                    primary: { usedPercent: 100, windowDurationMins: 300, resetsAt: Number(limit.slice(6)) },
+                    secondary: { usedPercent: 40, windowDurationMins: 10080, resetsAt: Number(limit.slice(6)) + 86_400 }
+                }
+            });
+            turnCompleted('failed', "You've hit your usage limit.", 'usageLimitExceeded');
             return;
         }
         if (text === 'slow') {

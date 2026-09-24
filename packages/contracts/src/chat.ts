@@ -346,6 +346,17 @@ export const ChatCheckpointDiffSchema = z.object({
 });
 export type ChatCheckpointDiff = z.infer<typeof ChatCheckpointDiffSchema>;
 
+/*
+ * Why a turn stopped short, when its CLI said so in its own stream: the plan's usage limit, or a model
+ * too busy to answer. Not a state of its own, since a client that validates `state` knows four.
+ */
+export const ChatTurnLimitSchema = z.object({
+    kind: z.enum(['usage', 'overload']),
+    // When the limit lifts, in milliseconds since the epoch; absent when the CLI named no time.
+    resetsAt: z.number().optional()
+});
+export type ChatTurnLimit = z.infer<typeof ChatTurnLimitSchema>;
+
 export const ChatTurnItemSchema = z.object({
     ...base,
     kind: z.literal('turn'),
@@ -373,7 +384,9 @@ export const ChatTurnItemSchema = z.object({
     // The git tree of the chat's folder when the turn settled: what a fork after this turn starts its files from.
     checkpointAfter: z.string().optional(),
     // Set on the turn a fork writes a summary in: the chat it is for, which gets the last answer of the turn.
-    summaryFor: ChatIdSchema.optional()
+    summaryFor: ChatIdSchema.optional(),
+    // Set on a turn that ended in an error because of a limit rather than a mistake.
+    limit: ChatTurnLimitSchema.optional()
 });
 
 /* What a turn a restart could not take up again ends with, so a client can tell it from a turn a person stopped. */

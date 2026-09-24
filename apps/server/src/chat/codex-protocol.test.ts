@@ -72,6 +72,41 @@ describe('CodexProtocol', () => {
         ).toEqual([{ type: 'turn.done', state: 'error', costUsd: 0, error: 'overloaded', native: { turnId: 'ct1' } }]);
     });
 
+    // The `codexErrorInfo` values of Codex 0.156.1 (`codex app-server generate-ts`, v2/CodexErrorInfo.ts).
+    const failed = (protocol: CodexProtocol, codexErrorInfo: unknown): unknown[] =>
+        protocol.handle({
+            method: 'turn/completed',
+            params: { ...ids, turn: { id: 'ct1', status: 'failed', error: { message: 'no', codexErrorInfo, additionalDetails: null } } }
+        });
+
+    test('a turn over the usage limit ends with the reset of the window its last update showed spent', () => {
+        const protocol = new CodexProtocol(1);
+        protocol.handle({
+            method: 'account/rateLimits/updated',
+            params: {
+                rateLimits: {
+                    limitId: 'codex',
+                    primary: { usedPercent: 100, windowDurationMins: 300, resetsAt: 1_789_000_000 },
+                    secondary: { usedPercent: 40, windowDurationMins: 10080, resetsAt: 1_789_400_000 }
+                }
+            }
+        });
+        expect(failed(protocol, 'usageLimitExceeded')).toEqual([
+            { type: 'turn.done', state: 'error', costUsd: 0, error: 'no', native: { turnId: 'ct1' }, limit: { kind: 'usage', resetsAt: 1_789_000_000_000 } }
+        ]);
+    });
+
+    test('an overloaded server is an overload, and any other failure no limit at all', () => {
+        const protocol = new CodexProtocol(1);
+        expect(failed(protocol, 'usageLimitExceeded')).toMatchObject([{ limit: { kind: 'usage' } }]);
+        expect(failed(protocol, 'serverOverloaded')).toMatchObject([{ limit: { kind: 'overload' } }]);
+        expect(failed(protocol, 'rateLimitExceeded')).toMatchObject([{ limit: { kind: 'overload' } }]);
+        expect(failed(protocol, 'contextWindowExceeded')).toEqual([{ type: 'turn.done', state: 'error', costUsd: 0, error: 'no', native: { turnId: 'ct1' } }]);
+        expect(failed(protocol, { httpConnectionFailed: { httpStatusCode: 503 } })).toEqual([
+            { type: 'turn.done', state: 'error', costUsd: 0, error: 'no', native: { turnId: 'ct1' } }
+        ]);
+    });
+
     test('a command is a Bash call whose partial output streams, and its approval carries the generation', () => {
         const protocol = new CodexProtocol(3);
         const command = { type: 'commandExecution', id: 'exec-1', command: '/bin/zsh -lc "git status"', cwd: '/w', status: 'inProgress' };
