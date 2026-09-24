@@ -1,4 +1,5 @@
 import AppIntents
+import LucideSwift
 import RuimtePulsar
 import SwiftUI
 import WidgetKit
@@ -349,19 +350,27 @@ private struct UsageRing: View {
     }
 }
 
-/// The provider's word mark from the desktop's `ProviderLogo`, in the theme's color.
+/// The provider's word mark from the desktop's `ProviderLogo`, in the theme's color; a CLI without one here, such as
+/// one a newer machine knows, gets a generic mark rather than another provider's.
 private struct ProviderMark: View {
     let provider: String
     let size: CGFloat
     @Environment(\.usageTheme) private var theme
 
     var body: some View {
-        Image(provider == "codex" ? "CodexMark" : "ClaudeMark")
-            .renderingMode(.template)
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
-            .foregroundStyle(theme.mark)
-            .accessibilityLabel(provider.capitalized)
+        Group {
+            switch provider {
+            case "claude", "codex":
+                Image(provider == "codex" ? "CodexMark" : "ClaudeMark")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+            default:
+                LucideIcon(.bot, size: size)
+            }
+        }
+        .frame(width: size, height: size)
+        .foregroundStyle(theme.mark)
+        .accessibilityLabel(provider.capitalized)
     }
 }
