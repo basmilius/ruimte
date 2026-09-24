@@ -1,5 +1,6 @@
 import { Fragment, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, FileText, Frame, Globe, Heading, Minus, PenTool, Workflow, Terminal } from 'lucide-react';
 import { isOpenableView, viewIconOf, type ProjectView, type ProviderInfo } from '@ruimte/contracts';
@@ -17,6 +18,7 @@ import { Tile } from '@/ui/Tile';
 import { useUi } from '@/state/ui';
 import { labelCollator } from '@/format/locale';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { cameThroughPortal } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
 import { CANVAS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
@@ -253,48 +255,68 @@ export function ViewMenu() {
         return null;
     }
     return (
-        <Menu.Root>
-            <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active">
-                <ViewGlyph
-                    id={active.id}
-                    kind={active.kind}
-                    icon={viewIconOf(active)}
-                    provider={active.kind === 'chat' || active.kind === 'terminal' ? active.node.provider : null}
-                    path={active.kind === 'file' ? active.path : null}
-                />
-                <ViewName view={active} className="truncate text-sm text-text" />
-                <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
-            </Menu.Trigger>
-            <MenuPopup className="min-w-52">
-                <div className={MENU_LABEL}>{t('viewMenu.views')}</div>
-                {views.filter(isOpenableView).map((view, index) => (
-                    <Menu.Item key={view.id} className="menu-item" onClick={() => showView(view.id)}>
+        // The right-click offers what a cell's bar does; `display: contents`, so the wrapper changes no layout.
+        <ContextMenu.Root>
+            <ContextMenu.Trigger
+                className="contents"
+                onContextMenu={(event) => {
+                    if (cameThroughPortal(event)) {
+                        event.preventBaseUIHandler();
+                    }
+                }}
+            >
+                <Menu.Root>
+                    <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active">
                         <ViewGlyph
-                            id={view.id}
-                            kind={view.kind}
-                            icon={viewIconOf(view)}
-                            provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
-                            path={view.kind === 'file' ? view.path : null}
+                            id={active.id}
+                            kind={active.kind}
+                            icon={viewIconOf(active)}
+                            provider={active.kind === 'chat' || active.kind === 'terminal' ? active.node.provider : null}
+                            path={active.kind === 'file' ? active.path : null}
                         />
-                        <ViewName view={view} className="truncate" />
-                        {view.id === activeViewId && (
-                            <span className="ml-auto flex shrink-0 items-center">
-                                <Icon icon={Check} size={14} />
-                            </span>
-                        )}
-                        {/* The first nine have a shortcut of their own; the rest are one click away. */}
-                        {index < 9 && view.id !== activeViewId && <Kbd shortcut={viewShortcut(index)!} />}
-                    </Menu.Item>
-                ))}
-                <Menu.Separator className={MENU_SEPARATOR} />
-                {/* Here the items follow the list of views, so they say what they are; under
+                        <ViewName view={active} className="truncate text-sm text-text" />
+                        <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
+                    </Menu.Trigger>
+                    <MenuPopup className="min-w-52">
+                        <div className={MENU_LABEL}>{t('viewMenu.views')}</div>
+                        {views.filter(isOpenableView).map((view, index) => (
+                            <Menu.Item key={view.id} className="menu-item" onClick={() => showView(view.id)}>
+                                <ViewGlyph
+                                    id={view.id}
+                                    kind={view.kind}
+                                    icon={viewIconOf(view)}
+                                    provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
+                                    path={view.kind === 'file' ? view.path : null}
+                                />
+                                <ViewName view={view} className="truncate" />
+                                {view.id === activeViewId && (
+                                    <span className="ml-auto flex shrink-0 items-center">
+                                        <Icon icon={Check} size={14} />
+                                    </span>
+                                )}
+                                {/* The first nine have a shortcut of their own; the rest are one click away. */}
+                                {index < 9 && view.id !== activeViewId && <Kbd shortcut={viewShortcut(index)!} />}
+                            </Menu.Item>
+                        ))}
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        {/* Here the items follow the list of views, so they say what they are; under
                             the sidebar's plus they would repeat what the plus already says. */}
-                <div className={MENU_LABEL}>{t('viewMenu.newView')}</div>
-                <NewViewItems />
-                <Menu.Separator className={MENU_SEPARATOR} />
-                <SplitItems separated />
-                <ViewMenuItems viewId={active.id} kind={active.kind} />
-            </MenuPopup>
-        </Menu.Root>
+                        <div className={MENU_LABEL}>{t('viewMenu.newView')}</div>
+                        <NewViewItems />
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <SplitItems separated />
+                        <ViewMenuItems viewId={active.id} kind={active.kind} />
+                    </MenuPopup>
+                </Menu.Root>
+            </ContextMenu.Trigger>
+            <ContextMenu.Portal>
+                <ContextMenu.Positioner className="z-(--z-popup)">
+                    <ContextMenu.Popup className="menu-popup min-w-52">
+                        <SplitItems separated />
+                        <ViewMenuItems viewId={active.id} kind={active.kind} />
+                    </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+            </ContextMenu.Portal>
+        </ContextMenu.Root>
     );
 }

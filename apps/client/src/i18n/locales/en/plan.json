@@ -48,6 +48,9 @@
     "notChanged": "The plan did not change",
     "copied": "Copied the plan as Markdown"
   },
+  "menu": {
+    "copyPlan": "Copy plan as Markdown"
+  },
   "header": {
     "kind": {
       "steps": "Steps",

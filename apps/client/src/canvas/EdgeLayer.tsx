@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
+import { Pencil, Trash } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
 import { edgeLines, fixedSides, selectedLine, textRect } from '@/canvas/edge-lines';
@@ -8,6 +11,8 @@ import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import type { Point, Rect } from '@/canvas/math';
 import { useEndpointId } from '@/state/keys';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
+import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
+import { Icon } from '@/ui/Icon';
 
 function EdgeLabel({
     ids,
@@ -78,6 +83,7 @@ function EdgeMarker({ shape, at, side, stroke }: { shape: MarkerShape; at: Point
 }
 
 export function EdgeLayer() {
+    const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const edges = useCanvas((s) => s.edges);
     const nodes = useCanvas((s) => s.nodes);
@@ -169,53 +175,75 @@ export function EdgeLayer() {
                     openTask: task !== null && task.status === 'open'
                 });
                 const stroke = look.accent ? (active ? 'var(--accent)' : 'var(--edge-context)') : active ? 'var(--text-muted)' : 'var(--edge-line)';
+                const remove = (): void => {
+                    for (const id of line.ids) {
+                        canvasStore.getState().removeEdge(id);
+                    }
+                };
                 return (
-                    <g key={key} onPointerEnter={() => setHovered(key)} onPointerLeave={() => setHovered((h) => (h === key ? null : h))}>
-                        {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
-                        <path
-                            d={route.d}
-                            fill="none"
-                            stroke="transparent"
-                            strokeWidth="14"
-                            className="pointer-events-auto cursor-pointer"
-                            onPointerDown={(e) => {
-                                e.stopPropagation();
-                                // One line is one thing to click, so both of its directions are selected together.
-                                canvasStore.getState().select(line.ids, e.shiftKey);
-                            }}
-                            onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                setEditing(key);
-                            }}
-                        />
-                        <path
-                            d={route.d}
-                            fill="none"
-                            stroke={stroke}
-                            strokeWidth={active ? look.width + 1 : look.width}
-                            strokeDasharray={look.dashed ? '6 6' : undefined}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                        <EdgeMarker shape={look.tail} at={route.from} side={route.fromSide} stroke={stroke} />
-                        <EdgeMarker shape={look.head} at={route.to} side={route.toSide} stroke={stroke} />
-                        <EdgeLabel ids={line.ids} label={label} at={mid} editing={editing === key} onEdit={(on) => setEditing(on ? key : null)} />
-                        {active && editing !== key && (
-                            <g
-                                transform={`translate(${mid.x + (label ? 40 : 0)}, ${mid.y})`}
+                    <ContextMenu.Root key={key}>
+                        <ContextMenu.Trigger
+                            render={<g />}
+                            onPointerEnter={() => setHovered(key)}
+                            onPointerLeave={() => setHovered((h) => (h === key ? null : h))}
+                        >
+                            {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
+                            <path
+                                d={route.d}
+                                fill="none"
+                                stroke="transparent"
+                                strokeWidth="14"
                                 className="pointer-events-auto cursor-pointer"
                                 onPointerDown={(e) => {
                                     e.stopPropagation();
-                                    for (const id of line.ids) {
-                                        canvasStore.getState().removeEdge(id);
-                                    }
+                                    // One line is one thing to click, so both of its directions are selected together.
+                                    canvasStore.getState().select(line.ids, e.shiftKey);
                                 }}
-                            >
-                                <circle r="9" fill="var(--surface-raised)" stroke="var(--border-strong)" />
-                                <path d="M -3 -3 L 3 3 M 3 -3 L -3 3" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" />
-                            </g>
-                        )}
-                    </g>
+                                onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditing(key);
+                                }}
+                            />
+                            <path
+                                d={route.d}
+                                fill="none"
+                                stroke={stroke}
+                                strokeWidth={active ? look.width + 1 : look.width}
+                                strokeDasharray={look.dashed ? '6 6' : undefined}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                            <EdgeMarker shape={look.tail} at={route.from} side={route.fromSide} stroke={stroke} />
+                            <EdgeMarker shape={look.head} at={route.to} side={route.toSide} stroke={stroke} />
+                            <EdgeLabel ids={line.ids} label={label} at={mid} editing={editing === key} onEdit={(on) => setEditing(on ? key : null)} />
+                            {active && editing !== key && (
+                                <g
+                                    transform={`translate(${mid.x + (label ? 40 : 0)}, ${mid.y})`}
+                                    className="pointer-events-auto cursor-pointer"
+                                    onPointerDown={(e) => {
+                                        e.stopPropagation();
+                                        remove();
+                                    }}
+                                >
+                                    <circle r="9" fill="var(--surface-raised)" stroke="var(--border-strong)" />
+                                    <path d="M -3 -3 L 3 3 M 3 -3 L -3 3" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" />
+                                </g>
+                            )}
+                        </ContextMenu.Trigger>
+                        <ContextMenu.Portal>
+                            <ContextMenu.Positioner className="z-(--z-popup)">
+                                <ContextMenu.Popup className="menu-popup">
+                                    <ContextMenu.Item className="menu-item" onClick={() => setEditing(key)}>
+                                        <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <span className={MENU_HINT}>{t('menu.doubleClick')}</span>
+                                    </ContextMenu.Item>
+                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
+                                    <ContextMenu.Item className="menu-item" onClick={remove}>
+                                        <Icon icon={Trash} size={14} /> {t('common:action.remove')}
+                                    </ContextMenu.Item>
+                                </ContextMenu.Popup>
+                            </ContextMenu.Positioner>
+                        </ContextMenu.Portal>
+                    </ContextMenu.Root>
                 );
             })}
             {draft &&

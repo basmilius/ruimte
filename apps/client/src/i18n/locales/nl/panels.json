@@ -218,6 +218,7 @@
     "branchMenu": {
       "checkout": "Checkout",
       "create": "Branch aanmaken...",
+      "copyName": "Branchnaam kopiëren",
       "default": "standaard",
       "detached": "detached",
       "inWorktree": "in een andere worktree",

@@ -309,6 +309,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     // Read when the card asks rather than on every render, so the strip's memo holds while the thread streams.
     const cardChat = useMemo<CardChat>(
         () => ({
+            chatId,
             canFork: (turnId) => {
                 const row = useChats.getState().byKey[endpointKey(endpointId, chatId)];
                 return forkRefusal(row?.info ?? null, row?.structure[turnId]) === null;

@@ -1,10 +1,16 @@
 import { memo, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
+import { Copy, Pencil, Trash } from 'lucide-react';
 import type { DrawingFont } from '@ruimte/contracts';
+import { deleteNodesAction } from '@/actions/client-actions';
 import { accentColor } from '@/canvas/accents';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
+import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
+import { copyText } from '@/ui/clipboard';
+import { Icon } from '@/ui/Icon';
 
 /* Absent is 'sans', so a label written before there was a choice keeps the face it had. */
 export const FONT_STACK: Record<DrawingFont, string> = {
@@ -57,63 +63,82 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
     };
 
     return (
-        <div
-            ref={ref}
-            data-text-id={id}
-            data-placeholder={t('text.placeholder')}
-            className={clsx(
-                'text-element absolute rounded-sm px-1 py-0.5 leading-tight text-text',
-                text.bold ? 'font-bold' : 'font-medium',
-                text.italic && 'italic',
-                selected && !editing && 'outline-2 outline-accent',
-                !editing && 'cursor-default'
-            )}
-            style={{
-                left: text.x,
-                top: text.y,
-                fontSize: text.size,
-                color: accentColor(text.color),
-                fontFamily: FONT_STACK[text.font ?? 'sans'],
-                width: text.maxWidth,
-                maxWidth: text.maxWidth,
-                whiteSpace: text.maxWidth ? 'pre-wrap' : 'pre',
-                overflowWrap: 'anywhere',
-                textAlign: text.align ?? 'left',
-                textDecorationLine: [text.underline && 'underline', text.strikethrough && 'line-through'].filter(Boolean).join(' ') || 'none'
-            }}
-            contentEditable={editing ? 'plaintext-only' : false}
-            suppressContentEditableWarning
-            onDoubleClick={(e) => {
-                e.stopPropagation();
-                canvasStore.getState().setEditingText(id);
-            }}
-            onBlur={editing ? commit : undefined}
-            onKeyDown={(e) => {
-                if (editing && (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey))) {
-                    e.preventDefault();
-                    ref.current?.blur();
-                }
-                if (editing) {
+        <ContextMenu.Root>
+            <ContextMenu.Trigger
+                render={<div />}
+                ref={ref}
+                data-text-id={id}
+                data-placeholder={t('text.placeholder')}
+                className={clsx(
+                    'text-element absolute rounded-sm px-1 py-0.5 leading-tight text-text',
+                    text.bold ? 'font-bold' : 'font-medium',
+                    text.italic && 'italic',
+                    selected && !editing && 'outline-2 outline-accent',
+                    !editing && 'cursor-default'
+                )}
+                style={{
+                    left: text.x,
+                    top: text.y,
+                    fontSize: text.size,
+                    color: accentColor(text.color),
+                    fontFamily: FONT_STACK[text.font ?? 'sans'],
+                    width: text.maxWidth,
+                    maxWidth: text.maxWidth,
+                    whiteSpace: text.maxWidth ? 'pre-wrap' : 'pre',
+                    overflowWrap: 'anywhere',
+                    textAlign: text.align ?? 'left',
+                    textDecorationLine: [text.underline && 'underline', text.strikethrough && 'line-through'].filter(Boolean).join(' ') || 'none'
+                }}
+                contentEditable={editing ? 'plaintext-only' : false}
+                suppressContentEditableWarning
+                onDoubleClick={(e) => {
                     e.stopPropagation();
-                }
-            }}
-        >
-            {text.text}
-            {!editing &&
-                !resizeLocked &&
-                (['left', 'right'] as const).map((side) => (
-                    <span
-                        key={side}
-                        data-text-resize={side}
-                        contentEditable={false}
-                        className="absolute inset-y-0 cursor-ew-resize"
-                        style={{ [side]: -4 / zoom, width: 8 / zoom }}
-                        onDoubleClick={(e) => {
-                            e.stopPropagation();
-                            canvasStore.getState().styleText(id, { maxWidth: undefined });
-                        }}
-                    />
-                ))}
-        </div>
+                    canvasStore.getState().setEditingText(id);
+                }}
+                onBlur={editing ? commit : undefined}
+                onKeyDown={(e) => {
+                    if (editing && (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey))) {
+                        e.preventDefault();
+                        ref.current?.blur();
+                    }
+                    if (editing) {
+                        e.stopPropagation();
+                    }
+                }}
+            >
+                {text.text}
+                {!editing &&
+                    !resizeLocked &&
+                    (['left', 'right'] as const).map((side) => (
+                        <span
+                            key={side}
+                            data-text-resize={side}
+                            contentEditable={false}
+                            className="absolute inset-y-0 cursor-ew-resize"
+                            style={{ [side]: -4 / zoom, width: 8 / zoom }}
+                            onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                canvasStore.getState().styleText(id, { maxWidth: undefined });
+                            }}
+                        />
+                    ))}
+            </ContextMenu.Trigger>
+            <ContextMenu.Portal>
+                <ContextMenu.Positioner className="z-(--z-popup)">
+                    <ContextMenu.Popup className="menu-popup">
+                        <ContextMenu.Item className="menu-item" disabled={editing} onClick={() => canvasStore.getState().setEditingText(id)}>
+                            <Icon icon={Pencil} size={14} /> {t('common:action.edit')} <span className={MENU_HINT}>{t('menu.doubleClick')}</span>
+                        </ContextMenu.Item>
+                        <ContextMenu.Item className="menu-item" disabled={text.text === ''} onClick={() => copyText(text.text)}>
+                            <Icon icon={Copy} size={14} /> {t('text.copy')}
+                        </ContextMenu.Item>
+                        <ContextMenu.Separator className={MENU_SEPARATOR} />
+                        <ContextMenu.Item className="menu-item" onClick={() => deleteNodesAction(canvasStore, [id])}>
+                            <Icon icon={Trash} size={14} /> {t('common:action.delete')}
+                        </ContextMenu.Item>
+                    </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+            </ContextMenu.Portal>
+        </ContextMenu.Root>
     );
 });

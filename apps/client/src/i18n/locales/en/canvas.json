@@ -152,6 +152,7 @@
   },
   "text": {
     "placeholder": "Type something",
+    "copy": "Copy text",
     "font": "Font",
     "size": "Size",
     "bold": "Bold",

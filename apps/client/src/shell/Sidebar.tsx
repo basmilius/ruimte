@@ -72,6 +72,7 @@ import { setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { UsageLimitsCard } from '@/shell/usage/UsageLimitsCard';
 import { ConnectionDot } from '@/shell/ConnectionDot';
+import { FolderMenuItems } from '@/shell/FolderMenuItems';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { Icon } from '@/ui/Icon';
 import { MenuPopup } from '@/ui/MenuPopup';
@@ -570,51 +571,60 @@ function ProjectHeading({ group, tabbable, onFocus, onArrow }: RowProps & { grou
         .flatMap((view) => [...view.nodes, ...(view.self ? [view.self] : [])])
         .filter((node) => node.status === 'needs-you').length;
     return (
-        <button
-            type="button"
-            data-sidebar-row={`project:${group.key}`}
-            tabIndex={tabbable ? 0 : -1}
-            aria-expanded={!group.collapsed}
-            aria-label={`${group.summary.name} · ${group.machineLabel}${group.active ? ` · ${t('sidebar.activeProject')}` : ''}`}
-            title={`${group.summary.name} · ${group.machineLabel}`}
-            onFocus={onFocus}
-            onClick={() => collapse(!group.collapsed)}
-            onKeyDown={(event) => {
-                arrowStep(event, onArrow);
-                if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-                    event.preventDefault();
-                    collapse(event.key === 'ArrowLeft');
-                }
-            }}
-            className={clsx(ROW, 'group font-medium text-text hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-accent')}
-        >
-            <span className={clsx(ICON_SLOT, group.active && 'text-accent')}>
-                <ProjectGlyph
-                    projectId={group.summary.projectId}
-                    endpointId={group.endpointId}
-                    icon={group.summary.icon}
-                    size={14}
-                    color={group.active ? 'var(--accent)' : group.summary.color}
-                    className="col-start-1 row-start-1 group-hover:hidden group-focus-visible:hidden"
-                />
-                <Icon
-                    icon={ChevronRight}
-                    size={14}
-                    className={clsx('col-start-1 row-start-1 hidden group-hover:block group-focus-visible:block', !group.collapsed && 'rotate-90')}
-                />
-            </span>
-            <span className="min-w-0 grow truncate">{group.summary.name}</span>
-            <Tooltip label={group.machineLabel}>
-                <span className="grid h-8 w-6 shrink-0 place-items-center text-text-faint" aria-label={group.machineLabel}>
-                    <MachineGlyph icon={machineIcon} size={14} />
+        <ContextMenu.Root>
+            <ContextMenu.Trigger
+                render={<button type="button" />}
+                data-sidebar-row={`project:${group.key}`}
+                tabIndex={tabbable ? 0 : -1}
+                aria-expanded={!group.collapsed}
+                aria-label={`${group.summary.name} · ${group.machineLabel}${group.active ? ` · ${t('sidebar.activeProject')}` : ''}`}
+                title={`${group.summary.name} · ${group.machineLabel}`}
+                onFocus={onFocus}
+                onClick={() => collapse(!group.collapsed)}
+                onKeyDown={(event) => {
+                    arrowStep(event, onArrow);
+                    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                        event.preventDefault();
+                        collapse(event.key === 'ArrowLeft');
+                    }
+                }}
+                className={clsx(ROW, 'group font-medium text-text hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-accent')}
+            >
+                <span className={clsx(ICON_SLOT, group.active && 'text-accent')}>
+                    <ProjectGlyph
+                        projectId={group.summary.projectId}
+                        endpointId={group.endpointId}
+                        icon={group.summary.icon}
+                        size={14}
+                        color={group.active ? 'var(--accent)' : group.summary.color}
+                        className="col-start-1 row-start-1 group-hover:hidden group-focus-visible:hidden"
+                    />
+                    <Icon
+                        icon={ChevronRight}
+                        size={14}
+                        className={clsx('col-start-1 row-start-1 hidden group-hover:block group-focus-visible:block', !group.collapsed && 'rotate-90')}
+                    />
                 </span>
-            </Tooltip>
-            {group.state === 'ready' && count > 0 && (
-                <span className="tabular-nums text-status-needs-you" aria-label={t('sidebar.waitingCount', { count })}>
-                    {count}
-                </span>
-            )}
-        </button>
+                <span className="min-w-0 grow truncate">{group.summary.name}</span>
+                <Tooltip label={group.machineLabel}>
+                    <span className="grid h-8 w-6 shrink-0 place-items-center text-text-faint" aria-label={group.machineLabel}>
+                        <MachineGlyph icon={machineIcon} size={14} />
+                    </span>
+                </Tooltip>
+                {group.state === 'ready' && count > 0 && (
+                    <span className="tabular-nums text-status-needs-you" aria-label={t('sidebar.waitingCount', { count })}>
+                        {count}
+                    </span>
+                )}
+            </ContextMenu.Trigger>
+            <ContextMenu.Portal>
+                <ContextMenu.Positioner className="z-(--z-popup)">
+                    <ContextMenu.Popup className="menu-popup">
+                        <FolderMenuItems endpointId={group.endpointId} folder={group.summary.folder} connected={group.state !== 'offline'} />
+                    </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+            </ContextMenu.Portal>
+        </ContextMenu.Root>
     );
 }
 

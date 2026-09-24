@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FileWarning, LoaderCircle } from 'lucide-react';
 import type { FileSurfaceKind } from '@/shell/panels/FileActionItems';
 import { FileActionsContext } from '@/shell/panels/file-actions';
-import { FileToolbar } from '@/shell/panels/FileToolbar';
+import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { renderFile } from '@/shell/panels/renderers';
 import { useFileRead } from '@/shell/panels/use-file-read';
 import { Button } from '@/ui/Button';
@@ -16,7 +16,7 @@ function WithoutRenderer({ children }: { children: ReactNode }) {
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar />
-            <div className="grid min-h-0 grow place-items-center">{children}</div>
+            <FileTextMenu className="grid min-h-0 grow place-items-center">{children}</FileTextMenu>
         </div>
     );
 }
@@ -43,6 +43,7 @@ export function FileBody({ path, name, on, tabKey }: { path: string; name: strin
             return (
                 <WithoutRenderer>
                     <EmptyState
+                        className="select-text"
                         icon={<Icon icon={FileWarning} size={20} />}
                         action={
                             <Button variant="secondary" size="sm" onClick={retry}>

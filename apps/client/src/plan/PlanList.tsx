@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
@@ -14,6 +14,7 @@ import {
     CircleMinus,
     CircleX,
     Copy,
+    FileText,
     Info,
     CirclePause,
     LoaderCircle,
@@ -27,7 +28,16 @@ import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { effectiveChecks, planProgress } from '@ruimte/plan';
 import { Markdown } from '@/chat/ui/Markdown';
 import { formatMoment } from '@/format/datetime';
-import { collapsedOf, notePlanStepAction, planViewKey, setPlanStepsAction, unlockPlanStepsAction, usePlanReveal, usePlanViewPrefs } from '@/plan/plan-actions';
+import {
+    collapsedOf,
+    copyPlanMarkdown,
+    notePlanStepAction,
+    planViewKey,
+    setPlanStepsAction,
+    unlockPlanStepsAction,
+    usePlanReveal,
+    usePlanViewPrefs
+} from '@/plan/plan-actions';
 import { usePlanAgent } from '@/plan/plan-agent';
 import {
     asksForNote,
@@ -46,6 +56,7 @@ import { useChatRow } from '@/state/chats';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
+import { TextMenu } from '@/ui/TextMenu';
 import { Tooltip } from '@/ui/Tooltip';
 
 const STATE_ICON: Record<PlanStepState, LucideIcon> = {
@@ -156,7 +167,7 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
 
     return (
         <div className="flex min-h-0 grow flex-col">
-            <div className="flex shrink-0 flex-col gap-1.5 border-b border-border px-4 pt-3 pb-3">
+            <PlanTextMenu plan={plan} className="flex shrink-0 flex-col gap-1.5 border-b border-border px-4 pt-3 pb-3">
                 <div className="flex min-w-0 items-center gap-2 text-base font-medium text-text">
                     <Icon icon={CheckCheck} size={16} className="shrink-0 text-text-muted" />
                     <span className="min-w-0 truncate select-text">{plan.meta.title}</span>
@@ -177,7 +188,7 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
                     <span className="bg-text-faint" style={{ flexGrow: progress.skipped + progress.blocked }} />
                     <span style={{ flexGrow: progress.open + progress.active }} />
                 </div>
-            </div>
+            </PlanTextMenu>
             <div ref={scroller} className="min-h-0 grow overflow-y-auto py-1">
                 {rows.length === 0 && (
                     <p className="px-4 py-6 text-center text-xs text-text-muted">
@@ -254,7 +265,7 @@ const toggleRowProps = (collapsed: boolean, onToggle: () => void) => ({
 function PlanRowView({ row, context }: { row: PlanRow; context: StepContext }) {
     if (row.type === 'section') {
         return (
-            <div className="pt-2">
+            <PlanTextMenu plan={context.plan} className="pt-2">
                 {/* The same box as a parent step's row, so a section and a step are equally tall and their carets line up. */}
                 <div
                     className={clsx('mx-1 flex min-w-0 items-start gap-1 py-1 pr-2', TOGGLE_ROW)}
@@ -274,18 +285,35 @@ function PlanRowView({ row, context }: { row: PlanRow; context: StepContext }) {
                         <Markdown text={row.item.description} fileLinks={false} />
                     </div>
                 )}
-            </div>
+            </PlanTextMenu>
         );
     }
     if (row.type === 'text') {
         return (
-            <div className="mx-4 my-2 border-l-2 border-border pl-3 select-text">
+            <PlanTextMenu plan={context.plan} className="mx-4 my-2 border-l-2 border-border pl-3 select-text">
                 <div className="text-sm font-medium wrap-anywhere text-text">{row.item.title}</div>
                 {row.item.description && <Markdown text={row.item.description} fileLinks={false} />}
-            </div>
+            </PlanTextMenu>
         );
     }
     return <StepRow row={row} context={context} />;
+}
+
+/* The text of a plan that is not a step, behind the same menu as any text, with the plan as a whole under it. */
+function PlanTextMenu({ plan, className, children }: { plan: Plan; className: string; children: ReactNode }) {
+    const { t } = useTranslation('plan');
+    return (
+        <TextMenu
+            className={className}
+            items={
+                <ContextMenu.Item className="menu-item" onClick={() => copyPlanMarkdown(plan)}>
+                    <Icon icon={FileText} size={14} /> {t('menu.copyPlan')}
+                </ContextMenu.Item>
+            }
+        >
+            {children}
+        </TextMenu>
+    );
 }
 
 function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; context: StepContext }) {

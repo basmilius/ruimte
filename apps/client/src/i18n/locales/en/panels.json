@@ -218,6 +218,7 @@
     "branchMenu": {
       "checkout": "Checkout",
       "create": "Create branch...",
+      "copyName": "Copy branch name",
       "default": "default",
       "detached": "detached",
       "inWorktree": "in another worktree",

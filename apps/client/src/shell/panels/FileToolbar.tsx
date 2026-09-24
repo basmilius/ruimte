@@ -9,10 +9,12 @@ import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { useFileActions, type FileActions } from '@/shell/panels/file-actions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
+import { cameThroughPortal } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 import { MenuPopup } from '@/ui/MenuPopup';
+import { TextMenu } from '@/ui/TextMenu';
 
 /*
  * The bar above every file renderer: the controls that change how the file is drawn, at its right.
@@ -35,10 +37,10 @@ export function FileToolbar({ children }: { children?: ReactNode }) {
         return createPortal(controls, host);
     }
     return (
-        <div className={FILE_TOOLBAR}>
+        <FileContextMenu className={FILE_TOOLBAR}>
             <span className="grow" />
             {controls}
-        </div>
+        </FileContextMenu>
     );
 }
 
@@ -111,8 +113,8 @@ function FileMenuRows({ actions }: { actions: FileActions }) {
 }
 
 /*
- * The bar's menu behind a right-click on a file that has no text to copy, an image or a video, so
- * the click there offers what the file can be asked instead of nothing.
+ * The bar's menu behind a right-click on a file that has no text to copy, an image or a video, and
+ * on the bar itself, so the click there offers what the file can be asked instead of nothing.
  */
 export function FileContextMenu({ className, children }: { className?: string; children: ReactNode }) {
     const actions = useFileActions();
@@ -123,7 +125,17 @@ export function FileContextMenu({ className, children }: { className?: string; c
 
     return (
         <ContextMenu.Root>
-            <ContextMenu.Trigger className={className}>{children}</ContextMenu.Trigger>
+            <ContextMenu.Trigger
+                className={className}
+                onContextMenu={(event) => {
+                    // The overflow menu is a child here as well, and a right-click in it is not one on the file.
+                    if (cameThroughPortal(event)) {
+                        event.preventBaseUIHandler();
+                    }
+                }}
+            >
+                {children}
+            </ContextMenu.Trigger>
             <ContextMenu.Portal>
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
@@ -132,5 +144,15 @@ export function FileContextMenu({ className, children }: { className?: string; c
                 </ContextMenu.Positioner>
             </ContextMenu.Portal>
         </ContextMenu.Root>
+    );
+}
+
+/* Text about the file rather than the file itself, a reason it will not show: Copy and Select all for the words, the file's items under them. */
+export function FileTextMenu({ className, children }: { className?: string; children: ReactNode }) {
+    const actions = useFileActions();
+    return (
+        <TextMenu className={className} items={actions ? <FileMenuRows actions={actions} /> : undefined}>
+            {children}
+        </TextMenu>
     );
 }

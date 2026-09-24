@@ -1,12 +1,15 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
-import { Check, ChevronDown, ChevronRight, GitBranch, Plus, Search } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Copy, GitBranch, Plus, Search } from 'lucide-react';
 import type { GitRef } from '@ruimte/contracts';
 import { basenameOf } from '@/shell/panels/files-tree';
 import type { GitTarget } from '@/state/git-target';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { copyText } from '@/ui/clipboard';
+import { cameThroughPortal } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { MenuPopup } from '@/ui/MenuPopup';
@@ -81,86 +84,109 @@ export function BranchMenu({
     const repos = targets.filter((entry) => entry.kind !== 'worktree');
     const worktrees = targets.filter((entry) => entry.kind === 'worktree');
 
+    /* Only a branch has a name to take along; a detached HEAD and a chip over several repositories name none. */
+    const copyable = !nested && !detached && branch !== null ? branch : null;
+
     return (
-        <Menu.Root
-            onOpenChange={(open) => {
-                if (!open) {
-                    return;
-                }
-                onOpenMenu();
-                // A flat menu shows the branches at once, so they are read the moment it opens.
-                if (!nested && target.cwd !== null) {
-                    onOpen(target.cwd);
-                }
-            }}
-        >
-            <Tooltip
-                label={
-                    nested
-                        ? t('git.branchMenu.tooltipRepos', { count: targets.length })
-                        : prefix === null
-                          ? t('git.branchMenu.tooltip')
-                          : t('git.branchMenu.tooltipWorktree', { branch: label, worktree: prefix })
-                }
-                name={nested}
+        <ContextMenu.Root>
+            <ContextMenu.Trigger
+                className="contents"
+                onContextMenu={(event) => {
+                    if (copyable === null || cameThroughPortal(event)) {
+                        event.preventBaseUIHandler();
+                    }
+                }}
             >
-                <Menu.Trigger className="inline-flex h-6 min-w-0 shrink items-center gap-1 rounded-full bg-surface-sunken px-2 text-xs text-text-muted hover:text-text">
-                    <Icon icon={GitBranch} size={12} className="shrink-0" />
-                    {/* Over several repositories no single branch is the one the panel is on, so the chip
+                <Menu.Root
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            return;
+                        }
+                        onOpenMenu();
+                        // A flat menu shows the branches at once, so they are read the moment it opens.
+                        if (!nested && target.cwd !== null) {
+                            onOpen(target.cwd);
+                        }
+                    }}
+                >
+                    <Tooltip
+                        label={
+                            nested
+                                ? t('git.branchMenu.tooltipRepos', { count: targets.length })
+                                : prefix === null
+                                  ? t('git.branchMenu.tooltip')
+                                  : t('git.branchMenu.tooltipWorktree', { branch: label, worktree: prefix })
+                        }
+                        name={nested}
+                    >
+                        <Menu.Trigger className="inline-flex h-6 min-w-0 shrink items-center gap-1 rounded-full bg-surface-sunken px-2 text-xs text-text-muted hover:text-text">
+                            <Icon icon={GitBranch} size={12} className="shrink-0" />
+                            {/* Over several repositories no single branch is the one the panel is on, so the chip
                         says none rather than one that happens to be first. */}
-                    {!nested && (
-                        <>
-                            {prefix !== null && <span className="max-w-24 truncate text-text-faint">{prefix}</span>}
-                            <span className="truncate font-mono">{label}</span>
-                        </>
-                    )}
-                    <Icon icon={ChevronDown} size={12} className="shrink-0" />
-                </Menu.Trigger>
-            </Tooltip>
-            <MenuPopup className={nested ? 'max-h-[32rem] w-80 overflow-y-auto' : 'max-h-96 w-80 overflow-y-auto'}>
-                {targets.length === 0 && (
-                    <Menu.Item className="menu-item" disabled>
-                        {t('git.branchMenu.noCheckouts')}
-                    </Menu.Item>
-                )}
-                {nested ? (
-                    <>
-                        <div className={MENU_LABEL}>{t('git.branchMenu.repositories')}</div>
-                        {repos.map((entry) => (
-                            <CheckoutLevel
-                                key={entry.cwd ?? entry.label}
-                                entry={entry}
-                                refs={entry.cwd === null ? { refs: [], loading: false, branch: null } : refsOf(entry.cwd)}
-                                renderActions={renderActions}
-                                onOpen={onOpen}
-                                onCheckout={onCheckout}
-                                onCreate={onCreate}
-                            />
-                        ))}
-                    </>
-                ) : (
-                    <>
-                        <div className={MENU_LABEL}>{t('git.branchMenu.checkout')}</div>
-                        <CheckoutChoice targets={targets} target={target} onPickTarget={onPickTarget} />
-                        {target.cwd !== null && (
+                            {!nested && (
+                                <>
+                                    {prefix !== null && <span className="max-w-24 truncate text-text-faint">{prefix}</span>}
+                                    <span className="truncate font-mono">{label}</span>
+                                </>
+                            )}
+                            <Icon icon={ChevronDown} size={12} className="shrink-0" />
+                        </Menu.Trigger>
+                    </Tooltip>
+                    <MenuPopup className={nested ? 'max-h-[32rem] w-80 overflow-y-auto' : 'max-h-96 w-80 overflow-y-auto'}>
+                        {targets.length === 0 && (
+                            <Menu.Item className="menu-item" disabled>
+                                {t('git.branchMenu.noCheckouts')}
+                            </Menu.Item>
+                        )}
+                        {nested ? (
                             <>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <BranchList cwd={target.cwd} state={refsOf(target.cwd)} branch={branch} onCheckout={onCheckout} onCreate={onCreate} />
+                                <div className={MENU_LABEL}>{t('git.branchMenu.repositories')}</div>
+                                {repos.map((entry) => (
+                                    <CheckoutLevel
+                                        key={entry.cwd ?? entry.label}
+                                        entry={entry}
+                                        refs={entry.cwd === null ? { refs: [], loading: false, branch: null } : refsOf(entry.cwd)}
+                                        renderActions={renderActions}
+                                        onOpen={onOpen}
+                                        onCheckout={onCheckout}
+                                        onCreate={onCreate}
+                                    />
+                                ))}
+                            </>
+                        ) : (
+                            <>
+                                <div className={MENU_LABEL}>{t('git.branchMenu.checkout')}</div>
+                                <CheckoutChoice targets={targets} target={target} onPickTarget={onPickTarget} />
+                                {target.cwd !== null && (
+                                    <>
+                                        <Menu.Separator className={MENU_SEPARATOR} />
+                                        <BranchList cwd={target.cwd} state={refsOf(target.cwd)} branch={branch} onCheckout={onCheckout} onCreate={onCreate} />
+                                    </>
+                                )}
                             </>
                         )}
-                    </>
-                )}
-                {nested && worktrees.length > 0 && (
-                    <>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <div className={MENU_LABEL}>{t('git.branchMenu.worktrees')}</div>
-                        {/* A worktree takes the panel over whole, the way it always did: its repositories
+                        {nested && worktrees.length > 0 && (
+                            <>
+                                <Menu.Separator className={MENU_SEPARATOR} />
+                                <div className={MENU_LABEL}>{t('git.branchMenu.worktrees')}</div>
+                                {/* A worktree takes the panel over whole, the way it always did: its repositories
                             step aside until the canvas or this menu points somewhere else. */}
-                        <CheckoutChoice targets={worktrees} target={target} onPickTarget={onPickTarget} />
-                    </>
-                )}
-            </MenuPopup>
-        </Menu.Root>
+                                <CheckoutChoice targets={worktrees} target={target} onPickTarget={onPickTarget} />
+                            </>
+                        )}
+                    </MenuPopup>
+                </Menu.Root>
+            </ContextMenu.Trigger>
+            <ContextMenu.Portal>
+                <ContextMenu.Positioner className="z-(--z-popup)">
+                    <ContextMenu.Popup className="menu-popup">
+                        <ContextMenu.Item className="menu-item" onClick={() => copyText(copyable ?? '')}>
+                            <Icon icon={Copy} size={14} /> {t('git.branchMenu.copyName')}
+                        </ContextMenu.Item>
+                    </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+            </ContextMenu.Portal>
+        </ContextMenu.Root>
     );
 }
 

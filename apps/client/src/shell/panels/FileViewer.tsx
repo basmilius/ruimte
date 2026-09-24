@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { runAsPerson } from '@/actions/client-actions';
 import { FileText, Search } from 'lucide-react';
 import { DiffFile } from '@/shell/panels/DiffFile';
+import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { FileBody } from '@/shell/panels/FileBody';
 import { FileIcon } from '@/ui/FileIcon';
 import { basenameOf } from '@/shell/panels/files-tree';
@@ -50,14 +52,24 @@ function EmptyPreview() {
                     <section className="flex flex-col gap-1">
                         <h2 className={`${SECTION_LABEL} px-2`}>{t('file.empty.recent')}</h2>
                         {recent.map((path) => (
-                            <button
-                                key={path}
-                                className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm text-text hover:bg-surface-hover"
-                                onClick={() => void runAsPerson('file.preview', { path, line: null })}
-                            >
-                                <FileIcon path={path} size={14} />
-                                <span className="min-w-0 truncate">{basenameOf(path)}</span>
-                            </button>
+                            <ContextMenu.Root key={path}>
+                                <ContextMenu.Trigger
+                                    render={<button type="button" />}
+                                    className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm text-text hover:bg-surface-hover"
+                                    onClick={() => void runAsPerson('file.preview', { path, line: null })}
+                                >
+                                    <FileIcon path={path} size={14} />
+                                    <span className="min-w-0 truncate">{basenameOf(path)}</span>
+                                </ContextMenu.Trigger>
+                                <ContextMenu.Portal>
+                                    <ContextMenu.Positioner className="z-(--z-popup)">
+                                        {/* Closed, so no tab to name: the items a preview tab offers about its file. */}
+                                        <ContextMenu.Popup className="menu-popup">
+                                            <FileActionItems path={path} on="tab" />
+                                        </ContextMenu.Popup>
+                                    </ContextMenu.Positioner>
+                                </ContextMenu.Portal>
+                            </ContextMenu.Root>
                         ))}
                     </section>
                 )}

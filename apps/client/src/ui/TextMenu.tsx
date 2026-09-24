@@ -1,4 +1,4 @@
-import { useRef, useState, type ComponentProps, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useRef, useState, type ComponentProps, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, Scan } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -14,9 +14,9 @@ import { Kbd } from '@/ui/Kbd';
  * A block of text and the menu that belongs to it: Copy for what is selected inside it, Select all
  * for the whole of it, on Cmd+A as well. Anywhere text can be selected a right-click has to offer
  * to copy it, and the app draws every menu itself, so a surface without one of these offers
- * nothing at all.
+ * nothing at all. `items` are what the surface itself can be asked, under a line of their own.
  */
-export function TextMenu({ children, ...rest }: ComponentProps<'div'>) {
+export function TextMenu({ children, items, ...rest }: ComponentProps<'div'> & { items?: ReactNode }) {
     const { t } = useTranslation();
     const host = useRef<HTMLDivElement>(null);
     // Read when the menu opens: a selection made after that is not the one the click was about.
@@ -45,6 +45,12 @@ export function TextMenu({ children, ...rest }: ComponentProps<'div'>) {
                         <ContextMenu.Item className="menu-item" onClick={() => selectAllWithin(host.current)}>
                             <Icon icon={Scan} size={14} /> {t('action.selectAll')} <Kbd shortcut={EDIT_SHORTCUTS.selectAll} />
                         </ContextMenu.Item>
+                        {items !== undefined && (
+                            <>
+                                <ContextMenu.Separator className={MENU_SEPARATOR} />
+                                {items}
+                            </>
+                        )}
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>
             </ContextMenu.Portal>

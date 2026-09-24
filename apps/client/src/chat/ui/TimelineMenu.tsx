@@ -39,11 +39,7 @@ export function TimelineMenuPopup({
     const turnId = chatId === null || target.row === null ? null : turnIdOfRow(target.row);
     const forkBlocked = useChatRow(chatId ?? '', (row) => (turnId === null ? null : forkRefusal(row?.info ?? null, row?.structure[turnId])));
     const markdown = target.row === null ? null : markdownOf(target.row);
-    const endpointId = useEndpointId();
     const markable = chatId !== null && (target.row?.kind === 'user' || target.row?.kind === 'assistant') ? target.row.id : null;
-    const bookmark = useChatRow(chatId ?? '', (row) =>
-        markable === null ? null : (row?.bookmarks?.find((candidate) => candidate.itemId === markable) ?? null)
-    );
     // A thread outside a chat (a sub-agent's transcript) has no cwd of its own; the project answers there.
     const cwd = useFileLinkCwd();
     const folder = useProject((s) => s.current?.folder ?? null);
@@ -85,24 +81,7 @@ export function TimelineMenuPopup({
                             </ContextMenu.Item>
                         </DisabledReason>
                     )}
-                    {chatId !== null && markable !== null && bookmark === null && (
-                        <ContextMenu.Item className="menu-item" onClick={() => void placeBookmark(endpointId, chatId, markable)}>
-                            <Icon icon={BookmarkPlus} size={14} /> {t('bookmarks.add')}
-                        </ContextMenu.Item>
-                    )}
-                    {chatId !== null && bookmark !== null && (
-                        <>
-                            <ContextMenu.Item
-                                className="menu-item"
-                                onClick={() => useBookmarkNaming.getState().open(endpointKey(endpointId, chatId), bookmark.itemId)}
-                            >
-                                <Icon icon={Pencil} size={14} /> {t('bookmarks.rename')}
-                            </ContextMenu.Item>
-                            <ContextMenu.Item className="menu-item" onClick={() => void removeBookmark(endpointId, chatId, bookmark)}>
-                                <Icon icon={BookmarkX} size={14} /> {t('bookmarks.remove')}
-                            </ContextMenu.Item>
-                        </>
-                    )}
+                    {chatId !== null && markable !== null && <BookmarkMenuItems chatId={chatId} itemId={markable} />}
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item" onClick={() => selectAllWithin(thread.current)}>
                         <Icon icon={Scan} size={14} /> {t('common:action.selectAll')}
@@ -118,5 +97,45 @@ export function TimelineMenuPopup({
                 </ContextMenu.Popup>
             </ContextMenu.Positioner>
         </ContextMenu.Portal>
+    );
+}
+
+/*
+ * Place a bookmark on a message, or rename and remove the one it has: the same rows from the thread
+ * and from the strip beside it. `onName` runs when a row opens the name field, which sits on the
+ * message and so has to be on screen; the strip scrolls there, the thread was clicked on it.
+ */
+export function BookmarkMenuItems({ chatId, itemId, onName }: { chatId: string; itemId: string; onName?: () => void }) {
+    const { t } = useTranslation('chat');
+    const endpointId = useEndpointId();
+    const bookmark = useChatRow(chatId, (row) => row?.bookmarks?.find((candidate) => candidate.itemId === itemId) ?? null);
+    if (bookmark === null) {
+        return (
+            <ContextMenu.Item
+                className="menu-item"
+                onClick={() => {
+                    void placeBookmark(endpointId, chatId, itemId);
+                    onName?.();
+                }}
+            >
+                <Icon icon={BookmarkPlus} size={14} /> {t('bookmarks.add')}
+            </ContextMenu.Item>
+        );
+    }
+    return (
+        <>
+            <ContextMenu.Item
+                className="menu-item"
+                onClick={() => {
+                    useBookmarkNaming.getState().open(endpointKey(endpointId, chatId), bookmark.itemId);
+                    onName?.();
+                }}
+            >
+                <Icon icon={Pencil} size={14} /> {t('bookmarks.rename')}
+            </ContextMenu.Item>
+            <ContextMenu.Item className="menu-item" onClick={() => void removeBookmark(endpointId, chatId, bookmark)}>
+                <Icon icon={BookmarkX} size={14} /> {t('bookmarks.remove')}
+            </ContextMenu.Item>
+        </>
     );
 }

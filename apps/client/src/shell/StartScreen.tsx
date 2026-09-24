@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { isRecentProject } from '@ruimte/contracts';
-import { Copy, ExternalLink, FolderOpen, LogIn, MonitorSmartphone, RotateCw } from 'lucide-react';
+import { FolderOpen, LogIn, MonitorSmartphone, RotateCw } from 'lucide-react';
 import { isDesktop } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
@@ -13,6 +13,7 @@ import { openProjectAction } from '@/actions/client-actions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { usePulsarAccount } from '@/pulsar/account';
 import { usePulsarMachines } from '@/pulsar/machines';
+import { FolderMenuItems } from '@/shell/FolderMenuItems';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { linkDot, linkHint, machineLink } from '@/shell/palette-browse';
 import { SignInButtons } from '@/shell/SignInButtons';
@@ -24,8 +25,6 @@ import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { mergeMachines, nameOf, type MachineEntry } from '@/shell/settings/machine-list';
 import { stationBoot } from '@/station';
 import { useEndpoints } from '@/state/endpoints';
-import { fileManagerName, useServers } from '@/state/server';
-import { transportFor } from '@/transport';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
 import { canShowReleaseNotes, openReleaseNotes } from '@/state/release-notes';
@@ -36,7 +35,6 @@ import { useEndpointConnection, useOpenEndpoints } from '@/transport/status';
 import { BrandIntro } from '@/ui/Brand';
 import { Button } from '@/ui/Button';
 import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
 import { Kbd } from '@/ui/Kbd';
@@ -101,16 +99,7 @@ function RecentRow({ row }: { row: ProjectMenuRow }) {
 function RecentRowMenu({ row }: { row: ProjectMenuRow }) {
     const { t } = useTranslation('shell');
     const { summary } = row;
-    const platform = useServers((s) => s.byEndpoint[row.endpointId]?.platform ?? null);
     const folder = summary.folder ?? null;
-    const reveal = (): void => {
-        if (folder === null) {
-            return;
-        }
-        void transportFor(row.endpointId)
-            ?.request('fs.reveal', { path: folder })
-            .catch(() => undefined);
-    };
     return (
         <ContextMenu.Portal>
             <ContextMenu.Positioner className="z-(--z-popup)">
@@ -121,12 +110,7 @@ function RecentRowMenu({ row }: { row: ProjectMenuRow }) {
                     {folder !== null && (
                         <>
                             <ContextMenu.Separator className={MENU_SEPARATOR} />
-                            <ContextMenu.Item className="menu-item" disabled={!row.connected} onClick={reveal}>
-                                <Icon icon={ExternalLink} size={14} /> {t('projectMenu.openIn', { app: fileManagerName(platform) })}
-                            </ContextMenu.Item>
-                            <ContextMenu.Item className="menu-item" onClick={() => copyText(folder)}>
-                                <Icon icon={Copy} size={14} /> {t('start.copyFolder')}
-                            </ContextMenu.Item>
+                            <FolderMenuItems endpointId={row.endpointId} folder={folder} connected={row.connected} />
                         </>
                     )}
                 </ContextMenu.Popup>

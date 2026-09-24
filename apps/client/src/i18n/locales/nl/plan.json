@@ -48,6 +48,9 @@
     "notChanged": "Het plan is niet gewijzigd",
     "copied": "Plan als Markdown gekopieerd"
   },
+  "menu": {
+    "copyPlan": "Plan kopiëren als Markdown"
+  },
   "header": {
     "kind": {
       "steps": "Stappen",

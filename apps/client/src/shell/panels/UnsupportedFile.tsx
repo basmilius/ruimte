@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { CornerUpRight, FileQuestion } from 'lucide-react';
 import { FS_READ_MAX_TEXT_BYTES, type FsReadBinary, type FsReadTooLarge } from '@ruimte/contracts';
 import { formatBytes } from '@/shell/panels/file-size';
-import { FileToolbar } from '@/shell/panels/FileToolbar';
+import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
@@ -20,7 +20,7 @@ export function UnsupportedFile({ path, name, read }: { path: string; name: stri
     return (
         // The bar as well: there is nothing to draw, but everything that can be asked of the file
         // still can be, and its surface keeps a row where every other file has one.
-        <div className="flex min-h-0 min-w-0 grow flex-col">
+        <FileTextMenu className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar />
             <EmptyState
                 className="select-text"
@@ -35,6 +35,6 @@ export function UnsupportedFile({ path, name, read }: { path: string; name: stri
                     ? t('file.tooLarge', { name, size: formatBytes(read.size), limit: formatBytes(FS_READ_MAX_TEXT_BYTES) })
                     : t('file.cannotShow', { name, mime: read.mime, size: formatBytes(read.size) })}
             </EmptyState>
-        </div>
+        </FileTextMenu>
     );
 }
