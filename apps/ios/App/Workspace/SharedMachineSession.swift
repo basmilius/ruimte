@@ -16,6 +16,9 @@ final class SharedMachineSession {
     @ObservationIgnored private var preferenceSubscriptions: [() -> Void] = []
     private var references = 0
     private var invalidated = false
+    /// Moves whenever the link goes away. `opened` lands a turn later, since `hold` announces a connected link before
+    /// it returns the lease, so a close in between must keep it from calling a dead link connected.
+    @ObservationIgnored private var linkEpoch = 0
     private struct ChatEntry {
         let model: ChatModel
         var viewers: Int
@@ -52,8 +55,9 @@ final class SharedMachineSession {
         }
         let events = LinkEvents(
             opened: { [weak self] in
+                guard let epoch = self?.linkEpoch else { return }
                 Task { @MainActor [weak self] in
-                    guard let self, lease != nil else { return }
+                    guard let self, lease != nil, linkEpoch == epoch else { return }
                     connected = true
                     failedAttempts = 0
                     problem = nil
@@ -63,6 +67,7 @@ final class SharedMachineSession {
             }, message: { [weak self] text in self?.rpc.receiveInOrder(text) },
             closed: { [weak self] error in
                 guard let self else { return }
+                linkEpoch += 1
                 if error != nil || !connected { failedAttempts += 1 }
                 connected = false
                 relayed = nil
@@ -139,6 +144,7 @@ final class SharedMachineSession {
         stopPreferences()
         lease?.release()
         lease = nil
+        linkEpoch += 1
         connected = false
         rpc.disconnected(error: nil)
     }
@@ -210,6 +216,7 @@ final class SharedMachineSession {
         projectSubscriptions.invalidate()
         lease?.release()
         lease = nil
+        linkEpoch += 1
         references = 0
         connected = false
         relayed = nil

@@ -54,6 +54,33 @@ final class PhaseZeroTests: XCTestCase {
         probe.release()
     }
 
+    @MainActor func testALinkThatClosesBeforeItsOpenLandsLeavesTheSessionDisconnected() async {
+        let connections = MachineConnections(scheduler: HeldScheduler(), monitorPaths: false)
+        connections.setScene("scene", foreground: true)
+        let runtime = AppRuntime(connections: connections, deviceKey: DeviceKey())
+        defer { connections.shutdown() }
+        var link: LinkEvents?
+        let opener = connections.hold(
+            machineID: "machine",
+            open: { events in
+                link = events
+                return SilentLink()
+            }, events: LinkEvents(opened: {}, message: { _ in }, closed: { _ in }))
+        let session = SharedMachineSession(
+            machine: Machine(
+                id: "machine", name: "Machine", icon: nil, publicKey: String(repeating: "A", count: 43),
+                brokerUrl: "wss://broker.test", lastSeenAt: nil),
+            runtime: runtime)
+        session.retain()
+        link?.opened()
+        link?.closed(nil)
+        for _ in 0..<10 { await Task.yield() }
+        XCTAssertFalse(session.connected)
+        XCTAssertFalse(session.rpc.isConnected)
+        session.release()
+        opener.release()
+    }
+
     func testGeneratedContractsAndUnicodeSignaturesOnIOS() throws {
         let message = String(repeating: "A", count: 15_999) + "📱漢字"
         let key = DeviceKey()
@@ -113,4 +140,13 @@ private actor MachineListGate {
                                                         httpVersion: nil, headerFields: nil)!))
         pending = nil
     }
+}
+
+@MainActor private final class HeldScheduler: TransportScheduling {
+    func after(milliseconds: Double, _ action: @escaping @MainActor () -> Void) -> () -> Void { {} }
+}
+
+@MainActor private final class SilentLink: MachineLink {
+    func send(_ text: String) throws {}
+    func close() {}
 }
