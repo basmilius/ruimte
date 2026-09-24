@@ -6,6 +6,8 @@
     "curly": "error",
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    // Only says the React Compiler skipped a component, and the client does not build with it.
+    "react/preserve-manual-memoization": "off"
   }
 }
