@@ -132,23 +132,23 @@ describe('the presence of the agent that holds the session', () => {
         expect(presence.holder).toBe('chat-1');
     });
 
-    test('shows an error after a failed action until the agent moves on', async () => {
+    test('shows why the session ends when the agent stops with an error', async () => {
         const { presence, shown } = setup({ language: 'nl' });
-        presence.status('chat-1', 'running');
-        presence.calling('chat-1');
-        presence.acting('chat-1');
-        presence.failed('chat-1', 'TextEdit');
-        presence.acted('chat-1');
-        await until(() => shown.length === 1);
-        expect(shown).toEqual(['error: Er ging iets mis in TextEdit']);
-        presence.status('chat-1', 'running');
-        await settled();
-        expect(shown).toHaveLength(1);
-        presence.calling('chat-1');
-        presence.acting('chat-1');
-        presence.acted('chat-1');
+        const hold = async (nodeId: string): Promise<void> => {
+            presence.calling(nodeId);
+            presence.acting(nodeId);
+            presence.acted(nodeId);
+            await until(() => shown.at(-1) === 'think');
+        };
+        await hold('term-1');
+        presence.status('term-1', 'error');
         await until(() => shown.length === 2);
-        expect(shown.at(-1)).toBe('think');
+        expect(shown.at(-1)).toBe('error: De agent stopte met een fout');
+        expect(presence.holder).toBeNull();
+        await hold('chat-1');
+        presence.turnEnded('chat-1', 'error');
+        await until(() => shown.length === 4);
+        expect(shown.at(-1)).toBe('error: De agent stopte met een fout');
     });
 
     test('ends the session when the turn is interrupted, the node closes or it goes without a word', async () => {
@@ -160,10 +160,10 @@ describe('the presence of the agent that holds the session', () => {
             await until(() => shown.at(-1) === 'think');
         };
         await hold('chat-1');
-        presence.turnEnded('chat-1', true);
+        presence.turnEnded('chat-1', 'aborted');
         await until(() => shown.at(-1) === 'end');
         await hold('chat-2');
-        presence.turnEnded('chat-2', false);
+        presence.turnEnded('chat-2', 'done');
         await until(() => shown.at(-1) === 'done');
         await hold('term-1');
         presence.closed('term-1');

@@ -31,6 +31,8 @@ public struct Request: Codable, Sendable {
     public var label: String?
     /// The step line of the menu bar item for a `presence` state.
     public var step: String?
+    /// For a `presence` state: show it for a moment, then end the session the way `done` does.
+    public var ends: Bool?
     /// For `doctor` with `prompt`: ask macOS for this one grant only (`accessibility` or `screenRecording`) and
     /// leave opening System Settings to the caller.
     public var grant: String?

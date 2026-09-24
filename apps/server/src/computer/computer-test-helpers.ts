@@ -181,7 +181,7 @@ export class FakeHelper implements HelperTransport {
     }
 
     private presence(request: HelperRequest): unknown {
-        const settles = request.state === 'done' || request.state === 'end';
+        const settles = request.state === 'done' || request.state === 'end' || request.ends === true;
         if (this.session.stopped && !settles) {
             return STOPPED_REFUSAL;
         }
@@ -195,8 +195,8 @@ export class FakeHelper implements HelperTransport {
         }
         const { mode } = this.session;
         this.shown = request.state ?? null;
-        // The real helper ends the session once `done` has faded.
-        this.session = request.state === 'done' ? { active: false, mode: 'running', stopped: false } : { ...this.session, active: true };
+        // The real helper ends the session once `done`, or a state that ends, has faded.
+        this.session = settles ? { active: false, mode: 'running', stopped: false } : { ...this.session, active: true };
         return { ok: true, result: { session: true, shown: mode === 'running' ? request.state : mode === 'paused' ? 'paused' : 'takeover', mode } };
     }
 }

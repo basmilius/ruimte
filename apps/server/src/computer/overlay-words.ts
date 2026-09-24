@@ -16,7 +16,7 @@ export interface OverlayWords {
 
 export interface PresenceWords {
     permission: (app: string) => string;
-    error: (app: string) => string;
+    agentError: string;
 }
 
 const ENGLISH: OverlayWords = {
@@ -74,8 +74,8 @@ const DUTCH: OverlayWords = {
 };
 
 const PRESENCE: Record<string, PresenceWords> = {
-    en: { permission: (app) => `Waiting for permission for ${app}`, error: (app) => `Something went wrong in ${app}` },
-    nl: { permission: (app) => `Wacht op toestemming voor ${app}`, error: (app) => `Er ging iets mis in ${app}` }
+    en: { permission: (app) => `Waiting for permission for ${app}`, agentError: 'The agent stopped with an error' },
+    nl: { permission: (app) => `Wacht op toestemming voor ${app}`, agentError: 'De agent stopte met een fout' }
 };
 
 const OVERLAY: Record<string, OverlayWords> = { en: ENGLISH, nl: DUTCH };

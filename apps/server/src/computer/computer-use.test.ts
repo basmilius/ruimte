@@ -298,7 +298,7 @@ const letIn = async (setup: ComputerSetup): Promise<void> => {
 const chatInfo = (chatId: string, status: AgentStatus): SessionEvent =>
     ({ event: 'chat.event', payload: { chatId, event: { type: 'info', info: { chatId, status } } } }) as unknown as SessionEvent;
 
-const turnEnded = (chatId: string, state: 'done' | 'aborted'): SessionEvent =>
+const turnEnded = (chatId: string, state: 'done' | 'aborted' | 'error'): SessionEvent =>
     ({ event: 'chat.event', payload: { chatId, event: { type: 'item', item: { kind: 'turn', id: 'turn-1', state } } } }) as unknown as SessionEvent;
 
 const terminalStatus = (sessionId: string, status: AgentStatus): SessionEvent =>
@@ -359,23 +359,25 @@ describe('the presence at the cursor', () => {
         expect(helper.session.active).toBe(false);
     });
 
-    test('shows an error in the app when the helper refused the action, and never for a card', async () => {
+    test('shows no error for an action the helper refused, which the agent recovers from itself', async () => {
         const setup = await computerSetup();
-        const { computer, helper, timers } = setup;
+        const { computer, helper } = setup;
         await letIn(setup);
         helper.error = 'element 3 is gone or has no frame any more; run `cu state` again';
         expect(await codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 3 }))).toBe('app-refused');
         await until(() => helper.presences.length === 1);
-        expect(helper.presences).toEqual(['error: Something went wrong in TextEdit']);
-        helper.error = null;
-        const other = codeOf(computer.operate('chat-1', 'state', 'Notes', {}));
-        expect(await other).toBe('unknown-app');
-        helper.apps = [...helper.apps, { name: 'Notes', pid: 600, bundleId: 'com.example.notes' }];
-        const asking = codeOf(computer.operate('chat-1', 'state', 'Notes', {}));
-        await until(() => helper.presences.length === 2);
-        timers.advance(APPROVAL_WAIT_MS);
-        expect(await asking).toBe('awaiting-approval');
-        expect(helper.presences).toEqual(['error: Something went wrong in TextEdit', 'permission: Waiting for permission for Notes']);
+        expect(helper.presences).toEqual(['think']);
+    });
+
+    test('shows why the session ends when the agent stops with an error, and ends it', async () => {
+        const setup = await computerSetup();
+        const { computer, helper } = setup;
+        await letIn(setup);
+        computer.observe(turnEnded('chat-1', 'error'));
+        await until(() => computer.status().session === null);
+        expect(helper.presences).toEqual(['error: The agent stopped with an error']);
+        expect(helper.requests.at(-1)).toMatchObject({ command: 'presence', state: 'error', ends: true });
+        expect(helper.session.active).toBe(false);
     });
 
     test('a presence the helper refuses is logged and the action never waits on it', async () => {

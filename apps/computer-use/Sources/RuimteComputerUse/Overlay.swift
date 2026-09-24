@@ -47,6 +47,8 @@ struct ActionLook {
 final class Overlay {
     /// A session nobody sends a command to for this long ends on its own, unless it waits for the person.
     private static let idleTimeout: Duration = .seconds(120)
+    /// Long enough to read why the session ends; `done` needs no words and goes with its own fade.
+    private static let endingLinger: Double = 3
     /// Points the person's mouse travels before it counts as taking over, so a nudged desk does not.
     private static let takeoverDistance: CGFloat = 12
 
@@ -236,7 +238,7 @@ final class Overlay {
     }
 
     /// What the agent is when it is not acting: set by the daemon, which knows.
-    func presence(_ name: String?, label: String?, step stepText: String?) throws -> [String: Any] {
+    func presence(_ name: String?, label: String?, step stepText: String?, ends: Bool) throws -> [String: Any] {
         guard let request = PresenceRequest(name) else {
             throw AgentError("presence takes one of \(PresenceRequest.names.joined(separator: ", "))")
         }
@@ -247,7 +249,7 @@ final class Overlay {
             }
             return ["session": false, "shown": NSNull()]
         }
-        let settles = state == .done
+        let settles = state == .done || ends
         if control.stopped && !settles {
             throw AgentError.stopped
         }
@@ -268,12 +270,12 @@ final class Overlay {
         control.show(state)
         step = stepText.flatMap { $0.isEmpty ? nil : $0 } ?? config.step(for: state, target: nil)
         render(animated: true)
-        if state == .done {
+        if settles {
             endTask?.cancel()
-            let linger = OverlayStyle.Motion.doneFadeDelay + OverlayStyle.Motion.doneFade.duration
+            let linger = state == .done ? OverlayStyle.Motion.doneFadeDelay + OverlayStyle.Motion.doneFade.duration : Self.endingLinger
             endTask = Task { [weak self] in
                 try? await Task.sleep(for: .milliseconds(Int(linger * 1000)))
-                guard !Task.isCancelled, let self, self.control.agentState == .done else {
+                guard !Task.isCancelled, let self, self.control.agentState == state else {
                     return
                 }
                 self.endSession()

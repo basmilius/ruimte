@@ -109,7 +109,7 @@ final class Agent {
             }
             return Response.success(["stopped": true])
         case "presence":
-            return await respond { try self.overlay.presence(request.state, label: request.label, step: request.step) }
+            return await respond { try self.overlay.presence(request.state, label: request.label, step: request.step, ends: request.ends == true) }
         case "clear-stop":
             // The daemon tells the stopped agent itself, so another agent it serves is not refused for that stop.
             overlay.clearStop()

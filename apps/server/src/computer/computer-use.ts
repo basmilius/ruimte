@@ -140,7 +140,7 @@ export interface ComputerUseOptions {
 }
 
 /* The fields of a helper request an agent's call fills, besides the command and the app. */
-export type OperateInput = Omit<HelperRequest, 'command' | 'app' | 'secret' | 'prompt' | 'state' | 'label' | 'step'>;
+export type OperateInput = Omit<HelperRequest, 'command' | 'app' | 'secret' | 'prompt' | 'state' | 'label' | 'step' | 'ends'>;
 
 /*
  * Computer use on this machine: the setting, the helper app, and the rules an agent's call passes
@@ -239,7 +239,7 @@ export class ComputerUse {
         } else if (event.event === 'chat.event') {
             const { chatId, event: chat } = event.payload;
             if (chat.type === 'item' && chat.item.kind === 'turn' && chat.item.state !== 'running') {
-                this.presence.turnEnded(chatId, chat.item.state === 'aborted');
+                this.presence.turnEnded(chatId, chat.item.state);
             } else if (chat.type === 'info') {
                 this.presence.status(chatId, chat.info.status);
             }
@@ -406,7 +406,7 @@ export class ComputerUse {
         }
         await this.holdWhileHeld(deadline);
         const request: HelperRequest = { ...input, command, app: pid === null ? app.bundleId : String(pid) };
-        const result = await this.act<StateResult | ActionResult>(callerId, app.name, deadline, () =>
+        const result = await this.act<StateResult | ActionResult>(callerId, deadline, () =>
             command === 'state' ? this.helper.request(request, StateResultSchema) : this.helper.request(request, ActionResultSchema)
         );
         if (command === 'open' && result.app?.bundleId !== undefined) {
@@ -460,16 +460,14 @@ export class ComputerUse {
     }
 
     /* One call that reaches the helper for an app: it makes the caller the one the cursor speaks for. */
-    private async act<Result>(callerId: string, appName: string, deadline: number, work: () => Promise<Result>): Promise<Result> {
+    private async act<Result>(callerId: string, deadline: number, work: () => Promise<Result>): Promise<Result> {
         this.presence.acting(callerId);
         let result: Result;
         try {
             result = await this.call(work);
         } catch (error) {
+            // A refused action, such as a stale element, is routine: the agent reads the refusal and recovers, so the person sees no error.
             const code = error instanceof ComputerRefusal ? error.code : null;
-            if (code === 'app-refused') {
-                this.presence.failed(callerId, appName);
-            }
             if (code === 'stopped') {
                 // This refusal is how the agent hears of the stop, so its next call is not refused for it again.
                 this.stopped.delete(callerId);
@@ -550,7 +548,12 @@ export class ComputerUse {
     }
 
     private async showPresence(show: PresenceShow): Promise<void> {
-        const request: HelperRequest = { command: 'presence', state: show.state, ...(show.label === undefined ? {} : { label: show.label }) };
+        const request: HelperRequest = {
+            command: 'presence',
+            state: show.state,
+            ...(show.label === undefined ? {} : { label: show.label }),
+            ...(show.ends ? { ends: true } : {})
+        };
         let reply;
         try {
             reply = await this.helper.ask(request, PresenceResultSchema);
@@ -565,7 +568,7 @@ export class ComputerUse {
             return;
         }
         // The helper ends a session once `done` has faded, so it runs no more as far as anyone should show.
-        this.heard({ active: show.state !== 'done' && show.state !== 'end', mode: reply.mode, stopped: false });
+        this.heard({ active: show.state !== 'done' && show.state !== 'end' && show.ends !== true, mode: reply.mode, stopped: false });
     }
 
     /* On, present and able to read another app; anything short of that is refused before an app is named. */

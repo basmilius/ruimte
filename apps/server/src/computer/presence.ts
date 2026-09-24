@@ -6,6 +6,8 @@ import type { PresenceWords } from './overlay-words.ts';
 export interface PresenceShow {
     state: PresenceState;
     label?: string;
+    // Shown for a moment, then the session ends, the way `done` does.
+    ends?: true;
 }
 
 export interface ComputerPresenceOptions {
@@ -18,7 +20,7 @@ export interface ComputerPresenceOptions {
     log?: (message: string) => void;
 }
 
-const same = (a: PresenceShow | null, b: PresenceShow | null): boolean => a?.state === b?.state && a?.label === b?.label;
+const same = (a: PresenceShow | null, b: PresenceShow | null): boolean => a?.state === b?.state && a?.label === b?.label && a?.ends === b?.ends;
 
 /*
  * What the cursor shows between actions, driven by the one agent that holds the helper's session:
@@ -31,8 +33,6 @@ export class ComputerPresence {
     private readonly statuses = new Map<string, AgentStatus>();
     private readonly inFlight = new Map<string, number>();
     private cards: ComputerApproval[] = [];
-    // The app of the holder's last call when it failed for a reason the agent has to act on.
-    private failedIn: string | null = null;
     private ending: PresenceShow | null = null;
     private sent: PresenceShow | null = null;
     private sending = false;
@@ -53,16 +53,8 @@ export class ComputerPresence {
     /* The call goes to the helper for an app, which makes this agent the one that holds the session. */
     acting(nodeId: string): void {
         this.claim(nodeId);
-        this.failedIn = null;
         // The helper shows the action itself, so whatever went before has to be said again after it.
         this.sent = null;
-    }
-
-    /* The helper refused the action itself, for a reason the agent has to act on. */
-    failed(nodeId: string, app: string): void {
-        if (nodeId === this.holderId) {
-            this.failedIn = app;
-        }
     }
 
     /* The call came back, however it went. */
@@ -90,29 +82,26 @@ export class ComputerPresence {
 
     /* What a chat or terminal is doing, from its hooks or its chat events. */
     status(nodeId: string, status: AgentStatus): void {
-        const before = this.statuses.get(nodeId);
         this.statuses.set(nodeId, status);
         if (nodeId !== this.holderId) {
             return;
         }
         if (status === 'exited') {
-            this.end('end');
-        } else if (status === 'idle' || status === 'error') {
-            this.end('done');
+            this.end({ state: 'end' });
+        } else if (status === 'idle') {
+            this.end({ state: 'done' });
+        } else if (status === 'error') {
+            this.end(this.failure());
         } else {
-            // A failure shows until the agent moves on: its next call, or a status of another kind.
-            if (status !== before) {
-                this.failedIn = null;
-            }
             this.flush();
         }
     }
 
-    /* A chat's turn settled; one the person interrupted says so apart from one that finished. */
-    turnEnded(nodeId: string, interrupted: boolean): void {
+    /* A chat's turn settled: finished, interrupted by the person, or failed. */
+    turnEnded(nodeId: string, how: 'done' | 'aborted' | 'error'): void {
         this.statuses.set(nodeId, 'idle');
         if (nodeId === this.holderId) {
-            this.end(interrupted ? 'end' : 'done');
+            this.end(how === 'done' ? { state: 'done' } : how === 'aborted' ? { state: 'end' } : this.failure());
         }
     }
 
@@ -120,7 +109,7 @@ export class ComputerPresence {
         this.statuses.delete(nodeId);
         this.inFlight.delete(nodeId);
         if (nodeId === this.holderId) {
-            this.end('end');
+            this.end({ state: 'end' });
         }
     }
 
@@ -136,13 +125,15 @@ export class ComputerPresence {
             return;
         }
         this.ending = null;
-        this.failedIn = null;
         this.setHolder(nodeId);
     }
 
-    private end(state: 'done' | 'end'): void {
-        this.ending = { state };
-        this.failedIn = null;
+    private failure(): PresenceShow {
+        return { state: 'error', label: this.options.words().agentError, ends: true };
+    }
+
+    private end(show: PresenceShow): void {
+        this.ending = show;
         this.setHolder(null);
         this.flush();
     }
@@ -168,9 +159,6 @@ export class ComputerPresence {
         }
         if (this.inFlight.has(holder)) {
             return null;
-        }
-        if (this.failedIn !== null) {
-            return { state: 'error', label: this.options.words().error(this.failedIn) };
         }
         return { state: this.statuses.get(holder) === 'needs-you' ? 'waiting' : 'think' };
     }
