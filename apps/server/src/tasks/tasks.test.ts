@@ -189,6 +189,51 @@ describe('a task wakes the chat that gave it', () => {
         expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
     });
 
+    test('five children without a team that settle over three wakes give the lead every result exactly once', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const one = await delegate(daemon, 'One', 'work on one', false);
+        const two = await delegate(daemon, 'Two', 'work on two', false);
+        const three = await delegate(daemon, 'Three', 'work on three', false);
+        const four = await delegate(daemon, 'Four', 'work on four', false);
+        const five = await delegate(daemon, 'Five', 'work on five', false);
+        await daemon.worker.settled();
+        const settledWakes = (count: number) => (): boolean =>
+            wakeTurns(daemon).length === count && wakeTurns(daemon).every((turn) => turn.state !== 'running');
+
+        // A result of `slow` keeps the wake it opens running, so the next two settle during a wake.
+        await report(daemon, one, 'slow');
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'running'));
+        await report(daemon, two, 'two is done');
+        await report(daemon, three, 'three is done');
+        expect(wakeTurns(daemon)).toHaveLength(1);
+        daemon.chats.cancel('chat-lead');
+        await daemon.until(settledWakes(2));
+        await daemon.worker.settled();
+
+        // The last two settle while the lead works on something of the person's.
+        await daemon.chats.send('chat-lead', 'slow');
+        await report(daemon, four, 'four is done');
+        await report(daemon, five, 'five is done');
+        expect(wakeTurns(daemon)).toHaveLength(2);
+        daemon.chats.cancel('chat-lead');
+        await daemon.until(settledWakes(3));
+        await daemon.worker.settled();
+
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[one.taskId], [two.taskId, three.taskId], [four.taskId, five.taskId]]);
+        expect(daemon.tasks.ofParent('chat-lead').map((task) => [task.status, task.wake])).toEqual([one, two, three, four, five].map(() => ['done', 'sent']));
+        expect(daemon.outbox.list()).toEqual([]);
+        // What the CLI was told in the two wakes that ran to the end names each of their results once.
+        const wakeIds = new Set(wakeTurns(daemon).map((turn) => turn.id));
+        const told = leadItems(daemon)
+            .flatMap((item) => (item.kind === 'assistant' && item.turnId !== null && wakeIds.has(item.turnId) ? [item.text] : []))
+            .join('\n');
+        for (const child of [two, three, four, five]) {
+            expect(told.split(`task ${child.taskId}): done`)).toHaveLength(2);
+        }
+    });
+
     test('a lead cleared after delegating is a new conversation, which the task no longer wakes', async () => {
         const daemon = await boot();
         daemon.worker.start();
