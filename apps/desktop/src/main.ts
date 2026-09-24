@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { buildIdentityOf, machineWorkOf, MACHINE_HEALTH_PATH, MACHINE_WORK_PATH, type BuildIdentity, type MachineWork } from '@ruimte/contracts';
 import { MENU_ROLES, type AgentActivity, type BackgroundServiceState, type MenuNode, type MenuSpec, type UpdateState } from '@ruimte/desktop-bridge';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
+import { editFrameOf, runGuestEdit } from './guest-edit';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
@@ -567,6 +568,9 @@ const editableGuestMenu = (contents: Electron.WebContents, params: Electron.Cont
     Menu.buildFromTemplate(template).popup({ window: mainWindow ?? undefined, ...(params.frame ? { frame: params.frame } : {}) });
 };
 
+/* The frame each guest's last right-click landed in, so copy and select all act where the person pointed. */
+const menuFrames = new WeakMap<Electron.WebContents, Electron.WebFrameMain>();
+
 /*
  * A right-click inside a browser node's page or an HTML preview. Electron ships no menu for web
  * content (Chromium's own belongs to the Chrome browser) and a native one reads as another
@@ -578,6 +582,11 @@ const guestContextMenu = (contents: Electron.WebContents, params: Electron.Conte
     if (params.isEditable) {
         editableGuestMenu(contents, params, guest === 'browser');
         return;
+    }
+    if (params.frame) {
+        menuFrames.set(contents, params.frame);
+    } else {
+        menuFrames.delete(contents);
     }
     mainWindow?.webContents.send('browser:context-menu', {
         webContentsId: contents.id,
@@ -619,10 +628,8 @@ ipcMain.on('browser:context-action', (_event, request: BrowserContextAction) => 
     const payload = request.payload ?? {};
     switch (request.action) {
         case 'copy':
-            contents.copy();
-            return;
         case 'select-all':
-            contents.selectAll();
+            runGuestEdit(editFrameOf(menuFrames.get(contents), contents.mainFrame), request.action);
             return;
         case 'copy-image':
             contents.copyImageAt(payload.x ?? 0, payload.y ?? 0);

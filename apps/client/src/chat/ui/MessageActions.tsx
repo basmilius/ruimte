@@ -63,7 +63,7 @@ export function MessageActions({ chatId, row }: { chatId: string; row: MessageRo
             aria-label={t('timeline.actions.label')}
             className={clsx(
                 'flex h-7 items-center opacity-0 transition-opacity group-has-focus-visible/message:opacity-100 group-hover/message:opacity-100',
-                row.kind === 'user' ? 'justify-end' : '-ml-1.5'
+                row.kind === 'user' ? '-mr-1.5 mt-1.5 justify-end' : '-ml-1.5'
             )}
         >
             {!streaming && (
