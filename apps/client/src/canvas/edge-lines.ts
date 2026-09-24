@@ -59,10 +59,6 @@ export const fixedSides = (line: EdgeLine): FixedSides => ({
     toSide: line.edge.toSide ?? line.back?.fromSide
 });
 
-/* Whether a selection is exactly one line, which is when Enter may open its name for editing. */
-export const selectedLine = (lines: readonly EdgeLine[], selection: readonly string[]): EdgeLine | null =>
-    lines.find((line) => line.ids.length === selection.length && line.ids.every((id) => selection.includes(id))) ?? null;
-
 // Geometry outside the DOM estimates glyph widths; explicit line breaks and wrapping still count.
 export const textRect = (text: { x: number; y: number; size: number; text: string; maxWidth?: number }): Rect => {
     const widths = text.text.split('\n').map((line) => line.length * text.size * 0.55);

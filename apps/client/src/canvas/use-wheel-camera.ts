@@ -3,6 +3,7 @@ import type { StoreApi } from 'zustand';
 import type { CameraSlice } from '@/canvas/camera-slice';
 import { isApplePlatform } from '@/desktop/bridge';
 import { isModHeld } from '@/ui/shortcut';
+import { createPanBatch } from '@/canvas/pan-batch';
 
 /* How long after the last wheel event a zoom settles on a whole percent. */
 const ZOOM_SETTLE_MS = 160;
@@ -42,6 +43,7 @@ export const useWheelCamera = (rootRef: RefObject<HTMLElement | null>, store: St
         let timer: number | null = null;
         // Only a zoom settles. Without this a pan right after one would snap the camera back.
         let zoomed = false;
+        const pan = createPanBatch((dx, dy) => store.getState().panBy(dx, dy));
 
         const onWheel = (e: WheelEvent): void => {
             const zooming = wheelZooms(e);
@@ -55,13 +57,14 @@ export const useWheelCamera = (rootRef: RefObject<HTMLElement | null>, store: St
             const locks = latest.current.locks?.();
             if (!zooming) {
                 if (locks?.pan !== true) {
-                    store.getState().panBy(-e.deltaX, -e.deltaY);
+                    pan.add(-e.deltaX, -e.deltaY);
                 }
                 return;
             }
             if (locks?.zoom === true) {
                 return;
             }
+            pan.flush();
             store.getState().zoomAt(Math.exp(-e.deltaY * 0.01), at);
             anchor = at;
             zoomed = true;
@@ -88,6 +91,7 @@ export const useWheelCamera = (rootRef: RefObject<HTMLElement | null>, store: St
         document.addEventListener('gesturestart', swallowGesture);
         document.addEventListener('gesturechange', swallowGesture);
         return () => {
+            pan.flush();
             if (timer !== null) {
                 window.clearTimeout(timer);
             }

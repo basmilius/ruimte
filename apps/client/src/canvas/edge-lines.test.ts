@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Edge } from '@/state/canvas';
-import { canLink, edgeLines, selectedLine, textRect } from './edge-lines';
+import { canLink, edgeLines, textRect } from './edge-lines';
 
 const edge = (id: string, from: string, to: string, label?: string): Edge => ({ id, from, to, ...(label === undefined ? {} : { label }) });
 
@@ -32,20 +32,6 @@ describe('edgeLines', () => {
     test('a line onto itself is never folded into another one', () => {
         const lines = edgeLines([edge('e1', 'a', 'a'), edge('e2', 'a', 'a')]);
         expect(lines.map((line) => line.ids)).toEqual([['e1'], ['e2']]);
-    });
-});
-
-describe('selectedLine', () => {
-    const lines = edgeLines([edge('e1', 'a', 'b'), edge('e2', 'b', 'a'), edge('e3', 'b', 'c')]);
-
-    test('is the line the whole selection stands for, and nothing else', () => {
-        expect(selectedLine(lines, ['e1', 'e2'])?.edge.id).toBe('e1');
-        expect(selectedLine(lines, ['e2', 'e1'])?.edge.id).toBe('e1');
-        expect(selectedLine(lines, ['e3'])?.edge.id).toBe('e3');
-        // Half a pair, or a pair plus a node, is not one line.
-        expect(selectedLine(lines, ['e1'])).toBeNull();
-        expect(selectedLine(lines, ['e1', 'e2', 'node-1'])).toBeNull();
-        expect(selectedLine(lines, [])).toBeNull();
     });
 });
 

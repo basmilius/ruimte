@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Pencil, Trash } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
-import { edgeLines, fixedSides, selectedLine, textRect } from '@/canvas/edge-lines';
 import { edgeLook, lineMeaning } from '@/canvas/edge-look';
-import { routeDraft, routeEdge, selfRoute, SIDE_NORMAL, type Obstacle, type Side } from '@/canvas/edge-route';
+import { routeDraft, SIDE_NORMAL, type Side } from '@/canvas/edge-route';
+import { lineRoutes } from '@/canvas/line-routes';
 import { markerPath, type MarkerShape } from '@/canvas/marker-path';
-import type { Point, Rect } from '@/canvas/math';
+import type { Point } from '@/canvas/math';
 import { useEndpointId } from '@/state/keys';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
 import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
@@ -82,7 +82,8 @@ function EdgeMarker({ shape, at, side, stroke }: { shape: MarkerShape; at: Point
     return <path d={path} fill={fill} stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />;
 }
 
-export function EdgeLayer() {
+/* Memoized with no props: the canvas above re-renders on every pan, which moves nothing drawn here. */
+export const EdgeLayer = memo(function EdgeLayer() {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const edges = useCanvas((s) => s.edges);
@@ -96,41 +97,7 @@ export function EdgeLayer() {
     const endpointId = useEndpointId();
     const tasks = useTasks((s) => s.byEndpoint[endpointId]);
 
-    const lines = useMemo(() => edgeLines(edges), [edges]);
-
-    // A selected line answers Enter the way a selected node does: it opens what you can edit on it.
-    const selected = selectedLine(lines, selection);
-    const selectedKey = selected === null ? null : selected.edge.id;
-    useEffect(() => {
-        if (selectedKey === null) {
-            return;
-        }
-        const onKeyDown = (e: KeyboardEvent): void => {
-            const target = e.target;
-            if (
-                e.key !== 'Enter' ||
-                (target instanceof HTMLElement && (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'))
-            ) {
-                return;
-            }
-            e.preventDefault();
-            setEditing(selectedKey);
-        };
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [selectedKey]);
-
-    const rectOf = (id: string): Rect | null => (hidden.has(id) ? null : nodes[id] ? nodes[id] : texts[id] ? textRect(texts[id]) : null);
-
-    /* What a line routes around. A group is a frame under its nodes, so a line between two of them
-       would be pushed out of the group it belongs to. */
-    const obstacles = useMemo(
-        () =>
-            Object.values(nodes)
-                .filter((node) => node.kind !== 'group' && !hidden.has(node.id))
-                .map(({ id, x, y, w, h }): Obstacle => ({ id, x, y, w, h })),
-        [hidden, nodes]
-    );
+    const { lines, obstacles, routes, rectOf } = lineRoutes(edges, nodes, texts, hidden);
 
     /* Whether this node reads what a line brings it, which only an agent does; every other node is
        an end a line runs to and nothing more. */
@@ -150,21 +117,11 @@ export function EdgeLayer() {
     return (
         <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width="1" height="1">
             {lines.map((line) => {
-                const a = rectOf(line.edge.from);
-                const b = rectOf(line.edge.to);
-                if (!a || !b) {
+                const key = line.edge.id;
+                const route = routes.get(key);
+                if (route === undefined) {
                     return null;
                 }
-                const key = line.edge.id;
-                const route =
-                    line.edge.from === line.edge.to
-                        ? selfRoute(a)
-                        : routeEdge(
-                              a,
-                              b,
-                              obstacles.filter((obstacle) => obstacle.id !== line.edge.from && obstacle.id !== line.edge.to),
-                              fixedSides(line)
-                          );
                 const mid = route.mid;
                 const active = hovered === key || line.ids.some((id) => selection.includes(id));
                 // A line a task went along says how the task stands, and only looks open while it is.
@@ -275,4 +232,4 @@ export function EdgeLayer() {
                 })()}
         </svg>
     );
-}
+});

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type RefObject } from 'react';
+import { memo, useEffect, useMemo, useState, type RefObject } from 'react';
 import { textRect } from '@/canvas/edge-lines';
 import { toWorld, type Point, type Rect } from '@/canvas/math';
 import { HINT_HOT, HINT_REACH, portHints, portKey, takenPorts } from '@/canvas/port-hints';
@@ -9,7 +9,7 @@ import { useCanvas, useCanvasStore } from '@/state/canvas';
  * so a port sits beside its node in the same layer as the line it starts, and a node holds nothing
  * of the canvas around it.
  */
-export function PortHints({ rootRef }: { rootRef: RefObject<HTMLDivElement | null> }) {
+export const PortHints = memo(function PortHints({ rootRef }: { rootRef: RefObject<HTMLDivElement | null> }) {
     const canvasStore = useCanvasStore();
     const nodes = useCanvas((s) => s.nodes);
     const texts = useCanvas((s) => s.texts);
@@ -111,4 +111,4 @@ export function PortHints({ rootRef }: { rootRef: RefObject<HTMLDivElement | nul
             })}
         </svg>
     );
-}
+});
