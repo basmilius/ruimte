@@ -775,6 +775,8 @@
      * thread grows past a screenful; only the rows and the composer inside it are centered.
      */
     .chat-column .chat-column-content { margin-inline: auto; max-width: 768px; }
+    /* Wider by the input's inset (`.composer-input .cm-content` padding plus the card's border), so what is typed lines up with the thread. */
+    .chat-column .chat-composer-content { margin-inline: auto; max-width: calc(768px + 2 * 21px); }
 
     /* Every page the app embeds steps out of the pointer's way while anything is dragged; otherwise
        its own document absorbs the event before the cell underneath can see the drag arrive. The

@@ -810,7 +810,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const attachable = capabilities?.attachments !== false;
 
     return (
-        <div className="chat-column-content pointer-events-none relative z-10 w-full">
+        <div className="chat-composer-content pointer-events-none relative z-10 w-full">
             {/* Only while there is something below the fold. It sits over the composer rather than
                 in the thread, because the composer is the one thing whose height it always clears. */}
             {!atEnd && (
