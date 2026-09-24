@@ -143,13 +143,9 @@ final class Overlay {
     }
 
     /// Starts the session, or keeps it going, on the screen of the point. In the background, `app` names the app
-    /// the agent works in, and the cursor stays away: it would be drawn over other apps.
+    /// the agent works in; the cursor still shows where it acts, even over another app, so the work stays visible.
     func begin(near globalPoint: CGPoint?, background app: String?) {
         background = app
-        if app != nil {
-            cursor.layer.isHidden = true
-            cursorPoint = nil
-        }
         endTask?.cancel()
         holdTask?.cancel()
         takeover.reset()
@@ -194,7 +190,7 @@ final class Overlay {
 
     /// Moves the cursor to the target, showing `state` on the way; the real pointer stays put.
     func glide(to globalPoint: CGPoint, showing state: PhantomState = .move) async throws {
-        guard let screen, background == nil else {
+        guard let screen else {
             return
         }
         let target = Geometry.local(globalPoint, on: screen)
