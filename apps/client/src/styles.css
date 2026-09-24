@@ -638,6 +638,7 @@
            it drifting sideways while it grows. */
         translate: -50% -50%;
         max-width: calc(100vw - 32px);
+        max-height: calc(100dvh - 32px);
         border-radius: 14px;
         outline: none;
         overflow: hidden;

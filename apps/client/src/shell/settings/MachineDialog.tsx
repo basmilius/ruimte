@@ -20,6 +20,7 @@ import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import { Button } from '@/ui/Button';
+import { FORM_ERROR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 const ACTION_DEPS: MachineActionDeps = {
@@ -121,7 +122,7 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
                         </SettingsSection>
                         <SettingsSection title={t('machineDialog.account.title')}>
                             {registrationFailure && (
-                                <p className="px-4 py-3 text-xs break-words text-status-error" role="alert">
+                                <p className={`${FORM_ERROR} px-4 py-3 break-words`} role="alert">
                                     {t('machineDialog.account.registrationFailure', { reason: registrationFailure })}
                                 </p>
                             )}
@@ -202,9 +203,7 @@ export function MachineDialog({ entry, open, onOpenChange }: MachineDialogProps)
         <Dialog.Root open={open && entry !== null} onOpenChange={onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
-                <Dialog.Popup className="dialog-popup dialog-popup-nested flex max-h-[calc(100dvh-32px)] w-[560px] flex-col">
-                    {entry && <MachineDialogBody entry={entry} />}
-                </Dialog.Popup>
+                <Dialog.Popup className="dialog-popup dialog-popup-nested flex w-[560px] flex-col">{entry && <MachineDialogBody entry={entry} />}</Dialog.Popup>
             </Dialog.Portal>
         </Dialog.Root>
     );

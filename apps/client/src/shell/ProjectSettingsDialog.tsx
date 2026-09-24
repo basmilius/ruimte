@@ -7,7 +7,7 @@ import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { Button } from '@/ui/Button';
-import { SECTION_LABEL } from '@/ui/classes';
+import { FORM_ERROR, SECTION_LABEL, SMALL_DIALOG } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { IconPicker } from '@/ui/IconPicker';
 import { useAsyncAction } from '@/ui/useAsyncAction';
@@ -114,7 +114,7 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
             <IconPicker value={chosen} disabled={busy} gridLabel={t('common:icon.symbol')} onChange={(icon) => void run(() => actions.setChosenIcon(icon))} />
 
             {failure && (
-                <p className="mt-3 text-sm text-status-error" role="alert">
+                <p className={`${FORM_ERROR} mt-3 break-words`} role="alert">
                     {failure}
                 </p>
             )}
@@ -154,7 +154,7 @@ export function ProjectSettingsDialog({ subject, open, onOpenChange, onOpenChang
         <Dialog.Root open={open} onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup w-[420px] p-5">
+                <Dialog.Popup className={SMALL_DIALOG}>
                     <Dialog.Title className="text-base font-semibold text-text">{t('projectSettings.title')}</Dialog.Title>
                     {subject !== null && <ProjectSettingsForm {...subject} onOpenChange={onOpenChange} />}
                 </Dialog.Popup>

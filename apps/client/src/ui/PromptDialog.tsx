@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/ui/Button';
-import { MULTILINE_FIELD, SECTION_LABEL } from '@/ui/classes';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FORM_ERROR, MULTILINE_FIELD, SECTION_LABEL, SMALL_DIALOG } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { useAsyncAction } from '@/ui/useAsyncAction';
 
@@ -105,12 +105,12 @@ export function PromptDialog({
         <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
             <Dialog.Portal>
                 <Dialog.Backdrop className={clsx('dialog-backdrop', nested && 'dialog-backdrop-nested')} forceRender={nested} />
-                <Dialog.Popup className={clsx('dialog-popup w-[420px] p-5', nested && 'dialog-popup-nested')}>
+                <Dialog.Popup className={clsx(SMALL_DIALOG, nested && 'dialog-popup-nested')}>
                     <Dialog.Title className="flex items-center gap-2 text-base font-semibold break-words text-text">
                         {titleIcon && <Icon icon={titleIcon} size={16} />}
                         {title}
                     </Dialog.Title>
-                    {description !== undefined && <p className="mt-1 text-sm break-words text-text-muted">{description}</p>}
+                    {description !== undefined && <p className={clsx(DIALOG_DESCRIPTION, 'mt-1 break-words')}>{description}</p>}
                     {field !== undefined && (
                         <label className="mt-4 flex flex-col gap-1.5">
                             {field.label !== undefined && <span className={SECTION_LABEL}>{field.label}</span>}
@@ -149,11 +149,11 @@ export function PromptDialog({
                     )}
                     {children}
                     {step.failure !== null && (
-                        <p className="mt-2 text-sm break-words text-status-error" role="alert">
+                        <p className={clsx(FORM_ERROR, 'mt-2 break-words')} role="alert">
                             {step.failure}
                         </p>
                     )}
-                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                    <div className={DIALOG_FOOTER}>
                         <Button onClick={onClose}>{t('action.cancel')}</Button>
                         {secondary !== undefined && (
                             <Button disabled={working} onClick={secondary.onClick}>

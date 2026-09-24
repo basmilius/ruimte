@@ -1,7 +1,6 @@
 import { useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Dialog } from '@base-ui-components/react/dialog';
 import { indentLess, indentMore, insertNewline } from '@codemirror/commands';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
@@ -65,12 +64,12 @@ import { useProviders } from '@/state/providers';
 import { useToasts } from '@/state/toasts';
 import { isShellShortcut } from '@/terminal/keymap';
 import { transportFor } from '@/transport';
-import { Button } from '@/ui/Button';
 import { BTN_GROUP, FLOAT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Tooltip } from '@/ui/Tooltip';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
+import { PromptDialog } from '@/ui/PromptDialog';
 import { KEY_SHORTCUTS, isModHeld, matchesShortcut } from '@/ui/shortcut';
 import { useNow } from '@/ui/useNow';
 
@@ -397,17 +396,21 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     };
 
     /* The daemon decides whether a turn is in the way; only its refusal asks the person first. */
-    const clearThread = async (force: boolean): Promise<void> => {
-        setConfirmClear(false);
+    const clearThread = async (): Promise<void> => {
         try {
-            await performAsPerson('chat.clear', { chatId, force });
+            await performAsPerson('chat.clear', { chatId, force: false });
         } catch (e) {
-            if (!force && e instanceof ActionRefusal && e.code === 'chat-busy') {
+            if (e instanceof ActionRefusal && e.code === 'chat-busy') {
                 setConfirmClear(true);
                 return;
             }
             setNotice(t('composer.notice.clearFailed'));
         }
+    };
+
+    const forceClearThread = async (): Promise<void> => {
+        await performAsPerson('chat.clear', { chatId, force: true });
+        setConfirmClear(false);
     };
 
     const compact = (): void => {
@@ -423,7 +426,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                 void performAsPerson('chat.compact', { chatId }).catch(() => undefined);
                 return true;
             case 'clear':
-                void clearThread(false);
+                void clearThread();
                 return true;
             default:
                 return false;
@@ -1182,21 +1185,16 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                     </div>
                 </PromptComposer>
             </div>
-            <Dialog.Root open={confirmClear} onOpenChange={(next) => !next && setConfirmClear(false)}>
-                <Dialog.Portal>
-                    <Dialog.Backdrop className="dialog-backdrop" />
-                    <Dialog.Popup className="dialog-popup w-[420px] p-5">
-                        <Dialog.Title className="text-base font-semibold text-text">{t('composer.clear.title')}</Dialog.Title>
-                        <p className="mt-1 text-xs text-text-muted">{t('composer.clear.description')}</p>
-                        <div className="mt-4 flex items-center justify-end gap-2">
-                            <Button onClick={() => setConfirmClear(false)}>{t('common:action.cancel')}</Button>
-                            <Button variant="danger" onClick={() => void clearThread(true)}>
-                                {t('composer.clear.confirm')}
-                            </Button>
-                        </div>
-                    </Dialog.Popup>
-                </Dialog.Portal>
-            </Dialog.Root>
+            <PromptDialog
+                open={confirmClear}
+                title={t('composer.clear.title')}
+                description={t('composer.clear.description')}
+                confirmLabel={t('composer.clear.confirm')}
+                danger
+                fallbackMessage={t('composer.notice.clearFailed')}
+                onConfirm={forceClearThread}
+                onClose={() => setConfirmClear(false)}
+            />
         </div>
     );
 }

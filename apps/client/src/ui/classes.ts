@@ -17,6 +17,21 @@ export const MENU_LABEL = 'px-2.5 pt-1.5 pb-0.5 text-xs/[inherit] text-text-fain
 /* The same label outside a popup: the sidebar's groups, the palette's sections. */
 export const SECTION_LABEL = 'text-xs/[inherit] font-medium text-text-faint';
 
+/* A question or a form of a few fields. Every one is as wide as the others, whatever it asks. */
+export const SMALL_DIALOG = 'dialog-popup w-[420px] p-5';
+
+/* The sentence under a dialog's title. */
+export const DIALOG_DESCRIPTION = 'text-sm text-text-muted';
+
+/* The line under a field that says what goes in it. */
+export const FIELD_HINT = 'mt-1 text-xs text-text-muted';
+
+/* What went wrong in a dialog or a form. It goes with `role="alert"`, so a screen reader hears it arrive. */
+export const FORM_ERROR = 'text-xs text-status-error';
+
+/* The buttons at the foot of a dialog, the main action last and so on the right. */
+export const DIALOG_FOOTER = 'mt-4 flex flex-wrap items-center justify-end gap-2';
+
 /* A trailing hint in a menu row: what the item does to something else, never a shortcut. Shortcuts stay
    `<kbd>`, which `.menu-item` already pushes to the right. */
 export const MENU_HINT = 'ml-auto pl-3 text-xs/[inherit] text-text-faint';

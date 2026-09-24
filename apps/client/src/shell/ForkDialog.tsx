@@ -26,6 +26,7 @@ import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SMALL_DIALOG } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
@@ -50,7 +51,7 @@ export function ForkDialog() {
         >
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup w-[440px] p-5">
+                <Dialog.Popup className={SMALL_DIALOG}>
                     <Dialog.Title className="flex items-center gap-2 text-base font-semibold text-text">
                         <Icon icon={GitFork} size={16} /> {t('fork.title')}
                     </Dialog.Title>
@@ -152,8 +153,8 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
 
     return (
         <>
-            <p className="mt-1 text-sm text-text-muted">{point ? forkPointLabel(point) : t('fork.turnGone')}</p>
-            <p className="mt-2 text-sm text-text-muted">
+            <p className={`${DIALOG_DESCRIPTION} mt-1`}>{point ? forkPointLabel(point) : t('fork.turnGone')}</p>
+            <p className={`${DIALOG_DESCRIPTION} mt-2`}>
                 {shape === 'view' ? t('fork.intoView', { after: origin === 'view' ? t('fork.theOriginal') : t('fork.itsCanvas') }) : t('fork.intoNode')}
             </p>
             {chosenCli !== null && pickable.length > 0 && (
@@ -169,7 +170,7 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                             onChange={chooseCli}
                         />
                     </div>
-                    {switching && <p className="mt-1 text-xs text-text-muted">{t('fork.handoffNote')}</p>}
+                    {switching && <p className={FIELD_HINT}>{t('fork.handoffNote')}</p>}
                 </>
             )}
             <label className="mt-3 block text-xs text-text-muted" htmlFor="fork-title">
@@ -215,8 +216,12 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                 onSubmit={() => void submit()}
             />
             {refusal !== null && <p className="mt-2 text-sm text-text-muted">{refusal}.</p>}
-            {failure && <p className="mt-2 text-sm text-status-error">{failure}</p>}
-            <div className="mt-4 flex items-center justify-end gap-2">
+            {failure && (
+                <p className={`${FORM_ERROR} mt-2`} role="alert">
+                    {failure}
+                </p>
+            )}
+            <div className={DIALOG_FOOTER}>
                 <Button onClick={onDone}>{t('common:action.cancel')}</Button>
                 <Button variant="primary" disabled={busy || !ready} onClick={() => void submit()}>
                     {busy ? t('fork.forking') : t('fork.fork')}
@@ -281,7 +286,11 @@ function ForkFolder({ folder, last, inWorktree, onInWorktree, branch, onBranch, 
                             }
                         }}
                     />
-                    {branchProblem !== null && <p className="mt-1 text-xs text-status-error">{branchProblem}</p>}
+                    {branchProblem !== null && (
+                        <p className={`${FORM_ERROR} mt-1`} role="alert">
+                            {branchProblem}
+                        </p>
+                    )}
                     <div className="mt-3 flex items-center justify-between gap-3">
                         <span className="text-sm text-text">{last ? t('fork.takeFiles') : t('fork.undoAfterTurn')}</span>
                         <Toggle
@@ -291,9 +300,7 @@ function ForkFolder({ folder, last, inWorktree, onInWorktree, branch, onBranch, 
                             onChange={onFilesAfterTurn}
                         />
                     </div>
-                    <p className="mt-1 text-xs text-text-muted">
-                        {!folder.filesAfterTurn ? t('fork.filesGone') : filesAfterTurn ? t('fork.fromTurnFiles') : t('fork.fromHead')}
-                    </p>
+                    <p className={FIELD_HINT}>{!folder.filesAfterTurn ? t('fork.filesGone') : filesAfterTurn ? t('fork.fromTurnFiles') : t('fork.fromHead')}</p>
                 </>
             ) : (
                 sharedNote !== null && <p className="mt-2 text-sm text-text-muted">{sharedNote}</p>

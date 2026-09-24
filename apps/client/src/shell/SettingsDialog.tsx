@@ -47,7 +47,7 @@ export function SettingsDialog() {
                 <Dialog.Backdrop className="dialog-backdrop" />
                 {/* The width steps down with the viewport: a narrower navigation on a tablet, and a menu of
                     sections instead of the column where even that leaves the panes too little room. */}
-                <Dialog.Popup className="dialog-popup flex h-[min(640px,calc(100dvh-32px))] w-[820px]">
+                <Dialog.Popup className="dialog-popup flex h-[640px] w-[820px]">
                     <Tabs.Root
                         value={section}
                         onValueChange={(value) => setSettings({ section: value as SettingsSectionId })}

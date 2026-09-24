@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { Search } from 'lucide-react';
-import { MENU_HINT } from '@/ui/classes';
+import { DIALOG_DESCRIPTION, MENU_HINT, SMALL_DIALOG } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 export interface Choice {
@@ -44,9 +44,9 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
         <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup w-[420px] p-5">
+                <Dialog.Popup className={SMALL_DIALOG}>
                     <Dialog.Title className="text-base font-semibold text-text">{title}</Dialog.Title>
-                    {description !== undefined && <p className="mt-1 text-sm text-text-muted">{description}</p>}
+                    {description !== undefined && <p className={clsx(DIALOG_DESCRIPTION, 'mt-1')}>{description}</p>}
                     {choices.length > filterFrom && (
                         <span className="relative mt-4 block">
                             <Icon
@@ -106,9 +106,9 @@ export function GitDiverged({ open, branch, busy, onPick, onClose }: DivergedPro
         <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup w-[420px] p-5">
+                <Dialog.Popup className={SMALL_DIALOG}>
                     <Dialog.Title className="text-base font-semibold text-text">{t('git.dialog.diverged.title', { branch })}</Dialog.Title>
-                    <p className="mt-1 text-sm text-text-muted">{t('git.dialog.diverged.description')}</p>
+                    <p className={clsx(DIALOG_DESCRIPTION, 'mt-1')}>{t('git.dialog.diverged.description')}</p>
                     <div className="mt-4 flex flex-col gap-2">
                         <button
                             className="rounded-lg border border-border px-3 py-2 text-left hover:bg-surface-hover"

@@ -6,6 +6,7 @@ import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@/shell/settings/controls';
 import { Button } from '@/ui/Button';
+import { FORM_ERROR } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { formatNumber } from '@/format/number';
 
@@ -98,7 +99,7 @@ function Section() {
                     </div>
                 )}
                 {(error || model?.error) && (
-                    <p role="alert" className="text-xs text-status-error">
+                    <p role="alert" className={FORM_ERROR}>
                         {error || model?.error}
                     </p>
                 )}

@@ -9,6 +9,7 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { backgroundServiceRow } from '@/shell/settings/background-service';
 import { Toggle } from '@/shell/settings/controls';
 import { Button } from '@/ui/Button';
+import { FORM_ERROR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 type Confirming = 'stop' | 'linger' | 'restart' | null;
@@ -86,7 +87,7 @@ export function BackgroundServiceSection() {
                 />
             )}
             {row.failure && (
-                <p className="px-4 pb-3 text-xs break-words text-status-error" role="alert">
+                <p className={`${FORM_ERROR} px-4 pb-3 break-words`} role="alert">
                     {t('backgroundService.failure', { reason: row.failure })}
                 </p>
             )}

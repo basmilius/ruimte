@@ -5,7 +5,7 @@ import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
 import { adoptMachineName } from '@/transport/server-info';
 import { Button } from '@/ui/Button';
-import { SECTION_LABEL } from '@/ui/classes';
+import { DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SECTION_LABEL } from '@/ui/classes';
 import { IconPicker } from '@/ui/IconPicker';
 import { useAsyncAction } from '@/ui/useAsyncAction';
 import { Tooltip } from '@/ui/Tooltip';
@@ -76,17 +76,17 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
                     }
                 }}
             />
-            <p className="mt-1.5 text-xs text-text-faint">{t('identity.nameHint')}</p>
+            <p className={FIELD_HINT}>{t('identity.nameHint')}</p>
 
             <IconPicker value={icon} disabled={disabled} onChange={setIcon} onClear={() => setIcon(null)} />
 
             {failure && (
-                <p className="mt-3 text-xs break-words text-status-error" role="alert">
+                <p className={`${FORM_ERROR} mt-3 break-words`} role="alert">
                     {failure}
                 </p>
             )}
 
-            <div className="mt-4 flex items-center justify-end gap-2">
+            <div className={DIALOG_FOOTER}>
                 {disabled ? (
                     <Tooltip label={disabledReason}>
                         <span className="inline-flex">{saveButton}</span>

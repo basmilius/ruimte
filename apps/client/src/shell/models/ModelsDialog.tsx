@@ -176,7 +176,7 @@ export function ModelsDialog() {
         <Dialog.Root open={open} onOpenChange={(next) => useUi.getState().setModelsOpen(next)}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup flex h-[min(600px,calc(100dvh-32px))] w-[1080px] flex-col">
+                <Dialog.Popup className="dialog-popup flex h-[600px] w-[1080px] flex-col">
                     <ErrorBoundary label={i18next.t('models:dialog.failed')} className="grow">
                         <Body />
                     </ErrorBoundary>

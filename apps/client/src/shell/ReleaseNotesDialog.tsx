@@ -90,7 +90,7 @@ export function ReleaseNotesDialog() {
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
                 <Dialog.Popup
-                    className="dialog-popup dialog-popup-nested flex h-[min(640px,80vh)] w-[520px] flex-col"
+                    className="dialog-popup dialog-popup-nested flex h-[640px] w-[520px] flex-col"
                     onKeyDown={(e) => {
                         // Every open dialog root listens for Escape on the document, and this one is not
                         // nested in the settings' tree, so without this one press would close both.

@@ -17,7 +17,7 @@ import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
-import { BTN_GROUP } from '@/ui/classes';
+import { BTN_GROUP, FORM_ERROR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -347,7 +347,7 @@ export function ConflictOverlay() {
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup
-                    className="dialog-popup flex h-[min(760px,88vh)] w-[min(1180px,94vw)] flex-col overflow-hidden p-0"
+                    className="dialog-popup flex h-[760px] w-[min(1180px,94vw)] flex-col overflow-hidden p-0"
                     onKeyDown={(event) => {
                         // Walking the conflicts from the keyboard, with a modifier, while the caret is in the file.
                         if (event.altKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
@@ -357,7 +357,7 @@ export function ConflictOverlay() {
                     }}
                 >
                     <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3">
-                        <Dialog.Title className="text-sm font-semibold text-text">
+                        <Dialog.Title className="text-base font-semibold text-text">
                             {operation === null ? t('title.plain') : t(`title.${operation}`)}
                         </Dialog.Title>
                         {answer !== null && (
@@ -442,7 +442,11 @@ export function ConflictOverlay() {
                         </nav>
 
                         <div className="flex min-w-0 grow flex-col">
-                            {failure !== null && <p className="border-b border-border px-3 py-2 text-xs text-status-error">{failure}</p>}
+                            {failure !== null && (
+                                <p className={clsx(FORM_ERROR, 'border-b border-border px-3 py-2')} role="alert">
+                                    {failure}
+                                </p>
+                            )}
                             {list.length === 0 ? (
                                 <div className="grid grow place-items-center px-6 text-center">
                                     <div>

@@ -11,6 +11,7 @@ import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { worktreeLists } from '@/state/worktrees';
 import { Button } from '@/ui/Button';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, SMALL_DIALOG } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 const warningOf = (pending: PendingEnd | null): string | null => {
@@ -49,13 +50,13 @@ export function EndChildrenDialog() {
         <Dialog.Root open={pending !== null} onOpenChange={(next) => !next && close()}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup w-[420px] p-5">
+                <Dialog.Popup className={SMALL_DIALOG}>
                     <Dialog.Title className="text-base font-semibold text-text">
                         {stop ? t('dialog.stopTitle', { what: pending?.what }) : t('dialog.deleteTitle', { what: pending?.what })}
                     </Dialog.Title>
-                    {warning !== null && <p className="mt-1 text-sm text-text-muted">{warning}</p>}
+                    {warning !== null && <p className={`${DIALOG_DESCRIPTION} mt-1`}>{warning}</p>}
                     {offered?.worktrees.map((worktree) => (
-                        <p key={worktree.path} className="mt-1 text-sm text-text-muted">
+                        <p key={worktree.path} className={`${DIALOG_DESCRIPTION} mt-1`}>
                             {leftBehindLine(worktree)}
                         </p>
                     ))}
@@ -65,7 +66,7 @@ export function EndChildrenDialog() {
                             <Toggle label={t('dialog.removeWorktreeToggle')} checked={removal.remove} onChange={(remove) => setRemoval({ pending, remove })} />
                         </label>
                     )}
-                    <div className="mt-4 flex items-center justify-end gap-2">
+                    <div className={DIALOG_FOOTER}>
                         <Button onClick={close}>{common('action.cancel')}</Button>
                         <Button
                             variant="danger"

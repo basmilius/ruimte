@@ -13,6 +13,7 @@ import { linkStep, typedCode } from '@/pulsar/link-request';
 import { refreshAccountMachines } from '@/pulsar/machines';
 import { SignInButtons } from '@/shell/SignInButtons';
 import { Button } from '@/ui/Button';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SMALL_DIALOG } from '@/ui/classes';
 import { useAsyncAction } from '@/ui/useAsyncAction';
 import { Icon } from '@/ui/Icon';
 
@@ -102,16 +103,20 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
         <Dialog.Root open={open} onOpenChange={close}>
             <Dialog.Portal>
                 <Dialog.Backdrop className={clsx('dialog-backdrop', nested && 'dialog-backdrop-nested')} forceRender />
-                <Dialog.Popup className={clsx('dialog-popup w-[460px] max-w-[calc(100vw-32px)] p-5', nested && 'dialog-popup-nested')}>
+                <Dialog.Popup className={clsx(SMALL_DIALOG, nested && 'dialog-popup-nested')}>
                     <Dialog.Title className="text-base font-semibold text-text">{t('linkMachine.title')}</Dialog.Title>
-                    <Dialog.Description className="mt-1 text-xs text-text-muted">{t('linkMachine.description')}</Dialog.Description>
+                    <Dialog.Description className={clsx(DIALOG_DESCRIPTION, 'mt-1')}>{t('linkMachine.description')}</Dialog.Description>
 
                     {step === 'unavailable' && <p className="mt-3 text-sm text-text">{t('linkMachine.unavailable')}</p>}
                     {step === 'signing-in' && <p className="mt-3 text-sm text-text-muted">{t('linkMachine.signingIn')}</p>}
                     {step === 'sign-in' && (
                         <div className="mt-3 flex flex-col items-start gap-2">
                             <p className="text-sm text-text">{t('linkMachine.signIn')}</p>
-                            {accountError !== null && <p className="text-xs break-words text-status-error">{accountError}</p>}
+                            {accountError !== null && (
+                                <p className={clsx(FORM_ERROR, 'break-words')} role="alert">
+                                    {accountError}
+                                </p>
+                            )}
                             <SignInButtons />
                         </div>
                     )}
@@ -134,7 +139,7 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
                                 }}
                             />
                             {account !== null && (
-                                <p className="mt-1.5 text-xs break-words text-text-faint">{t('linkMachine.joinsAccount', { account: accountName(account) })}</p>
+                                <p className={clsx(FIELD_HINT, 'break-words')}>{t('linkMachine.joinsAccount', { account: accountName(account) })}</p>
                             )}
                         </>
                     )}
@@ -158,12 +163,12 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
                     {step === 'denied' && <p className="mt-3 text-sm break-words text-text">{t('linkMachine.denied')}</p>}
 
                     {failure !== null && (
-                        <p className="mt-2 text-xs break-words text-status-error" role="alert">
+                        <p className={clsx(FORM_ERROR, 'mt-2 break-words')} role="alert">
                             {failure}
                         </p>
                     )}
 
-                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                    <div className={DIALOG_FOOTER}>
                         {step === 'enter-code' && (
                             <>
                                 <Button onClick={() => close(false)}>{t('common:action.cancel')}</Button>

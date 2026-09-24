@@ -347,7 +347,7 @@ export function UsageDialog() {
         <Dialog.Root open={open} onOpenChange={(next) => useUi.getState().setUsageOpen(next)}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup flex h-[min(820px,calc(100dvh-32px))] w-[1080px] flex-col">
+                <Dialog.Popup className="dialog-popup flex h-[820px] w-[1080px] flex-col">
                     <ErrorBoundary label={i18next.t('usage:dialog.failed')} className="grow">
                         <Body />
                     </ErrorBoundary>

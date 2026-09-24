@@ -8,7 +8,7 @@ import { renameViewAction, setViewIconAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { resetTitle } from '@/nodes/node-host';
 import { Button } from '@/ui/Button';
-import { SECTION_LABEL } from '@/ui/classes';
+import { FIELD_HINT, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { IconPicker } from '@/ui/IconPicker';
 
@@ -58,7 +58,7 @@ export function ViewSettingsDialog({ view, onClose }: { view: ProjectView; onClo
                     }
                 }}
             />
-            <p className="mt-1.5 text-sm text-text-faint">{t('viewSettings.nameHint')}</p>
+            <p className={FIELD_HINT}>{t('viewSettings.nameHint')}</p>
 
             <div className={`${SECTION_LABEL} mt-5 mb-1.5`}>{t('common:icon.label')}</div>
             <div className="flex items-center gap-3">

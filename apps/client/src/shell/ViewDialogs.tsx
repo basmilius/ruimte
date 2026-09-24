@@ -5,6 +5,7 @@ import { ViewSettingsDialog } from '@/shell/ViewSettingsDialog';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
+import { SMALL_DIALOG } from '@/ui/classes';
 import { PromptDialog } from '@/ui/PromptDialog';
 
 /* Settings, promoting and a new page: everything a view asks before it happens. */
@@ -53,7 +54,7 @@ export function ViewDialogs() {
             <Dialog.Root open={present && dialog.kind === 'settings'} onOpenChange={(next) => !next && close()}>
                 <Dialog.Portal>
                     <Dialog.Backdrop className="dialog-backdrop" />
-                    <Dialog.Popup className="dialog-popup w-[420px] p-5">{view && <ViewSettingsDialog view={view} onClose={close} />}</Dialog.Popup>
+                    <Dialog.Popup className={SMALL_DIALOG}>{view && <ViewSettingsDialog view={view} onClose={close} />}</Dialog.Popup>
                 </Dialog.Portal>
             </Dialog.Root>
         </>

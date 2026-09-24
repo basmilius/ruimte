@@ -35,7 +35,7 @@ import { useProjectNodes, worktreeLists, type WorktreeNode } from '@/state/workt
 import type { Transport } from '@/transport/transport';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
-import { SECTION_LABEL } from '@/ui/classes';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, SECTION_LABEL, SMALL_DIALOG } from '@/ui/classes';
 
 type Reading = { request: WorktreeMergeRequest; worktrees: Worktree[]; error: { message: string | null } | null };
 
@@ -182,16 +182,16 @@ export function MergeWorktreeDialog() {
         <Dialog.Root open={request !== null} onOpenChange={(next) => !next && close()}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup w-[460px] p-5">
+                <Dialog.Popup className={SMALL_DIALOG}>
                     <Dialog.Title className="text-base font-semibold text-text">{worktrees.length > 0 ? mergeTitle(worktrees) : t('merge.title')}</Dialog.Title>
-                    <p className="mt-1 text-sm text-text-muted">
+                    <p className={`${DIALOG_DESCRIPTION} mt-1`}>
                         {shown === null ? t('removeWorktree.counting') : (failure ?? t('merge.holds', { contents: mergeContents(worktrees) }))}
                     </p>
                     {agentLine !== null && <p className="mt-2 text-sm text-status-warning">{agentLine}</p>}
                     {shown !== null && failure === null && (
                         <>
                             {loose && (
-                                <div className="mt-4 flex flex-col gap-1.5">
+                                <div className="mt-4">
                                     <label className="flex items-center justify-between gap-3">
                                         <span className="text-sm text-text">{t('merge.commitFirst')}</span>
                                         <Toggle
@@ -200,7 +200,7 @@ export function MergeWorktreeDialog() {
                                             onChange={(commitFirst) => setDraft({ ...draft, commitFirst })}
                                         />
                                     </label>
-                                    {!draft.commitFirst && <span className="text-xs text-text-faint">{t('merge.commitFirstHint')}</span>}
+                                    {!draft.commitFirst && <p className={FIELD_HINT}>{t('merge.commitFirstHint')}</p>}
                                 </div>
                             )}
                             {single !== undefined && ((loose && draft.commitFirst) || strategy === 'squash') && (
@@ -222,15 +222,15 @@ export function MergeWorktreeDialog() {
                                     options={MERGE_STRATEGIES.map((value) => ({ id: value, label: mergeStrategyLabel(value) }))}
                                     onChange={(value: WorktreeMergeStrategy) => useSettings.getState().update({ worktreeMergeStrategy: value })}
                                 />
-                                <span className="text-xs text-text-faint">{mergeStrategyLine(strategy)}</span>
                             </div>
+                            <p className={FIELD_HINT}>{mergeStrategyLine(strategy)}</p>
                             <label className="mt-4 flex items-center justify-between gap-3">
                                 <span className="text-sm text-text">{t('merge.removeAfterwards', { count: worktrees.length })}</span>
                                 <Toggle label={t('merge.removeAfterwardsShort')} checked={draft.remove} onChange={(remove) => setDraft({ ...draft, remove })} />
                             </label>
                         </>
                     )}
-                    <div className="mt-5 flex items-center justify-end gap-2">
+                    <div className={DIALOG_FOOTER}>
                         <Button onClick={close}>{t('common:action.cancel')}</Button>
                         <Button variant="primary" disabled={blocked} onClick={confirm}>
                             {stopAgent ? t('merge.stopAndMerge') : t('merge.merge')}

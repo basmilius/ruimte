@@ -36,6 +36,7 @@ import { useMinute } from '@/shell/usage/limits';
 import { useLatency } from '@/transport/ping';
 import { useEndpointConnection, useLastSeenAt } from '@/transport/status';
 import { Button } from '@/ui/Button';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SMALL_DIALOG } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { SignInMark } from '@/ui/SignInMark';
 import { Tooltip } from '@/ui/Tooltip';
@@ -321,9 +322,9 @@ export function AddMachineDialog({
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Backdrop className={clsx('dialog-backdrop', nested && 'dialog-backdrop-nested')} forceRender />
-                <Dialog.Popup className={clsx('dialog-popup w-[460px] p-5', nested && 'dialog-popup-nested')}>
+                <Dialog.Popup className={clsx(SMALL_DIALOG, nested && 'dialog-popup-nested')}>
                     <Dialog.Title className="text-base font-semibold text-text">{t('machines.add.title')}</Dialog.Title>
-                    <Dialog.Description className="mt-1 text-xs text-text-muted">{t('machines.add.description')}</Dialog.Description>
+                    <Dialog.Description className={clsx(DIALOG_DESCRIPTION, 'mt-1')}>{t('machines.add.description')}</Dialog.Description>
                     <input
                         autoFocus
                         className="field mt-3 min-w-0 font-mono text-code"
@@ -339,13 +340,13 @@ export function AddMachineDialog({
                             }
                         }}
                     />
-                    <p className="mt-1.5 text-xs break-words text-text-faint">{t('machines.add.hint')}</p>
+                    <p className={clsx(FIELD_HINT, 'break-words')}>{t('machines.add.hint')}</p>
                     {failure && (
-                        <p className="mt-2 text-xs break-words text-status-error" role="alert">
+                        <p className={clsx(FORM_ERROR, 'mt-2 break-words')} role="alert">
                             {failure}
                         </p>
                     )}
-                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                    <div className={DIALOG_FOOTER}>
                         <Tooltip label={t('machines.add.codeHint')}>
                             <Button className="mr-auto" onClick={onLinkWithCode}>
                                 <Icon icon={KeyRound} size={12} /> {t('machines.add.withCode')}

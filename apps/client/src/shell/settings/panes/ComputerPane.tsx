@@ -31,6 +31,7 @@ import { transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
 import type { Transport } from '@/transport/transport';
 import { Button } from '@/ui/Button';
+import { FORM_ERROR } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
@@ -174,7 +175,7 @@ function ComputerMachineRow({ endpoint }: { endpoint: Endpoint }) {
                 <ComputerAppGrants grants={grants} held={held} busy={busy} onRevoke={(payload) => void revoke(payload)} />
             )}
             {(error ?? status?.problem) && (
-                <p role="alert" className="text-xs text-status-error">
+                <p role="alert" className={FORM_ERROR}>
                     {error ?? status?.problem}
                 </p>
             )}

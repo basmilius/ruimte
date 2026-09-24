@@ -18,6 +18,7 @@ import { useToasts } from '@/state/toasts';
 import { pool, transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
 import { Button } from '@/ui/Button';
+import { FORM_ERROR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
@@ -211,7 +212,11 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
                             {t('common:action.save')}
                         </Button>
                     </div>
-                    {problem && <div className="text-xs break-words text-status-error">{problem}</div>}
+                    {problem && (
+                        <p className={`${FORM_ERROR} break-words`} role="alert">
+                            {problem}
+                        </p>
+                    )}
                 </div>
             )}
         </SettingsRow>
