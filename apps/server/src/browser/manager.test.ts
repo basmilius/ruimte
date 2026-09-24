@@ -101,6 +101,13 @@ class FakePage implements BrowserPage {
     }
 }
 
+/* Turns the event loop until the fake page's chain of work got where a test looks; bounded by turns, never by time. */
+const until = async (reached: () => boolean): Promise<void> => {
+    for (let turn = 0; turn < 500 && !reached(); turn++) {
+        await Bun.sleep(0);
+    }
+};
+
 describe('BrowserManager', () => {
     test('keeps a page alive while control clients attach and streams only with a viewer', async () => {
         const page = new FakePage();
@@ -122,12 +129,12 @@ describe('BrowserManager', () => {
         const frames: number[] = [];
         const unsubscribe = await hub.subscribe(opened.streamId!, (frame) => frames.push(frame.data.byteLength));
         page.emitFrame();
-        await Bun.sleep(10);
+        await until(() => frames.length > 0 && page.calls.at(-1)?.[0] === 'Page.screencastFrameAck');
         expect(frames).toEqual([3]);
         expect(page.calls.map(([method]) => method).slice(-3)).toEqual(['Page.enable', 'Page.startScreencast', 'Page.screencastFrameAck']);
 
         unsubscribe();
-        await Bun.sleep(10);
+        await until(() => page.calls.at(-1)?.[0] === 'Page.stopScreencast');
         expect(page.calls.at(-1)?.[0]).toBe('Page.stopScreencast');
         expect(statuses.some((status) => status.title === 'Example')).toBe(true);
     });
@@ -151,7 +158,7 @@ describe('BrowserManager', () => {
         off();
 
         await manager.open('node-1', 'client-1', 'https://example.com', 800, 600);
-        await Bun.sleep(10);
+        await until(() => second.length > 0);
 
         expect(first).toHaveLength(0);
         expect(second.length).toBeGreaterThan(0);
@@ -167,7 +174,7 @@ describe('BrowserManager', () => {
         const unsubscribe = await hub.subscribe(opened.streamId!, (frame) => frames.push({ browserId: 'node-1', ...frame, data: '' }));
         await page.navigate('https://example.com/next');
         page.emitFrame();
-        await Bun.sleep(10);
+        await until(() => frames.length > 0 && page.activeOperations === 0);
 
         expect(page.calls.filter(([method]) => method === 'Page.captureScreenshot')).toHaveLength(1);
         expect(frames.at(-1)).toMatchObject({ width: 1600, height: 1200 });
@@ -208,14 +215,14 @@ describe('BrowserManager', () => {
 
         await manager.open('node-1', 'client-1', 'https://example.com', 800, 600, 'events', 2);
         page.emitFrame();
-        await Bun.sleep(10);
+        await until(() => frames.length > 0 && page.activeOperations === 0);
         expect(frames).toHaveLength(1);
         expect(frames[0]).toMatchObject({ width: 1600, height: 1200 });
         expect(page.calls.filter(([method]) => method === 'Page.captureScreenshot')).toHaveLength(1);
         expect(page.calls).toContainEqual(['Emulation.setDeviceMetricsOverride', { width: 800, height: 600, deviceScaleFactor: 2, mobile: false }]);
 
         manager.detach('node-1', 'client-1');
-        await Bun.sleep(10);
+        await until(() => page.calls.at(-1)?.[0] === 'Page.stopScreencast');
         expect(page.calls.at(-1)?.[0]).toBe('Page.stopScreencast');
         manager.closeAll();
     });
@@ -305,7 +312,7 @@ describe('BrowserManager', () => {
         await Promise.resolve();
         const resizing = manager.resize('node-1', 'client-1', 900, 700);
         await Promise.all([opening, resizing]);
-        await Bun.sleep(10);
+        await until(() => page.activeOperations === 0);
 
         expect(page.maxActiveOperations).toBe(1);
         manager.closeAll();
