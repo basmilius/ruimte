@@ -223,7 +223,7 @@ export const Scrubber = memo(function Scrubber({
                                                     <span>{hoveredTick.kind === 'person' ? t('rows.user.heading') : t('scrubber.tasks')}</span>
                                                 ) : (
                                                     <span className="flex min-w-0 items-center gap-1 self-center text-text-muted">
-                                                        <Icon icon={Bookmark} size={12} className="shrink-0 fill-current text-accent" />
+                                                        <Icon icon={Bookmark} size={12} className="shrink-0 text-accent" />
                                                         <span className="truncate">{hoveredTick.bookmark.name ?? t('bookmarks.unnamed')}</span>
                                                     </span>
                                                 )}

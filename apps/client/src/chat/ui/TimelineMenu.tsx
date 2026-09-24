@@ -103,7 +103,8 @@ export function TimelineMenuPopup({
 /*
  * Place a bookmark on a message, or rename and remove the one it has: the same rows from the thread
  * and from the strip beside it. `onName` runs when a row opens the name field, which sits on the
- * message and so has to be on screen; the strip scrolls there, the thread was clicked on it.
+ * bookmark's line over the message and so has to be on screen; the strip scrolls there, the thread
+ * was clicked on it.
  */
 export function BookmarkMenuItems({ chatId, itemId, onName }: { chatId: string; itemId: string; onName?: () => void }) {
     const { t } = useTranslation('chat');

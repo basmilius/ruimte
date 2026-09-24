@@ -138,6 +138,10 @@
       "worksIn": "It works in"
     },
     "stripFailed": "The message strip failed to render",
+    "actions": {
+      "label": "Message actions",
+      "copied": "Copied"
+    },
     "menu": {
       "copyMessage": "Copy message",
       "copyCode": "Copy code",

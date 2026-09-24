@@ -138,6 +138,10 @@
       "worksIn": "Werkt in"
     },
     "stripFailed": "De berichtenstrip kon niet worden getekend",
+    "actions": {
+      "label": "Berichtacties",
+      "copied": "Gekopieerd"
+    },
     "menu": {
       "copyMessage": "Bericht kopiëren",
       "copyCode": "Code kopiëren",

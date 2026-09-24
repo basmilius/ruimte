@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
-import type { ChatSubagentItem } from '@ruimte/contracts';
+import type { ChatBookmark, ChatSubagentItem } from '@ruimte/contracts';
 import { useForkedTurns } from '@/chat/forks';
 import { bookmarkRows } from '@/chat/logic/bookmarks';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
@@ -23,7 +23,8 @@ import {
 import { EMPTY_TARGET, readTimelineTarget, withCurrentText, type TimelineTarget } from '@/chat/logic/timeline-target';
 import { forkRefusal } from '@/chat/logic/fork';
 import { FindRevealContext } from '@/chat/ui/find-reveal';
-import { MessageBookmark } from '@/chat/ui/MessageBookmark';
+import { BookmarkMarker } from '@/chat/ui/BookmarkMarker';
+import { MessageActions } from '@/chat/ui/MessageActions';
 import { Scrubber, type CardChat } from '@/chat/ui/Scrubber';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { FOLLOW_THRESHOLD_PX, rowRhythm } from '@/chat/ui/rows/row-rhythm';
@@ -76,16 +77,27 @@ function EmptyThread({ chatId }: { chatId: string }) {
     );
 }
 
-/* A message of the thread with its bookmark over it; every other row as it is. */
-function MarkableRow({ row, chatId, children }: { row: TimelineRow; chatId: string; children: ReactNode }) {
+/*
+ * A row of the thread behind the chapter line of its bookmark. A message, the only row that takes a
+ * bookmark, gets its actions under it; every other row carries a bookmark only for a reply it folds.
+ */
+function MarkableRow({ row, chatId, bookmark, children }: { row: TimelineRow; chatId: string; bookmark: ChatBookmark | null; children: ReactNode }) {
     if (row.kind !== 'user' && row.kind !== 'assistant') {
-        return children;
+        return (
+            <>
+                {bookmark !== null && <BookmarkMarker chatId={chatId} itemId={bookmark.itemId} bookmark={bookmark} />}
+                {children}
+            </>
+        );
     }
     return (
-        <div className="group/message relative">
-            <MessageBookmark chatId={chatId} itemId={row.id} align={row.kind === 'user' ? 'end' : 'start'} />
-            {children}
-        </div>
+        <>
+            <BookmarkMarker chatId={chatId} itemId={row.id} bookmark={bookmark} />
+            <div className="group/message">
+                {children}
+                <MessageActions chatId={chatId} row={row} />
+            </div>
+        </>
     );
 }
 
@@ -411,7 +423,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                                                 >
                                                     <FindRevealContext.Provider value={chatFind.reveal}>
-                                                        <MarkableRow row={row} chatId={chatId}>
+                                                        <MarkableRow row={row} chatId={chatId} bookmark={marks.get(row.id) ?? null}>
                                                             <Row
                                                                 row={row}
                                                                 chatId={chatId}

@@ -58,7 +58,7 @@ export function BookmarkSubmenu({ chatId }: { chatId: string }) {
                                     }
                                 }}
                             >
-                                <Icon icon={Bookmark} size={14} className="shrink-0 fill-current text-accent" />
+                                <Icon icon={Bookmark} size={14} className="shrink-0 text-accent" />
                                 <span className={clsx('min-w-0 grow truncate', bookmark.name === undefined && 'text-text-muted')}>
                                     {bookmarkLabel(bookmark)}
                                 </span>
