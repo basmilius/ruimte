@@ -17,6 +17,8 @@ export interface TaskCoordinatorDeps {
     oweWake(task: Task): Promise<void>;
     /* Raises attention on a node whose task failed, for the person who has to look at why. */
     alert(nodeId: string, title: string, body: string): void;
+    /* When the daemon takes up a turn that stopped on an overload again; null when it does not, which makes it an error like any other. */
+    retryAt?(chatId: string, turn: ChatTurnItem, items: readonly ChatItem[]): number | null;
 }
 
 // A child's answer is its last word of the turn; the thinking and the tools before it are not the result.
@@ -79,7 +81,9 @@ export class TaskCoordinator {
             return;
         }
         const { chatId, event: chatEvent } = event.payload;
-        if (chatEvent.type === 'item' && chatEvent.item.kind === 'turn' && chatEvent.item.state !== 'running') {
+        if (chatEvent.type === 'item' && chatEvent.item.kind === 'turn' && chatEvent.item.state === 'running') {
+            this.turnStarted(chatId);
+        } else if (chatEvent.type === 'item' && chatEvent.item.kind === 'turn') {
             this.turnEnded(chatId, chatEvent.item);
         } else if (chatEvent.type === 'info' && chatEvent.info.activeTurnId === null) {
             // A child that waited on tasks of its own may be done now that its last wake turn went.
@@ -167,8 +171,41 @@ export class TaskCoordinator {
         if (!task || items === null || !this.answers(items, turn, task) || this.delegating(chatId)) {
             return;
         }
+        const paused = this.pauseFor(chatId, turn, items);
+        if (paused !== null) {
+            this.hold(task, paused);
+            return;
+        }
         const { status, result } = resultOfTurn(turn, items, this.deps.now());
         this.settle(task, status, result);
+    }
+
+    /*
+     * A limit is work waiting, not work that failed: the plan's limit always holds the task until the child
+     * finishes after it, an overload only while the daemon still owes the turn another try.
+     */
+    private pauseFor(chatId: string, turn: ChatTurnItem, items: readonly ChatItem[]): NonNullable<Task['paused']> | null {
+        const limit = turn.state === 'error' ? turn.limit : undefined;
+        if (limit?.kind === 'usage') {
+            return { kind: 'usage', ...(limit.resetsAt === undefined ? {} : { until: limit.resetsAt }) };
+        }
+        if (limit?.kind === 'overload') {
+            const at = this.deps.retryAt?.(chatId, turn, items) ?? null;
+            return at === null ? null : { kind: 'overload', until: at };
+        }
+        return null;
+    }
+
+    /* A child that took up work again is no longer waiting out a limit. */
+    private turnStarted(chatId: string): void {
+        const task = this.deps.tasks.openFor(chatId);
+        if (task?.paused !== undefined) {
+            this.hold(task, null);
+        }
+    }
+
+    private hold(task: Task, paused: NonNullable<Task['paused']> | null): void {
+        void this.deps.tasks.pause(task.id, paused).catch((e: unknown) => console.error(`Pausing task ${task.id} failed:`, errorText(e)));
     }
 
     private recheck(chatId: string): void {

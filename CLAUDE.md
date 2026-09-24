@@ -63,6 +63,7 @@ One WebSocket (or the same frames over a WebRTC DataChannel), JSON frames valida
 Decisions the code cannot show. Do not reverse one without asking Bas.
 
 - Two things wake a chat, each once: a finished task wakes the chat that delegated it, and a message wakes the chat it was sent to. A message goes one step deep, so the turn it opened wakes nobody, and a terminal is never woken at all.
+- A child that stops on a limit pauses its task: the turn says which limit and when it lifts (`limit`, read only from the CLI's own stream), the task stays open with `paused`, and its parent sleeps on until the child finishes after the reset. An overload the daemon does not try again is an error like any other and fails the task.
 - Every shortcut needs a modifier. The only bare keys are a drawing view's tools, and only while no text is typed and no dialog is up, and the widget keys inside a prompt card (arrows, Home, End, Space, Enter), only while the focus is in that card.
 - Never highlight the canvas grid in the accent color. Type: only the four sizes in `@theme`, no bracket sizes, nothing below 12px; Geist only for the wordmark, Kalam only for drawing text.
 - A page in a `<webview>` does not pinch-zoom (Chromium scales only the top-most widget); a `WebContentsView` per page and `setZoomFactor` were weighed and rejected.

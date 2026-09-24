@@ -528,3 +528,39 @@ describe('waiting on owed work', () => {
         expect(daemon.enqueued.filter((work) => work.kind === 'wake-parent' && work.payload.taskId === single.taskId)).toHaveLength(1);
     });
 });
+
+describe('a child on a limit', () => {
+    test('stops on the usage limit with its task open, paused until the reset, and wakes the lead once it finishes after it', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+
+        const child = await delegate(daemon, 'Lexer', 'fix the tokenizer\nlimit:1789000000');
+        await daemon.until(() => daemon.tasks.get(child.taskId)?.paused !== undefined);
+        await daemon.worker.settled();
+
+        expect(turnsOf(daemon, child.childId)).toEqual([expect.objectContaining({ state: 'error', limit: { kind: 'usage', resetsAt: 1_789_000_000_000 } })]);
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'open', result: null, paused: { kind: 'usage', until: 1_789_000_000_000 } });
+        expect(daemon.outbox.list()).toEqual([]);
+        expect(wakeTurns(daemon)).toEqual([]);
+
+        // A person takes it up after the reset: the task goes on, and settles on that turn's answer.
+        await daemon.chats.send(child.childId, 'go on');
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        const task = daemon.tasks.get(child.taskId);
+        expect(task).toMatchObject({ status: 'done', result: { text: 'echo: go on' } });
+        expect(task?.paused).toBeUndefined();
+        expect(wakeTurns(daemon)).toHaveLength(1);
+    });
+
+    test('fails its task on an overload nobody tries again, as on any other error', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+
+        const child = await delegate(daemon, 'Lexer', 'fix the tokenizer\noverloaded');
+        await daemon.until(() => daemon.tasks.get(child.taskId)?.status === 'failed');
+        expect(daemon.tasks.get(child.taskId)?.paused).toBeUndefined();
+        expect(turnsOf(daemon, child.childId)[0]).toMatchObject({ state: 'error', limit: { kind: 'overload' } });
+    });
+});

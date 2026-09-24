@@ -87,9 +87,24 @@ export class TaskStore {
         if (!task || task.status !== 'open') {
             return null;
         }
-        const settled: Task = { ...task, status, result, settledAt: now, wake: status === 'cancelled' ? 'none' : task.wake };
+        const { paused: _paused, ...open } = task;
+        const settled: Task = { ...open, status, result, settledAt: now, wake: status === 'cancelled' ? 'none' : task.wake };
         await this.write(settled);
         return settled;
+    }
+
+    /* Holds an open task while its child waits out a limit, or lets it go on with null; false when it was not open. */
+    async pause(id: string, paused: NonNullable<Task['paused']> | null): Promise<boolean> {
+        const task = this.tasks.get(id);
+        if (!task || task.status !== 'open') {
+            return false;
+        }
+        if (JSON.stringify(task.paused ?? null) === JSON.stringify(paused)) {
+            return true;
+        }
+        const { paused: _was, ...rest } = task;
+        await this.write(paused === null ? rest : { ...rest, paused });
+        return true;
     }
 
     /* Cancels the open tasks of these children, with the reason as the result; a cancelled task wakes nobody. */

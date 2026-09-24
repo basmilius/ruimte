@@ -31985,6 +31985,24 @@
                 "sent",
                 "none"
               ]
+            },
+            "paused": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "usage",
+                    "overload"
+                  ]
+                },
+                "until": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind"
+              ]
             }
           },
           "required": [
@@ -40902,6 +40920,24 @@
               "pending",
               "sent",
               "none"
+            ]
+          },
+          "paused": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "usage",
+                  "overload"
+                ]
+              },
+              "until": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind"
             ]
           }
         },
