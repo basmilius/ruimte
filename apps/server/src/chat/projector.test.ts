@@ -643,6 +643,32 @@ describe('an agent a subagent opened', () => {
 });
 
 describe('background tasks', () => {
+    test('a workflow call runs on past its turn and settles when its task ends, with what the notification says', () => {
+        const { thread, project } = setup();
+        const launched = 'Workflow launched in background. Task ID: w1\nRun ID: wf_1';
+        project(
+            { type: 'tool.started', ref: 'toolu_wf', name: 'Workflow', input: { script: 'export const meta = {}' }, parentRef: null },
+            { type: 'tool.done', ref: 'toolu_wf', output: launched, state: 'done' },
+            { type: 'turn.done', state: 'done', costUsd: 0 }
+        );
+        expect(thread.get('1:toolu_wf')).toMatchObject({ kind: 'tool', state: 'running', output: launched });
+
+        project({ type: 'task.done', ref: 'toolu_wf', taskId: 'w1', summary: 'Dynamic workflow "Review" completed', ok: true });
+        expect(thread.get('1:toolu_wf')).toMatchObject({ state: 'done', output: `${launched}\n\nDynamic workflow "Review" completed` });
+        // What it wakes the agent about is the header of the turn that follows.
+        project({ type: 'text.done', ref: 'msg_1:t0', text: 'The review is in' });
+        expect(thread.list().find((item) => item.kind === 'turn' && item.origin === 'agent')).toMatchObject({ label: 'Dynamic workflow "Review" completed' });
+
+        // One the process takes down with it failed.
+        const other = setup();
+        other.project(
+            { type: 'tool.started', ref: 'toolu_wf', name: 'Workflow', input: {}, parentRef: null },
+            { type: 'tool.done', ref: 'toolu_wf', output: launched, state: 'done' },
+            { type: 'exit', exitCode: 0 }
+        );
+        expect(other.thread.get('1:toolu_wf')).toMatchObject({ state: 'error' });
+    });
+
     test('a task takes its kind and command from the call that started it and leaves with its process', () => {
         const { thread, project } = setup();
         project(

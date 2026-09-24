@@ -35,6 +35,9 @@ const contextTokens = (usage: unknown): number =>
 const BACKGROUND_TASK_TYPES = new Set(['local_bash', 'monitor_mcp', 'monitor_ws']);
 const ENDED_TASK_STATUSES = new Set(['completed', 'failed', 'killed', 'stopped']);
 
+// How Claude Code (2.1.273 through 2.1.282) answers a Workflow call, with the id of the task the workflow runs as.
+const WORKFLOW_LAUNCHED = /^Workflow launched in background\. Task ID: (\S+)/;
+
 // The CLI's AskUserQuestion input, as far as the person needs to see it.
 const parseQuestions = (input: unknown): ChatQuestion[] => {
     if (!isRecord(input) || !Array.isArray(input.questions)) {
@@ -74,6 +77,8 @@ export class ClaudeProtocol {
     // Commands started in the foreground, which the CLI may still send to the background, and what runs there now.
     private readonly foregroundShells = new Map<string, { ref: string | null; description: string | null }>();
     private readonly backgroundTasks = new Set<string>();
+    // Workflows still running, by task id, to the Workflow call that launched each.
+    private readonly workflows = new Map<string, string>();
     // The uuid of the last main-chain assistant frame of the turn, which is the line of the transcript the turn ends on.
     private lastUuid: string | null = null;
     // What this turn heard about a limit: the API error of a main-chain frame, and a window the plan refused, with its reset in seconds.
@@ -217,6 +222,7 @@ export class ClaudeProtocol {
             const taskId = str(frame.task_id);
             if (taskId) {
                 this.endBackground(taskId, events);
+                this.workflows.delete(taskId);
             }
             // The CLI wakes the main agent itself when a background task settles; this frame is the only
             // thing that says what it was about, and it arrives before the turn nobody asked for.
@@ -255,6 +261,9 @@ export class ClaudeProtocol {
         }
         const taskId = str(frame.task_id);
         const description = str(frame.description);
+        if (taskId && ref && frame.task_type === 'local_workflow') {
+            this.workflows.set(taskId, ref);
+        }
         if (taskId && typeof frame.task_type === 'string' && BACKGROUND_TASK_TYPES.has(frame.task_type) && frame.ambient !== true) {
             if (frame.is_backgrounded === false) {
                 this.foregroundShells.set(taskId, { ref, description });
@@ -284,6 +293,7 @@ export class ClaudeProtocol {
         if (status !== null && ENDED_TASK_STATUSES.has(status)) {
             this.foregroundShells.delete(taskId);
             this.endBackground(taskId, events);
+            this.endWorkflow(taskId, null, status === 'completed', events);
         }
     }
 
@@ -299,6 +309,19 @@ export class ClaudeProtocol {
         if (this.backgroundTasks.delete(taskId)) {
             events.push({ type: 'background.ended', taskId });
         }
+    }
+
+    /*
+     * A workflow that ended, told by either its notification or the task's own status, whichever comes
+     * first: the stream of a workflow run was not seen live, and both are what every other task sends.
+     */
+    private endWorkflow(taskId: string, summary: string | null, ok: boolean, events: BackendEvent[]): void {
+        const ref = this.workflows.get(taskId);
+        if (ref === undefined) {
+            return;
+        }
+        this.workflows.delete(taskId);
+        events.push({ type: 'task.done', ref, taskId, summary, ok });
     }
 
     /* The control request that ends one task the CLI runs beside its turns. */
@@ -416,7 +439,12 @@ export class ClaudeProtocol {
             }
             const ref = str(block.tool_use_id);
             if (ref) {
-                events.push({ type: 'tool.done', ref, output: resultText(block.content), state: block.is_error === true ? 'error' : 'done' });
+                const output = resultText(block.content);
+                const workflow = WORKFLOW_LAUNCHED.exec(output)?.[1];
+                if (workflow) {
+                    this.workflows.set(workflow, ref);
+                }
+                events.push({ type: 'tool.done', ref, output, state: block.is_error === true ? 'error' : 'done' });
             }
         }
     }

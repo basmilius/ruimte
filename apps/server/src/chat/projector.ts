@@ -50,6 +50,7 @@ const isAgentTool = (name: string): boolean => name === 'Agent' || name === 'Tas
 
 // What the CLI answers a background launch with; the agent itself only settles much later.
 const LAUNCH_PLACEHOLDER = 'Async agent launched successfully';
+const WORKFLOW_LAUNCHED = 'Workflow launched in background';
 
 // A subagent that works longer than the row can hold: what is kept is the beginning of its work.
 const MAX_SUBAGENT_ITEMS = 200;
@@ -222,6 +223,12 @@ export class ThreadProjector {
                     this.settleSubagent(target, event, events);
                     break;
                 }
+                if (target?.kind === 'tool' && target.name === 'Workflow' && event.state === 'done' && event.output?.startsWith(WORKFLOW_LAUNCHED)) {
+                    // The call only launched the workflow; the row runs on past the turn until the workflow's task ends.
+                    this.backgroundCalls.add(target.id);
+                    events.push(this.thread.upsert({ ...target, output: event.output }));
+                    break;
+                }
                 this.settleTool(generation, event, events);
                 break;
             }
@@ -284,6 +291,7 @@ export class ThreadProjector {
                     this.taskToolUseId = row.toolUseId;
                 }
                 this.settleBackgroundSubagent(row, event, events);
+                this.settleLaunchedCall(generation, event, events);
                 break;
             }
             case 'background.started':
@@ -751,6 +759,20 @@ export class ThreadProjector {
                 ...(event.outputFile ? { outputFile: event.outputFile } : {})
             })
         );
+    }
+
+    /* A call whose work ran on past its own answer, such as a workflow, settled by the task it ran as. */
+    private settleLaunchedCall(generation: number, event: Extract<BackendEvent, { type: 'task.done' }>, events: ChatEvent[]): void {
+        const call = event.ref === null ? undefined : this.thread.get(this.itemId(generation, event.ref));
+        if (call?.kind !== 'tool' || call.state !== 'running' || !this.backgroundCalls.has(call.id)) {
+            return;
+        }
+        this.backgroundCalls.delete(call.id);
+        const summary = event.summary?.trim() ?? '';
+        const output = summary === '' ? call.output : [call.output, summary].filter((part) => part !== null && part !== '').join('\n\n');
+        const settled: ChatToolItem = { ...call, output, state: event.ok ? 'done' : 'error' };
+        delete settled.progress;
+        events.push(this.thread.upsert(settled));
     }
 
     /* A shell or a monitor, told apart by the call that started it when the CLI's frame does not say. */

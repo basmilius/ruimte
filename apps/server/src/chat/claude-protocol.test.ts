@@ -455,4 +455,47 @@ describe('ClaudeProtocol', () => {
         ).toEqual([{ type: 'background.started', taskId: 'b2', ref: 'toolu_b2', monitor: false, description: 'Run the tests' }]);
         expect(protocol.stopTaskRequest('b2')).toMatchObject({ type: 'control_request', request: { subtype: 'stop_task', task_id: 'b2' } });
     });
+
+    // The launch text is what Claude Code 2.1.273 and 2.1.274 wrote to their transcripts, and 2.1.282 still carries; the
+    // task frames are the ones every other task sends, since no workflow ran with the stream captured.
+    test('a workflow ends on whichever says so first, its task status or its notification', () => {
+        const launch = (protocol: ClaudeProtocol) =>
+            protocol.handle({
+                type: 'user',
+                message: {
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'tool_result',
+                            tool_use_id: 'toolu_wf',
+                            content: 'Workflow launched in background. Task ID: wtbdiuq1l\nSummary: Review the PR\nRun ID: wf_230f9737-7f9'
+                        }
+                    ]
+                }
+            });
+        const byStatus = new ClaudeProtocol();
+        expect(launch(byStatus)).toEqual([
+            { type: 'tool.done', ref: 'toolu_wf', output: expect.stringMatching(/^Workflow launched in background/), state: 'done' }
+        ]);
+        expect(byStatus.handle({ type: 'system', subtype: 'task_updated', task_id: 'wtbdiuq1l', patch: { status: 'failed' } })).toEqual([
+            { type: 'task.done', ref: 'toolu_wf', taskId: 'wtbdiuq1l', summary: null, ok: false }
+        ]);
+        expect(byStatus.handle({ type: 'system', subtype: 'task_updated', task_id: 'wtbdiuq1l', patch: { status: 'failed' } })).toEqual([]);
+
+        const byNotification = new ClaudeProtocol();
+        byNotification.handle({
+            type: 'system',
+            subtype: 'task_started',
+            task_id: 'w2',
+            tool_use_id: 'toolu_wf2',
+            description: 'Review the PR',
+            task_type: 'local_workflow',
+            workflow_name: 'review'
+        });
+        const summary = 'Dynamic workflow "Review the PR" completed';
+        expect(
+            byNotification.handle({ type: 'system', subtype: 'task_notification', task_id: 'w2', tool_use_id: 'toolu_wf2', status: 'completed', summary })
+        ).toEqual([{ type: 'task.done', ref: 'toolu_wf2', taskId: 'w2', summary, ok: true, usage: null, outputFile: null }]);
+        expect(byNotification.handle({ type: 'system', subtype: 'task_updated', task_id: 'w2', patch: { status: 'completed' } })).toEqual([]);
+    });
 });
