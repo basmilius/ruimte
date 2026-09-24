@@ -26,6 +26,16 @@ import { fileSecretStore, type SecretStore } from './secret-store';
 import { createOpenAiLiveSession, parseOpenAiLivePreferences } from './openai-live';
 import { SpeechService, speechHelperPath } from './speech';
 import { SpeechModel } from './speech-model';
+import {
+    allowGuestPermission,
+    appSubframeNavigation,
+    appWindowNavigation,
+    BROWSER_PARTITION,
+    hardenGuestPreferences,
+    isAppSender,
+    isExternalLink,
+    PREVIEW_PARTITION
+} from './web-guards';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
 const {
@@ -71,9 +81,35 @@ const port = Number(process.env.RUIMTE_PORT ?? DEFAULT_PORT);
 // The home the daemon runs with, where its local secret lives; a checkout uses the dev home, as the server's `bun dev` does.
 const ruimteHome = app.isPackaged ? (process.env.RUIMTE_HOME ?? join(homedir(), '.ruimte')) : (process.env.RUIMTE_DEV_HOME ?? join(homedir(), '.ruimte-dev'));
 
+const appUrl = devUrl ?? `http://127.0.0.1:${port}/`;
+const appOrigin = new URL(appUrl).origin;
+
 let daemon: ChildProcess | null = null;
 let mainWindow: Electron.BrowserWindow | null = null;
 const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
+
+/*
+ * Every channel answers the app's own page and nothing else. A guest cannot reach one (its preload
+ * only talks to its host), but a page the window was navigated to would inherit the bridge.
+ */
+const fromAppWindow = (event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): boolean =>
+    isAppSender(mainWindow !== null && event.sender === mainWindow.webContents, event.senderFrame, appOrigin);
+
+const refuseOtherPages = (): never => {
+    throw new Error('Only the app window may ask this');
+};
+
+const handleFromApp = <Args extends unknown[]>(channel: string, handler: (event: Electron.IpcMainInvokeEvent, ...args: Args) => unknown): void => {
+    ipcMain.handle(channel, (event, ...args) => (fromAppWindow(event) ? handler(event, ...(args as Args)) : refuseOtherPages()));
+};
+
+const onFromApp = <Args extends unknown[]>(channel: string, listener: (event: Electron.IpcMainEvent, ...args: Args) => void): void => {
+    ipcMain.on(channel, (event, ...args) => {
+        if (fromAppWindow(event)) {
+            listener(event, ...(args as Args));
+        }
+    });
+};
 
 /*
  * An app opened from the Dock or a launcher inherits a bare PATH, not the one the person's shell
@@ -254,13 +290,9 @@ const stopMachine = (): void => {
     app.quit();
 };
 
-ipcMain.handle('service:state', () => serviceController.state());
-ipcMain.handle('service:set-keep-running', (event, keepRunning: boolean) =>
-    event.sender === mainWindow?.webContents ? pushServiceState(serviceController.setKeepRunning(keepRunning === true)) : serviceController.state()
-);
-ipcMain.handle('service:enable-linger', (event) =>
-    event.sender === mainWindow?.webContents ? pushServiceState(serviceController.enableLinger()) : serviceController.state()
-);
+handleFromApp('service:state', () => serviceController.state());
+handleFromApp('service:set-keep-running', (_event, keepRunning: boolean) => pushServiceState(serviceController.setKeepRunning(keepRunning === true)));
+handleFromApp('service:enable-linger', () => pushServiceState(serviceController.enableLinger()));
 /*
  * While an older build keeps the machine, the port is asked now and then, so the question and the
  * row in the settings go away once the daemon restarted itself onto the new build.
@@ -279,17 +311,9 @@ const watchPendingRestart = (): void => {
     }, 30_000);
 };
 
-ipcMain.handle('service:restart-now', async (event) =>
-    event.sender === mainWindow?.webContents ? pushServiceState(await serviceController.restartNow()) : serviceController.state()
-);
-ipcMain.handle('service:restart-when-idle', (event) =>
-    event.sender === mainWindow?.webContents ? pushServiceState(serviceController.restartWhenIdle()) : serviceController.state()
-);
-ipcMain.on('service:stop-machine', (event) => {
-    if (event.sender === mainWindow?.webContents) {
-        stopMachine();
-    }
-});
+handleFromApp('service:restart-now', async () => pushServiceState(await serviceController.restartNow()));
+handleFromApp('service:restart-when-idle', () => pushServiceState(serviceController.restartWhenIdle()));
+onFromApp('service:stop-machine', () => stopMachine());
 
 // The band the client reserves across the sidebar's strip and the toolbar, which the overlay controls share on Windows and Linux.
 const TITLEBAR_HEIGHT = 48;
@@ -301,9 +325,6 @@ const titleBarOptions = (dark: boolean): Electron.BrowserWindowConstructorOption
     process.platform === 'darwin'
         ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 17, y: 17 } }
         : { titleBarStyle: 'hidden', titleBarOverlay: { height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] } };
-
-// The partition every browser node's page lives in; `apps/client/src/browser/registry.ts`.
-const BROWSER_PARTITION = 'persist:ruimte';
 
 /*
  * The theme the client is in. The client owns it (it may follow the system or not) and reports it,
@@ -345,7 +366,6 @@ const applyTheme = (theme: AppTheme): void => {
     }
 };
 
-const PREVIEW_PARTITION = 'preview';
 const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
 
 /* A previewed file may load adjacent assets, but cannot use its scripts to reach a server. */
@@ -355,10 +375,15 @@ const sealPreviewSession = (): void => {
     preview.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
 };
 
+const sealBrowserSession = (): void => {
+    const browser = session.fromPartition(BROWSER_PARTITION);
+    browser.setPermissionRequestHandler((_contents, permission, callback) => callback(allowGuestPermission(permission)));
+    browser.setPermissionCheckHandler((_contents, permission) => allowGuestPermission(permission));
+    browser.setDevicePermissionHandler(() => false);
+};
+
 const isPreviewGuest = (contents: Electron.WebContents): boolean =>
     contents.getType() === 'webview' && contents.session === session.fromPartition(PREVIEW_PARTITION);
-
-const isExternalLink = (url: string): boolean => /^(https?:\/\/|mailto:)/.test(url);
 
 /* Network links leave the sealed preview instead of failing silently inside it. */
 const routePreviewLinks = (contents: Electron.WebContents): void => {
@@ -373,6 +398,33 @@ const routePreviewLinks = (contents: Electron.WebContents): void => {
             void shell.openExternal(url);
         }
         return { action: 'deny' };
+    });
+};
+
+/* Nothing but the app loads in its window: a dropped link or file would otherwise take the bridge with it. */
+const guardAppNavigation = (contents: Electron.WebContents): void => {
+    contents.on('will-navigate', (event) => {
+        const verdict = appWindowNavigation(event.url, appOrigin);
+        if (verdict === 'allow') {
+            return;
+        }
+        event.preventDefault();
+        if (verdict === 'external') {
+            void shell.openExternal(event.url);
+        }
+    });
+    // Nobody chose where a redirect goes, so one that leaves the app only stops.
+    contents.on('will-redirect', (event) => {
+        const verdict = event.isMainFrame ? appWindowNavigation(event.url, appOrigin) : appSubframeNavigation(event.url, appOrigin);
+        if (verdict !== 'allow') {
+            event.preventDefault();
+        }
+    });
+    // The main frame is `will-navigate`'s, which is the one that may hand a link to the system browser.
+    contents.on('will-frame-navigate', (event) => {
+        if (!event.isMainFrame && appSubframeNavigation(event.url, appOrigin) !== 'allow') {
+            event.preventDefault();
+        }
     });
 };
 
@@ -393,8 +445,8 @@ const setKeepAwake = (request: KeepAwakeRequest | null): void => {
     applyKeepAwake();
 };
 
-ipcMain.on('power:keep-awake', (_event, keep: boolean) => setKeepAwake(keep === true ? LEGACY_KEEP_AWAKE : null));
-ipcMain.on('power:keep-awake-request', (_event, request: unknown) => setKeepAwake(keepAwakeRequestFrom(request)));
+onFromApp('power:keep-awake', (_event, keep: boolean) => setKeepAwake(keep === true ? LEGACY_KEEP_AWAKE : null));
+onFromApp('power:keep-awake-request', (_event, request: unknown) => setKeepAwake(keepAwakeRequestFrom(request)));
 
 /*
  * What the client last said about its agents. The shell counts nothing itself: which node holds an
@@ -411,7 +463,7 @@ const setAgentActivity = (activity: AgentActivity): void => {
     }
 };
 
-ipcMain.on('agents:activity', (_event, activity: AgentActivity) => setAgentActivity(activity));
+onFromApp('agents:activity', (_event, activity: AgentActivity) => setAgentActivity(activity));
 
 /* Set once a person has said to quit with agents still working, so the question is asked once. */
 let quitConfirmed = false;
@@ -472,9 +524,17 @@ const createWindow = (): Electron.BrowserWindow => {
     window.on('enter-full-screen', () => window.webContents.send('window:fullscreen', true));
     window.on('leave-full-screen', () => window.webContents.send('window:fullscreen', false));
     // Links a page opens in a new window go to the system browser, never to another Electron window.
-    window.webContents.setWindowOpenHandler(({ url }) => {
-        void shell.openExternal(url);
+    contents.setWindowOpenHandler(({ url }) => {
+        if (isExternalLink(url)) {
+            void shell.openExternal(url);
+        }
         return { action: 'deny' };
+    });
+    guardAppNavigation(contents);
+    contents.on('will-attach-webview', (event, preferences) => {
+        if (!hardenGuestPreferences(preferences)) {
+            event.preventDefault();
+        }
     });
     return window;
 };
@@ -637,7 +697,7 @@ const PREVIEW_ACTIONS = new Set(['copy', 'select-all', 'copy-image']);
  * download, the inspector and the system browser. The editing rows are not here, because an
  * editable field never reaches the client. Only a guest the menu came from takes one.
  */
-ipcMain.on('browser:context-action', (_event, request: BrowserContextAction) => {
+onFromApp('browser:context-action', (_event, request: BrowserContextAction) => {
     const contents = webContents.fromId(request.webContentsId);
     if (!contents || contents.isDestroyed()) {
         return;
@@ -671,7 +731,7 @@ ipcMain.on('browser:context-action', (_event, request: BrowserContextAction) => 
     }
 });
 
-ipcMain.handle('dialog:pick-folder', async (_event, initialPath?: string) => {
+handleFromApp('dialog:pick-folder', async (_event, initialPath?: string) => {
     if (!mainWindow) {
         return null;
     }
@@ -683,7 +743,7 @@ ipcMain.handle('dialog:pick-folder', async (_event, initialPath?: string) => {
 });
 
 /* Bytes the client made (an exported drawing) go where a native dialog says they go. */
-ipcMain.handle('dialog:save-file', async (_event, suggestedName: string, bytes: Uint8Array, mime: string) => {
+handleFromApp('dialog:save-file', async (_event, suggestedName: string, bytes: Uint8Array, mime: string) => {
     if (!mainWindow) {
         return null;
     }
@@ -699,23 +759,20 @@ ipcMain.handle('dialog:save-file', async (_event, suggestedName: string, bytes: 
     return result.filePath;
 });
 
-ipcMain.handle('shell:open-external', async (_event, url: string) => {
+handleFromApp('shell:open-external', async (_event, url: string) => {
     if (/^https?:\/\//.test(url)) {
         await shell.openExternal(url);
     }
 });
 
-ipcMain.on('devtools:guest', (_event, id: number) => guestDevTools(id));
+onFromApp('devtools:guest', (_event, id: number) => guestDevTools(id));
 
 /*
  * A png of a guest page, for an agent that asked what the page it drives looks like. Only the app's
  * own page may ask: a guest carries its own preload, which has none of this, and a picture of
  * another guest is not something a page gets to take.
  */
-ipcMain.handle('browser:capture', async (event, id: number) => {
-    if (event.sender !== mainWindow?.webContents) {
-        return null;
-    }
+handleFromApp('browser:capture', async (_event, id: number) => {
     const guest = webContents.fromId(id);
     if (!guest) {
         return null;
@@ -729,10 +786,7 @@ ipcMain.handle('browser:capture', async (event, id: number) => {
  * address proves nothing. Read on every ask rather than once: the daemon mints it on its first start,
  * which in `bun dev` may come after this window. Only the app's own page gets it.
  */
-ipcMain.handle('daemon:local-secret', async (event) => {
-    if (event.sender !== mainWindow?.webContents) {
-        return null;
-    }
+handleFromApp('daemon:local-secret', async () => {
     try {
         return (await readFile(join(ruimteHome, 'local.key'), 'utf8')).trim() || null;
     } catch {
@@ -759,12 +813,6 @@ const pulsarSessions = (): SessionVault => {
     return pulsarVault;
 };
 
-const fromAppWindow = (event: Electron.IpcMainInvokeEvent): boolean => event.sender === mainWindow?.webContents;
-
-const refuseOtherPages = (): never => {
-    throw new Error('Only the app window signs in');
-};
-
 type OpenAiCredentialStatus = {
     configured: boolean;
     persistent: boolean;
@@ -785,12 +833,9 @@ const openAiCredentialStatus = async (): Promise<OpenAiCredentialStatus> => {
     return { configured: false, persistent: false };
 };
 
-ipcMain.handle('openai:credential-status', (event) => (fromAppWindow(event) ? openAiCredentialStatus() : refuseOtherPages()));
+handleFromApp('openai:credential-status', () => openAiCredentialStatus());
 
-ipcMain.handle('openai:save-api-key', async (event, apiKey: unknown) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('openai:save-api-key', async (_event, apiKey: unknown) => {
     if (typeof apiKey !== 'string' || apiKey.trim() === '') {
         throw new Error('Enter an API key');
     }
@@ -798,18 +843,12 @@ ipcMain.handle('openai:save-api-key', async (event, apiKey: unknown) => {
     return openAiCredentialStatus();
 });
 
-ipcMain.handle('openai:clear-api-key', async (event) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('openai:clear-api-key', async () => {
     await openAiKeys().write(null);
     return openAiCredentialStatus();
 });
 
-ipcMain.handle('openai:create-live-session', async (event, sdp: unknown, preferences: unknown) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('openai:create-live-session', async (_event, sdp: unknown, preferences: unknown) => {
     if (typeof sdp !== 'string') {
         throw new Error('The microphone session offer is invalid');
     }
@@ -861,17 +900,11 @@ app.on('web-contents-created', (_event, contents) => {
         }
     });
 });
-ipcMain.handle('speech:state', async (event) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('speech:state', async () => {
     await speechModel.initialized;
     return speechModel.state;
 });
-ipcMain.handle('speech:enable', async (event, enabled: unknown) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('speech:enable', async (_event, enabled: unknown) => {
     if (typeof enabled !== 'boolean') {
         throw new Error('Invalid speech setting');
     }
@@ -881,18 +914,12 @@ ipcMain.handle('speech:enable', async (event, enabled: unknown) => {
     }
     return state;
 });
-ipcMain.handle('speech:remove', async (event) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('speech:remove', async () => {
     await speechModel.setEnabled(false);
     speechService.dispose();
     return speechModel.remove();
 });
-ipcMain.handle('speech:start', async (event, id: unknown, language: unknown) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('speech:start', async (_event, id: unknown, language: unknown) => {
     await speechModel.initialized;
     if (!speechModel.state.enabled || speechModel.state.phase !== 'ready') {
         throw new Error('Enable speech to text in Settings first');
@@ -902,38 +929,26 @@ ipcMain.handle('speech:start', async (event, id: unknown, language: unknown) => 
     }
     return speechService.start(id, language);
 });
-ipcMain.handle('speech:samples', async (event, id: unknown, samples: unknown) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('speech:samples', async (_event, id: unknown, samples: unknown) => {
     if (typeof id !== 'string') {
         throw new Error('Invalid dictation request');
     }
     return speechService.samples(id, samples);
 });
-ipcMain.handle('speech:stop', async (event, id: unknown) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('speech:stop', async (_event, id: unknown) => {
     if (typeof id !== 'string') {
         throw new Error('Invalid dictation request');
     }
     return speechService.stop(id);
 });
-ipcMain.handle('speech:cancel', (event, id: unknown) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('speech:cancel', (_event, id: unknown) => {
     if (typeof id !== 'string') {
         throw new Error('Invalid dictation request');
     }
     speechService.cancel(id);
 });
 
-ipcMain.handle('media:request-microphone', async (event) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('media:request-microphone', async () => {
     if (process.platform !== 'darwin') {
         return true;
     }
@@ -944,20 +959,17 @@ ipcMain.handle('media:request-microphone', async (event) => {
     return status === 'not-determined' ? systemPreferences.askForMediaAccess('microphone') : false;
 });
 
-ipcMain.handle('pulsar:address-book', (event) => (fromAppWindow(event) ? addressBookUrl : refuseOtherPages()));
+handleFromApp('pulsar:address-book', () => addressBookUrl);
 
-ipcMain.handle('pulsar:login-listen', async (event) => {
-    if (!fromAppWindow(event)) {
-        return refuseOtherPages();
-    }
+handleFromApp('pulsar:login-listen', async () => {
     // One login at a time: a second click starts over rather than leaving a port open for the first.
     pendingLogin?.cancel();
     pendingLogin = await listenForLogin();
     return { redirectUri: pendingLogin.redirectUri };
 });
 
-ipcMain.handle('pulsar:login-callback', async (event) => {
-    const login = fromAppWindow(event) ? pendingLogin : refuseOtherPages();
+handleFromApp('pulsar:login-callback', async () => {
+    const login = pendingLogin;
     if (!login) {
         throw new Error('No sign-in is waiting');
     }
@@ -982,23 +994,19 @@ ipcMain.handle('pulsar:login-callback', async (event) => {
     }
 });
 
-ipcMain.handle('pulsar:login-cancel', (event) => {
-    if (fromAppWindow(event)) {
-        pendingLogin?.cancel();
-        pendingLogin = null;
-    }
+handleFromApp('pulsar:login-cancel', () => {
+    pendingLogin?.cancel();
+    pendingLogin = null;
 });
 
-ipcMain.handle('pulsar:exchange', (event, payload: unknown) =>
-    fromAppWindow(event) ? pulsarSessions().exchange(SessionLoginCodeSchema.parse(payload)) : refuseOtherPages()
-);
-ipcMain.handle('pulsar:refresh', (event) => (fromAppWindow(event) ? pulsarSessions().refresh() : refuseOtherPages()));
-ipcMain.handle('pulsar:restore', (event) => (fromAppWindow(event) ? pulsarSessions().restore() : refuseOtherPages()));
-ipcMain.handle('pulsar:sign-out', (event) => (fromAppWindow(event) ? pulsarSessions().signOut() : refuseOtherPages()));
+handleFromApp('pulsar:exchange', (_event, payload: unknown) => pulsarSessions().exchange(SessionLoginCodeSchema.parse(payload)));
+handleFromApp('pulsar:refresh', () => pulsarSessions().refresh());
+handleFromApp('pulsar:restore', () => pulsarSessions().restore());
+handleFromApp('pulsar:sign-out', () => pulsarSessions().signOut());
 
-ipcMain.handle('window:is-fullscreen', () => mainWindow?.isFullScreen() ?? false);
+handleFromApp('window:is-fullscreen', () => mainWindow?.isFullScreen() ?? false);
 
-ipcMain.on('window:theme', (_event, theme: AppTheme) => applyTheme(theme));
+onFromApp('window:theme', (_event, theme: AppTheme) => applyTheme(theme));
 
 /*
  * electron-updater puts the whole HTTP exchange in the message of a failed check: every response
@@ -1073,9 +1081,9 @@ const checkForUpdate = async (): Promise<void> => {
     }
 };
 
-ipcMain.handle('update:state', () => updateState);
+handleFromApp('update:state', () => updateState);
 
-ipcMain.handle('update:configure', (_event, autoDownload: boolean) => {
+handleFromApp('update:configure', (_event, autoDownload: boolean) => {
     if (!updater) {
         return;
     }
@@ -1085,9 +1093,9 @@ ipcMain.handle('update:configure', (_event, autoDownload: boolean) => {
     updateTimer ??= setInterval(() => void checkForUpdate(), UPDATE_INTERVAL_MS);
 });
 
-ipcMain.handle('update:check', () => checkForUpdate());
+handleFromApp('update:check', () => checkForUpdate());
 
-ipcMain.handle('update:download', async () => {
+handleFromApp('update:download', async () => {
     if (!updater) {
         return;
     }
@@ -1098,7 +1106,7 @@ ipcMain.handle('update:download', async () => {
     }
 });
 
-ipcMain.on('update:install', () => updater?.quitAndInstall());
+onFromApp('update:install', () => updater?.quitAndInstall());
 
 /* From the REST API rather than the updater's atom feed: the feed carries GitHub's rendered HTML,
    only the versions between this one and the next, and a tag whose release is still a draft. */
@@ -1107,7 +1115,7 @@ const releaseNotes = createReleaseNotes({
     cacheFile: join(app.getPath('userData'), 'release-notes.json')
 });
 
-ipcMain.handle('releases:list', (_event, refresh?: boolean) => releaseNotes.list(refresh === true));
+handleFromApp('releases:list', (_event, refresh?: boolean) => releaseNotes.list(refresh === true));
 
 // Replace macOS's stock About and Settings with client routes while retaining native roles such as Quit.
 function appMenu(): Electron.MenuItemConstructorOptions {
@@ -1219,8 +1227,8 @@ const menuItemsOf = (nodes: readonly MenuNode[]): Electron.MenuItemConstructorOp
     nodes.map(menuItemOf).filter((item): item is Electron.MenuItemConstructorOptions => item !== null);
 
 // The client builds the menu from what has the focus (`apps/client/src/shell/menu`); the shell draws it.
-ipcMain.on('menu:set', (event, spec: MenuSpec) => {
-    if (event.sender !== mainWindow?.webContents || !Array.isArray(spec?.menus)) {
+onFromApp('menu:set', (_event, spec: MenuSpec) => {
+    if (!Array.isArray(spec?.menus)) {
         return;
     }
     try {
@@ -1265,7 +1273,7 @@ const runSmoke = async (window: Electron.BrowserWindow): Promise<void> => {
     }
     await window.webContents.executeJavaScript(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', altKey: true, bubbles: true }))`);
     await wait(500);
-    const target = devUrl ?? `http://127.0.0.1:${port}/`;
+    const target = appUrl;
     await window.webContents.executeJavaScript(
         `(() => { const ids = window.ruimte?.nodeIds() ?? []; const id = ids[ids.length - 1]; if (id) { window.ruimte.browserNavigate(id, ${JSON.stringify(target)}); } })()`
     );
@@ -1317,6 +1325,7 @@ if (!app.requestSingleInstanceLock()) {
     void app.whenReady().then(async () => {
         setStaticMenu();
         sealPreviewSession();
+        sealBrowserSession();
         registerGuestPreload();
         powerMonitor.on('on-battery', applyKeepAwake);
         powerMonitor.on('on-ac', applyKeepAwake);
@@ -1331,7 +1340,7 @@ if (!app.requestSingleInstanceLock()) {
             return;
         }
         mainWindow = createWindow();
-        await mainWindow.loadURL(devUrl ?? `http://127.0.0.1:${port}/`);
+        await mainWindow.loadURL(appUrl);
         if (smoke) {
             await runSmoke(mainWindow);
             app.quit();
@@ -1344,7 +1353,7 @@ if (!app.requestSingleInstanceLock()) {
     app.on('activate', () => {
         if (mainWindow === null && app.isReady()) {
             mainWindow = createWindow();
-            void mainWindow.loadURL(devUrl ?? `http://127.0.0.1:${port}/`);
+            void mainWindow.loadURL(appUrl);
         }
     });
 
