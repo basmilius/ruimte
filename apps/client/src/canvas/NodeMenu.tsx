@@ -24,6 +24,7 @@ import {
 import type { ProviderInfo } from '@ruimte/contracts';
 import { colorNoteAction, createNodeAction, duplicateNodeAction, focusNodeAction, linkNodesAction } from '@/actions/client-actions';
 import { ChatAgentSubmenu } from '@/agents/AgentMenus';
+import { FlagSubmenu } from '@/project/FlagSubmenu';
 import { askOpenAsView, canOpenAsView } from '@/project/views';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
@@ -274,6 +275,7 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
                             </ContextMenu.SubmenuRoot>
                         </>
                     )}
+                    <FlagSubmenu id={id} />
                     <ContextMenu.SubmenuRoot>
                         <ContextMenu.SubmenuTrigger className="menu-item">
                             <Icon icon={Palette} size={14} /> {t('menu.color')}

@@ -49,6 +49,7 @@ export const PALETTE_IDS = [
     'view-new-subheader',
     'view-promote',
     'view-delete',
+    'flag-toggle',
     'add-terminal',
     'add-chat',
     'add-browser',

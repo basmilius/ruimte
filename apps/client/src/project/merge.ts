@@ -3,6 +3,7 @@ import {
     type ProjectCanvasView,
     type ProjectContent,
     type ProjectEdge,
+    type ProjectFlags,
     type ProjectLayout,
     type ProjectNode,
     type ProjectText,
@@ -346,6 +347,25 @@ const interleave = (primary: readonly string[], secondary: readonly string[], pr
 };
 
 /*
+ * Three-way per id, the rule a field of a node follows. When both sides flagged one id differently
+ * this client's flag stands rather than refusing the whole document: a flag is a mark, not work.
+ */
+const mergeFlags = (base: ProjectFlags = {}, mine: ProjectFlags = {}, theirs: ProjectFlags = {}): ProjectFlags => {
+    const merged: ProjectFlags = { ...mine };
+    for (const id of new Set([...Object.keys(base), ...Object.keys(theirs)])) {
+        if (base[id] === theirs[id] || mine[id] !== base[id]) {
+            continue;
+        }
+        if (theirs[id] === undefined) {
+            delete merged[id];
+        } else {
+            merged[id] = theirs[id];
+        }
+    }
+    return merged;
+};
+
+/*
  * Three-way merge by id and field. Local edits win unless both sides changed the same field,
  * deleted a changed entry or orphaned an edge. Nodes in `handled` keep their local frame.
  */
@@ -420,7 +440,13 @@ export const mergeProject = (base: ProjectContent, mine: ProjectContent, theirs:
 
     return {
         ok: true,
-        content: { name: mine.name, color: mine.color, ...(mine.icon ? { icon: mine.icon } : {}), views },
+        content: {
+            name: mine.name,
+            color: mine.color,
+            ...(mine.icon ? { icon: mine.icon } : {}),
+            views,
+            flags: mergeFlags(base.flags, mine.flags, theirs.flags)
+        },
         changes: { views: added, canvases }
     };
 };

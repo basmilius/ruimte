@@ -265,6 +265,17 @@ describe('changing the list of views', () => {
         expect(useDocument.getState().edits).toBe(before + 1);
     });
 
+    test('a flag is an edit, one that changes nothing is not, and loading a document takes its flags', () => {
+        const before = useDocument.getState().edits;
+        useDocument.getState().setFlags(['a', 'n1'], 'red');
+        expect(useDocument.getState().flags).toEqual({ a: 'red', n1: 'red' });
+        expect(useDocument.getState().edits).toBe(before + 1);
+        useDocument.getState().setFlags(['a'], 'red');
+        expect(useDocument.getState().edits).toBe(before + 1);
+        useDocument.getState().load({ ...document([]), flags: { b: 'blue' } }, null);
+        expect(useDocument.getState().flags).toEqual({ b: 'blue' });
+    });
+
     test('reordering writes the order into the document', () => {
         useDocument.getState().moveView('b', 0);
         expect(useDocument.getState().views.map((each) => each.id)).toEqual(['b', 'a']);
@@ -466,7 +477,7 @@ describe('a view in the trash', () => {
     test('a merge keeps it out of the list and takes in what another writer changed on it', () => {
         useDocument.getState().trashView('a');
         const renamed = { ...view('a', [node('n1', 40, 40)]), name: 'Renamed' };
-        useDocument.getState().applyMerge([renamed, view('b', [node('n2', 900, 900)])], {}, []);
+        useDocument.getState().applyMerge([renamed, view('b', [node('n2', 900, 900)])], {}, [], {});
         expect(useDocument.getState().views.map((each) => each.id)).toEqual(['b']);
         expect(useDocument.getState().trashed[0]!.view).toEqual(renamed);
 
@@ -476,7 +487,7 @@ describe('a view in the trash', () => {
 
     test('a merge without it lets it go, since another writer deleted it too', () => {
         useDocument.getState().trashView('a');
-        useDocument.getState().applyMerge([view('b', [node('n2', 900, 900)])], {}, []);
+        useDocument.getState().applyMerge([view('b', [node('n2', 900, 900)])], {}, [], {});
         expect(useDocument.getState().trashed).toEqual([]);
         expect(useDocument.getState().restoreView('a')).toBe(false);
     });

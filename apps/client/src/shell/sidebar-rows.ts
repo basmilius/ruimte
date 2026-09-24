@@ -37,6 +37,8 @@ export interface SidebarView {
     path: string | null;
     /* Whether this view lives in the shared file, which is the one a team commits. */
     shared: boolean;
+    /* The flag this person put on it, as a node accent name. */
+    flag?: string;
     /* What sits on the canvas. A view that is not a canvas lists nothing: it is one node itself. */
     nodes: SidebarNode[];
     /* The node a standalone view is, so its row carries the status and the draft dot of that node. */

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { MAX_TITLE_LENGTH, type ActionInput, type ActionRegistry } from '@ruimte/actions';
 import type { ProjectCanvasView, ProjectDocument, ProjectSummary, ProviderInfo } from '@ruimte/contracts';
-import { clientActions, createClientActionRegistry, PERSON_ACTION_CALL, selectAllAction, VOICE_ACTION_CALL } from './client-actions';
+import { clientActions, createClientActionRegistry, PERSON_ACTION_CALL, selectAllAction, toggleFlagAction, VOICE_ACTION_CALL } from './client-actions';
 import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
 import { useDocument } from '@/state/document';
@@ -992,6 +992,52 @@ describe('client actions', () => {
             expect(useDocument.getState().views[1]).toMatchObject({ icon: undefined });
             expect(await clientActions.undo(cleared.undoToken, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed' });
             expect(useDocument.getState().views[1]).toMatchObject({ icon: { kind: 'lucide', value: 'rocket' } });
+        });
+
+        test('flags a view and a node on the canvas on screen, takes them off with null, and undo puts them back', async () => {
+            canvas().addNode('note', { x: 0, y: 0 }, { title: 'Plan' });
+            const [note] = canvas().order;
+            const flagged = await clientActions.execute('flag.set', { ids: ['release', note!], color: 'blue' }, PERSON_ACTION_CALL);
+            expect(flagged).toMatchObject({
+                status: 'completed',
+                output: {
+                    flags: [
+                        { id: 'release', target: 'view', previous: null },
+                        { id: note, target: 'node', previous: null }
+                    ],
+                    color: 'blue',
+                    changed: true
+                }
+            });
+            expect(useDocument.getState().flags).toEqual({ release: 'blue', [note!]: 'blue' });
+            const cleared = await clientActions.execute('flag.set', { ids: ['release'], color: null }, PERSON_ACTION_CALL);
+            if (cleared.status !== 'completed' || !cleared.undoToken) {
+                throw new Error('Expected the flag to go');
+            }
+            expect(useDocument.getState().flags).toEqual({ [note!]: 'blue' });
+            expect(await clientActions.undo(cleared.undoToken, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed' });
+            expect(useDocument.getState().flags).toEqual({ release: 'blue', [note!]: 'blue' });
+            expect(await clientActions.execute('flag.set', { ids: ['nothing'], color: 'red' }, PERSON_ACTION_CALL)).toMatchObject({
+                error: { code: 'unknown-target' }
+            });
+            // Voice has no words for a flag yet.
+            expect(await clientActions.execute('flag.set', { ids: ['release'], color: 'red' }, VOICE_ACTION_CALL)).toMatchObject({ status: 'failed' });
+        });
+
+        test('the flag shortcut flags the selection, else the view, and a second press takes the flags off', async () => {
+            canvas().addNode('note', { x: 0, y: 0 }, { title: 'Plan' });
+            const [note] = canvas().order;
+            canvas().select([]);
+            toggleFlagAction();
+            await Promise.resolve();
+            expect(useDocument.getState().flags).toEqual({ main: 'red' });
+            canvas().select([note!]);
+            toggleFlagAction();
+            await Promise.resolve();
+            expect(useDocument.getState().flags).toEqual({ main: 'red', [note!]: 'red' });
+            toggleFlagAction();
+            await Promise.resolve();
+            expect(useDocument.getState().flags).toEqual({ main: 'red' });
         });
 
         test('locks one gesture or all four', async () => {

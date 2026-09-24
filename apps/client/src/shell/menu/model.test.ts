@@ -216,6 +216,7 @@ describe('the menus', () => {
         expect(chat.flatMap((node) => (node.kind === 'command' ? [node.id] : []))).toEqual([
             'view-fork',
             'view-open-in-terminal',
+            'flag-toggle',
             'view-settings',
             'view-delete'
         ]);

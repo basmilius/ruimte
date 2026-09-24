@@ -63,6 +63,7 @@ import { useBrowserDisplayTitle } from '@/browser/title';
 import { resetTitle } from '@/nodes/node-host';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
+import { FlagMark } from '@/project/FlagMark';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { Brand } from '@/ui/Brand';
 import { MENU_HINT, SECTION_LABEL } from '@/ui/classes';
@@ -569,6 +570,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                     cell is not the same as one that is closed. */}
                 {row.beside && <span className="sr-only">{t('sidebar.openInAnotherCell')}</span>}
                 <span className="grow" />
+                <FlagMark color={view.flag} />
                 {row.draft && (
                     <Tooltip label={t('sidebar.unsentDraft')}>
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
@@ -758,6 +760,7 @@ export function Sidebar() {
     const combined = useSettings((s) => s.sidebarScope === 'all-open');
     const currentProject = useProject((s) => s.current);
     const shared = useDocument(useShallow((state) => state.shared));
+    const flags = useDocument((state) => state.flags);
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.byKey);
@@ -806,6 +809,7 @@ export function Sidebar() {
                     titleSource: 'titleSource' in view ? view.titleSource : undefined,
                     kind: view.kind,
                     shared: shared.includes(view.id),
+                    flag: flags[view.id],
                     icon: viewIconOf(view),
                     provider: provider ?? null,
                     path: view.kind === 'file' ? view.path : null,
@@ -815,7 +819,7 @@ export function Sidebar() {
                 };
             })
         }),
-        [source, shared, endpointId, sessions, chats, drafts, warnings, unseen, tasks, snoozes]
+        [source, shared, flags, endpointId, sessions, chats, drafts, warnings, unseen, tasks, snoozes]
     );
 
     const activeViewId = project.activeViewId;

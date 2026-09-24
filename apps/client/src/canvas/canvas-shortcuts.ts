@@ -16,7 +16,8 @@ import {
     groupSelectionAction,
     historyAction,
     selectAllAction,
-    splitAction
+    splitAction,
+    toggleFlagAction
 } from '@/actions/client-actions';
 import { showView, stepView, viewAtIndex } from '@/project/views';
 import { undoLatestDeletion } from '@/project/view-trash';
@@ -269,6 +270,14 @@ export const useCanvasShortcuts = (): void => {
             if (is(CANVAS_SHORTCUTS.togglePanel)) {
                 e.preventDefault();
                 useUi.getState().togglePanel();
+                return;
+            }
+            // From anywhere but a popup, so a flag goes on a chat view while its composer has the keyboard.
+            if (is(CANVAS_SHORTCUTS.toggleFlag)) {
+                if (!isInFloatingLayer(e.target)) {
+                    e.preventDefault();
+                    toggleFlagAction();
+                }
                 return;
             }
             /* A diagram has an undo and a camera of its own and nothing else a key reaches; a drawing binds

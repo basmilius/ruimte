@@ -478,7 +478,8 @@
             "selectFirst": "Selecteer eerst nodes",
             "rememberLayout": "Onthoud waar alles staat",
             "usage": "Kosten, tokens en limieten van je abonnement",
-            "remote": "Je machines, je account en pairing"
+            "remote": "Je machines, je account en pairing",
+            "toggleFlag": "De geselecteerde nodes, anders deze weergave"
         },
         "commands": {
             "openFolder": "Een map als project openen",
@@ -525,7 +526,8 @@
             "find": "Zoeken in chat of bestand",
             "keepAwakeOff": "Deze Mac laten slapen",
             "keepAwakeWorking": "Deze Mac wakker houden terwijl agents werken",
-            "keepAwakeAlways": "Deze Mac altijd wakker houden"
+            "keepAwakeAlways": "Deze Mac altijd wakker houden",
+            "toggleFlag": "Vlag zetten of weghalen"
         },
         "sections": {
             "recent": "Recent",
@@ -690,6 +692,7 @@
         "projectSettings": "Projectinstellingen…",
         "clear": "Wissen",
         "open": "Menu",
-        "find": "Zoeken"
+        "find": "Zoeken",
+        "toggleFlag": "Vlag zetten of weghalen"
     }
 }

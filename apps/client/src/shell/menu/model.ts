@@ -432,6 +432,7 @@ const viewKindMenu = (
             ...only(offers?.reveal === true, command('view-reveal', t('reveal', { app: context.fileManager }))),
             separator,
             ...only(offers?.share === true, command('view-share', context.shared ? t('unshare') : t('share'))),
+            command('flag-toggle', t('toggleFlag'), { shortcut: CANVAS_SHORTCUTS.toggleFlag }),
             command('view-settings', t('viewSettings')),
             separator,
             command('view-delete', t('deleteView'))

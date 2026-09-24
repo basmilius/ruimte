@@ -20,6 +20,7 @@ import {
 } from '@ruimte/actions';
 import {
     canShareView,
+    flagOf,
     isCanvasView,
     isDiagramView,
     isDrawingView,
@@ -30,6 +31,7 @@ import {
     MAIN_VIEW_NAME,
     type AgentKind,
     type DeviceReference,
+    type NodeAccent,
     type NodeTitleSource,
     type NoteColor,
     type ProjectIconChoice,
@@ -55,6 +57,7 @@ import {
     type ViewDeletionFacts,
     type ViewDeletionMachine
 } from '@/project/view-deletion';
+import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
 import { offerViewUndo } from '@/project/view-trash';
 import type { PromptClients } from '@/prompts/logic/subjects';
 import { FILES_VIEW_ID } from '@/shell/files-view';
@@ -1062,6 +1065,39 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 }
             };
         },
+        'flag.set': ({ ids, color }) => {
+            const state = document.getState();
+            const views = state.exportViews();
+            const flagged = [...new Set(ids)].map((id) => {
+                const target = views.some((view) => view.id === id)
+                    ? ('view' as const)
+                    : views.some((view) => isCanvasView(view) && view.nodes.some((node) => node.id === id))
+                      ? ('node' as const)
+                      : null;
+                if (target === null) {
+                    throw new ActionRefusal('unknown-target', `No view or node with id “${id}” exists in this project.`);
+                }
+                return { id, target, previous: flagOf(state.flags, id) };
+            });
+            state.setFlags(ids, color);
+            const changed = document.getState().flags !== state.flags;
+            return {
+                output: { flags: flagged, color, changed },
+                ...(changed
+                    ? {
+                          undo: () => {
+                              const current = document.getState();
+                              if (flagged.some((entry) => flagOf(current.flags, entry.id) !== color)) {
+                                  throw new ActionRefusal('stale-undo', 'These flags changed again since.');
+                              }
+                              for (const entry of flagged) {
+                                  current.setFlags([entry.id], entry.previous);
+                              }
+                          }
+                      }
+                    : {})
+            };
+        },
         'layout.save': ({ viewId, name }, { confirmed }) => {
             const { view, canvas } = canvasOnScreen(document, viewId);
             const previous = canvas.layouts.find((layout) => layout.name === name) ?? null;
@@ -1650,6 +1686,30 @@ export const cancelGitRunAction = (runId: string): void => {
 /* Null takes the mark away. */
 export const setViewIconAction = (viewId: string, icon: ProjectIconChoice | null): void => {
     void runAsPerson('view.setIcon', { viewId, icon: icon?.value ?? null });
+};
+
+/* A color a person picks is the one the shortcut sets next; null takes the flags off. */
+export const flagAction = (ids: readonly string[], color: NodeAccent | null): void => {
+    if (color !== null) {
+        rememberFlagColor(color);
+    }
+    void runAsPerson('flag.set', { ids: [...ids], color });
+};
+
+/*
+ * What the shortcut flags: the nodes selected on the canvas with the focus, else the view in the
+ * focused cell. Flagged all over it takes the flags off; otherwise it flags the lot in the last color.
+ */
+export const toggleFlagAction = (): void => {
+    const state = useDocument.getState();
+    const view = activeViewOf(state);
+    if (view === null) {
+        return;
+    }
+    const selection = isCanvasView(view) ? focusedCanvas().getState().selection : [];
+    const ids = selection.length > 0 ? selection : [view.id];
+    const flagged = ids.every((id) => flagOf(state.flags, id) !== null);
+    void runAsPerson('flag.set', { ids, color: flagged ? null : lastFlagColor() });
 };
 
 /* A person's key or menu row is the answer, as a terminal's own Cmd+K always was. */

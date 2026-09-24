@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, ProjectSummary, ProjectView } from '@ruimte/contracts';
+import type { ProjectContent, ProjectDocument, ProjectFlags, ProjectIconChoice, ProjectLocal, ProjectSummary, ProjectView } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
@@ -35,12 +35,13 @@ interface DocumentAccess {
     getState(): {
         views: ProjectView[];
         shared: string[];
+        flags: ProjectFlags;
         trashed: ReadonlyArray<{ view: ProjectView }>;
         activeViewId: string | null;
         edits: number;
         loading: boolean;
         load(document: ProjectDocument | null, local: ProjectLocal | null): void;
-        applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>, shared: string[]): void;
+        applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>, shared: string[], flags: ProjectFlags): void;
         heldNodeIds(): Set<string>;
         exportViews(): ProjectView[];
         fileViews(): ProjectView[];
@@ -594,7 +595,7 @@ export class ProjectClient {
         this.sink.setRev(document.rev);
         /* Which file a view is in is the folder's answer and not this screen's. A colleague's pull
            can share one, and nothing here may argue with what the daemon just read off disk. */
-        this.documents.getState().applyMerge(merge.content.views, merge.changes.canvases, document.shared ?? []);
+        this.documents.getState().applyMerge(merge.content.views, merge.changes.canvases, document.shared ?? [], merge.content.flags ?? {});
         return true;
     }
 
@@ -605,7 +606,9 @@ export class ProjectClient {
             name: current?.name ?? '',
             color: current?.color ?? '',
             ...(chosenIcon ? { icon: chosenIcon } : {}),
-            views: this.documents.getState().fileViews()
+            views: this.documents.getState().fileViews(),
+            // Always sent, empty too: a save without flags keeps the ones on disk, so taking the last one off has to say so.
+            flags: this.documents.getState().flags
         };
     }
 

@@ -366,8 +366,22 @@ describe('ProjectClient', () => {
         expect(useDocument.getState().shared).toEqual(['main']);
 
         // And what a pull says about the folder outranks this screen.
-        useDocument.getState().applyMerge(useDocument.getState().views, {}, []);
+        useDocument.getState().applyMerge(useDocument.getState().views, {}, [], {});
         expect(useDocument.getState().shared).toEqual([]);
+        dispose();
+    });
+
+    test('a flag rides the next save, and taking the last one off still says so', async () => {
+        const { transport, dispose } = setup();
+        await tick();
+        useDocument.getState().setFlags(['main'], 'red');
+        await tick(10);
+        expect((transport.of('project.save')[0]?.payload as { content: { flags?: unknown } }).content.flags).toEqual({ main: 'red' });
+
+        useDocument.getState().setFlags(['main'], null);
+        await tick(10);
+        // An empty map and not a missing one: the daemon keeps the flags of a save that names none.
+        expect((transport.of('project.save')[1]?.payload as { content: { flags?: unknown } }).content.flags).toEqual({});
         dispose();
     });
 

@@ -22,6 +22,7 @@ import { canShareView, isCanvasView, type ProjectView } from '@ruimte/contracts'
 import { BookmarkSubmenu } from '@/chat/ui/BookmarkSubmenu';
 import { ForkMenuItem, useOffersFork } from '@/chat/ui/ForkMenuItem';
 import { closeCellAction, duplicateViewAction, placeViewOnCanvasAction, showViewOnCanvasAction, splitAction } from '@/actions/client-actions';
+import { FlagSubmenu } from '@/project/FlagSubmenu';
 import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from '@/project/views';
 import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
@@ -106,6 +107,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
             <Menu.Item className="menu-item" onClick={() => askViewSettings(viewId)}>
                 <Icon icon={Settings2} size={14} /> {t('viewMenu.viewSettings')} {onSidebar && <Kbd shortcut={KEY_SHORTCUTS.rename} />}
             </Menu.Item>
+            <FlagSubmenu id={viewId} />
             {kind === 'chat' && <BookmarkSubmenu chatId={viewId} />}
 
             {copies && <Menu.Separator className={MENU_SEPARATOR} />}

@@ -15,6 +15,7 @@ export const CANVAS_SHORTCUTS = {
     maximizeCell: shortcut('Mod+Shift+Enter'),
     newView: shortcut('Mod+T'),
     togglePanel: shortcut('Mod+Alt+B'),
+    toggleFlag: shortcut('Mod+Alt+F'),
     focusPrompts: shortcut('Mod+Shift+P'),
     previousView: shortcut('Mod+Shift+['),
     nextView: shortcut('Mod+Shift+]'),

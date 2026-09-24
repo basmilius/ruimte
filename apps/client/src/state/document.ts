@@ -16,10 +16,13 @@ import {
     withRenamedView,
     withView,
     withViewAsNode,
+    withFlags,
     withViewIcon,
     withoutView,
+    type NodeAccent,
     type NodeTitleSource,
     type ProjectDocument,
+    type ProjectFlags,
     type ProjectIconChoice,
     type ProjectLocal,
     type ProjectView,
@@ -90,6 +93,8 @@ export interface DocumentState {
     /* The views that live in the shared file, which is the one a team commits. Everything else is
        this person's, which is what a view is until someone shares it. */
     shared: string[];
+    /* This person's flags on views and nodes, by id. Only ever in the private file, like `shared` beside the views. */
+    flags: ProjectFlags;
     /*
      * Views a person deleted that can still come back, oldest first. They are gone from the list and
      * the grid but not from the file, since another client and the daemon end what a view holds the
@@ -103,9 +108,11 @@ export interface DocumentState {
      * views, and what each canvas on screen has to take in. Not an edit, since it is already on disk,
      * and no view opens by itself: a person's grid only moves when the person moves it.
      */
-    applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>, shared: string[]): void;
+    applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>, shared: string[], flags: ProjectFlags): void;
     /* Puts a view in the shared file or takes it back out. Only a person does this; see `SharedViewIdsSchema`. */
     setShared(id: string, shared: boolean): void;
+    /* Flags views and nodes in one color, or takes their flags off with null. */
+    setFlags(ids: readonly string[], color: NodeAccent | null): void;
     /* The nodes a gesture holds in any canvas on screen, which a merge leaves under the person's hand. */
     heldNodeIds(): Set<string>;
     /* Puts a view in the cell that has the focus, or moves the focus to the cell it already stands in. */
@@ -459,6 +466,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             edits: 0,
             loading: false,
             shared: [],
+            flags: {},
             trashed: [],
 
             load(document, local) {
@@ -470,7 +478,16 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 const layout = layoutOf(local ?? { activeViewId: null, layout: undefined }, views);
                 const settled = settledOn(views, viewLocal, layout, { lastCanvasViewId: views.find(isCanvasView)?.id ?? null });
                 // Another project is another set of views, so a banner about the one that just left goes with it.
-                set({ ...settled, maximized: null, viewNotice: null, loading: true, edits: 0, shared: document?.shared ?? [], trashed: kept.trashed });
+                set({
+                    ...settled,
+                    maximized: null,
+                    viewNotice: null,
+                    loading: true,
+                    edits: 0,
+                    shared: document?.shared ?? [],
+                    flags: document?.flags ?? {},
+                    trashed: kept.trashed
+                });
                 // The project that was here goes first, editors and all, so nothing of it may show through.
                 peers.canvases.keep([]);
                 openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), settled.activeViewId, peers);
@@ -484,9 +501,16 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 });
             },
 
-            applyMerge(merged, canvases, shared) {
+            setFlags(ids, color) {
+                const flags = withFlags(get().flags, ids, color);
+                if (flags !== null) {
+                    set((state) => ({ flags, edits: state.edits + 1 }));
+                }
+            },
+
+            applyMerge(merged, canvases, shared, flags) {
                 const { views, trashed } = splitTrash(merged, get().trashed);
-                set((state) => ({ views, shared, trashed, viewNotice: keptNotice(state.viewNotice, views) }));
+                set((state) => ({ views, shared, flags, trashed, viewNotice: keptNotice(state.viewNotice, views) }));
                 for (const [viewId, patch] of Object.entries(canvases)) {
                     peers.canvases.peek(viewId)?.getState().applyExternal(patch);
                 }

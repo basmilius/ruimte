@@ -12,7 +12,8 @@ import {
     moveNodeToViewAction,
     placeViewOnCanvasAction,
     setLocksAction,
-    showViewOnCanvasAction
+    showViewOnCanvasAction,
+    toggleFlagAction
 } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
 import { canKeepAwake } from '@/desktop/bridge';
@@ -184,7 +185,14 @@ export const appCommands = (): Command[] => {
                   ...(activeViewId
                       ? [
                             { id: 'view-settings', label: i18next.t('shell:viewMenu.viewSettings'), run: () => askViewSettings(activeViewId) },
-                            { id: 'view-delete', label: i18next.t('shell:viewMenu.deleteView'), run: () => askDeleteView(activeViewId) }
+                            { id: 'view-delete', label: i18next.t('shell:viewMenu.deleteView'), run: () => askDeleteView(activeViewId) },
+                            {
+                                id: 'flag-toggle',
+                                label: i18next.t('shell:palette.commands.toggleFlag'),
+                                hint: i18next.t('shell:palette.hints.toggleFlag'),
+                                shortcut: CANVAS_SHORTCUTS.toggleFlag,
+                                run: toggleFlagAction
+                            }
                         ]
                       : []),
                   { id: 'view-new-drawing', label: i18next.t('shell:palette.commands.newDrawingView'), run: () => void createViewAction('drawing') },

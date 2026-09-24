@@ -134,6 +134,26 @@ describe('what is additive', () => {
     });
 });
 
+describe('flags', () => {
+    test('each side keeps the flags it set and takes the ones the other side set, and a flag never refuses a merge', () => {
+        const base = content([canvas('main')], { flags: { a: 'red', b: 'blue', c: 'green' } });
+        const mine = content([canvas('main')], { flags: { a: 'red', b: 'pink', c: 'green', mine: 'lime' } });
+        const theirs = content([canvas('main')], { flags: { b: 'sky', c: 'green', there: 'rose' } });
+
+        const merge = mergeProject(base, mine, theirs);
+        if (!merge.ok) {
+            throw new Error(merge.reason);
+        }
+        // Gone there, and untouched here; changed on both sides, where this client's color stands.
+        expect(merge.content.flags).toEqual({ b: 'pink', c: 'green', mine: 'lime', there: 'rose' });
+    });
+
+    test('a document from a machine that keeps no flags reads as one without any', () => {
+        const merge = mergeProject(content([canvas('main')]), content([canvas('main')], { flags: { main: 'red' } }), content([canvas('main')]));
+        expect(merge.ok && merge.content.flags).toEqual({ main: 'red' });
+    });
+});
+
 describe('what is a conflict', () => {
     test('both sides moving the same node', () => {
         const base = content([canvas('main', { nodes: [node('a')] })]);

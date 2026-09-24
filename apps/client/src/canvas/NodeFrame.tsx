@@ -38,6 +38,7 @@ import { accentColor } from '@/canvas/accents';
 import { ApprovalStrip } from '@/canvas/ApprovalStrip';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
+import { FlagMarkOf } from '@/project/FlagMark';
 import { SnoozeMenuItems } from '@/shell/Snooze';
 import { useEndpointId } from '@/state/keys';
 import { useCellHasFocus } from '@/state/document';
@@ -308,6 +309,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                         )}
                     </span>
                     {node.kind === 'chat' && !renaming && <SubagentBreadcrumb chatId={id} className="grow" />}
+                    {!renaming && <FlagMarkOf id={id} />}
                     {collapsed && <Pill className="tabular-nums">{t('group.inside', { count: node.memberIds?.length ?? 0 })}</Pill>}
                     {node.kind === 'chat' && !renaming && <ForkPill chatId={id} />}
                     {node.kind === 'chat' && !renaming && <PlanPill chatId={id} />}

@@ -478,7 +478,8 @@
             "selectFirst": "Select nodes first",
             "rememberLayout": "Remember where everything sits",
             "usage": "Cost, tokens and plan limits",
-            "remote": "Your machines, your account and pairing"
+            "remote": "Your machines, your account and pairing",
+            "toggleFlag": "The selected nodes, or else this view"
         },
         "commands": {
             "openFolder": "Open a folder as a project",
@@ -525,7 +526,8 @@
             "find": "Find in chat or file",
             "keepAwakeOff": "Let this Mac sleep",
             "keepAwakeWorking": "Keep this Mac awake while agents work",
-            "keepAwakeAlways": "Always keep this Mac awake"
+            "keepAwakeAlways": "Always keep this Mac awake",
+            "toggleFlag": "Flag or unflag"
         },
         "sections": {
             "recent": "Recent",
@@ -690,6 +692,7 @@
         "projectSettings": "Project Settings…",
         "clear": "Clear",
         "open": "Menu",
-        "find": "Find"
+        "find": "Find",
+        "toggleFlag": "Flag or Unflag"
     }
 }
