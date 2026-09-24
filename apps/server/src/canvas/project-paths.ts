@@ -61,6 +61,32 @@ export const checkCwd = async (folder: string, cwd: string, worktreePaths: (fold
     return resolved;
 };
 
+export interface StartCwdDeps {
+    /* Whether an agent made this node, which is what put its cwd through `checkCwd` in the first place. */
+    madeByAgent(nodeId: string): boolean;
+    /* The folder of the project that places the node; null when no project this machine knows does. */
+    folderOf(nodeId: string): string | null;
+    worktreePaths(folder: string): Promise<string[]>;
+}
+
+/*
+ * The cwd check again, at every start of a node an agent made. The verb checked a path that may be
+ * a symlink, and whoever can write in the folder can point it elsewhere before the start or the
+ * restart after it, so the check that counts is the one right before the shell or the CLI spawns.
+ */
+export const startCwdGuard =
+    (deps: StartCwdDeps) =>
+    async (nodeId: string, cwd: string): Promise<void> => {
+        if (!deps.madeByAgent(nodeId)) {
+            return;
+        }
+        const folder = deps.folderOf(nodeId);
+        if (folder === null) {
+            throw new VerbRefusal(CWD_RULE.outsideCode, `${nodeId} is in no project this machine knows, so ${cwd} cannot be held against its folder`);
+        }
+        await checkCwd(folder, cwd, deps.worktreePaths);
+    };
+
 const readInsideFile = async (rule: InsideRule, folder: string, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> => {
     const { resolved, real } = await checkInsideProject(folder, rule, path, worktreePaths);
     if (!(await stat(real)).isFile()) {

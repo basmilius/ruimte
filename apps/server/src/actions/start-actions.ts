@@ -153,7 +153,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
 
                 return {
                     landed: async () => {
-                        await host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: caller.caller, depth, agent: true });
+                        await host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: caller.caller, depth, agent: true, ceiling });
                         if (input.worktree && cwd !== undefined) {
                             await host.claimWorktree(place.folder, cwd, id);
                         }
@@ -347,7 +347,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                         const batchId = input.task ? `batch-${randomBytes(6).toString('hex')}` : undefined;
                         // Every task before any agent starts, so a role that is done at once never finds its team complete without the others.
                         for (const [index, made] of output.agents.entries()) {
-                            await host.recordMade({ projectId: place.projectId, nodeId: made.nodeId, openedBy: caller.caller, depth, agent: true });
+                            await host.recordMade({ projectId: place.projectId, nodeId: made.nodeId, openedBy: caller.caller, depth, agent: true, ceiling });
                             const roleCwd = roleCwds[index];
                             if (input.worktree && roleCwd !== undefined) {
                                 await host.claimWorktree(place.folder, roleCwd, made.nodeId);

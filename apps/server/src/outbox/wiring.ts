@@ -80,6 +80,8 @@ export interface OutboxWiringDeps {
     clock?: OutboxClock;
     now?: () => number;
     log?: (line: string) => void;
+    /* Refuses a directory an agent node may not start in, the same check the managers make. */
+    checkCwd?: (nodeId: string, cwd: string) => Promise<void>;
     /* Every unused fork a deleted node took along, for a caller that waits on them. */
     onDropped?: (drop: Promise<void>) => void;
     /* What a prune that failed does; the daemon logs it, a test stays quiet. */
@@ -157,6 +159,7 @@ export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
                 createSession: (options) => sessions.create(options),
                 killSession: (sessionId) => sessions.kill(sessionId),
                 onGaveUp: taskWiring.onStartGaveUp,
+                ...(deps.checkCwd ? { checkCwd: deps.checkCwd } : {}),
                 ...(deps.log ? { log: deps.log } : {})
             }),
             'resume-run': resumeRunHandler(chats),

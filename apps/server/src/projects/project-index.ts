@@ -8,6 +8,7 @@ import {
     type ProjectCanvasView,
     type ProjectContent,
     type ProjectFlags,
+    type ProjectView,
     type ViewSessionNode
 } from '@ruimte/contracts';
 
@@ -79,6 +80,10 @@ export class ProjectIndex {
 
     has(projectId: string): boolean {
         return this.projects.has(projectId);
+    }
+
+    viewsOf(projectId: string): readonly ProjectView[] | null {
+        return this.projects.get(projectId)?.content.views ?? null;
     }
 
     flagsOf(projectId: string): ProjectFlags | undefined {

@@ -287,6 +287,8 @@ export const REQUEST_SCHEMAS = {
     'session.kill': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'session.clear': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'session.list': { payload: EmptySchema, result: SessionListResultSchema },
+    // A person approving the command the session holds: it is written down and typed. Nothing held is no error.
+    'session.runHeld': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'browser.open': { payload: BrowserOpenPayloadSchema, result: BrowserInfoSchema },
     'browser.detach': { payload: BrowserTargetPayloadSchema, result: EmptySchema },
     'browser.kill': { payload: BrowserTargetPayloadSchema, result: EmptySchema },

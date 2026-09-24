@@ -33,7 +33,10 @@ export const SessionInfoSchema = z.object({
     agent: AgentInfoSchema.nullable().optional(),
     // What the agent is waiting on right now; the snapshot a client that arrives mid-request needs,
     // after which `session.approvals` keeps it up to date.
-    approvals: z.array(ApprovalRequestSchema).optional()
+    approvals: z.array(ApprovalRequestSchema).optional(),
+    // A command from a project file that no person on this machine approved yet: the shell started
+    // without it, and `session.runHeld` types it. A client that does not know the field shows a bare shell.
+    heldCommand: z.string().optional()
 });
 export type SessionInfo = z.infer<typeof SessionInfoSchema>;
 
@@ -43,7 +46,8 @@ export const SessionCreatePayloadSchema = z.object({
     cols,
     rows,
     shell: z.string().optional(),
-    // Typed into the fresh shell as its first line, so a node can open straight into a program.
+    // Typed into the fresh shell as its first line, so a node can open straight into a program, once
+    // a person on this machine approved it for this node; until then it is held (`heldCommand`).
     command: z.string().optional(),
     // An agent CLI to start instead; the daemon builds its command line and types that.
     agent: AgentLaunchSchema.optional()

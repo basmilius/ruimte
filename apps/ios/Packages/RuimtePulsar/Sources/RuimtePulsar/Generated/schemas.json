@@ -5198,6 +5198,9 @@
             "expiresAt"
           ]
         }
+      },
+      "heldCommand": {
+        "type": "string"
       }
     },
     "required": [
@@ -5704,6 +5707,9 @@
                   "expiresAt"
                 ]
               }
+            },
+            "heldCommand": {
+              "type": "string"
             }
           },
           "required": [
@@ -5722,6 +5728,24 @@
     "required": [
       "sessions"
     ]
+  },
+  "request.session.runHeld.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "sessionId"
+    ]
+  },
+  "request.session.runHeld.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
   },
   "request.browser.open.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

@@ -1,11 +1,12 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, SessionInfo } from '@ruimte/contracts';
+import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
 import { ApprovalStore, parsePermissionAsk, type ApprovalDecision } from '../agents/approvals.ts';
 import { modeOfHook, normalizeHook } from '../agents/hooks.ts';
-import { freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
+import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
+import { narrowerMode } from '../canvas/mode.ts';
 import { contextHint, verbsNote } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
@@ -79,6 +80,18 @@ export interface SessionManagerOptions {
     codexTitles?: { forThread(threadId: string): Promise<string | null> };
     // Lets a test shorten the wait before a session without a name looks again.
     titleRetryMs?: number;
+    // Which commands a person on this machine let a shell type. Without it every command is typed.
+    commands?: CommandGate;
+    // The widest mode the agent of this node may start in, whatever the node says; null for no limit.
+    modeCeiling?: (sessionId: string) => RuntimeMode | null;
+    // Refuses a directory this node may not start in, asked right before every spawn.
+    checkCwd?: (sessionId: string, cwd: string) => Promise<void>;
+}
+
+export interface CommandGate {
+    approved(sessionId: string, command: string): boolean;
+    /* Writes down that a person let this node type this command. */
+    approve(sessionId: string, command: string): Promise<void>;
 }
 
 // How often a hook of a turn in flight may look for a name the session does not have yet.
@@ -125,6 +138,9 @@ export class SessionManager {
     private readonly firstPrompt: (sessionId: string) => Promise<string | null>;
     private readonly firstNotices: (sessionId: string) => string[];
     private readonly depthOf: (sessionId: string) => number;
+    private readonly commands: CommandGate | null;
+    private readonly modeCeiling: (sessionId: string) => RuntimeMode | null;
+    private readonly checkCwd: (sessionId: string, cwd: string) => Promise<void>;
     // Told when the process tree of a session is about to change or just did: the end of a turn, an exit, a kill.
     onProcessChange: ((sessionId: string, phase: ProcessChangePhase) => void) | null = null;
     // Whether the process monitor found the agent of a session gone while its status still says it runs.
@@ -146,6 +162,9 @@ export class SessionManager {
         this.claudeTitles = options.claudeTitles ?? null;
         this.codexTitles = options.codexTitles ?? null;
         this.titleRetryMs = options.titleRetryMs ?? TITLE_RETRY_MS;
+        this.commands = options.commands ?? null;
+        this.modeCeiling = options.modeCeiling ?? (() => null);
+        this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
         this.approvals =
             options.approvals === false
                 ? null
@@ -218,6 +237,8 @@ export class SessionManager {
         if (existing && !existing.exited) {
             throw new SessionError('session-exists', `Session ${options.sessionId} already exists`);
         }
+        const cwd = options.cwd ?? this.env.HOME ?? homedir();
+        await this.checkCwd(options.sessionId, cwd);
 
         let restoredScreen: string | undefined;
         let restoredAgent: AgentInfo | undefined;
@@ -231,23 +252,74 @@ export class SessionManager {
             restoredAgent = (await this.agents?.read(options.sessionId)) ?? undefined;
         }
 
+        const launch = this.withinCeiling(options.sessionId, options.agent);
+        const held = options.command && this.commands?.approved(options.sessionId, options.command) === false ? options.command : null;
         const shell = options.shell ?? defaultShell(this.env);
         const session = this.spawn({
             id: options.sessionId,
             shell,
             args: options.args ?? defaultShellArgs(shell),
-            cwd: options.cwd ?? this.env.HOME ?? homedir(),
+            cwd,
             cols: options.cols,
             rows: options.rows,
-            command: options.command ?? (await this.startLine(options.sessionId, options.agent, restoredAgent !== undefined)),
+            command: held === null ? (options.command ?? (await this.startLine(options.sessionId, launch, restoredAgent !== undefined))) : undefined,
             restoredScreen,
             restoredAgent,
-            launch: options.agent
+            launch
         });
+        session.heldCommand = held;
         this.sessions.set(session.id, session);
         this.tokens.set(session.hookToken, session.id);
         this.broadcastListChanged();
         return this.info(session);
+    }
+
+    /* The launch with its mode narrowed to what the node may have, which a project file cannot widen. */
+    private withinCeiling(sessionId: string, launch: AgentLaunch | undefined): AgentLaunch | undefined {
+        const ceiling = this.modeCeiling(sessionId);
+        if (!launch || ceiling === null) {
+            return launch;
+        }
+        return { ...launch, runtimeMode: narrowerMode(launch.runtimeMode ?? DEFAULT_RUNTIME_MODE, ceiling) };
+    }
+
+    /*
+     * A person saying yes to the command a session holds: written down first, so the next start of
+     * this node types it too, then typed. A second client that says yes as well finds nothing held.
+     */
+    async runHeld(sessionId: string): Promise<void> {
+        const session = this.require(sessionId);
+        if (session.exited) {
+            throw new SessionError('session-exited', `Session ${sessionId} has ended`);
+        }
+        const command = session.heldCommand;
+        if (command === null) {
+            return;
+        }
+        session.heldCommand = null;
+        try {
+            await this.commands?.approve(sessionId, command);
+        } catch (e) {
+            session.heldCommand = command;
+            throw e;
+        }
+        this.typeHeld(session, command);
+    }
+
+    /* A person's save approved this command for this node; a session holding exactly that one types it now. */
+    runApproved(sessionId: string, command: string): void {
+        const session = this.sessions.get(sessionId);
+        if (session && !session.exited && session.heldCommand === command) {
+            session.heldCommand = null;
+            this.typeHeld(session, command);
+        }
+    }
+
+    private typeHeld(session: Session, command: string): void {
+        if (!session.exited) {
+            session.write(`${command}\n`);
+        }
+        this.broadcastListChanged();
     }
 
     /* A hook POST from a CLI inside one of the shells; the token says which one. */
@@ -698,7 +770,8 @@ export class SessionManager {
             exited: session.exited,
             ...(session.exitCode !== null ? { exitCode: session.exitCode } : {}),
             agent: session.agent,
-            approvals: this.approvals?.forSession(session.id) ?? []
+            approvals: this.approvals?.forSession(session.id) ?? [],
+            ...(session.heldCommand !== null ? { heldCommand: session.heldCommand } : {})
         };
     }
 

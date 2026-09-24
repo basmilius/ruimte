@@ -17,7 +17,8 @@ import {
     type AgentKind,
     type DiagramContent,
     type HealthResult,
-    type MachineWork
+    type MachineWork,
+    type RuntimeMode
 } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
 import { ClaudeTitleReader } from './agents/claude-title.ts';
@@ -109,7 +110,9 @@ import { ProjectStore } from './projects/project-store.ts';
 import { takesNoteOnLine } from './providers/launch.ts';
 import { ProviderRegistry } from './providers/registry.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
-import { SessionManager } from './sessions/manager.ts';
+import { SessionError, SessionManager } from './sessions/manager.ts';
+import { CommandApprovals, commandsSet } from './sessions/command-approvals.ts';
+import { startCwdGuard } from './canvas/project-paths.ts';
 import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
 import { UsageMonitor } from './usage/limits/monitor.ts';
 import { UsageService } from './usage/usage-service.ts';
@@ -175,6 +178,15 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // And for the tasks a chat gave, whose results still have to wake it.
     const tasks = new TaskStore(config.home);
     await tasks.load();
+    // And for the commands a person let a terminal type, which a node's first start asks about.
+    const commandApprovals = new CommandApprovals(config.home);
+    await commandApprovals.load();
+    const folderOf = (nodeId: string): string | null => projects.index.locate(nodeId)?.folder ?? null;
+    const startCwd = startCwdGuard({
+        madeByAgent: (nodeId) => lineage.madeBy(nodeId) !== null,
+        folderOf,
+        worktreePaths: (folder) => canvasHost.worktreePaths(folder)
+    });
     /* What a node hears the moment it can: taken here, so whichever channel gets there first is the
        only one that delivers it. */
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
@@ -192,6 +204,22 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         firstPrompt: (sessionId) => prompts.take(sessionId),
         firstNotices: messagesFor,
         depthOf: (sessionId) => lineage.depthOf(sessionId),
+        // A node no project places yet has no folder to approve against, so its command waits for the save that adds it.
+        commands: {
+            approved: (sessionId, command) => {
+                const folder = folderOf(sessionId);
+                return folder !== null && commandApprovals.has(folder, sessionId, command);
+            },
+            approve: async (sessionId, command) => {
+                const folder = folderOf(sessionId);
+                if (folder === null) {
+                    throw new SessionError('session-not-found', `No project this machine knows places ${sessionId}`);
+                }
+                await commandApprovals.approve(folder, sessionId, command);
+            }
+        },
+        modeCeiling: (sessionId) => lineage.ceilingOf(sessionId),
+        checkCwd: startCwd,
         approvals: config.approvals,
         claudeTitles,
         codexTitles: new CodexTitleReader()
@@ -234,6 +262,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         contextUrl,
         binDir,
         depthOf: (chatId) => lineage.depthOf(chatId),
+        modeCeiling: (chatId) => lineage.ceilingOf(chatId),
+        checkCwd: startCwd,
         contextSources: (chatId) => context.list(chatId),
         standalone: (chatId) => projects.index.locate(chatId)?.canvasId === null,
         openingSelection: (chatId, provider) => {
@@ -267,7 +297,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         tasks,
         chats,
         sessions: manager,
-        alert: (target, nodeId, title, body) => push.alert(target, nodeId, title, body)
+        alert: (target, nodeId, title, body) => push.alert(target, nodeId, title, body),
+        checkCwd: startCwd
     });
     const outboxWorker = outboxWiring.worker;
     const taskWiring = outboxWiring.tasks;
@@ -281,6 +312,18 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         await (kind === 'terminal' ? manager.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
     };
     projects.attachSessionEnder(endSession);
+    projects.attachSaveListener(async (folder, before, after) => {
+        for (const { nodeId, command } of commandsSet(before, after)) {
+            try {
+                await commandApprovals.approve(folder, nodeId, command);
+            } catch (e) {
+                // Not approved is only asked again; the save itself already landed.
+                console.error(`Approving the command of ${nodeId} failed:`, errorText(e));
+                continue;
+            }
+            manager.runApproved(nodeId, command);
+        }
+    });
     const drawings = new DrawingStore(projects);
     projects.attachDrawings(drawings);
     const diagrams = new DiagramStore(projects);
@@ -398,7 +441,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         },
         depthOf: (nodeId: string) => lineage.depthOf(nodeId),
         openedCount: (callerId: string) => lineage.openedCount(callerId),
-        recordMade: (record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean }) => lineage.put(record),
+        recordMade: (record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean; ceiling?: RuntimeMode }) =>
+            lineage.put(record),
         madeBy: (nodeId: string) => lineage.madeBy(nodeId),
         agentsDeleteAnyView: () => identity.agentsDeleteAnyView,
         showView: (projectId: string, viewId: string, by: string) => projects.showView(projectId, viewId, by),

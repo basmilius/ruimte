@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatItem, ProjectContent } from '@ruimte/contracts';
 import { AgentLineageStore } from '../agents/lineage.ts';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
+import { startCwdGuard } from '../canvas/project-paths.ts';
 import type { AgentStart, CanvasHost } from '../canvas/verb.ts';
 import { AttachmentStore } from '../chat/attachment-store.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
@@ -48,9 +49,17 @@ const content = (): ProjectContent => ({
     ]
 });
 
+/* A stand-in for a folder in the project, pointed wherever a test says. */
+const link = async (path: string, to: string): Promise<void> => {
+    await rm(path, { force: true });
+    await symlink(to, path);
+};
+
 /* One run of the daemon over a home. The stores read from disk, the managers empty, nothing kept from a run before. */
 interface Daemon {
     prompts: PendingPromptStore;
+    /* What the start-agent handler logged, a start it gave up on among it. */
+    logged: string[];
     outbox: OutboxStore;
     worker: OutboxWorker;
     sessions: SessionManager;
@@ -103,7 +112,19 @@ const boot = async (): Promise<Daemon> => {
     const adapter = new FakePtyAdapter();
     const claude = inProcess(fakeClaude);
     const codex = inProcess(fakeCodex);
-    const sessions = new SessionManager({ adapter, env: { HOME: home, PATH: process.env.PATH }, firstPrompt: (id) => prompts.take(id) });
+    const checkCwd = startCwdGuard({
+        madeByAgent: (nodeId) => lineage.madeBy(nodeId) !== null,
+        folderOf: (nodeId) => store.index.locate(nodeId)?.folder ?? null,
+        worktreePaths: async () => []
+    });
+    const modeCeiling = (id: string) => lineage.ceilingOf(id);
+    const sessions = new SessionManager({
+        adapter,
+        env: { HOME: home, PATH: process.env.PATH },
+        firstPrompt: (id) => prompts.take(id),
+        modeCeiling,
+        checkCwd
+    });
     const attachments = new AttachmentStore(home);
     const chats = new ChatManager({
         providers,
@@ -111,8 +132,11 @@ const boot = async (): Promise<Daemon> => {
         attachments,
         spawn: (options) => (options.command[0] === 'codex' ? codex.spawn(options) : claude.spawn(options)),
         env: { PATH: process.env.PATH, HOME: home },
-        firstPrompt: (id) => prompts.take(id)
+        firstPrompt: (id) => prompts.take(id),
+        modeCeiling,
+        checkCwd
     });
+    const logged: string[] = [];
     const worker = new OutboxWorker({
         store: outbox,
         clock: stillClock,
@@ -131,7 +155,9 @@ const boot = async (): Promise<Daemon> => {
                 killChat: (chatId) => chats.kill(chatId),
                 hasSession: (sessionId) => sessions.get(sessionId) !== undefined,
                 createSession: (options) => sessions.create(options),
-                killSession: (sessionId) => sessions.kill(sessionId)
+                killSession: (sessionId) => sessions.kill(sessionId),
+                checkCwd,
+                log: (line) => logged.push(line)
             })
         }
     });
@@ -193,6 +219,7 @@ const boot = async (): Promise<Daemon> => {
 
     const daemon: Daemon = {
         prompts,
+        logged,
         outbox,
         worker,
         sessions,
@@ -221,13 +248,13 @@ const boot = async (): Promise<Daemon> => {
 };
 
 /* A team verb run by the lead chat, the way `ruimte-context team` posts it. */
-const openTeam = async (daemon: Daemon): Promise<string[]> => {
+const openTeam = async (daemon: Daemon, extra: string[] = []): Promise<string[]> => {
     const path = `${CANVAS_PATH}/team`;
     const response = await handleCanvasRequest(
         new Request(`http://127.0.0.1${path}`, {
             method: 'POST',
             headers: { authorization: 'Bearer lead' },
-            body: JSON.stringify({ argv: ['--label', 'Crew', '--roles', JSON.stringify(TEAM)] })
+            body: JSON.stringify({ argv: ['--label', 'Crew', '--roles', JSON.stringify(TEAM), ...extra] })
         }),
         path,
         { targetForToken: (token) => (token === 'lead' ? 'chat-lead' : null), host: daemon.host }
@@ -317,6 +344,68 @@ describe('a team the daemon starts on its own', () => {
         expect(again.adapter.spawned).toEqual([]);
         expect(again.chats.list()).toEqual([]);
         expect(again.claude.started).toEqual([]);
+    });
+
+    test('a child whose project file asks for more than its opener has starts at the ceiling, after a restart too', async () => {
+        const before = await boot();
+        // The lead runs supervised, so that is the most any agent it opens may run in.
+        await before.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, runtimeMode: 'supervised' });
+        const [lexer, , docs] = await openTeam(before);
+        await before.retire();
+
+        // Something with a shell widens both children in the project file before anyone starts them.
+        await store.mutate(projectId, (current) => ({
+            content: {
+                ...current,
+                views: current.views.map((view) =>
+                    view.kind === 'canvas'
+                        ? { ...view, nodes: view.nodes.map((node) => (node.id === 'chat-lead' ? node : { ...node, runtimeMode: 'full-access' })) }
+                        : view
+                )
+            },
+            result: null
+        }));
+        const nodes = (await store.read(projectId)).views.flatMap((view) => (view.kind === 'canvas' ? view.nodes : []));
+        const node = (id: string) => nodes.find((candidate) => candidate.id === id)!;
+        expect(node(lexer!).runtimeMode).toBe('full-access');
+
+        // A client mounts them on the daemon that came back, the way it mounts any node.
+        const after = await boot();
+        await after.sessions.create({ sessionId: lexer!, cols: 80, rows: 24, cwd: folder, agent: { kind: 'claude', runtimeMode: node(lexer!).runtimeMode } });
+        await after.chats.create({ chatId: docs!, provider: 'claude', cwd: folder, runtimeMode: node(docs!).runtimeMode });
+        expect(after.sessions.get(lexer!)?.launch?.runtimeMode).toBe('supervised');
+        expect(after.adapter.forSession(lexer!).typed).not.toContain('bypassPermissions');
+        expect(after.chats.get(docs!)?.info.runtimeMode).toBe('supervised');
+    });
+
+    test('a --cwd whose symlink moved outside the project after the verb checked it is refused at the start', async () => {
+        await mkdir(join(folder, 'inside'));
+        const outside = join(root, 'outside');
+        await mkdir(outside);
+        await link(join(folder, 'w'), join(folder, 'inside'));
+
+        const daemon = await boot();
+        const [lexer, parser, docs] = await openTeam(daemon, ['--cwd', 'w']);
+        await link(join(folder, 'w'), outside);
+        daemon.worker.start();
+        await daemon.worker.settled();
+
+        expect(daemon.adapter.spawned).toEqual([]);
+        expect(daemon.chats.list()).toEqual([]);
+        expect(daemon.logged.filter((line) => line.includes('is outside'))).toHaveLength(3);
+        // A client mounting one later is refused the same way, with the code the verb uses.
+        await expect(daemon.sessions.create({ sessionId: lexer!, cols: 80, rows: 24, cwd: join(folder, 'w') })).rejects.toMatchObject({
+            code: 'cwd-outside-project'
+        });
+        await expect(daemon.chats.create({ chatId: parser!, provider: 'codex', cwd: join(folder, 'w') })).rejects.toMatchObject({
+            code: 'cwd-outside-project'
+        });
+        expect(daemon.adapter.spawned).toEqual([]);
+
+        // Pointed back inside, the same node starts.
+        await link(join(folder, 'w'), join(folder, 'inside'));
+        await daemon.chats.create({ chatId: docs!, provider: 'claude', cwd: join(folder, 'w') });
+        expect(daemon.chats.get(docs!)).toBeDefined();
     });
 
     test('a node deleted before its start is never started, and what was owed for it goes', async () => {

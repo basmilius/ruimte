@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { RuntimeModeSchema, type RuntimeMode } from '@ruimte/contracts';
 import { RecordDirectory } from '../record-directory.ts';
 import { z } from 'zod';
 
@@ -13,6 +14,9 @@ const LineageSchema = z.object({
     agent: z.boolean().default(true),
     /* A fork is a sibling a person made beside `openedBy` rather than a node it opened; absent is opened by a verb. */
     relation: z.literal('fork').optional(),
+    /* The widest mode the agent may start in, the mode of its opener when it was made. Absent on a
+       record from before, and on a node nobody may widen anyway since no agent started it. */
+    ceiling: RuntimeModeSchema.optional(),
     createdAt: z.number(),
     /* When stopping or deleting the node that opened it ended this one too; a cascade never ends a node twice. */
     endedAt: z.number().optional()
@@ -90,6 +94,12 @@ export class AgentLineageStore {
                     entry.projectId === projectId && openedByAgent(entry) && entry.endedAt === undefined && ids.has(entry.nodeId) && !ids.has(entry.openedBy)
             )
             .map((entry) => ({ nodeId: entry.nodeId, openedBy: entry.openedBy }));
+    }
+
+    /* The widest mode this agent node may start in, every time it starts; null for one no agent opened. */
+    ceilingOf(nodeId: string): RuntimeMode | null {
+        const entry = this.opened.get(nodeId);
+        return entry !== undefined && openedByAgent(entry) ? (entry.ceiling ?? null) : null;
     }
 
     /* How deep a node sits. A node nobody wrote down is one a person made, which is where a chain starts. */

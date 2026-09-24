@@ -63,6 +63,8 @@ export interface StartAgentDeps {
         agent: { kind: StartAgentEntry['payload']['provider']; runtimeMode?: RuntimeMode };
     }): Promise<unknown>;
     killSession(sessionId: string): Promise<void>;
+    /* Refuses a directory the node may not start in; asked right before the start, not when the verb ran. */
+    checkCwd?: (nodeId: string, cwd: string) => Promise<void>;
     log?: (line: string) => void;
     /* A start that failed and will not be tried again. What was waiting on the agent hears it here. */
     onGaveUp?: (entry: StartAgentEntry, error: unknown) => void;
@@ -85,6 +87,9 @@ export const startAgentHandler =
             return;
         }
         try {
+            if (cwd !== null) {
+                await deps.checkCwd?.(nodeId, cwd);
+            }
             if (node === 'chat') {
                 if (deps.hasChat(nodeId)) {
                     return;

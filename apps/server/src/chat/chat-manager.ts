@@ -27,6 +27,7 @@ import type {
     RuntimeMode,
     Task
 } from '@ruimte/contracts';
+import { narrowerMode } from '../canvas/mode.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
@@ -135,6 +136,10 @@ interface ChatManagerOptions {
     dropWakes?: (chatId: string) => Promise<void>;
     plans?: ChatPlans;
     bookmarks?: BookmarkStore;
+    // The widest mode this chat may run in, whatever its record or its node says; null for no limit.
+    modeCeiling?: (chatId: string) => RuntimeMode | null;
+    // Refuses a directory this chat may not start in, asked every time a chat is loaded.
+    checkCwd?: (chatId: string, cwd: string) => Promise<void>;
 }
 
 // Above this the record is big enough that rewriting it for every small change costs more than it saves.
@@ -175,6 +180,8 @@ export class ChatManager {
     private readonly messages: (chatId: string) => string[];
     private readonly unshownMessages: (chatId: string) => Promise<string[]>;
     private readonly firstPrompt: (chatId: string) => Promise<string | null>;
+    private readonly modeCeiling: (chatId: string) => RuntimeMode | null;
+    private readonly checkCwd: (chatId: string, cwd: string) => Promise<void>;
     private readonly claudeTitles: ChatManagerOptions['claudeTitles'] | null;
     private readonly nameChat: ChatManagerOptions['nameChat'] | null;
     private readonly subagents: SubagentReader;
@@ -218,6 +225,8 @@ export class ChatManager {
         this.messages = options.messages ?? (() => []);
         this.unshownMessages = options.unshownMessages ?? (() => Promise.resolve([]));
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
+        this.modeCeiling = options.modeCeiling ?? (() => null);
+        this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
         this.commands = {
             ...(options.command ? { claude: options.command } : {}),
             ...(options.codexCommand ? { codex: options.codexCommand } : {})
@@ -358,16 +367,20 @@ export class ChatManager {
         const provider = this.providers.get(kind);
         const catalog = provider.catalog;
         const selection = catalog.normalize(stored?.info.selection ?? this.openingSelection(payload.chatId, kind) ?? payload.selection);
+        const cwd = stored?.info.cwd ?? payload.cwd ?? this.env.HOME ?? homedir();
+        await this.checkCwd(payload.chatId, cwd);
+        const ceiling = this.modeCeiling(payload.chatId);
+        const withinCeiling = (mode: RuntimeMode): RuntimeMode => (ceiling === null ? mode : narrowerMode(mode, ceiling));
         const info: ChatInfo = stored?.info
-            ? stored.info
+            ? { ...stored.info, runtimeMode: withinCeiling(stored.info.runtimeMode) }
             : {
                   chatId: payload.chatId,
                   provider: kind,
-                  cwd: payload.cwd ?? this.env.HOME ?? homedir(),
+                  cwd,
                   agentSessionId: payload.resume ?? null,
                   model: null,
                   selection,
-                  runtimeMode: payload.runtimeMode ?? 'full-access',
+                  runtimeMode: withinCeiling(payload.runtimeMode ?? 'full-access'),
                   status: 'idle',
                   running: false,
                   activeTurnId: null,

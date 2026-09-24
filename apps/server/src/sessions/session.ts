@@ -72,6 +72,8 @@ export class Session {
     agent: AgentInfo | null;
     // The permission mode the CLI's hooks last reported, which outranks the launch: a person can switch it in the TUI.
     reportedMode: RuntimeMode | null = null;
+    // A command from a project file the shell started without, until a person on this machine says yes to it.
+    heldCommand: string | null = null;
     private readonly terminal: Terminal;
     private readonly serializer: SerializeAddon;
     private readonly pty: PtyProcess;

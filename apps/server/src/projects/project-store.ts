@@ -169,6 +169,9 @@ export type TrackedProbe = (path: string) => Promise<boolean>;
 /* Ends the session behind one node, handed over by the daemon so the store stays out of the managers. */
 export type SessionEnder = (kind: 'terminal' | 'chat', nodeId: string) => Promise<void>;
 
+/* Told what a person's save changed, with the views as they were before it and as it wrote them. */
+export type SaveListener = (folder: string, before: readonly ProjectView[], after: readonly ProjectView[]) => Promise<void>;
+
 /* A view of a kind this daemon does not know may own a file under either folder, so it counts as live for both. */
 const viewIdsIn = (views: ProjectView[], kind: 'drawing' | 'diagram'): Set<string> =>
     new Set(views.filter((view) => view.kind === kind || view.kind === UNKNOWN_KIND).map((view) => view.id));
@@ -205,6 +208,8 @@ export class ProjectStore {
     /* The store knows which sessions a project holds; the managers know how to stop one. */
     private endSession: SessionEnder = async () => undefined;
 
+    private personSaved: SaveListener = async () => undefined;
+
     constructor(home: string, seams: WatchSeams = SYSTEM_WATCH) {
         this.home = home;
         this.seams = seams;
@@ -216,6 +221,11 @@ export class ProjectStore {
 
     attachSessionEnder(endSession: SessionEnder): void {
         this.endSession = endSession;
+    }
+
+    /* Only `save` tells it, which only a client's `project.save` calls: a verb, a watcher or a pull never does. */
+    attachSaveListener(listener: SaveListener): void {
+        this.personSaved = listener;
     }
 
     /*
@@ -515,6 +525,8 @@ export class ProjectStore {
             throw new ProjectError('project-invalid', `The save would give two things the id "${duplicate}"`);
         }
         await this.refuseOverOutsideEdit(state);
+        // What the machine held until now; a project it has open is always indexed, and an index it lacks sets nothing.
+        const before = this.index.viewsOf(projectId);
         /* Only a person's save moves a view between the two files. A payload without a list leaves
            the folder as it is, which is what an older client and every other writer amount to. */
         const ids = [...(shared ?? state.shared)];
@@ -536,7 +548,9 @@ export class ProjectStore {
             await this.drawings?.resettle(projectId, moved);
             await this.diagrams?.resettle(projectId, moved);
         }
-        this.index.set(projectId, state.entry.folder, fromPortable(document, state.entry.folder));
+        const daemonSide = fromPortable(document, state.entry.folder);
+        this.index.set(projectId, state.entry.folder, daemonSide);
+        await this.personSaved(state.entry.folder, before ?? daemonSide.views, daemonSide.views);
         const drawingIds = drawingIdsIn(document.views);
         // A view that a person deleted here takes its file with it. An outside edit never does:
         // a git pull can drop a view whose file is still on its way, and that file is someone's work.
@@ -561,7 +575,6 @@ export class ProjectStore {
            this document, and taking it in would undo a drag that went on while the save was out. Inside
            the lock, so a save of another client that this one makes stale finds the document there
            before its refusal. */
-        const daemonSide = fromPortable(document, state.entry.folder);
         this.emit({ event: 'project.changed', payload: { projectId, document: daemonSide } }, origin);
         return document.rev;
     }
