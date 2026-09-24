@@ -21,7 +21,7 @@ console.log(`export RUIMTE_PULSAR_TEST_STATEMENT_PRIVATE_KEY=${Buffer.from(pem).
 "${compose[@]}" up -d --build --force-recreate --wait daemon-test
 
 status=0
-RUIMTE_DOCKER=1 bun test "$here/../src/docker" "$@" || status=$?
+RUIMTE_DOCKER=1 bun --config="$here/../../../integration.bunfig.toml" test "$here/../src/docker" "$@" || status=$?
 
 "${compose[@]}" rm --stop --force --volumes daemon-test > /dev/null
 exit "$status"

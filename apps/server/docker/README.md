@@ -83,7 +83,7 @@ throws `/work` and `$RUIMTE_HOME` away on every start (`RUIMTE_FRESH_STATE=1`, t
 flag is for) and is recreated and removed around every run. The container on 4310 is untouched, and
 it can stay up while the suite runs.
 
-`apps/server/src/docker/remote-daemon.test.ts` pairs, opens a socket and walks the wire: `/health`,
+`apps/server/src/docker/remote-daemon.integration.test.ts` pairs, opens a socket and walks the wire: `/health`,
 `server.hello` and `endpoint.info` (Linux, `lan`, authenticated), the daemon's own id in both the
 pairing answer and `endpoint.info` and kept in `endpoint.json`, a refused token, `project.list` on a
 freshly paired daemon answering nothing and making nothing, a project opened on `/work/atlas`, a
