@@ -33,6 +33,25 @@ const PATH_FIELDS = ['cwd', 'path'] as const;
 
 type Carrier = { [K in keyof ProjectNodeOverlay]?: ProjectNodeOverlay[K] };
 
+/* Whether a relative path climbs out of the folder it is read against, on either kind of machine. */
+const climbsOut = (path: string): boolean => {
+    let depth = 0;
+    for (const segment of path.split(/[\\/]/)) {
+        if (segment === '..') {
+            depth -= 1;
+            if (depth < 0) {
+                return true;
+            }
+        } else if (segment !== '' && segment !== '.') {
+            depth += 1;
+        }
+    }
+    return false;
+};
+
+/* A path every checkout reads the same way: relative, and inside the project folder. */
+const isPortablePath = (path: string): boolean => !isAbsolutePath(path) && !climbsOut(path);
+
 /* What a carrier cannot take into the shared file, or null when it can travel as it is. */
 const overlayOfCarrier = (carrier: Carrier): ProjectNodeOverlay | null => {
     const overlay: ProjectNodeOverlay = {};
@@ -43,11 +62,30 @@ const overlayOfCarrier = (carrier: Carrier): ProjectNodeOverlay | null => {
     }
     for (const field of PATH_FIELDS) {
         const value = carrier[field];
-        if (typeof value === 'string' && isAbsolutePath(value)) {
+        if (typeof value === 'string' && !isPortablePath(value)) {
             overlay[field] = value;
         }
     }
     return Object.keys(overlay).length === 0 ? null : overlay;
+};
+
+/*
+ * A shared carrier as a checkout may take it: everything `splitContent` never writes there is gone.
+ * Anyone who can push to the repository can write the shared file, so a mode, a session, a worktree
+ * or a folder off this disk found in it is not this person's and must not start anything.
+ */
+const trustedOfShared = <T extends Carrier>(carrier: T): T => {
+    const trusted = { ...carrier };
+    for (const field of OVERLAY_FIELDS) {
+        delete trusted[field];
+    }
+    for (const field of PATH_FIELDS) {
+        const value = trusted[field];
+        if (typeof value === 'string' && !isPortablePath(value)) {
+            delete trusted[field];
+        }
+    }
+    return trusted;
 };
 
 const withoutOverlay = <T extends Carrier>(carrier: T, overlay: ProjectNodeOverlay): T => {
@@ -205,8 +243,9 @@ export const mergeFiles = (
     const overlay = file.overlay;
     const sharedViews = (shared?.views ?? []).map((view) =>
         withCarriers(view, (id, carrier) => {
+            const trusted = trustedOfShared(carrier);
             const held = overlay[id];
-            return held ? { ...carrier, ...held } : carrier;
+            return held ? { ...trusted, ...held } : trusted;
         })
     );
     return {
@@ -219,6 +258,24 @@ export const mergeFiles = (
         },
         shared: sharedViews.map((view) => view.id)
     };
+};
+
+/*
+ * What the one file of a version 1 or 2 held for this person on the nodes of views that go on
+ * shared, taken out before `mergeFiles` strips it: that file was written by Ruimte, not pulled.
+ */
+export const overlayOfLegacy = (views: readonly ProjectView[]): Record<string, ProjectNodeOverlay> => {
+    const overlay: Record<string, ProjectNodeOverlay> = {};
+    for (const view of views) {
+        withCarriers(view, (id, carrier) => {
+            const held = overlayOfCarrier(carrier);
+            if (held) {
+                overlay[id] = held;
+            }
+            return carrier;
+        });
+    }
+    return overlay;
 };
 
 /* A project that has never been split: every view of it is one person's until they say otherwise. */

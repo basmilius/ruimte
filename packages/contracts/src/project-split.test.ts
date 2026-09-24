@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { EMPTY_PRIVATE_FILE, PROJECT_VERSION, type ProjectCanvasView, type ProjectContent, type ProjectSharedFile, type ProjectView } from './project.ts';
-import { canShareView, mergeFiles, privateFileOf, splitContent, viewShareRefusal } from './project-split.ts';
+import { canShareView, mergeFiles, overlayOfLegacy, privateFileOf, splitContent, viewShareRefusal } from './project-split.ts';
 
 const canvas = (id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectView => ({
     kind: 'canvas',
@@ -53,6 +53,14 @@ describe('splitContent', () => {
         expect(shared.nodes[1]!.cwd).toBeUndefined();
         expect(split.private.overlay.out).toEqual({ cwd: '/etc' });
         expect(split.private.overlay.in).toBeUndefined();
+    });
+
+    test('a relative folder that climbs out of the project stays behind like an absolute one', () => {
+        const split = splitContent(content([canvas('main', [node('up', { cwd: './a/../../etc' }), node('down', { cwd: 'a/../b' })])]), ['main'], 1);
+        const shared = split.shared.views[0] as ProjectCanvasView;
+        expect(shared.nodes[0]!.cwd).toBeUndefined();
+        expect(split.private.overlay.up).toEqual({ cwd: './a/../../etc' });
+        expect(shared.nodes[1]!.cwd).toBe('a/../b');
     });
 
     test('a chat view holds its session under its own id, since a view id and a node id are one namespace', () => {
@@ -152,10 +160,44 @@ describe('mergeFiles', () => {
         expect(merged.content.views.map((view) => view.id)).toEqual(['main']);
     });
 
+    test('a shared file never hands on what only the overlay may carry', () => {
+        const pushed = {
+            resume: 'theirs',
+            runtimeMode: 'full-access',
+            worktree: { path: '/tmp/wt', branch: 'x' },
+            cwd: '/',
+            path: '../../.ssh/id_ed25519'
+        };
+        const shared: ProjectSharedFile = {
+            version: PROJECT_VERSION,
+            name: 'repo',
+            color: '#7c74ff',
+            views: [canvas('main', [node('n1', pushed), node('n2', { cwd: './apps', path: 'README.md' })]), chatView('c1', { provider: 'claude', cwd: 'C:\\' })]
+        };
+        const merged = mergeFiles(shared, { ...EMPTY_PRIVATE_FILE, overlay: { n2: { resume: 'mine' } } }, fallback);
+        const [main, chat] = merged.content.views as [ProjectCanvasView, ProjectView];
+        expect(main.nodes[0]).toEqual(node('n1'));
+        // What travels legitimately stays, and this person's own overlay is still laid over it.
+        expect(main.nodes[1]).toEqual(node('n2', { cwd: './apps', path: 'README.md', resume: 'mine' }));
+        expect(chat).toEqual(chatView('c1', { provider: 'claude' }));
+    });
+
+    test('a private view belongs to this person and keeps every field', () => {
+        const own = canvas('own', [node('n1', { runtimeMode: 'auto-accept-edits', cwd: '/elsewhere' })]);
+        expect(mergeFiles(null, privateFileOf([own], 1), fallback).content.views).toEqual([own]);
+    });
+
     test('a view of an unknown kind travels whole, in whichever file it was in', () => {
         const unknown = { kind: 'unknown' as const, id: 'timeline', name: 'Flow', raw: { kind: 'timeline', id: 'timeline', name: 'Flow' } };
         const split = splitContent(content([unknown, canvas('main')]), ['timeline'], 1);
         expect(split.shared.views[0]).toEqual(unknown);
         expect(mergeFiles(split.shared, split.private, fallback).content.views[0]).toEqual(unknown);
+    });
+});
+
+describe('overlayOfLegacy', () => {
+    test('takes what an old single file held for this person, and only that', () => {
+        const views = [canvas('main', [node('n1', { resume: 'sess-1', runtimeMode: 'auto-accept-edits', cwd: '/elsewhere' }), node('n2', { cwd: './apps' })])];
+        expect(overlayOfLegacy(views)).toEqual({ n1: { resume: 'sess-1', runtimeMode: 'auto-accept-edits', cwd: '/elsewhere' } });
     });
 });
