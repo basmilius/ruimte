@@ -254,6 +254,37 @@ export const fakeCodex: FakeCli = (io) => {
             io.later(() => notify('item/completed', { item: running, threadId, turnId: spawnedIn, completedAtMs: Date.now() }));
             return;
         }
+        /*
+         * A spawn the way Codex 0.156.1 reports it: no spawnAgent call, a `subAgentActivity` that started under
+         * the call id, the agent's own thread streaming over the same connection, and a `completed` activity
+         * with an id of its own once the agent is done, here after the parent's turn ended.
+         */
+        if (text.startsWith('spawn agent:')) {
+            const prompt = text.slice(text.indexOf(':') + 1).trim();
+            const childId = `child-${nonce}-${++itemCounter}`;
+            const childTurn = `turn-${nonce}-${++itemCounter}`;
+            childThreads.set(childId, [{ type: 'userMessage', id: `${childId}-prompt`, content: [{ type: 'text', text: prompt, text_elements: [] }] }]);
+            const activity = (id: string, kind: string): void => {
+                const entry = { type: 'subAgentActivity', id, kind, agentThreadId: childId, agentPath: '/root/survey' };
+                started(entry);
+                completed(entry);
+            };
+            const inChild = (method: string, params: Frame): void => {
+                notify(method, { threadId: childId, ...params });
+            };
+            activity(`call-spawn-${nonce}-${++itemCounter}`, 'started');
+            inChild('thread/status/changed', { status: { type: 'active', activeFlags: [] } });
+            inChild('turn/started', { turn: { id: childTurn, items: [], itemsView: 'notLoaded', status: 'inProgress', error: null } });
+            const step = { type: 'commandExecution', id: `${childId}-step`, command: "/bin/zsh -lc 'echo PONG'", cwd: io.cwd, status: 'completed' };
+            inChild('item/started', { turnId: childTurn, item: { ...step, status: 'inProgress' } });
+            inChild('item/completed', { turnId: childTurn, item: { ...step, aggregatedOutput: 'PONG\n', exitCode: 0 } });
+            inChild('item/completed', { turnId: childTurn, item: { type: 'agentMessage', id: `${childId}-answer`, text: 'PONG', phase: 'final_answer' } });
+            inChild('turn/completed', { turn: { id: childTurn, items: [], itemsView: 'summary', status: 'completed', error: null } });
+            agentMessage('spawned');
+            turnCompleted('completed');
+            io.later(() => activity(`subagent-completed-${childTurn}`, 'completed'));
+            return;
+        }
         if (text.startsWith('ask:')) {
             const question = text.slice(4).trim();
             pendingQuestion = { rpcId: serverRequestId, questionId: 'color' };

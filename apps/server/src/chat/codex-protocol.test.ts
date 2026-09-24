@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import type { BackendEvent } from './backend.ts';
 import { CodexProtocol, unwrapCommand } from './codex-protocol.ts';
 
 const ids = { threadId: 't1', turnId: 'ct1' };
@@ -20,8 +21,50 @@ describe('CodexProtocol', () => {
         expect(protocol.threadReady({ thread: { id: 'thread-abc', model: 'gpt-6-astra' }, model: 'gpt-6-astra never danger-full-access' })).toEqual([
             { type: 'session', agentSessionId: 'thread-abc', model: 'gpt-6-astra never danger-full-access', title: null }
         ]);
-        protocol.handle({ method: 'turn/started', params: { ...ids, turn: { id: 'ct1', status: 'inProgress' } } });
+        protocol.handle({ method: 'turn/started', params: { threadId: 'thread-abc', turn: { id: 'ct1', status: 'inProgress' } } });
         expect(protocol.turnId).toBe('ct1');
+    });
+
+    // Codex 0.156.1 streams a spawned agent's own thread over the chat's connection.
+    test("a spawned agent's thread is none of the chat's: its turns, items and usage are left out", () => {
+        const protocol = new CodexProtocol(1);
+        protocol.threadReady({ thread: { id: 'main' }, model: 'm' });
+        protocol.handle({ method: 'turn/started', params: { threadId: 'main', turn: { id: 'main-turn', status: 'inProgress' } } });
+        const child = { threadId: 'child', turnId: 'child-turn' };
+        expect(protocol.handle({ method: 'thread/started', params: { thread: { id: 'child' } } })).toEqual([]);
+        expect(protocol.handle({ method: 'turn/started', params: { ...child, turn: { id: 'child-turn', status: 'inProgress' } } })).toEqual([]);
+        expect(protocol.handle({ method: 'item/completed', params: { ...child, item: message('msg_child', 'PONG') } })).toEqual([]);
+        expect(protocol.handle({ method: 'thread/tokenUsage/updated', params: { ...child, tokenUsage: { last: { totalTokens: 9 } } } })).toEqual([]);
+        expect(protocol.handle({ method: 'turn/completed', params: { ...child, turn: { id: 'child-turn', status: 'completed' } } })).toEqual([]);
+        expect(protocol.turnId).toBe('main-turn');
+        expect(protocol.handle({ method: 'item/completed', params: { threadId: 'main', turnId: 'main-turn', item: message('msg_main', 'done') } })).toEqual([
+            { type: 'text.done', ref: 'msg_main', text: 'done' }
+        ]);
+    });
+
+    // What Codex 0.156.1 sends for a spawn, as captured from its app-server: no spawnAgent call, only these items.
+    test('a spawned agent opens its row on its started activity and settles on its completed one, found by thread', () => {
+        const protocol = new CodexProtocol(1);
+        const activity = (id: string, kind: string) => ({ type: 'subAgentActivity', id, kind, agentThreadId: 'agent-thread', agentPath: '/root/pong' });
+        const started = activity('call_spawn', 'started');
+        const opened: BackendEvent[] = [
+            { type: 'tool.started', ref: 'call_spawn', name: 'Agent', input: { agentPath: '/root/pong' }, parentRef: null },
+            { type: 'task.started', ref: 'call_spawn', description: 'pong', subagentType: null, prompt: null, background: true, threadId: 'agent-thread' }
+        ];
+        expect(protocol.handle({ method: 'item/started', params: { ...ids, item: started } })).toEqual(opened);
+        expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: started } })).toEqual([]);
+
+        // A wait on it completes with nothing to say about the agent itself.
+        const wait = { type: 'collabAgentToolCall', id: 'call_wait', tool: 'wait', status: 'completed', receiverThreadIds: [], agentsStates: {} };
+        expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: wait } }).map((event) => event.type)).toEqual(['tool.started', 'tool.done']);
+
+        const completed = activity('subagent-completed-turn-2', 'completed');
+        expect(protocol.handle({ method: 'item/started', params: { ...ids, item: completed } })).toEqual([
+            { type: 'task.done', ref: 'call_spawn', summary: null, ok: true }
+        ]);
+        expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: completed } })).toEqual([]);
+        // An activity about a thread nobody saw start has no row to settle.
+        expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: { ...completed, agentThreadId: 'other' } } })).toEqual([]);
     });
 
     test('the name a thread already has comes with the handshake, and a rename after it as a title', () => {
@@ -225,6 +268,13 @@ describe('CodexProtocol', () => {
             { type: 'task.progress', ref: 'collab_1', summary: null, lastTool: null, usage: null }
         ]);
 
+        // The call completes as soon as the agent runs; that is no end of the agent.
+        const launched = { ...item, status: 'completed', agentsStates: { 'child-1': { status: 'running', message: null } } };
+        expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: launched } }).at(-1)).toMatchObject({
+            type: 'task.progress',
+            ref: 'collab_1'
+        });
+
         const done = { ...item, status: 'completed', agentsStates: { 'child-1': { status: 'completed', message: 'the docs are read' } } };
         expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: done } }).at(-1)).toEqual({
             type: 'task.done',
@@ -238,6 +288,36 @@ describe('CodexProtocol', () => {
             type: 'tool.done',
             ref: 'collab_2',
             state: 'done'
+        });
+
+        // Another call that reports on a spawned agent settles its row, once.
+        const second = { ...item, id: 'collab_3', status: 'completed', receiverThreadIds: ['child-2'], agentsStates: { 'child-2': { status: 'running' } } };
+        protocol.handle({ method: 'item/completed', params: { ...ids, item: second } });
+        const wait = {
+            ...item,
+            id: 'collab_4',
+            tool: 'wait',
+            status: 'completed',
+            receiverThreadIds: ['child-2'],
+            agentsStates: { 'child-2': { status: 'errored' } }
+        };
+        expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: wait } }).at(-1)).toEqual({
+            type: 'task.done',
+            ref: 'collab_3',
+            summary: 'child-2: errored',
+            ok: false
+        });
+        expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: { ...wait, id: 'collab_5' } } }).at(-1)).toMatchObject({
+            type: 'tool.done'
+        });
+
+        // A spawn that failed opened no agent, so nothing is left to wait for.
+        const failed = { ...item, id: 'collab_6', status: 'failed', receiverThreadIds: [] };
+        expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: failed } }).at(-1)).toEqual({
+            type: 'task.done',
+            ref: 'collab_6',
+            summary: null,
+            ok: false
         });
     });
 

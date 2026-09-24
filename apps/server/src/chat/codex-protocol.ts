@@ -43,6 +43,9 @@ const textOf = (content: unknown): string => {
         .join('\n');
 };
 
+// What `agentsStates` says of an agent that stopped working; the call that reports it may have completed long before.
+const ENDED_AGENT_STATES = new Set(['completed', 'errored', 'interrupted', 'shutdown', 'notFound']);
+
 /* What became of every agent a collab call touched, one line each; empty while the call still runs. */
 const collabAgentOutput = (states: unknown): string => {
     if (!isRecord(states)) {
@@ -174,6 +177,10 @@ export class CodexProtocol {
     private readonly backgroundTerminals = new Map<string, string>();
     // When the plan's spent window lifts, from its last rate limit update; null while no window is spent.
     private spentUntil: number | null = null;
+    // The chat's own thread. A spawned agent's thread streams over the same connection, and none of it is the chat's.
+    private ownThreadId: string | null = null;
+    // Per agent thread, the ref of the row that stands for it and whether that row has settled.
+    private readonly agentRows = new Map<string, { ref: string; settled: boolean }>();
 
     constructor(generation: number) {
         this.generation = generation;
@@ -187,6 +194,7 @@ export class CodexProtocol {
     /* The result of `thread/start` or `thread/resume`. The thread id is what a terminal resumes. */
     threadReady(result: unknown): BackendEvent[] {
         const thread = isRecord(result) && isRecord(result.thread) ? result.thread : {};
+        this.ownThreadId = str(thread.id) ?? this.ownThreadId;
         return [
             {
                 type: 'session',
@@ -207,13 +215,15 @@ export class CodexProtocol {
             this.handleServerRequest(frame.method, frame.id as CodexRpcId, params, events);
             return events;
         }
+        // Codex 0.156.1 streams a spawned agent's turns, items and usage here too, under that agent's thread id.
+        const threadId = frame.method === 'thread/started' ? (isRecord(params.thread) ? str(params.thread.id) : null) : str(params.threadId);
+        if (threadId !== null && this.ownThreadId !== null && threadId !== this.ownThreadId) {
+            return events;
+        }
         switch (frame.method) {
             case 'thread/started':
-                events.push({
-                    type: 'session',
-                    agentSessionId: isRecord(params.thread) ? str(params.thread.id) : null,
-                    model: null
-                });
+                this.ownThreadId = threadId ?? this.ownThreadId;
+                events.push({ type: 'session', agentSessionId: threadId, model: null });
                 break;
             case 'thread/name/updated': {
                 const title = cleanTitle(params.threadName);
@@ -554,8 +564,12 @@ export class CodexProtocol {
                     return;
                 }
                 this.tool(ref, tool, input, completed, collabAgentOutput(item.agentsStates), str(item.status) === 'completed', events);
+                this.settleEndedAgents(item.agentsStates, events);
                 return;
             }
+            case 'subAgentActivity':
+                this.subAgentActivity(item, events);
+                return;
             case 'contextCompaction':
                 if (completed) {
                     events.push({ type: 'compaction', preTokens: null });
@@ -611,11 +625,11 @@ export class CodexProtocol {
     }
 
     /*
-     * An agent Codex spawned. It works in a thread of its own, so this row never grows children or a
-     * report. What there is to say about it is the state Codex keeps per agent it touched.
+     * An agent Codex spawned, as a spawnAgent call reports it. It works in a thread of its own, so this row
+     * never grows children or a report. The call completes once the agent runs; only the state Codex keeps
+     * per agent says when it stopped. A spawn that failed opened no agent to wait for.
      */
     private spawnedAgent(ref: string, item: Frame, input: unknown, events: BackendEvent[]): void {
-        const status = str(item.status);
         const summary = collabAgentOutput(item.agentsStates);
         // One spawn opens one thread; Codex only knows its id once the call went through.
         const threadId = Array.isArray(item.receiverThreadIds) ? str(item.receiverThreadIds[0]) : null;
@@ -630,11 +644,61 @@ export class CodexProtocol {
             background: true,
             ...(threadId ? { threadId } : {})
         });
-        if (status === 'inProgress' || status === null) {
-            events.push({ type: 'task.progress', ref, summary: summary || null, lastTool: null, usage: null });
+        if (threadId === null) {
+            if (str(item.status) === 'failed') {
+                events.push({ type: 'task.done', ref, summary: summary || null, ok: false });
+            }
             return;
         }
-        events.push({ type: 'task.done', ref, summary: summary || null, ok: status === 'completed' });
+        if (!this.agentRows.has(threadId)) {
+            this.agentRows.set(threadId, { ref, settled: false });
+        }
+        if (!this.settleEndedAgents(item.agentsStates, events)) {
+            events.push({ type: 'task.progress', ref, summary: summary || null, lastTool: null, usage: null });
+        }
+    }
+
+    /* Settles the row of every agent a collab call reports stopped; true when one of them did just now. */
+    private settleEndedAgents(states: unknown, events: BackendEvent[]): boolean {
+        let settled = false;
+        for (const [threadId, state] of Object.entries(isRecord(states) ? states : {})) {
+            const status = isRecord(state) ? str(state.status) : null;
+            const row = this.agentRows.get(threadId);
+            if (row === undefined || row.settled || status === null || !ENDED_AGENT_STATES.has(status)) {
+                continue;
+            }
+            row.settled = true;
+            settled = true;
+            events.push({ type: 'task.done', ref: row.ref, summary: collabAgentOutput({ [threadId]: state }), ok: status === 'completed' });
+        }
+        return settled;
+    }
+
+    /*
+     * What Codex 0.156.1 reports of an agent it spawned instead of a spawnAgent call: `started` under the
+     * spawn's call id with the agent's thread, then `completed` or `interrupted` under an id of its own that
+     * only the thread ties back to the row. Each comes as item/started and again as item/completed.
+     */
+    private subAgentActivity(item: Frame, events: BackendEvent[]): void {
+        const ref = str(item.id);
+        const threadId = str(item.agentThreadId);
+        const kind = str(item.kind);
+        if (ref === null || threadId === null) {
+            return;
+        }
+        const row = this.agentRows.get(threadId);
+        if (kind === 'started' && row === undefined) {
+            this.agentRows.set(threadId, { ref, settled: false });
+            // The path ends in the name the parent gave the agent, which is all the stream says about its task.
+            const path = str(item.agentPath) ?? '';
+            events.push({ type: 'tool.started', ref, name: 'Agent', input: { agentPath: path }, parentRef: null });
+            events.push({ type: 'task.started', ref, description: path.split('/').at(-1) ?? '', subagentType: null, prompt: null, background: true, threadId });
+            return;
+        }
+        if ((kind === 'completed' || kind === 'interrupted') && row !== undefined && !row.settled) {
+            row.settled = true;
+            events.push({ type: 'task.done', ref: row.ref, summary: null, ok: kind === 'completed' });
+        }
     }
 
     private tool(

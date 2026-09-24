@@ -674,6 +674,27 @@ describe('ChatManager with Codex', () => {
             expect(idle()).toBe(true);
         });
 
+        // The shape Codex 0.156.1 streams: activity items instead of a spawnAgent call, and the agent's own thread beside the chat's.
+        test('an agent spawned through activity items stays running past the turn until its completed activity', async () => {
+            await open('chat-activity');
+            await manager.send('chat-activity', 'spawn agent: survey the docs');
+            await recorder.until(() => idle() && recorder.ofKind('subagent').length === 1);
+            const row = recorder.ofKind('subagent')[0]!;
+            expect(row).toMatchObject({ description: 'survey', background: true, status: 'running' });
+            expect(row.native?.threadId?.startsWith('child-')).toBe(true);
+            // The agent's own turn ending did not end the chat's, and none of its items is the chat's.
+            expect(recorder.ofKind('turn')).toHaveLength(1);
+            expect(recorder.ofKind('turn')[0]).toMatchObject({ state: 'done' });
+            expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['spawned']);
+            expect(recorder.ofKind('tool')).toEqual([]);
+
+            codex.started[0]!.runLater();
+            await recorder.until(() => recorder.ofKind('subagent')[0]?.status === 'done');
+            expect(recorder.ofKind('subagent')[0]?.finishedAt).toEqual(expect.any(Number));
+            expect(recorder.ofKind('turn')).toHaveLength(1);
+            expect(idle()).toBe(true);
+        });
+
         test('a row without a thread is refused by name', async () => {
             await open('chat-none');
             await expect(manager.subagent('c1', { chatId: 'chat-none', toolUseId: 'nope' })).rejects.toMatchObject({ code: 'subagent-not-found' });
