@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { AgentInfo, AgentStatus, ApprovalRequest } from '@ruimte/contracts';
 import type { CanvasNode } from '@/state/canvas';
-import type { ChatsById } from '@/state/chats';
+import type { ChatStatuses } from '@/state/chats';
 import { dropEndpoint, endpointKey, useEndpointId } from '@/state/keys';
 
 export interface SessionState {
@@ -128,7 +128,7 @@ const sessionStatus = (state: SessionState | undefined): AgentStatus | undefined
 export type StatusOf = Pick<CanvasNode, 'id' | 'kind' | 'status'>;
 
 /* A terminal's status comes from its session, a chat's from its thread; anything else still carries it on the node. */
-export const nodeStatus = (node: StatusOf, sessions: SessionsByKey, chats: ChatsById, endpointId: string): AgentStatus | undefined => {
+export const nodeStatus = (node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): AgentStatus | undefined => {
     if (node.kind === 'terminal') {
         return sessionStatus(sessions[endpointKey(endpointId, node.id)]);
     }

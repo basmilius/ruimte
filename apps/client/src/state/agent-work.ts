@@ -1,4 +1,4 @@
-import type { ChatState, ChatsById } from '@/state/chats';
+import type { ChatState, ChatStatuses } from '@/state/chats';
 import { endpointKey } from '@/state/keys';
 import type { SessionState, SessionsByKey, StatusOf } from '@/state/sessions';
 
@@ -12,17 +12,17 @@ import type { SessionState, SessionsByKey, StatusOf } from '@/state/sessions';
 export const sessionWorking = (session: SessionState | undefined): boolean => session?.agent?.live === true && session.agent.status === 'running';
 
 /* The same question of a chat, which carries the status on its thread rather than on a session. */
-export const chatWorking = (chat: ChatState | undefined): boolean => chat?.info.status === 'running';
+export const chatWorking = (chat: Pick<ChatState, 'info'> | undefined): boolean => chat?.info.status === 'running';
 
 /* Whether any agent is working, over every machine this window is watching. */
-export const agentsWorking = (sessions: SessionsByKey, chats: ChatsById): boolean =>
+export const agentsWorking = (sessions: SessionsByKey, chats: ChatStatuses): boolean =>
     Object.values(sessions).some(sessionWorking) || Object.values(chats).some(chatWorking);
 
 /*
  * Whether this node is the one with the working agent in it. Only a terminal and a chat can be,
  * since everything else on a canvas carries a status no CLI ever reported.
  */
-export const nodeWorking = (node: StatusOf, sessions: SessionsByKey, chats: ChatsById, endpointId: string): boolean => {
+export const nodeWorking = (node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): boolean => {
     if (node.kind === 'terminal') {
         return sessionWorking(sessions[endpointKey(endpointId, node.id)]);
     }

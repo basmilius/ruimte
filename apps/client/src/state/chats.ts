@@ -21,6 +21,9 @@ export interface ChatState {
 /* Rows keyed with `endpointKey`, so a thread says which daemon it runs on. */
 export type ChatsById = Record<string, ChatState>;
 
+/* What a chat is doing, without its thread: all a header, the sidebar or a counter reads. */
+export type ChatStatuses = Record<string, Pick<ChatState, 'info'>>;
+
 /* What a chat client writes. It owns one machine's socket, so it speaks in node ids alone. */
 export interface ChatSink {
     reset(chatId: string, info: ChatInfo, items: ChatItem[]): void;
@@ -33,6 +36,8 @@ export interface ChatSink {
 
 interface ChatsStore {
     byKey: ChatsById;
+    /* Replaced only when a chat's info is, never for a streamed word, so what reads the status alone is not redrawn by one. */
+    statusByKey: ChatStatuses;
     reset(key: string, info: ChatInfo, items: ChatItem[]): void;
     apply(key: string, event: ChatEvent): void;
     status(key: string, info: ChatInfo): void;
@@ -55,6 +60,10 @@ const withItem = (state: ChatState, item: ChatItem): ChatState => {
 
 /* Cheap enough, since a status only arrives when the daemon saw one change, never on a streamed word. */
 const sameInfo = (left: ChatInfo, right: ChatInfo): boolean => JSON.stringify(left) === JSON.stringify(right);
+
+/* The statuses with this chat's info in them, the same object when that info is already there. */
+const withStatus = (statuses: ChatStatuses, key: string, info: ChatInfo): ChatStatuses =>
+    statuses[key]?.info === info ? statuses : { ...statuses, [key]: { info } };
 
 export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
     switch (event.type) {
@@ -88,6 +97,7 @@ export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
 
 export const useChats = create<ChatsStore>((set) => ({
     byKey: {},
+    statusByKey: {},
     reset(key, info, items) {
         set((s) => {
             // The bookmarks are not part of the thread; they come in on their own and outlive a reset of it.
@@ -96,7 +106,8 @@ export const useChats = create<ChatsStore>((set) => ({
                 byKey: {
                     ...s.byKey,
                     [key]: bookmarks === undefined ? stateOf(info, items) : { ...stateOf(info, items), bookmarks }
-                }
+                },
+                statusByKey: withStatus(s.statusByKey, key, info)
             };
         });
     },
@@ -106,7 +117,8 @@ export const useChats = create<ChatsStore>((set) => ({
             if (!current) {
                 return {};
             }
-            return { byKey: { ...s.byKey, [key]: applyEvent(current, event) } };
+            const next = applyEvent(current, event);
+            return { byKey: { ...s.byKey, [key]: next }, statusByKey: withStatus(s.statusByKey, key, next.info) };
         });
     },
     /*
@@ -118,13 +130,13 @@ export const useChats = create<ChatsStore>((set) => ({
         set((s) => {
             const current = s.byKey[key];
             if (!current) {
-                return { byKey: { ...s.byKey, [key]: stateOf(info, []) } };
+                return { byKey: { ...s.byKey, [key]: stateOf(info, []) }, statusByKey: withStatus(s.statusByKey, key, info) };
             }
             // An attached client already had this on `chat.event`; writing it again would redraw the thread.
             if (sameInfo(current.info, info)) {
                 return {};
             }
-            return { byKey: { ...s.byKey, [key]: { ...current, info } } };
+            return { byKey: { ...s.byKey, [key]: { ...current, info } }, statusByKey: withStatus(s.statusByKey, key, info) };
         });
     },
     bookmarks(key, bookmarks) {
@@ -140,11 +152,13 @@ export const useChats = create<ChatsStore>((set) => ({
         set((s) => {
             const next = { ...s.byKey };
             delete next[key];
-            return { byKey: next };
+            const statuses = { ...s.statusByKey };
+            delete statuses[key];
+            return { byKey: next, statusByKey: statuses };
         });
     },
     clear(endpointId) {
-        set((s) => ({ byKey: dropEndpoint(s.byKey, endpointId) }));
+        set((s) => ({ byKey: dropEndpoint(s.byKey, endpointId), statusByKey: dropEndpoint(s.statusByKey, endpointId) }));
     }
 }));
 
@@ -168,6 +182,6 @@ export const useNodeStatus = (node: StatusOf): AgentStatus | undefined => {
     const endpointId = useEndpointId();
     const key = endpointKey(endpointId, node.id);
     const session = useSessions((s) => s.byKey[key]);
-    const chat = useChats((s) => s.byKey[key]);
+    const chat = useChats((s) => s.statusByKey[key]);
     return nodeStatus(node, session ? { [key]: session } : {}, chat ? { [key]: chat } : {}, endpointId);
 };

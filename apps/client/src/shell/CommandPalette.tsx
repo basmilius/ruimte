@@ -47,6 +47,7 @@ import {
     machinesStep,
     openBrowse,
     paletteStart,
+    type PaletteSignal,
     parentOf,
     pickMachine,
     retryLink,
@@ -175,8 +176,32 @@ function SearchToggle({ icon, label, active, onClick }: { icon: LucideIcon; labe
     );
 }
 
-/* Cmd+K: jump to a node, run an action, or type a path to open a folder as a project. */
+/*
+ * Cmd+K: jump to a node, run an action, or type a path to open a folder as a project. The body follows
+ * the canvas, the machines and the projects, so it is mounted only while the palette is up or on its
+ * way out. The browse ask it saw last stays here, so a body that mounts knows whether this opening is one.
+ */
 export function CommandPalette() {
+    const open = useUi((s) => s.paletteOpen);
+    const [mounted, setMounted] = useState(open);
+    const [browseSeen, setBrowseSeen] = useState(() => useUi.getState().paletteBrowseAt);
+    if (open && !mounted) {
+        setMounted(true);
+    }
+    if (!open && !mounted) {
+        return null;
+    }
+    const onClosed = (): void => {
+        const state = useUi.getState();
+        if (!state.paletteOpen) {
+            setBrowseSeen(state.paletteBrowseAt);
+            setMounted(false);
+        }
+    };
+    return <PaletteBody browseSeen={browseSeen} onClosed={onClosed} />;
+}
+
+function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed(): void }) {
     const { t } = useTranslation(['shell', 'common']);
     const open = useUi((s) => s.paletteOpen);
     const seed = useUi((s) => s.paletteSeed);
@@ -287,7 +312,13 @@ export function CommandPalette() {
     };
 
     const signal = { open, mode, browseAt };
-    const [seen, setSeen] = useState(signal);
+    const [seen, setSeen] = useState<PaletteSignal>(() => ({ open: false, mode, browseAt: browseSeen }));
+    // Mounted open, the dialog would skip the way in; one frame closed lets it animate like any other.
+    const [entered, setEntered] = useState(false);
+    useEffect(() => {
+        const frame = window.requestAnimationFrame(() => setEntered(true));
+        return () => window.cancelAnimationFrame(frame);
+    }, []);
 
     // Opening is driven by the store, not by the dialog, so the fresh start is derived while rendering.
     const start = paletteStart(signal, seen);
@@ -785,7 +816,7 @@ export function CommandPalette() {
     };
 
     return (
-        <Dialog.Root open={open} onOpenChange={setOpen}>
+        <Dialog.Root open={open && entered} onOpenChange={setOpen} onOpenChangeComplete={(isOpen) => !isOpen && onClosed()}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup

@@ -72,7 +72,7 @@ export function inspectionActions(document: StoreApi<DocumentState>, dependencie
                             status === 'unknown'
                                 ? null
                                 : target.kind === 'chat'
-                                  ? chatWorking(chat ? { info: chat, items: {}, structure: {}, order: [] } : undefined)
+                                  ? chatWorking(chat ? { info: chat } : undefined)
                                   : sessionWorking(session ? { attached: false, agent: session.agent } : undefined),
                         toolHistory: target.kind === 'chat',
                         updatedAt: target.kind === 'terminal' ? (session?.agent?.updatedAt ?? null) : null

@@ -9,7 +9,7 @@ import { nodeWorking } from '@/state/agent-work';
 import { nodesInSight, seenNodes, type CanvasSight } from '@/state/in-sight';
 import { seePushNotifications, clearPushNotification, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
 import { liveCanvas, subscribeCanvases } from '@/state/canvas';
-import { useChats, type ChatsById } from '@/state/chats';
+import { useChats, type ChatStatuses } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
@@ -131,7 +131,7 @@ export interface AttentionGroups {
 export const groupAttention = (
     nodes: readonly StatusOf[],
     sessions: SessionsByKey,
-    chats: ChatsById,
+    chats: ChatStatuses,
     endpointId: string,
     unseen: Readonly<Record<string, true>>,
     snoozes: Snoozes
@@ -208,7 +208,7 @@ export const clearUnseen = (nodeId: string): void => {
 };
 
 /* Whether each node needs you, keyed for the snoozes; a node with no status yet says nothing either way. */
-export const snoozeObservations = (nodes: readonly StatusOf[], sessions: SessionsByKey, chats: ChatsById, endpointId: string): Map<string, boolean> => {
+export const snoozeObservations = (nodes: readonly StatusOf[], sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): Map<string, boolean> => {
     const observed = new Map<string, boolean>();
     for (const node of nodes) {
         const status = nodeStatus(node, sessions, chats, endpointId);

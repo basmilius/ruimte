@@ -52,7 +52,7 @@ export function StatusSummary() {
     const canvasNodes = useCanvas((s) => s.nodes);
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
-    const chats = useChats((s) => s.byKey);
+    const chats = useChats((s) => s.statusByKey);
     const unseen = useAttention((s) => s.unseen);
     const snoozes = useSnoozes((s) => s.byKey);
 

@@ -186,7 +186,6 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     /* The cheap half of the offer, so a chat that can never make one keeps no timer. */
     const couldOfferCompaction = compaction !== undefined && compaction !== 'none' && info.usage.contextTokens >= RESUME_COMPACTION_TOKENS;
     const now = useNow(60_000, couldOfferCompaction);
-    /* Left to the compiler: a dependency on `capabilities` is one it cannot prove stable, so a `useMemo` here would turn the whole component off. */
     const compactionOffer = !couldOfferCompaction
         ? null
         : resumeCompactionOffer({

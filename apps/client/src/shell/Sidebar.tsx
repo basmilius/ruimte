@@ -763,7 +763,7 @@ export function Sidebar() {
     const flags = useDocument((state) => state.flags);
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
-    const chats = useChats((s) => s.byKey);
+    const chats = useChats((s) => s.statusByKey);
     const drafts = useDrafts((s) => s.ids);
     const warnings = useProcessWarnings((s) => s.byEndpoint);
     const unseen = useAttention((s) => s.unseen);
@@ -788,7 +788,7 @@ export function Sidebar() {
             openViewIds: source.openViewIds,
             views: source.views.map((view) => {
                 const canvas = source.canvases[view.id];
-                const live = isCanvasView(view) ? (canvas ? canvas.order.flatMap((id) => (canvas.nodes[id] ? [canvas.nodes[id]!] : [])) : view.nodes) : [];
+                const live = isCanvasView(view) ? (canvas ?? view.nodes) : [];
                 const asRow = (node: StatusOf & { title: string; titleSource?: SidebarNode['titleSource']; provider?: AgentKind }): SidebarNode => ({
                     id: node.id,
                     title: node.title,

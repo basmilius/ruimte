@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem } from '@ruimte/contracts';
 import { applyEvent, useChats, type ChatState } from '@/state/chats';
+import { endpointKey } from '@/state/keys';
 
 const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
     chatId: 'chat-1',
@@ -133,5 +134,32 @@ describe('bookmarks in the store', () => {
         useChats.getState().bookmarks(key, []);
         expect(useChats.getState().byKey[key]?.bookmarks).toEqual([]);
         useChats.getState().forget(key);
+    });
+});
+
+describe('the statuses beside the threads', () => {
+    test('stay the same object while a reply streams, and change with the info', () => {
+        const key = endpointKey('status-test', 'chat-1');
+        const reply: ChatItem = { id: 'r', kind: 'assistant', createdAt: 0, turnId: null, text: 'Hello', streaming: true };
+        useChats.getState().reset(key, info({ status: 'running' }), [reply]);
+        const streaming = useChats.getState().statusByKey;
+        expect(streaming[key]?.info.status).toBe('running');
+
+        useChats.getState().apply(key, { type: 'delta', itemId: 'r', text: ' there' });
+        expect(useChats.getState().statusByKey).toBe(streaming);
+
+        useChats.getState().apply(key, { type: 'info', info: info({ status: 'needs-you' }) });
+        expect(useChats.getState().statusByKey[key]?.info.status).toBe('needs-you');
+
+        useChats.getState().forget(key);
+        expect(useChats.getState().statusByKey[key]).toBeUndefined();
+    });
+
+    test('hold a chat nobody attached to, and leave with the machine', () => {
+        const key = endpointKey('gone', 'chat-1');
+        useChats.getState().status(key, info({ status: 'running' }));
+        expect(useChats.getState().statusByKey[key]?.info.status).toBe('running');
+        useChats.getState().clear('gone');
+        expect(useChats.getState().statusByKey[key]).toBeUndefined();
     });
 });
