@@ -33,6 +33,22 @@ final class AttentionStoreTests: XCTestCase {
         XCTAssertTrue(store.unseen.isEmpty)
     }
 
+    @MainActor func testAChatNobodyHasOpenSaysWhatItDoesThroughChatStatus() async {
+        let machine = AttentionMachine(snapshot: .object([:]))
+        let store = AttentionStore(client: machine)
+        store.start()
+        defer { store.stop() }
+        await machine.waitForLists()
+        machine.emit(
+            "chat.status", .object(["chatId": .string("chat-1"), "info": .object(["status": .string("running")])]))
+        XCTAssertEqual(store.statuses["chat-1"], .running)
+        machine.emit(
+            "chat.status", .object(["chatId": .string("chat-1"), "info": .object(["status": .string("idle")])]))
+        XCTAssertEqual(store.statuses["chat-1"], .idle)
+        XCTAssertTrue(store.unseen.contains("chat-1"))
+        XCTAssertEqual(machine.chatLists, 1)
+    }
+
     private func entry(_ id: String, issued: Double, read: Double) -> JSONValue {
         .object(["nodeId": .string(id), "issuedAt": .number(issued), "readThrough": .number(read)])
     }
@@ -41,6 +57,8 @@ final class AttentionStoreTests: XCTestCase {
 @MainActor private final class AttentionMachine: MachineRequesting {
     let snapshot: JSONValue
     var push: (@MainActor @Sendable (JSONValue) -> Void)?
+    private(set) var chatLists = 0
+    private var handlers: [String: @MainActor @Sendable (JSONValue) -> Void] = [:]
     private var listed = false
     private var waiter: CheckedContinuation<Void, Never>?
 
@@ -51,6 +69,7 @@ final class AttentionStoreTests: XCTestCase {
         case "push.attention": return snapshot
         case "session.list": return .object(["sessions": .array([])])
         default:
+            chatLists += 1
             defer {
                 listed = true
                 waiter?.resume()
@@ -62,8 +81,11 @@ final class AttentionStoreTests: XCTestCase {
 
     func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         if event == "push.attention" { push = handler }
+        handlers[event] = handler
         return {}
     }
+
+    func emit(_ event: String, _ payload: JSONValue) { handlers[event]?(payload) }
 
     func waitForLists() async {
         if !listed { await withCheckedContinuation { waiter = $0 } }

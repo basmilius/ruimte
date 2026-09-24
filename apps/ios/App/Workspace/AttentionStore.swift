@@ -72,6 +72,11 @@ final class AttentionStore {
                 self?.read(event.text("sessionId")) { $0.shellExited = true }
             })
         subscriptions.append(
+            client.subscribe("chat.status") { [weak self] payload in
+                guard let info = payload["info"] else { return }
+                self?.update(payload.text("chatId"), status: AgentStatus.of(info))
+            })
+        subscriptions.append(
             client.subscribe("chat.event") { [weak self] payload in
                 guard let event = payload["event"], let info = event["info"] else { return }
                 self?.update(payload.text("chatId"), status: AgentStatus.of(info))
@@ -83,13 +88,7 @@ final class AttentionStore {
                 guard connected else { return }
                 pushEntries.removeAll()
                 marksFrom = nil
-                refreshTask = Task { [weak self] in
-                    while !Task.isCancelled {
-                        await self?.refresh()
-                        // Chats outside an open page have no event subscription on the existing wire.
-                        do { try await Task.sleep(for: .seconds(10)) } catch { return }
-                    }
-                }
+                refreshTask = Task { [weak self] in await self?.refresh() }
             })
     }
 
