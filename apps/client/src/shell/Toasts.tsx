@@ -2,7 +2,7 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { CircleAlert, CircleCheck, Copy, LoaderCircle, Trash, X } from 'lucide-react';
-import { useToasts, type Toast } from '@/state/toasts';
+import { elapsedOf, useToasts, type Toast, type ToastDeadline } from '@/state/toasts';
 import { Button } from '@/ui/Button';
 import { FLOAT } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -43,10 +43,43 @@ function CopyOutput({ output }: { output: string }) {
     );
 }
 
+/*
+ * How long the offer in a toast still stands, drawn from the timer that takes the toast away: the
+ * ring starts as far along as that timer already is, so both end together. With motion off it stays full.
+ */
+function TimerRing({ id, deadline }: { id: string; deadline: ToastDeadline }) {
+    const { t } = useTranslation('common');
+    const lifetime = deadline.end - deadline.start;
+    const [elapsed] = useState(() => elapsedOf(deadline, Date.now()));
+    return (
+        <Tooltip label={t('action.dismiss')} name>
+            <button className="group/ring icon-btn relative h-(--text-sm--line-height) w-6 shrink-0" onClick={() => useToasts.getState().dismiss(id)}>
+                <svg width={16} height={16} viewBox="0 0 16 16" className="-rotate-90" aria-hidden>
+                    <circle cx={8} cy={8} r={6} fill="none" strokeWidth={2} className="stroke-border" />
+                    <circle
+                        cx={8}
+                        cy={8}
+                        r={6}
+                        fill="none"
+                        strokeWidth={2}
+                        pathLength={1}
+                        strokeDasharray={1}
+                        className="toast-timer-arc stroke-current"
+                        style={{ animationDuration: `${lifetime}ms`, animationDelay: `${-elapsed}ms` }}
+                    />
+                </svg>
+                <Icon icon={X} size={8} className="absolute opacity-0 group-hover/ring:opacity-100 group-focus-visible/ring:opacity-100" />
+            </button>
+        </Tooltip>
+    );
+}
+
 function ToastCard({ toast }: { toast: Toast }) {
     const { t } = useTranslation('common');
     // A toast that goes by itself keeps its close button out of sight until the pointer or the keyboard is on it.
     const leaves = toast.kind === 'deleted' || (toast.kind === 'success' && toast.persist !== true);
+    // An offer that runs out shows how long it has left instead.
+    const countdown = toast.action !== undefined ? toast.deadline : undefined;
     return (
         <div className={`group flex items-start gap-3 rounded-[10px] py-2.5 pr-2 pl-3 ${FLOAT}`}>
             <span className={clsx(TITLE_LINE, 'w-4 justify-center')}>
@@ -73,17 +106,21 @@ function ToastCard({ toast }: { toast: Toast }) {
                     {toast.action.shortcut && <Kbd shortcut={toast.action.shortcut} className="font-sans text-xs text-text-faint" />}
                 </span>
             )}
-            <Tooltip label={t('action.dismiss')} name>
-                <button
-                    className={clsx(
-                        'icon-btn h-(--text-sm--line-height) w-6 shrink-0',
-                        leaves && 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
-                    )}
-                    onClick={() => useToasts.getState().dismiss(toast.id)}
-                >
-                    <Icon icon={X} size={12} />
-                </button>
-            </Tooltip>
+            {countdown !== undefined ? (
+                <TimerRing key={countdown.start} id={toast.id} deadline={countdown} />
+            ) : (
+                <Tooltip label={t('action.dismiss')} name>
+                    <button
+                        className={clsx(
+                            'icon-btn h-(--text-sm--line-height) w-6 shrink-0',
+                            leaves && 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
+                        )}
+                        onClick={() => useToasts.getState().dismiss(toast.id)}
+                    >
+                        <Icon icon={X} size={12} />
+                    </button>
+                </Tooltip>
+            )}
         </div>
     );
 }

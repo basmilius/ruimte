@@ -978,6 +978,13 @@
         to { opacity: 0; }
     }
 
+    /* A toast's countdown ring; `TimerRing` sets duration and delay from the toast's own timer. */
+    .toast-timer-arc { animation: toast-timer linear forwards; }
+    @keyframes toast-timer {
+        from { stroke-dashoffset: 0; }
+        to { stroke-dashoffset: 1; }
+    }
+
     /* The page an HTML file is drawn as. Its white ground is what a browser gives a document that
        brings no background; a native webview waits for its first load to avoid a white flash. */
     .file-preview-page { width: 100%; height: 100%; border: 0; background: #ffffff; }
