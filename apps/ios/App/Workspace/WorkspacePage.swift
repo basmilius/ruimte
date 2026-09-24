@@ -371,7 +371,20 @@ struct ProjectItemPage: View {
             } else {
                 switch current.text("kind") {
                 case "canvas": CanvasPage(workspace: workspace, viewID: current.stableID)
-                case "terminal": TerminalScreen(client: workspace.client, sessionID: current.stableID, title: title)
+                case "terminal":
+                    VStack(spacing: 0) {
+                        if let command = workspace.heldCommands[current.stableID] {
+                            HStack {
+                                Text("Run \(command)?").font(.callout.monospaced()).lineLimit(1).truncationMode(.middle)
+                                Spacer()
+                                Button("Run") { Task { await workspace.runHeldCommand(current.stableID) } }
+                                    .buttonStyle(.borderedProminent)
+                            }
+                            .padding().background(.regularMaterial)
+                            .disabled(!workspace.session.connected)
+                        }
+                        TerminalScreen(client: workspace.client, sessionID: current.stableID, title: title)
+                    }
                 case "browser": BrowserPage(url: current.text("url"))
                 case "file": FileContentPage(client: workspace.client, path: absolutePath(current.text("path")))
                 case "note": NotePage(workspace: workspace, nodeID: current.stableID, bodyText: current.text("body"))

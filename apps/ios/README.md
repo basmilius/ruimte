@@ -26,6 +26,8 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   Unsaved drawing drafts persist locally for recovery.
 - SwiftTerm terminals with snapshots, output, resync, keyboard controls and paste confirmation.
   `session.attach` uses `follow:true` so opening a phone never resizes the desktop PTY.
+  A command from the project file that nobody on the machine approved yet waits above the
+  terminal as "Run bun dev?" until a tap on Run (`heldCommand`, `session.runHeld`).
 - File and media previews, filesystem updates, usage and machine access management.
   Destructive actions require confirmation.
 - Git over every repository a project folder holds: the one the folder is in, its initialized

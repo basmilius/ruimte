@@ -16,6 +16,8 @@ final class MobileWorkspace {
     var conflict: JSONValue?
     var notice: JSONValue?
     var selectedID: String?
+    /// The commands from the project file a terminal started without, by node, until a person says yes to one.
+    private(set) var heldCommands: [String: String] = [:]
     private var base = JSONValue.object([:])
     private var subscriptions: [() -> Void] = []
     private var revision = 0
@@ -51,6 +53,11 @@ final class MobileWorkspace {
             client.subscribe("project.showView") { [weak self] event in
                 guard let self, event.text("projectId") == projectID else { return }
                 notice = event
+            })
+        subscriptions.append(
+            client.subscribe("session.list-changed") { [weak self] _ in
+                guard let self, !heldCommands.isEmpty else { return }
+                Task { await self.refreshHeldCommands() }
             })
         subscriptions.append(
             client.observeConnection { [weak self] connected in
@@ -247,9 +254,29 @@ final class MobileWorkspace {
             for key in ["provider", "resume", "runtimeMode"] { payload[key] = metadata[key] }
         }
         do {
-            _ = try await client.request(kind == "chat" ? "chat.create" : "session.create", payload: .object(payload))
+            let info = try await client.request(kind == "chat" ? "chat.create" : "session.create", payload: .object(payload))
+            if kind == "terminal" { heldCommands[item.stableID] = info["heldCommand"]?.stringValue }
         } catch MachineClientError.server(let code, _) where kind == "terminal" && code == "session-exists" {
             // The existing shell is shared with the desktop and keeps its current dimensions.
+            await refreshHeldCommands(including: item.stableID)
         }
+    }
+
+    /// A person saying yes to the command the machine holds for this terminal: it is written down there and typed.
+    func runHeldCommand(_ id: String) async {
+        do {
+            _ = try await client.request("session.runHeld", payload: .object(["sessionId": .string(id)]))
+            heldCommands[id] = nil
+        } catch { problem = error.localizedDescription }
+    }
+
+    /// Another client may have said yes, or a shell made elsewhere may hold one; only the session list says.
+    private func refreshHeldCommands(including id: String? = nil) async {
+        guard let result = try? await client.request("session.list", payload: .object([:])) else { return }
+        let held = Dictionary(
+            result.list("sessions").compactMap { session in
+                session["heldCommand"]?.stringValue.map { (session.text("sessionId"), $0) }
+            }, uniquingKeysWith: { first, _ in first })
+        for key in Set(heldCommands.keys).union(id.map { [$0] } ?? []) { heldCommands[key] = held[key] }
     }
 }
