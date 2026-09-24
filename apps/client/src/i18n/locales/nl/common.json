@@ -41,7 +41,8 @@
             "toasts": "De meldingen konden niet worden getekend",
             "machineUpdate": "De update van de machine kon niet worden getekend",
             "link": "Een machine koppelen kon niet worden getekend",
-            "shortcutHints": "De sneltoetshints konden niet worden getekend"
+            "shortcutHints": "De sneltoetshints konden niet worden getekend",
+            "deviceTools": "De apparaattools konden niet worden getekend"
         }
     },
     "answer": {

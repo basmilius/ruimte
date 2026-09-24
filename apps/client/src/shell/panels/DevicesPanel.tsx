@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +23,6 @@ import { deviceTools, isCanvasView, type DeviceInfo, type DeviceReference } from
 import { createViewAction, placeViewOnCanvasAction } from '@/actions/client-actions';
 import { AndroidMark } from '@/devices/AndroidMark';
 import { DeviceControls, DeviceSurface } from '@/devices/DeviceBody';
-import { DeviceToolsPanel } from '@/devices/DeviceToolsPanel';
 import { deviceStateText, unavailableNotes } from '@/devices/device-text';
 import { PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/shell/PanelHeaderSlot';
 import { useDocument } from '@/state/document';
@@ -39,6 +38,11 @@ import { SignInMark } from '@/ui/SignInMark';
 import { Tooltip } from '@/ui/Tooltip';
 import { PanelEmpty } from '@/ui/PanelEmpty';
 import { MenuPopup } from '@/ui/MenuPopup';
+import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { lazyNamed } from '@/ui/lazy';
+import { failed } from '@/shell/surface-failure';
+
+const DeviceToolsPanel = lazyNamed(() => import('@/devices/DeviceToolsPanel'), 'DeviceToolsPanel');
 
 const referenceOf = (device: DeviceInfo): DeviceReference => ({
     platform: device.platform,
@@ -388,7 +392,11 @@ function DeviceToolsFlyout({ device }: { device: DeviceInfo }) {
             <Popover.Portal>
                 <Popover.Positioner side="left" align="start" sideOffset={8} collisionPadding={16} className="z-(--z-popup)">
                     <Popover.Popup className="h-[min(720px,calc(100dvh-32px))] w-80 max-w-[calc(100vw-32px)] overflow-hidden rounded-xl border border-border bg-surface shadow-float outline-none">
-                        <DeviceToolsPanel device={device} onClose={() => setOpen(false)} />
+                        <ErrorBoundary label={failed('deviceTools')} resetKeys={[device.deviceId]} compact className="h-full">
+                            <Suspense fallback={null}>
+                                <DeviceToolsPanel device={device} onClose={() => setOpen(false)} />
+                            </Suspense>
+                        </ErrorBoundary>
                     </Popover.Popup>
                 </Popover.Positioner>
             </Popover.Portal>

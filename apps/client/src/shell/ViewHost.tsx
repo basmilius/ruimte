@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { isFilesView, type CellView } from '@/shell/files-view';
@@ -6,8 +6,6 @@ import { FileViewer } from '@/shell/panels/FileViewer';
 import { Canvas } from '@/canvas/Canvas';
 import { ProjectStartScreen } from '@/shell/ProjectStartScreen';
 import { SplitGrid } from '@/shell/SplitGrid';
-import { DiagramView } from '@/diagram/DiagramView';
-import { DrawingView } from '@/drawing/DrawingView';
 import { useDiagram } from '@/state/diagram';
 import { useDrawing } from '@/state/drawing';
 import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
@@ -19,6 +17,10 @@ import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useFiles } from '@/state/files';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { lazyNamed } from '@/ui/lazy';
+
+const DrawingView = lazyNamed(() => import('@/drawing/DrawingView'), 'DrawingView');
+const DiagramView = lazyNamed(() => import('@/diagram/DiagramView'), 'DiagramView');
 
 function StandaloneView({ view }: { view: ProjectView }) {
     // `bodyFocused` is one flag for the whole grid, so without the cell every chat and terminal would grab it.
@@ -42,8 +44,16 @@ function StandaloneView({ view }: { view: ProjectView }) {
             {view.kind === 'terminal' && <TerminalBody id={view.id} focused={focused} />}
             {view.kind === 'browser' && <BrowserViewSurface id={view.id} />}
             {view.kind === 'device' && <DeviceBody id={view.id} />}
-            {view.kind === 'drawing' && <DrawingView id={view.id} />}
-            {view.kind === 'diagram' && <DiagramView id={view.id} />}
+            {view.kind === 'drawing' && (
+                <Suspense fallback={null}>
+                    <DrawingView id={view.id} />
+                </Suspense>
+            )}
+            {view.kind === 'diagram' && (
+                <Suspense fallback={null}>
+                    <DiagramView id={view.id} />
+                </Suspense>
+            )}
             {/* No column around it: prose centers itself at 768px inside its own renderer, and
                 code wants every pixel the window has. */}
             {isFileView(view) && <FileSurface path={view.path} on="view" />}

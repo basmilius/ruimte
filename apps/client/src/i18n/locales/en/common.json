@@ -41,7 +41,8 @@
             "toasts": "The notifications failed to render",
             "machineUpdate": "The machine update failed to render",
             "link": "Linking a machine failed to render",
-            "shortcutHints": "The shortcut hints failed to render"
+            "shortcutHints": "The shortcut hints failed to render",
+            "deviceTools": "The device tools failed to render"
         }
     },
     "answer": {

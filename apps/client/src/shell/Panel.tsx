@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
@@ -6,7 +6,6 @@ import { hasOverlayControls } from '@/desktop/bridge';
 import { PANELS } from '@/shell/panels';
 import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
-import { GitPanel } from '@/shell/panels/GitPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
 import { DevicesPanel } from '@/shell/panels/DevicesPanel';
 import { SlidingColumn } from '@/shell/SlidingColumn';
@@ -14,9 +13,12 @@ import { clampColumnSize } from '@/shell/useColumnResize';
 import { useUi, type PanelKind } from '@/state/ui';
 import { SECTION_LABEL } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { lazyNamed } from '@/ui/lazy';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+
+const GitPanel = lazyNamed(() => import('@/shell/panels/GitPanel'), 'GitPanel');
 
 const DEFAULT_WIDTH = 540;
 // A drag stops here instead of squeezing the canvas away.
@@ -74,7 +76,9 @@ export function Panel() {
             </header>
             <PanelHeaderProvider hosts={{ leading: leadingHeaderSlot, titleSignal, trailing: headerSlot }}>
                 <ErrorBoundary label={t('panel.failed')} resetKeys={[panel.kind]} className="min-h-0 grow">
-                    <PanelBody kind={panel.kind} />
+                    <Suspense fallback={<div className="min-h-0 grow" />}>
+                        <PanelBody kind={panel.kind} />
+                    </Suspense>
                 </ErrorBoundary>
             </PanelHeaderProvider>
         </SlidingColumn>

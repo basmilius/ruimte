@@ -21,8 +21,6 @@ import {
 import { FadingWords } from '@/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { formatClockDuration } from '@/format/duration';
-import { SlidingColumn } from '@/shell/SlidingColumn';
-import { clampColumnSize } from '@/shell/useColumnResize';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -31,10 +29,6 @@ import { closeVoicePanel, startVoice, stopVoice, undoVoiceAction, undoVoiceActio
 import { VoiceWaveform } from '@/voice/VoiceWaveform';
 import { useVoice, type VoiceAction, type VoiceActionKind, type VoicePhase, type VoiceUtterance } from '@/voice/state';
 import { voiceTimeline, type VoiceTimelineEntry } from '@/voice/timeline';
-
-const DEFAULT_WIDTH = 380;
-const MIN_WIDTH = 320;
-const MIN_WORKSPACE_WIDTH = 480;
 
 const actionIcons: Record<VoiceActionKind, LucideIcon> = {
     focus: LayoutGrid,
@@ -202,19 +196,16 @@ function TranscriptEntry({ streaming, utterance }: { streaming: boolean; utteran
     );
 }
 
-export function VoicePanel() {
+export function VoicePanelBody() {
     const { t } = useTranslation('voice');
-    const open = useVoice((state) => state.open);
     const phase = useVoice((state) => state.phase);
     const error = useVoice((state) => state.error);
     const transcript = useVoice((state) => state.transcript);
     const actions = useVoice((state) => state.actions);
     const sessionStartedAt = useVoice((state) => state.sessionStartedAt);
-    const storedWidth = useVoice((state) => state.width);
     const now = useNow(1_000, sessionStartedAt !== null);
     const elapsedMs = sessionStartedAt === null ? 0 : Math.max(0, now - sessionStartedAt);
     const bottom = useRef<HTMLDivElement>(null);
-    const width = clampColumnSize({ min: MIN_WIDTH, max: () => window.innerWidth - MIN_WORKSPACE_WIDTH }, storedWidth ?? DEFAULT_WIDTH);
     const active = phase === 'connecting' || phase === 'listening' || phase === 'closing';
     const timeline = voiceTimeline(transcript, actions);
     const last = timeline.at(-1);
@@ -225,13 +216,7 @@ export function VoicePanel() {
     }, [transcript, actions]);
 
     return (
-        <SlidingColumn
-            open={open}
-            restoreWithProject={false}
-            width={width}
-            bounds={{ min: MIN_WIDTH, max: () => window.innerWidth - MIN_WORKSPACE_WIDTH }}
-            onWidth={(next) => useVoice.getState().setWidth(next)}
-        >
+        <>
             <header
                 className={clsx(
                     'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border pr-2 pl-3',
@@ -292,6 +277,6 @@ export function VoicePanel() {
                     {active ? t('conversation.end') : transcript.length > 0 ? t('conversation.restart') : t('conversation.start')}
                 </Button>
             </footer>
-        </SlidingColumn>
+        </>
     );
 }

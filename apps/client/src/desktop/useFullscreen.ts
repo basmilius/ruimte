@@ -15,6 +15,9 @@ export const useDesktopFullscreen = (): boolean => {
     return fullscreen;
 };
 
+/* The padding the strip starts with where there are no traffic lights to clear. */
+export const STRIP_PADDING_PX = 12;
+
 /* The space the leftmost strip keeps free for the traffic lights, or nothing where there are none.
    Fullscreen hides them, so the inset goes with them and the strip starts at its own padding. */
 export const useTrafficLightInset = (): number | undefined => {

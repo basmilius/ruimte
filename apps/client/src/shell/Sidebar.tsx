@@ -77,7 +77,7 @@ import { useInstantWidth } from '@/shell/useInstantWidth';
 import { UsageLimitsCard } from '@/shell/usage/UsageLimitsCard';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { FolderMenuItems } from '@/shell/FolderMenuItems';
-import { useTrafficLightInset } from '@/desktop/useFullscreen';
+import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { Icon } from '@/ui/Icon';
 import { MenuPopup } from '@/ui/MenuPopup';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
@@ -95,9 +95,6 @@ import { useUnsavedStoredPath } from '@/shell/panels/use-unsaved';
 /* How wide the list is when it is open. The inner column keeps this width while the wrapper
    animates to zero, so nothing reflows on the way out. */
 export const SIDEBAR_WIDTH_PX = 248;
-
-/* The padding the strip starts with where there are no traffic lights to clear. */
-export const STRIP_PADDING_PX = 12;
 
 /* Every kind a node on a canvas can be. A view row draws itself through `ViewGlyph`, which starts
    from the icon a person picked and falls back to the same marks. */
