@@ -16,7 +16,7 @@ const flush = async (): Promise<void> => {
         await Promise.resolve();
     }
 };
-const fixture = () => {
+const fixture = (allowed = true) => {
     const ready = deferred<void>();
     const calls: string[] = [];
     let id = '';
@@ -68,6 +68,10 @@ const fixture = () => {
         },
         {
             bridge,
+            requestMicrophoneAccess: async () => {
+                calls.push('access');
+                return allowed;
+            },
             openMicrophone: async () => {
                 calls.push('microphone');
                 return stream;
@@ -87,16 +91,25 @@ const fixture = () => {
 };
 
 describe('dictation lifecycle', () => {
-    test('waits for the loaded model before opening the microphone', async () => {
+    test('asks for the microphone, then waits for the loaded model before opening it', async () => {
         const run = fixture();
-        expect(run.calls).toEqual(['start']);
+        await flush();
+        expect(run.calls).toEqual(['access', 'start']);
         run.ready.resolve();
         await flush();
-        expect(run.calls).toEqual(['start', 'microphone', 'capture', 'ready']);
+        expect(run.calls).toEqual(['access', 'start', 'microphone', 'capture', 'ready']);
         run.session.cancel();
+    });
+    test('a refused microphone never starts the helper', async () => {
+        const run = fixture(false);
+        await flush();
+        expect(run.calls).not.toContain('start');
+        expect(run.calls).toContain('error');
+        expect(run.calls.filter((call) => call === 'end')).toHaveLength(1);
     });
     test('cancelling a load never opens a microphone later', async () => {
         const run = fixture();
+        await flush();
         run.session.cancel();
         run.ready.resolve();
         await flush();

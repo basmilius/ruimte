@@ -4,9 +4,12 @@ export interface DictationChunk {
     final: boolean;
 }
 
+/* Each code is a key under `voice:dictation.errors`, so a person never reads the code itself. */
+export type DictationErrorCode = 'noBridge' | 'overrun' | 'recognition' | 'targetChanged';
+
 export class DictationError extends Error {
-    readonly code: string;
-    constructor(code: string, message?: string) {
+    readonly code: DictationErrorCode;
+    constructor(code: DictationErrorCode, message?: string) {
         super(message ?? code);
         this.name = 'DictationError';
         this.code = code;

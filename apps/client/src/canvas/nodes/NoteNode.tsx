@@ -1,5 +1,5 @@
 import { DictationControl } from '@/dictation/DictationControl';
-import i18next from 'i18next';
+import { DictationError } from '@/dictation/engine';
 import { useEffect, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { ClipboardPaste, Copy, Scan, Scissors } from 'lucide-react';
@@ -78,7 +78,7 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
                                 return {
                                     insert: (text) => {
                                         if (ref.current !== field || field.value !== before) {
-                                            throw new Error(i18next.t('voice:dictation.targetChanged'));
+                                            throw new DictationError('targetChanged');
                                         }
                                         canvasStore.getState().updateNode(id, { body: `${before.slice(0, from)}${text}${before.slice(to)}` }, true);
                                         requestAnimationFrame(() => {

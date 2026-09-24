@@ -4,9 +4,10 @@ import type { SpeechState } from '@ruimte/desktop-bridge';
 import { claimMicrophone } from '@/audio/ownership';
 import { desktop } from '@/desktop/bridge';
 import { useSettings } from '@/state/settings';
+import { dictationFailureText } from './failure';
 import { helperEngine } from './helper';
 import { applyChunk, EMPTY_TRANSCRIPT, transcriptText } from './transcript';
-import type { DictationSession } from './engine';
+import type { DictationEngine, DictationSession } from './engine';
 
 export const SPEECH_LOCALES: Record<string, string> = {
     ar: 'ar-AR',
@@ -62,6 +63,21 @@ let releaseAudio: (() => void) | null = null;
 let insertion: DictationInsertion | null = null;
 let observers = 0;
 let releaseModel: (() => void) | null = null;
+let engine: DictationEngine = helperEngine;
+
+/* Puts another recognizer behind every dictation that starts from now on; the returned call puts the previous one back. */
+export const setDictationEngine = (next: DictationEngine): (() => void) => {
+    const previous = engine;
+    engine = next;
+    return () => {
+        engine = previous;
+    };
+};
+
+const failWith = (targetId: string, error: unknown): void => {
+    console.warn('Dictation failed:', error);
+    useDictation.setState({ targetId, phase: 'error', error: dictationFailureText(error) });
+};
 
 export const observeSpeech = (): (() => void) => {
     const bridge = desktop()?.speech;
@@ -169,7 +185,7 @@ export const toggleDictation = (target: DictationTarget): void => {
     let finalText: string | null = null;
     let failed = false;
     try {
-        session = helperEngine.start(
+        session = engine.start(
             { language, deviceId: useSettings.getState().voiceInputDeviceId },
             {
                 onReady: () => {
@@ -200,7 +216,7 @@ export const toggleDictation = (target: DictationTarget): void => {
                         return;
                     }
                     failed = true;
-                    useDictation.setState({ phase: 'error', error: error.message });
+                    failWith(target.id, error);
                 },
                 onEnd: () => {
                     if (generation !== token) {
@@ -216,7 +232,7 @@ export const toggleDictation = (target: DictationTarget): void => {
                         }
                     } catch (error) {
                         failed = true;
-                        useDictation.setState({ phase: 'error', error: error instanceof Error ? error.message : String(error) });
+                        failWith(target.id, error);
                     }
                     captured.dispose?.();
                     insertion = null;
@@ -228,7 +244,7 @@ export const toggleDictation = (target: DictationTarget): void => {
         );
     } catch (error) {
         cancelDictation();
-        useDictation.setState({ targetId: target.id, phase: 'error', error: error instanceof Error ? error.message : String(error) });
+        failWith(target.id, error);
     }
 };
 

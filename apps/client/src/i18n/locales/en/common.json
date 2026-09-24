@@ -66,7 +66,10 @@
         "error": {
             "disabled": "Microphone access is disabled in System Settings",
             "noTrack": "No microphone audio track was available",
-            "stopped": "The microphone test was stopped"
+            "stopped": "The microphone test was stopped",
+            "denied": "Microphone access was denied. Allow it in System Settings, then try again.",
+            "missing": "No microphone was found.",
+            "failed": "The microphone could not be opened."
         }
     },
     "find": {

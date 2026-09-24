@@ -66,7 +66,10 @@
         "error": {
             "disabled": "Toegang tot de microfoon staat uit in Systeeminstellingen",
             "noTrack": "Er was geen audiospoor van de microfoon beschikbaar",
-            "stopped": "De microfoontest is gestopt"
+            "stopped": "De microfoontest is gestopt",
+            "denied": "Toegang tot de microfoon is geweigerd. Sta die toe in Systeeminstellingen en probeer het opnieuw.",
+            "missing": "Er is geen microfoon gevonden.",
+            "failed": "De microfoon kon niet worden geopend."
         }
     },
     "find": {

@@ -10,5 +10,6 @@ Optional local dictation, under Voice settings beside Voice Control. Only Nemotr
 - A terminal gets an editable draft. Only an explicit paste sends sanitized text through xterm; never Enter, control characters or partial transcripts.
 - The microphone closes on normal stop, cancellation and every failure. Stop drains the final worklet block before asking the helper for its last result.
 - No word substitutions or spoken commands. Recognition errors remain visible for the person to edit.
+- A failure reaches a person only through `failure.ts`: a `DictationError` code is a key under `voice:dictation.errors`, and no raw code or Chromium message is shown.
 
 `controller.ts` coordinates the target and audio ownership. `helper.ts` manages capture and the optional desktop bridge. `editor.ts` tracks CodeMirror insertion ranges and isolates undo history. The desktop shell owns downloads, persisted enablement and the helper's sixty-second idle timeout. IPC shapes live in `packages/desktop-bridge/src/speech.ts`.

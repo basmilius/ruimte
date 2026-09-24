@@ -1,7 +1,7 @@
 import { useRef, useState, type ComponentProps } from 'react';
 import clsx from 'clsx';
-import i18next from 'i18next';
 import { DictationControl } from './DictationControl';
+import { DictationError } from './engine';
 
 interface DictationTextareaProps extends ComponentProps<'textarea'> {
     /* Where the button sits beside the field, e.g. a negative margin so it does not make a one-line row taller. */
@@ -45,13 +45,13 @@ export function DictationTextarea({ buttonClassName, ref, ...props }: DictationT
                     return {
                         insert: (text) => {
                             if (field.current !== element || element.value !== before || !element.isConnected) {
-                                throw new Error(i18next.t('voice:dictation.targetChanged'));
+                                throw new DictationError('targetChanged');
                             }
                             element.focus();
                             element.setSelectionRange(from, to);
                             // Chromium records insertText as one native undo step and sends the normal input event.
                             if (!document.execCommand('insertText', false, text)) {
-                                throw new Error(i18next.t('voice:dictation.targetChanged'));
+                                throw new DictationError('targetChanged');
                             }
                         }
                     };

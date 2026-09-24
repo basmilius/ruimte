@@ -42,6 +42,13 @@ export const openMicrophoneStream = async (
     }
 };
 
+/* The desktop shell asks macOS, which keeps the permission and shows its own prompt; a browser asks when the stream opens. */
+export const ensureMicrophoneAccess = async (request: () => Promise<boolean> | undefined = () => desktop()?.requestMicrophoneAccess?.()): Promise<void> => {
+    if ((await request()) === false) {
+        throw new DOMException(i18next.t('common:microphone.error.disabled'), 'NotAllowedError');
+    }
+};
+
 export const listMicrophones = async (): Promise<MicrophoneDevice[]> => {
     const devices = await navigator.mediaDevices.enumerateDevices();
     let unnamed = 0;
@@ -151,9 +158,7 @@ export class MicrophoneMonitor {
     }
 
     async #open(): Promise<MediaStream> {
-        if ((await desktop()?.requestMicrophoneAccess?.()) === false) {
-            throw new DOMException(i18next.t('common:microphone.error.disabled'), 'NotAllowedError');
-        }
+        await ensureMicrophoneAccess();
         const stream = await openMicrophoneStream(this.#deviceId);
         if (this.#stopped) {
             stream.getTracks().forEach((track) => track.stop());

@@ -40,9 +40,6 @@
     "error": {
         "start": "GPT-Live kon niet starten",
         "session": "GPT-Live meldde een fout in de sessie",
-        "microphoneDenied": "Toegang tot de microfoon is geweigerd. Sta die toe in Systeeminstellingen en probeer het opnieuw.",
-        "microphoneMissing": "Er is geen microfoon gevonden.",
-        "microphoneFailed": "De microfoon kon niet worden geopend.",
         "noSession": "Ruimte kon geen microfoonsessie opzetten"
     },
     "untitledProject": "Naamloos project",
@@ -71,10 +68,16 @@
         "preview": "Live transcriptie",
         "failed": "Speech to Text kon niet starten",
         "unsupportedLanguage": "Speech to Text ondersteunt deze taal niet. Kies een andere taal in de Voice-instellingen.",
-        "targetChanged": "Het tekstveld is gewijzigd. Dicteer opnieuw.",
         "terminalDraft": "Tekst om in de terminal te plakken",
         "paste": "In terminal plakken",
         "discard": "Weggooien",
-        "noEnter": "Plakt tekst zonder op Enter te drukken."
+        "noEnter": "Plakt tekst zonder op Enter te drukken.",
+        "errors": {
+            "noBridge": "Speech to Text werkt alleen in de desktop-app.",
+            "overrun": "De spraakherkenning kon de microfoon niet bijhouden. Probeer het opnieuw.",
+            "recognition": "De spraakherkenning stopte met een fout. Probeer het opnieuw.",
+            "unknown": "Dicteren stopte onverwacht. Probeer het opnieuw.",
+            "targetChanged": "Het tekstveld is gewijzigd. Dicteer opnieuw."
+        }
     }
 }

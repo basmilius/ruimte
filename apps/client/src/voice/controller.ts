@@ -15,6 +15,7 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { LiveSession, type LiveEvent } from '@/voice/live-session';
 import { MicrophoneMonitor, WaveformMonitor, WAVEFORM_BAND_COUNT } from '@/audio/microphone';
+import { microphoneFailureText } from '@/audio/microphone-failure';
 import { ResponseToolLoop } from '@/voice/response-tool-loop';
 import { chatCompletion, type VoiceChatFollowUp } from '@/voice/chat-follow-up';
 import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction, type VoiceActionKind } from '@/voice/state';
@@ -41,16 +42,6 @@ const undo = new Map<string, () => void>();
 const chatFollowUps = new Map<string, VoiceChatFollowUp>();
 
 const failureText = (error: unknown): string => (error instanceof Error ? error.message : i18next.t('voice:error.start'));
-
-const microphoneFailureText = (error: unknown): string => {
-    if (error instanceof DOMException && error.name === 'NotAllowedError') {
-        return i18next.t('voice:error.microphoneDenied');
-    }
-    if (error instanceof DOMException && error.name === 'NotFoundError') {
-        return i18next.t('voice:error.microphoneMissing');
-    }
-    return error instanceof Error ? error.message : i18next.t('voice:error.microphoneFailed');
-};
 
 /*
  * This context is for the speech model, not something a person reads, so it skips `format/`. A fixed

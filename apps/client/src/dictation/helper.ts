@@ -1,6 +1,6 @@
 import type { SpeechBridge } from '@ruimte/desktop-bridge';
 import { SpeechCapture } from '@/audio/capture';
-import { openMicrophoneStream } from '@/audio/microphone';
+import { ensureMicrophoneAccess, openMicrophoneStream } from '@/audio/microphone';
 import { desktop } from '@/desktop/bridge';
 import { DictationError, type DictationEngine, type DictationHandlers, type DictationOptions, type DictationSession } from './engine';
 
@@ -28,13 +28,14 @@ export class HelperSession implements DictationSession {
         handlers: DictationHandlers,
         dependencies?: {
             bridge: SpeechBridge;
+            requestMicrophoneAccess?(): Promise<boolean>;
             openMicrophone(deviceId: string): Promise<MediaStream>;
             capture(onSamples: (samples: Float32Array) => void, onBands?: (bands: number[]) => void): Capture;
         }
     ) {
         const bridge = dependencies?.bridge ?? desktop()?.speech;
         if (!bridge?.onEvent) {
-            throw new DictationError('no-bridge');
+            throw new DictationError('noBridge');
         }
         this.#bridge = bridge;
         this.#handlers = handlers;
@@ -43,7 +44,7 @@ export class HelperSession implements DictationSession {
                 return;
             }
             if (++this.#queued > 64) {
-                this.#fail(new Error('Speech recognition cannot keep up with the microphone'));
+                this.#fail(new DictationError('overrun'));
                 return;
             }
             this.#pending = this.#pending
@@ -65,15 +66,26 @@ export class HelperSession implements DictationSession {
             if (event.type === 'transcript') {
                 handlers.onChunk({ text: event.text, final: event.final });
             } else if (event.type === 'failed') {
-                this.#fail(new Error(event.message));
+                this.#fail(new DictationError('recognition', event.message));
             } else if (event.type === 'ended') {
                 this.#end();
             }
         });
-        void this.#run(options, dependencies?.openMicrophone ?? openMicrophoneStream).catch((error: unknown) => this.#fail(error));
+        void this.#run(options, dependencies?.requestMicrophoneAccess, dependencies?.openMicrophone ?? openMicrophoneStream).catch((error: unknown) =>
+            this.#fail(error)
+        );
     }
 
-    async #run(options: DictationOptions, open: (deviceId: string) => Promise<MediaStream>): Promise<void> {
+    async #run(
+        options: DictationOptions,
+        requestAccess: (() => Promise<boolean>) | undefined,
+        open: (deviceId: string) => Promise<MediaStream>
+    ): Promise<void> {
+        // Before the model loads, so the system's prompt shows at the press and a refusal never starts the helper.
+        await ensureMicrophoneAccess(requestAccess);
+        if (this.#ended) {
+            return;
+        }
         await this.#bridge.start(this.#id, options.language);
         if (this.#ended) {
             return;

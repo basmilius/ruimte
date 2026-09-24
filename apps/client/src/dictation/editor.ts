@@ -1,9 +1,9 @@
 import { StateEffect, StateField } from '@codemirror/state';
 import { isolateHistory } from '@codemirror/commands';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
-import i18next from 'i18next';
 import { externalChange } from '@/chat/ui/composer/editor';
 import type { DictationInsertion } from './controller';
+import { DictationError } from './engine';
 
 export interface InsertionRange {
     from: number;
@@ -157,7 +157,7 @@ export const captureEditor = (view: EditorView): DictationInsertion | null => {
         insert: (text) => {
             const range = view.state.field(dictationRange);
             if (!range || view.state.readOnly || !view.dom.isConnected) {
-                throw new Error(i18next.t('voice:dictation.targetChanged'));
+                throw new DictationError('targetChanged');
             }
             view.dispatch({
                 changes: { ...range, insert: text },

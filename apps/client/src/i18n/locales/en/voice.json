@@ -40,9 +40,6 @@
     "error": {
         "start": "GPT-Live could not start",
         "session": "GPT-Live reported a session error",
-        "microphoneDenied": "Microphone access was denied. Allow it in System Settings, then try again.",
-        "microphoneMissing": "No microphone was found.",
-        "microphoneFailed": "The microphone could not be opened.",
         "noSession": "Ruimte could not create a microphone session"
     },
     "untitledProject": "Untitled project",
@@ -71,10 +68,16 @@
         "preview": "Live transcript",
         "failed": "Speech to Text could not start",
         "unsupportedLanguage": "This language is not supported by Speech to Text. Choose another language in Voice settings.",
-        "targetChanged": "The text field changed. Please dictate again.",
         "terminalDraft": "Dictated text to paste",
         "paste": "Paste into terminal",
         "discard": "Discard",
-        "noEnter": "Pastes text without pressing Enter."
+        "noEnter": "Pastes text without pressing Enter.",
+        "errors": {
+            "noBridge": "Speech to Text needs the desktop app.",
+            "overrun": "Speech recognition could not keep up with the microphone. Try again.",
+            "recognition": "Speech recognition stopped with an error. Try again.",
+            "unknown": "Dictation stopped unexpectedly. Try again.",
+            "targetChanged": "The text field changed. Please dictate again."
+        }
     }
 }
