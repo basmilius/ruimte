@@ -383,11 +383,30 @@
             "sound": {
                 "label": "Play a sound with a notification",
                 "description": "Applies to every agent notification."
+            }
+        },
+        "keepAwake": {
+            "title": "Keep this Mac awake",
+            "description": "Sleep pauses every agent. These settings apply to this Mac only.",
+            "mode": {
+                "label": "Keep awake",
+                "off": "Off",
+                "working": {
+                    "label": "While agents work",
+                    "description": "Only while an agent works."
+                },
+                "always": {
+                    "label": "Always",
+                    "description": "Also when no agent works."
+                }
             },
-            "keepAwake": {
-                "label": "Keep this computer awake",
-                "description": "Keeps the computer awake while an agent works, since sleep pauses the agent. The display can still turn off.",
-                "toggle": "Keep this computer awake while an agent works"
+            "battery": {
+                "label": "Also on battery",
+                "description": "Off, this Mac only stays awake on the power adapter."
+            },
+            "display": {
+                "label": "Keep the display on",
+                "description": "Off, the display can still turn off while the Mac stays awake."
             }
         },
         "chats": {

@@ -11,6 +11,7 @@ import { useProject } from '@/state/project';
 import { useProvidersStore } from '@/state/providers';
 import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useWindow } from '@/state/window';
 
@@ -46,6 +47,7 @@ export const useNativeMenu = (): void => {
             useProvidersStore.subscribe(schedule),
             useChats.subscribe(schedule),
             useSessions.subscribe(schedule),
+            useSettings.subscribe(schedule),
             useServers.subscribe(schedule),
             useWindow.subscribe(schedule),
             subscribeCanvases(schedule),

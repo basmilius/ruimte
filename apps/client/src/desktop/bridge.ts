@@ -1,6 +1,7 @@
 import type {
     AgentActivity,
     BackgroundServiceState,
+    KeepAwakeRequest,
     MenuSpec,
     OpenAiLivePreferences,
     ReleaseNotesState,
@@ -14,6 +15,7 @@ export type {
     AgentActivity,
     BackgroundServiceState,
     DaemonOwner,
+    KeepAwakeRequest,
     OpenAiLivePreferences,
     PendingRestart,
     Release,
@@ -150,8 +152,12 @@ export interface DesktopBridge {
     setTheme?(theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void;
     /* Keeps the machine from sleeping while an agent works. The client decides when that is and says
        so; the shell holds the block and drops it on a reload or when the window goes. Optional for
-       the same reason `onBrowserContextMenu` is; without it the setting is not offered. */
+       the same reason `onBrowserContextMenu` is. Superseded by `requestKeepAwake`, and still what a
+       shell from before that one understands. */
     setKeepAwake?(keep: boolean): void;
+    /* What the client wants held, or null for nothing. The shell weighs it against the power source
+       it sees, live, and ignores it off macOS. Optional for the same reason `onBrowserContextMenu` is. */
+    requestKeepAwake?(request: KeepAwakeRequest | null): void;
     /* How much of the work still wants a person. The client counts it (`state/attention.ts`). Only
        it knows which node holds an agent and which holds a shell somebody left attached. The shell
        badges the dock with `attention` and asks before quitting on `working`. Optional for the same
@@ -205,9 +211,13 @@ export const desktop = (): DesktopBridge | null => (typeof window === 'undefined
 
 export const isDesktop = (): boolean => desktop() !== null;
 
-/* True where the shell can hold the machine awake. A browser cannot, so the setting is not offered
-   there rather than shown as a switch that promises something the page has no way to do. */
-export const canKeepAwake = (): boolean => typeof desktop()?.setKeepAwake === 'function';
+/* True where the shell can hold the machine awake, which is the desktop app on macOS for now. A
+   browser cannot, so the setting is not offered there rather than shown as a switch that promises
+   something the page has no way to do. */
+export const canKeepAwake = (): boolean => {
+    const bridge = desktop();
+    return bridge?.platform === 'darwin' && (typeof bridge.requestKeepAwake === 'function' || typeof bridge.setKeepAwake === 'function');
+};
 
 /* True only in the desktop app on macOS, where a two-finger swipe goes back and forward in a page.
    Elsewhere a mouse's side buttons do the same thing, and they work on every platform. */

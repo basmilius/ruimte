@@ -43,6 +43,8 @@ export type MenuNode =
           keys?: string;
           enabled?: boolean;
           checked?: boolean;
+          /* One of a group of choices, with `checked` on the chosen one. A shell older than this draws a check mark. */
+          radio?: boolean;
       }
     | { kind: 'role'; role: MenuRole; label: string }
     | { kind: 'shell'; action: MenuShellAction; label: string }

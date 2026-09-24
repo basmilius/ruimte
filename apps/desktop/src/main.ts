@@ -4,9 +4,18 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { buildIdentityOf, machineWorkOf, MACHINE_HEALTH_PATH, MACHINE_WORK_PATH, type BuildIdentity, type MachineWork } from '@ruimte/contracts';
-import { MENU_ROLES, type AgentActivity, type BackgroundServiceState, type MenuNode, type MenuSpec, type UpdateState } from '@ruimte/desktop-bridge';
+import {
+    MENU_ROLES,
+    type AgentActivity,
+    type BackgroundServiceState,
+    type KeepAwakeRequest,
+    type MenuNode,
+    type MenuSpec,
+    type UpdateState
+} from '@ruimte/desktop-bridge';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { editFrameOf, runGuestEdit } from './guest-edit';
+import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE } from './keep-awake';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
@@ -19,8 +28,23 @@ import { SpeechService, speechHelperPath } from './speech';
 import { SpeechModel } from './speech-model';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
-const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerSaveBlocker, safeStorage, screen, session, shell, systemPreferences, webContents } =
-    require('electron') as typeof import('electron');
+const {
+    app,
+    BrowserWindow,
+    dialog,
+    ipcMain,
+    Menu,
+    nativeTheme,
+    net,
+    powerMonitor,
+    powerSaveBlocker,
+    safeStorage,
+    screen,
+    session,
+    shell,
+    systemPreferences,
+    webContents
+} = require('electron') as typeof import('electron');
 
 /*
  * The desktop shell: one window, the client inside it, the daemon next to it. Nothing crosses
@@ -352,29 +376,25 @@ const routePreviewLinks = (contents: Electron.WebContents): void => {
     });
 };
 
-/* The blocker in flight, or null. One window, so one id; holding it here is what keeps a second
-   request from leaking the first. */
-let keepAwakeId: number | null = null;
+/* What the client last asked for. Kept rather than applied once, since the power source it depends
+   on changes while the request stands. */
+let keepAwakeRequest: KeepAwakeRequest | null = null;
 
-/*
- * Agents need `prevent-app-suspension`, not a lit display. On macOS, `pmset` reports Chromium's
- * assertion as `NoIdleSleepAssertion` owned by Electron.
- */
-const setKeepAwake = (keep: boolean): void => {
-    if (keep === (keepAwakeId !== null)) {
-        return;
-    }
-    if (keep) {
-        keepAwakeId = powerSaveBlocker.start('prevent-app-suspension');
-        return;
-    }
-    if (keepAwakeId !== null && powerSaveBlocker.isStarted(keepAwakeId)) {
-        powerSaveBlocker.stop(keepAwakeId);
-    }
-    keepAwakeId = null;
+const holdKeepAwake = createKeepAwakeHold(powerSaveBlocker);
+
+const applyKeepAwake = (): void => {
+    // `powerMonitor` only answers once the app is ready, and a request only arrives from a window after that.
+    const onBattery = keepAwakeRequest !== null && powerMonitor.isOnBatteryPower();
+    holdKeepAwake(keepAwakeBlocker(keepAwakeRequest, { platform: process.platform, onBattery }));
 };
 
-ipcMain.on('power:keep-awake', (_event, keep: boolean) => setKeepAwake(keep));
+const setKeepAwake = (request: KeepAwakeRequest | null): void => {
+    keepAwakeRequest = request;
+    applyKeepAwake();
+};
+
+ipcMain.on('power:keep-awake', (_event, keep: boolean) => setKeepAwake(keep === true ? LEGACY_KEEP_AWAKE : null));
+ipcMain.on('power:keep-awake-request', (_event, request: unknown) => setKeepAwake(keepAwakeRequestFrom(request)));
 
 /*
  * What the client last said about its agents. The shell counts nothing itself: which node holds an
@@ -434,7 +454,7 @@ const createWindow = (): Electron.BrowserWindow => {
     window.once('ready-to-show', () => window.show());
     window.on('closed', () => {
         mainWindow = null;
-        setKeepAwake(false);
+        setKeepAwake(null);
         setAgentActivity({ working: 0, attention: 0 });
     });
     // Reset client-owned state on main-frame reload; subframe loads must not release the power block.
@@ -442,7 +462,7 @@ const createWindow = (): Electron.BrowserWindow => {
         if (!window.webContents.isLoadingMainFrame()) {
             return;
         }
-        setKeepAwake(false);
+        setKeepAwake(null);
         setAgentActivity({ working: 0, attention: 0 });
         setStaticMenu();
     });
@@ -1184,7 +1204,7 @@ const menuItemOf = (node: MenuNode): Electron.MenuItemConstructorOptions | null 
         case 'command':
             return {
                 label: node.label,
-                type: node.checked === undefined ? 'normal' : 'checkbox',
+                type: node.checked === undefined ? 'normal' : node.radio === true ? 'radio' : 'checkbox',
                 checked: node.checked ?? false,
                 enabled: node.enabled ?? true,
                 ...(node.accelerator ? { accelerator: node.accelerator } : {}),
@@ -1298,6 +1318,8 @@ if (!app.requestSingleInstanceLock()) {
         setStaticMenu();
         sealPreviewSession();
         registerGuestPreload();
+        powerMonitor.on('on-battery', applyKeepAwake);
+        powerMonitor.on('on-ac', applyKeepAwake);
         try {
             // `bun dev` runs the daemon itself; the shell only opens the dev URL.
             if (!devUrl) {

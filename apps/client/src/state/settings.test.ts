@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
-import { codeThemesOf, iceServersFrom, settingsFrom } from './settings';
+import { codeThemesOf, iceServersFrom, settingsFrom, type KeepAwakeMode, type Settings } from './settings';
 
 describe('a view an agent asks for', () => {
     test('is not followed until a person says so', () => {
@@ -15,14 +15,34 @@ describe('a view an agent asks for', () => {
 });
 
 describe('keeping the machine awake', () => {
+    const legacy = (value: unknown): Partial<Settings> => ({ agentsKeepAwake: value }) as Partial<Settings>;
+
     test('is off until a person turns it on, since a laptop that never sleeps is a decision', () => {
-        expect(settingsFrom({}).agentsKeepAwake).toBe(false);
-        expect(settingsFrom({ agentsShowViews: true }).agentsKeepAwake).toBe(false);
+        expect(settingsFrom({}).keepAwake).toBe('off');
+        expect(settingsFrom({ agentsShowViews: true }).keepAwake).toBe('off');
+        expect(settingsFrom({ keepAwake: 'sometimes' as unknown as KeepAwakeMode }).keepAwake).toBe('off');
     });
 
-    test('is on only for a stored true, never for whatever else is under the key', () => {
-        expect(settingsFrom({ agentsKeepAwake: true }).agentsKeepAwake).toBe(true);
-        expect(settingsFrom({ agentsKeepAwake: 1 as unknown as boolean }).agentsKeepAwake).toBe(false);
+    test('keeps a stored mode', () => {
+        expect(settingsFrom({ keepAwake: 'always' }).keepAwake).toBe('always');
+        expect(settingsFrom({ keepAwake: 'working' }).keepAwake).toBe('working');
+    });
+
+    test('reads the switch it used to be: on was while an agent works, anything else is off', () => {
+        expect(settingsFrom(legacy(true)).keepAwake).toBe('working');
+        expect(settingsFrom(legacy(false)).keepAwake).toBe('off');
+        expect(settingsFrom(legacy(1)).keepAwake).toBe('off');
+    });
+
+    test('a mode written since wins over the switch left beside it', () => {
+        expect(settingsFrom({ ...legacy(true), keepAwake: 'off' }).keepAwake).toBe('off');
+    });
+
+    test('holds on the power adapter only, with the display allowed to sleep, until a person says otherwise', () => {
+        expect(settingsFrom({}).keepAwakeOnBattery).toBe(false);
+        expect(settingsFrom({}).keepAwakeDisplay).toBe(false);
+        expect(settingsFrom({ keepAwakeOnBattery: true, keepAwakeDisplay: true })).toMatchObject({ keepAwakeOnBattery: true, keepAwakeDisplay: true });
+        expect(settingsFrom({ keepAwakeOnBattery: 1 as unknown as boolean }).keepAwakeOnBattery).toBe(false);
     });
 });
 
@@ -41,7 +61,7 @@ describe('answering a permission here', () => {
 describe('being told a turn ended', () => {
     test('starts on: it only ever fires while you are elsewhere, which is when it is worth having', () => {
         expect(settingsFrom({}).agentsTurnNotify).toBe(true);
-        expect(settingsFrom({ agentsKeepAwake: true }).agentsTurnNotify).toBe(true);
+        expect(settingsFrom({ keepAwake: 'always' }).agentsTurnNotify).toBe(true);
     });
 
     test('is off for a stored false and for nothing else', () => {

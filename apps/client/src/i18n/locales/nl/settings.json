@@ -383,11 +383,30 @@
             "sound": {
                 "label": "Een geluid spelen bij een notificatie",
                 "description": "Geldt voor elke notificatie van een agent."
+            }
+        },
+        "keepAwake": {
+            "title": "Deze Mac wakker houden",
+            "description": "Slaap pauzeert elke agent. Deze instellingen gelden alleen voor deze Mac.",
+            "mode": {
+                "label": "Wakker houden",
+                "off": "Uit",
+                "working": {
+                    "label": "Terwijl agents werken",
+                    "description": "Alleen zolang een agent werkt."
+                },
+                "always": {
+                    "label": "Altijd",
+                    "description": "Ook als er geen agent werkt."
+                }
             },
-            "keepAwake": {
-                "label": "Deze computer wakker houden",
-                "description": "Houdt de computer wakker terwijl een agent werkt, want slapen pauzeert de agent. Het scherm mag nog uitgaan.",
-                "toggle": "Deze computer wakker houden terwijl een agent werkt"
+            "battery": {
+                "label": "Ook op de batterij",
+                "description": "Uit houdt deze Mac alleen wakker op de netadapter."
+            },
+            "display": {
+                "label": "Het scherm aan laten",
+                "description": "Uit mag het scherm nog uitgaan terwijl de Mac wakker blijft."
             }
         },
         "chats": {

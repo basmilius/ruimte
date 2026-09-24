@@ -110,7 +110,9 @@ export function AgentsPane() {
     const preferences = useChatPreferences();
     const agentsShowViews = useSettings((s) => s.agentsShowViews);
     const agentsApprovals = useSettings((s) => s.agentsApprovals);
-    const agentsKeepAwake = useSettings((s) => s.agentsKeepAwake);
+    const keepAwake = useSettings((s) => s.keepAwake);
+    const keepAwakeOnBattery = useSettings((s) => s.keepAwakeOnBattery);
+    const keepAwakeDisplay = useSettings((s) => s.keepAwakeDisplay);
     const agentsTurnNotify = useSettings((s) => s.agentsTurnNotify);
     const agentsTurnSound = useSettings((s) => s.agentsTurnSound);
     const chatStreaming = useSettings((s) => s.chatStreaming);
@@ -204,21 +206,62 @@ export function AgentsPane() {
                         />
                     }
                 />
-                {/* A browser cannot keep anything awake, so it is told nothing about a switch it has no way to honor. */}
-                {canKeepAwake() && (
+            </SettingsSection>
+            {/* A browser cannot keep anything awake, so it is told nothing about a choice it has no way to honor. */}
+            {canKeepAwake() && (
+                <SettingsSection title={t('agents.keepAwake.title')} description={t('agents.keepAwake.description')}>
                     <SettingsRow
-                        label={t('agents.working.keepAwake.label')}
-                        description={t('agents.working.keepAwake.description')}
+                        label={t('agents.keepAwake.mode.label')}
                         control={
-                            <Toggle
-                                checked={agentsKeepAwake}
-                                onChange={(checked) => update({ agentsKeepAwake: checked })}
-                                label={t('agents.working.keepAwake.toggle')}
+                            <Select
+                                value={keepAwake}
+                                label={t('agents.keepAwake.mode.label')}
+                                align="end"
+                                items={[
+                                    { value: 'off', label: t('agents.keepAwake.mode.off') },
+                                    {
+                                        value: 'working',
+                                        label: t('agents.keepAwake.mode.working.label'),
+                                        description: t('agents.keepAwake.mode.working.description')
+                                    },
+                                    {
+                                        value: 'always',
+                                        label: t('agents.keepAwake.mode.always.label'),
+                                        description: t('agents.keepAwake.mode.always.description')
+                                    }
+                                ]}
+                                onValueChange={(value) => update({ keepAwake: value })}
                             />
                         }
                     />
-                )}
-            </SettingsSection>
+                    {keepAwake !== 'off' && (
+                        <SettingsRow
+                            label={t('agents.keepAwake.battery.label')}
+                            description={t('agents.keepAwake.battery.description')}
+                            control={
+                                <Toggle
+                                    checked={keepAwakeOnBattery}
+                                    onChange={(checked) => update({ keepAwakeOnBattery: checked })}
+                                    label={t('agents.keepAwake.battery.label')}
+                                />
+                            }
+                        />
+                    )}
+                    {keepAwake === 'always' && (
+                        <SettingsRow
+                            label={t('agents.keepAwake.display.label')}
+                            description={t('agents.keepAwake.display.description')}
+                            control={
+                                <Toggle
+                                    checked={keepAwakeDisplay}
+                                    onChange={(checked) => update({ keepAwakeDisplay: checked })}
+                                    label={t('agents.keepAwake.display.label')}
+                                />
+                            }
+                        />
+                    )}
+                </SettingsSection>
+            )}
             <SettingsSection title={t('agents.chats.title')}>
                 <SettingsRow
                     label={t('agents.chats.streaming.label')}

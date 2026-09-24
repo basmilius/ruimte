@@ -15,6 +15,7 @@ import {
     showViewOnCanvasAction
 } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
+import { canKeepAwake } from '@/desktop/bridge';
 import { openFocusedFind } from '@/find/hosts';
 import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubheaderView } from '@/project/views';
 import { copyDiagram, exportDiagram, openDiagramJson } from '@/diagram/diagram-actions';
@@ -27,6 +28,7 @@ import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { windowWorkspace } from '@/state/window';
 import { providersOf } from '@/state/providers';
+import { useSettings } from '@/state/settings';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
@@ -438,6 +440,25 @@ export const appCommands = (): Command[] => {
         { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') },
         { id: 'panel-processes', label: i18next.t('shell:palette.commands.toggleProcesses'), run: () => useUi.getState().togglePanel('processes') },
         { id: 'theme', label: i18next.t('shell:palette.commands.toggleTheme'), run: () => useTheme.getState().toggle() },
+        ...(canKeepAwake()
+            ? [
+                  {
+                      id: 'keep-awake-off',
+                      label: i18next.t('shell:palette.commands.keepAwakeOff'),
+                      run: () => useSettings.getState().update({ keepAwake: 'off' })
+                  },
+                  {
+                      id: 'keep-awake-working',
+                      label: i18next.t('shell:palette.commands.keepAwakeWorking'),
+                      run: () => useSettings.getState().update({ keepAwake: 'working' })
+                  },
+                  {
+                      id: 'keep-awake-always',
+                      label: i18next.t('shell:palette.commands.keepAwakeAlways'),
+                      run: () => useSettings.getState().update({ keepAwake: 'always' })
+                  }
+              ]
+            : []),
         {
             id: 'settings',
             label: i18next.t('shell:settingsDialog.title'),

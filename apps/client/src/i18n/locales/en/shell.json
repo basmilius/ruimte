@@ -512,7 +512,10 @@
             "toggleTheme": "Toggle light and dark",
             "keyboardShortcuts": "Keyboard shortcuts",
             "remote": "Remote",
-            "find": "Find in chat or file"
+            "find": "Find in chat or file",
+            "keepAwakeOff": "Let this Mac sleep",
+            "keepAwakeWorking": "Keep this Mac awake while agents work",
+            "keepAwakeAlways": "Always keep this Mac awake"
         },
         "sections": {
             "recent": "Recent",
@@ -577,6 +580,10 @@
         },
         "about": "About Ruimte",
         "settings": "Settings…",
+        "keepAwake": "Keep This Mac Awake",
+        "keepAwakeOff": "Off",
+        "keepAwakeWorking": "While Agents Work",
+        "keepAwakeAlways": "Always",
         "services": "Services",
         "hide": "Hide Ruimte",
         "hideOthers": "Hide Others",

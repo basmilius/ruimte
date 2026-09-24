@@ -36,6 +36,20 @@ export const chatStreamingFrom = (stored: unknown): ChatStreamingMode => {
     return CHAT_STREAMING_MODES.find((mode) => mode === stored) ?? 'words';
 };
 
+/* When this Mac stays awake: never, while an agent works, or all the time. */
+export type KeepAwakeMode = 'off' | 'working' | 'always';
+
+export const KEEP_AWAKE_MODES: readonly KeepAwakeMode[] = ['off', 'working', 'always'];
+
+/* A stored mode, or the switch before it under `agentsKeepAwake`, whose on was while an agent works. */
+export const keepAwakeFrom = (stored: unknown, legacy: unknown): KeepAwakeMode => {
+    const mode = KEEP_AWAKE_MODES.find((entry) => entry === stored);
+    if (mode) {
+        return mode;
+    }
+    return legacy === true ? 'working' : 'off';
+};
+
 export interface CodeThemeInfo {
     readonly id: string;
     readonly displayName: string;
@@ -112,10 +126,15 @@ export interface Settings {
        machine is told to hold nothing for this client and the prompt in the terminal is the only
        place to answer; another client that wants them is asked as before. */
     agentsApprovals: boolean;
-    /* Whether this machine stays awake while an agent works. About the computer this window runs on
-       and nothing else, which is why it sits with the client and not with a project or a daemon.
-       Off to start with: a laptop that never sleeps is not something to arrange behind someone. */
-    agentsKeepAwake: boolean;
+    /* When this Mac stays awake. About the computer this window runs on and nothing else, which is
+       why it sits with the client and not with a project or a daemon. Off to start with: a laptop
+       that never sleeps is not something to arrange behind someone. */
+    keepAwake: KeepAwakeMode;
+    /* Whether that holds on battery as well. Off, it holds on the power adapter only. */
+    keepAwakeOnBattery: boolean;
+    /* Whether the display stays on as well, which only `always` offers: while an agent works nobody
+       needs to watch it. */
+    keepAwakeDisplay: boolean;
     /* Whether a turn that ends while this window is not the one in front says so, as a notification
        of the operating system. On. The point of the whole thing is the moment somebody walked away,
        and it never fires while the window is in front, so it cannot land on top of what you are doing. */
@@ -176,7 +195,9 @@ const DEFAULT_SETTINGS: Settings = {
     updatesAutoDownload: true,
     agentsShowViews: false,
     agentsApprovals: true,
-    agentsKeepAwake: false,
+    keepAwake: 'off',
+    keepAwakeOnBattery: false,
+    keepAwakeDisplay: false,
     agentsTurnNotify: true,
     agentsTurnSound: false,
     browserSwipe: true,
@@ -210,8 +231,10 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
     // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
     agentsShowViews: stored.agentsShowViews === true,
-    // Same rule. Nothing keeps a laptop from sleeping unless a stored `true` asked for it.
-    agentsKeepAwake: stored.agentsKeepAwake === true,
+    // Same rule. Nothing keeps a laptop from sleeping unless a person asked for it.
+    keepAwake: keepAwakeFrom(stored.keepAwake, (stored as Partial<Settings> & { agentsKeepAwake?: unknown }).agentsKeepAwake),
+    keepAwakeOnBattery: stored.keepAwakeOnBattery === true,
+    keepAwakeDisplay: stored.keepAwakeDisplay === true,
     // The two that start on, so only a stored `false` turns either of them off.
     agentsApprovals: stored.agentsApprovals !== false,
     agentsTurnNotify: stored.agentsTurnNotify !== false,
@@ -309,7 +332,9 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 updatesAutoDownload,
                 agentsShowViews,
                 agentsApprovals,
-                agentsKeepAwake,
+                keepAwake,
+                keepAwakeOnBattery,
+                keepAwakeDisplay,
                 agentsTurnNotify,
                 agentsTurnSound,
                 browserSwipe,
@@ -342,7 +367,9 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 updatesAutoDownload,
                 agentsShowViews,
                 agentsApprovals,
-                agentsKeepAwake,
+                keepAwake,
+                keepAwakeOnBattery,
+                keepAwakeDisplay,
                 agentsTurnNotify,
                 agentsTurnSound,
                 browserSwipe,

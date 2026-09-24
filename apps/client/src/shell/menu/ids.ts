@@ -85,7 +85,10 @@ export const PALETTE_IDS = [
     'theme',
     'settings',
     'settings-keyboard',
-    'settings-machines'
+    'settings-machines',
+    'keep-awake-off',
+    'keep-awake-working',
+    'keep-awake-always'
 ] as const;
 
 export type PaletteId = (typeof PALETTE_IDS)[number];

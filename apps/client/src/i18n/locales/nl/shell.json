@@ -512,7 +512,10 @@
             "toggleTheme": "Licht of donker",
             "keyboardShortcuts": "Sneltoetsen",
             "remote": "Remote",
-            "find": "Zoeken in chat of bestand"
+            "find": "Zoeken in chat of bestand",
+            "keepAwakeOff": "Deze Mac laten slapen",
+            "keepAwakeWorking": "Deze Mac wakker houden terwijl agents werken",
+            "keepAwakeAlways": "Deze Mac altijd wakker houden"
         },
         "sections": {
             "recent": "Recent",
@@ -577,6 +580,10 @@
         },
         "about": "Over Ruimte",
         "settings": "Instellingen…",
+        "keepAwake": "Deze Mac wakker houden",
+        "keepAwakeOff": "Uit",
+        "keepAwakeWorking": "Terwijl agents werken",
+        "keepAwakeAlways": "Altijd",
         "services": "Voorzieningen",
         "hide": "Ruimte verbergen",
         "hideOthers": "Andere verbergen",

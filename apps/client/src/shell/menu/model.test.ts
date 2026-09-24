@@ -42,6 +42,7 @@ const context = (patch: Partial<MenuContext> = {}): MenuContext => ({
     agents: [{ kind: 'claude', name: 'Claude Code', chat: true, terminal: true }],
     releaseNotes: true,
     fullscreen: false,
+    keepAwake: null,
     ...patch
 });
 
@@ -165,6 +166,23 @@ describe('the menus', () => {
         expect(find(three, 'cell-close-others')?.enabled).toBe(true);
         expect(find(three, 'cell-close-right')?.enabled).toBe(true);
         expect(commandIds(menuModel(START_SCREEN))).not.toContain('cell-close-others');
+    });
+
+    test('keeping the Mac awake is a choice of three under Settings, with the one in force marked', () => {
+        const spec = menuModel(context({ keepAwake: 'working' }));
+        const app = menu(spec, 'Ruimte');
+        const keepAwake = app[app.findIndex((node) => node.kind === 'command' && node.id === 'settings') + 1];
+        expect(keepAwake).toMatchObject({ kind: 'submenu', id: 'keep-awake', label: 'Keep This Mac Awake' });
+        const choices = keepAwake?.kind === 'submenu' ? keepAwake.items : [];
+        expect(choices).toEqual([
+            { kind: 'command', id: 'keep-awake-off', label: 'Off', checked: false, radio: true },
+            { kind: 'command', id: 'keep-awake-working', label: 'While Agents Work', checked: true, radio: true },
+            { kind: 'command', id: 'keep-awake-always', label: 'Always', checked: false, radio: true }
+        ]);
+    });
+
+    test('where the shell cannot hold the Mac awake the choice is not offered', () => {
+        expect(commandIds(menuModel(context()))).not.toContain('keep-awake-off');
     });
 
     test('zoom is offered on every view and only works where there is a camera', () => {

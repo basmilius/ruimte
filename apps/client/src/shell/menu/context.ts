@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import { canShareView, isCanvasView, isOpenableView, type ProjectView } from '@ruimte/contracts';
 import { forkRefusal, lastSettledTurn } from '@/chat/logic/fork';
-import { desktop, isApplePlatform } from '@/desktop/bridge';
+import { canKeepAwake, desktop, isApplePlatform } from '@/desktop/bridge';
 import { canOpenAsView, type SessionHandoff } from '@/project/views';
 import type { MenuContext, MenuHost } from '@/shell/menu/model';
 import { canSplit, cellCount, cellsRightOf, freeViewFor, maximizedCell } from '@/shell/split';
@@ -14,6 +14,7 @@ import { useProject } from '@/state/project';
 import { providersOf } from '@/state/providers';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useSessions } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { windowWorkspace } from '@/state/window';
 
@@ -106,6 +107,7 @@ export const menuContext = (host: MenuHost): MenuContext => {
             .providers.filter((provider) => provider.installed)
             .map((provider) => ({ kind: provider.kind, name: provider.name, chat: provider.capabilities.chat, terminal: provider.capabilities.terminal })),
         releaseNotes: typeof desktop()?.releaseNotes === 'function',
-        fullscreen: typeof document !== 'undefined' && document.fullscreenElement !== null
+        fullscreen: typeof document !== 'undefined' && document.fullscreenElement !== null,
+        keepAwake: host === 'desktop' && canKeepAwake() ? useSettings.getState().keepAwake : null
     };
 };

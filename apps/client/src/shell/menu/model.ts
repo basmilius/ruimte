@@ -4,6 +4,7 @@ import type { MenuNode, MenuRole, MenuShellAction, MenuSpec } from '@ruimte/desk
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { APP_SHORTCUTS, BROWSER_KEEPS } from '@/shell/shortcuts';
 import type { ViewOffers } from '@/shell/view-offers';
+import type { KeepAwakeMode } from '@/state/settings';
 import type { PanelKind } from '@/state/ui';
 import { formatShortcut, type Shortcut } from '@/ui/shortcut';
 import { GO_VIEW_PREFIX, type MenuActionId, type PaletteId } from '@/shell/menu/ids';
@@ -51,6 +52,8 @@ export interface MenuContext {
     releaseNotes: boolean;
     /* The page fills the screen, which only the web client asks the page itself. */
     fullscreen: boolean;
+    /* When this Mac stays awake, or null where the shell cannot hold it awake. */
+    keepAwake: KeepAwakeMode | null;
 }
 
 type CommandId = MenuActionId | PaletteId;
@@ -59,7 +62,10 @@ interface CommandOptions {
     shortcut?: Shortcut;
     enabled?: boolean;
     checked?: boolean;
+    radio?: boolean;
 }
+
+const KEEP_AWAKE_LABELS: Record<KeepAwakeMode, string> = { off: 'keepAwakeOff', working: 'keepAwakeWorking', always: 'keepAwakeAlways' };
 
 const t = (key: string, options?: Record<string, unknown>): string => i18next.t(`shell:menu.${key}`, options ?? {});
 
@@ -150,10 +156,14 @@ export const menuModel = (context: MenuContext): MenuSpec => {
             label,
             ...shortcutOf(options),
             ...(options.enabled === undefined ? {} : { enabled: options.enabled }),
-            ...(options.checked === undefined ? {} : { checked: options.checked })
+            ...(options.checked === undefined ? {} : { checked: options.checked }),
+            ...(options.radio ? { radio: true } : {})
         };
     };
 
+    const keepAwakeItems = (Object.keys(KEEP_AWAKE_LABELS) as KeepAwakeMode[]).map((mode) =>
+        command(`keep-awake-${mode}`, t(KEEP_AWAKE_LABELS[mode]), { checked: context.keepAwake === mode, radio: true })
+    );
     const appMenu = {
         id: 'app',
         label: 'Ruimte',
@@ -161,6 +171,7 @@ export const menuModel = (context: MenuContext): MenuSpec => {
             command('about', t('about')),
             separator,
             command('settings', t('settings'), { shortcut: APP_SHORTCUTS.settings }),
+            ...only(context.keepAwake !== null, submenu('keep-awake', t('keepAwake'), keepAwakeItems)),
             separator,
             role('services', t('services')),
             separator,

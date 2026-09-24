@@ -1,4 +1,4 @@
-import type { MenuSpec } from '@ruimte/desktop-bridge';
+import type { KeepAwakeRequest, MenuSpec } from '@ruimte/desktop-bridge';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
 const { contextBridge, ipcRenderer, webUtils } = require('electron') as typeof import('electron');
@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     },
     setTheme: (theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void => ipcRenderer.send('window:theme', theme),
     setKeepAwake: (keep: boolean): void => ipcRenderer.send('power:keep-awake', keep),
+    requestKeepAwake: (request: KeepAwakeRequest | null): void => ipcRenderer.send('power:keep-awake-request', request),
     setAgentActivity: (activity: { working: number; attention: number }): void => ipcRenderer.send('agents:activity', activity),
     saveFile: (suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null> =>
         ipcRenderer.invoke('dialog:save-file', suggestedName, bytes, mime),
