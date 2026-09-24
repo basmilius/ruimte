@@ -172,7 +172,7 @@ describe('the menus', () => {
         const spec = menuModel(context({ keepAwake: 'working' }));
         const app = menu(spec, 'Ruimte');
         const keepAwake = app[app.findIndex((node) => node.kind === 'command' && node.id === 'settings') + 1];
-        expect(keepAwake).toMatchObject({ kind: 'submenu', id: 'keep-awake', label: 'Keep This Mac Awake' });
+        expect(keepAwake).toMatchObject({ kind: 'submenu', id: 'keep-awake', label: 'Keep This Computer Awake' });
         const choices = keepAwake?.kind === 'submenu' ? keepAwake.items : [];
         expect(choices).toEqual([
             { kind: 'command', id: 'keep-awake-off', label: 'Off', checked: false, radio: true },

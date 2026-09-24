@@ -22,7 +22,7 @@ describe('the indicator of computer use on a node', () => {
     });
 
     test('is the accent while the agent acts, and offers pause and stop', () => {
-        expect(indicatorLook('running')).toEqual({ tone: 'accent', label: 'Operating this Mac', actions: ['pause', 'stop'] });
+        expect(indicatorLook('running')).toEqual({ tone: 'accent', label: 'Operating this computer', actions: ['pause', 'stop'] });
     });
 
     test('is muted while the person holds the Mac, and offers resume and stop', () => {

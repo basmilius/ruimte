@@ -1,6 +1,6 @@
 {
     "indicator": {
-        "running": "Operating this Mac",
+        "running": "Operating this computer",
         "paused": "Paused",
         "takenOver": "You have control",
         "pause": "Pause",

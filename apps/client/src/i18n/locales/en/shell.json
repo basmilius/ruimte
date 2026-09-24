@@ -530,9 +530,9 @@
             "remote": "Remote",
             "computerUse": "Computer use settings",
             "find": "Find in chat or file",
-            "keepAwakeOff": "Let this Mac sleep",
-            "keepAwakeWorking": "Keep this Mac awake while agents work",
-            "keepAwakeAlways": "Always keep this Mac awake",
+            "keepAwakeOff": "Let this computer sleep",
+            "keepAwakeWorking": "Keep this computer awake while agents work",
+            "keepAwakeAlways": "Always keep this computer awake",
             "toggleFlag": "Flag or unflag"
         },
         "sections": {
@@ -598,7 +598,7 @@
         },
         "about": "About Ruimte",
         "settings": "Settings…",
-        "keepAwake": "Keep This Mac Awake",
+        "keepAwake": "Keep This Computer Awake",
         "keepAwakeOff": "Off",
         "keepAwakeWorking": "While Agents Work",
         "keepAwakeAlways": "Always",

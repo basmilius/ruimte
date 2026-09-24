@@ -530,9 +530,9 @@
             "remote": "Remote",
             "computerUse": "Instellingen voor computer use",
             "find": "Zoeken in chat of bestand",
-            "keepAwakeOff": "Deze Mac laten slapen",
-            "keepAwakeWorking": "Deze Mac wakker houden terwijl agents werken",
-            "keepAwakeAlways": "Deze Mac altijd wakker houden",
+            "keepAwakeOff": "Deze computer laten slapen",
+            "keepAwakeWorking": "Deze computer wakker houden terwijl agents werken",
+            "keepAwakeAlways": "Deze computer altijd wakker houden",
             "toggleFlag": "Vlag zetten of weghalen"
         },
         "sections": {
@@ -598,7 +598,7 @@
         },
         "about": "Over Ruimte",
         "settings": "Instellingen…",
-        "keepAwake": "Deze Mac wakker houden",
+        "keepAwake": "Deze computer wakker houden",
         "keepAwakeOff": "Uit",
         "keepAwakeWorking": "Terwijl agents werken",
         "keepAwakeAlways": "Altijd",

@@ -14,8 +14,8 @@ const status = (patch: Partial<ComputerUseStatus> = {}): ComputerUseStatus => ({
 
 describe('the setup of computer use', () => {
     test('a machine that is no Mac is macOS only, whatever it answered', () => {
-        expect(computerSetupOf(status({ present: false }), 'linux').phase).toBe('macOnly');
-        expect(computerSetupOf(null, 'linux').phase).toBe('macOnly');
+        expect(computerSetupOf(status({ present: false }), 'linux').phase).toBe('unsupported');
+        expect(computerSetupOf(null, 'linux').phase).toBe('unsupported');
         expect(canSwitch(computerSetupOf(null, 'linux'))).toBe(false);
     });
 

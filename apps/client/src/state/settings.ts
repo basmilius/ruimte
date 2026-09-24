@@ -36,7 +36,7 @@ export const chatStreamingFrom = (stored: unknown): ChatStreamingMode => {
     return CHAT_STREAMING_MODES.find((mode) => mode === stored) ?? 'words';
 };
 
-/* When this Mac stays awake: never, while an agent works, or all the time. */
+/* When this computer stays awake: never, while an agent works, or all the time. */
 export type KeepAwakeMode = 'off' | 'working' | 'always';
 
 export const KEEP_AWAKE_MODES: readonly KeepAwakeMode[] = ['off', 'working', 'always'];
@@ -126,7 +126,7 @@ export interface Settings {
        machine is told to hold nothing for this client and the prompt in the terminal is the only
        place to answer; another client that wants them is asked as before. */
     agentsApprovals: boolean;
-    /* When this Mac stays awake. About the computer this window runs on and nothing else, which is
+    /* When this computer stays awake. About the computer this window runs on and nothing else, which is
        why it sits with the client and not with a project or a daemon. Off to start with: a laptop
        that never sleeps is not something to arrange behind someone. */
     keepAwake: KeepAwakeMode;

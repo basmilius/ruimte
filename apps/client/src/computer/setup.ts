@@ -5,7 +5,8 @@ import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 export type ComputerSetupPhase =
     // The machine has not answered yet.
     | 'unknown'
-    | 'macOnly'
+    // A system the helper does not exist for yet.
+    | 'unsupported'
     // A Mac without the helper app, such as a daemon from npm.
     | 'unavailable'
     | 'off'
@@ -38,7 +39,7 @@ export const computerSetupOf = (status: ComputerUseStatus | null, platform: stri
     const screenRecording = grantState(status?.screenRecording ?? null);
     const at = (phase: ComputerSetupPhase): ComputerSetup => ({ phase, accessibility, screenRecording });
     if (platform !== null && platform !== 'darwin') {
-        return at('macOnly');
+        return at('unsupported');
     }
     if (status === null) {
         return at('unknown');
@@ -55,8 +56,8 @@ export const computerSetupOf = (status: ComputerUseStatus | null, platform: stri
     return at(accessibility === 'granted' && screenRecording === 'granted' ? 'ready' : 'grants');
 };
 
-/* The switch means something only on a Mac that has the helper. */
-export const canSwitch = (setup: ComputerSetup): boolean => setup.phase !== 'unknown' && setup.phase !== 'macOnly' && setup.phase !== 'unavailable';
+/* The switch means something only on a system that has the helper. */
+export const canSwitch = (setup: ComputerSetup): boolean => setup.phase !== 'unknown' && setup.phase !== 'unsupported' && setup.phase !== 'unavailable';
 
 /* Whether the grants are shown at all: only once computer use is on. */
 export const showsGrants = (setup: ComputerSetup): boolean => setup.phase === 'starting' || setup.phase === 'grants' || setup.phase === 'ready';

@@ -52,7 +52,7 @@ export interface MenuContext {
     releaseNotes: boolean;
     /* The page fills the screen, which only the web client asks the page itself. */
     fullscreen: boolean;
-    /* When this Mac stays awake, or null where the shell cannot hold it awake. */
+    /* When this computer stays awake, or null where the shell cannot hold it awake. */
     keepAwake: KeepAwakeMode | null;
 }
 

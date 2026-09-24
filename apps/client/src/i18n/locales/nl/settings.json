@@ -103,7 +103,7 @@
         },
         "computer": {
             "label": "Computer use",
-            "description": "Laat agents de apps op een Mac bedienen."
+            "description": "Laat agents de apps op een computer bedienen."
         },
         "machines": {
             "label": "Remote",
@@ -390,8 +390,8 @@
             }
         },
         "keepAwake": {
-            "title": "Deze Mac wakker houden",
-            "description": "Slaap pauzeert elke agent. Deze instellingen gelden alleen voor deze Mac.",
+            "title": "Deze computer wakker houden",
+            "description": "Slaap pauzeert elke agent. Deze instellingen gelden alleen voor deze computer.",
             "mode": {
                 "label": "Wakker houden",
                 "off": "Uit",
@@ -406,11 +406,11 @@
             },
             "battery": {
                 "label": "Ook op de batterij",
-                "description": "Uit houdt deze Mac alleen wakker op de netadapter."
+                "description": "Uit houdt deze computer alleen wakker op de netadapter."
             },
             "display": {
                 "label": "Het scherm aan laten",
-                "description": "Uit mag het scherm nog uitgaan terwijl de Mac wakker blijft."
+                "description": "Uit mag het scherm nog uitgaan terwijl de computer wakker blijft."
             }
         },
         "chats": {
@@ -558,17 +558,17 @@
     },
     "computer": {
         "title": "Computer use",
-        "description": "Agents kunnen de apps op een Mac zien en bedienen. Ze komen pas bij een app nadat jij die toestaat.",
+        "description": "Agents kunnen de apps op een computer zien en bedienen. Ze komen pas bij een app nadat jij die toestaat.",
         "enable": "Computer use toestaan op {{machine}}",
         "failed": "Computer use kon niet laden",
         "machine": {
             "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Remote, of terwijl er een project op open staat.",
             "checking": "Controleren…",
-            "macOnly": "Computer use werkt alleen op macOS.",
-            "unavailable": "Deze machine heeft geen Ruimte Computer Use. Dat zit in de Ruimte-app voor macOS.",
+            "unsupported": "Computer use is nog niet beschikbaar voor het systeem van deze machine.",
+            "unavailable": "Deze machine heeft geen Ruimte Computer Use. Dat zit in de desktop-app van Ruimte.",
             "off": "Uit. Agents op deze machine kunnen de apps niet zien of bedienen.",
             "starting": "Ruimte Computer Use starten…",
-            "grants": "Wacht op twee toestemmingen in macOS.",
+            "grants": "Wacht op twee toestemmingen.",
             "ready": "Aan. Een agent vraagt het je voordat die een app gebruikt."
         },
         "grant": {
@@ -587,7 +587,7 @@
             "unknown": "Controleren"
         },
         "open": "Open Systeeminstellingen",
-        "restartNote": "macOS past Schermopname pas toe als Ruimte Computer Use opnieuw start. Ruimte herstart het zodra je terugkomt in dit venster.",
+        "restartNote": "Schermopname werkt pas als Ruimte Computer Use opnieuw start. Ruimte herstart het zodra je terugkomt in dit venster.",
         "checkAgain": "Opnieuw controleren",
         "remote": "Sta deze toe op {{machine}} zelf, in Systeeminstellingen > Privacy en beveiliging."
     },
