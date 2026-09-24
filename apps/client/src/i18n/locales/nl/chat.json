@@ -140,7 +140,8 @@
     "stripFailed": "De berichtenstrip kon niet worden getekend",
     "actions": {
       "label": "Berichtacties",
-      "copied": "Gekopieerd"
+      "copied": "Gekopieerd",
+      "shiftPlain": "Shift kopieert platte tekst"
     },
     "menu": {
       "copyMessage": "Bericht kopiëren",

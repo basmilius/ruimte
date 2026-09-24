@@ -5,7 +5,7 @@ import { Bookmark, Check, Copy, GitFork } from 'lucide-react';
 import { placeBookmark } from '@/chat/bookmarks';
 import { forkRefusal } from '@/chat/logic/fork';
 import type { TimelineRow } from '@/chat/logic/timeline';
-import { messageTextOf } from '@/chat/logic/timeline-copy';
+import { markdownOf, messageTextOf } from '@/chat/logic/timeline-copy';
 import { useChatRow, useChats } from '@/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
@@ -48,9 +48,10 @@ export function MessageActions({ chatId, row }: { chatId: string; row: MessageRo
     }, [copied]);
 
     // The row was derived from the structure, which a delta leaves alone; the text to copy is the one held now.
-    const copy = (): void => {
+    const copy = (plain: boolean): void => {
         const item = useChats.getState().byKey[endpointKey(endpointId, chatId)]?.items[row.id];
-        const text = messageTextOf(item?.kind === row.kind ? ({ ...row, item } as MessageRow) : row);
+        const current = item?.kind === row.kind ? ({ ...row, item } as MessageRow) : row;
+        const text = (plain ? null : markdownOf(current)) ?? messageTextOf(current);
         if (text !== null) {
             copyText(text);
             setCopied(true);
@@ -83,8 +84,8 @@ export function MessageActions({ chatId, row }: { chatId: string; row: MessageRo
                         </Tooltip>
                     )}
                     {hasText && (
-                        <Tooltip label={copied ? t('timeline.actions.copied') : t('timeline.menu.copyMessage')} name>
-                            <button type="button" className="icon-btn h-7 w-7 rounded-md" onClick={copy}>
+                        <Tooltip label={copied ? t('timeline.actions.copied') : t('timeline.menu.copyMessage')} kbd={t('timeline.actions.shiftPlain')} name>
+                            <button type="button" className="icon-btn h-7 w-7 rounded-md" onClick={(e) => copy(e.shiftKey)}>
                                 <Icon icon={copied ? Check : Copy} size={14} />
                             </button>
                         </Tooltip>
