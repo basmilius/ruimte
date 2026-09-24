@@ -192,6 +192,16 @@ const browserOutcome = z.object({
 
 const computerApp = z.string().min(1).describe('The app: its name, bundle id or pid, as computer apps lists them');
 const computerAppRef = z.object({ name: z.string(), bundleId: z.string().nullable(), pid: z.number().int() });
+/* How long a call may hold for a card or the person's pause, which every call that reads or operates an app can meet. */
+const computerHold = {
+    wait: z
+        .number()
+        .int()
+        .min(1)
+        .max(110)
+        .nullish()
+        .describe("Seconds the call holds for a card or the person's pause and goes on once they answer or resume; 6 without it")
+};
 /* How the tree and the picture of a state are cut, for state itself and for every action that asks for one after it. */
 const computerStateCut = {
     screenshot: z.boolean().nullish().describe('False leaves the picture of the window out'),
@@ -200,6 +210,7 @@ const computerStateCut = {
     maxText: z.number().int().min(10).max(10_000).nullish().describe('Where a label or value is cut; 100 characters without it')
 };
 const computerThenState = {
+    ...computerHold,
     withState: z.boolean().nullish().describe('After the action, wait until the window settles and answer with its new state'),
     ...computerStateCut
 };
@@ -1820,7 +1831,7 @@ export const ACTION_DEFINITIONS = {
         effect: 'read',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ app: computerApp, ...computerStateCut }),
+        input: z.object({ app: computerApp, ...computerHold, ...computerStateCut }),
         output: computerState
     },
     'computer.click': {

@@ -15,7 +15,7 @@ import { CodedError } from '../coded-error.ts';
 import { errorText } from '../error-text.ts';
 import { writeAtomic } from '../fs.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
-import { APPROVAL_WAIT_MS, ComputerApprovals, realTimers, type AppRef, type CallerInfo, type Timers } from './approvals.ts';
+import { APPROVAL_WAIT_MS, ComputerApprovals, MAX_HOLD_MS, realTimers, type AppRef, type CallerInfo, type Timers } from './approvals.ts';
 import { HelperFailure, helperDirectory, type ComputerHelper } from './helper.ts';
 import {
     ActionResultSchema,
@@ -56,9 +56,9 @@ type HeldCode = 'paused' | 'taken-over';
 
 /* The person holds the Mac. Nothing the agent does changes that, so the words steer it away from trying. */
 const HELD_WORDS: Record<HeldCode, string> = {
-    paused: 'The person paused the session; wait until they resume it, then read the state and call again. Do not try to reach the app another way meanwhile',
+    paused: 'The person paused the session. Call computer state again with --wait 60, which holds until they resume, and act only after it: they may have changed the window. Do not try to reach the app another way meanwhile',
     'taken-over':
-        'The person took over the Mac; wait until they hand it back, then read the state and call again. Do not try to reach the app another way meanwhile'
+        'The person took over the Mac. Call computer state again with --wait 60, which holds until they hand it back, and act only after it: they may have changed the window. Do not try to reach the app another way meanwhile'
 };
 
 const STOPPED_WORDS = 'The person stopped you; ask them before you operate an app again, and once they agree start with computer state';
@@ -499,21 +499,24 @@ export class ComputerUse {
         return { apps: listed, doctor };
     }
 
-    /* `state` answers with the tree and the picture; every other command with what it did. */
-    async operate(callerId: string, command: 'state', query: string, input: OperateInput): Promise<StateResult>;
-    async operate(callerId: string, command: Exclude<AppCommand, 'state'>, query: string, input: OperateInput): Promise<ActionResult>;
-    async operate(callerId: string, command: AppCommand, query: string, input: OperateInput): Promise<StateResult | ActionResult> {
+    /*
+     * `state` answers with the tree and the picture; every other command with what it did. `holdMs` is how
+     * long the call may wait for a card or the person's pause together, the default hold without it.
+     */
+    async operate(callerId: string, command: 'state', query: string, input: OperateInput, holdMs?: number): Promise<StateResult>;
+    async operate(callerId: string, command: Exclude<AppCommand, 'state'>, query: string, input: OperateInput, holdMs?: number): Promise<ActionResult>;
+    async operate(callerId: string, command: AppCommand, query: string, input: OperateInput, holdMs?: number): Promise<StateResult | ActionResult> {
         this.presence.calling(callerId);
         try {
-            return await this.operateNow(callerId, command, query, input);
+            return await this.operateNow(callerId, command, query, input, Math.min(holdMs ?? this.waitMs, MAX_HOLD_MS));
         } finally {
             this.presence.acted(callerId);
         }
     }
 
-    private async operateNow(callerId: string, command: AppCommand, query: string, input: OperateInput): Promise<StateResult | ActionResult> {
+    private async operateNow(callerId: string, command: AppCommand, query: string, input: OperateInput, holdMs: number): Promise<StateResult | ActionResult> {
         // One budget for the card and the person's pause together, so a held call still ends inside the CLI's own limit.
-        const deadline = this.now() + this.waitMs;
+        const deadline = this.now() + holdMs;
         await this.ready();
         this.refuseOnceIfStopped(callerId);
         const run = this.runOf(callerId);
@@ -524,11 +527,11 @@ export class ComputerUse {
         if (await this.isTerminal(app.bundleId, app.name, pid, pid === null ? [] : await this.processes())) {
             throw terminalRefusal(app.name);
         }
-        const outcome = await this.approvals.ask({ callerId, run, app, command, caller: await this.describe(callerId) });
+        const outcome = await this.approvals.ask({ callerId, run, app, command, caller: await this.describe(callerId) }, Math.max(0, deadline - this.now()));
         if (outcome === 'waiting') {
             throw new ComputerRefusal(
                 'awaiting-approval',
-                `A card asking the person to let you operate ${app.name} is up in Ruimte; tell them, and call again once they answered`
+                `A card asking the person to let you operate ${app.name} is up in Ruimte; tell them, then call again with --wait 60, which holds until they answer`
             );
         }
         if (outcome === 'declined') {

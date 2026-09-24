@@ -2,11 +2,14 @@ import { randomUUID } from 'node:crypto';
 import type { AgentStatus, ComputerApproval, ComputerApprovalChoice, ComputerThisTimeGrant } from '@ruimte/contracts';
 
 /*
- * How long a verb holds its call while the card is up. Codex ends a shell command after 10 s unless
- * the model asked for longer, the shortest default of the agent CLIs, and an approved call still has
- * to run its action inside that. Past this the agent hears `awaiting-approval` and calls again.
+ * How long a verb holds its call while the card is up, unless the agent asks for longer with `--wait`.
+ * An agent CLI may end a shell command after 10 s unless the model asked for more, and an approved
+ * call still has to run its action inside that. Past this the agent hears `awaiting-approval`.
  */
 export const APPROVAL_WAIT_MS = 6_000;
+
+/* The longest hold `--wait` asks for, under the two minutes some agent CLIs give a shell command by default. */
+export const MAX_HOLD_MS = 110_000;
 
 /* How long a card stands after the agent last asked: long enough to answer after a coffee, short enough that a card for an agent that gave up goes. */
 export const CARD_MS = 10 * 60_000;
@@ -125,8 +128,8 @@ export class ComputerApprovals {
         return this.allowed(callerId, run, bundleId) ? 'this-time' : 'ask';
     }
 
-    /* Raises the card, or joins the one that stands, and holds for a while for the answer. */
-    async ask(ask: ApprovalAsk): Promise<ApprovalOutcome> {
+    /* Raises the card, or joins the one that stands, and holds for the answer for `waitMs`, or the default hold. */
+    async ask(ask: ApprovalAsk, waitMs: number = this.waitMs): Promise<ApprovalOutcome> {
         const { callerId, run, app } = ask;
         if (this.allowed(callerId, run, app.bundleId)) {
             return 'granted';
@@ -141,7 +144,7 @@ export class ComputerApprovals {
             const cancel = this.timers.set(() => {
                 pending.waiters.delete(done);
                 settle('waiting');
-            }, this.waitMs);
+            }, waitMs);
             const done = (outcome: ApprovalOutcome): void => {
                 cancel();
                 settle(outcome);

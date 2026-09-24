@@ -60,7 +60,7 @@ import { HOOK_EVENTS } from './agents/hooks.ts';
 import { defaultCodexRulesPath, defaultHookPaths, installCodexRules, installHooks } from './agents/install.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './chat/attachment-route.ts';
 import { AttachmentStore } from './chat/attachment-store.ts';
-import { CANVAS_PATH, handleCanvasRequest } from './canvas/canvas-route.ts';
+import { CANVAS_PATH, CANVAS_REQUEST_TIMEOUT_S, handleCanvasRequest } from './canvas/canvas-route.ts';
 import { ChatManager } from './chat/chat-manager.ts';
 import { hookContext } from './context/context-note.ts';
 import { handleContextRequest } from './context/context-route.ts';
@@ -921,6 +921,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname.startsWith(`${CANVAS_PATH}/`)) {
+                server.timeout(request, CANVAS_REQUEST_TIMEOUT_S);
                 return handleCanvasRequest(request, url.pathname, { targetForToken, host: canvasHost });
             }
 

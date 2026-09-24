@@ -667,7 +667,7 @@ describe('the person holding the Mac', () => {
         timers.advance(500);
         const refusal = await call;
         expect(refusal).toMatchObject({ code: 'taken-over' });
-        expect((refusal as { message: string }).message).toContain('wait until they hand it back');
+        expect((refusal as { message: string }).message).toContain('which holds until they hand it back');
         expect(helper.acted.map((request) => request.command)).toEqual(['type']);
     });
 
@@ -684,6 +684,35 @@ describe('the person holding the Mac', () => {
         expect(helper.presences).toEqual([]);
         await computer.operate('chat-1', 'state', 'TextEdit', {});
         expect(computer.status().session).toEqual({ mode: 'running', nodeId: 'chat-1' });
+    });
+});
+
+describe('the hold an agent asks for', () => {
+    test('keeps the card up for that long instead of the default, and goes on as soon as the person answers', async () => {
+        const { computer, helper, timers } = await computerSetup();
+        const call = computer.operate('chat-1', 'state', 'TextEdit', {}, 60_000);
+        await until(() => computer.pendingApprovals().length === 1);
+        expect(timers.waitingFor(60_000)).toBe(1);
+        timers.advance(45_000);
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
+        await call;
+        expect(helper.acted.map((request) => request.command)).toEqual(['state']);
+    });
+
+    test('is one budget for the card and the pause together', async () => {
+        const setup = await computerSetup();
+        const { computer, helper, timers } = setup;
+        helper.hold('paused');
+        const call = codeOf(computer.operate('chat-1', 'click', 'TextEdit', { element: 1 }, 20_000));
+        await until(() => computer.pendingApprovals().length === 1);
+        timers.advance(15_000);
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
+        for (let waited = 0; waited < 5_000; waited += HOLD_MS) {
+            await until(() => timers.waitingFor(HOLD_MS) > 0);
+            timers.advance(HOLD_MS);
+        }
+        expect(await call).toBe('paused');
+        expect(helper.acted).toEqual([]);
     });
 });
 

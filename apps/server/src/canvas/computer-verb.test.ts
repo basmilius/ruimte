@@ -117,6 +117,19 @@ describe('ruimte-context computer', () => {
         expect(setup.computer.pendingApprovals()).toEqual([]);
     });
 
+    test('holds as long as --wait asks, within its bounds', async () => {
+        const setup = await computerSetup();
+        const call = run(setup, ['state', 'TextEdit', '--wait', '60']);
+        await until(() => setup.computer.pendingApprovals().length === 1);
+        expect(setup.timers.waitingFor(60_000)).toBe(1);
+        await setup.computer.answer(setup.computer.pendingApprovals()[0]!.requestId, 'once');
+        expect(await call).toContain('elements\t2');
+        expect((await run(setup, ['click', 'TextEdit', '--element', '1', '--wait', '111']))[0]).toStartWith(
+            'refused\tbad-arguments\t--wait is between 1 and 110'
+        );
+        expect(setup.helper.acted.every((request) => !('wait' in request))).toBe(true);
+    });
+
     test('refuses a terminal whatever was granted', async () => {
         const setup = await computerSetup();
         expect((await run(setup, ['state', 'Shells']))[0]).toStartWith('refused\tterminal\tShells runs shells');

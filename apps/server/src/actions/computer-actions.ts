@@ -106,6 +106,9 @@ const cutOf = (input: {
     ...(given(input.maxText) ? { maxText: input.maxText } : {})
 });
 
+/* The hold an agent asked for with --wait, in the milliseconds the service counts in. */
+const holdOf = (input: { wait?: number | null }): number | undefined => (given(input.wait) ? input.wait * 1000 : undefined);
+
 /* Where a click or a scroll lands: an element, or both halves of a pixel, never a mix. */
 const placeOf = ({ element, x, y }: { element?: number | null; x?: number | null; y?: number | null }, verb: string): OperateInput => {
     if (given(element) && !given(x) && !given(y)) {
@@ -135,32 +138,40 @@ export const computerActions: ActionHandlers<ServerActionContext> = {
         };
     },
     'computer.state': async (input, { actor, context }) => ({
-        output: stateOf(await computerOf(context).operate(actor.id, 'state', input.app, cutOf(input)))
+        output: stateOf(await computerOf(context).operate(actor.id, 'state', input.app, cutOf(input), holdOf(input)))
     }),
     'computer.click': async (input, { actor, context }) => {
         const place = placeOf(input, 'click');
         const extra = { ...(given(input.count) ? { count: input.count } : {}), ...(given(input.button) ? { button: input.button } : {}) };
-        return { output: outcomeOf(await computerOf(context).operate(actor.id, 'click', input.app, { ...cutOf(input), ...place, ...extra })) };
+        return { output: outcomeOf(await computerOf(context).operate(actor.id, 'click', input.app, { ...cutOf(input), ...place, ...extra }, holdOf(input))) };
     },
     'computer.scroll': async (input, { actor, context }) => {
         const place = placeOf(input, 'scroll');
         const extra = { direction: input.direction, ...(given(input.pages) ? { pages: input.pages } : {}) };
-        return { output: outcomeOf(await computerOf(context).operate(actor.id, 'scroll', input.app, { ...cutOf(input), ...place, ...extra })) };
+        return { output: outcomeOf(await computerOf(context).operate(actor.id, 'scroll', input.app, { ...cutOf(input), ...place, ...extra }, holdOf(input))) };
     },
     'computer.type': async (input, { actor, context }) => ({
-        output: outcomeOf(await computerOf(context).operate(actor.id, 'type', input.app, { ...cutOf(input), text: input.text }))
+        output: outcomeOf(await computerOf(context).operate(actor.id, 'type', input.app, { ...cutOf(input), text: input.text }, holdOf(input)))
     }),
     'computer.key': async (input, { actor, context }) => ({
-        output: outcomeOf(await computerOf(context).operate(actor.id, 'key', input.app, { ...cutOf(input), combos: input.combos }))
+        output: outcomeOf(await computerOf(context).operate(actor.id, 'key', input.app, { ...cutOf(input), combos: input.combos }, holdOf(input)))
     }),
     'computer.setValue': async (input, { actor, context }) => ({
-        output: outcomeOf(await computerOf(context).operate(actor.id, 'set-value', input.app, { ...cutOf(input), element: input.element, value: input.value }))
+        output: outcomeOf(
+            await computerOf(context).operate(actor.id, 'set-value', input.app, { ...cutOf(input), element: input.element, value: input.value }, holdOf(input))
+        )
     }),
     'computer.menu': async (input, { actor, context }) => {
-        const result = await computerOf(context).operate(actor.id, 'menu', input.app, { ...cutOf(input), ...(given(input.item) ? { path: input.item } : {}) });
+        const result = await computerOf(context).operate(
+            actor.id,
+            'menu',
+            input.app,
+            { ...cutOf(input), ...(given(input.item) ? { path: input.item } : {}) },
+            holdOf(input)
+        );
         return { output: { ...outcomeOf(result), listing: Array.isArray(result.menu) ? result.menu : null } };
     },
     'computer.open': async (input, { actor, context }) => ({
-        output: outcomeOf(await computerOf(context).operate(actor.id, 'open', input.app, cutOf(input)))
+        output: outcomeOf(await computerOf(context).operate(actor.id, 'open', input.app, cutOf(input), holdOf(input)))
     })
 };

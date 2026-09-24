@@ -7,6 +7,12 @@ import { refusalBody } from '../refusal.ts';
 
 export const CANVAS_PATH = '/canvas';
 
+/*
+ * How long a verb may take before the server drops it, in seconds. Bun ends a request after 10 s of
+ * silence, and a computer verb may hold 110 s for a card or a pause and then wait 110 s for its window.
+ */
+export const CANVAS_REQUEST_TIMEOUT_S = 240;
+
 const BodySchema = z.object({ argv: z.array(z.string()) });
 
 const TEXT = { 'content-type': 'text/plain; charset=utf-8' };

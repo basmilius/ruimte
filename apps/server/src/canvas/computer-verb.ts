@@ -17,6 +17,13 @@ const CUT_PARAMS = [
     { syntax: '--max-text N', need: 'optional', field: 'maxText' }
 ] as const;
 
+const WAIT_PARAM = {
+    syntax: '--wait S',
+    need: 'optional',
+    field: 'wait',
+    more: 'give your shell command a timeout above it, since some CLIs end one after 10 s'
+} as const;
+
 const STATE_PARAM = { syntax: '--state', need: 'no value', field: 'withState', more: 'the answer then ends in the state lines' } as const;
 
 const wholeFlag = (flag: string, min: number, max: number) =>
@@ -34,18 +41,21 @@ const pixelFlag = (flag: string) =>
         .transform(Number)
         .optional();
 
+/* The flags of every call that reads or operates an app: how long it holds for the person, and how its state is cut. */
 const CUT_FLAGS = {
+    wait: wholeFlag('wait', 1, 110),
     'max-depth': wholeFlag('max-depth', 1, 200),
     'max-elements': wholeFlag('max-elements', 1, 5000),
     'max-text': wholeFlag('max-text', 10, 10_000)
 };
 
 interface CutInput {
-    flags: { 'max-depth'?: number; 'max-elements'?: number; 'max-text'?: number };
+    flags: { wait?: number; 'max-depth'?: number; 'max-elements'?: number; 'max-text'?: number };
     switches: ReadonlySet<string>;
 }
 
 const cutOf = ({ flags, switches }: CutInput) => ({
+    wait: flags.wait ?? null,
     screenshot: !switches.has('no-screenshot'),
     maxDepth: flags['max-depth'] ?? null,
     maxElements: flags['max-elements'] ?? null,
@@ -110,10 +120,12 @@ const OUTCOME_PRINTS: readonly string[] = [
 
 /* What holds for every action, said once per action so `help computer <action>` is whole. */
 const COMMON_DETAIL: readonly string[] = [
-    `approval\tThe first call in an app a person has not let you into puts a card in front of them and waits up to ${APPROVAL_WAIT_MS / 1000} s; refused awaiting-approval means the card is up: tell the person, and call again once they answered`,
+    `approval\tThe first call in an app a person has not let you into puts a card in front of them and holds up to ${APPROVAL_WAIT_MS / 1000} s, or --wait S; refused awaiting-approval means the card is still up: tell the person, then call again with --wait 60, which goes on as soon as they answer`,
     'approval\tA yes holds for this chat or terminal session, or for always on this machine; a no reaches you once, as declined. Every permission mode asks, full-access included',
     'terminal\tAn app that runs shells is refused whatever the person says; run commands in your own shell',
-    `hold\tThe person can pause the session or take the Mac over with their own mouse; a call then waits up to ${APPROVAL_WAIT_MS / 1000} s for them and refuses with paused or taken-over. Wait until they are done, read the state and call again; never reach the app another way meanwhile`,
+    `hold\tThe person can pause the session or take the Mac over with their own mouse; a call then holds up to ${APPROVAL_WAIT_MS / 1000} s, or --wait S, and refuses with paused or taken-over. Call computer state with --wait 60 before you act again, since they may have changed the window; never reach the app another way meanwhile`,
+    'timeout\tWith --wait, give your shell command a timeout above it: some CLIs end a shell command after 10 s unless you ask for more',
+    'refusals\tawaiting-approval, paused and taken-over: call again with --wait 60. declined: leave the app alone. stopped: ask the person. terminal: run the command in your own shell. app-refused: read why, usually a stale element; read the state again',
     'stop\tThe person can stop you at any moment; every action after that refuses with stopped. Ask them before you go on; once they agree, computer state picks up again',
     'elements\tAn element keeps its number while it is the same element; after a new window or sheet read the state again',
     'see\truimte-context computer apps\tthe apps that run, and which of them you may operate without asking'
@@ -154,7 +166,7 @@ const state = defineActionVerb('computer', {
     name: 'state',
     action: 'computer.state',
     usage: '<app>',
-    params: [APP_PARAM, ...CUT_PARAMS],
+    params: [APP_PARAM, WAIT_PARAM, ...CUT_PARAMS],
     detail: [...STATE_PRINTS, ...COMMON_DETAIL],
     positionals: appTuple('state'),
     flags: z.object(CUT_FLAGS),
@@ -173,7 +185,7 @@ const actionParams = <
     Name extends 'computer.click' | 'computer.scroll' | 'computer.type' | 'computer.key' | 'computer.setValue' | 'computer.menu' | 'computer.open'
 >(
     own: readonly ActionParam<Name>[]
-): ActionParam<Name>[] => [APP_PARAM, ...own, STATE_PARAM, ...CUT_PARAMS] as ActionParam<Name>[];
+): ActionParam<Name>[] => [APP_PARAM, ...own, WAIT_PARAM, STATE_PARAM, ...CUT_PARAMS] as ActionParam<Name>[];
 
 const click = defineActionVerb('computer', {
     name: 'click',
