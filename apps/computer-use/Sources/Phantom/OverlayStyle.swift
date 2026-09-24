@@ -111,7 +111,8 @@ public enum OverlayStyle {
 
     public enum Motion {
         public static let morph = Timing(duration: 0.46, easing: .cubic(0.34, 1.56, 0.64, 1))
-        public static let move = Timing(duration: 0.7, easing: .cubic(0.34, 1.4, 0.64, 1))
+        // No overshoot, unlike the design: a pointer that springs past its target reads as a slip, not a hand.
+        public static let move = Timing(duration: 0.7, easing: .cubic(0.4, 0, 0.2, 1))
         /// The scale of hover and take over.
         public static let pose = Timing(duration: 0.22, easing: .cubic(0.34, 1.56, 0.64, 1))
         public static let color = Timing(duration: 0.2, easing: .ease)
