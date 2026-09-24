@@ -436,13 +436,24 @@ describe('the handler on its own', () => {
             payload: { turnId: 't', attempt: 2 }
         };
         const other: OutboxEntry = { ...resume, id: 'resume-2', target: 'stranger' };
-        const { calls, deps } = fakeDeps({ lead: ['child'], child: ['grandchild'] }, [resume, other]);
+        // A message or a task that reached the outbox before the stop would start the CLI again on its own.
+        const message: OutboxEntry = { ...resume, kind: 'deliver-message', id: 'message-1', target: 'grandchild', payload: { from: 'lead' } };
+        const task: OutboxEntry = { ...resume, kind: 'give-task', id: 'task-1', target: 'child', payload: { taskId: 'task-a' } };
+        const { calls, deps } = fakeDeps({ lead: ['child'], child: ['grandchild'] }, [resume, other, message, task]);
         await endChildrenHandler(deps)(entry(['child']));
-        expect(calls).toEqual(['mark child,grandchild', 'remove resume-1', 'cancel child,grandchild', 'stop grandchild', 'stop child']);
+        expect(calls).toEqual([
+            'mark child,grandchild',
+            'remove resume-1',
+            'remove message-1',
+            'remove task-1',
+            'cancel child,grandchild',
+            'stop grandchild',
+            'stop child'
+        ]);
         // Run again after a restart halfway, it ends the same nodes out of what the entry held.
         calls.length = 0;
         await endChildrenHandler(deps)(entry(['child']));
-        expect(calls).toEqual(['mark child', 'remove resume-1', 'cancel child', 'stop child']);
+        expect(calls).toEqual(['mark child', 'remove resume-1', 'remove task-1', 'cancel child', 'stop child']);
     });
 
     test('owes nothing for a node that opened no agents', async () => {
