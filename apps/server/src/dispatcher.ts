@@ -57,8 +57,16 @@ const errorReply = (id: string | null, code: string, message: string): ReplyErro
     error: { code, message }
 });
 
+/* Runs before every handler once the payload parsed, and refuses a request by throwing a `RequestError`. */
+export type RequestGuard = (type: RequestType, payload: unknown, client: ClientConnection) => void | Promise<void>;
+
 export class Dispatcher {
     private readonly handlers = new Map<RequestType, Handler<RequestType>>();
+    private guard: RequestGuard | null = null;
+
+    setGuard(guard: RequestGuard): void {
+        this.guard = guard;
+    }
 
     register<T extends RequestType>(type: T, handler: Handler<T>): void {
         if (this.handlers.has(type)) {
@@ -102,6 +110,7 @@ export class Dispatcher {
         }
 
         try {
+            await this.guard?.(type, payloadParse.data, client);
             const result = await handler(payloadParse.data, client);
             client.send({ id, ok: true, result });
         } catch (e) {

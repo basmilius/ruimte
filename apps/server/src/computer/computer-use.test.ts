@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { APPROVAL_WAIT_MS, CARD_MS } from './approvals.ts';
 import { computerSetup, SHELL_APP, TEXT_EDIT, until, type ComputerSetup } from './computer-test-helpers.ts';
-import { agentWords, findInstalledApp, resolveApp, SESSION_POLL_MS } from './computer-use.ts';
+import { agentWords, findInstalledApp, resolveApp, RUIMTE_SETTLE_MS, SESSION_POLL_MS } from './computer-use.ts';
 import { overlayWords } from './overlay-words.ts';
 
 // How long a call held by the person waits before it asks the helper again.
@@ -765,5 +765,97 @@ describe("the person's buttons in Ruimte", () => {
         const before = launches.length;
         expect((await computer.control('stop')).session).toBeNull();
         expect(launches.length).toBe(before);
+    });
+});
+
+const RUIMTE = { name: 'Ruimte', pid: 600, bundleId: 'app.ruimte.desktop' };
+
+/* Lets chat-1 into Ruimte for always with a click, and notes whether Ruimte counted as operated while the helper acted. */
+const clickRuimte = async (setup: ComputerSetup): Promise<{ duringAction: boolean }> => {
+    setup.helper.apps = [...setup.helper.apps, RUIMTE];
+    let duringAction = false;
+    setup.helper.onAct = () => {
+        duringAction = setup.computer.operatingRuimte();
+    };
+    const call = setup.computer.operate('chat-1', 'click', 'Ruimte', { element: 1 });
+    await until(() => setup.computer.pendingApprovals().length === 1);
+    await setup.computer.answer(setup.computer.pendingApprovals()[0]!.requestId, 'always');
+    await call;
+    setup.helper.onAct = null;
+    return { duringAction };
+};
+
+describe('an agent operating Ruimte', () => {
+    test('starts with an action on Ruimte, before the helper acts, and says so in the status', async () => {
+        const setup = await computerSetup();
+        expect(setup.computer.operatingRuimte()).toBe(false);
+        const { duringAction } = await clickRuimte(setup);
+        expect(duringAction).toBe(true);
+        expect(setup.computer.operatingRuimte()).toBe(true);
+        expect(setup.computer.status().session).toEqual({ mode: 'running', nodeId: 'chat-1', operatingRuimte: true });
+    });
+
+    test('holds for the dev build too, and never for another app alone', async () => {
+        const setup = await computerSetup();
+        await letIn(setup);
+        await setup.computer.operate('chat-1', 'click', 'TextEdit', { element: 1 });
+        expect(setup.computer.operatingRuimte()).toBe(false);
+        expect(setup.computer.status().session).toEqual({ mode: 'running', nodeId: 'chat-1' });
+        setup.helper.apps = [...setup.helper.apps, { name: 'Ruimte Dev', pid: 601, bundleId: 'app.ruimte.desktop.dev' }];
+        const call = setup.computer.operate('chat-1', 'state', 'Ruimte Dev', {});
+        await until(() => setup.computer.pendingApprovals().length === 1);
+        await setup.computer.answer(setup.computer.pendingApprovals()[0]!.requestId, 'once');
+        await call;
+        expect(setup.computer.operatingRuimte()).toBe(true);
+    });
+
+    test('ends while the person pauses or takes over, and holds again once they resume', async () => {
+        const setup = await computerSetup();
+        const { computer, helper, timers } = setup;
+        await clickRuimte(setup);
+        for (const mode of ['paused', 'takenOver'] as const) {
+            helper.hold(mode);
+            expect(await computer.confirmOperatingRuimte()).toBe(false);
+            expect(computer.status().session).toEqual({ mode, nodeId: 'chat-1' });
+            helper.hold('running');
+            timers.advance(SESSION_POLL_MS);
+            await until(() => computer.status().session?.operatingRuimte === true);
+        }
+    });
+
+    test('ends once the actions went to another app for the settle time', async () => {
+        const setup = await computerSetup();
+        const { computer, timers } = setup;
+        await clickRuimte(setup);
+        const call = computer.operate('chat-1', 'state', 'TextEdit', {});
+        await until(() => computer.pendingApprovals().length === 1);
+        await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
+        await call;
+        expect(computer.operatingRuimte()).toBe(true);
+        timers.advance(RUIMTE_SETTLE_MS - 1);
+        expect(computer.operatingRuimte()).toBe(true);
+        timers.advance(1);
+        expect(computer.operatingRuimte()).toBe(false);
+        // The poll of the session says so to the clients.
+        await until(() => computer.status().session?.operatingRuimte === undefined);
+        await computer.operate('chat-1', 'click', 'Ruimte', { element: 1 });
+        expect(computer.operatingRuimte()).toBe(true);
+    });
+
+    test('ends with the session, and a new session starts without it', async () => {
+        const setup = await computerSetup();
+        const { computer, helper } = setup;
+        await clickRuimte(setup);
+        computer.observe(turnEnded('chat-1', 'done'));
+        await until(() => computer.status().session === null);
+        expect(computer.operatingRuimte()).toBe(false);
+        await computer.operate('chat-1', 'state', 'Ruimte', {});
+        expect(helper.session.active).toBe(true);
+        expect(computer.operatingRuimte()).toBe(true);
+        await letIn(setup);
+        helper.session = { active: false, mode: 'running', stopped: false };
+        await computer.refreshStatus();
+        await computer.operate('chat-1', 'click', 'TextEdit', { element: 1 });
+        expect(computer.operatingRuimte()).toBe(false);
     });
 });

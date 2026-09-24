@@ -23,7 +23,10 @@ export const ComputerUseStatusSchema = z.object({
         .object({
             mode: ComputerSessionModeSchema,
             // The chat or terminal whose agent drives it; null when none on this machine does.
-            nodeId: z.string().nullable()
+            nodeId: z.string().nullable(),
+            /* True while the agent operates Ruimte itself, and the Ruimte windows on this Mac decide nothing for
+               the person until they take over or pause; absent otherwise and from a machine that does not know. */
+            operatingRuimte: z.boolean().optional()
         })
         .nullable()
         .optional()

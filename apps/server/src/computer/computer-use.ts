@@ -38,6 +38,12 @@ const HOLD_POLL_MS = 500;
 /* How often the machine asks how a running session stands, so a pause, a stop or the helper's own end shows without a call. */
 export const SESSION_POLL_MS = 2_000;
 
+/* The release and the dev build of the desktop app; either one is a window a person decides in. */
+export const RUIMTE_BUNDLE_IDS: ReadonlySet<string> = new Set(['app.ruimte.desktop', 'app.ruimte.desktop.dev']);
+
+/* How long Ruimte stays operated after the agent's actions moved to another app: the helper's own bound on letting a UI settle. */
+export const RUIMTE_SETTLE_MS = 3_000;
+
 type HeldCode = 'paused' | 'taken-over';
 
 /* The person holds the Mac. Nothing the agent does changes that, so the words steer it away from trying. */
@@ -203,6 +209,11 @@ export class ComputerUse {
     private clearing: Promise<void> = Promise.resolve();
     private cancelPoll: (() => void) | null = null;
     private current: ComputerUseStatus;
+    // Whether an action of this session went to Ruimte, and since when its actions go elsewhere; both reset with the session.
+    private ruimteTargeted = false;
+    private awaySince: number | null = null;
+    private ruimteActions = 0;
+    private confirming: Promise<boolean> | null = null;
 
     constructor(options: ComputerUseOptions) {
         this.home = options.home;
@@ -252,6 +263,48 @@ export class ComputerUse {
 
     status(): ComputerUseStatus {
         return this.current;
+    }
+
+    /* The chat or terminal whose agent holds the session: the one whose call reached the helper last. */
+    get holder(): string | null {
+        return this.presence.holder;
+    }
+
+    /*
+     * Whether an agent operates Ruimte now, as last heard: from an action aimed at Ruimte until the person
+     * pauses or takes over, the session ends, or the actions went to other apps for the settle time, since
+     * a click on another app lands on whatever window is in front and the last one may still be settling.
+     */
+    operatingRuimte(): boolean {
+        const session = this.session;
+        const active = session !== null && session.active;
+        if (active && session.mode !== 'running') {
+            return false;
+        }
+        if (this.ruimteActions > 0) {
+            return true;
+        }
+        if (!active || !this.ruimteTargeted) {
+            return false;
+        }
+        return this.awaySince === null || this.now() - this.awaySince < RUIMTE_SETTLE_MS;
+    }
+
+    /* The same, asked of the helper again when the answer would be yes, so a person who just took over is not refused for the next two seconds. */
+    confirmOperatingRuimte(): Promise<boolean> {
+        if (!this.operatingRuimte()) {
+            return Promise.resolve(false);
+        }
+        this.confirming ??= this.helper
+            .ask({ command: 'doctor', prompt: false }, DoctorResultSchema)
+            .then((doctor) => this.heard(doctor?.session ?? null))
+            // A helper that does not answer took nothing back, so what was last heard stands.
+            .catch(() => undefined)
+            .then(() => this.operatingRuimte())
+            .finally(() => {
+                this.confirming = null;
+            });
+        return this.confirming;
     }
 
     pendingApprovals(): ComputerApproval[] {
@@ -457,8 +510,10 @@ export class ComputerUse {
         }
         await this.holdWhileHeld(deadline);
         const request: HelperRequest = { ...input, command, app: pid === null ? app.bundleId : String(pid) };
-        const result = await this.act<StateResult | ActionResult>(callerId, deadline, () =>
-            command === 'state' ? this.helper.request(request, StateResultSchema) : this.helper.request(request, ActionResultSchema)
+        const result = await this.aimed(app.bundleId, () =>
+            this.act<StateResult | ActionResult>(callerId, deadline, () =>
+                command === 'state' ? this.helper.request(request, StateResultSchema) : this.helper.request(request, ActionResultSchema)
+            )
         );
         // An app that did not run until now is checked once it does, before its tree or anything else of it goes back.
         if (command === 'open' && pid === null && result.app?.bundleId !== undefined) {
@@ -569,9 +624,38 @@ export class ComputerUse {
         this.setStatus(this.current);
     }
 
+    /*
+     * An action for this app. One for Ruimte counts from before the helper acts, so the windows of Ruimte
+     * are held back when its click lands, also as the first action of a session the helper has yet to start.
+     */
+    private async aimed<Result>(bundleId: string, work: () => Promise<Result>): Promise<Result> {
+        const ruimte = RUIMTE_BUNDLE_IDS.has(bundleId);
+        if (ruimte) {
+            this.ruimteTargeted = true;
+            this.ruimteActions += 1;
+            this.awaySince = null;
+        } else if (this.ruimteTargeted && this.awaySince === null) {
+            this.awaySince = this.now();
+        }
+        this.setStatus(this.current);
+        try {
+            return await work();
+        } finally {
+            if (ruimte) {
+                this.ruimteActions -= 1;
+                this.setStatus(this.current);
+            }
+        }
+    }
+
     private noteSession(session: HelperSession | null): void {
         const stoppedNow = session?.stopped === true && this.session?.stopped !== true;
         this.session = session;
+        // An action on its way to Ruimte may be the one that starts the session.
+        if ((session === null || !session.active) && this.ruimteActions === 0) {
+            this.ruimteTargeted = false;
+            this.awaySince = null;
+        }
         if (stoppedNow) {
             this.personStopped();
         }
@@ -674,7 +758,10 @@ export class ComputerUse {
         const session = this.session;
         const next: ComputerUseStatus = {
             ...status,
-            session: session !== null && session.active && status.running ? { mode: session.mode, nodeId: this.presence.holder } : null
+            session:
+                session !== null && session.active && status.running
+                    ? { mode: session.mode, nodeId: this.presence.holder, ...(this.operatingRuimte() ? { operatingRuimte: true } : {}) }
+                    : null
         };
         if (JSON.stringify(next) !== JSON.stringify(this.current)) {
             this.current = next;
