@@ -87,6 +87,9 @@
     },
     "html": {
       "failed": "{{name}} did not load ({{error}})",
+      "findDesktopOnly": "Finding in an HTML preview needs the desktop app",
+      "findLocalOnly": "Finding in an HTML preview works only for a file on this machine",
+      "findTextOnly": "An HTML preview finds plain text only",
       "loading": "Loading the page",
       "previewTitle": "{{name}} preview"
     },

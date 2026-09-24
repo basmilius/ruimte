@@ -5,11 +5,14 @@ import type { FsReadText } from '@ruimte/contracts';
 import { focusCellOfView, watchGuestFocus } from '@/browser/guest-focus';
 import { registerPreviewGuest } from '@/browser/preview-guests';
 import { isDesktop } from '@/desktop/bridge';
+import { FindBar } from '@/find/FindBar';
+import { useFind } from '@/find/use-find';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { localFileUrl } from '@/shell/panels/file-url';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { htmlPreviewDocument } from '@/shell/panels/html-preview';
+import { usePreviewFind, type FindablePage, type FoundInPage } from '@/shell/panels/use-preview-find';
 import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useUnsaved } from '@/state/text-drafts';
@@ -38,7 +41,7 @@ const scrollScript = (restore: { x: number; y: number } | undefined): string => 
     }, { passive: true });
 })()`;
 
-interface PreviewWebview extends HTMLElement {
+interface PreviewWebview extends FindablePage {
     src: string;
     reload(): void;
     executeJavaScript(code: string): Promise<unknown>;
@@ -86,6 +89,13 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
     const cell = useContext(CellViewContext);
     const url = localFileUrl(path);
     const staticDocument = useMemo(() => staticPreviewDocument(read.text), [read.text]);
+    const surface = useRef<HTMLDivElement>(null);
+    // The source is the editor's to search.
+    const find = useFind(surface, view === 'preview');
+    const pageFind = usePreviewFind(find, page);
+    const { found, refresh } = pageFind;
+    // The inert iframe is another origin, whose text the client cannot read.
+    const findUnavailable = nativePreview ? null : isDesktop() ? t('file.html.findLocalOnly') : t('file.html.findDesktopOnly');
 
     useEffect(() => {
         const parent = host.current;
@@ -106,7 +116,9 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
             element.dataset.loaded = '';
             setLoading(false);
             element.executeJavaScript(scrollScript(restore)).catch(() => {});
+            refresh();
         });
+        element.addEventListener('found-in-page', (event) => found((event as unknown as { result: FoundInPage }).result));
         element.addEventListener('console-message', (event) => {
             const message = (event as unknown as { message: string }).message;
             if (!message.startsWith(SCROLL_MESSAGE)) {
@@ -136,7 +148,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
             page.current = null;
             element.remove();
         };
-    }, [nativePreview, url, path, cell]);
+    }, [nativePreview, url, path, cell, found, refresh]);
 
     useEffect(() => {
         if (!nativePreview) {
@@ -171,7 +183,17 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             {view === 'source' ? <CodeFile path={path} read={read} toolbarExtra={controls} /> : <FileToolbar>{controls}</FileToolbar>}
-            <div className={view === 'preview' ? 'relative flex min-h-0 grow flex-col bg-surface' : 'hidden'}>
+            <div ref={surface} className={view === 'preview' ? 'relative flex min-h-0 grow flex-col bg-surface' : 'hidden'}>
+                {find.open && (
+                    <FindBar
+                        find={find}
+                        total={pageFind.total}
+                        current={pageFind.current}
+                        onStep={pageFind.step}
+                        unsupported={{ wholeWord: t('file.html.findTextOnly'), regex: t('file.html.findTextOnly') }}
+                        disabledReason={findUnavailable}
+                    />
+                )}
                 {nativePreview ? (
                     <>
                         {loading && <div className="progress-line absolute inset-x-0 top-0 z-10" role="progressbar" aria-label={t('file.html.loading')} />}

@@ -87,6 +87,9 @@
     },
     "html": {
       "failed": "{{name}} is niet geladen ({{error}})",
+      "findDesktopOnly": "Zoeken in een HTML-preview kan alleen in de desktop-app",
+      "findLocalOnly": "Zoeken in een HTML-preview werkt alleen voor een bestand op deze machine",
+      "findTextOnly": "Een HTML-preview vindt alleen gewone tekst",
       "loading": "De pagina laden",
       "previewTitle": "Voorbeeld van {{name}}"
     },

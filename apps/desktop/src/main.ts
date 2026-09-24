@@ -1146,11 +1146,12 @@ const DEVTOOLS_ACCELERATOR = process.platform === 'darwin' ? 'Alt+Command+I' : '
 /*
  * A command from the menu goes to the page, which runs it the way the palette does. One fired by its
  * accelerator is dropped: the page saw that key first and its own listeners answered it or let it
- * pass on purpose. Only a page in a browser node never sees the key, so there the menu answers.
+ * pass on purpose. Only a page in a browser node or an HTML preview never sees the key, so there the
+ * menu answers.
  */
 const runMenuCommand = (id: string, byKey: boolean): void => {
     const focused = webContents.getFocusedWebContents();
-    if (byKey && (focused === null || !isBrowserGuest(focused))) {
+    if (byKey && (focused === null || !(isBrowserGuest(focused) || isPreviewGuest(focused)))) {
         return;
     }
     mainWindow?.show();
