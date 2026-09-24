@@ -21,6 +21,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UdpSocket;
 
 mod native_remoted;
+mod simulator_accessibility;
 
 use native_remoted::{NativeRemotedTunnel, connect_rsd};
 
@@ -43,6 +44,11 @@ enum Command {
         #[arg(long)]
         udid: Option<String>,
         device_id: String,
+    },
+    /// Answers accessibility trees of a booted simulator, one JSON request and reply per line.
+    SimulatorAccessibility {
+        #[arg(long)]
+        udid: String,
     },
     Probe {
         #[arg(long)]
@@ -248,21 +254,37 @@ impl ProtocolWriter {
     }
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     match Arguments::parse().command {
-        Command::PhysicalIos { udid, device_id: _ } => run_physical_helper(udid).await,
+        // The accessibility reader waits on the thread it runs on, so it stays outside the async runtime.
+        Command::SimulatorAccessibility { udid } => {
+            std::process::exit(simulator_accessibility::run(&udid))
+        }
+        Command::PhysicalIos { udid, device_id: _ } => block_on(run_physical_helper(udid)),
         Command::Probe {
             udid,
             timeout,
             transport,
-        } => {
+        } => block_on(async move {
             if let Err(error) =
                 probe_stream(udid.as_deref(), Duration::from_secs(timeout), transport).await
             {
                 eprintln!("Rust iOS stream probe failed: {error:#}");
                 std::process::exit(1);
             }
+        }),
+    }
+}
+
+fn block_on(future: impl Future<Output = ()>) {
+    match tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime.block_on(future),
+        Err(error) => {
+            eprintln!("could not start the async runtime: {error}");
+            std::process::exit(1);
         }
     }
 }
