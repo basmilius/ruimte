@@ -53,6 +53,7 @@ import type { Notice, NoticeDelivery } from '../context/notices.ts';
 import { MAX_TITLE_LENGTH, NEW_NODE, OPENING_OFF_CANVAS, type AgentStart, type CanvasHost, type Noun } from './verb.ts';
 import { VERBS } from './verbs.ts';
 import { TaskStore } from '../tasks/task-store.ts';
+import { freeBranch } from '../git/worktrees.ts';
 import { MAX_TASK_PROMPT_LENGTH, nextLine, taskBrief } from './task-verbs.ts';
 
 const nounNamed = (name: string): Noun => VERBS.find((entry): entry is Noun => entry.served === 'noun' && entry.name === name)!;
@@ -197,7 +198,9 @@ const host = (): CanvasHost => ({
         ),
     worktreePaths: async () => worktrees,
     branchesOf: async () => branches,
-    addWorktree: async (_folder, branch) => {
+    addWorktree: async (_folder, want) => {
+        const taken = new Set([...(branches ?? []), ...madeWorktrees.map((made) => made.branch)]);
+        const branch = 'branch' in want ? want.branch : freeBranch(want.fresh, taken);
         const made = { path: join(worktree, branch), branch };
         madeWorktrees.push(made);
         return { worktree: made, created: true };

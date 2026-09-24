@@ -57,6 +57,29 @@ describe('Worktrees', () => {
         await expect(worktrees.remove(repo, added.worktree.path)).rejects.toMatchObject({ code: 'worktree-not-found' });
     });
 
+    test('two fresh worktrees asked for at once under one name get a branch and a folder each', async () => {
+        const [first, second] = await Promise.all([
+            worktrees.addFresh(repo, 'claude', { madeBy: 'verb', nodeId: 'chat-a' }),
+            worktrees.addFresh(repo, 'claude', { madeBy: 'verb', nodeId: 'chat-b' })
+        ]);
+        expect([first.branch, second.branch].sort()).toEqual(['claude', 'claude-2']);
+        expect(first.path).not.toBe(second.path);
+        expect(await branchList()).toEqual(['claude', 'claude-2', 'main']);
+    });
+
+    test('a named branch is taken again, except by an agent when its worktree was made for another node', async () => {
+        const made = await worktrees.add(repo, 'shared', { madeBy: 'verb' });
+        // Nobody claimed it yet, so an agent that names the branch lands in it.
+        expect(await worktrees.add(repo, 'shared', { madeBy: 'verb' })).toEqual({ worktree: made.worktree, created: false });
+
+        await worktrees.claim(repo, made.worktree.path, 'chat-a');
+        await expect(worktrees.add(repo, 'shared', { madeBy: 'verb' })).rejects.toMatchObject({ code: 'worktree-taken' });
+        await expect(worktrees.add(repo, 'shared', { madeBy: 'fork', nodeId: 'chat-b' })).rejects.toMatchObject({ code: 'worktree-taken' });
+        expect((await worktrees.add(repo, 'shared', { madeBy: 'fork', nodeId: 'chat-a' })).created).toBe(false);
+        // A person opens whichever worktree they like.
+        expect((await worktrees.add(repo, 'shared')).created).toBe(false);
+    });
+
     test('an existing branch gets a worktree without a new branch, and removing it leaves that branch alone', async () => {
         await git(['branch', 'existing']);
         const added = await worktrees.add(repo, 'existing');

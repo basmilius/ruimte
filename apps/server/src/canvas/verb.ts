@@ -29,6 +29,9 @@ import { parseArgv } from './argv.ts';
 // The verbs reach the one sanitizer through the toolkit they already import.
 export { field } from '../refusal.ts';
 
+/* A worktree a verb asks for: a new branch named after a title, or the branch it was given. */
+export type WorktreeWant = { fresh: string } | { branch: string };
+
 /* A verb said no. The code is for a script, the message for the agent, the lines for what it can pick instead. */
 export class VerbRefusal extends CodedError {}
 
@@ -44,8 +47,12 @@ export interface CanvasHost {
     worktreePaths(folder: string): Promise<string[]>;
     /* The local branches of the repository the folder is in; null when it is in none. */
     branchesOf(folder: string): Promise<string[] | null>;
-    /* The worktree of a branch under the machine's worktrees folder, made from HEAD when the branch is new. */
-    addWorktree(folder: string, branch: string, projectId: string): Promise<{ worktree: Worktree; created: boolean }>;
+    /*
+     * A worktree under the machine's worktrees folder, made from HEAD when the branch is new. `fresh`
+     * is always a new one, on the first free branch after that name; `branch` takes that branch and
+     * may answer a worktree it already has, unless that one was made for another node.
+     */
+    addWorktree(folder: string, want: WorktreeWant, projectId: string): Promise<{ worktree: Worktree; created: boolean }>;
     /* Writes the node a worktree was made for into the register, once the node exists. */
     claimWorktree(folder: string, path: string, nodeId: string): Promise<void>;
     /* Takes back a worktree this call made, when the write it was made for is refused. */

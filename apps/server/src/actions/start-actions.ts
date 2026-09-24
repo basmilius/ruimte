@@ -11,7 +11,7 @@ import { groupMembers, placeBeside, placeFree, placeInGroup, placeTeam } from '.
 import { checkCwd } from '../canvas/project-paths.ts';
 import { MAX_TASK_PROMPT_LENGTH, requireChatParent, taskBrief } from '../canvas/tasks.ts';
 import { NEW_NODE, OPENING_OFF_CANVAS, VerbRefusal, canvasFor, field, newNode } from '../canvas/verb.ts';
-import { branchSlug, branchesForWorktrees, freeBranch, makeWorktrees } from '../canvas/worktree.ts';
+import { branchSlug, makeWorktrees, requireRepository } from '../canvas/worktree.ts';
 import { providerFor } from '../providers/registry.ts';
 import { verbCallOf, type ServerActionContext } from './context.ts';
 import { operationIdOf } from './operation-actions.ts';
@@ -62,10 +62,10 @@ export const startActions: ActionHandlers<ServerActionContext> = {
         const runtimeMode = chat ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling);
         let undoWorktrees = async (): Promise<void> => undefined;
         if (input.worktree) {
-            const branches = await branchesForWorktrees(caller, place.folder);
-            const branch = input.branch ?? freeBranch(branchSlug(input.task ?? input.title ?? kind), branches);
+            await requireRepository(caller, place.folder);
             if (!dryRun) {
-                const made = await makeWorktrees(caller, { folder: place.folder, projectId: place.projectId }, [branch]);
+                const want = input.branch === null ? { fresh: branchSlug(input.task ?? input.title ?? kind) } : { branch: input.branch };
+                const made = await makeWorktrees(caller, { folder: place.folder, projectId: place.projectId }, [want]);
                 cwd = made.worktrees[0]!.path;
                 undoWorktrees = made.undo;
             }
@@ -234,14 +234,10 @@ export const startActions: ActionHandlers<ServerActionContext> = {
         const roleCwds: Array<string | undefined> = roles.map(() => cwd);
         let undoWorktrees = async (): Promise<void> => undefined;
         if (input.worktree) {
-            const taken = await branchesForWorktrees(caller, place.folder);
-            const branches = roles.map((role) => {
-                const branch = freeBranch(branchSlug(role.title), taken);
-                taken.add(branch);
-                return branch;
-            });
+            await requireRepository(caller, place.folder);
             if (!dryRun) {
-                const made = await makeWorktrees(caller, { folder: place.folder, projectId: place.projectId }, branches);
+                const wants = roles.map((role) => ({ fresh: branchSlug(role.title) }));
+                const made = await makeWorktrees(caller, { folder: place.folder, projectId: place.projectId }, wants);
                 made.worktrees.forEach((worktree, index) => {
                     roleCwds[index] = worktree.path;
                 });

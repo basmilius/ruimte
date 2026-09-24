@@ -31,7 +31,8 @@ import { TaskStore } from './tasks/task-store.ts';
 import { registerTaskHandlers } from './handlers/tasks.ts';
 import { registerPlanHandlers } from './handlers/plan.ts';
 import { PlanStore } from './plans/plan-store.ts';
-import type { AgentStart } from './canvas/verb.ts';
+import type { AgentStart, WorktreeWant } from './canvas/verb.ts';
+import { addWanted } from './canvas/worktree.ts';
 import { connectionOpener, socketChannel, type ClientChannel, type OpenConnection, type SocketChannel } from './connection.ts';
 import { authenticateChannel } from './pulsar/channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS } from './pulsar/data-channel.ts';
@@ -383,7 +384,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         modeOf: nodeMode(modes),
         terminalModePreference: () => chats.composerPreferences.terminalMode(),
         branchesOf: (folder: string) => worktrees.branches(folder).catch(() => null),
-        addWorktree: (folder: string, branch: string, projectId: string) => worktrees.add(folder, branch, { madeBy: 'verb', projectId }),
+        addWorktree: (folder: string, want: WorktreeWant, projectId: string) => addWanted(worktrees, folder, want, projectId),
         claimWorktree: (folder: string, path: string, nodeId: string) => worktrees.claim(folder, path, nodeId),
         removeWorktree: (folder: string, path: string) => worktrees.remove(folder, path),
         worktrees: worktreeHost(worktrees, merges),

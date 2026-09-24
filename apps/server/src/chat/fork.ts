@@ -24,10 +24,11 @@ import { agentNode, nameOf } from '../canvas/agents.ts';
 import { MAX_CANVAS_NODES, newId } from '../canvas/nodes.ts';
 import { placeFree } from '../canvas/placement.ts';
 import { narrowerMode } from '../canvas/mode.ts';
-import { branchSlug, freeBranch } from '../canvas/worktree.ts';
+import type { WorktreeWant } from '../canvas/verb.ts';
+import { branchSlug } from '../canvas/worktree.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
 import { git } from '../git/run.ts';
-import type { Worktrees } from '../git/worktrees.ts';
+import { freeBranch, type Worktrees } from '../git/worktrees.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { AgentLineageStore } from '../agents/lineage.ts';
@@ -61,7 +62,12 @@ export interface ChatForkDeps {
     /* The local branches of the repository a folder is in, or null outside one. */
     branchesOf(folder: string): Promise<string[] | null>;
     /* A worktree on a new branch for the fork, with the folder in it that matches the original's, and how to take it back. */
-    addWorktree(input: { cwd: string; branch: string; projectId: string; nodeId: string }): Promise<{ worktree: Worktree; cwd: string; undo(): Promise<void> }>;
+    addWorktree(input: {
+        cwd: string;
+        want: WorktreeWant;
+        projectId: string;
+        nodeId: string;
+    }): Promise<{ worktree: Worktree; cwd: string; undo(): Promise<void> }>;
     treeExists(cwd: string, tree: string): Promise<boolean>;
     /* The tree of a folder as it is now, or null when git cannot take one. */
     takeTree(cwd: string): Promise<string | null>;
@@ -250,13 +256,15 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
             throw new ChatError('not-a-repository', `${info.cwd} is not in a git repository, so the fork cannot have a worktree`);
         }
         const tree = payload.filesAfterTurn === true ? await filesTree(deps, info.cwd, turns, index) : null;
-        const branch = payload.worktree.branch ?? freeBranch(branchSlug(title), new Set(branches));
-        if (branches.includes(branch)) {
-            throw new ChatError('branch-exists', `The branch ${branch} exists already; name another one`);
+        const named = payload.worktree.branch;
+        if (named !== undefined && branches.includes(named)) {
+            throw new ChatError('branch-exists', `The branch ${named} exists already; name another one`);
         }
-        const made = await deps.addWorktree({ cwd: info.cwd, branch, projectId: place.projectId, nodeId: forkId }).catch((error: unknown) => {
-            throw new ChatError('worktree-failed', `The worktree for ${branch} could not be made: ${errorText(error)}`);
+        const want = named === undefined ? { fresh: branchSlug(title) } : { branch: named };
+        const made = await deps.addWorktree({ cwd: info.cwd, want, projectId: place.projectId, nodeId: forkId }).catch((error: unknown) => {
+            throw new ChatError('worktree-failed', `The worktree for ${named ?? branchSlug(title)} could not be made: ${errorText(error)}`);
         });
+        const branch = made.worktree.branch;
         undoers.push(() => made.undo());
         if (tree !== null) {
             try {
@@ -447,7 +455,7 @@ export const chatForkDeps = (wiring: {
     host: Pick<CanvasHost, 'installedAgents' | 'locate' | 'read' | 'mutate'>;
     titleFor(id: string): string | null;
     lineage: Pick<AgentLineageStore, 'depthOf' | 'put'>;
-    worktrees?: Pick<Worktrees, 'add' | 'remove' | 'branches'>;
+    worktrees?: Pick<Worktrees, 'add' | 'addFresh' | 'remove' | 'branches'>;
     checkpoints?: Pick<Checkpoints, 'take' | 'exists' | 'restore'>;
 }): ChatForkDeps => ({
     source: (chatId) => wiring.chats.forkSource(chatId),
@@ -482,14 +490,15 @@ export const chatForkDeps = (wiring: {
         });
     },
     branchesOf: async (folder) => (wiring.worktrees ? wiring.worktrees.branches(folder).catch(() => null) : null),
-    addWorktree: async ({ cwd, branch, projectId, nodeId }) => {
+    addWorktree: async ({ cwd, want, projectId, nodeId }) => {
         if (!wiring.worktrees) {
             throw new ChatError('not-a-repository', 'This machine makes no worktrees');
         }
         const worktrees = wiring.worktrees;
         // A chat in a subfolder of the repository goes on in the same subfolder of the worktree.
         const prefix = ((await git(['rev-parse', '--show-prefix'], cwd)) ?? '').trim();
-        const { worktree } = await worktrees.add(cwd, branch, { madeBy: 'fork', projectId, nodeId });
+        const origin = { madeBy: 'fork' as const, projectId, nodeId };
+        const worktree = 'branch' in want ? (await worktrees.add(cwd, want.branch, origin)).worktree : await worktrees.addFresh(cwd, want.fresh, origin);
         return {
             worktree,
             cwd: prefix === '' ? worktree.path : join(worktree.path, prefix).replace(/\/$/, ''),

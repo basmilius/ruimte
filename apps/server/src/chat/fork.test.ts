@@ -445,13 +445,16 @@ describe('forkChat', () => {
             {
                 ...deps,
                 branchesOf: async () => ['main'],
-                addWorktree: async ({ branch }) => ({
-                    worktree: { path: `/worktrees/${branch}`, branch },
-                    cwd: `/worktrees/${branch}`,
-                    undo: async () => {
-                        undone.push('worktree');
-                    }
-                }),
+                addWorktree: async ({ want }) => {
+                    const branch = 'branch' in want ? want.branch : want.fresh;
+                    return {
+                        worktree: { path: `/worktrees/${branch}`, branch },
+                        cwd: `/worktrees/${branch}`,
+                        undo: async () => {
+                            undone.push('worktree');
+                        }
+                    };
+                },
                 forkClaude: async () => ({
                     undo: async () => {
                         undone.push('transcript');

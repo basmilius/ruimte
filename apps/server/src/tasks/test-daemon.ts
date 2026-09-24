@@ -4,6 +4,7 @@ import { AgentLineageStore } from '../agents/lineage.ts';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
 import type { AgentStart, CanvasHost } from '../canvas/verb.ts';
+import { addWanted } from '../canvas/worktree.ts';
 import { AttachmentStore } from '../chat/attachment-store.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { ChatStore } from '../chat/chat-store.ts';
@@ -186,8 +187,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         modeOf: nodeMode(modes),
         terminalModePreference: () => chats.composerPreferences.terminalMode(),
         branchesOf: async (folder) => (worktrees ? worktrees.branches(folder).catch(() => null) : null),
-        addWorktree: (folder, branch, projectId) =>
-            worktrees ? worktrees.add(folder, branch, { madeBy: 'verb', projectId }) : Promise.reject(new Error('no worktrees here')),
+        addWorktree: (folder, want, projectId) => (worktrees ? addWanted(worktrees, folder, want, projectId) : Promise.reject(new Error('no worktrees here'))),
         claimWorktree: async (folder, path, nodeId) => worktrees?.claim(folder, path, nodeId),
         removeWorktree: async (folder, path) => worktrees?.remove(folder, path),
         ...(worktrees

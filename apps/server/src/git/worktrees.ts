@@ -133,6 +133,19 @@ const workSentence = (branch: string, work: WorktreeWork, target: string | null)
     return `${branch} holds ${parts[0]}, ${parts[1]} and ${parts[2]}${operation}`;
 };
 
+/* The first of base, base-2, base-3 that is not taken yet. */
+export const freeBranch = (base: string, taken: ReadonlySet<string>): string => {
+    if (!taken.has(base)) {
+        return base;
+    }
+    for (let suffix = 2; ; suffix++) {
+        const candidate = `${base}-${suffix}`;
+        if (!taken.has(candidate)) {
+            return candidate;
+        }
+    }
+};
+
 export const hasWork = (work: WorktreeWork): boolean => work.changed + work.untracked + work.ahead > 0 || work.operation !== undefined;
 
 /*
@@ -210,15 +223,39 @@ export class Worktrees {
     /*
      * The worktree for a branch, made when missing; a branch that does not exist yet is created from
      * HEAD of the checkout `repo` is in. What it was made from goes in the register: that checkout's
-     * branch, and the commit the new branch shares with it.
+     * branch, and the commit the new branch shares with it. An agent never lands in a worktree the
+     * register gives to another node; a person may open any.
      */
     async add(repo: string, branch: string, origin: WorktreeOrigin = { madeBy: 'client' }): Promise<{ worktree: Worktree; created: boolean }> {
-        const { main, entries } = await this.read(repo);
-        const existing = entries.find((entry) => entry.path !== main && entry.branch === branch);
-        if (existing) {
+        const { main } = await this.read(repo);
+        return await this.serialize(main, async () => {
+            const { entries } = await this.read(repo);
+            const existing = entries.find((entry) => entry.path !== main && entry.branch === branch);
+            if (existing === undefined) {
+                return { worktree: await this.make(repo, main, branch, origin), created: true };
+            }
             const record = (await this.registerOf(main).read()).get(existing.path);
+            if (origin.madeBy !== 'client' && record?.nodeId !== undefined && record.nodeId !== origin.nodeId) {
+                throw new GitError('worktree-taken', `The worktree of ${branch} belongs to ${record.nodeId}; name another branch.`);
+            }
             return { worktree: { path: existing.path, branch, ...(record ? recordFields(record) : {}) }, created: false };
-        }
+        });
+    }
+
+    /*
+     * A worktree on a new branch named `base`, or base-2, base-3 when that is taken. The name is picked
+     * and the worktree made under the repository lock, so two agents started at once never share one.
+     */
+    async addFresh(repo: string, base: string, origin: WorktreeOrigin): Promise<Worktree> {
+        const { main } = await this.read(repo);
+        return await this.serialize(main, async () => {
+            const { entries } = await this.read(repo);
+            const taken = new Set([...(await this.branches(main)), ...entries.map((entry) => basename(entry.path))]);
+            return await this.make(repo, main, freeBranch(base, taken), origin);
+        });
+    }
+
+    private async make(repo: string, main: string, branch: string, origin: WorktreeOrigin): Promise<Worktree> {
         const register = this.registerOf(main);
         const dir = join(this.root, repoFolderName(main));
         await mkdir(dir, { recursive: true, mode: 0o700 });
@@ -245,7 +282,7 @@ export class Worktrees {
         }
         await this.linkShared(repo, path).catch((e: unknown) => this.log(`Linking the shared paths into ${path} failed: ${errorText(e)}`));
         this.announce(main);
-        return { worktree: { path, branch, ...(record ? recordFields(record) : {}) }, created: true };
+        return { path, branch, ...(record ? recordFields(record) : {}) };
     }
 
     /* Writes down the node a worktree was made for, once the node has an id. */

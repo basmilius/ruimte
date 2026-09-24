@@ -1,6 +1,7 @@
 import type { Worktree } from '@ruimte/contracts';
-import { VerbRefusal, type VerbCall } from './verb.ts';
+import { VerbRefusal, type VerbCall, type WorktreeWant } from './verb.ts';
 import { errorText } from '../error-text.ts';
+import type { Worktrees } from '../git/worktrees.ts';
 
 export const WORKTREE_LINES: readonly string[] = [
     "worktree\tEach agent gets a git worktree of its own under the machine's worktrees folder, on a new branch from HEAD, and starts in it; two agents editing the same file never overwrite each other",
@@ -19,27 +20,25 @@ export const branchSlug = (title: string): string => {
     return slug === '' ? 'agent' : slug;
 };
 
-/* The first of base, base-2, base-3 that no branch has yet, so two agents never end up on one worktree. */
-export const freeBranch = (base: string, taken: ReadonlySet<string>): string => {
-    if (!taken.has(base)) {
-        return base;
-    }
-    for (let n = 2; ; n++) {
-        const candidate = `${base}-${n}`;
-        if (!taken.has(candidate)) {
-            return candidate;
-        }
+/* Refuses a project that is not in a git repository, before anything is made for it. */
+export const requireRepository = async (call: VerbCall, folder: string): Promise<void> => {
+    if ((await call.host.branchesOf(folder)) === null) {
+        throw new VerbRefusal('not-a-repository', `--worktree needs a git repository, and ${folder} is not in one`);
     }
 };
 
-/* The branches of the project's repository, refusing a project that is not in one. */
-export const branchesForWorktrees = async (call: VerbCall, folder: string): Promise<Set<string>> => {
-    const branches = await call.host.branchesOf(folder);
-    if (branches === null) {
-        throw new VerbRefusal('not-a-repository', `--worktree needs a git repository, and ${folder} is not in one`);
-    }
-    return new Set(branches);
-};
+const nameOf = (want: WorktreeWant): string => ('branch' in want ? want.branch : want.fresh);
+
+/* `CanvasHost.addWorktree` over the machine's worktrees. */
+export const addWanted = async (
+    worktrees: Worktrees,
+    folder: string,
+    want: WorktreeWant,
+    projectId: string
+): Promise<{ worktree: Worktree; created: boolean }> =>
+    'branch' in want
+        ? await worktrees.add(folder, want.branch, { madeBy: 'verb', projectId })
+        : { worktree: await worktrees.addFresh(folder, want.fresh, { madeBy: 'verb', projectId }), created: true };
 
 /*
  * The worktrees of one call, made before the project is written so the nodes can start in them.
@@ -48,7 +47,7 @@ export const branchesForWorktrees = async (call: VerbCall, folder: string): Prom
 export const makeWorktrees = async (
     call: VerbCall,
     place: { folder: string; projectId: string },
-    branches: readonly string[]
+    wants: readonly WorktreeWant[]
 ): Promise<{ worktrees: Worktree[]; undo(): Promise<void> }> => {
     const folder = place.folder;
     const made: Worktree[] = [];
@@ -58,16 +57,16 @@ export const makeWorktrees = async (
             await call.host.removeWorktree(folder, worktree.path).catch(() => undefined);
         }
     };
-    for (const branch of branches) {
+    for (const want of wants) {
         try {
-            const { worktree, created } = await call.host.addWorktree(folder, branch, place.projectId);
+            const { worktree, created } = await call.host.addWorktree(folder, want, place.projectId);
             worktrees.push(worktree);
             if (created) {
                 made.push(worktree);
             }
         } catch (e) {
             await undo();
-            throw new VerbRefusal('worktree-failed', `The worktree for ${branch} could not be made: ${errorText(e)}`);
+            throw new VerbRefusal('worktree-failed', `The worktree for ${nameOf(want)} could not be made: ${errorText(e)}`);
         }
     }
     return { worktrees, undo };
