@@ -263,8 +263,12 @@ for (const [name, schema] of Object.entries(apiRoots)) {
         }
     });
     stampStatement(schemas[name]!);
-    if (name === 'request.chat.send.payload') schemas[name]!['x-message-content'] = true;
-    if (name === 'request.session.attach.payload') schemas[name]!['x-follow-dimensions'] = true;
+    if (name === 'request.chat.send.payload') {
+        schemas[name]!['x-message-content'] = true;
+    }
+    if (name === 'request.session.attach.payload') {
+        schemas[name]!['x-follow-dimensions'] = true;
+    }
 }
 const tableSource = (name: string, entries: string[], methods: string): string =>
     `public enum ${name}: String, CaseIterable, Sendable {\n${entries.map((entry) => `    case ${identifier(entry)} = ${JSON.stringify(entry)}`).join('\n')}\n\n${methods}\n}`;

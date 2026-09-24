@@ -10,7 +10,9 @@ export function registerTerminalDictationTarget(key: string, target: DictationTa
     useTerminalDictationTargets.setState(({ targets }) => ({ targets: new Map(targets).set(key, target) }));
     return () => {
         useTerminalDictationTargets.setState(({ targets }) => {
-            if (targets.get(key) !== target) return {};
+            if (targets.get(key) !== target) {
+                return {};
+            }
             const next = new Map(targets);
             next.delete(key);
             return { targets: next };

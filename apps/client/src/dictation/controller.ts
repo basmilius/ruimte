@@ -207,7 +207,9 @@ export const toggleDictation = (target: DictationTarget): void => {
                 },
                 onBands: (bands) => {
                     if (generation === token) {
-                        if (useDictation.getState().phase === 'listening') captured.levels?.(bands);
+                        if (useDictation.getState().phase === 'listening') {
+                            captured.levels?.(bands);
+                        }
                         useDictation.setState({ bands });
                     }
                 },

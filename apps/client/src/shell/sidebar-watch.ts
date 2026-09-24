@@ -29,7 +29,9 @@ export class SidebarWatch {
                 if (status === 'open') {
                     this.set({ ...this.snapshot, state: 'loading' });
                     this.refresh();
-                } else this.set({ ...this.snapshot, state: 'offline' });
+                } else {
+                    this.set({ ...this.snapshot, state: 'offline' });
+                }
             }),
             transport.on('project.changed', () => this.schedule()),
             transport.on('project.summary', () => this.schedule()),
@@ -53,7 +55,9 @@ export class SidebarWatch {
         this.disposed = true;
         this.off.forEach((off) => off());
         clearInterval(this.interval);
-        if (this.timer !== null) clearTimeout(this.timer);
+        if (this.timer !== null) {
+            clearTimeout(this.timer);
+        }
         this.listeners.clear();
     }
 
@@ -63,7 +67,9 @@ export class SidebarWatch {
     }
 
     private schedule(): void {
-        if (this.timer !== null) return;
+        if (this.timer !== null) {
+            return;
+        }
         this.timer = setTimeout(() => {
             this.timer = null;
             this.refresh();
@@ -71,13 +77,17 @@ export class SidebarWatch {
     }
 
     private set(snapshot: SidebarMachineSnapshot): void {
-        if (this.disposed || JSON.stringify(snapshot) === JSON.stringify(this.snapshot)) return;
+        if (this.disposed || JSON.stringify(snapshot) === JSON.stringify(this.snapshot)) {
+            return;
+        }
         this.snapshot = snapshot;
         this.listeners.forEach((listener) => listener());
     }
 
     refresh = (): void => {
-        if (this.disposed || this.snapshot.state === 'unsupported') return;
+        if (this.disposed || this.snapshot.state === 'unsupported') {
+            return;
+        }
         if (this.transport.status !== 'open') {
             this.set({ ...this.snapshot, state: 'offline' });
             return;
@@ -91,19 +101,27 @@ export class SidebarWatch {
         const revision = this.statusRevision;
         void Promise.all([this.transport.request('project.sidebar', {}), this.transport.request('session.list', {}), this.transport.request('chat.list', {})])
             .then(([overview, sessions, chats]) => {
-                if (this.disposed || generation !== this.generation) return;
+                if (this.disposed || generation !== this.generation) {
+                    return;
+                }
                 const statuses: Record<string, AgentStatus> = {};
                 for (const session of sessions.sessions) {
                     statuses[`terminal:${session.sessionId}`] =
                         session.agent?.live || session.agent?.status === 'exited' ? session.agent.status : session.exited ? 'error' : 'running';
                 }
-                for (const chat of chats.chats) statuses[`chat:${chat.chatId}`] = chat.status;
+                for (const chat of chats.chats) {
+                    statuses[`chat:${chat.chatId}`] = chat.status;
+                }
                 // An event received during the request is newer than that request's status snapshot.
-                if (revision !== this.statusRevision) this.again = true;
+                if (revision !== this.statusRevision) {
+                    this.again = true;
+                }
                 this.set({ projects: overview.projects, statuses: revision === this.statusRevision ? statuses : this.snapshot.statuses, state: 'ready' });
             })
             .catch((error: unknown) => {
-                if (generation !== this.generation) return;
+                if (generation !== this.generation) {
+                    return;
+                }
                 const unsupported =
                     error instanceof TransportError && ['unknown-request', 'unknown-type', 'bad-request', 'not-implemented'].includes(error.code);
                 this.set({ ...this.snapshot, state: unsupported ? 'unsupported' : this.transport.status === 'open' ? 'error' : 'offline' });

@@ -12,7 +12,9 @@ export const spectrumBands = (decibels: Float32Array, sampleRate: number): numbe
         const from = Math.max(1, Math.floor((lowHz * (highHz / lowHz) ** (index / SPEECH_SPECTRUM_BAND_COUNT)) / binHz));
         const to = Math.min(decibels.length, Math.max(from + 1, Math.ceil((lowHz * (highHz / lowHz) ** ((index + 1) / SPEECH_SPECTRUM_BAND_COUNT)) / binHz)));
         let peak = -Infinity;
-        for (let bin = from; bin < to; bin++) peak = Math.max(peak, decibels[bin] ?? -Infinity);
+        for (let bin = from; bin < to; bin++) {
+            peak = Math.max(peak, decibels[bin] ?? -Infinity);
+        }
         return Math.min(1, Math.max(0, (peak + 70) / 50));
     });
 };

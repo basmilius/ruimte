@@ -26,7 +26,9 @@ function Control({ terminalId }: { terminalId: string | null }) {
     const phase = useDictation((state) => (target && state.targetId === target.id ? state.phase : 'idle'));
     const error = useDictation((state) => (target && state.targetId === target.id ? state.error : null));
     useEffect(observeSpeech, []);
-    if (!enabled) return null;
+    if (!enabled) {
+        return null;
+    }
     const working = phase === 'starting' || phase === 'finishing';
     const recording = phase === 'listening';
     const label = error || (working ? t(`dictation.${phase}`) : recording ? t('dictation.stop') : t('dictation.start'));
@@ -43,7 +45,9 @@ function Control({ terminalId }: { terminalId: string | null }) {
                     event.stopPropagation();
                 }}
                 onClick={() => {
-                    if (target) toggleDictation(target);
+                    if (target) {
+                        toggleDictation(target);
+                    }
                 }}
             >
                 <Icon

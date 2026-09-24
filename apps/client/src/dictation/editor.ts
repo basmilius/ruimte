@@ -48,7 +48,9 @@ class WaveformWidget extends WidgetType {
         const element = document.createElement('span');
         element.className = 'dictation-waveform';
         element.setAttribute('aria-hidden', 'true');
-        for (let index = 0; index < 5; index++) element.append(document.createElement('span'));
+        for (let index = 0; index < 5; index++) {
+            element.append(document.createElement('span'));
+        }
         this.updateDOM(element);
         return element;
     }
@@ -58,7 +60,9 @@ class WaveformWidget extends WidgetType {
             const from = Math.floor((index * this.levels.length) / 5);
             const to = Math.max(from + 1, Math.floor(((index + 1) * this.levels.length) / 5));
             let level = 0;
-            for (let band = from; band < to; band++) level += this.levels[band] ?? 0;
+            for (let band = from; band < to; band++) {
+                level += this.levels[band] ?? 0;
+            }
             (element.children[index] as HTMLElement).style.transform = `scaleY(${(2 + Math.min(1, Math.max(0, level / (to - from))) * 12) / 14})`;
         }
         return true;
@@ -122,7 +126,9 @@ export const dictationPreview = StateField.define<{ text: string; levels: readon
             if (effect.is(dictationPreviewEffect) && range) {
                 text = effect.value;
             }
-            if (effect.is(dictationLevelsEffect) && range) levels = effect.value;
+            if (effect.is(dictationLevelsEffect) && range) {
+                levels = effect.value;
+            }
         }
         const widget = new PreviewWidget(text);
         const marks = [];
@@ -131,7 +137,9 @@ export const dictationPreview = StateField.define<{ text: string; levels: readon
                 range.from === range.to ? Decoration.widget({ widget, side: 1 }).range(range.from) : Decoration.replace({ widget }).range(range.from, range.to)
             );
         }
-        if (range && levels !== null) marks.push(Decoration.widget({ widget: new WaveformWidget(levels), side: 2 }).range(range.to));
+        if (range && levels !== null) {
+            marks.push(Decoration.widget({ widget: new WaveformWidget(levels), side: 2 }).range(range.to));
+        }
         return { text, levels, decorations: Decoration.set(marks, true) };
     },
     provide: (field) => EditorView.decorations.from(field, (value) => value.decorations)

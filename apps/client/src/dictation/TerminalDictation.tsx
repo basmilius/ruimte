@@ -27,7 +27,9 @@ function TerminalControl({
     useEffect(observeSpeech, []);
     useEffect(() => {
         const element = targetRef.current;
-        if (!element || disabled) return;
+        if (!element || disabled) {
+            return;
+        }
         const target = { id, element, capture: () => ({ insert: (text: string) => setDraft(terminalDictationText(text)) }) };
         const unregister = registerDictationTarget(target);
         const unregisterTerminal = registerTerminalDictationTarget(terminalTargetKey(endpointId, terminalId), target);

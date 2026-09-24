@@ -17,7 +17,9 @@ export const sidebarNavigator = (navigation: SidebarNavigation): ((target: Sideb
         const attempt = ++serial;
         const outcome = await navigation.open(target.endpointId, target.projectId);
         const current = navigation.current();
-        if (attempt !== serial || outcome !== 'done' || current.endpointId !== target.endpointId || current.projectId !== target.projectId) return;
+        if (attempt !== serial || outcome !== 'done' || current.endpointId !== target.endpointId || current.projectId !== target.projectId) {
+            return;
+        }
         navigation.reveal(target);
     };
 };

@@ -73,7 +73,9 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                                 }}
                                 onClick={() => {
                                     const element = targetRef.current;
-                                    if (element) toggleDictation({ id, element, capture: () => latest.current() });
+                                    if (element) {
+                                        toggleDictation({ id, element, capture: () => latest.current() });
+                                    }
                                 }}
                             >
                                 <Icon

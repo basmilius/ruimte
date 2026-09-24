@@ -686,7 +686,9 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: Ro
     const item = row.type === 'node' ? row.node : null;
     const inert = view?.kind === 'separator' || view?.kind === 'subheader' || view?.kind === 'unknown' || !group.summary.available;
     const toggle = () => {
-        if (row.type === 'view') useSidebarProjects.getState().expandView(group.key, row.view.id, !row.expanded);
+        if (row.type === 'view') {
+            useSidebarProjects.getState().expandView(group.key, row.view.id, !row.expanded);
+        }
     };
     const label = view?.name ?? item?.title ?? '';
     const status = row.type === 'view' ? row.status : row.node.status;
@@ -700,13 +702,17 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: Ro
                 aria-expanded={row.type === 'view' && row.expandable ? row.expanded : undefined}
                 onFocus={onFocus}
                 onClick={() => {
-                    if (!inert && row.target) void openSidebarTarget(row.target);
+                    if (!inert && row.target) {
+                        void openSidebarTarget(row.target);
+                    }
                 }}
                 onKeyDown={(event) => {
                     arrowStep(event, onArrow);
                     if (row.type === 'view' && row.expandable && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
                         event.preventDefault();
-                        if (row.expanded !== (event.key === 'ArrowRight')) toggle();
+                        if (row.expanded !== (event.key === 'ArrowRight')) {
+                            toggle();
+                        }
                     }
                 }}
                 className={clsx(

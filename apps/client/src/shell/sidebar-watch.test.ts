@@ -42,7 +42,9 @@ const watch = (transport: FakeTransport) => {
     return watcher;
 };
 const settle = async () => {
-    for (let turn = 0; turn < 15; turn++) await Promise.resolve();
+    for (let turn = 0; turn < 15; turn++) {
+        await Promise.resolve();
+    }
 };
 afterEach(() => {
     watchers.splice(0).forEach((watcher) => watcher.dispose());

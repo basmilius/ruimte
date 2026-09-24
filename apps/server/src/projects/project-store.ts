@@ -265,11 +265,15 @@ export class ProjectStore {
         try {
             text = await readFile(path, 'utf8');
         } catch (error) {
-            if (isNotFound(error)) return { kind: 'missing' as const };
+            if (isNotFound(error)) {
+                return { kind: 'missing' as const };
+            }
             throw error;
         }
         const parsed = parsePrivateFile(text);
-        if (parsed.kind === 'unreadable') throw new ProjectError('project-invalid', `${path} does not parse as a private project file`);
+        if (parsed.kind === 'unreadable') {
+            throw new ProjectError('project-invalid', `${path} does not parse as a private project file`);
+        }
         return parsed.kind === 'ok' ? { ...parsed, text } : parsed;
     }
 

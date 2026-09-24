@@ -61,7 +61,9 @@ export const useSidebarMachines = (enabled: boolean, endpointIds: readonly strin
             .map((endpoint) => {
                 const watcher = new SidebarWatch(machineTransport(endpoint.id));
                 const off = watcher.subscribe(() => {
-                    if (alive) store.setState((before) => ({ snapshots: { ...before.snapshots, [endpoint.id]: watcher.getSnapshot() } }));
+                    if (alive) {
+                        store.setState((before) => ({ snapshots: { ...before.snapshots, [endpoint.id]: watcher.getSnapshot() } }));
+                    }
                 });
                 store.setState((before) => ({ snapshots: { ...before.snapshots, [endpoint.id]: watcher.getSnapshot() } }));
                 const release = pool.hold(endpoint);

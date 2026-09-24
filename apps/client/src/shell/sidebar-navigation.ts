@@ -25,7 +25,9 @@ export const openSidebarTarget = sidebarNavigator({
             useSidebarProjects.getState().collapse(sidebarProjectKey(target.endpointId, target.projectId), false);
             const expanded = useUi.getState().sidebarExpanded ?? [];
             useUi.getState().setSidebarExpanded([...new Set([...expanded, target.viewId])]);
-            if (view.kind === 'canvas') revealNode(target.nodeId);
+            if (view.kind === 'canvas') {
+                revealNode(target.nodeId);
+            }
         }
     }
 });

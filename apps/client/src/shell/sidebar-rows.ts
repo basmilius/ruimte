@@ -218,7 +218,9 @@ export const buildCombinedSidebar = (groups: readonly SidebarGroup[]): SidebarSe
         if (group.state === 'ready') {
             const seen = new Set<string>();
             for (const row of own.find((section) => section.kind === 'needs-you')?.rows ?? []) {
-                if (row.type !== 'node' || seen.has(row.node.id)) continue;
+                if (row.type !== 'node' || seen.has(row.node.id)) {
+                    continue;
+                }
                 seen.add(row.node.id);
                 waiting.push(qualify(row));
             }

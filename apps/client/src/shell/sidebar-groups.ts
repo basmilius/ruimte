@@ -32,9 +32,13 @@ export const useSidebarGroups = (enabled: boolean, active: SidebarProject, expan
         const incomplete: { label: string; state: SidebarGroup['state'] }[] = [];
         for (const endpoint of listedEndpoints(endpoints)) {
             const projects = selected.filter((row) => row.endpointId === endpoint.id);
-            if (projects.length === 0) continue;
+            if (projects.length === 0) {
+                continue;
+            }
             const snapshot = machines[endpoint.id];
-            if (snapshot?.state !== 'ready') incomplete.push({ label: endpoint.label, state: snapshot?.state ?? 'loading' });
+            if (snapshot?.state !== 'ready') {
+                incomplete.push({ label: endpoint.label, state: snapshot?.state ?? 'loading' });
+            }
             for (const { summary } of projects) {
                 const views = snapshot?.projects.find((project) => project.summary.projectId === summary.projectId)?.views ?? null;
                 const key = sidebarProjectKey(endpoint.id, summary.projectId);
@@ -54,7 +58,9 @@ export const useSidebarGroups = (enabled: boolean, active: SidebarProject, expan
                     status: state === 'ready' ? (snapshot?.statuses[`${value.kind}:${value.id}`] ?? value.status ?? null) : null,
                     snoozedUntil: snoozeOf(snoozes, endpoint.id, value.id)
                 });
-                if (state === 'error' && snapshot?.state === 'ready') incomplete.push({ label: `${summary.name} · ${endpoint.label}`, state });
+                if (state === 'error' && snapshot?.state === 'ready') {
+                    incomplete.push({ label: `${summary.name} · ${endpoint.label}`, state });
+                }
                 const activeNode = (value: SidebarNode): SidebarNode => ({
                     ...value,
                     status: state !== 'ready' ? null : (snapshot?.statuses[`${value.kind}:${value.id}`] ?? value.status)
@@ -92,7 +98,9 @@ export const useSidebarGroups = (enabled: boolean, active: SidebarProject, expan
         const keys = new Set(groups.map((group) => group.key));
         const kept = order.filter((key) => keys.has(key));
         const added = groups.filter((group) => !kept.includes(group.key));
-        if (kept.length === 0) added.sort((a, b) => b.summary.lastOpenedAt - a.summary.lastOpenedAt);
+        if (kept.length === 0) {
+            added.sort((a, b) => b.summary.lastOpenedAt - a.summary.lastOpenedAt);
+        }
         const nextOrder = [...kept, ...added.map((group) => group.key)];
         groups.sort((a, b) => nextOrder.indexOf(a.key) - nextOrder.indexOf(b.key));
         return { groups, incomplete, order: nextOrder };
