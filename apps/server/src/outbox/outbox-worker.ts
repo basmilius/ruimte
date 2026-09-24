@@ -74,8 +74,9 @@ export class OutboxWorker {
     }
 
     /* Owes a piece of work and starts on it; resolves once the entry is on disk, not once it is done. */
-    async enqueue(projectId: string, target: string, work: Parameters<OutboxStore['put']>[2]): Promise<void> {
-        await this.store.put(projectId, target, work, this.clock.now());
+    async enqueue(projectId: string, target: string, work: Parameters<OutboxStore['put']>[2], notBefore?: number): Promise<void> {
+        const now = this.clock.now();
+        await this.store.put(projectId, target, work, now, notBefore ?? now);
         this.drain();
     }
 
@@ -116,6 +117,11 @@ export class OutboxWorker {
         for (const entry of this.store.list()) {
             // A waiting entry holds no lane. The resume of a chat must not queue behind a wake that waits for it.
             if (busy.has(entry.target) || this.waiting.has(entry.id)) {
+                continue;
+            }
+            // Nor does work due at a later time, which nothing owed before it has to wait for.
+            if (entry.attempts === 0 && entry.notBefore > now) {
+                nextDue = nextDue === null ? entry.notBefore : Math.min(nextDue, entry.notBefore);
                 continue;
             }
             const lanes = lanesOf(entry);

@@ -146,6 +146,10 @@ export const ChatInfoSchema = z.object({
     suggestedTitle: SuggestedTitleSchema.optional(),
     // The chat this one was forked from and the turn it continues after; absent on a chat nobody forked.
     forkOf: z.object({ chatId: ChatIdSchema, turnId: z.string().min(1), at: z.number() }).optional(),
+    // This chat's own switch for being taken up again after a limit; absent follows the machine's `resumeAtReset`.
+    resumeAtReset: z.boolean().optional(),
+    // When the daemon takes the chat up again on its own, after the limit its last turn stopped on; absent while nothing is owed.
+    resumeAt: z.number().optional(),
     createdAt: z.number()
 });
 export type ChatInfo = z.infer<typeof ChatInfoSchema>;
@@ -477,7 +481,8 @@ export type ChatCreatePayload = z.infer<typeof ChatCreatePayloadSchema>;
 export const ChatConfigurePayloadSchema = z.object({
     chatId: ChatIdSchema,
     selection: ModelSelectionSchema.optional(),
-    runtimeMode: RuntimeModeSchema.optional()
+    runtimeMode: RuntimeModeSchema.optional(),
+    resumeAtReset: z.boolean().optional()
 });
 export type ChatConfigurePayload = z.infer<typeof ChatConfigurePayloadSchema>;
 

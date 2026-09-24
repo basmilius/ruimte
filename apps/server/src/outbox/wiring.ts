@@ -1,6 +1,7 @@
 import type { AgentLineageStore } from '../agents/lineage.ts';
 import type { PendingPromptStore } from '../agents/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
+import { limitResumeAt } from '../chat/limit-resume.ts';
 import { wireSummaries, type SummaryWiring } from '../chat/summary.ts';
 import { chatOpener } from '../chat/wake-chat.ts';
 import { deliverMessageHandler } from '../context/deliver-message.ts';
@@ -33,10 +34,14 @@ export class OutboxLink {
     /* What the chat manager reports an interrupted run to. */
     readonly onInterruptedRun: ReturnType<typeof oweResume>;
     private readonly onEnqueued: ((work: OutboxWork) => void) | null;
+    private readonly outbox: OutboxStore;
+    private readonly projectOf: (chatId: string) => string | null;
     private worker: OutboxWorker | null = null;
 
     constructor(options: OutboxLinkOptions) {
         this.onEnqueued = options.onEnqueued ?? null;
+        this.outbox = options.outbox;
+        this.projectOf = options.projectOf;
         this.onInterruptedRun = oweResume({
             projectOf: options.projectOf,
             entries: () => options.outbox.list(),
@@ -55,6 +60,26 @@ export class OutboxLink {
 
     wake(chatId: string): void {
         this.require().wake(chatId);
+    }
+
+    /* Owes the resume of a limited turn at `at`, in place of whatever this chat owed before; a chat no project holds is owed nothing. */
+    async oweLimitResume(chatId: string, turnId: string, at: number): Promise<void> {
+        const projectId = this.projectOf(chatId);
+        if (projectId === null) {
+            return;
+        }
+        await this.lapseLimitResume(chatId);
+        await this.require().enqueue(projectId, chatId, { kind: 'resume-limit', payload: { turnId } }, at);
+        this.onEnqueued?.({ kind: 'resume-limit', payload: { turnId } });
+    }
+
+    /* Drops what a chat was owed after a limit; with no chat, what every chat was, as the machine's switch goes off. */
+    async lapseLimitResume(chatId?: string): Promise<void> {
+        for (const entry of this.outbox.list()) {
+            if (entry.kind === 'resume-limit' && (chatId === undefined || entry.target === chatId)) {
+                await this.outbox.remove(entry.id);
+            }
+        }
     }
 
     private require(): OutboxWorker {
@@ -82,6 +107,8 @@ export interface OutboxWiringDeps {
     log?: (line: string) => void;
     /* Refuses a directory an agent node may not start in, the same check the managers make. */
     checkCwd?: (nodeId: string, cwd: string) => Promise<void>;
+    /* The machine's switch for taking a limited chat up again on a clock; off without it. */
+    resumeAtReset?: () => boolean;
     /* Every unused fork a deleted node took along, for a caller that waits on them. */
     onDropped?: (drop: Promise<void>) => void;
     /* What a prune that failed does; the daemon logs it, a test stays quiet. */
@@ -105,6 +132,7 @@ export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
     const { link, outbox, projects, lineage, prompts, notices, tasks, chats, sessions } = deps;
     const enqueue = (projectId: string, target: string, work: OutboxWork): Promise<void> => link.enqueue(projectId, target, work);
     const placed = (nodeId: string): boolean => projects.index.locate(nodeId) !== null;
+    const now = deps.now ?? Date.now;
     const failed = (what: string, error: unknown): void => {
         if (deps.onFailed) {
             deps.onFailed(what, error);
@@ -123,6 +151,9 @@ export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
         enqueue,
         alert: (target, nodeId, title, body) => deps.alert(target, nodeId, title, body),
         wake: (chatId) => link.wake(chatId),
+        // The same answer the chat itself gives as its turn ends, so a task pauses exactly while a retry is owed.
+        retryAt: (chatId, turn, items) =>
+            deps.resumeAtReset?.() === true && chats.get(chatId)?.info.resumeAtReset !== false ? limitResumeAt(items, turn, now()) : null,
         ...(deps.now ? { now: deps.now } : {})
     });
 
@@ -163,6 +194,8 @@ export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
                 ...(deps.log ? { log: deps.log } : {})
             }),
             'resume-run': resumeRunHandler(chats),
+            // A node that left the document takes its entry along through the prune; one that is still owed runs here.
+            'resume-limit': (entry) => (placed(entry.target) ? chats.takeUpAfterLimit(entry.target, entry.payload.turnId) : Promise.resolve()),
             'wake-parent': taskWiring.wakeParent,
             'give-task': taskWiring.giveTask,
             'deliver-message': deliverMessageHandler({

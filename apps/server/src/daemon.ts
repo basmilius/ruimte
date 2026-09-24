@@ -327,7 +327,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         dropWakes: (chatId) => tasks.dropWake(chatId),
         endedAt: (chatId) => lineage.endedAt(chatId),
         plans,
-        bookmarks
+        bookmarks,
+        limitResume: {
+            allowed: () => identity.resumeAtReset,
+            now: () => Date.now(),
+            owe: (chatId, turnId, at) => outboxLink.oweLimitResume(chatId, turnId, at),
+            lapse: (chatId) => outboxLink.lapseLimitResume(chatId)
+        }
     });
     const projects = new ProjectStore(config.home);
     projects.attachTracked(isTrackedPath);
@@ -342,7 +348,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         chats,
         sessions: manager,
         alert: (target, nodeId, title, body) => push.alert(target, nodeId, title, body),
-        checkCwd: startCwd
+        checkCwd: startCwd,
+        resumeAtReset: () => identity.resumeAtReset
     });
     const outboxWorker = outboxWiring.worker;
     const taskWiring = outboxWiring.tasks;
@@ -615,6 +622,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 devices.closeAll();
             }
         },
+        resumeChanged: (on) => {
+            chats.resumeSettingChanged();
+            // A chat nobody loaded owes a resume only on disk, so turning the switch off drops those there.
+            if (!on) {
+                void outboxLink.lapseLimitResume().catch((e: unknown) => console.error('Dropping the resumes after a limit failed:', errorText(e)));
+            }
+        },
         disconnect: (sessionId) => {
             handshake.revoke(sessionId);
             for (const { channel, connection } of [...connections.values(), ...directConnections]) {
@@ -754,6 +768,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         agentsDeleteAnyView: identity.agentsDeleteAnyView,
         refuseStatements: identity.refuseStatements,
         streamingAllowed: identity.streamingAllowed,
+        resumeAtReset: identity.resumeAtReset,
         platform: process.platform,
         version: VERSION,
         protocol: PROTOCOL_VERSION,

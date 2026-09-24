@@ -79,6 +79,8 @@ export interface TestDaemonOptions {
     installed?: AgentKind[];
     /* What runs as Claude Code; the plain fake unless a test needs one that misbehaves. */
     claudeCli?: FakeCli;
+    /* The machine's switches a test flips; resuming after a limit is off, as on a fresh machine. */
+    machine?: { resumeAtReset: boolean };
 }
 
 export const bootTestDaemon = async ({
@@ -88,7 +90,8 @@ export const bootTestDaemon = async ({
     checkpoints,
     worktrees,
     installed = ['claude'],
-    claudeCli = fakeClaude
+    claudeCli = fakeClaude,
+    machine = { resumeAtReset: false }
 }: TestDaemonOptions): Promise<TestDaemon> => {
     const prompts = new PendingPromptStore(home);
     await prompts.load();
@@ -131,7 +134,13 @@ export const bootTestDaemon = async ({
         taskRows: (chatId) => tasks.ofParent(chatId),
         dropWakes: (chatId) => tasks.dropWake(chatId),
         endedAt: (chatId) => lineage.endedAt(chatId),
-        plans
+        plans,
+        limitResume: {
+            allowed: () => machine.resumeAtReset,
+            now: () => clock.now(),
+            owe: (chatId, turnId, at) => outboxLink.oweLimitResume(chatId, turnId, at),
+            lapse: (chatId) => outboxLink.lapseLimitResume(chatId)
+        }
     });
     let waiters: Array<{ check: () => boolean; resolve: () => void }> = [];
     const recheck = (): void => {
@@ -161,7 +170,8 @@ export const bootTestDaemon = async ({
         now: () => clock.now(),
         log: () => undefined,
         onDropped: (drop) => drops.push(drop),
-        onFailed: () => undefined
+        onFailed: () => undefined,
+        resumeAtReset: () => machine.resumeAtReset
     });
     const worker = outboxWiring.worker;
     const wiring = outboxWiring.tasks;

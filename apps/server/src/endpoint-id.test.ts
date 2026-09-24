@@ -121,6 +121,7 @@ describe('readOrCreateEndpointIdentity', () => {
                     agentsDeleteAnyView: false,
                     refuseStatements: false,
                     streamingAllowed: true,
+                    resumeAtReset: false,
                     broker: { mode: 'default' }
                 }
             }
@@ -162,6 +163,18 @@ describe('readOrCreateEndpointIdentity', () => {
         await identity.setIdentity(null, null, { streamingAllowed: true });
         written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
         expect(written.streamingAllowed).toBeUndefined();
+    });
+
+    test('resuming after a limit is off by default and survives a restart once a person turns it on', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(identity.resumeAtReset).toBe(false);
+
+        await identity.setIdentity(null, null, { resumeAtReset: true });
+        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).resumeAtReset).toBe(true);
+
+        await identity.setIdentity(null, null, { resumeAtReset: false });
+        const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
+        expect(written.resumeAtReset).toBeUndefined();
     });
 
     test('the broker setting survives a restart, is applied before clients hear it, and a default one is not written', async () => {

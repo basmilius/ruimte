@@ -22,6 +22,7 @@ import type { BackendEvent, BackendLaunch, ChatBackend } from './backend.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
+import { limitedTurn, limitResumeAt, limitResumeWake } from './limit-resume.ts';
 import { ThreadProjector } from './projector.ts';
 import type { SubagentSettlement } from './subagent-settlement.ts';
 import { ChatThread } from './thread.ts';
@@ -61,6 +62,17 @@ interface ChatSessionOptions {
     nameThread?(input: ChatTitleInput): Promise<string | null>;
     // How a subagent's own transcript says it ended, for a row whose CLI is gone; absent for a CLI that keeps none.
     subagentSettlement?(toolUseId: string): Promise<SubagentSettlement | null>;
+    // What the daemon owes a turn that stopped on a limit; absent, nothing takes one up on its own.
+    limitResume?: LimitResumeHooks;
+}
+
+export interface LimitResumeHooks {
+    // The machine's switch; the chat's own `resumeAtReset` can still say no.
+    allowed(): boolean;
+    now(): number;
+    // Owes the outbox entry that takes the turn up at `at`, in place of any this chat owed before.
+    owe(turnId: string, at: number): Promise<void>;
+    lapse(): Promise<void>;
 }
 
 // Claude Code names a session about six seconds after its first prompt, and a first turn can run for minutes.
@@ -154,7 +166,12 @@ export class ChatSession {
     }
 
     /* Model and permission changes; a turn in flight keeps its process until it ends. */
-    configure(patch: { selection?: ModelSelection; runtimeMode?: RuntimeMode }): ChatInfo {
+    configure(patch: { selection?: ModelSelection; runtimeMode?: RuntimeMode; resumeAtReset?: boolean }): ChatInfo {
+        if (patch.resumeAtReset !== undefined && patch.resumeAtReset !== this.thread.info.resumeAtReset) {
+            this.emit([this.thread.patchInfo({ resumeAtReset: patch.resumeAtReset })]);
+            this.options.persist();
+            this.resumeSettingChanged();
+        }
         const catalog = this.options.provider.catalog;
         const selection = patch.selection ? catalog.normalize(patch.selection) : this.thread.info.selection;
         const next: Partial<ChatInfo> = {
@@ -284,6 +301,7 @@ export class ChatSession {
     }
 
     cancel(): void {
+        this.lapseResume();
         const turnId = this.thread.info.activeTurnId;
         // A turn still waiting to be resumed has no process to interrupt; stopping it is ending it here.
         if (!this.backend && turnId !== null) {
@@ -494,6 +512,7 @@ export class ChatSession {
         if (this.frozen || this.thread.info.activeTurnId !== null) {
             return null;
         }
+        this.lapseResume();
         const { preamble, note } = this.contextNote(wake.text);
         const turnId = newId('turn');
         const now = Date.now();
@@ -522,6 +541,73 @@ export class ChatSession {
         this.turnReady = this.checkpoint(turnId);
         this.run((backend) => backend.sendTurn({ text: wake.text, preamble, attachments: [], mentions: [], skills: [] }));
         return turnId;
+    }
+
+    /* The machine's switch or this chat's own changed: a limit still ahead is owed a resume now, or what was owed lapses. */
+    resumeSettingChanged(): void {
+        if (this.resumeAllowed()) {
+            this.oweResume(false);
+        } else {
+            this.lapseResume();
+        }
+    }
+
+    /*
+     * Opens the turn that takes up the limited turn `turnId` again, carrying the tasks and messages that
+     * one answered; false when anything stepped in since (a person wrote, the switch went off, the chat
+     * stopped), which is how the owed entry lapses.
+     */
+    takeUpAfterLimit(turnId: string): boolean {
+        const turn = limitedTurn(this.thread.list());
+        if (turn === null || turn.id !== turnId || !this.resumeAllowed()) {
+            return false;
+        }
+        const wake = limitResumeWake(turn.limit.kind);
+        return (
+            this.wake({
+                ...wake,
+                taskIds: turn.taskIds ?? [],
+                ...(turn.messageFrom === undefined ? {} : { messageFrom: turn.messageFrom })
+            }) !== null
+        );
+    }
+
+    private resumeAllowed(): boolean {
+        return this.options.limitResume?.allowed() === true && this.thread.info.resumeAtReset !== false;
+    }
+
+    /*
+     * Owes a resume of the last turn when it stopped on a limit. Right after that turn every limit is
+     * owed; a switch turned on later only owes a usage limit whose reset is still ahead, so an old
+     * error is never taken up out of the blue.
+     */
+    private oweResume(fresh: boolean): void {
+        const hooks = this.options.limitResume;
+        const turn = limitedTurn(this.thread.list());
+        if (!hooks || turn === null || this.thread.info.activeTurnId !== null || this.frozen || !this.resumeAllowed()) {
+            return;
+        }
+        const now = hooks.now();
+        if (!fresh && (turn.limit.kind !== 'usage' || (turn.limit.resetsAt ?? 0) <= now)) {
+            return;
+        }
+        const at = limitResumeAt(this.thread.list(), turn, now);
+        if (at === null || at === this.thread.info.resumeAt) {
+            return;
+        }
+        this.emit([this.thread.patchInfo({ resumeAt: at })]);
+        this.options.persist();
+        void hooks.owe(turn.id, at).catch((e: unknown) => console.error(`Owing a resume of chat ${this.id} failed:`, errorText(e)));
+    }
+
+    private lapseResume(): void {
+        const hooks = this.options.limitResume;
+        if (this.thread.info.resumeAt === undefined || !hooks) {
+            return;
+        }
+        this.emit([this.thread.patchInfo({ resumeAt: undefined })]);
+        this.options.persist();
+        void hooks.lapse().catch((e: unknown) => console.error(`Dropping the resume of chat ${this.id} failed:`, errorText(e)));
     }
 
     /*
@@ -608,6 +694,7 @@ export class ChatSession {
      * or to carry on in, which starts the CLI again like any send.
      */
     end(reason: string): void {
+        this.lapseResume();
         const backend = this.backend;
         this.backend = null;
         this.starting = null;
@@ -787,6 +874,7 @@ export class ChatSession {
     }
 
     private openTurn(text: string | null, note: string | null, extras: ChatSendExtras, requestedTurnId?: string): string {
+        this.lapseResume();
         const turnId = requestedTurnId ?? newId('turn');
         const now = Date.now();
         const events = [this.thread.upsert({ id: turnId, kind: 'turn', createdAt: now, turnId, state: 'running', origin: 'user', endedAt: null, costUsd: 0 })];
@@ -1046,6 +1134,9 @@ export class ChatSession {
                 this.nameThread();
             }
             this.drainQueue();
+            if (event.limit !== undefined) {
+                this.oweResume(true);
+            }
         }
     }
 

@@ -330,7 +330,7 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
         });
         notes = { note: switchNote(cut, original, files, { to: nameOf(provider), turns: handoff.turns, all: handoff.all }), preamble: handoff.text };
     }
-    const { queue: _queue, suggestedTitle: _suggestedTitle, skills: _skills, ...kept } = info;
+    const { queue: _queue, suggestedTitle: _suggestedTitle, skills: _skills, resumeAt: _resumeAt, ...kept } = info;
     const forkInfo: ChatInfo = {
         ...kept,
         chatId: forkId,

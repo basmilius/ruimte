@@ -564,3 +564,133 @@ describe('a child on a limit', () => {
         expect(turnsOf(daemon, child.childId)[0]).toMatchObject({ state: 'error', limit: { kind: 'overload' } });
     });
 });
+
+describe('resume at reset', () => {
+    const bootOn = async (installed: Array<'claude' | 'codex'> = ['claude']): Promise<Daemon> => {
+        const daemon = await bootTestDaemon({ home, store, clock, installed, machine: { resumeAtReset: true } });
+        running.push(daemon);
+        return daemon;
+    };
+
+    const owedResumes = (daemon: Daemon) => daemon.outbox.list().filter((entry) => entry.kind === 'resume-limit');
+
+    // The manual clock starts at 1 000 000 ms, so the fakes are told a reset ten minutes on, in seconds.
+    const RESET_AT = 1_600_000;
+
+    test('a Claude child on its limit continues by itself at the reset, and its task settles on that turn', async () => {
+        const daemon = await bootOn();
+        daemon.worker.start();
+        await leadIdle(daemon);
+
+        const child = await delegate(daemon, 'Lexer', `fix the tokenizer\nlimit:${RESET_AT / 1000}`);
+        await daemon.until(() => owedResumes(daemon).length === 1 && daemon.tasks.get(child.taskId)?.paused !== undefined);
+        await daemon.worker.settled();
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'open', paused: { kind: 'usage', until: RESET_AT } });
+        expect(owedResumes(daemon)[0]).toMatchObject({ target: child.childId, notBefore: RESET_AT });
+        expect(daemon.chats.get(child.childId)?.info.resumeAt).toBe(RESET_AT);
+
+        // Nothing moves before the reset.
+        clock.advance(RESET_AT - clock.now() - 1);
+        await daemon.worker.settled();
+        expect(turnsOf(daemon, child.childId)).toHaveLength(1);
+
+        clock.advance(1);
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        const [limited, resumed] = turnsOf(daemon, child.childId);
+        expect(limited).toMatchObject({ state: 'error', limit: { kind: 'usage' } });
+        expect(resumed).toMatchObject({ state: 'done', origin: 'agent', label: 'Usage limit reset' });
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'done', result: { text: expect.stringContaining('usage limit, which has reset now') } });
+        expect(daemon.tasks.get(child.taskId)?.paused).toBeUndefined();
+        expect(daemon.chats.get(child.childId)?.info.resumeAt).toBeUndefined();
+        expect(owedResumes(daemon)).toEqual([]);
+    });
+
+    test('the resume survives a restart between owing it and the reset, and runs once', async () => {
+        const first = await bootOn();
+        first.worker.start();
+        await leadIdle(first);
+        const child = await delegate(first, 'Lexer', `fix the tokenizer\nlimit:${RESET_AT / 1000}`);
+        await first.until(() => owedResumes(first).length === 1);
+        await first.worker.settled();
+        const limitedId = turnsOf(first, child.childId)[0]!.id;
+        await first.stop();
+
+        const second = await bootOn();
+        second.worker.start();
+        await second.worker.settled();
+        expect(owedResumes(second)).toHaveLength(1);
+        clock.advance(RESET_AT - clock.now());
+        await second.until(() => wakeTurns(second).some((turn) => turn.state === 'done'));
+        expect(turnsOf(second, child.childId).map((turn) => turn.label ?? turn.state)).toEqual(['error', 'Usage limit reset']);
+        expect(second.tasks.get(child.taskId)?.status).toBe('done');
+
+        // Run again, as after a restart between the turn it opened and the removal of its file: nothing new.
+        await second.chats.takeUpAfterLimit(child.childId, limitedId);
+        expect(turnsOf(second, child.childId)).toHaveLength(2);
+        expect(wakeTurns(second)).toHaveLength(1);
+    });
+
+    test('a Codex turn on an overloaded server is tried again after a minute by itself', async () => {
+        const daemon = await bootOn(['claude', 'codex']);
+        daemon.worker.start();
+        await leadIdle(daemon);
+
+        const [line] = await verb(daemon, 'chat-lead', 'agent', ['codex', '--task', 'Parser', '--prompt', 'fix the parser\noverloaded']);
+        const fields = line!.split('\t');
+        const childId = fields[0]!;
+        const taskId = fields[5]!;
+        await daemon.until(() => owedResumes(daemon).length === 1);
+        await daemon.worker.settled();
+        const owedAt = clock.now() + 60_000;
+        expect(turnsOf(daemon, childId)[0]).toMatchObject({ state: 'error', limit: { kind: 'overload' } });
+        expect(daemon.tasks.get(taskId)).toMatchObject({ status: 'open', paused: { kind: 'overload', until: owedAt } });
+        expect(owedResumes(daemon)[0]?.notBefore).toBe(owedAt);
+
+        clock.advance(60_000);
+        await daemon.until(() => daemon.tasks.get(taskId)?.status === 'done');
+        expect(turnsOf(daemon, childId)[1]).toMatchObject({ state: 'done', label: 'Overloaded model' });
+    });
+
+    test('the resume lapses when a person writes first, stops the chat or turns its switch off', async () => {
+        const daemon = await bootOn();
+        daemon.worker.start();
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        const limit = async (): Promise<void> => {
+            await daemon.chats.send('chat-lead', `limit:${RESET_AT / 1000}`);
+            await daemon.until(() => owedResumes(daemon).length === 1);
+        };
+        const lapsed = (): boolean => owedResumes(daemon).length === 0 && daemon.chats.get('chat-lead')?.info.resumeAt === undefined;
+
+        await limit();
+        await daemon.chats.send('chat-lead', 'never mind');
+        await daemon.until(lapsed);
+
+        await limit();
+        daemon.chats.cancel('chat-lead');
+        await daemon.until(lapsed);
+
+        // Turning it on again owes the reset that is still ahead; off drops it.
+        daemon.chats.configure({ chatId: 'chat-lead', resumeAtReset: false });
+        await daemon.until(lapsed);
+        daemon.chats.configure({ chatId: 'chat-lead', resumeAtReset: true });
+        await daemon.until(() => owedResumes(daemon).length === 1);
+        daemon.chats.configure({ chatId: 'chat-lead', resumeAtReset: false });
+        await daemon.until(lapsed);
+
+        clock.advance(RESET_AT);
+        await daemon.worker.settled();
+        expect(turnsOf(daemon, 'chat-lead').map((turn) => turn.origin ?? 'user')).toEqual(['user', 'user', 'user']);
+    });
+
+    test('nothing is owed while the machine has it off, whatever the chat says', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        daemon.chats.configure({ chatId: 'chat-lead', resumeAtReset: true });
+        await daemon.chats.send('chat-lead', `limit:${RESET_AT / 1000}`);
+        await daemon.until(() => turnsOf(daemon, 'chat-lead')[0]?.state === 'error');
+        await daemon.worker.settled();
+        expect(owedResumes(daemon)).toEqual([]);
+        expect(daemon.chats.get('chat-lead')?.info.resumeAt).toBeUndefined();
+    });
+});

@@ -5,7 +5,7 @@ import { chatOpener } from '../chat/wake-chat.ts';
 import type { OutboxEntry, OutboxWork, StartAgentEntry } from '../outbox/outbox.ts';
 import type { OutboxHandlers } from '../outbox/outbox-worker.ts';
 import { giveTaskHandler } from './give-task.ts';
-import { TaskCoordinator } from './task-coordinator.ts';
+import { TaskCoordinator, type TaskCoordinatorDeps } from './task-coordinator.ts';
 import type { TaskStore } from './task-store.ts';
 import { oweWake, parkedNote, wakeParentHandler } from './wake-parent.ts';
 
@@ -22,6 +22,8 @@ export interface TaskWiringDeps {
     alert(target: 'chat' | 'terminal', nodeId: string, title: string, body: string): void;
     /* Tells the outbox a chat may be free now. */
     wake(chatId: string): void;
+    /* When the daemon tries a turn that stopped on an overload again; null when it does not. */
+    retryAt?: TaskCoordinatorDeps['retryAt'];
     now?: () => number;
 }
 
@@ -49,7 +51,8 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
         placed: deps.placed,
         owedTurn: deps.owedTurn,
         oweWake: (task) => oweWake({ enqueue: deps.enqueue }, task),
-        alert: (nodeId, title, body) => deps.alert(deps.chats.get(nodeId) ? 'chat' : 'terminal', nodeId, title, body)
+        alert: (nodeId, title, body) => deps.alert(deps.chats.get(nodeId) ? 'chat' : 'terminal', nodeId, title, body),
+        ...(deps.retryAt ? { retryAt: deps.retryAt } : {})
     });
 
     // Deferred, so a row is never written into a parent from inside the broadcast of the child that settled it.

@@ -122,6 +122,7 @@ describe('auth handlers', () => {
                     agentsDeleteAnyView: false,
                     refuseStatements: false,
                     streamingAllowed: true,
+                    resumeAtReset: false,
                     broker: { mode: 'default' }
                 }
             }

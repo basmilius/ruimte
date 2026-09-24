@@ -4746,6 +4746,9 @@
           "streamingAllowed": {
             "type": "boolean"
           },
+          "resumeAtReset": {
+            "type": "boolean"
+          },
           "platform": {
             "type": "string"
           },
@@ -8708,6 +8711,12 @@
           "at"
         ]
       },
+      "resumeAtReset": {
+        "type": "boolean"
+      },
+      "resumeAt": {
+        "type": "number"
+      },
       "createdAt": {
         "type": "number"
       }
@@ -10017,6 +10026,12 @@
               "turnId",
               "at"
             ]
+          },
+          "resumeAtReset": {
+            "type": "boolean"
+          },
+          "resumeAt": {
+            "type": "number"
           },
           "createdAt": {
             "type": "number"
@@ -13122,6 +13137,12 @@
                         "at"
                       ]
                     },
+                    "resumeAtReset": {
+                      "type": "boolean"
+                    },
+                    "resumeAt": {
+                      "type": "number"
+                    },
                     "createdAt": {
                       "type": "number"
                     }
@@ -13461,6 +13482,12 @@
                         "turnId",
                         "at"
                       ]
+                    },
+                    "resumeAtReset": {
+                      "type": "boolean"
+                    },
+                    "resumeAt": {
+                      "type": "number"
                     },
                     "createdAt": {
                       "type": "number"
@@ -14809,6 +14836,9 @@
           "auto",
           "full-access"
         ]
+      },
+      "resumeAtReset": {
+        "type": "boolean"
       }
     },
     "required": [
@@ -15122,6 +15152,12 @@
           "turnId",
           "at"
         ]
+      },
+      "resumeAtReset": {
+        "type": "boolean"
+      },
+      "resumeAt": {
+        "type": "number"
       },
       "createdAt": {
         "type": "number"
@@ -15731,6 +15767,12 @@
               "turnId",
               "at"
             ]
+          },
+          "resumeAtReset": {
+            "type": "boolean"
+          },
+          "resumeAt": {
+            "type": "number"
           },
           "createdAt": {
             "type": "number"
@@ -30669,6 +30711,9 @@
       "streamingAllowed": {
         "type": "boolean"
       },
+      "resumeAtReset": {
+        "type": "boolean"
+      },
       "platform": {
         "type": "string"
       },
@@ -30868,6 +30913,9 @@
       "streamingAllowed": {
         "type": "boolean"
       },
+      "resumeAtReset": {
+        "type": "boolean"
+      },
       "broker": {
         "oneOf": [
           {
@@ -31028,6 +31076,9 @@
         "type": "boolean"
       },
       "streamingAllowed": {
+        "type": "boolean"
+      },
+      "resumeAtReset": {
         "type": "boolean"
       },
       "platform": {
@@ -31854,6 +31905,12 @@
                 "turnId",
                 "at"
               ]
+            },
+            "resumeAtReset": {
+              "type": "boolean"
+            },
+            "resumeAt": {
+              "type": "number"
             },
             "createdAt": {
               "type": "number"
@@ -34602,6 +34659,12 @@
                       "at"
                     ]
                   },
+                  "resumeAtReset": {
+                    "type": "boolean"
+                  },
+                  "resumeAt": {
+                    "type": "number"
+                  },
                   "createdAt": {
                     "type": "number"
                   }
@@ -34941,6 +35004,12 @@
                       "turnId",
                       "at"
                     ]
+                  },
+                  "resumeAtReset": {
+                    "type": "boolean"
+                  },
+                  "resumeAt": {
+                    "type": "number"
                   },
                   "createdAt": {
                     "type": "number"
@@ -36199,6 +36268,12 @@
               "at"
             ]
           },
+          "resumeAtReset": {
+            "type": "boolean"
+          },
+          "resumeAt": {
+            "type": "number"
+          },
           "createdAt": {
             "type": "number"
           }
@@ -36394,6 +36469,9 @@
         "type": "boolean"
       },
       "streamingAllowed": {
+        "type": "boolean"
+      },
+      "resumeAtReset": {
         "type": "boolean"
       },
       "broker": {

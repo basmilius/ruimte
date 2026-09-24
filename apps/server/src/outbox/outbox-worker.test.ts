@@ -37,6 +37,7 @@ test('an entry is on disk until its work is done, and then it is gone', async ()
         handlers: {
             'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
+            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'resume-run': unused,
             'wake-parent': unused,
@@ -73,6 +74,7 @@ test('what an earlier run owed is started once after a restart, and not again af
             handlers: {
                 'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
                 'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
+                'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
                 'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
                 'resume-run': unused,
                 'wake-parent': unused,
@@ -106,6 +108,7 @@ test('entries for one target run one after the other, oldest first, while other 
         handlers: {
             'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
+            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'resume-run': unused,
             'wake-parent': unused,
@@ -148,6 +151,7 @@ test('a failure waits 1, 5 and 30 seconds on the clock and is then given up on',
         handlers: {
             'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
+            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'resume-run': unused,
             'wake-parent': unused,
@@ -184,6 +188,7 @@ test('a retry that was waiting survives a restart with its attempts', async () =
         handlers: {
             'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
+            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'resume-run': unused,
             'wake-parent': unused,
@@ -226,6 +231,7 @@ test('an entry that waits keeps its file, costs no attempt, holds no lane and ru
         handlers: {
             'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
+            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'end-children': unused,
             'start-agent': unused,
@@ -269,6 +275,7 @@ test('a wake that lands while the entry is still deciding to wait runs it again 
         handlers: {
             'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
+            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'start-agent': unused,
             'end-children': unused,
@@ -324,6 +331,7 @@ test('ending children waits for a start of one of them that runs, and holds back
         handlers: {
             'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
+            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'resume-run': unused,
             'wake-parent': unused,
@@ -354,4 +362,39 @@ test('an entry that ends children is kept when the node it is about leaves the p
     await store.put('project', 'gone', work(), clock.now());
     await store.prune('project', new Set(['child']));
     expect(store.list().map((entry) => entry.kind)).toEqual(['end-children']);
+});
+
+test('work due at a later time runs then, and the work owed after it for the same node does not wait for it', async () => {
+    const runs: string[] = [];
+    const worker = new OutboxWorker({
+        store,
+        clock,
+        handlers: {
+            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
+            'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
+            'resume-limit': async (entry) => {
+                runs.push(`resume ${entry.payload.turnId}`);
+            },
+            'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
+            'resume-run': unused,
+            'wake-parent': async () => {
+                runs.push('wake');
+            },
+            'end-children': unused,
+            'start-agent': unused
+        }
+    });
+    worker.start();
+    await worker.enqueue('project', 'chat-1', { kind: 'resume-limit', payload: { turnId: 'turn-1' } }, clock.now() + 60_000);
+    await worker.enqueue('project', 'chat-1', { kind: 'wake-parent', payload: { taskId: 'task-1' } });
+    await worker.settled();
+    expect(runs).toEqual(['wake']);
+
+    clock.advance(59_999);
+    await worker.settled();
+    expect(runs).toEqual(['wake']);
+    clock.advance(1);
+    await worker.settled();
+    expect(runs).toEqual(['wake', 'resume turn-1']);
+    expect(store.list()).toEqual([]);
 });

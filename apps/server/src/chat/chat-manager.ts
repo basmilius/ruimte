@@ -36,7 +36,7 @@ import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { AttachmentStore } from './attachment-store.ts';
 import type { BookmarkStore } from './bookmark-store.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
-import { ChatSession, PLAN_RESUME_PREAMBLE, type ChatSendExtras, type ResumeDecision } from './chat-session.ts';
+import { ChatSession, PLAN_RESUME_PREAMBLE, type ChatSendExtras, type LimitResumeHooks, type ResumeDecision } from './chat-session.ts';
 import { ChatLog, COMPACT_ABOVE_BYTES } from './chat-log.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import type { ChatRecord, ChatStore } from './chat-store.ts';
@@ -144,6 +144,13 @@ interface ChatManagerOptions {
     modeCeiling?: (chatId: string) => RuntimeMode | null;
     // Refuses a directory this chat may not start in, asked every time a chat is loaded.
     checkCwd?: (chatId: string, cwd: string) => Promise<void>;
+    // Where a turn that stopped on a limit is owed a resume on a clock, when the machine allows it.
+    limitResume?: {
+        allowed(): boolean;
+        now(): number;
+        owe(chatId: string, turnId: string, at: number): Promise<void>;
+        lapse(chatId: string): Promise<void>;
+    };
 }
 
 // Above this the record is big enough that rewriting it for every small change costs more than it saves.
@@ -192,6 +199,7 @@ export class ChatManager {
     private readonly nameChat: ChatManagerOptions['nameChat'] | null;
     private readonly subagents: SubagentReader;
     private readonly onInterruptedRun: ChatManagerOptions['onInterruptedRun'] | null;
+    private readonly limitResume: ChatManagerOptions['limitResume'] | null;
     private readonly endedAt: (chatId: string) => number | null;
     private readonly taskRows: (chatId: string) => Task[];
     private readonly dropWakes: (chatId: string) => Promise<void>;
@@ -204,6 +212,7 @@ export class ChatManager {
 
     constructor(options: ChatManagerOptions) {
         this.onInterruptedRun = options.onInterruptedRun ?? null;
+        this.limitResume = options.limitResume ?? null;
         this.endedAt = options.endedAt ?? (() => null);
         this.taskRows = options.taskRows ?? (() => []);
         this.dropWakes = options.dropWakes ?? (() => Promise.resolve());
@@ -424,7 +433,8 @@ export class ChatManager {
             persistSoon: () => this.persistSoon(payload.chatId),
             ...(kind === 'claude' && claudeTitles ? { readTitle: (agentSessionId: string) => claudeTitles.forSession(agentSessionId) } : {}),
             ...(kind === 'codex' && nameChat ? { nameThread: (input: ChatTitleInput) => nameChat(kind, input) } : {}),
-            ...(kind === 'claude' ? { subagentSettlement: (toolUseId: string) => this.subagents.claudeSettlement(payload.chatId, toolUseId) } : {})
+            ...(kind === 'claude' ? { subagentSettlement: (toolUseId: string) => this.subagents.claudeSettlement(payload.chatId, toolUseId) } : {}),
+            ...(this.limitResume ? { limitResume: limitHooks(this.limitResume, payload.chatId) } : {})
         });
         this.chats.set(session.id, session);
         if (stored) {
@@ -953,6 +963,34 @@ export class ChatManager {
         return open ? PLAN_RESUME_PREAMBLE : null;
     }
 
+    /*
+     * Takes up a turn that stopped on a limit, once its reset or its retry came. Loads the chat when
+     * nobody has; a chat whose opener was stopped since that turn is left as it is.
+     */
+    async takeUpAfterLimit(chatId: string, turnId: string): Promise<void> {
+        await this.creating.get(chatId)?.catch(() => undefined);
+        if (!this.chats.has(chatId)) {
+            if (!(await this.store?.has(chatId))) {
+                return;
+            }
+            await this.create({ chatId });
+        }
+        const session = this.chats.get(chatId);
+        const turn = session?.thread.get(turnId);
+        const ended = this.endedAt(chatId);
+        if (!session || turn === undefined || (ended !== null && ended >= turn.createdAt)) {
+            return;
+        }
+        session.takeUpAfterLimit(turnId);
+    }
+
+    /* The machine's switch for resuming after a limit changed; every chat loaded here looks again. */
+    resumeSettingChanged(): void {
+        for (const session of this.chats.values()) {
+            session.resumeSettingChanged();
+        }
+    }
+
     /* A resume that never came about: the turn ends as aborted, with the reason in the thread. */
     abandonRun(chatId: string, turnId: string, reason: string): void {
         this.chats.get(chatId)?.abandon(turnId, reason);
@@ -1180,6 +1218,14 @@ export class ChatManager {
         return session;
     }
 }
+
+/* The hooks of one chat, over the manager's own. */
+const limitHooks = (hooks: NonNullable<ChatManagerOptions['limitResume']>, chatId: string): LimitResumeHooks => ({
+    allowed: () => hooks.allowed(),
+    now: () => hooks.now(),
+    owe: (turnId, at) => hooks.owe(chatId, turnId, at),
+    lapse: () => hooks.lapse(chatId)
+});
 
 /* The running turn of a stored chat, when it may be resumed and the resume is now owed; null otherwise. */
 const interruptedTurn = (record: { info: ChatInfo; items: ChatItem[] }): Extract<ChatItem, { kind: 'turn' }> | null => {

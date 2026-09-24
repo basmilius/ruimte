@@ -25,6 +25,12 @@ const ResumeRunSchema = z.object({
     payload: z.object({ turnId: z.string().min(1), attempt: z.number().int().positive() })
 });
 
+const ResumeLimitSchema = z.object({
+    kind: z.literal('resume-limit'),
+    // The target is the chat; the turn that stopped on a limit, which a turn opened at `notBefore` takes up again.
+    payload: z.object({ turnId: z.string().min(1) })
+});
+
 const WakeParentSchema = z.object({
     kind: z.literal('wake-parent'),
     // The target is the chat to wake; the task that settled is only what owed it, since a wake takes every settled task.
@@ -58,6 +64,7 @@ const DeliverSummarySchema = z.object({
 const OutboxWorkSchema = z.discriminatedUnion('kind', [
     StartAgentSchema,
     ResumeRunSchema,
+    ResumeLimitSchema,
     WakeParentSchema,
     GiveTaskSchema,
     DeliverMessageSchema,
@@ -82,6 +89,7 @@ export type OutboxWork = z.infer<typeof OutboxWorkSchema>;
 export type OutboxEntry = z.infer<typeof OutboxEntrySchema>;
 export type StartAgentEntry = Extract<OutboxEntry, { kind: 'start-agent' }>;
 export type ResumeRunEntry = Extract<OutboxEntry, { kind: 'resume-run' }>;
+export type ResumeLimitEntry = Extract<OutboxEntry, { kind: 'resume-limit' }>;
 export type WakeParentEntry = Extract<OutboxEntry, { kind: 'wake-parent' }>;
 export type GiveTaskEntry = Extract<OutboxEntry, { kind: 'give-task' }>;
 export type DeliverMessageEntry = Extract<OutboxEntry, { kind: 'deliver-message' }>;
@@ -94,7 +102,8 @@ export const lanesOf = (entry: OutboxEntry): string[] => (entry.kind === 'end-ch
 /*
  * Work the daemon still owes, one file per entry under `$RUIMTE_HOME/outbox`, removed once it is
  * done. On disk because the owing outlives the process. A node written a moment before a restart
- * still has its agent started after it. Only a verb or a restart puts something here, never a clock.
+ * still has its agent started after it. Only a verb or a restart puts something here, never a clock;
+ * the one exception is a `resume-limit`, due at a time, and only where a person turned it on.
  */
 export class OutboxStore {
     readonly dir: string;
@@ -110,7 +119,8 @@ export class OutboxStore {
         return this.entries.load();
     }
 
-    async put(projectId: string, target: string, work: OutboxWork, now: number): Promise<OutboxEntry> {
+    /* `notBefore` later than `now` is work due at a time, which holds no lane until then. */
+    async put(projectId: string, target: string, work: OutboxWork, now: number, notBefore = now): Promise<OutboxEntry> {
         const entry: OutboxEntry = {
             ...work,
             id: `${work.kind}-${randomBytes(6).toString('hex')}`,
@@ -118,7 +128,7 @@ export class OutboxStore {
             target,
             createdAt: now,
             attempts: 0,
-            notBefore: now
+            notBefore
         };
         await this.entries.write(entry);
         return entry;

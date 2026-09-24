@@ -38,6 +38,10 @@ const FileSchema = z.object({
     /* Whether clients may stream browser pages and, later, device screens from this daemon. Absent
        is on so existing machines keep the behavior they had before this switch existed. */
     streamingAllowed: z.boolean().optional().catch(undefined),
+    /* Whether a chat that stopped on a limit may be taken up again on a clock, at the reset or after an
+       overload, when its own switch lets it. The daemon keeps that clock, so the switch is the machine's.
+       Absent is off. */
+    resumeAtReset: z.boolean().optional().catch(undefined),
     /* Which broker this machine announces itself to, set from a client. Absent is the build's default;
        one that will not read falls back to it too, since a machine on the default broker is findable. */
     broker: BrokerSettingSchema.optional().catch(undefined)
@@ -55,6 +59,7 @@ interface IdentityOptions {
     agentsDeleteAnyView: boolean;
     refuseStatements: boolean;
     streamingAllowed: boolean;
+    resumeAtReset: boolean;
     broker: BrokerSetting;
 }
 
@@ -69,6 +74,7 @@ export interface IdentityFlags {
     agentsDeleteAnyView?: boolean;
     refuseStatements?: boolean;
     streamingAllowed?: boolean;
+    resumeAtReset?: boolean;
     broker?: BrokerSetting;
 }
 
@@ -91,6 +97,7 @@ export class EndpointIdentity {
     private deleteAnyView: boolean;
     private noStatements: boolean;
     private allowStreaming: boolean;
+    private resumeLimited: boolean;
     private brokerSetting: BrokerSetting;
     private brokerSwitch: IdentityBroker | null = null;
 
@@ -105,6 +112,7 @@ export class EndpointIdentity {
         this.deleteAnyView = options.agentsDeleteAnyView;
         this.noStatements = options.refuseStatements;
         this.allowStreaming = options.streamingAllowed;
+        this.resumeLimited = options.resumeAtReset;
         this.brokerSetting = options.broker;
     }
 
@@ -137,6 +145,11 @@ export class EndpointIdentity {
         return this.allowStreaming;
     }
 
+    /* Whether the outbox may take up a limited chat on a clock; off on a fresh machine, and each chat can still say no. */
+    get resumeAtReset(): boolean {
+        return this.resumeLimited;
+    }
+
     /* The broker a person picked for this machine, which a flag or the environment may still override. */
     get broker(): BrokerSetting {
         return this.brokerSetting;
@@ -167,6 +180,7 @@ export class EndpointIdentity {
         this.deleteAnyView = flags.agentsDeleteAnyView ?? this.deleteAnyView;
         this.noStatements = flags.refuseStatements ?? this.noStatements;
         this.allowStreaming = flags.streamingAllowed ?? this.allowStreaming;
+        this.resumeLimited = flags.resumeAtReset ?? this.resumeLimited;
         this.brokerSetting = flags.broker ?? this.brokerSetting;
         await this.persist();
         if (flags.broker !== undefined) {
@@ -182,6 +196,7 @@ export class EndpointIdentity {
                 agentsDeleteAnyView: this.deleteAnyView,
                 refuseStatements: this.noStatements,
                 streamingAllowed: this.allowStreaming,
+                resumeAtReset: this.resumeLimited,
                 broker: this.brokerSetting,
                 ...this.brokerSwitch?.describe()
             }
@@ -201,6 +216,7 @@ export class EndpointIdentity {
             ...(this.deleteAnyView ? { agentsDeleteAnyView: true } : {}),
             ...(this.noStatements ? { refuseStatements: true } : {}),
             ...(!this.allowStreaming ? { streamingAllowed: false } : {}),
+            ...(this.resumeLimited ? { resumeAtReset: true } : {}),
             ...(this.brokerSetting.mode === 'default' ? {} : { broker: this.brokerSetting })
         };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
@@ -234,6 +250,7 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
         agentsDeleteAnyView: file?.agentsDeleteAnyView ?? false,
         refuseStatements: file?.refuseStatements ?? false,
         streamingAllowed: file?.streamingAllowed ?? true,
+        resumeAtReset: file?.resumeAtReset ?? false,
         broker: file?.broker ?? { mode: 'default' }
     });
     if (!keys) {

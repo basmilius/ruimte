@@ -17,6 +17,8 @@ interface EndpointHost {
     disconnect(sessionId: string): void;
     // A disabled policy stops streams already in flight as well as refusing the next one.
     streamingChanged(allowed: boolean): void;
+    // Chats take up a limited turn on a clock only while this is on; turning it off drops what was owed.
+    resumeChanged?(on: boolean): void;
 }
 
 export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, host: EndpointHost): void => {
@@ -31,6 +33,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         agentsDeleteAnyView: identity.agentsDeleteAnyView,
         refuseStatements: identity.refuseStatements,
         streamingAllowed: identity.streamingAllowed,
+        resumeAtReset: identity.resumeAtReset,
         platform: process.platform,
         version: host.version,
         protocol: PROTOCOL_VERSION,
@@ -52,10 +55,14 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
             agentsDeleteAnyView: payload.agentsDeleteAnyView,
             refuseStatements: payload.refuseStatements,
             streamingAllowed: payload.streamingAllowed,
+            resumeAtReset: payload.resumeAtReset,
             broker: payload.broker
         });
         if (payload.streamingAllowed !== undefined) {
             host.streamingChanged(identity.streamingAllowed);
+        }
+        if (payload.resumeAtReset !== undefined) {
+            host.resumeChanged?.(identity.resumeAtReset);
         }
         return info(client.access);
     });
