@@ -29,12 +29,24 @@ import { startInputModality } from '@/ui/modality';
 import { refuseStrayDrops } from '@/canvas/drop';
 import { useTheme } from '@/state/theme';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
+import { reloadOnStaleChunk } from '@/stale-chunks';
 import '@/state/theme';
 import '@/state/settings';
 import '@fontsource-variable/geist';
 import '@xterm/xterm/css/xterm.css';
 import '@/styles.css';
 
+/* The desktop app carries its own chunks, so one failing there is no deploy, and a reload would only drop every page. */
+if (!desktop()) {
+    reloadOnStaleChunk({
+        target: window,
+        // Reached per call, since touching `sessionStorage` throws where a browser blocks storage.
+        storage: { getItem: (key) => sessionStorage.getItem(key), setItem: (key, value) => sessionStorage.setItem(key, value) },
+        reload: () => window.location.reload(),
+        // The entry chunk's address carries the hash of the build.
+        build: import.meta.url
+    });
+}
 startSessionLifecycle();
 startSnoozeClock();
 startAgentNotifications();
