@@ -9,6 +9,7 @@ import { useUsageEndpointId } from '@/state/usage';
 import { useProjectList } from '@/state/project-list';
 import type { UsageMetric } from '@/state/usage';
 import { SECTION_LABEL } from '@/ui/classes';
+import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 import { ProviderLogo } from '@/ui/ProviderLogo';
@@ -148,7 +149,7 @@ function DayRows({ summary, providers }: { summary: UsageSummaryResult; provider
     const money = useMoney();
     const rows = deriveDays(summary);
     if (rows.length === 0) {
-        return <p className="px-2 py-6 text-center text-xs text-text-muted">{t('breakdown.days.empty')}</p>;
+        return <EmptyState>{t('breakdown.days.empty')}</EmptyState>;
     }
     return (
         <div className={TABLE}>

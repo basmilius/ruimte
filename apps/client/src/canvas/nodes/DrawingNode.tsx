@@ -11,7 +11,6 @@ import { showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useTheme } from '@/state/theme';
 import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
 
 /* World units of air around a mirrored drawing, so nothing touches the frame. */
 const PADDING = 24;
@@ -78,12 +77,12 @@ export function DrawingNode({ id }: { id: string }) {
     return (
         <div ref={boxRef} className="h-full w-full" onDoubleClick={() => viewId && showView(viewId)}>
             {mirror?.gone && (
-                <EmptyState icon={<Icon icon={PenTool} size={16} />} className="h-full">
+                <EmptyState icon={PenTool} className="h-full">
                     {t('drawing.gone')}
                 </EmptyState>
             )}
             {!mirror?.gone && elements.length === 0 && !mirror?.loading && (
-                <EmptyState icon={<Icon icon={PenTool} size={16} />} className="h-full">
+                <EmptyState icon={PenTool} className="h-full">
                     {t('drawing.empty')}
                 </EmptyState>
             )}

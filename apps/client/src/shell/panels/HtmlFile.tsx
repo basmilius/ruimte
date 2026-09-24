@@ -21,7 +21,6 @@ import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
 
 type HtmlView = 'preview' | 'source';
 
@@ -201,7 +200,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
                         {error !== null && (
                             <EmptyState
                                 className="absolute inset-0 z-10 bg-surface"
-                                icon={<Icon icon={FileWarning} size={20} />}
+                                icon={FileWarning}
                                 action={
                                     <Button variant="secondary" size="sm" onClick={retry}>
                                         {t('common:action.retry')}

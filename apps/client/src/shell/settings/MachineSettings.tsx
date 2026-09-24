@@ -100,7 +100,9 @@ export function DirectRow({ endpoint, available }: { endpoint: Endpoint; availab
             label={t('machine.direct.label')}
             description={
                 failure !== null ? (
-                    <span className="text-status-error">{failure}</span>
+                    <span className="text-status-error" role="alert">
+                        {failure}
+                    </span>
                 ) : endpoint.brokerUrl ? (
                     t('machine.direct.viaBroker', { host: brokerHostOf(endpoint.brokerUrl) })
                 ) : (
@@ -437,7 +439,16 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
                     }
                 />
             ))}
-            {failure && <SettingsRow muted label={<span className="break-words text-status-error">{failure}</span>} />}
+            {failure && (
+                <SettingsRow
+                    muted
+                    label={
+                        <span className="break-words text-status-error" role="alert">
+                            {failure}
+                        </span>
+                    }
+                />
+            )}
             <ConfirmDialog
                 open={target !== null}
                 onOpenChange={(open) => (open ? undefined : setTarget(null))}

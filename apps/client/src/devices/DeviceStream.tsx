@@ -423,7 +423,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
             )}
             {streamError && (
                 <div className="absolute inset-0 grid place-items-center bg-bg/90 px-6 text-center" role="alert">
-                    <EmptyState icon={<Icon icon={CircleAlert} size={24} />}>{streamError}</EmptyState>
+                    <EmptyState icon={CircleAlert}>{streamError}</EmptyState>
                 </div>
             )}
         </div>

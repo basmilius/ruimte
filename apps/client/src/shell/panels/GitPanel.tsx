@@ -37,7 +37,7 @@ import { useToasts } from '@/state/toasts';
 import { useProjectNodes, useWorktrees, worktreeLists } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
-import { BTN_GROUP, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
+import { BTN_GROUP, FORM_ERROR, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
 import { Separator } from '@/ui/Separator';
@@ -502,7 +502,7 @@ export function GitPanel() {
                 </div>
             )}
             {failures.map((checkout) => (
-                <p key={checkout.path} className="border-b border-border px-3 py-2 text-xs text-status-error">
+                <p key={checkout.path} className={`${FORM_ERROR} border-b border-border px-3 py-2`} role="alert">
                     {named ? `${checkout.label}: ${checkout.failure}` : checkout.failure}
                 </p>
             ))}

@@ -54,6 +54,7 @@ import { chatWorking } from '@/state/agent-work';
 import { useChatRow } from '@/state/chats';
 import { MENU_LABEL, MENU_SEPARATOR, MULTILINE_FIELD } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
+import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { MenuCheck } from '@/ui/MenuCheck';
 import { TextMenu } from '@/ui/TextMenu';
@@ -190,11 +191,7 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
                 </div>
             </PlanTextMenu>
             <div ref={scroller} className="min-h-0 grow overflow-y-auto py-1">
-                {rows.length === 0 && (
-                    <p className="px-4 py-6 text-center text-xs text-text-muted">
-                        {filter === 'issues' ? t('empty.issues') : filter === 'open' ? t('empty.open') : t('empty.all')}
-                    </p>
-                )}
+                {rows.length === 0 && <EmptyState>{filter === 'issues' ? t('empty.issues') : filter === 'open' ? t('empty.open') : t('empty.all')}</EmptyState>}
                 {rows.map((row) => (
                     <PlanRowView key={row.item.id} row={row} context={context} />
                 ))}

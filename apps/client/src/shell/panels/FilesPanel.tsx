@@ -452,11 +452,11 @@ export function FilesPanel() {
        way, a folder with nothing in it, or a filter nothing here answers to. */
     const placeholder = (): ReactNode => {
         if (searching) {
-            return matches.length > 0 ? null : <EmptyState icon={<Icon icon={Search} size={20} />}>{t('files.noMatch')}</EmptyState>;
+            return matches.length > 0 ? null : <EmptyState icon={Search}>{t('files.noMatch')}</EmptyState>;
         }
         if (!cache.has(folder)) {
             return (
-                <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>
+                <EmptyState icon={LoaderCircle} spin>
                     {t('files.reading', { name: basenameOf(folder) })}
                 </EmptyState>
             );
@@ -465,9 +465,9 @@ export function FilesPanel() {
             return null;
         }
         if (!showHidden && (cache.get(folder)?.length ?? 0) > 0) {
-            return <EmptyState icon={<Icon icon={Folder} size={20} />}>{t('files.onlyHidden')}</EmptyState>;
+            return <EmptyState icon={Folder}>{t('files.onlyHidden')}</EmptyState>;
         }
-        return <EmptyState icon={<Icon icon={Folder} size={20} />}>{t('files.empty')}</EmptyState>;
+        return <EmptyState icon={Folder}>{t('files.empty')}</EmptyState>;
     };
 
     const empty = placeholder();

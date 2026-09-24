@@ -10,7 +10,7 @@ import { DevicesPanel } from '@/shell/panels/DevicesPanel';
 import { SlidingColumn } from '@/shell/SlidingColumn';
 import { clampColumnSize } from '@/shell/useColumnResize';
 import { useUi, type PanelKind } from '@/state/ui';
-import { SECTION_LABEL } from '@/ui/classes';
+import { PANEL_HEADER, SECTION_LABEL } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { lazyNamed } from '@/ui/lazy';
 import { CloseButton } from '@/ui/CloseButton';
@@ -55,12 +55,7 @@ export function Panel() {
         <SlidingColumn open={open} width={width} bounds={bounds} onWidth={(next) => useUi.getState().setPanelWidth(next)}>
             {/* An open panel is the rightmost column, so on Windows and Linux the close button
                         would land under the native window controls; the inset keeps their width free. */}
-            <header
-                className={clsx(
-                    'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border pr-2 pl-3',
-                    open && hasOverlayControls() && 'toolbar-overlay-inset'
-                )}
-            >
+            <header className={clsx(PANEL_HEADER, 'app-drag', open && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <div ref={setLeadingHeaderSlot} className="contents" />
                 <div ref={setTitleSignal} className="panel-title-signal hidden" />
                 <span className={`${SECTION_LABEL} panel-title shrink-0`}>{label}</span>

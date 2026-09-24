@@ -215,7 +215,8 @@ function BrowserErrorPlate({ id }: { id: string }) {
     return createPortal(
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg" role="alert">
             <EmptyState
-                icon={<Icon icon={ERROR_ICON[error.kind]} size={24} />}
+                icon={ERROR_ICON[error.kind]}
+                title={error.title}
                 action={
                     <div className="flex items-center gap-2">
                         {error.retryable && (
@@ -229,7 +230,6 @@ function BrowserErrorPlate({ id }: { id: string }) {
                     </div>
                 }
             >
-                <span className="mb-1 block text-sm text-text">{error.title}</span>
                 <span className="block break-all text-text-muted">{prettyUrl(failure.url)}</span>
                 {error.hint && <span className="mt-2 block">{error.hint}</span>}
                 {/* Chromium's own name for it: the one part of this that is worth searching for. */}

@@ -17,6 +17,18 @@ export const MENU_LABEL = 'px-2.5 pt-1.5 pb-0.5 text-xs/[inherit] text-text-fain
 /* The same label outside a popup: the sidebar's groups, the palette's sections. */
 export const SECTION_LABEL = 'text-xs/[inherit] font-medium text-text-faint';
 
+/* The bar across the top of a side panel, as tall as the toolbar beside it: the panel's name in
+   `SECTION_LABEL`, its own controls, and a close button last. */
+export const PANEL_HEADER = 'flex h-12 shrink-0 items-center gap-2 border-b border-border pr-2 pl-3';
+
+/* A row of a list that reads as a table and fills the width of its panel: commits, processes,
+   worktrees. Square, so the rows stack into one block; padded 12px beside text and 4px beside a button. */
+export const FLAT_ROW = 'flex h-7 items-center';
+
+/* A row of a list a person finds their way through: the sidebar, devices, recent files. Inset from
+   the edge and rounded, so each row reads as a place of its own. */
+export const INSET_ROW = 'flex h-8 items-center rounded-md px-2';
+
 /* A question or a form of a few fields. Every one is as wide as the others, whatever it asks. */
 export const SMALL_DIALOG = 'dialog-popup w-[420px] p-5';
 

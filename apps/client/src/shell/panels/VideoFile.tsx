@@ -40,7 +40,7 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
                 {failed || bytes.failure !== null ? (
                     <EmptyState
                         className="select-text"
-                        icon={<Icon icon={FileVideo} size={20} />}
+                        icon={FileVideo}
                         action={
                             <Button variant="secondary" size="sm" onClick={reveal}>
                                 <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}

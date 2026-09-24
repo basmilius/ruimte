@@ -21,7 +21,9 @@ import { FadingWords } from '@/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { formatClockDuration } from '@/format/duration';
 import { Button } from '@/ui/Button';
+import { FORM_ERROR, PANEL_HEADER, SECTION_LABEL } from '@/ui/classes';
 import { CloseButton } from '@/ui/CloseButton';
+import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { useNow } from '@/ui/useNow';
@@ -180,12 +182,7 @@ function TranscriptEntry({ streaming, utterance }: { streaming: boolean; utteran
     const { t } = useTranslation('voice');
     return (
         <div>
-            <div
-                className={clsx(
-                    'mb-1.5 text-xs font-medium tracking-wide uppercase tabular-nums',
-                    utterance.speaker === 'assistant' ? 'text-accent' : 'text-text-muted'
-                )}
-            >
+            <div className={clsx('mb-1.5 text-xs font-medium tabular-nums', utterance.speaker === 'assistant' ? 'text-accent' : 'text-text-muted')}>
                 {utterance.speaker === 'assistant' ? t('speaker.assistant') : t('speaker.person')} · {formatClockDuration(utterance.startMs)}
             </div>
             <p className="text-sm leading-6 text-text whitespace-pre-wrap [text-wrap:pretty]">
@@ -217,32 +214,21 @@ export function VoicePanelBody() {
 
     return (
         <>
-            <header
-                className={clsx(
-                    'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border pr-2 pl-3',
-                    hasOverlayControls() && 'toolbar-overlay-inset'
-                )}
-            >
-                <span className="flex grow items-center gap-2 text-xs font-semibold text-text">
-                    <Icon icon={Mic} size={14} className="text-text-muted" />
-                    {t('title')}
-                </span>
+            <header className={clsx(PANEL_HEADER, 'app-drag', hasOverlayControls() && 'toolbar-overlay-inset')}>
+                <span className={`${SECTION_LABEL} grow`}>{t('title')}</span>
                 <VoiceStatus elapsedMs={elapsedMs} phase={phase} />
                 <CloseButton label={t('close')} onClick={closeVoicePanel} />
             </header>
             <VoiceWaveform phase={phase} />
             <div className="min-h-0 grow overflow-y-auto px-4 py-5" role="log" aria-live="polite">
-                {timeline.length === 0 && (
-                    <div className="flex min-h-48 flex-col items-center justify-center gap-2 text-center">
-                        {!active && (
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-raised text-text-muted">
-                                <Icon icon={Mic} size={16} />
-                            </div>
-                        )}
-                        <p className="text-sm font-medium text-text">{active ? t('empty.listening') : t('empty.title')}</p>
-                        {!active && <p className="max-w-64 text-xs leading-relaxed text-text-muted">{t('empty.description')}</p>}
-                    </div>
-                )}
+                {timeline.length === 0 &&
+                    (active ? (
+                        <EmptyState className="min-h-48">{t('empty.listening')}</EmptyState>
+                    ) : (
+                        <EmptyState className="min-h-48" icon={Mic} title={t('empty.title')}>
+                            {t('empty.description')}
+                        </EmptyState>
+                    ))}
                 <div>
                     {timeline.map((entry, index) => (
                         <div
@@ -262,7 +248,11 @@ export function VoicePanelBody() {
                 <div ref={bottom} className="h-5" aria-hidden="true" />
             </div>
             <footer className="shrink-0 border-t border-border p-3">
-                {error && <p className="mb-2 text-xs text-status-error">{error}</p>}
+                {error && (
+                    <p className={`${FORM_ERROR} mb-2`} role="alert">
+                        {error}
+                    </p>
+                )}
                 <Button
                     className="w-full"
                     variant={active ? 'secondary' : 'primary'}

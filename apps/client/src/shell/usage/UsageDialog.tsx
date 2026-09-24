@@ -18,6 +18,7 @@ import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import type { Transport } from '@/transport/transport';
 import { usageEndpointFor } from '@/shell/usage/picker';
 import { Button } from '@/ui/Button';
+import { FORM_ERROR } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Select } from '@/ui/Select';
@@ -131,7 +132,11 @@ function Provenance() {
     const currency = useUsage((s) => s.currency);
     const failed = useUsage((s) => s.failed);
     if (failed) {
-        return <p className="mt-auto text-center text-xs text-status-error">{t('provenance.failed')}</p>;
+        return (
+            <p className={`${FORM_ERROR} mt-auto text-center`} role="alert">
+                {t('provenance.failed')}
+            </p>
+        );
     }
     if (summary === null) {
         return null;
@@ -281,14 +286,14 @@ function Page({ endpointId }: { endpointId: string }) {
             <div className="flex min-h-0 grow flex-col gap-6 overflow-y-auto px-6 pt-4 pb-6 max-[960px]:px-4">
                 <MachineNote endpointId={endpointId} stale={shown !== null} />
                 {noRoots && (
-                    <EmptyState className={DIALOG_CENTER} icon={<Icon icon={ChartNoAxesColumn} size={24} />} action={<MachineAgents endpointId={endpointId} />}>
+                    <EmptyState className={DIALOG_CENTER} icon={ChartNoAxesColumn} action={<MachineAgents endpointId={endpointId} />}>
                         {t('empty.noTranscripts')}
                     </EmptyState>
                 )}
                 {/* The skeleton is the wait for an answer; without a socket there is no answer on the way. */}
                 {shown === null && answering && <LoadingBody />}
                 {shown === null && !answering && (
-                    <EmptyState className={DIALOG_CENTER} icon={<Icon icon={ChartNoAxesColumn} size={24} />} action={<MachineAgents endpointId={endpointId} />}>
+                    <EmptyState className={DIALOG_CENTER} icon={ChartNoAxesColumn} action={<MachineAgents endpointId={endpointId} />}>
                         {t('empty.noUsage')}
                     </EmptyState>
                 )}

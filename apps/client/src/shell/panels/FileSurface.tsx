@@ -5,7 +5,6 @@ import { FileBody } from '@/shell/panels/FileBody';
 import { basenameOf, resolveStoredPath } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';
 import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
 
 /*
  * The file a node or a view points at. Both hold a path and nothing else, so both resolve it
@@ -18,7 +17,7 @@ export function FileSurface({ path, on }: { path: string | null; on: FileSurface
 
     if (resolved === null) {
         return (
-            <EmptyState icon={<Icon icon={FileQuestion} size={16} />} className="h-full">
+            <EmptyState icon={FileQuestion} className="h-full">
                 {t('file.noFile')}
             </EmptyState>
         );

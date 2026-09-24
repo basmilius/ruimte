@@ -41,6 +41,11 @@ const INTL_OUTSIDE_FORMAT: Record<string, string> = {
     'voice/controller.ts': 'the date told to the speech model, fixed to en-GB so the model always reads one format; no person reads it'
 };
 
+/* Where text may be set in capitals, and why there. A label anywhere else is a sentence, through `SECTION_LABEL`. */
+const UPPERCASE: Record<string, string> = {
+    'shell/LinkMachineDialog.tsx': 'the pairing code, which reads in capitals on the screen it is copied from, whatever case is typed'
+};
+
 /* Where `title` is not a hint but the element's accessible name, which a Tooltip does not give. */
 const TITLE_AS_NAME = new Set(['iframe']);
 
@@ -237,6 +242,20 @@ describe('the conventions of the client', () => {
     test('type comes in the four sizes of the theme, never a size in brackets', () => {
         const bracketed = sources().flatMap(({ path, text }) => [...text.matchAll(/text-\[\d[^\]]*\]/g)].map((match) => `${path}: ${match[0]}`));
         expect(bracketed).toEqual([]);
+    });
+
+    test('a label is sentence case, never uppercase', () => {
+        const shouted = sources()
+            .filter(({ path }) => !(path in UPPERCASE))
+            .flatMap(({ path, text }) =>
+                nodesIn(programOf(path, text)).flatMap((node) => {
+                    const classes = classesIn(node.type === 'Literal' || node.type === 'TemplateElement' ? [node] : []).split(/\s+/);
+                    return classes.some((utility) => utility.slice(utility.lastIndexOf(':') + 1) === 'uppercase')
+                        ? [`${path}:${lineOf(text, (node as unknown as { start: number }).start)}`]
+                        : [];
+                })
+            );
+        expect(shouted).toEqual([]);
     });
 
     test('keyboard focus is the accent outline, never a ring or a colored border', () => {

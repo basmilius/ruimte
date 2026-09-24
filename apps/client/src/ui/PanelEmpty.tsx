@@ -2,13 +2,11 @@ import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
 
 interface PanelEmptyProps {
     /* The panel's own header, kept above the sentence so a person can still act while nothing is listed. */
     header?: ReactNode;
     icon: LucideIcon;
-    iconSize?: number;
     spin?: boolean;
     action?: ReactNode;
     /* The ground a node body sits on, which a panel inside the shell already has behind it. */
@@ -22,11 +20,11 @@ interface PanelEmptyProps {
 }
 
 /* What a panel or a node body shows while it holds nothing: a sentence, one icon, at most one button. */
-export function PanelEmpty({ header, icon, iconSize = 20, spin = false, action, sunken = false, fill = 'grow', children }: PanelEmptyProps) {
+export function PanelEmpty({ header, icon, spin = false, action, sunken = false, fill = 'grow', children }: PanelEmptyProps) {
     return (
         <div className={clsx('grid min-h-0 place-items-center', fill === 'full' ? 'h-full' : 'grow', sunken && 'bg-surface-sunken')}>
             {header}
-            <EmptyState icon={<Icon icon={icon} size={iconSize} className={spin ? 'animate-spin' : undefined} />} action={action}>
+            <EmptyState icon={icon} spin={spin} action={action}>
                 {children}
             </EmptyState>
         </div>

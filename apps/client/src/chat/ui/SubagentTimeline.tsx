@@ -18,7 +18,6 @@ import { useEndpointId } from '@/state/keys';
 import { machineTransport } from '@/transport';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
 
 const NO_TURNS = new Set<string>();
 
@@ -85,11 +84,7 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
         return <div className="chat-column-content px-4 pt-4 text-xs text-text-faint">{t('subagents.loading')}</div>;
     }
     if (state.status === 'failed') {
-        return (
-            <EmptyState icon={<Icon icon={Bot} size={16} />}>
-                {state.unsupported ? t('subagents.unsupported') : (state.error ?? t('subagents.unreadable'))}
-            </EmptyState>
-        );
+        return <EmptyState icon={Bot}>{state.unsupported ? t('subagents.unsupported') : (state.error ?? t('subagents.unreadable'))}</EmptyState>;
     }
 
     const openChild = (item: ChatSubagentItem): void => {
@@ -126,7 +121,7 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
                                 </Button>
                             </div>
                         )}
-                        {rows.length === 0 && !state.live && <div className="text-xs text-text-faint">{t('rows.subagent.nothingYet')}</div>}
+                        {rows.length === 0 && !state.live && <EmptyState icon={Bot}>{t('rows.subagent.nothingYet')}</EmptyState>}
                         {rows.map((row, index) => {
                             const previous = index > 0 ? rows[index - 1]! : null;
                             return (

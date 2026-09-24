@@ -61,6 +61,7 @@ function SubagentWork({ item, work }: { item: ChatSubagentItem; work: ChatItem[]
         }
     }, [work.length, running]);
     if (work.length === 0) {
+        // A line inside a chat row, where the centered block of an EmptyState would outweigh the row itself.
         return <div className="ml-6 pb-1 text-xs text-text-faint">{t('rows.subagent.nothingYet')}</div>;
     }
     return (

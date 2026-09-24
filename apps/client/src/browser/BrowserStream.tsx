@@ -9,7 +9,6 @@ import { credentialFor } from '@/endpoint/credentials';
 import { useEndpointId } from '@/state/keys';
 import { useEndpoints } from '@/state/endpoints';
 import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
 import { initialStreamUrl, useBrowserRow } from './registry';
 import { browserStreamScaleLimit, clampBrowserStreamScale, useBrowserStreamQuality } from './stream-quality';
 
@@ -263,7 +262,7 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
             {!imageReady && !visibleError && <div className="absolute inset-0 grid place-items-center text-xs text-text-muted">{t('stream.starting')}</div>}
             {visibleError && (
                 <div className="absolute inset-0 grid place-items-center bg-bg/90 px-6 text-center text-xs text-text-muted" role="alert">
-                    <EmptyState icon={<Icon icon={CircleAlert} size={24} />}>{visibleError}</EmptyState>
+                    <EmptyState icon={CircleAlert}>{visibleError}</EmptyState>
                 </div>
             )}
         </div>

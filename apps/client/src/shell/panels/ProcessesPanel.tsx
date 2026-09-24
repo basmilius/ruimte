@@ -49,7 +49,7 @@ import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
 import { useEndpointConnection } from '@/transport/status';
 import { Button } from '@/ui/Button';
-import { MENU_HINT, MENU_LABEL, SECTION_LABEL } from '@/ui/classes';
+import { FLAT_ROW, MENU_HINT, MENU_LABEL, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { PanelEmpty } from '@/ui/PanelEmpty';
@@ -395,7 +395,7 @@ export function ProcessesPanel() {
                     const reveal = group.nodeId !== null && known ? group.nodeId : null;
                     const here = placed.get(group.id) ?? [];
                     const groupRow = (
-                        <div className="flex h-8 items-center gap-1.5 pr-3 pl-1 hover:bg-surface-hover">
+                        <div className={`${FLAT_ROW} gap-1.5 pr-3 pl-1 hover:bg-surface-hover`}>
                             <button
                                 className="icon-btn icon-btn-xs"
                                 aria-expanded={open}
@@ -437,7 +437,8 @@ export function ProcessesPanel() {
                                     const line = (
                                         <div
                                             className={clsx(
-                                                'flex h-7 items-center gap-1.5 pr-3 hover:bg-surface-hover',
+                                                FLAT_ROW,
+                                                'gap-1.5 pr-3 hover:bg-surface-hover',
                                                 highlight?.pid === process.pid && highlight.startTime === process.startTime && 'bg-surface-active'
                                             )}
                                             style={{ paddingLeft: INDENT_BASE + process.depth * INDENT_STEP }}

@@ -66,7 +66,7 @@ import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { FlagMark } from '@/project/FlagMark';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { Brand } from '@/ui/Brand';
-import { MENU_HINT, SECTION_LABEL } from '@/ui/classes';
+import { INSET_ROW, MENU_HINT, SECTION_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
@@ -111,7 +111,7 @@ const ROW_ICON: Record<CanvasNodeKind, typeof Terminal> = {
     unknown: CircleQuestionMark
 };
 
-const ROW = 'flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm';
+const ROW = `${INSET_ROW} w-full gap-2 text-left text-sm`;
 /* Where a dragged row would land. It sits in the gap, so the rows around it do not move while
    the pointer travels. */
 const INSERT_LINE = 'pointer-events-none -my-px h-0.5 shrink-0 rounded-full bg-accent';

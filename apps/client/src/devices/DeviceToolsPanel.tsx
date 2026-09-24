@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CircleAlert, LoaderCircle } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
 import {
     devicePermissions,
     deviceTools,
@@ -17,6 +17,7 @@ import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
 import { Segmented, Toggle } from '@/shell/settings/controls';
 import { Button } from '@/ui/Button';
+import { FORM_ERROR, PANEL_HEADER, SECTION_LABEL } from '@/ui/classes';
 import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
@@ -94,16 +95,16 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
     const disabled = pending || settings === null;
     return (
         <aside className="flex h-full min-h-0 w-full flex-col bg-surface">
-            <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3">
-                <span className="text-xs font-medium text-text">{t('device.tools.title')}</span>
+            <header className={PANEL_HEADER}>
+                <span className={SECTION_LABEL}>{t('device.tools.title')}</span>
                 {pending && <Icon icon={LoaderCircle} size={14} className="animate-spin text-text-muted" />}
                 <CloseButton label={t('device.tools.close')} className="ml-auto" onClick={onClose} />
             </header>
             <div className="min-h-0 grow overflow-y-auto">
                 {error && (
-                    <div className="flex items-start gap-2 border-b border-border bg-status-error/10 px-3 py-2 text-xs text-status-error" role="alert">
-                        <Icon icon={CircleAlert} size={14} className="mt-0.5 shrink-0" /> {error}
-                    </div>
+                    <p className={`${FORM_ERROR} border-b border-border px-3 py-2 break-words`} role="alert">
+                        {error}
+                    </p>
                 )}
                 {settings === null && !error && (
                     <div className="flex items-center gap-2 px-3 py-3 text-xs text-text-muted">
@@ -225,7 +226,7 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
 function ToolSection({ title, children }: { title: string; children: ReactNode }) {
     return (
         <section className="flex flex-col gap-2.5 border-b border-border px-3 py-3 last:border-b-0">
-            <h3 className="text-xs font-medium tracking-wide text-text-faint uppercase">{title}</h3>
+            <h3 className={SECTION_LABEL}>{title}</h3>
             {children}
         </section>
     );

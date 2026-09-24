@@ -17,7 +17,6 @@ import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
 import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { lazyNamed } from '@/ui/lazy';
 
@@ -151,28 +150,30 @@ function DiffBody({ state, wrap, layout, relative }: { state: DiffState; wrap: b
     if (state.status === 'loading') {
         return (
             <div className="file-diff grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>{t('diff.reading', { path: relative })}</EmptyState>
+                <EmptyState icon={LoaderCircle} spin>
+                    {t('diff.reading', { path: relative })}
+                </EmptyState>
             </div>
         );
     }
     if (state.status === 'error') {
         return (
             <div className="file-diff grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={FileWarning} size={20} />}>{state.message}</EmptyState>
+                <EmptyState icon={FileWarning}>{state.message}</EmptyState>
             </div>
         );
     }
     if (state.diff.omitted) {
         return (
             <div className="file-diff grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={FileWarning} size={20} />}>{omittedLabel(state.diff.omitted)}</EmptyState>
+                <EmptyState icon={FileWarning}>{omittedLabel(state.diff.omitted)}</EmptyState>
             </div>
         );
     }
     if (state.diff.diff === '') {
         return (
             <div className="file-diff grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={GitCompare} size={20} />}>{t('diff.noChange', { path: relative })}</EmptyState>
+                <EmptyState icon={GitCompare}>{t('diff.noChange', { path: relative })}</EmptyState>
             </div>
         );
     }
@@ -272,14 +273,14 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
             </div>
             {state.status === 'loading' && (
                 <div className="file-diff grid min-h-0 grow place-items-center">
-                    <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>
+                    <EmptyState icon={LoaderCircle} spin>
                         {commit === undefined ? t('diff.readingChanges') : t('diff.readingCommit')}
                     </EmptyState>
                 </div>
             )}
             {state.status === 'error' && (
                 <div className="file-diff grid min-h-0 grow place-items-center">
-                    <EmptyState icon={<Icon icon={FileWarning} size={20} />}>{state.message}</EmptyState>
+                    <EmptyState icon={FileWarning}>{state.message}</EmptyState>
                 </div>
             )}
             {state.status === 'ready' && (

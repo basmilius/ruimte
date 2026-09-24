@@ -131,7 +131,7 @@ function FailedRow({ failure, row }: { failure: BootFailure; row: ProjectMenuRow
             )}
             <span className="flex min-w-0 grow flex-col">
                 <span className="truncate text-sm text-text">{row?.summary.name ?? t('start.lastProject')}</span>
-                <span className="truncate text-xs text-status-error">
+                <span className="truncate text-xs text-status-error" role="alert">
                     {machine} · {failure.reason}
                 </span>
             </span>
@@ -155,7 +155,9 @@ function SignInCard({ description }: { description: string }) {
                 </span>
                 <span className="flex min-w-0 flex-col">
                     <span className="text-sm font-medium text-text">{t('start.signIn')}</span>
-                    <span className={clsx('text-xs', error ? 'text-status-error' : 'text-text-muted')}>{notice ?? error ?? description}</span>
+                    <span className={clsx('text-xs', error ? 'text-status-error' : 'text-text-muted')} role={error ? 'alert' : undefined}>
+                        {notice ?? error ?? description}
+                    </span>
                 </span>
             </span>
             <SignInButtons />

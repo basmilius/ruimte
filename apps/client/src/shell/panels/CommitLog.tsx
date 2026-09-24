@@ -7,7 +7,7 @@ import { performAsPerson } from '@/actions/client-actions';
 import { groupCommits, mergeLogs, relativeTime, type LoadedLog, type LogRow } from '@/shell/panels/commit-log';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
-import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
+import { FLAT_ROW, MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
@@ -21,8 +21,7 @@ const PAGE = 30;
 const REFS_SHOWN = 2;
 
 /* A commit row is its own open button: the row's states with the columns of a row that opens. */
-const LOG_ROW =
-    'group flex h-7 w-full min-w-0 items-center gap-1.5 pr-1 pl-3 text-xs text-inherit hover:bg-surface-hover hover:text-text data-[selected]:bg-surface-active data-[selected]:text-text';
+const LOG_ROW = `${FLAT_ROW} group w-full min-w-0 gap-1.5 pr-1 pl-3 text-xs text-inherit hover:bg-surface-hover hover:text-text data-[selected]:bg-surface-active data-[selected]:text-text`;
 
 /* The checkouts the log is read from, named so a row can say which one it came out of. The panel hands
    this list over memoized: a new one of the same checkouts would read every log again. */

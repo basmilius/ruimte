@@ -27,7 +27,7 @@ import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
 import { useChatPlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
-import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR, PANEL_HEADER, SECTION_LABEL } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
@@ -106,13 +106,9 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
     const planKey = planViewKey(endpointId, chatId, plan.id);
 
     return (
-        <header className={clsx('app-drag flex h-12 shrink-0 items-center gap-1 border-b border-border pr-2 pl-3', inset && 'toolbar-overlay-inset')}>
+        <header className={clsx(PANEL_HEADER, 'app-drag', inset && 'toolbar-overlay-inset')}>
             <Tooltip label={t('planPanel.showChat')}>
-                <button
-                    type="button"
-                    className="min-w-0 truncate rounded-md px-1 py-0.5 text-xs font-medium text-text-muted hover:text-text"
-                    onClick={() => focusChat(chatId)}
-                >
+                <button type="button" className={`${SECTION_LABEL} min-w-0 truncate rounded-md hover:text-text`} onClick={() => focusChat(chatId)}>
                     {title ?? t('planPanel.chat')}
                 </button>
             </Tooltip>

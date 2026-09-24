@@ -69,7 +69,9 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
 
     const count =
         query.text === '' || disabled ? null : invalid ? (
-            <span className="text-status-error">{t('find.invalid')}</span>
+            <span className="text-status-error" role="alert">
+                {t('find.invalid')}
+            </span>
         ) : total === 0 ? (
             t('find.none')
         ) : current === null ? (

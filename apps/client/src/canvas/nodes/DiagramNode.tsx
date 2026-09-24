@@ -39,13 +39,13 @@ export function DiagramNode({ id }: { id: string }) {
     return (
         <div className="h-full w-full" onDoubleClick={() => viewId && showView(viewId)}>
             {mirror?.gone && (
-                <EmptyState icon={<Icon icon={Workflow} size={16} />} className="h-full">
+                <EmptyState icon={Workflow} className="h-full">
                     {t('diagram.gone')}
                 </EmptyState>
             )}
             {/* No "being written" state: the daemon cannot know an agent is about to write one. */}
             {!mirror?.gone && !drawn && !mirror?.loading && (
-                <EmptyState icon={<Icon icon={Workflow} size={16} />} className="h-full">
+                <EmptyState icon={Workflow} className="h-full">
                     {t('diagram.empty')}
                 </EmptyState>
             )}

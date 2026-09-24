@@ -8,7 +8,6 @@ import { formatBytes } from '@/shell/panels/file-size';
 import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
 
 type Zoom = 'fit' | 'full';
 
@@ -32,9 +31,7 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
             </FileToolbar>
             <FileContextMenu className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
                 {failed || bytes.failure !== null ? (
-                    <EmptyState icon={<Icon icon={ImageOff} size={20} />}>
-                        {t('file.image.failed', { name, reason: bytes.failure ?? t('file.image.maybeChanged') })}
-                    </EmptyState>
+                    <EmptyState icon={ImageOff}>{t('file.image.failed', { name, reason: bytes.failure ?? t('file.image.maybeChanged') })}</EmptyState>
                 ) : (
                     bytes.url !== null && (
                         <img

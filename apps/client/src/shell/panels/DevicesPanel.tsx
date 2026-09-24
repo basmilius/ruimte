@@ -32,7 +32,7 @@ import { useServer } from '@/state/server';
 import { deviceClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
 import { EMPTY_DEVICE_LIST, useDevices } from '@/devices/state';
-import { BTN_GROUP, MENU_SEPARATOR } from '@/ui/classes';
+import { BTN_GROUP, INSET_ROW, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { SignInMark } from '@/ui/SignInMark';
 import { Tooltip } from '@/ui/Tooltip';
@@ -256,7 +256,7 @@ function DeviceSection({
                     type="button"
                     aria-expanded={!collapsed}
                     onClick={() => onCollapse(!collapsed)}
-                    className="group flex h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-accent"
+                    className={`${INSET_ROW} group w-full min-w-0 gap-2 text-left text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-accent`}
                 >
                     <span className="grid size-4 shrink-0 place-items-center">
                         <span className="col-start-1 row-start-1 grid place-items-center group-hover:hidden group-focus-visible:hidden">

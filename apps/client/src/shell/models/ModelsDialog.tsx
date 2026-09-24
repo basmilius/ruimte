@@ -15,7 +15,6 @@ import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { CloseButton } from '@/ui/CloseButton';
-import { Icon } from '@/ui/Icon';
 
 const SCALES: readonly CostScale[] = ['log', 'linear'];
 
@@ -153,7 +152,7 @@ function Body() {
             {load.status === 'failed' && (
                 <EmptyState
                     className="grow"
-                    icon={<Icon icon={ChartSpline} size={24} />}
+                    icon={ChartSpline}
                     action={
                         <Button size="sm" variant="secondary" onClick={retry}>
                             {i18next.t('common:action.retry')}

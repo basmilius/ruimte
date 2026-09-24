@@ -8,7 +8,6 @@ import { renderFile } from '@/shell/panels/renderers';
 import { useFileRead } from '@/shell/panels/use-file-read';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
 
 /* The two states no renderer draws still carry the bar, so a file that will not read can be
    revealed, copied or put somewhere else, which is exactly what a path that went missing needs. */
@@ -35,7 +34,9 @@ export function FileBody({ path, name, on, tabKey }: { path: string; name: strin
         if (state.status === 'loading') {
             return (
                 <WithoutRenderer>
-                    <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>{t('file.reading', { name })}</EmptyState>
+                    <EmptyState icon={LoaderCircle} spin>
+                        {t('file.reading', { name })}
+                    </EmptyState>
                 </WithoutRenderer>
             );
         }
@@ -44,7 +45,7 @@ export function FileBody({ path, name, on, tabKey }: { path: string; name: strin
                 <WithoutRenderer>
                     <EmptyState
                         className="select-text"
-                        icon={<Icon icon={FileWarning} size={20} />}
+                        icon={FileWarning}
                         action={
                             <Button variant="secondary" size="sm" onClick={retry}>
                                 {t('common:action.retry')}

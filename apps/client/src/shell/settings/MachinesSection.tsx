@@ -135,7 +135,11 @@ function MachineRow({ entry, onOpen }: { entry: MachineEntry; onOpen(): void }) 
                     <span className="text-xs leading-snug break-words text-text-faint">
                         {relayed ? t('machines.viaRelay', { reach: reachLabel(entry) }) : reachLabel(entry)}
                     </span>
-                    {failure !== null && <span className="text-xs leading-snug break-words text-status-error">{failure}</span>}
+                    {failure !== null && (
+                        <span className="text-xs leading-snug break-words text-status-error" role="alert">
+                            {failure}
+                        </span>
+                    )}
                 </span>
                 <Icon icon={ChevronRight} size={16} className="shrink-0 text-text-faint" />
             </button>
@@ -412,7 +416,16 @@ export function MachinesSection() {
                 {signedIn && machines === null && machinesError === null && (
                     <SettingsRow label={<Skeleton className="w-40" />} description={<Skeleton className="mt-1 w-24" />} />
                 )}
-                {signedIn && machinesError !== null && <SettingsRow muted label={<span className="break-words text-status-error">{machinesError}</span>} />}
+                {signedIn && machinesError !== null && (
+                    <SettingsRow
+                        muted
+                        label={
+                            <span className="break-words text-status-error" role="alert">
+                                {machinesError}
+                            </span>
+                        }
+                    />
+                )}
             </SettingsSection>
             <MachineDialog
                 entry={selected}

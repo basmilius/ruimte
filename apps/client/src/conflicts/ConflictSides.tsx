@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight, Check } from 'lucide-react';
 import { bothLines, sideLines, type MergeBlock, type MergeSide } from '@ruimte/merge';
 import { Button } from '@/ui/Button';
+import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 
 interface SideProps {
@@ -25,7 +26,7 @@ function Side({ label, lines, take, disabled, onTake }: SideProps) {
             </div>
             <div className="min-h-0 grow overflow-auto">
                 {lines.length === 0 ? (
-                    <p className="px-2 py-2 text-xs text-text-faint">{t('side.nothing')}</p>
+                    <EmptyState className="h-full">{t('side.nothing')}</EmptyState>
                 ) : (
                     <pre className="px-2 py-1 font-mono text-code leading-(--text-code--line-height) text-text">{lines.join('\n')}</pre>
                 )}

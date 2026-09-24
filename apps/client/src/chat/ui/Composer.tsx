@@ -1104,7 +1104,11 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                         onKeyDown={onKeyDown}
                         onPaste={onPaste}
                     />
-                    {notice && <div className="px-5 pb-1 text-xs text-status-error @max-md/composer:px-3.5">{notice}</div>}
+                    {notice && (
+                        <div className="px-5 pb-1 text-xs text-status-error @max-md/composer:px-3.5" role="alert">
+                            {notice}
+                        </div>
+                    )}
                     {guard.visible && (
                         <div
                             className={clsx(

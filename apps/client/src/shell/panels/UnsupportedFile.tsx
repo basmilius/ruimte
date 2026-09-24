@@ -24,7 +24,7 @@ export function UnsupportedFile({ path, name, read }: { path: string; name: stri
             <FileToolbar />
             <EmptyState
                 className="select-text"
-                icon={<Icon icon={FileQuestion} size={20} />}
+                icon={FileQuestion}
                 action={
                     <Button variant="secondary" size="sm" onClick={reveal}>
                         <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}

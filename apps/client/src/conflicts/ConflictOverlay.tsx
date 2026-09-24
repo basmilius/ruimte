@@ -19,6 +19,7 @@ import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, FORM_ERROR } from '@/ui/classes';
 import { CloseButton } from '@/ui/CloseButton';
+import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -408,7 +409,7 @@ export function ConflictOverlay() {
 
                     <div className="flex min-h-0 grow">
                         <nav className="w-64 shrink-0 overflow-y-auto border-r border-border py-1">
-                            {list.length === 0 && <p className="px-3 py-4 text-xs text-text-faint">{t('list.none')}</p>}
+                            {list.length === 0 && <EmptyState>{t('list.none')}</EmptyState>}
                             {list.map((entry) => {
                                 const remaining = open[entry.path];
                                 return (
@@ -445,15 +446,13 @@ export function ConflictOverlay() {
                                 </p>
                             )}
                             {list.length === 0 ? (
-                                <div className="grid grow place-items-center px-6 text-center">
-                                    <div>
-                                        <Icon icon={Check} size={20} className="mx-auto text-status-idle" />
-                                        <p className="mt-2 text-sm text-text">{t('empty.title')}</p>
-                                        <p className="mt-1 text-xs text-text-muted">{operation === null ? t('empty.plain') : t(`empty.${operation}`)}</p>
-                                    </div>
-                                </div>
+                                <EmptyState className="grow" icon={Check} title={t('empty.title')}>
+                                    {operation === null ? t('empty.plain') : t(`empty.${operation}`)}
+                                </EmptyState>
                             ) : file === null ? (
-                                <div className="grid grow place-items-center text-xs text-text-faint">{loading ? t('loading') : t('list.pick')}</div>
+                                <EmptyState className="grow" icon={loading ? LoaderCircle : undefined} spin>
+                                    {loading ? t('loading') : t('list.pick')}
+                                </EmptyState>
                             ) : file.whole ? (
                                 <WholeFile
                                     file={file}

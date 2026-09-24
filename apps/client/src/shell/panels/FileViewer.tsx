@@ -11,7 +11,7 @@ import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { SECTION_LABEL } from '@/ui/classes';
+import { INSET_ROW, SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tile } from '@/ui/Tile';
@@ -24,7 +24,7 @@ function EmptyPreview() {
     if (folder === null && recent.length === 0) {
         return (
             <div className="grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={FileText} size={20} />}>{t('file.empty.hint')}</EmptyState>
+                <EmptyState icon={FileText}>{t('file.empty.hint')}</EmptyState>
             </div>
         );
     }
@@ -55,7 +55,7 @@ function EmptyPreview() {
                             <ContextMenu.Root key={path}>
                                 <ContextMenu.Trigger
                                     render={<button type="button" />}
-                                    className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm text-text hover:bg-surface-hover"
+                                    className={`${INSET_ROW} min-w-0 gap-2 text-left text-sm text-text hover:bg-surface-hover`}
                                     onClick={() => void runAsPerson('file.preview', { path, line: null })}
                                 >
                                     <FileIcon path={path} size={14} />

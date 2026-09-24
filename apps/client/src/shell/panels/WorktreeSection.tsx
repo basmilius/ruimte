@@ -18,7 +18,7 @@ import { useSessions } from '@/state/sessions';
 import { worktreeLists, type WorktreeNode } from '@/state/worktrees';
 import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
-import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
+import { FLAT_ROW, MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { MenuPopup } from '@/ui/MenuPopup';
@@ -149,7 +149,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                         <ContextMenu.Root key={worktree.path}>
                             <ContextMenu.Trigger
                                 render={<li />}
-                                className="group flex h-8 items-center gap-2 pr-1 pl-3 hover:bg-surface-hover"
+                                className={`${FLAT_ROW} group gap-2 pr-1 pl-3 hover:bg-surface-hover`}
                                 aria-current={worktree.path === current ? 'true' : undefined}
                             >
                                 <Icon icon={worktree.missing ? FolderX : GitBranch} size={14} className="shrink-0 text-text-muted" />

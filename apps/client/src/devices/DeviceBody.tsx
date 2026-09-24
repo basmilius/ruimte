@@ -181,7 +181,7 @@ export function DevicePlate({ id }: { id: string }) {
 
 function DeviceMessage({ icon, spin = false, message, action }: { icon: LucideIcon; spin?: boolean; message: string; action?: ReactNode }) {
     return (
-        <PanelEmpty icon={icon} iconSize={24} spin={spin} action={action} sunken fill="full">
+        <PanelEmpty icon={icon} spin={spin} action={action} sunken fill="full">
             {message}
         </PanelEmpty>
     );
