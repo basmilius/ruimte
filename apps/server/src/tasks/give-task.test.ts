@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatTurnItem, ProjectContent, Task } from '@ruimte/contracts';
+import type { ChatSubagentItem, ChatTurnItem, ProjectContent, Task } from '@ruimte/contracts';
 import { nextLine } from '../canvas/task-verbs.ts';
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
@@ -147,6 +147,30 @@ describe('a task given to an agent that is already open', () => {
         expect(task.result?.text).toContain('echo: check the note');
         expect(turnsFor(daemon, childId, taskId)).toHaveLength(1);
         expect(turnsFor(daemon, 'chat-lead', taskId)).toHaveLength(1);
+    });
+
+    test('to a child that finished the task it was opened with, runs it again on a row of its own in the thread that gave it', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const [line] = await verb(daemon, 'chat-lead', 'agent', ['claude', '--task', 'Survey', '--prompt', 'look around']);
+        const [childId = '', , , , , first = ''] = line!.split('\t');
+        await daemon.until(() => taskOf(daemon, first).wake === 'sent');
+        await daemon.worker.settled();
+        const rows = (): ChatSubagentItem[] =>
+            (daemon.chats.get('chat-lead')?.thread.list() ?? []).filter((item): item is ChatSubagentItem => item.kind === 'subagent');
+        expect(rows().map((row) => row.status)).toEqual(['done']);
+
+        // `slow` keeps the new turn open, so the child is caught while it works on the second task.
+        const { taskId: second } = await give(daemon, childId, ['--prompt', 'slow', '--title', 'Second look']);
+        await daemon.until(() => turnsFor(daemon, childId, second).some((turn) => turn.state === 'running'));
+
+        expect(rows().map((row) => [row.id, row.childId, row.status, row.finishedAt === null])).toEqual([
+            [`task-${first}`, childId, 'done', false],
+            [`task-${second}`, childId, 'running', true]
+        ]);
+        expect(daemon.chats.get(childId)?.info.status).toBe('running');
+        expect([taskOf(daemon, first).status, taskOf(daemon, second).status]).toEqual(['done', 'open']);
     });
 
     test('is refused while that agent still works on one, naming the task in its way', async () => {

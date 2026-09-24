@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { Task } from '@ruimte/contracts';
+import { taskStatusWord } from '@/ui/status-look';
 import { childTask, edgeTask, useTasks } from './tasks';
 
 const task = (id: string, overrides: Partial<Task> = {}): Task => ({
@@ -43,5 +44,17 @@ describe('tasks', () => {
         expect(edgeTask(tasks, 'chat-lead', 'chat-child')?.id).toBe('fresh');
         expect(edgeTask(tasks, 'chat-child', 'chat-lead')).toBeNull();
         expect(childTask(undefined, 'chat-child')).toBeNull();
+    });
+
+    test('a node whose task settled shows the one it is given next, also when both were given in the same millisecond', () => {
+        const store = useTasks.getState();
+        store.setProjectTasks('local', 'project', [task('first', { status: 'done', settledAt: 1 })]);
+        store.putTask('local', task('second'));
+        const shown = childTask(useTasks.getState().byEndpoint.local, 'chat-child');
+        expect(shown?.id).toBe('second');
+        expect(taskStatusWord(shown!.status)).toBe('running');
+        // The first one settling again, as an event late for it, does not take the mark back.
+        store.putTask('local', task('first', { status: 'done', settledAt: 2 }));
+        expect(childTask(useTasks.getState().byEndpoint.local, 'chat-child')?.id).toBe('second');
     });
 });

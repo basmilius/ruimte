@@ -63,6 +63,21 @@ describe('subagent list', () => {
         expect(flyoutSubagents(['settled', 'woken', 'u1'], structure)).toEqual([woken]);
     });
 
+    test('a child that finished its task and was given another runs again in the list, the badge and the count', () => {
+        const first = subagent('task-a', { origin: 'ruimte', childId: 'node-1', status: 'done', turnId: 'turn-1', startedAt: 1, finishedAt: 5 });
+        const second = subagent('task-b', { origin: 'ruimte', childId: 'node-1', background: true, startedAt: 6 });
+        const tasks: Record<string, Task> = { a: { ...task('done'), id: 'a' }, b: { ...task('open'), id: 'b' } };
+        const words = (items: readonly ChatSubagentItem[]) => items.map((item) => statusWordOf(item, tasks[taskIdOf(item) ?? ''] ?? null));
+        const structure: Record<string, ChatItem> = { u1: message('u1'), u2: { ...message('u2'), createdAt: 5 }, 'task-a': first, 'task-b': second };
+
+        const listed = flyoutSubagents(['u1', 'task-a', 'task-b'], structure);
+        expect(listed).toEqual([first, second]);
+        expect(words(listed)).toEqual(['done', 'running']);
+        expect(summaryWordOf(words(listed))).toBe('running');
+        // A message between the two leaves the settled one in the thread, and the new one still counts.
+        expect(flyoutSubagents(['u1', 'task-a', 'u2', 'task-b'], structure)).toEqual([second]);
+    });
+
     test('the badge shows work in progress first, then a failure, then a cancel, and done only when all are', () => {
         expect(summaryWordOf(['done', 'failed', 'running'])).toBe('running');
         expect(summaryWordOf(['done', 'cancelled', 'failed'])).toBe('failed');
