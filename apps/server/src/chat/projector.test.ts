@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatInfo } from '@ruimte/contracts';
+import { EVENT_SCHEMAS, type ChatEvent, type ChatInfo } from '@ruimte/contracts';
 import type { BackendEvent } from './backend.ts';
 import { ThreadProjector, stripAgentFooter, summaryLine } from './projector.ts';
 import { ChatThread } from './thread.ts';
@@ -526,5 +526,122 @@ describe('background tasks', () => {
         project({ type: 'tool.done', ref: 'exec', output: 'stopped', state: 'error' }, { type: 'background.ended', taskId: '44653' });
         expect(thread.get('1:exec')).toMatchObject({ state: 'error', output: 'stopped' });
         expect(thread.info).toMatchObject({ activeTurnId: null, status: 'idle', background: [] });
+    });
+});
+
+/*
+ * The iPhone app validates every chat.event whole and drops one it cannot read, so what the projector writes has to
+ * pass the same schema a client derives its tables from.
+ */
+describe('the wire', () => {
+    const scenarios: { idle?: boolean; events: BackendEvent[] }[] = [
+        {
+            events: [
+                { type: 'session', agentSessionId: 'sid', model: 'sonnet', slashCommands: ['compact'], skills: ['review'], title: 'Fix it' },
+                { type: 'title', title: 'Fix the bug' },
+                { type: 'model', model: 'opus' },
+                { type: 'thinking.delta', ref: 'th_1', text: 'Let me see' },
+                { type: 'thinking.done', ref: 'th_1', text: 'Let me see.' },
+                { type: 'text.delta', ref: 'msg_1:t0', text: 'po' },
+                { type: 'text.done', ref: 'msg_1:t0', text: 'pong' },
+                { type: 'tool.started', ref: 'toolu_1', name: 'Bash', input: { command: 'sleep 30' }, parentRef: null },
+                { type: 'tool.progress', ref: 'toolu_1', startedAt: 1000, description: 'Wait a while' },
+                { type: 'tool.output', ref: 'toolu_1', text: 'line1\n' },
+                { type: 'tool.done', ref: 'toolu_1', output: 'line1', state: 'done' },
+                { type: 'tool.started', ref: 'patch-1', name: 'ApplyPatch', input: { summary: 'a.ts' }, parentRef: null },
+                { type: 'tool.done', ref: 'patch-1', output: '-x\n+y\n', state: 'done', changes: [{ path: 'a.ts', kind: 'update', diff: '-x\n+y\n' }] },
+                {
+                    type: 'approval.requested',
+                    requestId: 'r1',
+                    ref: 'toolu_9',
+                    toolName: 'Edit',
+                    input: { file_path: 'a.ts' },
+                    description: 'Change a file',
+                    canAllowAlways: true,
+                    allowAlways: { label: 'Always', description: 'Edits in this folder' }
+                },
+                { type: 'request.withdrawn', requestId: 'r1' },
+                {
+                    type: 'question.requested',
+                    requestId: 'q1',
+                    questions: [{ id: '0', header: 'Pick', question: 'Which?', choices: [{ label: 'A', description: '' }], multiSelect: false }],
+                    async: true
+                },
+                { type: 'request.withdrawn', requestId: 'q1' },
+                { type: 'usage', contextTokens: 25090, contextWindow: 258400 },
+                { type: 'compaction', preTokens: null },
+                { type: 'note', level: 'warning', text: 'Slow down' },
+                { type: 'tool.started', ref: 'toolu_b', name: 'Bash', input: { command: 'bun run dev', run_in_background: true }, parentRef: null },
+                { type: 'background.started', taskId: 'b', ref: 'toolu_b', monitor: false, description: 'Start the dev server' },
+                { type: 'background.ended', taskId: 'b' },
+                { type: 'turn.done', state: 'done', costUsd: 0.02, native: { lastUuid: 'u-2' } },
+                { type: 'exit', exitCode: 0 }
+            ]
+        },
+        {
+            events: [
+                {
+                    type: 'tool.started',
+                    ref: 'toolu_agent',
+                    name: 'Agent',
+                    input: { description: 'Find the bug', subagent_type: 'general-purpose', prompt: 'look around', run_in_background: true },
+                    parentRef: null
+                },
+                {
+                    type: 'task.started',
+                    ref: 'toolu_agent',
+                    description: 'Find the bug',
+                    subagentType: 'explorer',
+                    prompt: null,
+                    background: true,
+                    threadId: 'thread-2'
+                },
+                {
+                    type: 'task.progress',
+                    ref: 'toolu_agent',
+                    summary: 'Running Grep',
+                    lastTool: 'Grep',
+                    usage: { totalTokens: 20, toolUses: 3, durationMs: 40 }
+                },
+                { type: 'tool.started', ref: 'toolu_child', name: 'Grep', input: { pattern: 'x' }, parentRef: 'toolu_agent' },
+                { type: 'tool.done', ref: 'toolu_child', output: 'found', state: 'done' },
+                { type: 'text.done', ref: 'msg_9:t0', text: 'the bug is in a.ts', parentRef: 'toolu_agent' },
+                { type: 'tool.done', ref: 'toolu_agent', output: 'Async agent launched successfully.', state: 'done' },
+                { type: 'turn.done', state: 'done', costUsd: 0 },
+                { type: 'task.done', ref: 'toolu_agent', summary: 'Report written', ok: false, usage: null, outputFile: '/tmp/a1.output' },
+                { type: 'text.delta', ref: 'msg_10:t0', text: 'The report is done' },
+                { type: 'turn.done', state: 'error', costUsd: 0, error: 'The model is overloaded' }
+            ]
+        },
+        {
+            idle: true,
+            events: [
+                { type: 'text.delta', ref: 'msg_1:t0', text: 'half' },
+                { type: 'failed', message: 'spawn failed' },
+                { type: 'exit', exitCode: 1 }
+            ]
+        }
+    ];
+
+    test('every event the projector writes, and the thread it leaves, passes the chat.event schema', () => {
+        const kinds = new Set<string>();
+        for (const scenario of scenarios) {
+            const thread = new ChatThread(scenario.idle ? { ...info, status: 'idle', activeTurnId: null } : info);
+            if (!scenario.idle) {
+                thread.upsert({ id: 'turn-1', kind: 'turn', createdAt: 0, turnId: 'turn-1', state: 'running', origin: 'user', endedAt: null, costUsd: 0 });
+            }
+            let clock = 1;
+            const projector = new ThreadProjector(thread, { providerName: 'Test CLI', now: () => clock++ });
+            const events: ChatEvent[] = scenario.events.flatMap((event) => projector.project(1, event));
+            events.push({ type: 'reset', info: thread.info, items: thread.list() });
+            events.forEach((event, index) => {
+                const parsed = EVENT_SCHEMAS['chat.event'].safeParse({ chatId: 'c', event, seq: index + 1 });
+                expect(parsed.error?.issues ?? []).toEqual([]);
+                if (event.type === 'item') {
+                    kinds.add(event.item.kind);
+                }
+            });
+        }
+        expect([...kinds].sort()).toEqual(['approval', 'assistant', 'compaction', 'note', 'question', 'subagent', 'thinking', 'tool', 'turn']);
     });
 });

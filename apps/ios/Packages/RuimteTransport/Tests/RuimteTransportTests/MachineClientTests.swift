@@ -156,6 +156,26 @@ import Testing
         #expect(MachineClient.timedRequests.contains(.chatList))
     }
 
+    @Test func anEventThatDoesNotValidateGoesToItsRejectedSubscribers() {
+        let client = MachineClient(send: { _ in }, connected: true)
+        var events: [JSONValue] = []
+        var rejected: [JSONValue] = []
+        let stop = client.subscribe("chat.event") { events.append($0) }
+        let stopRejected = client.subscribeRejected("chat.event") { rejected.append($0) }
+        client.receive(
+            #"{"type":"event","event":"chat.event","payload":{"chatId":"c1","event":{"type":"future","x":1}}}"#)
+        client.receive(
+            #"{"type":"event","event":"chat.event","payload":{"chatId":"c1","event":{"type":"delta","itemId":"i","text":"x"}}}"#
+        )
+        #expect(events.count == 1)
+        #expect(rejected.map { $0["chatId"] } == [.string("c1")])
+        stop()
+        stopRejected()
+        client.receive(
+            #"{"type":"event","event":"chat.event","payload":{"chatId":"c1","event":{"type":"future","x":1}}}"#)
+        #expect(rejected.count == 1)
+    }
+
     @Test func validatesRequestsAndFansOutEventsWithoutIDs() async throws {
         var sends = 0
         let client = MachineClient(send: { _ in sends += 1 }, connected: true)

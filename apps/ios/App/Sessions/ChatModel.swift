@@ -35,6 +35,10 @@ final class ChatModel {
     @ObservationIgnored private var attachment: MachineAttachment?
     private var positions: [String: Int] = [:]
     private var generation = 0
+    /// Whether this connection already attached again over an event the app could not read. Once is enough: the
+    /// snapshot brings the thread up to date, and a machine that keeps sending such events would otherwise attach
+    /// again on every one.
+    private var reattachedOverRejectedEvent = false
     private var draftKey: String { "ruimte.chat.draft.\(chatID)" }
 
     init(client: any MachineRequesting, chatID: String) {
@@ -73,6 +77,14 @@ final class ChatModel {
                 if !self.loading { self.receive(event) }
             })
         unsubscribe.append(
+            client.subscribeRejected("chat.event") { [weak self] payload in
+                guard let self, payload["chatId"]?.stringValue == self.chatID, !self.loading,
+                    !self.reattachedOverRejectedEvent
+                else { return }
+                self.reattachedOverRejectedEvent = true
+                self.attach()
+            })
+        unsubscribe.append(
             client.observeConnection { [weak self] available in
                 guard let self else { return }
                 self.connected = available
@@ -80,6 +92,7 @@ final class ChatModel {
                 if available {
                     self.attach()
                 } else {
+                    self.reattachedOverRejectedEvent = false
                     self.generation += 1
                     self.attachTask?.cancel()
                     self.loading = false

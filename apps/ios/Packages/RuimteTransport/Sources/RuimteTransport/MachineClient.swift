@@ -1,11 +1,15 @@
 import Foundation
 import RuimtePulsar
+import os
 
 @MainActor public protocol MachineRequesting: AnyObject {
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue
     func request(_ type: String, payload: JSONValue, onResult: @escaping @MainActor @Sendable (JSONValue) -> Void)
         async throws -> JSONValue
     func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void
+    /// Hands over the raw payload of an event this app could not validate, which a newer machine may send, so what
+    /// depends on the stream can read its state again instead of waiting on an event that never arrives.
+    func subscribeRejected(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void
     func acquireSubscription(start: String, stop: String, payload: JSONValue, stopPayload: JSONValue)
         -> MachineSubscription
     func acquireAttachment(_ type: String, id: String) -> MachineAttachment
@@ -98,6 +102,9 @@ import RuimtePulsar
         handler(true)
         return {}
     }
+    public func subscribeRejected(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
+        -> () -> Void
+    { {} }
 }
 
 public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
@@ -129,6 +136,8 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         .planList,
     ]
 
+    private static let log = Logger(subsystem: "app.ruimte.mobile", category: "wire")
+
     private struct Pending {
         let type: WireRequest
         let continuation: CheckedContinuation<JSONValue, Error>
@@ -149,6 +158,7 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     private var pending: [String: Pending] = [:]
     private var attachments: [String: Set<UUID>] = [:]
     private var subscribers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
+    private var rejectedSubscribers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
     private var observers: [UUID: @MainActor @Sendable (Bool) -> Void] = [:]
     private var incoming: Task<Void, Never>?
     private var connectionGeneration = 0
@@ -185,6 +195,7 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     public func shutdown() {
         disconnected()
         subscribers.removeAll()
+        rejectedSubscribers.removeAll()
         attachments.removeAll()
         remoteSubscriptions.removeAll()
         observers.removeAll()
@@ -296,6 +307,18 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         }
     }
 
+    public func subscribeRejected(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
+        -> () -> Void
+    {
+        let id = UUID()
+        rejectedSubscribers[event, default: [:]][id] = handler
+        return { [weak self] in
+            guard let self else { return }
+            rejectedSubscribers[event]?.removeValue(forKey: id)
+            if rejectedSubscribers[event]?.isEmpty == true { rejectedSubscribers.removeValue(forKey: event) }
+        }
+    }
+
     public func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void {
         let id = UUID()
         observers[id] = handler
@@ -346,9 +369,17 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
             return
         }
         guard frame["type"] == .string("event"), let name = frame["event"]?.stringValue,
-            let event = WireEvent(rawValue: name), let input = frame["payload"],
-            let payload = try? event.validatePayload(input)
+            let event = WireEvent(rawValue: name), let input = frame["payload"]
         else { return }
+        let payload: JSONValue
+        do {
+            payload = try event.validatePayload(input)
+        } catch {
+            let reason = String(describing: error)
+            Self.log.error("Dropped an invalid \(name, privacy: .public) event: \(reason, privacy: .public)")
+            for handler in Array(rejectedSubscribers[name]?.values ?? [:].values) { handler(input) }
+            return
+        }
         for handler in Array(subscribers[name]?.values ?? [:].values) { handler(payload) }
     }
 
