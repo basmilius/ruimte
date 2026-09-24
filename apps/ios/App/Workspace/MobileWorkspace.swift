@@ -16,7 +16,7 @@ final class MobileWorkspace {
     var conflict: JSONValue?
     var notice: JSONValue?
     var selectedID: String?
-    /// The commands from the project file a terminal started without, by node, until a person says yes to one.
+    /// Per node, the project-file command its terminal started without, until a person approves it.
     private(set) var heldCommands: [String: String] = [:]
     private var base = JSONValue.object([:])
     private var subscriptions: [() -> Void] = []
@@ -262,7 +262,7 @@ final class MobileWorkspace {
         }
     }
 
-    /// A person saying yes to the command the machine holds for this terminal: it is written down there and typed.
+    /// Approves the command the machine holds for this terminal. The machine records the approval and types it.
     func runHeldCommand(_ id: String) async {
         do {
             _ = try await client.request("session.runHeld", payload: .object(["sessionId": .string(id)]))
@@ -270,7 +270,8 @@ final class MobileWorkspace {
         } catch { problem = error.localizedDescription }
     }
 
-    /// Another client may have said yes, or a shell made elsewhere may hold one; only the session list says.
+    /// Another client may have approved a command, or a shell started elsewhere may hold one. Only the session list
+    /// knows.
     private func refreshHeldCommands(including id: String? = nil) async {
         guard let result = try? await client.request("session.list", payload: .object([:])) else { return }
         let held = Dictionary(

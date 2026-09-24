@@ -15,8 +15,8 @@ final class ChatModel {
     /// Whether the thread holds a subagent row, and one with a pointer of its own; kept apart from `items` so the
     /// screen does not observe every streamed delta.
     private(set) var subagentRows = (any: false, native: false)
-    /// Moves when a subagent row or the work under one changes, so the sub-agent page derives its lists again then and
-    /// not on every word the main thread streams.
+    /// Moves only when a subagent row or the work under one changes, unlike `revision`, which moves on every streamed
+    /// word.
     private(set) var subagentRevision = 0
     var draft: String { didSet { UserDefaults.standard.set(draft, forKey: draftKey) } }
     var attachments: [ChatUpload] = []
@@ -38,9 +38,8 @@ final class ChatModel {
     @ObservationIgnored private var attachment: MachineAttachment?
     private var positions: [String: Int] = [:]
     private var generation = 0
-    /// Whether this connection already attached again over an event the app could not read. Once is enough: the
-    /// snapshot brings the thread up to date, and a machine that keeps sending such events would otherwise attach
-    /// again on every one.
+    /// One reattach per connection is enough, since the snapshot brings the thread up to date. A machine that keeps
+    /// sending unreadable events would otherwise cause a reattach on every one.
     private var reattachedOverRejectedEvent = false
     private var draftKey: String { "ruimte.chat.draft.\(chatID)" }
 

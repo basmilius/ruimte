@@ -147,8 +147,7 @@ final class TerminalModel {
         guard writeTask == nil else { return }
         writeTask = Task {
             defer { writeTask = nil }
-            // Whatever was typed while the previous write was on its way goes out as one, so a slow link costs one
-            // round trip per write instead of one per keystroke.
+            // Keys typed during a write go out together, so a slow link costs a round trip per write, not per key.
             while !queuedInput.isEmpty, !Task.isCancelled {
                 let text = queuedInput.joined()
                 queuedInput.removeAll()

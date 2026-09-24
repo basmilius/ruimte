@@ -350,8 +350,8 @@ private struct UsageRing: View {
     }
 }
 
-/// The provider's word mark from the desktop's `ProviderLogo`, in the theme's color; a CLI without one here, such as
-/// one a newer machine knows, gets a generic mark rather than another provider's.
+/// The provider's word mark from the desktop's `ProviderLogo`, in the theme's color. A provider without a mark here,
+/// such as one only a newer machine knows, gets a generic icon instead of another provider's mark.
 private struct ProviderMark: View {
     let provider: String
     let size: CGFloat

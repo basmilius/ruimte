@@ -40,8 +40,7 @@ jobs:
           fi
           gh release create "$GITHUB_REF_NAME" --draft --title "Release ${GITHUB_REF_NAME#v}" --notes-file "$notes"
 
-  # Every job of ci.yml on the tagged commit, alongside packaging. A red one leaves the release a
-  # draft, so no artifact is published before the commit has passed its checks.
+  # ci.yml on the tagged commit, alongside packaging. A red job keeps the release a draft.
   verify:
     uses: ./.github/workflows/ci.yml
     permissions:

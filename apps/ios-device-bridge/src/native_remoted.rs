@@ -398,8 +398,7 @@ fn is_dictionary(object: XpcObject) -> bool {
         )
 }
 
-/// The value under `key`, only when it is a dictionary itself; a null or differently typed
-/// value reads as absent.
+/// The value under `key`, or `None` when it is missing or not a dictionary.
 unsafe fn child_dictionary(dictionary: XpcObject, key: &CStr) -> Option<XpcObject> {
     let value = unsafe { xpc_dictionary_get_value(dictionary, key.as_ptr()) };
     is_dictionary(value).then_some(value)

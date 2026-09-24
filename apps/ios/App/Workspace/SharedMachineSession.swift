@@ -16,8 +16,8 @@ final class SharedMachineSession {
     @ObservationIgnored private var preferenceSubscriptions: [() -> Void] = []
     private var references = 0
     private var invalidated = false
-    /// Moves whenever the link goes away. `opened` lands a turn later, since `hold` announces a connected link before
-    /// it returns the lease, so a close in between must keep it from calling a dead link connected.
+    /// Moves whenever the link goes away. `hold` reports a connected link before it returns the lease, so `opened`
+    /// runs a turn later, and a close in between must not leave a dead link marked connected.
     @ObservationIgnored private var linkEpoch = 0
     private struct ChatEntry {
         let model: ChatModel

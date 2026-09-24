@@ -135,8 +135,8 @@ struct SubagentListPage: View {
     }
 }
 
-/// The lists of the sub-agent page, kept until the chat's subagent revision moves. `items` is only read when they are
-/// derived again, so a page that holds them does not observe the words the main thread streams.
+/// Keeps the sub-agent page's lists until the chat's subagent revision moves. It reads `items` only to derive them
+/// again, so the page does not observe every word the main thread streams.
 @MainActor final class SubagentListDerivation {
     struct Lists {
         var active: [JSONValue] = []

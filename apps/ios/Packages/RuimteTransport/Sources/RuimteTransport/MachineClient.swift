@@ -7,8 +7,8 @@ import os
     func request(_ type: String, payload: JSONValue, onResult: @escaping @MainActor @Sendable (JSONValue) -> Void)
         async throws -> JSONValue
     func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void
-    /// Hands over the raw payload of an event this app could not validate, which a newer machine may send, so what
-    /// depends on the stream can read its state again instead of waiting on an event that never arrives.
+    /// Hands over the raw payload of an event that failed validation, which a newer machine may send. A subscriber
+    /// can then read its state again instead of waiting on an event that never arrives.
     func subscribeRejected(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void
     func acquireSubscription(start: String, stop: String, payload: JSONValue, stopPayload: JSONValue)
         -> MachineSubscription
@@ -123,9 +123,9 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
 }
 
 @MainActor public final class MachineClient: MachineRequesting {
-    /// The requests that only read, the only ones a timer may give up on. A mutation may still be running on the
-    /// machine (a push behind a slow hook, a large send), so it ends only when the link closes, the way the desktop
-    /// client has no timer at all, and a person pressing again never starts it twice.
+    /// Only requests that read may time out. A mutation may still be running on the machine, such as a push behind a
+    /// slow hook, and a timeout would invite a second press that runs it twice. It ends when the link closes, as on
+    /// the desktop, which has no request timer.
     public static let timedRequests: Set<WireRequest> = [
         .serverHello, .serverPing, .pushAttention, .sessionAttach, .sessionList, .browserDevServers, .deviceList,
         .deviceDetail, .chatHistory, .chatAttach, .chatTurnDiff, .chatForkInfo, .chatSubagent, .chatList, .skillsList,
