@@ -11,7 +11,7 @@ export type ProgressSink = (phase: GitActionPhase, line: string) => void;
  * One action while it runs: the git that is going right now, so a cancel can end it, and whether a
  * cancel already came in, so the step after this one never starts.
  */
-class Job {
+export class Job {
     canceled = false;
     private kill: (() => void) | null = null;
 

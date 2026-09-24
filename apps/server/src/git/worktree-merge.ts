@@ -1,6 +1,7 @@
 import type { GitActionPhase, WorktreeMergePayload, WorktreeMergeResult } from '@ruimte/contracts';
-import type { ProgressSink } from './actions.ts';
-import { abortOperation, conflictedFiles, gitPathExists } from './conflict.ts';
+import { rm } from 'node:fs/promises';
+import { Job, type ProgressSink } from './actions.ts';
+import { abortOperation, conflictedFiles, gitPath, gitPathExists, operationOf } from './conflict.ts';
 import { resolveBase } from './status.ts';
 import { GitError, git, runGit, streamGit } from './run.ts';
 import type { Worktrees } from './worktrees.ts';
@@ -50,9 +51,10 @@ export interface MergeLimits {
     abortOnConflict?: boolean;
 }
 
-class Job {
-    canceled = false;
-}
+// A step that runs this long says so, beside the cancel; nothing ends it without a person.
+const WAIT_NOTICE_MS = 20_000;
+
+export const STILL_WAITING = 'Still waiting on git. A hook or a prompt may be holding it up; cancel to stop it.';
 
 const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;
 
@@ -64,18 +66,18 @@ export class WorktreeMerge {
     private readonly running = new Map<string, Job>();
     private readonly worktrees: Worktrees;
     private readonly agents: WorktreeAgents;
+    private readonly waitNotice: number;
 
-    constructor(worktrees: Worktrees, agents: WorktreeAgents) {
+    /* `waitNotice` is the milliseconds a step runs before it says it is still waiting. */
+    constructor(worktrees: Worktrees, agents: WorktreeAgents, options: { waitNotice?: number } = {}) {
         this.worktrees = worktrees;
         this.agents = agents;
+        this.waitNotice = options.waitNotice ?? WAIT_NOTICE_MS;
     }
 
-    /* Stops a merge before its next step; the merge step itself runs to its end once started. */
+    /* Ends the git that runs now, and no step after it starts. */
     cancel(actionId: string): void {
-        const job = this.running.get(actionId);
-        if (job) {
-            job.canceled = true;
-        }
+        this.running.get(actionId)?.cancel();
     }
 
     async merge(payload: WorktreeMergePayload, sink: ProgressSink, limits: MergeLimits = {}): Promise<WorktreeMergeResult> {
@@ -107,7 +109,21 @@ export class WorktreeMerge {
                 throw new GitError('git-failed', 'The merge was canceled.');
             }
             sink(phase, '');
-            const result = await streamGit([...settings, ...args], cwd, { onLine: (line) => sink(phase, line) });
+            const notice = setTimeout(() => sink(phase, STILL_WAITING), this.waitNotice);
+            const result = await streamGit([...settings, ...args], cwd, {
+                onLine: (line) => sink(phase, line),
+                onSpawn: (kill) => job.hold(kill),
+                group: true
+            }).finally(() => clearTimeout(notice));
+            if (job.canceled) {
+                const waiting = await operationOf(cwd);
+                throw new GitError(
+                    'git-failed',
+                    waiting === null
+                        ? 'The merge was canceled.'
+                        : `The merge was canceled halfway, and a ${waiting} waits in ${cwd}. Finish or take it back there.`
+                );
+            }
             const text = `${result.stdout}${result.stderr}`.trim();
             output.push(text);
             return { code: result.code, text };
@@ -148,7 +164,7 @@ export class WorktreeMerge {
             throw new GitError('target-not-checked-out', `${into} is not checked out anywhere; ${project?.path ?? main} is on ${on}.`);
         }
         settings = settingsFor(into);
-        const busy = (await this.worktrees.operationIn(target.path)) ?? ((await gitPathExists(target.path, 'SQUASH_MSG')) ? 'squash' : null);
+        const busy = (await this.worktrees.operationIn(target.path)) ?? ((await squashWaits(target.path)) ? 'squash' : null);
         if (busy !== null) {
             throw new GitError('target-busy', `A ${busy} waits halfway in ${target.path}. Finish or abort it there first.`);
         }
@@ -188,6 +204,11 @@ export class WorktreeMerge {
             const subject = payload.subject?.trim() || `Work in ${branch}`;
             await must('stage', ['add', '--all'], entry.path);
             await must('commit', ['commit', '--message', subject, ...messageBody(payload.body)], entry.path);
+        }
+
+        // Stopping and committing the agents takes a while, and a person may switch the target's branch meanwhile.
+        if ((await git(['symbolic-ref', '-q', 'HEAD'], target.path))?.trim() !== `refs/heads/${into}`) {
+            throw new GitError('target-not-checked-out', `${target.path} is no longer on ${into}, so nothing was merged into it.`);
         }
 
         const ahead = Number.parseInt((await git(['rev-list', '--count', `refs/heads/${into}..refs/heads/${branch}`], main))?.trim() ?? '0', 10) || 0;
@@ -248,10 +269,16 @@ export class WorktreeMerge {
             }
             if (squash) {
                 // A branch whose content the target has already squashes into nothing, and a commit of nothing fails.
-                const staged = (await runGit(['diff', '--cached', '--quiet'], target.path)).code !== 0;
+                const staged = await hasStaged(target.path);
                 if (staged) {
                     const subject = payload.subject?.trim() || `Merge ${branch}`;
                     await must('commit', ['commit', '--message', subject, ...messageBody(payload.body)], target.path);
+                } else {
+                    // Git prepares the message even for a squash of nothing, and it would open as the draft of the next commit.
+                    const message = await gitPath(target.path, 'SQUASH_MSG');
+                    if (message !== null) {
+                        await rm(message, { force: true });
+                    }
                 }
                 squashed = true;
                 summary = staged ? `Squashed ${branch} into ${into}.` : `${into} already has everything in ${branch}.`;
@@ -289,5 +316,12 @@ export class WorktreeMerge {
         return (await runGit(['rev-parse', '--verify', '--quiet', `refs/heads/${local}`], main)).code === 0 ? local : null;
     }
 }
+
+const hasStaged = async (cwd: string): Promise<boolean> => (await runGit(['diff', '--cached', '--quiet'], cwd)).code !== 0;
+
+/* A squash that stopped: its prepared message with something still to settle or to commit. A message
+   alone is one git left behind, and counting it would refuse every merge after it. */
+const squashWaits = async (cwd: string): Promise<boolean> =>
+    (await gitPathExists(cwd, 'SQUASH_MSG')) && ((await conflictedFiles(cwd)).length > 0 || (await hasStaged(cwd)));
 
 const messageBody = (body: string | undefined): string[] => (body === undefined || body.trim() === '' ? [] : ['--message', body.trim()]);

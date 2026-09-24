@@ -278,4 +278,45 @@ describe('WorktreeMerge', () => {
         expect(agents.stopped).toEqual(['chat-lexer']);
         expect(await readFile(join(repo, 'last-words.txt'), 'utf8')).toBe('written while stopping\n');
     });
+
+    test('a target that switched branches while the agent was stopped is refused and neither branch moves', async () => {
+        const path = await lexer();
+        agents.rows = [{ nodeId: 'chat-lexer', working: true, live: true }];
+        agents.onStop = async () => {
+            await gitIn(repo, ['switch', '--quiet', '--create', 'elsewhere']);
+        };
+        const main = (await gitIn(repo, ['rev-parse', 'main'])).trim();
+
+        await expect(run(path, { stopAgent: true })).rejects.toMatchObject({ code: 'target-not-checked-out' });
+
+        expect((await gitIn(repo, ['rev-parse', 'main'])).trim()).toBe(main);
+        expect((await gitIn(repo, ['rev-parse', 'elsewhere'])).trim()).toBe(main);
+    });
+
+    test('a second squash of the same branch leaves no prepared message behind, and the next merge is not refused', async () => {
+        const path = await lexer();
+        await run(path, { strategy: 'squash', subject: 'Lexer' });
+        const squashed = (await gitIn(repo, ['rev-parse', 'main'])).trim();
+
+        const again = await run(path, { strategy: 'squash', subject: 'Lexer' });
+
+        expect(again.summary).toBe('main already has everything in lexer.');
+        expect(await exists(join(repo, '.git', 'SQUASH_MSG'))).toBe(false);
+        expect((await gitIn(repo, ['rev-parse', 'main'])).trim()).toBe(squashed);
+        await expect(run(path, { strategy: 'squash', subject: 'Lexer' })).resolves.toMatchObject({ into: 'main' });
+    });
+
+    test('a prepared message with nothing staged or unmerged is not a squash that waits', async () => {
+        const path = await lexer();
+        await writeFile(join(repo, '.git', 'SQUASH_MSG'), 'left behind\n');
+        await expect(run(path)).resolves.toMatchObject({ summary: 'Merged lexer into main.' });
+    });
+
+    test('a squash that waits with staged work is still refused', async () => {
+        const path = await lexer();
+        await writeFile(join(repo, '.git', 'SQUASH_MSG'), 'halfway\n');
+        await writeFile(join(repo, 'README.md'), 'staged\n');
+        await gitIn(repo, ['add', 'README.md']);
+        await expect(run(path)).rejects.toMatchObject({ code: 'target-busy' });
+    });
 });
