@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { isApplePlatform } from '@/desktop/bridge';
 import { formatShortcut } from '@/ui/shortcut';
@@ -48,9 +48,11 @@ const measureHints = (apple: boolean): PlacedHint[] => {
 export function ShortcutHints() {
     const [shown, setShown] = useState(false);
     const [hints, setHints] = useState<PlacedHint[]>([]);
+    const holdRef = useRef<ModifierHold | null>(null);
 
     useEffect(() => {
         const hold = new ModifierHold(isApplePlatform(), setShown);
+        holdRef.current = hold;
         const onKeyDown = (e: KeyboardEvent): void => hold.keyDown(e);
         const onKeyUp = (e: KeyboardEvent): void => hold.keyUp(e);
         // A click or a zoom with the modifier down is a gesture, not someone looking for a shortcut.
@@ -79,6 +81,11 @@ export function ShortcutHints() {
         let frame = 0;
         let last = '';
         const measure = (): void => {
+            // Focus that moved into a page takes the key-up with it, so the embedder never hears the modifier let go.
+            if (document.activeElement?.tagName === 'WEBVIEW') {
+                holdRef.current?.cancel();
+                return;
+            }
             const next = measureHints(apple);
             const signature = JSON.stringify(next);
             if (signature !== last) {
