@@ -1,4 +1,4 @@
-import type { AgentKind } from '@ruimte/contracts';
+import type { AgentKind, ComputerApproval } from '@ruimte/contracts';
 import { orderPrompts, type PendingPrompt } from '@/prompts/logic/prompts';
 import { isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '@/prompts/logic/subjects';
 import type { CanvasNode } from '@/state/canvas';
@@ -21,6 +21,8 @@ export interface CanvasPromptsInput {
     chats: ChatsById;
     /* The agentsApprovals setting: off, a terminal's permission request is only answered in its TUI. */
     approvalsOffered: boolean;
+    /* The cards of this machine about operating its apps; each belongs to the chat or terminal whose agent asks. */
+    computer: readonly ComputerApproval[];
     /* When each waiting terminal was first seen waiting, by session key, as the previous call returned it. */
     waitingSince: ReadonlyMap<string, number>;
 }
@@ -48,13 +50,21 @@ export const pendingPromptsOf = (chat: Pick<ChatState, 'structure' | 'order'> | 
  * A waiting terminal is dated by when it was first seen waiting rather than by the agent's
  * `updatedAt`, which every later hook of the same prompt moves forward.
  */
-export const canvasPrompts = ({ nodes, endpointId, sessions, chats, approvalsOffered, waitingSince }: CanvasPromptsInput): CanvasPrompts => {
+export const canvasPrompts = ({ nodes, endpointId, sessions, chats, approvalsOffered, computer, waitingSince }: CanvasPromptsInput): CanvasPrompts => {
     const prompts: CanvasPrompt[] = [];
     const since = new Map(waitingSince);
     const add = (node: CanvasPromptsInput['nodes'][number], subject: PromptSubject, provider: AgentKind | null, surface: CanvasPrompt['surface']) =>
         prompts.push({ id: promptIdOf(subject), subject, title: node.title, provider, surface });
     for (const node of nodes) {
         const key = endpointKey(endpointId, node.id);
+        if (node.kind === 'chat' || node.kind === 'terminal') {
+            const provider = (node.kind === 'chat' ? chats[key]?.info.provider : sessions[key]?.agent?.kind) ?? node.provider ?? null;
+            for (const request of computer) {
+                if (request.nodeId === node.id) {
+                    add(node, { kind: 'computer-approval', nodeId: node.id, request }, provider, node.kind);
+                }
+            }
+        }
         if (node.kind === 'chat') {
             const chat = chats[key];
             for (const item of pendingPromptsOf(chat)) {
@@ -104,8 +114,17 @@ export const stackFront = (ids: readonly string[], activeId: string | null, last
     return ids[Math.min(Math.max(lastIndex, 0), ids.length - 1)]!;
 };
 
-const payloadOf = (subject: PromptSubject): unknown =>
-    subject.kind === 'chat' ? subject.item : subject.kind === 'terminal-approval' ? subject.request : subject.since;
+const payloadOf = (subject: PromptSubject): unknown => {
+    switch (subject.kind) {
+        case 'chat':
+            return subject.item;
+        case 'terminal-approval':
+        case 'computer-approval':
+            return subject.request;
+        case 'terminal-waiting':
+            return subject.since;
+    }
+};
 
 /* Whether a new reading draws the same stack, so a word streaming into a chat does not redraw its cards. */
 export const samePrompts = (a: readonly CanvasPrompt[], b: readonly CanvasPrompt[]): boolean =>

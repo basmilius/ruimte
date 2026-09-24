@@ -1399,6 +1399,9 @@ export const PERSON_PROMPT_CLIENTS: PromptClients = {
     sessions: {
         answerApproval: async (terminalId, requestId, choiceId) =>
             (await performAsPerson('terminal.answerApproval', { terminalId, requestId, choiceId })).accepted
+    },
+    computer: {
+        answer: async (requestId, choice) => (await performAsPerson('computer.answerApproval', { requestId, choice })).accepted
     }
 };
 

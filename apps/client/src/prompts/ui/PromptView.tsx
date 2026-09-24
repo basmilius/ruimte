@@ -67,6 +67,26 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
         );
     }
 
+    if (subject.kind === 'computer-approval') {
+        const { request } = subject;
+        const words = { node: request.nodeTitle?.trim() || t('computer.unnamed'), project: request.projectName ?? '', app: request.app.name };
+        return (
+            <PromptCard
+                kind="approval"
+                heading={t('computer.heading', { app: request.app.name })}
+                top={top}
+                busy={sending}
+                disabled={disabled}
+                error={error}
+                actions={<ApprovalActions buttons={buttons} locked={locked} sending={sending} />}
+            >
+                <p className="text-sm text-text">{request.projectName === null ? t('computer.bodyNoProject', words) : t('computer.body', words)}</p>
+                <p className="break-all font-mono text-xs text-text-muted select-text">{request.app.bundleId}</p>
+                <p className="text-xs text-text-muted">{t('computer.scope', { app: request.app.name })}</p>
+            </PromptCard>
+        );
+    }
+
     const { item } = subject;
     const question = item.kind === 'question' ? item.questions[Math.min(draft.index, item.questions.length - 1)]! : null;
     const answer = question ? questionAnswer(draft, question) : null;

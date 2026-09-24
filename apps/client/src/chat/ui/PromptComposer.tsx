@@ -1,17 +1,21 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, Hand, MessageCircleQuestionMark } from 'lucide-react';
 import { PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { focusPromptStart } from '@/prompts/logic/focus';
-import { nextPrompt, type PendingPrompt } from '@/prompts/logic/prompts';
-import { answerPrompt, type PromptSubject } from '@/prompts/logic/subjects';
+import { orderPrompts, type PendingPrompt } from '@/prompts/logic/prompts';
+import { answerPrompt, isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '@/prompts/logic/subjects';
 import { useFocusAfterAnswer } from '@/prompts/logic/useFocusAfterAnswer';
 import { usePromptSession } from '@/prompts/logic/usePromptSession';
 import { PromptView } from '@/prompts/ui/PromptView';
+import { useNodeComputerApprovals } from '@/state/computer';
+import { useEndpointId } from '@/state/keys';
 import { Icon } from '@/ui/Icon';
 
-const requestIdOf = (item: PendingPrompt): string => item.requestId;
+/* The one being read stays in front; otherwise blocking before optional, oldest first, as everywhere else. */
+const pickSubject = (waiting: readonly PromptSubject[], activeId: string | null): PromptSubject | null =>
+    waiting.find((subject) => promptIdOf(subject) === activeId) ?? orderPrompts(waiting, isBlockingSubject, promptCreatedAt)[0] ?? null;
 
 export function PromptComposer({
     chatId,
@@ -37,11 +41,20 @@ export function PromptComposer({
     children: ReactNode;
 }) {
     const { t } = useTranslation('chat');
-    const session = usePromptSession({ prompts: pending, idOf: requestIdOf, pick: nextPrompt, disabled });
+    const endpointId = useEndpointId();
+    const computer = useNodeComputerApprovals(endpointId, chatId);
+    // A card about operating an app waits in the chat beside the CLI's own requests.
+    const subjects = useMemo(
+        (): PromptSubject[] => [
+            ...pending.map((item): PromptSubject => ({ kind: 'chat', nodeId: chatId, item })),
+            ...computer.map((request): PromptSubject => ({ kind: 'computer-approval', nodeId: chatId, request }))
+        ],
+        [pending, computer, chatId]
+    );
+    const session = usePromptSession({ prompts: subjects, idOf: promptIdOf, pick: pickSubject, disabled });
     const ref = useRef<HTMLDivElement>(null);
     const { active, activeId: activeKey } = session;
     const expanded = !!active;
-    const subject: PromptSubject | null = active && { kind: 'chat', nodeId: chatId, item: active };
     const refocus = useFocusAfterAnswer(activeKey, ref, () => onAllAnswered?.());
 
     useEffect(() => {
@@ -52,28 +65,32 @@ export function PromptComposer({
 
     return (
         <div ref={ref} onPointerDownCapture={session.onPointerDownCapture} onClickCapture={session.onClickCapture}>
-            {active && subject && elsewhere && (
+            {active && elsewhere && (
                 <button
                     type="button"
                     className="flex w-full items-center gap-2 px-3.5 py-3 text-left text-sm text-text-muted hover:text-text"
                     onClick={() => bringPromptToFront(chatId)}
                 >
-                    <Icon icon={active.kind === 'approval' ? Hand : MessageCircleQuestionMark} size={16} className="shrink-0 text-status-needs-you" />
+                    <Icon
+                        icon={active.kind !== 'chat' || active.item.kind === 'approval' ? Hand : MessageCircleQuestionMark}
+                        size={16}
+                        className="shrink-0 text-status-needs-you"
+                    />
                     <span className="grow">{t('composer.waitingBelow')}</span>
                     <Icon icon={ArrowDown} size={16} className="shrink-0" />
                 </button>
             )}
-            {active && subject && !elsewhere && (
+            {active && !elsewhere && (
                 <div hidden={!expanded}>
                     <PromptView
                         key={activeKey}
-                        subject={subject}
-                        draft={session.draftOf(active.requestId)}
-                        onDraft={(draft) => session.setDraft(active.requestId, draft)}
+                        subject={active}
+                        draft={session.draftOf(promptIdOf(active))}
+                        onDraft={(draft) => session.setDraft(promptIdOf(active), draft)}
                         onAction={(action) => {
                             refocus.hold();
                             void session
-                                .act(active, () => answerPrompt(subject, action, { ...PERSON_PROMPT_CLIENTS, sessions: null }))
+                                .act(active, () => answerPrompt(active, action, { ...PERSON_PROMPT_CLIENTS, sessions: null }))
                                 .then((result) => {
                                     if (result === 'failed') {
                                         refocus.release();
@@ -85,7 +102,7 @@ export function PromptComposer({
                         denyReason={denyReason}
                         disabled={disabled}
                         sending={session.sending}
-                        error={session.errorOf(active.requestId)}
+                        error={session.errorOf(promptIdOf(active))}
                     />
                 </div>
             )}

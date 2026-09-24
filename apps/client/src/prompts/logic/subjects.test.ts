@@ -35,6 +35,12 @@ const recorder = (accepted = true) => {
                 calls.push(['answerApproval', ...args]);
                 return accepted;
             }
+        },
+        computer: {
+            answer: async (...args) => {
+                calls.push(['computerAnswer', ...args]);
+                return accepted;
+            }
         }
     };
     return { calls, clients };
@@ -92,6 +98,48 @@ describe('answering a subject', () => {
             answerPrompt({ kind: 'terminal-waiting', nodeId: 'terminal-1', since: 1 }, { kind: 'choose', choiceId: 'allow' }, clients)
         ).rejects.toThrow();
         expect(calls).toEqual([]);
+    });
+});
+
+describe('a computer use card', () => {
+    const card: PromptSubject = {
+        kind: 'computer-approval',
+        nodeId: 'chat-1',
+        request: {
+            requestId: 'computer-1',
+            nodeId: 'chat-1',
+            surface: 'chat',
+            nodeTitle: 'Docs',
+            projectId: 'p1',
+            projectName: 'Ruimte',
+            app: { name: 'TextEdit', bundleId: 'com.example.textedit' },
+            command: 'state',
+            createdAt: 7,
+            expiresAt: 600_007
+        }
+    };
+
+    test('offers Deny, Always allow and Allow this time, the last as the primary', () => {
+        expect(approvalButtons(card, '').map((button) => [button.label, button.primary, button.action])).toEqual([
+            ['Deny', false, { kind: 'choose', choiceId: 'deny' }],
+            ['Always allow', false, { kind: 'choose', choiceId: 'always' }],
+            ['Allow this time', true, { kind: 'choose', choiceId: 'once' }]
+        ]);
+    });
+
+    test('answers the machine with the choice, and a card that is gone is an error', async () => {
+        const { calls, clients } = recorder();
+        await answerPrompt(card, { kind: 'choose', choiceId: 'always' }, clients);
+        expect(calls).toEqual([['computerAnswer', 'computer-1', 'always']]);
+        await expect(answerPrompt(card, { kind: 'choose', choiceId: 'once' }, recorder(false).clients)).rejects.toThrow('already answered');
+        await expect(answerPrompt(card, { kind: 'choose', choiceId: 'allow' }, clients)).rejects.toThrow();
+        expect(calls).toHaveLength(1);
+    });
+
+    test('blocks, and is dated by when the agent first asked', () => {
+        expect(isBlockingSubject(card)).toBe(true);
+        expect(promptCreatedAt(card)).toBe(7);
+        expect(promptIdOf(card)).toBe('computer:chat-1:computer-1');
     });
 });
 

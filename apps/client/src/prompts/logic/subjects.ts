@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { ApprovalChoice, ApprovalRequest } from '@ruimte/contracts';
+import type { ApprovalChoice, ApprovalRequest, ComputerApproval, ComputerApprovalChoice } from '@ruimte/contracts';
 import { isBlockingPrompt, type PendingPrompt, type PromptAction } from '@/prompts/logic/prompts';
 
 /* What a prompt card draws, whatever asked it. The chat's items pass through unchanged. */
@@ -8,7 +8,9 @@ export type PromptSubject =
     // A terminal's permission request, drawn as a chat's: the summary as the command, its choices as the buttons.
     | { kind: 'terminal-approval'; nodeId: string; request: ApprovalRequest }
     // Only its TUI can answer; the card offers the way there.
-    | { kind: 'terminal-waiting'; nodeId: string; since: number };
+    | { kind: 'terminal-waiting'; nodeId: string; since: number }
+    // An agent in a chat or a terminal wants to operate an app of the machine; the machine asks, not the CLI.
+    | { kind: 'computer-approval'; nodeId: string; request: ComputerApproval };
 
 /* The requests a subject can send, as the clients that send them have them. */
 export interface PromptClients {
@@ -20,7 +22,14 @@ export interface PromptClients {
     sessions: {
         answerApproval(nodeId: string, requestId: string, choiceId: string): Promise<boolean>;
     } | null;
+    computer: {
+        answer(requestId: string, choice: ComputerApprovalChoice): Promise<boolean>;
+    } | null;
 }
+
+const COMPUTER_CHOICES: readonly string[] = ['once', 'always', 'deny'] satisfies ComputerApprovalChoice[];
+
+const isComputerChoice = (choiceId: string): choiceId is ComputerApprovalChoice => COMPUTER_CHOICES.includes(choiceId);
 
 export interface ApprovalButtonSpec {
     id: string;
@@ -39,6 +48,8 @@ export const promptIdOf = (subject: PromptSubject): string => {
             return `terminal:${subject.nodeId}:${subject.request.requestId}`;
         case 'terminal-waiting':
             return `waiting:${subject.nodeId}`;
+        case 'computer-approval':
+            return `computer:${subject.nodeId}:${subject.request.requestId}`;
     }
 };
 
@@ -50,6 +61,8 @@ export const promptCreatedAt = (subject: PromptSubject): number => {
             return subject.request.createdAt;
         case 'terminal-waiting':
             return subject.since;
+        case 'computer-approval':
+            return subject.request.createdAt;
     }
 };
 
@@ -64,6 +77,14 @@ export const approvalButtons = (subject: PromptSubject, reason: string): Approva
         return [...subject.request.choices]
             .sort((a, b) => CHOICE_ORDER[a.kind] - CHOICE_ORDER[b.kind])
             .map((choice) => ({ id: choice.id, label: choice.label, primary: choice.kind === 'allow', action: { kind: 'choose', choiceId: choice.id } }));
+    }
+    if (subject.kind === 'computer-approval') {
+        const choose = (choiceId: ComputerApprovalChoice) => ({ kind: 'choose', choiceId }) as const;
+        return [
+            { id: 'deny', label: i18next.t('prompts:computer.deny'), primary: false, action: choose('deny') },
+            { id: 'always', label: i18next.t('prompts:computer.always'), primary: false, action: choose('always') },
+            { id: 'once', label: i18next.t('prompts:computer.once'), primary: true, action: choose('once') }
+        ];
     }
     if (subject.kind !== 'chat' || subject.item.kind !== 'approval') {
         return [];
@@ -113,6 +134,16 @@ export const answerPrompt = async (subject: PromptSubject, action: PromptAction,
     }
     if (subject.kind === 'terminal-waiting' || action.kind !== 'choose') {
         throw new Error(i18next.t('prompts:error.terminalOnly'));
+    }
+    if (subject.kind === 'computer-approval') {
+        const { computer } = clients;
+        if (computer === null) {
+            throw new Error(i18next.t('prompts:error.notConnected'));
+        }
+        if (!isComputerChoice(action.choiceId) || !(await computer.answer(subject.request.requestId, action.choiceId))) {
+            throw new Error(i18next.t('prompts:error.expired'));
+        }
+        return;
     }
     const { sessions } = clients;
     if (sessions === null) {

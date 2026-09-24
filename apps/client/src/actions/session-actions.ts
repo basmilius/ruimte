@@ -663,6 +663,14 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
                 .catch(() => false);
             return { output: { terminalId, terminal, accepted } };
         },
+        'computer.answerApproval': async ({ requestId, choice }) => {
+            // Gone already is an answer, not a failure: another client was first, or the card ran out.
+            const accepted = await connected()
+                .request('computer.answer', { requestId, choice })
+                .then((result) => result.accepted)
+                .catch(() => false);
+            return { output: { requestId, accepted } };
+        },
         'terminal.stop': async ({ terminalId }, call) => {
             const terminal = terminalNamed(terminalId, call);
             const state = machine.terminal(terminalId);

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentInfo, ApprovalRequest, ChatInfo, ChatItem } from '@ruimte/contracts';
+import type { AgentInfo, ApprovalRequest, ChatInfo, ChatItem, ComputerApproval } from '@ruimte/contracts';
 import { PROMPT_SAMPLES } from '@/prompts/logic/prompts.fixtures';
 import type { ChatsById } from '@/state/chats';
 import { endpointKey } from '@/state/keys';
@@ -50,8 +50,22 @@ const input = (overrides: Partial<CanvasPromptsInput> = {}): CanvasPromptsInput 
         [key('merge')]: chatOf([{ ...approval, id: 'merge-a', requestId: 'merge-a', createdAt: 300 }])
     },
     approvalsOffered: true,
+    computer: [],
     waitingSince: new Map(),
     ...overrides
+});
+
+const computerCard = (nodeId: string, createdAt: number): ComputerApproval => ({
+    requestId: `computer-${nodeId}`,
+    nodeId,
+    surface: 'chat',
+    nodeTitle: nodeId,
+    projectId: 'p1',
+    projectName: 'Ruimte',
+    app: { name: 'TextEdit', bundleId: 'com.example.textedit' },
+    command: 'state',
+    createdAt,
+    expiresAt: createdAt + 600_000
 });
 
 describe('canvasPrompts', () => {
@@ -68,6 +82,18 @@ describe('canvasPrompts', () => {
             ['chat', 'codex'],
             ['terminal', 'claude'],
             ['chat', 'codex']
+        ]);
+    });
+
+    test('a computer use card stands on the chat or terminal whose agent asks, blocking like a permission', () => {
+        const { prompts } = canvasPrompts(input({ computer: [computerCard('docs', 10), computerCard('ios', 20), computerCard('elsewhere', 5)] }));
+        expect(prompts.map((prompt) => [prompt.subject.kind, prompt.title, prompt.surface])).toEqual([
+            ['computer-approval', 'docs', 'chat'],
+            ['computer-approval', 'ios', 'terminal'],
+            ['terminal-approval', 'api', 'terminal'],
+            ['chat', 'merge', 'chat'],
+            ['terminal-waiting', 'ios', 'terminal'],
+            ['chat', 'docs', 'chat']
         ]);
     });
 

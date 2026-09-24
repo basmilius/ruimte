@@ -6,6 +6,7 @@ import {
     ChatCheckpointDiffSchema,
     ChatSubagentSourceSchema,
     ChatSubagentStatusSchema,
+    ComputerApprovalChoiceSchema,
     ContextSourceSchema,
     DeviceReferenceSchema,
     DiagramDirectionSchema,
@@ -1782,6 +1783,17 @@ export const ACTION_DEFINITIONS = {
             // On this machine, outside the project folder; null when nobody has the page open.
             path: z.string().nullable()
         })
+    },
+    'computer.answerApproval': {
+        title: 'Answer a computer use card',
+        description:
+            'Lets an agent into an app for as long as its chat or terminal session runs, or always on this machine, or keeps it out. A terminal stays out whatever the answer.',
+        effect: 'external',
+        domain: 'machine',
+        actors: PERSON,
+        input: z.object({ requestId: z.string().min(1), choice: ComputerApprovalChoiceSchema }),
+        // False when the card was gone already: another client was first, or its time ran out.
+        output: z.object({ requestId: z.string(), accepted: z.boolean() })
     },
     'computer.apps': {
         title: 'List apps',

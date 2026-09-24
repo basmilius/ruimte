@@ -45,5 +45,15 @@
     "waiting_other": "{{count}} requests waiting",
     "question": "Question {{index}} of {{total}}",
     "draftSaved": "Draft saved"
+  },
+  "computer": {
+    "heading": "Let an agent use {{app}}?",
+    "body": "{{node}} in {{project}} wants to see and operate {{app}} on this machine.",
+    "bodyNoProject": "{{node}} wants to see and operate {{app}} on this machine.",
+    "unnamed": "An agent",
+    "scope": "This time lasts while this session runs. Always lets every agent on this machine use {{app}}.",
+    "once": "Allow this time",
+    "always": "Always allow",
+    "deny": "Deny"
   }
 }
