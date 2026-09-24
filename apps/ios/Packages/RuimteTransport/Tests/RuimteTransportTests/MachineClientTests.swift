@@ -138,6 +138,24 @@ import Testing
         #expect(client.pendingRequestCount == 0)
     }
 
+    @Test func aMutationWaitsForTheLinkInsteadOfATimer() async throws {
+        let clock = RequestClock()
+        var client: MachineClient!
+        client = MachineClient(send: { _ in #expect(clock.actions.isEmpty) }, scheduler: clock, connected: true)
+        let push = Task {
+            try await client.request(
+                "git.action",
+                payload: .object(["cwd": .string("/work"), "actionId": .string("push-1"), "kind": .string("push")]))
+        }
+        while client.pendingRequestCount == 0 { await Task.yield() }
+        clock.fire()
+        #expect(client.pendingRequestCount == 1)
+        client.disconnected()
+        await #expect(throws: MachineClientError.disconnected) { try await push.value }
+        #expect(!MachineClient.timedRequests.contains(.chatSend))
+        #expect(MachineClient.timedRequests.contains(.chatList))
+    }
+
     @Test func validatesRequestsAndFansOutEventsWithoutIDs() async throws {
         var sends = 0
         let client = MachineClient(send: { _ in sends += 1 }, connected: true)

@@ -116,6 +116,19 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
 }
 
 @MainActor public final class MachineClient: MachineRequesting {
+    /// The requests that only read, the only ones a timer may give up on. A mutation may still be running on the
+    /// machine (a push behind a slow hook, a large send), so it ends only when the link closes, the way the desktop
+    /// client has no timer at all, and a person pressing again never starts it twice.
+    public static let timedRequests: Set<WireRequest> = [
+        .serverHello, .serverPing, .pushAttention, .sessionAttach, .sessionList, .browserDevServers, .deviceList,
+        .deviceDetail, .chatHistory, .chatAttach, .chatTurnDiff, .chatForkInfo, .chatSubagent, .chatList, .skillsList,
+        .providerList, .projectSidebar, .projectList, .projectOpen, .projectSettings, .drawingPaths, .drawingOpen,
+        .diagramLayout, .diagramOpen, .fsBrowse, .fsSearch, .fsGrep, .fsList, .fsRead, .bytesRead, .gitWorktreeList,
+        .gitStatus, .gitDiff, .gitRefs, .gitRepos, .gitLog, .gitConflicts, .gitConflict, .gitCapabilities,
+        .usageSummary, .usageLimits, .processesListAlerts, .endpointInfo, .authSessions, .taskList, .agentChildren,
+        .planList,
+    ]
+
     private struct Pending {
         let type: WireRequest
         let continuation: CheckedContinuation<JSONValue, Error>
@@ -206,14 +219,16 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
                     return
                 }
                 pending[id] = Pending(type: requestType, continuation: continuation, onResult: onResult)
-                let cancel = scheduler.after(milliseconds: timeoutMilliseconds) { [weak self] in
-                    self?.finish(id, result: .failure(MachineClientError.timeout(type)))
-                }
-                if pending[id] != nil {
-                    pending[id]?.cancelTimeout = cancel
-                } else {
-                    cancel()
-                    return
+                if Self.timedRequests.contains(requestType) {
+                    let cancel = scheduler.after(milliseconds: timeoutMilliseconds) { [weak self] in
+                        self?.finish(id, result: .failure(MachineClientError.timeout(type)))
+                    }
+                    if pending[id] != nil {
+                        pending[id]?.cancelTimeout = cancel
+                    } else {
+                        cancel()
+                        return
+                    }
                 }
                 do { try send(text) } catch { finish(id, result: .failure(error)) }
             }
