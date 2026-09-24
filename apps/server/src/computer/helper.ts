@@ -51,6 +51,9 @@ export const locateHelperApp = (options: { platform: string; compiled: boolean; 
     return existsSync(path) ? path : null;
 };
 
+/* How long a request may go without an answer: a `wait` gets the time it waits for on top. */
+export const answerWithinMs = (request: HelperRequest, baseMs: number = REQUEST_TIMEOUT_MS): number => baseMs + (request.timeout ?? 0) * 1000;
+
 /* One request per connection: write the JSON, half-close, read until the helper closes. */
 export const socketTransport = (socketPath: string, timeoutMs: number = REQUEST_TIMEOUT_MS): HelperTransport => ({
     send: (request) =>
@@ -58,7 +61,8 @@ export const socketTransport = (socketPath: string, timeoutMs: number = REQUEST_
             const socket = connect(socketPath);
             const chunks: Buffer[] = [];
             let connected = false;
-            socket.setTimeout(timeoutMs, () => socket.destroy(new Error(`the computer use helper did not answer within ${timeoutMs / 1000} s`)));
+            const limitMs = answerWithinMs(request, timeoutMs);
+            socket.setTimeout(limitMs, () => socket.destroy(new Error(`the computer use helper did not answer within ${limitMs / 1000} s`)));
             socket.on('connect', () => {
                 connected = true;
                 socket.end(JSON.stringify(request));

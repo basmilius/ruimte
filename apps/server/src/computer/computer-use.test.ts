@@ -716,6 +716,20 @@ describe('the hold an agent asks for', () => {
     });
 });
 
+describe('the trees an agent got', () => {
+    test('are told against per agent and app, and forgotten with the node', async () => {
+        const setup = await computerSetup();
+        const { computer } = setup;
+        await letIn(setup);
+        const state = await computer.operate('chat-1', 'state', 'TextEdit', {});
+        expect(computer.treeView('chat-1', state, 'full')).toEqual({ kind: 'full', reason: null });
+        expect(computer.treeView('chat-1', state, 'diff')).toMatchObject({ kind: 'diff', added: 0, gone: 0, changed: 0 });
+        expect(computer.treeView('term-1', state, 'diff')).toMatchObject({ kind: 'full', reason: 'the first state of this app you got' });
+        computer.nodeClosed('chat-1');
+        expect(computer.treeView('chat-1', state, 'diff')).toMatchObject({ kind: 'full' });
+    });
+});
+
 describe('a stop by the person', () => {
     test('reaches the agent that held the session on its next call, state included, once', async () => {
         const setup = await computerSetup();

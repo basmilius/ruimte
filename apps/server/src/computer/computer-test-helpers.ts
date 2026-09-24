@@ -74,6 +74,12 @@ export class FakeHelper implements HelperTransport {
     launchable: RunningApp | null = null;
     // How many requests a helper told to quit still answers, the way the real one does for a moment.
     lingerAfterQuit = 0;
+    // What a state answers, and a state after an action or a wait: change it to have the window change.
+    state: typeof SAMPLE_STATE & Record<string, unknown> = SAMPLE_STATE;
+    // The value `read` answers for an element.
+    readValue = 'hi';
+    // Whether a `wait` saw its condition hold before its timeout.
+    waitMet = true;
     private lingering: number | null = null;
 
     async send(request: HelperRequest): Promise<unknown> {
@@ -138,7 +144,25 @@ export class FakeHelper implements HelperTransport {
             return { ok: false, error: this.error };
         }
         if (request.command === 'state') {
-            return { ok: true, result: SAMPLE_STATE };
+            return { ok: true, result: this.state };
+        }
+        if (request.command === 'read') {
+            return {
+                ok: true,
+                result: { app: SAMPLE_STATE.app, element: request.element, role: 'TextArea', value: this.readValue, frame: { x: 1, y: 2, width: 3, height: 4 } }
+            };
+        }
+        if (request.command === 'wait') {
+            const condition =
+                request.text !== undefined
+                    ? `"${request.text}" to appear`
+                    : request.gone !== undefined
+                      ? `"${request.gone}" to go`
+                      : `element ${request.element} to have the value "${request.value}"`;
+            return {
+                ok: true,
+                result: { app: SAMPLE_STATE.app, met: this.waitMet, condition, waited: this.waitMet ? 1.5 : (request.timeout ?? 0), state: this.state }
+            };
         }
         const launched = request.command === 'open' && this.launchable?.bundleId === request.app ? this.launchable : null;
         if (launched !== null) {
@@ -151,7 +175,7 @@ export class FakeHelper implements HelperTransport {
                 method: 'AXPress',
                 target: { role: 'Button', label: 'Save', window: 'Untitled' },
                 point: { x: 400, y: 300 },
-                ...(request.withState ? { settled: true, state: SAMPLE_STATE } : {})
+                ...(request.withState ? { settled: true, state: this.state } : {})
             }
         };
     }

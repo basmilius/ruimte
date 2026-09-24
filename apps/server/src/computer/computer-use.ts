@@ -23,19 +23,24 @@ import {
     DoctorResultSchema,
     PresenceResultSchema,
     PressResultSchema,
+    ReadResultSchema,
     StateResultSchema,
+    WaitResultSchema,
     type ActionResult,
     type AppCommand,
     type DoctorResult,
     type HelperRequest,
     type HelperSession,
+    type ReadResult,
     type RunningApp,
-    type StateResult
+    type StateResult,
+    type WaitResult
 } from './helper-protocol.ts';
 import { overlayWords, presenceWords } from './overlay-words.ts';
 import { ComputerPresence, type PresenceShow } from './presence.ts';
 import type { ComputerUseStore } from './store.ts';
 import { readProcessTable, runsShells, type ProcessRow, type ProcessTable } from './terminal-apps.ts';
+import { diffTree, rememberTree, type RememberedTree, type TreeView } from './tree-diff.ts';
 
 /* A no to an agent: the code a script branches on, the sentence the model reads, what it may pick instead. */
 export class ComputerRefusal extends CodedError {}
@@ -186,6 +191,22 @@ export interface ComputerUseOptions {
     log?: (message: string) => void;
 }
 
+type HelperAnswer = StateResult | ReadResult | WaitResult | ActionResult;
+
+const ANSWER_SCHEMAS: Record<AppCommand, typeof StateResultSchema | typeof ReadResultSchema | typeof WaitResultSchema | typeof ActionResultSchema> = {
+    state: StateResultSchema,
+    read: ReadResultSchema,
+    wait: WaitResultSchema,
+    click: ActionResultSchema,
+    scroll: ActionResultSchema,
+    type: ActionResultSchema,
+    key: ActionResultSchema,
+    'set-value': ActionResultSchema,
+    open: ActionResultSchema,
+    menu: ActionResultSchema,
+    drag: ActionResultSchema
+};
+
 /* The fields of a helper request an agent's call fills, besides the command and the app. */
 export type OperateInput = Omit<HelperRequest, 'command' | 'app' | 'secret' | 'prompt' | 'state' | 'label' | 'step' | 'ends'>;
 
@@ -223,6 +244,8 @@ export class ComputerUse {
     private awaySince: number | null = null;
     private ruimteActions = 0;
     private confirming: Promise<boolean> | null = null;
+    // The last whole tree each agent got per app. Kept here, not in the helper: its one element map serves every agent, and only the daemon knows which agent got which tree.
+    private readonly trees = new Map<string, RememberedTree>();
 
     constructor(options: ComputerUseOptions) {
         this.home = options.home;
@@ -370,6 +393,11 @@ export class ComputerUse {
     /* A chat or terminal goes; a chat says nothing to an observer when it does. */
     nodeClosed(nodeId: string): void {
         this.stopped.delete(nodeId);
+        for (const key of this.trees.keys()) {
+            if (key.startsWith(`${nodeId}\n`)) {
+                this.trees.delete(key);
+            }
+        }
         this.approvals.forget(nodeId);
         this.presence.closed(nodeId);
     }
@@ -410,6 +438,7 @@ export class ComputerUse {
         this.approvals.dropAll();
         this.approvals.dropThisTime();
         this.stopped.clear();
+        this.trees.clear();
         this.presence.drop();
         await this.helper.quit();
         this.session = null;
@@ -500,12 +529,33 @@ export class ComputerUse {
     }
 
     /*
-     * `state` answers with the tree and the picture; every other command with what it did. `holdMs` is how
-     * long the call may wait for a card or the person's pause together, the default hold without it.
+     * How a state reads to the agent that got it: whole, or only what changed against the last whole
+     * tree it got for that app. Either way this tree is the one the next is told against.
+     */
+    treeView(callerId: string, state: StateResult, want: 'full' | 'diff'): TreeView {
+        const key = `${callerId}\n${state.app.bundleId ?? state.app.pid}`;
+        const after = rememberTree(state);
+        const view: TreeView = want === 'full' ? { kind: 'full', reason: null } : diffTree(this.trees.get(key), after);
+        this.trees.set(key, after);
+        return view;
+    }
+
+    /*
+     * `state` answers with the tree and the picture, `read` with one element whole, `wait` with whether it
+     * happened and the state after; every other command with what it did. `holdMs` is how long the call
+     * may wait for a card or the person's pause together, the default hold without it.
      */
     async operate(callerId: string, command: 'state', query: string, input: OperateInput, holdMs?: number): Promise<StateResult>;
-    async operate(callerId: string, command: Exclude<AppCommand, 'state'>, query: string, input: OperateInput, holdMs?: number): Promise<ActionResult>;
-    async operate(callerId: string, command: AppCommand, query: string, input: OperateInput, holdMs?: number): Promise<StateResult | ActionResult> {
+    async operate(callerId: string, command: 'read', query: string, input: OperateInput, holdMs?: number): Promise<ReadResult>;
+    async operate(callerId: string, command: 'wait', query: string, input: OperateInput, holdMs?: number): Promise<WaitResult>;
+    async operate(
+        callerId: string,
+        command: Exclude<AppCommand, 'state' | 'read' | 'wait'>,
+        query: string,
+        input: OperateInput,
+        holdMs?: number
+    ): Promise<ActionResult>;
+    async operate(callerId: string, command: AppCommand, query: string, input: OperateInput, holdMs?: number): Promise<HelperAnswer> {
         this.presence.calling(callerId);
         try {
             return await this.operateNow(callerId, command, query, input, Math.min(holdMs ?? this.waitMs, MAX_HOLD_MS));
@@ -514,7 +564,7 @@ export class ComputerUse {
         }
     }
 
-    private async operateNow(callerId: string, command: AppCommand, query: string, input: OperateInput, holdMs: number): Promise<StateResult | ActionResult> {
+    private async operateNow(callerId: string, command: AppCommand, query: string, input: OperateInput, holdMs: number): Promise<HelperAnswer> {
         // One budget for the card and the person's pause together, so a held call still ends inside the CLI's own limit.
         const deadline = this.now() + holdMs;
         await this.ready();
@@ -540,9 +590,7 @@ export class ComputerUse {
         await this.holdWhileHeld(deadline);
         const request: HelperRequest = { ...input, command, app: pid === null ? app.bundleId : String(pid) };
         const result = await this.aimed(app.bundleId, () =>
-            this.act<StateResult | ActionResult>(callerId, deadline, () =>
-                command === 'state' ? this.helper.request(request, StateResultSchema) : this.helper.request(request, ActionResultSchema)
-            )
+            this.act<HelperAnswer>(callerId, deadline, () => this.helper.request(request, ANSWER_SCHEMAS[command]))
         );
         // An app that did not run until now is checked once it does, before its tree or anything else of it goes back.
         if (command === 'open' && pid === null && result.app?.bundleId !== undefined) {

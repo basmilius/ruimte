@@ -3,7 +3,7 @@ import { mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeHelper, tempHome } from './computer-test-helpers.ts';
-import { ComputerHelper, HelperFailure, locateHelperApp } from './helper.ts';
+import { answerWithinMs, ComputerHelper, HelperFailure, locateHelperApp } from './helper.ts';
 import { DoctorResultSchema, StateResultSchema } from './helper-protocol.ts';
 
 const helperOver = async (fake: FakeHelper, launches: string[] = [], appPath: string | null = '/Apps/Helper.app') =>
@@ -29,6 +29,11 @@ const failureOf = async (work: Promise<unknown>): Promise<HelperFailure> => {
 };
 
 describe('the helper', () => {
+    test('gets the time a wait waits for on top of the time any request has to answer in', () => {
+        expect(answerWithinMs({ command: 'click' })).toBe(20_000);
+        expect(answerWithinMs({ command: 'wait', timeout: 110 })).toBe(130_000);
+    });
+
     test('is started once when its socket is closed, and signs every request with the local secret', async () => {
         const fake = new FakeHelper();
         fake.running = false;

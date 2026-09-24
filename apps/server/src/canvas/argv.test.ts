@@ -54,6 +54,17 @@ describe('parseArgv', () => {
         expect(parseArgv(['--chat', '--chat'], KNOWN, ['chat'])).toMatchObject({ ok: false, code: 'duplicate-flag' });
     });
 
+    test('a switch that is a flag too takes a value only after =, and swallows no word after it', () => {
+        expect(parseArgv(['--state', 'full'], ['state'], ['state'])).toEqual({ ok: true, positionals: ['full'], flags: {}, switches: new Set(['state']) });
+        expect(parseArgv(['--state=full'], ['state'], ['state'])).toEqual({
+            ok: true,
+            positionals: [],
+            flags: { state: 'full' },
+            switches: new Set(['state'])
+        });
+        expect(parseArgv(['--state', '--state=full'], ['state'], ['state'])).toMatchObject({ ok: false, code: 'duplicate-flag' });
+    });
+
     test('an unknown flag names the switches too', () => {
         const parsed = parseArgv(['--cmd', 'x'], KNOWN, ['chat']);
         expect(parsed).toMatchObject({ ok: false, code: 'unknown-flag' });

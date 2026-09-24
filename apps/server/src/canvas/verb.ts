@@ -134,7 +134,7 @@ export interface BrowserDriveHost {
 }
 
 /* What an agent's `computer` call reaches: the setting, and the rules every call passes before the helper acts. */
-export type ComputerHost = Pick<ComputerUse, 'enabled' | 'apps' | 'operate'>;
+export type ComputerHost = Pick<ComputerUse, 'enabled' | 'apps' | 'operate' | 'treeView'>;
 
 export interface WorktreeHost {
     /* Every worktree of the repository a folder is in, with the work each holds. */
@@ -346,7 +346,7 @@ const defineArgs = <Positionals extends z.ZodType, Flags extends z.ZodObject>(na
         usage,
         summary: spec.summary,
         detail: spec.detail,
-        flagNames: [...values, ...switches],
+        flagNames: [...new Set([...values, ...switches])],
         dryRun: spec.dryRun === true,
         run: (argv, call) => runArgs(name, usage, spec, argv, call)
     };

@@ -90,14 +90,15 @@ public enum WaitCondition: Equatable, Sendable {
         }
     }
 
+    /// What it waits for, to follow "waited for".
     public var summary: String {
         switch self {
         case let .text(text):
-            return "text \"\(text)\" appears"
+            return "\"\(text)\" to appear"
         case let .gone(text):
-            return "text \"\(text)\" is gone"
+            return "\"\(text)\" to go"
         case let .value(element, value):
-            return "element \(element) has value \"\(value)\""
+            return "element \(element) to have the value \"\(value)\""
         }
     }
 }

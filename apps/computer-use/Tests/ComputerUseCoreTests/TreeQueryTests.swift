@@ -68,6 +68,12 @@ struct WaitConditionTests {
         #expect(!WaitCondition.value(element: 1, "100").holds([], value: "10"))
         #expect(!WaitCondition.value(element: 1, "100").holds([], value: nil))
     }
+
+    @Test func saysWhatItWaitsFor() {
+        #expect(WaitCondition.text("Saved").summary == "\"Saved\" to appear")
+        #expect(WaitCondition.gone("Exporting").summary == "\"Exporting\" to go")
+        #expect(WaitCondition.value(element: 4, "100").summary == "element 4 to have the value \"100\"")
+    }
 }
 
 struct DragPathTests {

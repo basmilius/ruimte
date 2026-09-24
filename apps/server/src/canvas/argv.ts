@@ -6,13 +6,14 @@ export type ParsedArgv =
  * Splits the words after a verb into positionals, `--flag value` pairs (`--flag=value` too, for a
  * value that itself starts with `--`) and the switches the verb declared. Anything not declared a
  * switch takes a value, so a flag that lost its argument is refused instead of swallowing the next
- * word, and a flag given twice is refused rather than one of the two silently winning.
+ * word, and a flag given twice is refused rather than one of the two silently winning. A name that is
+ * both a switch and a flag is on when written bare and takes a value only after `=` (`--state=full`).
  */
 export const parseArgv = (argv: readonly string[], known: readonly string[], switches: readonly string[] = []): ParsedArgv => {
     const positionals: string[] = [];
     const flags: Record<string, string> = {};
     const given = new Set<string>();
-    const all = [...known, ...switches];
+    const all = [...new Set([...known, ...switches])];
     for (let i = 0; i < argv.length; i++) {
         const word = argv[i]!;
         if (!word.startsWith('--')) {
@@ -32,6 +33,11 @@ export const parseArgv = (argv: readonly string[], known: readonly string[], swi
             return { ok: false, code: 'duplicate-flag', message: `--${name} is given twice` };
         }
         if (switches.includes(name)) {
+            if (equals !== -1 && known.includes(name)) {
+                flags[name] = word.slice(equals + 1);
+                given.add(name);
+                continue;
+            }
             if (equals !== -1) {
                 return { ok: false, code: 'unexpected-value', message: `--${name} takes no value; it is on when you write it and off when you do not` };
             }

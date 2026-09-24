@@ -211,7 +211,11 @@ const computerStateCut = {
 };
 const computerThenState = {
     ...computerHold,
-    withState: z.boolean().nullish().describe('After the action, wait until the window settles and answer with its new state'),
+    withState: z
+        .boolean()
+        .nullish()
+        .describe('After the action, wait until the window settles and answer with what changed against the last tree you got for this app'),
+    fullState: z.boolean().nullish().describe('With withState, the whole tree instead of what changed'),
     ...computerStateCut
 };
 const computerElement = z.number().int().min(0).describe('An element by the number in brackets the last state gave it');
@@ -226,7 +230,14 @@ const computerState = z.object({
     tree: z.array(z.string()),
     truncated: z.string().nullable(),
     hidden: z.boolean(),
-    note: z.string().nullable()
+    note: z.string().nullable(),
+    // Set when the tree holds only what changed against the last tree the caller got: `+ ` new, `- ` gone, `~ ` changed.
+    diff: z.object({ added: z.number().int(), gone: z.number().int(), changed: z.number().int() }).nullish(),
+    // Why the tree is whole where only what changed was asked for.
+    full: z.string().nullish(),
+    // With find: how many elements hold the text; the other lines are what they sit in.
+    matches: z.number().int().nullish(),
+    within: z.number().int().nullish()
 });
 const computerOutcome = z.object({
     app: computerAppRef.nullable(),
@@ -1831,8 +1842,65 @@ export const ACTION_DEFINITIONS = {
         effect: 'read',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ app: computerApp, ...computerHold, ...computerStateCut }),
+        input: z.object({
+            app: computerApp,
+            ...computerHold,
+            find: z
+                .string()
+                .min(1)
+                .nullish()
+                .describe('Only the elements whose title, value, description or identifier holds this text, ignoring case, and what they sit in'),
+            within: computerElement.nullish().describe('Only this element of the last state and what is inside it'),
+            ...computerStateCut
+        }),
         output: computerState
+    },
+    'computer.read': {
+        title: 'Read an element of an app',
+        description: 'Reads the title, value and description of one element of an app whole, where a state cuts them, with its role and frame.',
+        effect: 'read',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ app: computerApp, element: computerElement, ...computerHold }),
+        output: z.object({
+            app: computerAppRef,
+            element: z.number().int(),
+            role: z.string(),
+            title: z.string().nullable(),
+            value: z.string().nullable(),
+            description: z.string().nullable(),
+            placeholder: z.string().nullable(),
+            identifier: z.string().nullable(),
+            frame: z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() }).nullable(),
+            // Per text that was cut: how long it is whole; what is shown is its start.
+            cut: z.record(z.string(), z.number().int())
+        })
+    },
+    'computer.wait': {
+        title: 'Wait for an app',
+        description: 'Reads an app until a text appears, a text is gone or an element has a value, or the time is up, and answers with what changed.',
+        effect: 'read',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({
+            app: computerApp,
+            text: z.string().min(1).nullish().describe('Wait until an element holds this text in its title, value, description or identifier, ignoring case'),
+            gone: z.string().min(1).nullish().describe('Wait until no element holds this text'),
+            element: computerElement.nullish().describe('With value: the element of the last state to watch'),
+            value: z.string().nullish().describe('With element: wait until its value is exactly this'),
+            timeout: z.number().int().min(1).max(110).nullish().describe('Seconds to wait for it; 10 without it'),
+            ...computerHold,
+            fullState: z.boolean().nullish().describe('The whole tree at the end instead of what changed'),
+            ...computerStateCut
+        }),
+        output: z.object({
+            app: computerAppRef,
+            met: z.boolean(),
+            condition: z.string(),
+            waited: z.number(),
+            state: computerState.nullable(),
+            stateError: z.string().nullable()
+        })
     },
     'computer.click': {
         title: 'Click in an app',
@@ -1920,6 +1988,24 @@ export const ACTION_DEFINITIONS = {
             ...computerThenState
         }),
         output: computerOutcome.extend({ listing: z.array(z.string()).nullable() })
+    },
+    'computer.drag': {
+        title: 'Drag in an app',
+        description: 'Presses on an element or a pixel of an app, moves to another and lets go there.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({
+            app: computerApp,
+            from: computerElement.nullish().describe('The element to press on'),
+            fromX: computerPixel.nullish(),
+            fromY: computerPixel.nullish(),
+            to: computerElement.nullish().describe('The element to let go on'),
+            toX: computerPixel.nullish(),
+            toY: computerPixel.nullish(),
+            ...computerThenState
+        }),
+        output: computerOutcome
     },
     'computer.open': {
         title: 'Open an app',

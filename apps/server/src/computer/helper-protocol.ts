@@ -22,12 +22,15 @@ export const HELPER_COMMANDS = [
     'key',
     'set-value',
     'open',
-    'menu'
+    'menu',
+    'drag',
+    'read',
+    'wait'
 ] as const;
 export type HelperCommand = (typeof HELPER_COMMANDS)[number];
 
 /* The commands that read or operate one app, which is what a person has to let an agent into. */
-export const APP_COMMANDS = ['state', 'click', 'scroll', 'type', 'key', 'set-value', 'open', 'menu'] as const;
+export const APP_COMMANDS = ['state', 'click', 'scroll', 'type', 'key', 'set-value', 'open', 'menu', 'drag', 'read', 'wait'] as const;
 export type AppCommand = (typeof APP_COMMANDS)[number];
 
 /* How the tree and the picture of a `state` are cut, for `state` itself and every action with `withState`. */
@@ -61,6 +64,16 @@ export interface HelperRequest extends StateOptions {
     pages?: number;
     path?: string;
     withState?: boolean;
+    // For `state`: only the elements that hold this text and what they sit in, or only the subtree of one element.
+    find?: string;
+    within?: number;
+    // For `drag`: where it ends; `element` or `x` and `y` is where it starts.
+    toElement?: number;
+    toX?: number;
+    toY?: number;
+    // For `wait`: the text that has to leave the tree (`text` is the one that has to appear), and how long to wait in seconds.
+    gone?: string;
+    timeout?: number;
     state?: PresenceState;
     // Words beside the cursor for a `presence` state, instead of the helper's own for it.
     label?: string;
@@ -134,7 +147,11 @@ export const StateResultSchema = z.object({
     tree: z.array(z.string()),
     truncated: z.string().optional(),
     hidden: z.boolean().optional(),
-    note: z.string().optional()
+    note: z.string().optional(),
+    // This run of the helper, which numbers elements from 0 again after a restart; absent from a helper older than the diff.
+    instance: z.string().optional(),
+    // With `find`: how many elements hold the text.
+    matches: z.number().int().optional()
 });
 export type StateResult = z.infer<typeof StateResultSchema>;
 
@@ -164,3 +181,25 @@ export const ActionResultSchema = z
     })
     .catchall(z.unknown());
 export type ActionResult = z.infer<typeof ActionResultSchema>;
+
+export const ReadResultSchema = z.object({
+    app: AppDescriptorSchema,
+    element: z.number().int(),
+    role: z.string(),
+    title: z.string().optional(),
+    value: z.string().optional(),
+    description: z.string().optional(),
+    placeholder: z.string().optional(),
+    identifier: z.string().optional(),
+    frame: z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() }).optional()
+});
+export type ReadResult = z.infer<typeof ReadResultSchema>;
+
+export const WaitResultSchema = z.object({
+    app: AppDescriptorSchema,
+    met: z.boolean(),
+    condition: z.string(),
+    waited: z.number(),
+    state: z.union([StateResultSchema, z.object({ error: z.string() })])
+});
+export type WaitResult = z.infer<typeof WaitResultSchema>;

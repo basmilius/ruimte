@@ -1,8 +1,9 @@
 import type { ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
 import { APPROVAL_WAIT_MS } from '../computer/approvals.ts';
+import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
 import { defineActionVerb, runAction, type ActionParam } from './action-verb.ts';
-import { field } from './verb.ts';
+import { VerbRefusal, field } from './verb.ts';
 
 type ComputerState = ActionOutput<'computer.state'>;
 type ComputerOutcome = ActionOutput<'computer.click'>;
@@ -24,7 +25,12 @@ const WAIT_PARAM = {
     more: 'give your shell command a timeout above it, since some CLIs end one after 10 s'
 } as const;
 
-const STATE_PARAM = { syntax: '--state', need: 'no value', field: 'withState', more: 'the answer then ends in the state lines' } as const;
+const STATE_PARAM = {
+    syntax: '--state',
+    need: 'no value',
+    field: 'withState',
+    more: 'the answer then ends in the state lines: only what changed, marked + new, - gone, ~ changed; --state=full for the whole tree'
+} as const;
 
 const wholeFlag = (flag: string, min: number, max: number) =>
     z
@@ -62,27 +68,62 @@ const cutOf = ({ flags, switches }: CutInput) => ({
     maxText: flags['max-text'] ?? null
 });
 
+/* An action's flags: those of every call, and --state, which may ask for the whole tree. */
+const ACTION_FLAGS = {
+    state: z.enum(['full'], { error: '--state takes no value, or =full for the whole tree' }).optional(),
+    ...CUT_FLAGS
+};
+
+const ACTION_SWITCHES = ['state', 'no-screenshot'] as const;
+
 /* The same for an action, which answers with the state after it only when --state asks. */
-const thenState = (input: CutInput) => ({ withState: input.switches.has('state'), ...cutOf(input) });
+const thenState = (input: CutInput & { flags: { state?: 'full' } }) => ({
+    withState: input.switches.has('state'),
+    fullState: input.flags.state === 'full',
+    ...cutOf(input)
+});
 
 const yesNo = (value: boolean): string => (value ? 'yes' : 'no');
 
 const round = (value: number): string => String(Math.round(value * 100) / 100);
 
-/* A window, its picture and its tree: one row each, the tree a row per element with its indent kept. */
-export const stateLines = (state: ComputerState): string[] => [
-    `app\t${field(state.app.name)}\t${state.app.bundleId ?? '-'}\t${state.app.pid}`,
+const windowLines = (state: ComputerState): string[] => [
     `window\t${field(state.window.title)}\t${round(state.window.x)},${round(state.window.y)}\t${round(state.window.width)}x${round(state.window.height)}`,
     ...(state.window.sheet === null ? [] : [`sheet\t${field(state.window.sheet)}`]),
     state.screenshot === null
         ? `shot\tnone\t${field(state.screenshotError ?? '')}`
-        : `shot\t${field(state.screenshot.path)}\t${state.screenshot.width}x${state.screenshot.height}\t${round(state.screenshot.scale)}\t${round(state.screenshot.originX)},${round(state.screenshot.originY)}`,
-    `elements\t${state.elements}`,
+        : `shot\t${field(state.screenshot.path)}\t${state.screenshot.width}x${state.screenshot.height}\t${round(state.screenshot.scale)}\t${round(state.screenshot.originX)},${round(state.screenshot.originY)}`
+];
+
+const remarkLines = (state: ComputerState): string[] => [
     ...(state.truncated === null ? [] : [`truncated\t${field(state.truncated)}`]),
     ...(state.hidden ? ['hidden\tyes\tIts windows are off screen; computer open shows it'] : []),
-    ...(state.note === null ? [] : [`note\t${field(state.note)}`]),
-    ...state.tree.map((line) => `tree\t${field(line)}`)
+    ...(state.note === null ? [] : [`note\t${field(state.note)}`])
 ];
+
+const changeCounts = ({ added, gone, changed }: { added: number; gone: number; changed: number }): string =>
+    added + gone + changed === 0 ? 'none' : `${added} new\t${gone} gone\t${changed} changed`;
+
+/*
+ * A window, its picture and its tree: one row each, the tree a row per element with its indent kept.
+ * After an action that is only what changed, since the rest is what the agent read before.
+ */
+export const stateLines = (state: ComputerState): string[] => {
+    const tree = state.tree.map((line) => `tree\t${field(line)}`);
+    if (state.diff !== null && state.diff !== undefined) {
+        return [...windowLines(state), ...remarkLines(state), `changes\t${changeCounts(state.diff)}`, ...tree];
+    }
+    return [
+        `app\t${field(state.app.name)}\t${state.app.bundleId ?? '-'}\t${state.app.pid}`,
+        ...windowLines(state),
+        `elements\t${state.elements}`,
+        ...(state.matches === null || state.matches === undefined ? [] : [`matches\t${state.matches}`]),
+        ...(state.within === null || state.within === undefined ? [] : [`within\t${state.within}`]),
+        ...remarkLines(state),
+        ...(state.full === null || state.full === undefined ? [] : [`full\t${field(state.full)}`]),
+        ...tree
+    ];
+};
 
 /* What an action did, and the state after it when it was asked for. */
 export const outcomeLines = (word: string, outcome: ComputerOutcome): string[] => {
@@ -107,7 +148,8 @@ const STATE_PRINTS: readonly string[] = [
     'prints\tsheet\tlabel\twhen a sheet is up; the tree and the picture show it over its window',
     'prints\tshot\tpath\twidthxheight\tscale\tx,y\tthe png on this machine, its pixels per point and the screen point of its top-left; shot none and why when there is no picture',
     'prints\ttree\tline\tone row per element: [N] role, label, value=, desc=, id=, frame, and focused, selected, disabled or offscreen; the indent after the tab is its depth',
-    'prints\ttruncated, hidden, note\twhen the tree was cut, the app is hidden, or the helper has something to say'
+    'prints\ttruncated, hidden, note\twhen the tree was cut, the app is hidden, or the helper has something to say',
+    'read\t[N] is the number an action takes with --element; text longer than --max-text ends in …"(cut: N chars), which computer read shows whole'
 ];
 
 const OUTCOME_PRINTS: readonly string[] = [
@@ -115,18 +157,25 @@ const OUTCOME_PRINTS: readonly string[] = [
     'prints\ttarget\trole\tlabel\tidentifier\twindow\twhat it acted on; for a click by pixel what was under it',
     'prints\tpoint\tx,y\twhere the pointer went, in screen points',
     'prints\tdetail\tkey\tvalue\twhat the helper reports of its own, such as method (AXPress or mouse), typed or pressed',
-    'prints\tsettled\tyes|no\twith --state: whether the window stopped changing within 3 s; the state rows follow'
+    'prints\tsettled\tyes|no\twith --state: whether the window stopped changing within 3 s; the state rows follow',
+    'prints\tchanges\tN new\tN gone\tN changed\twith --state: the tree rows are only the lines that changed against the last tree you got for this app, or none',
+    'prints\ttree\t+ line | - line | ~ line\ta new element, one that went, and the new form of one that changed; the window and shot rows are there as always',
+    'prints\tfull\twhy\twhen the rows after an action are the whole tree after all: the first state of this app you got, a new window or a new sheet'
 ];
 
 /* What holds for every action, said once per action so `help computer <action>` is whole. */
 const COMMON_DETAIL: readonly string[] = [
-    `approval\tThe first call in an app a person has not let you into puts a card in front of them and holds up to ${APPROVAL_WAIT_MS / 1000} s, or --wait S; refused awaiting-approval means the card is still up: tell the person, then call again with --wait 60, which goes on as soon as they answer`,
+    `approval\tThe first call in an app a person has not let you into puts a card in front of them and holds up to ${APPROVAL_WAIT_MS / 1000} s, or --wait S, for their answer`,
     'approval\tA yes holds for this chat or terminal session, or for always on this machine; a no reaches you once, as declined. Every permission mode asks, full-access included',
-    'terminal\tAn app that runs shells is refused whatever the person says; run commands in your own shell',
-    `hold\tThe person can pause the session or take the Mac over with their own mouse; a call then holds up to ${APPROVAL_WAIT_MS / 1000} s, or --wait S, and refuses with paused or taken-over. Call computer state with --wait 60 before you act again, since they may have changed the window; never reach the app another way meanwhile`,
+    `hold\tThe person can pause the session or take the Mac over with their own mouse; a call then holds up to ${APPROVAL_WAIT_MS / 1000} s, or --wait S, until they give it back. Never reach the app another way meanwhile`,
     'timeout\tWith --wait, give your shell command a timeout above it: some CLIs end a shell command after 10 s unless you ask for more',
-    'refusals\tawaiting-approval, paused and taken-over: call again with --wait 60. declined: leave the app alone. stopped: ask the person. terminal: run the command in your own shell. app-refused: read why, usually a stale element; read the state again',
-    'stop\tThe person can stop you at any moment; every action after that refuses with stopped. Ask them before you go on; once they agree, computer state picks up again',
+    'refused\tawaiting-approval\tthe card is still up: tell the person, then call again with --wait 60',
+    'refused\tpaused, taken-over\tthe person still holds the Mac: call computer state with --wait 60, since they may have changed the window, then act on what it shows',
+    'refused\tdeclined\tthe person said no to this app: leave it alone unless they ask you to',
+    'refused\tstopped\tthe person stopped you: ask them before you go on; once they agree, computer state picks up again',
+    'refused\tterminal\tthe app runs shells and is never yours, whatever the person says: run the command in your own shell',
+    'refused\tapp-refused\tthe app or the helper said no, usually to a number from an older state: read the state again',
+    'refused\tnot-in-session, computer-use-off, not-granted\tnothing you can change: tell the person',
     'elements\tAn element keeps its number while it is the same element; after a new window or sheet read the state again',
     'see\truimte-context computer apps\tthe apps that run, and which of them you may operate without asking'
 ];
@@ -166,13 +215,119 @@ const state = defineActionVerb('computer', {
     name: 'state',
     action: 'computer.state',
     usage: '<app>',
-    params: [APP_PARAM, WAIT_PARAM, ...CUT_PARAMS],
-    detail: [...STATE_PRINTS, ...COMMON_DETAIL],
+    params: [
+        APP_PARAM,
+        { syntax: '--find T', need: 'optional', field: 'find', more: 'prints matches, the number of elements that hold it' },
+        { syntax: '--within N', need: 'optional', field: 'within', more: 'the numbers stay the ones the elements had' },
+        WAIT_PARAM,
+        ...CUT_PARAMS
+    ],
+    detail: [
+        ...STATE_PRINTS,
+        'note\tA whole state is what the next --state after an action is told against; one with --find or --within is not',
+        ...COMMON_DETAIL
+    ],
     positionals: appTuple('state'),
-    flags: z.object(CUT_FLAGS),
+    flags: z.object({ find: z.string().min(1, '--find needs the text to look for').optional(), within: wholeFlag('within', 0, 1_000_000), ...CUT_FLAGS }),
     switches: ['no-screenshot'],
     async run({ positionals: [app], flags, switches }, call) {
-        return stateLines(await runAction(call, 'computer.state', { app, ...cutOf({ flags, switches }) }));
+        const part = { find: flags.find ?? null, within: flags.within ?? null };
+        return stateLines(await runAction(call, 'computer.state', { app, ...part, ...cutOf({ flags, switches }) }));
+    }
+});
+
+const read = defineActionVerb('computer', {
+    name: 'read',
+    action: 'computer.read',
+    usage: '<app> --element N',
+    params: [APP_PARAM, { syntax: '--element N', need: 'required', field: 'element' }, WAIT_PARAM],
+    detail: [
+        'prints\telement\tN\trole',
+        'prints\tframe\tx,y\twidthxheight\tin screen points',
+        `prints\ttitle, value, description, placeholder, identifier\ttext\tone row per line of the text, whole up to ${READ_MAX_CHARS} characters`,
+        'prints\tcut\tkey\tshown\ttotal\twhen a text was longer than that: its first characters are shown',
+        'note\tFor a value a state cuts at 100 characters, such as the text of a document or a long label',
+        ...COMMON_DETAIL
+    ],
+    positionals: appTuple('read'),
+    flags: z.object({
+        element: z.string({ error: 'computer read needs --element' }).regex(/^\d+$/, '--element takes a whole number').transform(Number),
+        wait: CUT_FLAGS.wait
+    }),
+    async run({ positionals: [app], flags }, call) {
+        const read = await runAction(call, 'computer.read', { app, element: flags.element, wait: flags.wait ?? null });
+        const texts = [
+            ['title', read.title],
+            ['value', read.value],
+            ['description', read.description],
+            ['placeholder', read.placeholder],
+            ['identifier', read.identifier]
+        ] as const;
+        return [
+            `done\tread\t${field(read.app.name)}`,
+            `element\t${read.element}\t${field(read.role)}`,
+            ...(read.frame === null ? [] : [`frame\t${round(read.frame.x)},${round(read.frame.y)}\t${round(read.frame.width)}x${round(read.frame.height)}`]),
+            ...texts.flatMap(([key, text]) => (text === null ? [] : text.split(/\r\n|\r|\n/).map((line) => `${key}\t${field(line)}`))),
+            ...Object.entries(read.cut).map(([key, total]) => `cut\t${key}\t${READ_MAX_CHARS}\t${total}`)
+        ];
+    }
+});
+
+const wait = defineActionVerb('computer', {
+    name: 'wait',
+    action: 'computer.wait',
+    usage: '<app> (--text T | --gone T | --element N --value V)',
+    params: [
+        APP_PARAM,
+        { syntax: '--text T', need: 'or --gone', field: 'text' },
+        { syntax: '--gone T', need: 'or --text', field: 'gone' },
+        { syntax: '--element N', need: 'with --value', field: 'element' },
+        { syntax: '--value V', need: 'with --element', field: 'value' },
+        { syntax: '--timeout S', need: 'optional', field: 'timeout', more: 'at most 110; give your shell command a timeout above it' },
+        WAIT_PARAM,
+        { syntax: '--state', need: 'no value', field: 'fullState', more: 'write --state=full; without it the rows are only what changed' },
+        ...CUT_PARAMS
+    ],
+    detail: [
+        'prints\tdone\twait\tapp\twhat it waited for\tthe seconds it took',
+        'prints\tstate rows\tonly what changed against the last tree you got, as after an action with --state',
+        'note\tUse it instead of sleeping: after an action that starts something slow, wait for the text that says it is done',
+        'timeout\tRefused with timeout when the time is up; the state under it is how the window stands then',
+        ...COMMON_DETAIL
+    ],
+    positionals: appTuple('wait'),
+    flags: z.object({
+        text: z.string().min(1, '--text needs the text to wait for').optional(),
+        gone: z.string().min(1, '--gone needs the text to wait for').optional(),
+        element: wholeFlag('element', 0, 1_000_000),
+        value: z.string().optional(),
+        timeout: wholeFlag('timeout', 1, 110),
+        ...ACTION_FLAGS
+    }),
+    switches: ACTION_SWITCHES,
+    async run({ positionals: [app], flags, switches }, call) {
+        const outcome = await runAction(call, 'computer.wait', {
+            app,
+            text: flags.text ?? null,
+            gone: flags.gone ?? null,
+            element: flags.element ?? null,
+            value: flags.value ?? null,
+            timeout: flags.timeout ?? null,
+            fullState: flags.state === 'full',
+            ...cutOf({ flags, switches })
+        });
+        const lines = [
+            ...(outcome.stateError === null ? [] : [`state\tnone\t${field(outcome.stateError)}`]),
+            ...(outcome.state === null ? [] : stateLines(outcome.state))
+        ];
+        if (!outcome.met) {
+            throw new VerbRefusal(
+                'timeout',
+                `Waited ${round(outcome.waited)} s for ${outcome.condition}, and it did not happen. The state below is how the window stands now; wait again with a longer --timeout, or act on what you see`,
+                lines
+            );
+        }
+        return [`done\twait\t${field(outcome.app.name)}\t${field(outcome.condition)}\t${round(outcome.waited)}`, ...lines];
     }
 });
 
@@ -182,7 +337,15 @@ const Y_PARAM = { syntax: '--y PX', need: 'with --x', field: 'y' } as const;
 
 /* The params and flags of an action that answers with what it did and, with --state, the state after. */
 const actionParams = <
-    Name extends 'computer.click' | 'computer.scroll' | 'computer.type' | 'computer.key' | 'computer.setValue' | 'computer.menu' | 'computer.open'
+    Name extends
+        | 'computer.click'
+        | 'computer.scroll'
+        | 'computer.type'
+        | 'computer.key'
+        | 'computer.setValue'
+        | 'computer.menu'
+        | 'computer.open'
+        | 'computer.drag'
 >(
     own: readonly ActionParam<Name>[]
 ): ActionParam<Name>[] => [APP_PARAM, ...own, WAIT_PARAM, STATE_PARAM, ...CUT_PARAMS] as ActionParam<Name>[];
@@ -211,9 +374,9 @@ const click = defineActionVerb('computer', {
         y: pixelFlag('y'),
         count: wholeFlag('count', 1, 3),
         button: z.enum(['left', 'right'], { error: '--button is left or right' }).optional(),
-        ...CUT_FLAGS
+        ...ACTION_FLAGS
     }),
-    switches: ['state', 'no-screenshot'],
+    switches: ACTION_SWITCHES,
     async run({ positionals: [app], flags, switches }, call) {
         const outcome = await runAction(call, 'computer.click', {
             app,
@@ -252,9 +415,9 @@ const scroll = defineActionVerb('computer', {
             .transform(Number)
             .refine((value) => value > 0 && value <= 50, '--pages is above 0 and at most 50')
             .optional(),
-        ...CUT_FLAGS
+        ...ACTION_FLAGS
     }),
-    switches: ['state', 'no-screenshot'],
+    switches: ACTION_SWITCHES,
     async run({ positionals: [app], flags, switches }, call) {
         const outcome = await runAction(call, 'computer.scroll', {
             app,
@@ -269,6 +432,50 @@ const scroll = defineActionVerb('computer', {
     }
 });
 
+const drag = defineActionVerb('computer', {
+    name: 'drag',
+    action: 'computer.drag',
+    usage: '<app> (--from N | --from-x PX --from-y PX) (--to N | --to-x PX --to-y PX)',
+    params: actionParams<'computer.drag'>([
+        { syntax: '--from N', need: 'or --from-x/--from-y', field: 'from' },
+        { syntax: '--from-x PX', need: 'with --from-y', field: 'fromX' },
+        { syntax: '--from-y PX', need: 'with --from-x', field: 'fromY' },
+        { syntax: '--to N', need: 'or --to-x/--to-y', field: 'to' },
+        { syntax: '--to-x PX', need: 'with --to-y', field: 'toX' },
+        { syntax: '--to-y PX', need: 'with --to-x', field: 'toY' }
+    ]),
+    detail: [
+        'note\tIt presses at the start, moves in a few steps to the end and lets go there; for a slider, a split view, a file onto a window',
+        'note\tThe start is checked like a click: a drag that would grab something else than --from is refused. The end is not, it may lie on another element',
+        ...OUTCOME_PRINTS,
+        ...COMMON_DETAIL
+    ],
+    positionals: appTuple('drag'),
+    flags: z.object({
+        from: wholeFlag('from', 0, 1_000_000),
+        'from-x': pixelFlag('from-x'),
+        'from-y': pixelFlag('from-y'),
+        to: wholeFlag('to', 0, 1_000_000),
+        'to-x': pixelFlag('to-x'),
+        'to-y': pixelFlag('to-y'),
+        ...ACTION_FLAGS
+    }),
+    switches: ACTION_SWITCHES,
+    async run({ positionals: [app], flags, switches }, call) {
+        const outcome = await runAction(call, 'computer.drag', {
+            app,
+            from: flags.from ?? null,
+            fromX: flags['from-x'] ?? null,
+            fromY: flags['from-y'] ?? null,
+            to: flags.to ?? null,
+            toX: flags['to-x'] ?? null,
+            toY: flags['to-y'] ?? null,
+            ...thenState({ flags, switches })
+        });
+        return outcomeLines('drag', outcome);
+    }
+});
+
 const type = defineActionVerb('computer', {
     name: 'type',
     action: 'computer.type',
@@ -276,8 +483,8 @@ const type = defineActionVerb('computer', {
     params: actionParams<'computer.type'>([{ syntax: '--text T', need: 'required', field: 'text', more: 'write --text=T for text that starts with --' }]),
     detail: ['note\tIt types into whatever has the focus; click the field first. The app is brought to the front', ...OUTCOME_PRINTS, ...COMMON_DETAIL],
     positionals: appTuple('type'),
-    flags: z.object({ text: z.string({ error: 'computer type needs --text' }).min(1, '--text needs the text to type'), ...CUT_FLAGS }),
-    switches: ['state', 'no-screenshot'],
+    flags: z.object({ text: z.string({ error: 'computer type needs --text' }).min(1, '--text needs the text to type'), ...ACTION_FLAGS }),
+    switches: ACTION_SWITCHES,
     async run({ positionals: [app], flags, switches }, call) {
         return outcomeLines('type', await runAction(call, 'computer.type', { app, text: flags.text, ...thenState({ flags, switches }) }));
     }
@@ -300,8 +507,8 @@ const key = defineActionVerb('computer', {
         .tuple([z.string().min(1, 'computer key needs an app')], { error: 'computer key needs an app and at least one key combo' })
         .rest(z.string().min(1))
         .refine((words) => words.length >= 2, 'computer key needs at least one key combo after the app, such as cmd+n'),
-    flags: z.object(CUT_FLAGS),
-    switches: ['state', 'no-screenshot'],
+    flags: z.object(ACTION_FLAGS),
+    switches: ACTION_SWITCHES,
     async run({ positionals: [app, ...combos], flags, switches }, call) {
         return outcomeLines('key', await runAction(call, 'computer.key', { app, combos, ...thenState({ flags, switches }) }));
     }
@@ -320,9 +527,9 @@ const setValue = defineActionVerb('computer', {
     flags: z.object({
         element: z.string({ error: 'computer set-value needs --element' }).regex(/^\d+$/, '--element takes a whole number').transform(Number),
         value: z.string({ error: 'computer set-value needs --value' }),
-        ...CUT_FLAGS
+        ...ACTION_FLAGS
     }),
-    switches: ['state', 'no-screenshot'],
+    switches: ACTION_SWITCHES,
     async run({ positionals: [app], flags, switches }, call) {
         const outcome = await runAction(call, 'computer.setValue', { app, element: flags.element, value: flags.value, ...thenState({ flags, switches }) });
         return outcomeLines('set-value', outcome);
@@ -344,8 +551,8 @@ const menu = defineActionVerb('computer', {
         .tuple([z.string().min(1, 'computer menu needs an app')], { error: 'computer menu needs an app' })
         .rest(z.string())
         .refine((words) => words.length <= 2, 'computer menu takes an app and at most one item; quote a path with spaces in it'),
-    flags: z.object(CUT_FLAGS),
-    switches: ['state', 'no-screenshot'],
+    flags: z.object(ACTION_FLAGS),
+    switches: ACTION_SWITCHES,
     async run({ positionals: [app, item], flags, switches }, call) {
         const outcome = await runAction(call, 'computer.menu', { app, item: item ?? null, ...thenState({ flags, switches }) });
         if (outcome.listing !== null) {
@@ -371,20 +578,22 @@ const open = defineActionVerb('computer', {
         ...COMMON_DETAIL
     ],
     positionals: appTuple('open'),
-    flags: z.object(CUT_FLAGS),
-    switches: ['state', 'no-screenshot'],
+    flags: z.object(ACTION_FLAGS),
+    switches: ACTION_SWITCHES,
     async run({ positionals: [app], flags, switches }, call) {
         return outcomeLines('open', await runAction(call, 'computer.open', { app, ...thenState({ flags, switches }) }));
     }
 });
 
-export const COMPUTER_ACTIONS = [apps, state, click, type, key, setValue, scroll, menu, open] as const;
+export const COMPUTER_ACTIONS = [apps, state, read, click, type, key, setValue, scroll, drag, menu, open, wait] as const;
 
 export const COMPUTER_SUMMARY =
     'Reads and operates the apps of this machine, each only once a person let you into it; only while a person turned computer use on here';
 
 export const COMPUTER_DETAIL: readonly string[] = [
-    'note\tA loop: open or apps, state to read the window and its elements, an action with --state to act and read the result in one call',
+    'first\truimte-context computer apps to see what runs and what you may operate, then open <app> or state <app> to read the whole window once',
+    'loop\tAn action with --state acts and answers with what changed since then, marked + new, - gone, ~ changed; wait <app> --text T instead of sleeping; read for a text a state cut',
+    'find\tstate --find T lists only the elements that hold T and what they sit in, and --within N one part of the window, for a window too big to read whole',
     'note\tThe screenshot is this machine’s, not the project’s: it lives outside the project folder and is swept an hour later',
     'off\tWhile computer use is off on this machine every action refuses with computer-use-off, and only a person turns it on',
     'grants\tUntil a person gave Ruimte Computer Use both Accessibility and Screen Recording every action refuses with not-granted; only they can, in the settings of Ruimte'
