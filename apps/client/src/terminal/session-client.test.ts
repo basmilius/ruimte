@@ -12,6 +12,7 @@ class FakeTransport implements Transport {
     readonly existing = new Set<string>();
     readonly exited = new Map<string, number>();
     readonly agents = new Map<string, AgentInfo>();
+    readonly held = new Map<string, string>();
     screen = 'screen';
     // While set, a list request waits for it, the way a second round trip does on a slow link.
     listHeld: Promise<void> | null = null;
@@ -38,8 +39,12 @@ class FakeTransport implements Transport {
                     rows: 24,
                     createdAt: 0,
                     attached: 0,
-                    exited: false
+                    exited: false,
+                    ...(this.held.has(id) ? { heldCommand: this.held.get(id) } : {})
                 } as RequestMap[T]['result']);
+            case 'session.runHeld':
+                this.held.delete(id);
+                return Promise.resolve({} as RequestMap[T]['result']);
             case 'session.attach':
                 return Promise.resolve({ screen: this.screen, cols: 80, rows: 24, exited: this.exited.has(id) } as RequestMap[T]['result']);
             case 'session.list':
@@ -50,7 +55,7 @@ class FakeTransport implements Transport {
     }
 
     sessions(): SessionInfo[] {
-        const ids = new Set([...this.exited.keys(), ...this.agents.keys()]);
+        const ids = new Set([...this.exited.keys(), ...this.agents.keys(), ...this.held.keys()]);
         return [...ids].map((sessionId) => ({
             sessionId,
             cwd: '/',
@@ -61,7 +66,8 @@ class FakeTransport implements Transport {
             attached: 0,
             exited: this.exited.has(sessionId),
             exitCode: this.exited.get(sessionId),
-            agent: this.agents.get(sessionId) ?? null
+            agent: this.agents.get(sessionId) ?? null,
+            ...(this.held.has(sessionId) ? { heldCommand: this.held.get(sessionId) } : {})
         }));
     }
 
@@ -107,6 +113,7 @@ class FakeSink implements SessionSink {
     readonly exited = new Map<string, number | undefined>();
     readonly agents = new Map<string, AgentInfo | null>();
     readonly approvals = new Map<string, ApprovalRequest[]>();
+    readonly held = new Map<string, string | undefined>();
     readonly forgotten: string[] = [];
 
     setAttached(nodeId: string, attached: boolean): void {
@@ -123,6 +130,10 @@ class FakeSink implements SessionSink {
 
     setAgent(nodeId: string, agent: AgentInfo | null): void {
         this.agents.set(nodeId, agent);
+    }
+
+    setHeldCommand(nodeId: string, command: string | undefined): void {
+        this.held.set(nodeId, command);
     }
 
     forget(nodeId: string): void {
@@ -159,6 +170,25 @@ describe('SessionClient', () => {
 
         client.setApprovals(true);
         expect(transport.of('agent.setApprovals')).toHaveLength(3);
+    });
+
+    test('a command the daemon holds is shown until a person runs it here or another client does', async () => {
+        const { transport, sink, client } = setup();
+        transport.held.set('a', 'bun dev');
+        transport.held.set('b', 'bun test');
+        await client.open('a', { command: 'bun dev' }, 80, 24);
+        await client.open('b', { command: 'bun test' }, 80, 24);
+        expect(sink.held.get('a')).toBe('bun dev');
+
+        await client.runHeld('a');
+        expect(transport.of('session.runHeld').map((call) => call.payload)).toEqual([{ sessionId: 'a' }]);
+        expect(sink.held.get('a')).toBeUndefined();
+
+        // Said yes to on another client: the list that follows no longer holds it.
+        transport.held.delete('b');
+        transport.emit('session.list-changed', {});
+        await flush();
+        expect(sink.held.get('b')).toBeUndefined();
     });
 
     test('open creates, attaches and reports the screen', async () => {

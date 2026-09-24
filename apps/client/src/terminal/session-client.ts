@@ -32,6 +32,8 @@ export class SessionClient {
     private readonly opens = new Map<string, OpenOptions>();
     // Cold resumes already typed this page life; a CLI that is not installed must not be retyped on every attach.
     private readonly resumed = new Set<string>();
+    // The nodes whose command the daemon holds, which a change in its list may have let go of.
+    private readonly held = new Set<string>();
     private readonly outputHandlers = new HandlerTable<string>();
     private readonly exitHandlers = new HandlerTable<number>();
     private readonly screenHandlers = new HandlerTable<Pick<SessionAttachResult, 'screen'>>();
@@ -54,6 +56,12 @@ export class SessionClient {
             transport.on('session.status', ({ sessionId, agent }) => this.sink.setAgent(sessionId, agent)),
             // The whole pending list of that session, so a request another client answered disappears here too.
             transport.on('session.approvals', ({ sessionId, approvals }) => this.sink.setApprovals(sessionId, approvals)),
+            // Another client said yes to a held command; this one only learns it from the list.
+            transport.on('session.list-changed', () => {
+                if (this.held.size > 0) {
+                    void this.refreshHeld();
+                }
+            }),
             transport.subscribeStatus((status) => this.onStatus(status))
         );
     }
@@ -72,6 +80,7 @@ export class SessionClient {
             this.sink.setExited(nodeId, undefined);
             this.sink.setAgent(nodeId, info.agent ?? null);
             this.sink.setApprovals(nodeId, info.approvals ?? []);
+            this.setHeld(nodeId, info.heldCommand);
         } catch (e) {
             // The shell of a previous mount (or a previous tab) is still running; that is the whole point.
             if (!(e instanceof TransportError && e.code === 'session-exists')) {
@@ -141,8 +150,18 @@ export class SessionClient {
         this.mounted.delete(nodeId);
         this.opens.delete(nodeId);
         this.resumed.delete(nodeId);
+        this.held.delete(nodeId);
         this.sink.forget(nodeId);
         await this.transport.request('session.kill', { sessionId: nodeId });
+    }
+
+    /*
+     * A person saying yes to the command the daemon holds for this node. Not an action in the catalog,
+     * which voice and agents reach too: only a click on the question may approve a command.
+     */
+    async runHeld(nodeId: string): Promise<void> {
+        await this.transport.request('session.runHeld', { sessionId: nodeId });
+        this.setHeld(nodeId, undefined);
     }
 
     async resumeAgent(nodeId: string): Promise<void> {
@@ -258,10 +277,30 @@ export class SessionClient {
             this.sink.setExited(nodeId, info?.exitCode ?? 0);
         }
         this.sink.setAgent(nodeId, info?.agent ?? null);
+        this.setHeld(nodeId, info?.heldCommand);
         if (info?.agent && !info.agent.live && !result.exited && !this.resumed.has(nodeId)) {
             // The daemon came back with a record of the agent that ran here; pick it up where it left off.
             this.resumed.add(nodeId);
             void this.resumeAgent(nodeId);
+        }
+    }
+
+    private setHeld(nodeId: string, command: string | undefined): void {
+        if (command === undefined) {
+            this.held.delete(nodeId);
+        } else {
+            this.held.add(nodeId);
+        }
+        this.sink.setHeldCommand(nodeId, command);
+    }
+
+    private async refreshHeld(): Promise<void> {
+        const sessions = await this.listSessions();
+        if (sessions === null) {
+            return;
+        }
+        for (const nodeId of [...this.held]) {
+            this.setHeld(nodeId, sessions.find((session) => session.sessionId === nodeId)?.heldCommand);
         }
     }
 

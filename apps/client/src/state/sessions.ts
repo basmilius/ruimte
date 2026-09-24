@@ -13,6 +13,8 @@ export interface SessionState {
     agent?: AgentInfo | null;
     /* What the agent in this shell is waiting on. The daemon sends the whole list, so it replaces, never merges. */
     approvals?: ApprovalRequest[];
+    /* A command from the project file the shell started without, until a person on this machine says yes to it. */
+    heldCommand?: string;
 }
 
 /* Rows keyed with `endpointKey`, so a session says which daemon it runs on. */
@@ -24,6 +26,7 @@ export interface SessionSink {
     setExited(nodeId: string, exitCode: number | undefined): void;
     setAgent(nodeId: string, agent: AgentInfo | null): void;
     setApprovals(nodeId: string, approvals: ApprovalRequest[]): void;
+    setHeldCommand(nodeId: string, command: string | undefined): void;
     forget(nodeId: string): void;
 }
 
@@ -35,6 +38,7 @@ interface SessionsStore {
     setExited(key: string, exitCode: number | undefined): void;
     setAgent(key: string, agent: AgentInfo | null): void;
     setApprovals(key: string, approvals: ApprovalRequest[]): void;
+    setHeldCommand(key: string, command: string | undefined): void;
     forget(key: string): void;
     restart(key: string): void;
     /* Drops one machine's rows. Its sessions keep running; this client is done looking at them. */
@@ -70,6 +74,15 @@ export const useSessions = create<SessionsStore>((set) => ({
             return { byKey: { ...s.byKey, [key]: { ...current, attached: current?.attached ?? false, approvals } } };
         });
     },
+    setHeldCommand(key, heldCommand) {
+        set((s) => {
+            const current = s.byKey[key];
+            if (current?.heldCommand === heldCommand || (!current && heldCommand === undefined)) {
+                return {};
+            }
+            return { byKey: { ...s.byKey, [key]: { ...current, attached: current?.attached ?? false, heldCommand } } };
+        });
+    },
     forget(key) {
         set((s) => {
             const next = { ...s.byKey };
@@ -91,6 +104,7 @@ export const sessionSinkFor = (endpointId: string): SessionSink => ({
     setExited: (nodeId, exitCode) => useSessions.getState().setExited(endpointKey(endpointId, nodeId), exitCode),
     setAgent: (nodeId, agent) => useSessions.getState().setAgent(endpointKey(endpointId, nodeId), agent),
     setApprovals: (nodeId, approvals) => useSessions.getState().setApprovals(endpointKey(endpointId, nodeId), approvals),
+    setHeldCommand: (nodeId, command) => useSessions.getState().setHeldCommand(endpointKey(endpointId, nodeId), command),
     forget: (nodeId) => useSessions.getState().forget(endpointKey(endpointId, nodeId))
 });
 

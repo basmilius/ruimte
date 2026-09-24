@@ -223,7 +223,9 @@
     "sessionEnded": "[session ended]",
     "exited": "[process exited with code {{code}}]",
     "resume": "Resume",
-    "restart": "Restart"
+    "restart": "Restart",
+    "held": "Run {{command}}?",
+    "run": "Run"
   },
   "chat": {
     "openFailed": "The chat could not be opened",

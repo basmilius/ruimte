@@ -223,7 +223,9 @@
     "sessionEnded": "[sessie beëindigd]",
     "exited": "[proces gestopt met code {{code}}]",
     "resume": "Hervatten",
-    "restart": "Opnieuw starten"
+    "restart": "Opnieuw starten",
+    "held": "{{command}} uitvoeren?",
+    "run": "Uitvoeren"
   },
   "chat": {
     "openFailed": "De chat kon niet worden geopend",

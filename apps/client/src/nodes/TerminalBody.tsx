@@ -98,6 +98,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const endpointId = useEndpointId();
     const exited = useSessionRow(id, (row) => row?.exited);
     const agentRecord = useSessionRow(id, (row) => row?.agent);
+    const heldCommand = useSessionRow(id, (row) => row?.heldCommand);
     // Claude Code and Codex write a name down; the daemon sends none for Gemini or Copilot.
     useSuggestedTitle(id, agentRecord?.kind === 'claude' || agentRecord?.kind === 'codex' ? agentRecord.suggestedTitle : undefined);
     const resolvedTheme = useTheme((t) => t.resolved);
@@ -303,6 +304,14 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                             <NodeNotice tone="error" onRetry={rebuild}>
                                 {failure}
                             </NodeNotice>
+                        )}
+                        {heldCommand !== undefined && exited === undefined && (
+                            <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-text">
+                                <span className="grow truncate">{t('terminal.held', { command: heldCommand })}</span>
+                                <Button size="sm" onClick={() => void sessionClient.runHeld(id).catch(() => undefined)}>
+                                    <Icon icon={Play} size={12} /> {t('terminal.run')}
+                                </Button>
+                            </div>
                         )}
                         {exited !== undefined && (
                             <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-term-dim">
