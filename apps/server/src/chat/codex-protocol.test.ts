@@ -280,6 +280,54 @@ describe('CodexProtocol', () => {
         expect(protocol.questionAnswer('call_2', { '0': 'Red' })).toBeNull();
     });
 
+    test('an MCP server that asks yes or no is an approval, answered with how long Codex remembers it', () => {
+        const protocol = new CodexProtocol(2);
+        // As computer use sends it before it touches an app (Codex 0.156.1).
+        const params = {
+            ...ids,
+            serverName: 'cua_repl',
+            mode: 'form',
+            message: 'Allow Computer Use to use "Ruimte"?',
+            requestedSchema: { type: 'object', properties: {} },
+            _meta: {
+                callId: 'call_1',
+                codex_approval_kind: 'mcp_tool_call',
+                connector_name: 'Computer Use',
+                persist: ['session', 'always'],
+                tool_name: 'get_app_state',
+                tool_params_display: [{ display_name: 'App', name: 'app', value: 'Ruimte' }]
+            }
+        };
+        expect(protocol.handle({ method: 'mcpServer/elicitation/request', id: 0, params })).toEqual([
+            {
+                type: 'approval.requested',
+                requestId: '2-0',
+                ref: 'call_1',
+                toolName: 'Computer Use',
+                input: { app: 'Ruimte' },
+                description: 'Allow Computer Use to use "Ruimte"?',
+                canAllowAlways: true,
+                allowAlways: { label: 'Always allow', description: 'Codex remembers this approval, also in later chats.' }
+            }
+        ]);
+        expect(protocol.approvalDecision('2-0', 'allow-always')).toEqual({ rpcId: 0, result: { action: 'accept', content: {}, _meta: { persist: 'always' } } });
+        expect(protocol.approvalDecision('2-0', 'allow')).toBeNull();
+
+        protocol.handle({ method: 'mcpServer/elicitation/request', id: 1, params: { ...params, _meta: { ...params._meta, persist: ['session'] } } });
+        expect(protocol.approvalDecision('2-1', 'allow')).toEqual({ rpcId: 1, result: { action: 'accept', content: {} } });
+
+        protocol.handle({ method: 'mcpServer/elicitation/request', id: 2, params: { ...params, _meta: {} } });
+        expect(protocol.approvalDecision('2-2', 'deny')).toEqual({ rpcId: 2, result: { action: 'decline' } });
+    });
+
+    test('an MCP server that asks for fields or sends a link is left to the backend to refuse', () => {
+        const protocol = new CodexProtocol(1);
+        const form = { ...ids, serverName: 's', mode: 'form', message: 'Name?', requestedSchema: { type: 'object', properties: { name: { type: 'string' } } } };
+        expect(protocol.handle({ method: 'mcpServer/elicitation/request', id: 0, params: form })).toEqual([]);
+        const link = { ...ids, serverName: 's', mode: 'url', message: 'Sign in', url: 'https://example.com', elicitationId: 'e1' };
+        expect(protocol.handle({ method: 'mcpServer/elicitation/request', id: 1, params: link })).toEqual([]);
+    });
+
     test('a server request it does not know says nothing, so the backend can refuse it', () => {
         const protocol = new CodexProtocol(1);
         expect(protocol.handle({ method: 'item/permissions/requestApproval', id: 9, params: ids })).toEqual([]);

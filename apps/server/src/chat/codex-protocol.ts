@@ -124,7 +124,33 @@ const outputChunk = (params: Frame): string | null => {
 
 type Pending =
     | { type: 'approval'; rpcId: CodexRpcId; kind: 'command' | 'fileChange'; amendment: string[] | null; decisions: string[] }
-    | { type: 'question'; rpcId: CodexRpcId | null; questionIds: string[] };
+    | { type: 'question'; rpcId: CodexRpcId | null; questionIds: string[] }
+    | { type: 'elicitation'; rpcId: CodexRpcId; persist: ElicitationPersist | null };
+
+type ElicitationPersist = 'always' | 'session';
+
+/* A form that asks for no fields is a yes or no, which is all an approval card can answer. */
+const isConfirmation = (params: Frame): boolean =>
+    params.mode === 'form' &&
+    isRecord(params.requestedSchema) &&
+    Object.keys(isRecord(params.requestedSchema.properties) ? params.requestedSchema.properties : {}).length === 0;
+
+/* The widest remembering the MCP server offers, which the one "always" button of a card stands for. */
+const elicitationPersist = (meta: Frame): ElicitationPersist | null => {
+    const offered = Array.isArray(meta.persist) ? meta.persist : [];
+    return offered.includes('always') ? 'always' : offered.includes('session') ? 'session' : null;
+};
+
+/* The arguments as the MCP server shows them to a person, keyed by name, so the card sums up the call. */
+const elicitationInput = (meta: Frame): Frame => {
+    const input: Frame = {};
+    for (const param of Array.isArray(meta.tool_params_display) ? meta.tool_params_display : []) {
+        if (isRecord(param) && typeof param.name === 'string') {
+            input[param.name] = param.value;
+        }
+    }
+    return input;
+};
 
 /*
  * The `codex app-server` protocol, in and out. Notifications and the server's own requests become
@@ -280,6 +306,10 @@ export class CodexProtocol {
     /* The reply that settles an approval, or null when nothing waits under that id. */
     approvalDecision(requestId: string, decision: ApprovalDecision): { rpcId: CodexRpcId; result: unknown } | null {
         const pending = this.pending.get(requestId);
+        if (pending?.type === 'elicitation') {
+            this.pending.delete(requestId);
+            return { rpcId: pending.rpcId, result: elicitationAnswer(decision, pending.persist) };
+        }
         if (pending?.type !== 'approval') {
             return null;
         }
@@ -338,6 +368,10 @@ export class CodexProtocol {
             events.push({ type: 'question.requested', requestId, questions });
             return;
         }
+        if (method === 'mcpServer/elicitation/request') {
+            this.elicitation(requestId, rpcId, params, events);
+            return;
+        }
         const kind = method === 'item/commandExecution/requestApproval' ? 'command' : method === 'item/fileChange/requestApproval' ? 'fileChange' : null;
         if (!kind) {
             return;
@@ -375,6 +409,33 @@ export class CodexProtocol {
                   }
                 : decisions.includes('acceptForSession')
                   ? { allowAlways: { label: 'Allow for this session', description: 'Allow this provider permission for the rest of the session.' } }
+                  : {})
+        });
+    }
+
+    /*
+     * An MCP server asking the person something, such as computer use asking before it touches an app.
+     * Only a yes or no becomes a card; a form with fields or a link stays unanswered, which Codex reads as a decline.
+     */
+    private elicitation(requestId: string, rpcId: CodexRpcId, params: Frame, events: BackendEvent[]): void {
+        if (!isConfirmation(params)) {
+            return;
+        }
+        const meta = isRecord(params._meta) ? params._meta : {};
+        const persist = elicitationPersist(meta);
+        this.pending.set(requestId, { type: 'elicitation', rpcId, persist });
+        events.push({
+            type: 'approval.requested',
+            requestId,
+            ref: str(meta.callId),
+            toolName: str(meta.connector_name) ?? str(params.serverName) ?? 'MCP',
+            input: elicitationInput(meta),
+            description: str(params.message),
+            canAllowAlways: persist !== null,
+            ...(persist === 'always'
+                ? { allowAlways: { label: 'Always allow', description: 'Codex remembers this approval, also in later chats.' } }
+                : persist === 'session'
+                  ? { allowAlways: { label: 'Allow for this session', description: 'Codex remembers this approval for the rest of the session.' } }
                   : {})
         });
     }
@@ -583,4 +644,12 @@ const codexDecision = (decision: ApprovalDecision, pending: Extract<Pending, { t
         return { acceptWithExecpolicyAmendment: { execpolicy_amendment: pending.amendment } };
     }
     return pending.kind === 'fileChange' || pending.decisions.includes('acceptForSession') ? 'acceptForSession' : 'accept';
+};
+
+/* The MCP answer to a yes or no; how long it is remembered rides along in `_meta.persist`. */
+const elicitationAnswer = (decision: ApprovalDecision, persist: ElicitationPersist | null): unknown => {
+    if (decision === 'deny') {
+        return { action: 'decline' };
+    }
+    return decision === 'allow-always' && persist !== null ? { action: 'accept', content: {}, _meta: { persist } } : { action: 'accept', content: {} };
 };
