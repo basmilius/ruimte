@@ -13,6 +13,7 @@ import type {
     Task
 } from '@ruimte/contracts';
 import { notResumedNote } from '@ruimte/contracts';
+import { chatReferenceNote, resolveChatReferences } from '../context/chat-references.ts';
 import { contextChangeNote } from '../context/context-note.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ChatProvider } from '../providers/provider.ts';
@@ -42,6 +43,8 @@ interface ChatSessionOptions {
     computer?(): boolean;
     // The links as they are now: named in the CLI's first prompt, and a change between two turns put in front of the next one.
     contextSources?(): ContextSource[];
+    // The name of a chat of the same project a person attached to a message; null for any other id.
+    chatTitle?(id: string): string | null;
     // What another node left for this chat, taken as it is handed over: delivered once, in front of the next prompt.
     messages?(): string[];
     // Git trees per turn, so a settled turn can show what the working tree holds against its start.
@@ -66,6 +69,7 @@ const TITLE_RECHECK_MS = 10_000;
 export interface ChatSendExtras {
     mentions?: string[];
     skills?: string[];
+    chats?: string[];
     attachments?: ChatAttachment[];
 }
 
@@ -186,6 +190,7 @@ export class ChatSession {
                 createdAt: Date.now(),
                 ...(extras.mentions?.length ? { mentions: extras.mentions } : {}),
                 ...(extras.skills?.length ? { skills: extras.skills } : {}),
+                ...(extras.chats?.length ? { chats: extras.chats } : {}),
                 ...(extras.attachments?.length ? { attachments: extras.attachments } : {})
             };
             this.setQueue([...this.queue, message]);
@@ -239,16 +244,19 @@ export class ChatSession {
             return;
         }
         this.setQueue(rest);
-        this.dispatch(next.text, { mentions: next.mentions, skills: next.skills, attachments: next.attachments }, next.turnId);
+        this.dispatch(next.text, { mentions: next.mentions, skills: next.skills, chats: next.chats, attachments: next.attachments }, next.turnId);
     }
 
     private dispatch(text: string, extras: ChatSendExtras, requestedTurnId?: string): void {
         this.settleAgentTurn();
         const { preamble, note } = this.contextNote(text);
-        const turnId = this.openTurn(text, note, extras, requestedTurnId);
+        // A slash command must stay the first thing the CLI reads, as `contextNote` keeps it.
+        const references = text.startsWith('/') ? [] : resolveChatReferences(extras.chats, (id) => this.options.chatTitle?.(id) ?? null);
+        const turnId = this.openTurn(text, note, { ...extras, chats: references.map((reference) => reference.id) }, requestedTurnId);
+        const said = [preamble, chatReferenceNote(references)].filter((part): part is string => part !== null);
         const input = {
             text,
-            preamble,
+            preamble: said.length === 0 ? null : said.join('\n\n'),
             attachments: extras.attachments ?? [],
             mentions: extras.mentions ?? [],
             skills: extras.skills ?? []
@@ -788,8 +796,9 @@ export class ChatSession {
         if (text !== null) {
             const mentions = extras.mentions?.length ? extras.mentions : undefined;
             const skills = extras.skills?.length ? extras.skills : undefined;
+            const chats = extras.chats?.length ? extras.chats : undefined;
             const attachments = extras.attachments?.length ? extras.attachments : undefined;
-            events.push(this.thread.upsert({ id: newId('user'), kind: 'user', createdAt: now, turnId, text, mentions, skills, attachments }));
+            events.push(this.thread.upsert({ id: newId('user'), kind: 'user', createdAt: now, turnId, text, mentions, skills, chats, attachments }));
         }
         events.push(this.thread.patchInfo({ status: 'running', activeTurnId: turnId }));
         this.emit(events);

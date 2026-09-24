@@ -101,6 +101,8 @@ interface ChatManagerOptions {
     openingSelection?: (chatId: string, provider: AgentKind) => ModelSelection | undefined;
     // The sources themselves, so a chat can name them to its agent and tell it what came and went between turns.
     contextSources?: (chatId: string) => ContextSource[];
+    // The name of a chat of the same project, for a message a person attached it to; null for any other id.
+    chatTitle?: (chatId: string, id: string) => string | null;
     // What another node left for this chat, taken once and put in front of the next prompt.
     messages?: (chatId: string) => string[];
     // The same messages, as the lines a person reads in the thread; asked once, when the chat is loaded.
@@ -180,6 +182,7 @@ export class ChatManager {
     private readonly computer: () => boolean;
     private readonly openingSelection: NonNullable<ChatManagerOptions['openingSelection']>;
     private readonly contextSources: (chatId: string) => ContextSource[];
+    private readonly chatTitle: (chatId: string, id: string) => string | null;
     private readonly messages: (chatId: string) => string[];
     private readonly unshownMessages: (chatId: string) => Promise<string[]>;
     private readonly firstPrompt: (chatId: string) => Promise<string | null>;
@@ -226,6 +229,7 @@ export class ChatManager {
         this.standalone = options.standalone ?? (() => false);
         this.computer = options.computer ?? (() => false);
         this.contextSources = options.contextSources ?? (() => []);
+        this.chatTitle = options.chatTitle ?? (() => null);
         this.messages = options.messages ?? (() => []);
         this.unshownMessages = options.unshownMessages ?? (() => Promise.resolve([]));
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
@@ -411,6 +415,7 @@ export class ChatManager {
             standalone: () => this.standalone(payload.chatId),
             computer: () => this.computer(),
             contextSources: () => this.contextSources(payload.chatId),
+            chatTitle: (id: string) => this.chatTitle(payload.chatId, id),
             messages: () => this.messages(payload.chatId),
             ...(this.checkpoints ? { checkpoints: this.checkpoints } : {}),
             emit: (event: ChatEvent) => this.emit(payload.chatId, event),

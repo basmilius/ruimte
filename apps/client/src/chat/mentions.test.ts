@@ -1,5 +1,16 @@
 import { describe, expect, test } from 'bun:test';
-import { chipRanges, chipText, findMentionQuery, findSkillQuery, insertMention, insertSkill, presentMentions, presentSkills, tokenizeChips } from './mentions';
+import {
+    chipRanges,
+    chipText,
+    dropQuery,
+    findMentionQuery,
+    findSkillQuery,
+    insertMention,
+    insertSkill,
+    presentMentions,
+    presentSkills,
+    tokenizeChips
+} from './mentions';
 
 describe('findMentionQuery', () => {
     test('opens on an @ that starts a word and follows it to the caret', () => {
@@ -18,6 +29,13 @@ describe('insertMention', () => {
     test('swaps the query for the path plus a space and moves the caret behind it', () => {
         const mention = findMentionQuery('see @cmp now', 8)!;
         expect(insertMention('see @cmp now', mention, 'src/Composer.tsx')).toEqual({ text: 'see @src/Composer.tsx  now', caret: 22 });
+    });
+});
+
+describe('dropQuery', () => {
+    test('takes the @query out and leaves the caret where it stood', () => {
+        const query = findMentionQuery('see @plan now', 9)!;
+        expect(dropQuery('see @plan now', query)).toEqual({ text: 'see  now', caret: 4 });
     });
 });
 

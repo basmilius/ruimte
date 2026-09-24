@@ -10,6 +10,11 @@
     "unreadable": "Could not read {{name}}",
     "unreadableThumbnail": "Could not read the thumbnail"
   },
+  "chatReference": {
+    "gone": "Chat not in this project",
+    "untitled": "Untitled chat",
+    "remove": "Remove {{title}}"
+  },
   "fork": {
     "refusal": {
       "notInConversation": "This turn is not in the conversation",
@@ -229,7 +234,9 @@
     "jumpToEnd": "Jump to the end",
     "mentions": {
       "here": "Files in this folder",
-      "noMatch": "No files match",
+      "files": "Files",
+      "chats": "Chats in this project",
+      "noMatch": "No files or chats match",
       "empty": "No files here"
     },
     "queue": {

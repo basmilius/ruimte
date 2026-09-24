@@ -30,6 +30,8 @@ export interface ChatSendExtras {
     mentions?: string[];
     /* Skills picked with `$`; they also sit in the text, this is what the timeline chips. */
     skills?: string[];
+    /* Chats of the project picked with `@`; only their ids travel, the agent reads them itself. */
+    chats?: string[];
     attachments?: ChatAttachmentUpload[];
 }
 
@@ -156,6 +158,7 @@ export class ChatClient {
             text,
             mentions: extras.mentions,
             skills: extras.skills,
+            chats: extras.chats,
             attachments: extras.attachments
         });
     }

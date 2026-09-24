@@ -103,6 +103,7 @@ export const ChatQueuedMessageSchema = z.object({
     text: z.string(),
     mentions: z.array(z.string()).optional(),
     skills: z.array(z.string()).optional(),
+    chats: z.array(z.string()).optional(),
     attachments: z.array(ChatAttachmentSchema).optional(),
     createdAt: z.number()
 });
@@ -180,6 +181,8 @@ export const ChatUserItemSchema = z.object({
     mentions: z.array(z.string()).optional(),
     // Skills the person picked with `$`; the names also sit in the text, this is what the row chips.
     skills: z.array(z.string()).optional(),
+    // Chats of the same project the person picked with `@`. Only their ids travel; the agent reads them itself.
+    chats: z.array(z.string()).optional(),
     attachments: z.array(ChatAttachmentSchema).optional()
 });
 
@@ -624,6 +627,7 @@ export const ChatSendPayloadSchema = z
         text: z.string(),
         mentions: z.array(z.string().min(1)).max(64).optional(),
         skills: z.array(z.string().min(1)).max(16).optional(),
+        chats: z.array(ChatIdSchema).max(16).optional(),
         attachments: ChatAttachmentUploadsSchema.optional()
     })
     .refine((payload) => payload.text.trim() !== '' || (payload.attachments?.length ?? 0) > 0, { message: 'A message needs text or an attachment' });

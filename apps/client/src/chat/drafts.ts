@@ -9,15 +9,17 @@ export interface ChatDraft {
     text: string;
     mentions: string[];
     skills: string[];
+    /* Chats of the project picked with `@`, drawn beside the text rather than in it. */
+    chats: string[];
     attachments: ChatAttachmentUpload[];
     /* A piece of an answer that goes above the text as a blockquote; empty for none. */
     quote: string;
 }
 
-export const EMPTY_DRAFT: ChatDraft = { text: '', mentions: [], skills: [], attachments: [], quote: '' };
+export const EMPTY_DRAFT: ChatDraft = { text: '', mentions: [], skills: [], chats: [], attachments: [], quote: '' };
 
 // Older records only had text; the rest is filled in on read.
-type DraftRecord = { text: string; mentions?: string[]; skills?: string[]; attachments?: ChatAttachmentUpload[]; quote?: string };
+type DraftRecord = { text: string; mentions?: string[]; skills?: string[]; chats?: string[]; attachments?: ChatAttachmentUpload[]; quote?: string };
 
 const storage = persistedJson<Record<string, DraftRecord>>(STORAGE_KEY, (raw) => (raw ? (JSON.parse(raw) as Record<string, DraftRecord>) : {}), {});
 
@@ -47,7 +49,14 @@ const trackDraft = (chatId: string, held: boolean): void => {
 export const readDraft = (chatId: string): ChatDraft => {
     const record = readAll()[chatId];
     return record
-        ? { text: record.text, mentions: record.mentions ?? [], skills: record.skills ?? [], attachments: record.attachments ?? [], quote: record.quote ?? '' }
+        ? {
+              text: record.text,
+              mentions: record.mentions ?? [],
+              skills: record.skills ?? [],
+              chats: record.chats ?? [],
+              attachments: record.attachments ?? [],
+              quote: record.quote ?? ''
+          }
         : EMPTY_DRAFT;
 };
 
@@ -59,12 +68,19 @@ export const writeDraft = (chatId: string, draft: ChatDraft): void => {
         store(drafts);
         return;
     }
-    drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills, attachments: draft.attachments, quote: draft.quote };
+    drafts[chatId] = {
+        text: draft.text,
+        mentions: draft.mentions,
+        skills: draft.skills,
+        chats: draft.chats,
+        attachments: draft.attachments,
+        quote: draft.quote
+    };
     if (store(drafts)) {
         return;
     }
     // A file can outgrow the storage quota; the text is the part worth keeping then.
-    drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills, quote: draft.quote };
+    drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills, chats: draft.chats, quote: draft.quote };
     store(drafts);
 };
 
@@ -92,6 +108,7 @@ export const takeBackIntoDraft = (
             text: current.text.trim() === '' ? taken.text : joinDraftText(taken.text, current.text),
             mentions: union(taken.mentions, current.mentions),
             skills: union(taken.skills, current.skills),
+            chats: union(taken.chats, current.chats),
             attachments: [...checked.accepted.map((entry) => entry.upload), ...current.attachments],
             quote: current.quote
         },

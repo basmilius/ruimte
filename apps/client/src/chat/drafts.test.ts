@@ -23,23 +23,25 @@ describe('a queued message taken back to edit', () => {
     const upload = (name: string) => ({ name, mime: 'text/plain', data: 'aGVsbG8=' });
 
     test('fills an empty composer as it was queued', () => {
-        const taken = { text: 'see @src/a.ts', mentions: ['src/a.ts'], skills: ['review'], attachments: [upload('a.txt')] };
+        const taken = { text: 'see @src/a.ts', mentions: ['src/a.ts'], skills: ['review'], chats: ['chat-a'], attachments: [upload('a.txt')] };
         expect(takeBackIntoDraft(EMPTY_DRAFT, taken)).toEqual({ draft: { ...taken, quote: '' }, rejected: [] });
     });
 
-    test('goes above what was typed since, with a blank line between, joins its mentions and files, and leaves the quote in place', () => {
+    test('goes above what was typed since, with a blank line between, joins its mentions, chats and files, and leaves the quote in place', () => {
         const current = {
             text: 'and @src/b.ts',
             mentions: ['src/b.ts', 'src/a.ts'],
             skills: [],
+            chats: ['chat-b', 'chat-a'],
             attachments: [upload('b.txt')],
             quote: 'The cache is per machine.'
         };
-        const taken = { text: 'see @src/a.ts\n', mentions: ['src/a.ts'], skills: ['review'], attachments: [upload('a.txt')] };
+        const taken = { text: 'see @src/a.ts\n', mentions: ['src/a.ts'], skills: ['review'], chats: ['chat-a'], attachments: [upload('a.txt')] };
         expect(takeBackIntoDraft(current, taken).draft).toEqual({
             text: 'see @src/a.ts\n\nand @src/b.ts',
             mentions: ['src/a.ts', 'src/b.ts'],
             skills: ['review'],
+            chats: ['chat-a', 'chat-b'],
             attachments: [upload('a.txt'), upload('b.txt')],
             quote: 'The cache is per machine.'
         });

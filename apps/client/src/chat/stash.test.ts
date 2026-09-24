@@ -46,6 +46,7 @@ describe('stashedFrom', () => {
             text: 'look at @src/a.ts',
             mentions: ['src/a.ts'],
             skills: ['unslop'],
+            chats: [],
             attachments: [{ name: 'shot.png', mime: 'image/png', data: 'AAAA' }],
             quote: ''
         };

@@ -10,6 +10,11 @@
     "unreadable": "Kon {{name}} niet lezen",
     "unreadableThumbnail": "Kon de miniatuur niet lezen"
   },
+  "chatReference": {
+    "gone": "Chat niet in dit project",
+    "untitled": "Naamloze chat",
+    "remove": "{{title}} verwijderen"
+  },
   "fork": {
     "refusal": {
       "notInConversation": "Deze turn zit niet in het gesprek",
@@ -229,7 +234,9 @@
     "jumpToEnd": "Naar het einde",
     "mentions": {
       "here": "Bestanden in deze map",
-      "noMatch": "Geen bestanden gevonden",
+      "files": "Bestanden",
+      "chats": "Chats in dit project",
+      "noMatch": "Geen bestanden of chats gevonden",
       "empty": "Hier staan geen bestanden"
     },
     "queue": {

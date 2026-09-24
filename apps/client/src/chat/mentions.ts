@@ -48,6 +48,12 @@ export const insertToken = (text: string, query: MentionQuery, sigil: string, va
     return { text: `${text.slice(0, query.start)}${token}${text.slice(end)}`, caret: query.start + token.length };
 };
 
+/* Takes the `<sigil>query` under the caret out, for a pick that lands beside the text instead of in it. */
+export const dropQuery = (text: string, query: MentionQuery): { text: string; caret: number } => ({
+    text: `${text.slice(0, query.start)}${text.slice(query.start + 1 + query.query.length)}`,
+    caret: query.start
+});
+
 export const insertMention = (text: string, query: MentionQuery, path: string): { text: string; caret: number } => insertToken(text, query, '@', path);
 
 export const insertSkill = (text: string, query: MentionQuery, name: string): { text: string; caret: number } => insertToken(text, query, '$', name);

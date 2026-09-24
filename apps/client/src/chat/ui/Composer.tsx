@@ -6,7 +6,7 @@ import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import clsx from 'clsx';
-import { ArrowUp, ChevronDown, Clock, Copy, FastForward, Paperclip, Pencil, Plus, Square, SquareSlash, X, Zap } from 'lucide-react';
+import { ArrowUp, ChevronDown, Clock, Copy, FastForward, MessageSquare, Paperclip, Pencil, Plus, Square, SquareSlash, X, Zap } from 'lucide-react';
 import { ActionRefusal } from '@ruimte/actions';
 import type {
     AgentKind,
@@ -25,9 +25,11 @@ import { performAsPerson } from '@/actions/client-actions';
 import { askBeforeStoppingSubagents } from '@/agents/end-children';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, readStoredAttachments, uploadBytes } from '@/chat/attachments';
+import { chatSuggestions } from '@/chat/chat-references';
 import { EMPTY_DRAFT, isEmptyDraft, joinDraftText, readDraft, takeBackIntoDraft, takeDraftOffers, writeDraft, type ChatDraft } from '@/chat/drafts';
 import {
     MENTION_DRAG_TYPE,
+    dropQuery,
     findMentionQuery,
     findSkillQuery,
     insertMention,
@@ -46,6 +48,8 @@ import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferenc
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
 import { ChatActivity } from '@/chat/ui/ChatActivity';
+import { ChatReferenceChip } from '@/chat/ui/ChatReferenceChip';
+import { useProjectChats } from '@/chat/ui/use-project-chats';
 import { chipDecorations } from '@/chat/ui/composer/chips';
 import { enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirection, tabSpaces } from '@/chat/ui/composer/keys';
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
@@ -76,6 +80,8 @@ import { useNow } from '@/ui/useNow';
 const SEARCH_DEBOUNCE_MS = 80;
 // What fits above the composer without turning the picker into a file tree.
 const MENTION_RESULTS = 8;
+// The chats go above the files, so a few leave the files in view.
+const CHAT_RESULTS = 4;
 const NOTICE_MS = 4000;
 // How many sent prompts the arrow keys walk back through, per chat.
 const PROMPT_HISTORY = 50;
@@ -172,6 +178,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const order = useChatRow(chatId, (row) => row?.order);
     // The structure, which a delta leaves alone. The prompts and the requests are items of their own.
     const items = useChatRow(chatId, (row) => row?.structure);
+    const chats = useProjectChats();
 
     const pending = useMemo(() => [...approvals, ...questions], [approvals, questions]);
     const provider = providers.find((entry) => entry.kind === info.provider);
@@ -337,6 +344,11 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const mentionMenuOpen = !commandMenuOpen && !skillMenuOpen && mention !== null;
     // Results belong to the query that asked for them; a closed picker shows none while the next answer is on its way.
     const files = mention === null ? [] : searched;
+    const chatMatches = useMemo(
+        () => (mention === null ? [] : chatSuggestions(chats, mention.query, [chatId, ...draft.chats], CHAT_RESULTS)),
+        [chatId, chats, draft.chats, mention]
+    );
+    const mentionCount = chatMatches.length + files.length;
     const editorExtensions = useMemo(
         () => [chipDecorations({ mentions: draft.mentions, skills: draft.skills }), LEAVE_DROPS_TO_THE_CARD],
         [draft.mentions, draft.skills]
@@ -462,6 +474,34 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
         moveCaret(result.caret);
     };
 
+    /* A picked chat sits beside the text as a chip, so the `@query` that found it goes. */
+    const chooseChat = (id: string): void => {
+        if (!mention) {
+            return;
+        }
+        const result = dropQuery(text, mention);
+        setDraft((current) => ({ ...current, text: result.text, chats: current.chats.includes(id) ? current.chats : [...current.chats, id] }));
+        setMention(null);
+        moveCaret(result.caret);
+    };
+
+    const chooseMentionAt = (index: number): void => {
+        const chat = chatMatches[index];
+        if (chat) {
+            chooseChat(chat.id);
+            return;
+        }
+        const path = files[index - chatMatches.length] ?? files[0];
+        if (path !== undefined) {
+            chooseMention(path);
+        }
+    };
+
+    const removeChat = (id: string): void => {
+        setDraft((current) => ({ ...current, chats: current.chats.filter((entry) => entry !== id) }));
+        inputRef.current?.focus();
+    };
+
     /*
      * A picked skill becomes a `$name` chip in the text and a name on the send, which is what
      * dispatches it. The `/` menu lands here too, so both spellings end up on the same path.
@@ -544,6 +584,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
         onSend(withQuote(quote, trimmed), {
             mentions: presentMentions(trimmed, draft.mentions),
             skills: presentSkills(trimmed, draft.skills),
+            chats: draft.chats,
             attachments: draft.attachments
         });
         clearDraft();
@@ -594,6 +635,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                 text: message.text,
                 mentions: message.mentions ?? [],
                 skills: message.skills ?? [],
+                chats: message.chats ?? [],
                 attachments: uploads
             };
             // A file that would not fit is refused here, while the message still holds it on the machine.
@@ -723,17 +765,17 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                 return true;
             }
         }
-        if (mentionMenuOpen && files.length > 0) {
+        if (mentionMenuOpen && mentionCount > 0) {
             if (e.key === 'ArrowDown') {
-                setMenuIndex((i) => (i + 1) % files.length);
+                setMenuIndex((i) => (i + 1) % mentionCount);
                 return true;
             }
             if (e.key === 'ArrowUp') {
-                setMenuIndex((i) => (i - 1 + files.length) % files.length);
+                setMenuIndex((i) => (i - 1 + mentionCount) % mentionCount);
                 return true;
             }
             if (e.key === 'Tab' || e.key === 'Enter') {
-                chooseMention(files[menuIndex] ?? files[0]!);
+                chooseMentionAt(menuIndex);
                 return true;
             }
         }
@@ -956,8 +998,24 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                     )}
                     {mentionMenuOpen && (
                         <div className="border-b border-border px-1.5 py-1.5">
-                            {mention.query === '' && files.length > 0 && <div className={MENU_LABEL}>{t('composer.mentions.here')}</div>}
-                            {files.length === 0 && (
+                            {chatMatches.length > 0 && <div className={MENU_LABEL}>{t('composer.mentions.chats')}</div>}
+                            {chatMatches.map((chat, index) => (
+                                <button
+                                    key={chat.id}
+                                    data-active={index === menuIndex}
+                                    className="cursor-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-text-muted"
+                                    onMouseEnter={() => setMenuIndex(index)}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => chooseChat(chat.id)}
+                                >
+                                    <Icon icon={MessageSquare} size={14} className="shrink-0 text-text-faint" />
+                                    <span className="truncate text-text">{chat.title || t('chatReference.untitled')}</span>
+                                </button>
+                            ))}
+                            {files.length > 0 && (mention.query === '' || chatMatches.length > 0) && (
+                                <div className={MENU_LABEL}>{mention.query === '' ? t('composer.mentions.here') : t('composer.mentions.files')}</div>
+                            )}
+                            {mentionCount === 0 && (
                                 <div className="px-2 py-1 text-xs text-text-faint">
                                     {mention.query ? t('composer.mentions.noMatch') : t('composer.mentions.empty')}
                                 </div>
@@ -967,9 +1025,9 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                                 return (
                                     <button
                                         key={path}
-                                        data-active={index === menuIndex}
+                                        data-active={chatMatches.length + index === menuIndex}
                                         className="cursor-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-text-muted"
-                                        onMouseEnter={() => setMenuIndex(index)}
+                                        onMouseEnter={() => setMenuIndex(chatMatches.length + index)}
                                         onMouseDown={(e) => e.preventDefault()}
                                         onClick={() => chooseMention(path)}
                                     >
@@ -1050,6 +1108,13 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                                     <Icon icon={X} size={12} />
                                 </button>
                             </Tooltip>
+                        </div>
+                    )}
+                    {draft.chats.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 px-5 pt-4 @max-md/composer:px-3.5 @max-md/composer:pt-3">
+                            {draft.chats.map((id) => (
+                                <ChatReferenceChip key={id} chatId={id} onRemove={() => removeChat(id)} />
+                            ))}
                         </div>
                     )}
                     {draft.attachments.length > 0 && (

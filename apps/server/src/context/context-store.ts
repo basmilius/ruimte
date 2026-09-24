@@ -33,6 +33,9 @@ export class SubagentUnreadable extends ContextRefusal {
 interface ContextReaders {
     /* What the agent under this id may read, derived from the project documents the daemon knows. */
     sources(targetId: string): ContextSource[];
+    /* The chats a person attached to a message of this chat. Readable like a line, but never listed or
+       announced as one: the message that attached them already said where they are. */
+    referenced?(targetId: string): ContextSource[];
     /* The elements of a drawing view, or null when no open project has one under that id. */
     drawingElements(viewId: string): Promise<DrawingElement[] | null>;
     /* The diagram of a view in the project of the agent asking, whether or not anyone has that project open. */
@@ -150,8 +153,10 @@ export class ContextStore {
      * are rendered here) and because the wire then carries fifteen lines instead of two thousand.
      */
     async read(targetId: string, sourceId: string, tail: number | null = null, subagent: string | null = null): Promise<string | null> {
-        // Only what is linked into the asker matches, so a node id opens nothing an edge did not.
-        const source = this.readers.sources(targetId).find((entry) => entry.id === sourceId || entry.nodeId === sourceId);
+        // Only what is linked into the asker matches, so a node id opens nothing an edge or a person's attachment did not.
+        const source = [...this.readers.sources(targetId), ...(this.readers.referenced?.(targetId) ?? [])].find(
+            (entry) => entry.id === sourceId || entry.nodeId === sourceId
+        );
         if (!source) {
             return null;
         }

@@ -9,6 +9,7 @@ import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { BookmarkStore } from './bookmark-store.ts';
+import { chatReferenceNote } from '../context/chat-references.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, FakeCheckpoints, RecordingStore } from './chat-test-helpers.ts';
 import { fakeClaude } from './fake-claude.ts';
@@ -376,6 +377,26 @@ describe('ChatManager', () => {
         expect(replies[1]).toBe(`echo: ${notes[0]?.text}\n\nsecond`);
         expect(replies[2]).toBe('echo: third');
         expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['first', 'second', 'third']);
+    });
+
+    test('a chat attached with @ goes to the CLI as the command that reads it, and to the thread as its id', async () => {
+        await retire(manager);
+        const titles: Record<string, string> = { 'chat-earlier': 'Auth rewrite' };
+        manager = makeManager({ chatTitle: (chatId, id) => (chatId === 'chat-ref' ? (titles[id] ?? null) : null) });
+        manager.subscribe('c1', recorder.sink());
+        await manager.create({ chatId: 'chat-ref', cwd: home });
+        manager.attach('chat-ref', 'c1');
+
+        await manager.send('chat-ref', 'carry on from there', { chats: ['chat-earlier', 'chat-elsewhere'] });
+        await recorder.until(idle);
+
+        expect(recorder.ofKind('user')[0]).toMatchObject({ text: 'carry on from there', chats: ['chat-earlier'] });
+        // The fake echoes its prompt, so the reply shows what the CLI was given.
+        expect(recorder.ofKind('assistant')[0]?.text).toBe(
+            `echo: ${chatReferenceNote([{ id: 'chat-earlier', title: 'Auth rewrite' }])}\n\ncarry on from there`
+        );
+        // Nothing in the thread repeats it: the row draws the chip.
+        expect(recorder.ofKind('note')).toEqual([]);
     });
 
     test('a CLI that dies mid-turn leaves an error note and the chat can go on', async () => {

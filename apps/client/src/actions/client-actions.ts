@@ -1265,7 +1265,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
             clearTerminal(terminalId);
             return { output: { terminalId, terminal } };
         },
-        'chat.send': async ({ chatId, prompt, mentions, skills, attachments }, call) => {
+        'chat.send': async ({ chatId, prompt, mentions, skills, chats, attachments }, call) => {
             const chat = sessionTitle(document, chatId, 'chat');
             if (!chat) {
                 throw new ActionRefusal('unknown-chat', `No AI Chat with id “${chatId}” exists in this project.`);
@@ -1278,6 +1278,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 const submitted = await sendChat(chatId, text, {
                     ...(mentions == null ? {} : { mentions }),
                     ...(skills == null ? {} : { skills }),
+                    ...(chats == null ? {} : { chats }),
                     ...(attachments == null ? {} : { attachments })
                 });
                 return { output: { chatId, chat, ...submitted } };

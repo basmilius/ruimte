@@ -9,6 +9,7 @@ import { useEndpointId } from '@/state/keys';
 import { useProviders } from '@/state/providers';
 import { useSettings } from '@/state/settings';
 import { useMachineUrl } from '@/transport/machine-url';
+import { ChatReferenceChip } from '@/chat/ui/ChatReferenceChip';
 import { ImageThumb } from '@/chat/ui/ImageView';
 import { MessageMarkdown, ReplyMarkdown } from '@/chat/ui/Markdown';
 import { FadingWords } from '@/chat/ui/FadingWords';
@@ -64,6 +65,7 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
     const endpointId = useEndpointId();
     const long = item.text.split('\n').length > USER_FOLD_LINES || item.text.length > USER_FOLD_CHARS;
     const attachments = item.attachments ?? [];
+    const chats = item.chats ?? [];
     useOpenForFind(item.id, 'text', setOpen);
     return (
         <div data-find-item={item.id} className="flex flex-col items-end">
@@ -83,6 +85,13 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
                             <AttachmentLink key={attachment.id} chatId={chatId} endpointId={endpointId} attachment={attachment} />
                         )
                     )}
+                </div>
+            )}
+            {chats.length > 0 && (
+                <div className="mb-1.5 flex max-w-[80%] flex-wrap justify-end gap-1.5">
+                    {chats.map((id) => (
+                        <ChatReferenceChip key={id} chatId={id} />
+                    ))}
                 </div>
             )}
             {item.text !== '' && (

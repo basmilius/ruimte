@@ -132,6 +132,22 @@ export class ProjectIndex {
         return null;
     }
 
+    /* The name of the chat node or chat view under `id` in the project of `fromId`, never `fromId` itself; null for anything else. */
+    chatTitleBeside(fromId: string, id: string): string | null {
+        const place = id === fromId ? null : this.locate(fromId);
+        const views = place === null ? [] : (this.projects.get(place.projectId)?.content.views ?? []);
+        for (const view of views) {
+            if (view.kind === 'chat' && view.id === id) {
+                return view.name;
+            }
+            const node = isCanvasView(view) ? view.nodes.find((candidate) => candidate.id === id && candidate.kind === 'chat') : undefined;
+            if (node) {
+                return node.title;
+            }
+        }
+        return null;
+    }
+
     /*
      * Every session this project holds, over every view it has. Read when a project closes from a
      * client that never had it on screen, which has no document of its own to count.

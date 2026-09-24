@@ -8525,6 +8525,12 @@
                 "type": "string"
               }
             },
+            "chats": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
             "attachments": {
               "type": "array",
               "items": {
@@ -8784,6 +8790,12 @@
                   }
                 },
                 "skills": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "chats": {
                   "type": "array",
                   "items": {
                     "type": "string"
@@ -9805,6 +9817,12 @@
                     "type": "string"
                   }
                 },
+                "chats": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "attachments": {
                   "type": "array",
                   "items": {
@@ -10036,6 +10054,12 @@
                   }
                 },
                 "skills": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "chats": {
                   "type": "array",
                   "items": {
                     "type": "string"
@@ -10939,6 +10963,12 @@
                     "type": "string"
                   }
                 },
+                "chats": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "attachments": {
                   "type": "array",
                   "items": {
@@ -11826,6 +11856,12 @@
                           }
                         },
                         "skills": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "chats": {
                           "type": "array",
                           "items": {
                             "type": "string"
@@ -12831,6 +12867,12 @@
                               "type": "string"
                             }
                           },
+                          "chats": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
                           "attachments": {
                             "type": "array",
                             "items": {
@@ -13165,6 +13207,12 @@
                               "type": "string"
                             }
                           },
+                          "chats": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
                           "attachments": {
                             "type": "array",
                             "items": {
@@ -13396,6 +13444,12 @@
                             }
                           },
                           "skills": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "chats": {
                             "type": "array",
                             "items": {
                               "type": "string"
@@ -14329,6 +14383,14 @@
           "minLength": 1
         }
       },
+      "chats": {
+        "maxItems": 16,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
       "attachments": {
         "maxItems": 8,
         "type": "array",
@@ -14424,6 +14486,12 @@
             }
           },
           "skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "chats": {
             "type": "array",
             "items": {
               "type": "string"
@@ -14777,6 +14845,12 @@
               }
             },
             "skills": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "chats": {
               "type": "array",
               "items": {
                 "type": "string"
@@ -15385,6 +15459,12 @@
                     "type": "string"
                   }
                 },
+                "chats": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "attachments": {
                   "type": "array",
                   "items": {
@@ -15822,6 +15902,12 @@
                   }
                 },
                 "skills": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "chats": {
                   "type": "array",
                   "items": {
                     "type": "string"
@@ -31478,6 +31564,12 @@
                       "type": "string"
                     }
                   },
+                  "chats": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "attachments": {
                     "type": "array",
                     "items": {
@@ -33177,6 +33269,12 @@
                           "type": "string"
                         }
                       },
+                      "chats": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
                       "attachments": {
                         "type": "array",
                         "items": {
@@ -34177,6 +34275,12 @@
                             "type": "string"
                           }
                         },
+                        "chats": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
                         "attachments": {
                           "type": "array",
                           "items": {
@@ -34511,6 +34615,12 @@
                             "type": "string"
                           }
                         },
+                        "chats": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
                         "attachments": {
                           "type": "array",
                           "items": {
@@ -34742,6 +34852,12 @@
                           }
                         },
                         "skills": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "chats": {
                           "type": "array",
                           "items": {
                             "type": "string"
@@ -35733,6 +35849,12 @@
                   }
                 },
                 "skills": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "chats": {
                   "type": "array",
                   "items": {
                     "type": "string"
