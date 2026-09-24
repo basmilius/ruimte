@@ -39,6 +39,7 @@ interface ChatSessionOptions {
     spawn?: SpawnChatProcess;
     depth?(): number;
     standalone?(): boolean;
+    computer?(): boolean;
     // The links as they are now: named in the CLI's first prompt, and a change between two turns put in front of the next one.
     contextSources?(): ContextSource[];
     // What another node left for this chat, taken as it is handed over: delivered once, in front of the next prompt.
@@ -915,6 +916,7 @@ export class ChatSession {
             context: this.options.contextSources?.() ?? [],
             depth: this.options.depth?.() ?? 0,
             standalone: this.options.standalone?.() ?? false,
+            computer: this.options.computer?.() ?? false,
             ...(this.options.spawn ? { spawn: this.options.spawn } : {})
         };
         const made: { backend: ChatBackend | null } = { backend: null };

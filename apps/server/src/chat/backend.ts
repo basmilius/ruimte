@@ -27,6 +27,8 @@ export interface BackendLaunch {
     // How deep in a chain of agents this chat sits, which decides what the note about the verbs offers it.
     depth: number;
     standalone?: boolean;
+    // Whether computer use is on for this machine, which is when the note names the `computer` noun.
+    computer?: boolean;
     // How the CLI is started; a test runs a fake in the same process, everything else spawns it.
     spawn?: SpawnChatProcess;
 }

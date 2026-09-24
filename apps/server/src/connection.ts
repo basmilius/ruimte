@@ -58,6 +58,7 @@ export interface ConnectionServices {
     tasks?: Subscribable;
     worktrees?: Subscribable;
     plans?: Subscribable;
+    computer?: Subscribable;
 }
 
 export interface OpenConnection {
@@ -115,7 +116,8 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             services.processes.subscribe(clientId, sink),
             services.tasks?.subscribe(clientId, sink) ?? (() => undefined),
             services.worktrees?.subscribe(clientId, sink) ?? (() => undefined),
-            services.plans?.subscribe(clientId, sink) ?? (() => undefined)
+            services.plans?.subscribe(clientId, sink) ?? (() => undefined),
+            services.computer?.subscribe(clientId, sink) ?? (() => undefined)
         ];
         let closed = false;
 

@@ -189,6 +189,53 @@ const browserOutcome = z.object({
     error: z.string().nullable()
 });
 
+const computerApp = z.string().min(1).describe('The app: its name, bundle id or pid, as computer apps lists them');
+const computerAppRef = z.object({ name: z.string(), bundleId: z.string().nullable(), pid: z.number().int() });
+/* How the tree and the picture of a state are cut, for state itself and for every action that asks for one after it. */
+const computerStateCut = {
+    screenshot: z.boolean().nullish().describe('False leaves the picture of the window out'),
+    maxDepth: z.number().int().min(1).max(200).nullish().describe('How many levels of the tree to read; 60 without it'),
+    maxElements: z.number().int().min(1).max(5000).nullish().describe('How many elements to list; 500 without it'),
+    maxText: z.number().int().min(10).max(10_000).nullish().describe('Where a label or value is cut; 100 characters without it')
+};
+const computerThenState = {
+    withState: z.boolean().nullish().describe('After the action, wait until the window settles and answer with its new state'),
+    ...computerStateCut
+};
+const computerElement = z.number().int().min(0).describe('An element by the number in brackets the last state gave it');
+const computerPixel = z.number().min(0).describe('A pixel of the last screenshot, counted from its top-left corner');
+const computerState = z.object({
+    app: computerAppRef,
+    window: z.object({ title: z.string(), x: z.number(), y: z.number(), width: z.number(), height: z.number(), sheet: z.string().nullable() }),
+    // On this machine, outside any project; null when no picture was taken, and screenshotError says why.
+    screenshot: z.object({ path: z.string(), width: z.number(), height: z.number(), scale: z.number(), originX: z.number(), originY: z.number() }).nullable(),
+    screenshotError: z.string().nullable(),
+    elements: z.number().int(),
+    tree: z.array(z.string()),
+    truncated: z.string().nullable(),
+    hidden: z.boolean(),
+    note: z.string().nullable()
+});
+const computerOutcome = z.object({
+    app: computerAppRef.nullable(),
+    target: z
+        .object({
+            role: z.string().nullable(),
+            label: z.string().nullable(),
+            identifier: z.string().nullable(),
+            window: z.string().nullable(),
+            sheet: z.string().nullable()
+        })
+        .nullable(),
+    point: z.object({ x: z.number(), y: z.number() }).nullable(),
+    // What the helper said it did, one word per fact: method, typed, pressed, launched and the like.
+    details: z.record(z.string(), z.string()),
+    note: z.string().nullable(),
+    settled: z.boolean().nullable(),
+    state: computerState.nullable(),
+    stateError: z.string().nullable()
+});
+
 /*
  * A file on the machine the project runs on: relative to the project folder, or absolute. Voice stays
  * inside that folder; a person names any file a node or a view can show.
@@ -1735,6 +1782,130 @@ export const ACTION_DEFINITIONS = {
             // On this machine, outside the project folder; null when nobody has the page open.
             path: z.string().nullable()
         })
+    },
+    'computer.apps': {
+        title: 'List apps',
+        description:
+            'Lists the apps that run on this machine, with how the caller stands with each: allowed always, allowed this time, to ask for, or a terminal.',
+        effect: 'read',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({
+            screenRecording: z.boolean(),
+            apps: z.array(
+                computerAppRef.extend({
+                    frontmost: z.boolean(),
+                    hidden: z.boolean(),
+                    access: z.enum(['always', 'this-time', 'ask', 'terminal', 'no-bundle-id'])
+                })
+            )
+        })
+    },
+    'computer.state': {
+        title: 'Read an app',
+        description: 'Reads the accessibility tree of the key window of an app and writes a picture of that window.',
+        effect: 'read',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ app: computerApp, ...computerStateCut }),
+        output: computerState
+    },
+    'computer.click': {
+        title: 'Click in an app',
+        description: 'Clicks an element of an app, or a pixel of its last screenshot.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({
+            app: computerApp,
+            element: computerElement.nullish(),
+            x: computerPixel.nullish(),
+            y: computerPixel.nullish(),
+            count: z.number().int().min(1).max(3).nullish().describe('2 for a double click'),
+            button: z.enum(['left', 'right']).nullish().describe('right for a context menu; left without it'),
+            ...computerThenState
+        }),
+        output: computerOutcome
+    },
+    'computer.type': {
+        title: 'Type in an app',
+        description: 'Types text into the focused element of an app; a newline is Return and a tab is Tab.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ app: computerApp, text: z.string().min(1).describe('The text to type'), ...computerThenState }),
+        output: computerOutcome
+    },
+    'computer.key': {
+        title: 'Press keys in an app',
+        description: 'Presses key combinations in an app, one after the other.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({
+            app: computerApp,
+            combos: z.array(z.string().min(1)).min(1).describe('Key combinations such as cmd+n, return, escape, shift+tab'),
+            ...computerThenState
+        }),
+        output: computerOutcome
+    },
+    'computer.setValue': {
+        title: 'Set a value in an app',
+        description: 'Sets the value of a text field, text area or slider of an app directly.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({
+            app: computerApp,
+            element: computerElement,
+            value: z.string().describe('The value; a number element takes a number, true or false'),
+            ...computerThenState
+        }),
+        output: computerOutcome
+    },
+    'computer.scroll': {
+        title: 'Scroll in an app',
+        description: 'Scrolls an element of an app, or the scroll area under a pixel of its last screenshot.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({
+            app: computerApp,
+            element: computerElement.nullish(),
+            x: computerPixel.nullish(),
+            y: computerPixel.nullish(),
+            direction: z.enum(['up', 'down', 'left', 'right']).describe('Which way the content moves into view'),
+            pages: z.number().gt(0).max(50).nullish().describe('How far, in pages of 90 percent of the area; 1 without it'),
+            ...computerThenState
+        }),
+        output: computerOutcome
+    },
+    'computer.menu': {
+        title: 'Use the menu bar of an app',
+        description: 'Lists the menu bar of an app, or runs one of its items.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({
+            app: computerApp,
+            item: z
+                .string()
+                .min(1)
+                .nullish()
+                .describe('The item to run: its number in the last listing, or a path such as "File > Save"; without it the menu bar is listed'),
+            ...computerThenState
+        }),
+        output: computerOutcome.extend({ listing: z.array(z.string()).nullable() })
+    },
+    'computer.open': {
+        title: 'Open an app',
+        description: 'Starts an app, or brings it to the front and shows it when it runs, and waits for a window.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ app: computerApp, ...computerThenState }),
+        output: computerOutcome
     },
     'context.list': {
         title: 'List linked context',

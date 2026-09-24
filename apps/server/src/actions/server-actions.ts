@@ -2,6 +2,7 @@ import { ActionRegistry } from '@ruimte/actions';
 import { CodedError } from '../coded-error.ts';
 import { agentActions } from './agent-actions.ts';
 import { browserActions } from './browser-actions.ts';
+import { computerActions } from './computer-actions.ts';
 import type { ServerActionContext } from './context.ts';
 import { contextActions } from './context-actions.ts';
 import { diagramActions } from './diagram-actions.ts';
@@ -33,6 +34,7 @@ export const serverActions = new ActionRegistry<ServerActionContext>(
         ...planActions,
         ...diagramActions,
         ...browserActions,
+        ...computerActions,
         ...worktreeActions,
         ...contextActions
     },

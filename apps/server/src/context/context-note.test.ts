@@ -28,6 +28,15 @@ describe('contextHint', () => {
 });
 
 describe('verbsNote', () => {
+    test('names computer use only while it is on for this machine', () => {
+        for (const standalone of [false, true]) {
+            expect(verbsNote({ depth: 0, standalone })).not.toContain('computer');
+            expect(verbsNote({ depth: 0, standalone, computer: true })).toContain('`ruimte-context computer`');
+        }
+        expect(hookContext('SessionStart', [], { computer: true })).toContain('`ruimte-context computer`');
+        expect(chatPrompt({ sources: [], depth: 0, computer: true })).toContain('`ruimte-context computer`');
+    });
+
     test('offers team and agent at depth 0, only agent at depth 1 and neither below', () => {
         expect(VERBS_NOTE).toContain('`agent <cli>` for one, `team` for several in parallel');
         expect(VERBS_NOTE).toContain('answer yourself whatever you can');

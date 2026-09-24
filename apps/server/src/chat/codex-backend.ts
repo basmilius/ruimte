@@ -93,7 +93,12 @@ export class CodexBackend implements ChatBackend {
             ...(tier === null ? {} : { serviceTier: tier }),
             ...codexThreadOptions(this.launch.runtimeMode)
         };
-        const developerInstructions = chatPrompt({ sources: this.launch.context, depth: this.launch.depth, standalone: this.launch.standalone });
+        const developerInstructions = chatPrompt({
+            sources: this.launch.context,
+            depth: this.launch.depth,
+            standalone: this.launch.standalone,
+            computer: this.launch.computer
+        });
         let result: unknown;
         if (this.launch.resume) {
             try {

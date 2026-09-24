@@ -1,0 +1,173 @@
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { Timers } from './approvals.ts';
+import { ComputerUse, type ComputerUseOptions } from './computer-use.ts';
+import { ComputerHelper, HelperUnreachable, type HelperTransport } from './helper.ts';
+import type { HelperRequest, RunningApp } from './helper-protocol.ts';
+import { ComputerUseStore } from './store.ts';
+import type { ProcessRow } from './terminal-apps.ts';
+
+/* Timers that only move when a test says so, with the clock the approvals read beside them. */
+export class ManualTimers implements Timers {
+    now = 1_000;
+    private entries: { at: number; run: () => void }[] = [];
+
+    set(run: () => void, ms: number): () => void {
+        const entry = { at: this.now + ms, run };
+        this.entries.push(entry);
+        return () => {
+            this.entries = this.entries.filter((candidate) => candidate !== entry);
+        };
+    }
+
+    advance(ms: number): void {
+        this.now += ms;
+        const due = this.entries.filter((entry) => entry.at <= this.now).sort((a, b) => a.at - b.at);
+        this.entries = this.entries.filter((entry) => entry.at > this.now);
+        for (const entry of due) {
+            entry.run();
+        }
+    }
+}
+
+export const TEXT_EDIT: RunningApp = { name: 'TextEdit', pid: 501, bundleId: 'com.example.textedit', frontmost: true };
+export const SHELL_APP: RunningApp = { name: 'Shells', pid: 777, bundleId: 'com.example.shells' };
+
+export const SAMPLE_STATE = {
+    app: { name: 'TextEdit', pid: 501, bundleId: 'com.example.textedit' },
+    window: { title: 'Untitled', frame: { x: 292, y: 161, width: 586, height: 488 } },
+    screenshot: { path: '/home/computer-use/screenshots/shot.png', width: 1172, height: 976, scale: 2, origin: { x: 292, y: 161 } },
+    elements: 2,
+    tree: ['[0] Window:StandardWindow "Untitled" (292,161 586x488)', '  [1] TextArea value="hi" (292,261 586x382) focused']
+};
+
+/* The helper app as a socket that answers from a script; it records every request it got. */
+export class FakeHelper implements HelperTransport {
+    running = true;
+    readonly requests: HelperRequest[] = [];
+    apps: RunningApp[] = [TEXT_EDIT, SHELL_APP];
+    accessibility = true;
+    screenRecording = true;
+    error: string | null = null;
+
+    async send(request: HelperRequest): Promise<unknown> {
+        if (!this.running) {
+            throw new HelperUnreachable('connect ENOENT');
+        }
+        this.requests.push(request);
+        if (request.command === 'quit') {
+            this.running = false;
+            return { ok: true, result: { stopped: true } };
+        }
+        if (request.command === 'doctor') {
+            return {
+                ok: true,
+                result: {
+                    accessibility: { granted: this.accessibility },
+                    screenRecording: { granted: this.screenRecording },
+                    ready: this.accessibility && this.screenRecording
+                }
+            };
+        }
+        if (request.command === 'apps') {
+            return { ok: true, result: { apps: this.apps } };
+        }
+        if (this.error !== null) {
+            return { ok: false, error: this.error };
+        }
+        if (request.command === 'state') {
+            return { ok: true, result: SAMPLE_STATE };
+        }
+        return {
+            ok: true,
+            result: {
+                app: SAMPLE_STATE.app,
+                method: 'AXPress',
+                target: { role: 'Button', label: 'Save', window: 'Untitled' },
+                point: { x: 400, y: 300 },
+                ...(request.withState ? { settled: true, state: SAMPLE_STATE } : {})
+            }
+        };
+    }
+
+    /* The requests that acted on an app, leaving out the doctor and apps calls every action makes first. */
+    get acted(): HelperRequest[] {
+        return this.requests.filter((request) => !['doctor', 'apps', 'quit'].includes(request.command));
+    }
+}
+
+/* A shell under the app with pid 777, on a pty of its own: what a terminal looks like in the process table. */
+export const PROCESSES: ProcessRow[] = [
+    { pid: 501, ppid: 1, tty: null },
+    { pid: 777, ppid: 1, tty: null },
+    { pid: 778, ppid: 777, tty: 'ttys004' }
+];
+
+export interface ComputerSetup {
+    home: string;
+    helper: FakeHelper;
+    timers: ManualTimers;
+    computer: ComputerUse;
+    runs: Map<string, string>;
+    launches: string[];
+}
+
+export const tempHome = async (): Promise<string> => {
+    const home = await mkdtemp(join(tmpdir(), 'ruimte-computer-'));
+    await writeFile(join(home, 'local.key'), 'secret\n');
+    return home;
+};
+
+/* A computer use service over a fake helper, a fixed process table and manual timers; `enabled` turns it on first. */
+export const computerSetup = async (
+    options: { home?: string; enabled?: boolean; helper?: FakeHelper; overrides?: Partial<ComputerUseOptions> } = {}
+): Promise<ComputerSetup> => {
+    const home = options.home ?? (await tempHome());
+    const helper = options.helper ?? new FakeHelper();
+    const timers = new ManualTimers();
+    const runs = new Map<string, string>([
+        ['chat-1', 'chat:a'],
+        ['term-1', 'terminal:b']
+    ]);
+    const launches: string[] = [];
+    const store = new ComputerUseStore(home, () => timers.now);
+    await store.load();
+    const computer = new ComputerUse({
+        home,
+        store,
+        helper: new ComputerHelper({
+            home,
+            appPath: '/Applications/Ruimte Computer Use.app',
+            transport: helper,
+            launch: async (appPath) => {
+                launches.push(appPath);
+                helper.running = true;
+            },
+            // Read from memory, so the path of a call holds no file I/O and `until` needs no clock.
+            secret: async () => 'secret',
+            sleep: async () => undefined
+        }),
+        runOf: (id) => runs.get(id) ?? null,
+        describe: async (id) => ({ surface: id.startsWith('term') ? 'terminal' : 'chat', nodeTitle: `Node ${id}`, projectId: 'p1', projectName: 'Ruimte' }),
+        processes: async () => PROCESSES,
+        findApp: async (name) => (name === 'Notes' ? { name: 'Notes', bundleId: 'com.example.notes' } : null),
+        now: () => timers.now,
+        timers,
+        ...options.overrides
+    });
+    if (options.enabled !== false) {
+        await computer.setEnabled(true, 'en');
+    }
+    return { home, helper, timers, computer, runs, launches };
+};
+
+/* Lets the promise chains of the service run without a clock: every turn of the event loop, until the condition holds. */
+export const until = async (condition: () => boolean): Promise<void> => {
+    for (let i = 0; i < 1000 && !condition(); i++) {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+    if (!condition()) {
+        throw new Error('the condition never held');
+    }
+};

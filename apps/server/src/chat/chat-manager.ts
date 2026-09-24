@@ -95,6 +95,8 @@ interface ChatManagerOptions {
     // How deep a chat sits in a chain of agents; an unknown chat is one a person opened.
     depthOf?: (chatId: string) => number;
     standalone?: (chatId: string) => boolean;
+    // Whether computer use is on for this machine, read when a chat's CLI starts.
+    computer?: () => boolean;
     // A client may create an agent chat before the outbox starts it; the explicit model still wins.
     openingSelection?: (chatId: string, provider: AgentKind) => ModelSelection | undefined;
     // The sources themselves, so a chat can name them to its agent and tell it what came and went between turns.
@@ -175,6 +177,7 @@ export class ChatManager {
     private readonly contextUrl: string | null;
     private readonly depthOf: (chatId: string) => number;
     private readonly standalone: (chatId: string) => boolean;
+    private readonly computer: () => boolean;
     private readonly openingSelection: NonNullable<ChatManagerOptions['openingSelection']>;
     private readonly contextSources: (chatId: string) => ContextSource[];
     private readonly messages: (chatId: string) => string[];
@@ -221,6 +224,7 @@ export class ChatManager {
         this.depthOf = options.depthOf ?? (() => 0);
         this.openingSelection = options.openingSelection ?? (() => undefined);
         this.standalone = options.standalone ?? (() => false);
+        this.computer = options.computer ?? (() => false);
         this.contextSources = options.contextSources ?? (() => []);
         this.messages = options.messages ?? (() => []);
         this.unshownMessages = options.unshownMessages ?? (() => Promise.resolve([]));
@@ -405,6 +409,7 @@ export class ChatManager {
             env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
             depth: () => this.depthOf(payload.chatId),
             standalone: () => this.standalone(payload.chatId),
+            computer: () => this.computer(),
             contextSources: () => this.contextSources(payload.chatId),
             messages: () => this.messages(payload.chatId),
             ...(this.checkpoints ? { checkpoints: this.checkpoints } : {}),

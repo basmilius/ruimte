@@ -7,6 +7,7 @@ import { nodeDeleteAction, nodeListAction, nodeNewAction } from './node-verb.ts'
 import { agentVerb } from './agent-verb.ts';
 import { arrangeAction } from './arrange-verb.ts';
 import { BROWSER_ACTIONS, BROWSER_DETAIL, BROWSER_SUMMARY } from './browser-verb.ts';
+import { COMPUTER_ACTIONS, COMPUTER_DETAIL, COMPUTER_SUMMARY } from './computer-verb.ts';
 import { diagramAction } from './diagram-verb.ts';
 import { flagVerb } from './flag-verb.ts';
 import { nodeEditAction } from './edit-verb.ts';
@@ -191,6 +192,13 @@ const browserNoun = defineNoun({
     actions: [...BROWSER_ACTIONS]
 });
 
+const computerNoun = defineNoun({
+    name: 'computer',
+    summary: COMPUTER_SUMMARY,
+    detail: COMPUTER_DETAIL,
+    actions: [...COMPUTER_ACTIONS]
+});
+
 const viewNoun = defineNoun({
     name: 'view',
     summary: VIEW_SUMMARY,
@@ -226,7 +234,8 @@ export const VERBS: readonly VerbEntry[] = [
     taskNoun,
     planVerb,
     worktreeVerb,
-    operationVerb
+    operationVerb,
+    computerNoun
 ];
 
 export const verbNamed = (name: string): VerbEntry | undefined => VERBS.find((verb) => verb.name === name);

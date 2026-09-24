@@ -93,6 +93,10 @@ import { readMachineModel } from './machine-model.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
 import { registerProcessHandlers } from './handlers/processes.ts';
 import { registerUsageHandlers } from './handlers/usage.ts';
+import { registerComputerHandlers } from './handlers/computer.ts';
+import { ComputerUse } from './computer/computer-use.ts';
+import { ComputerHelper, locateHelperApp } from './computer/helper.ts';
+import { ComputerUseStore } from './computer/store.ts';
 import { Checkpoints } from './git/checkpoints.ts';
 import { GitStatusWatcher } from './git/status-watcher.ts';
 import { worktreeAgents } from './git/worktree-agents.ts';
@@ -181,6 +185,37 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // And for the commands a person let a terminal type, which a node's first start asks about.
     const commandApprovals = new CommandApprovals(config.home);
     await commandApprovals.load();
+    // And for whether agents may operate this machine's apps, and which ones a person let them into for good.
+    const computerStore = new ComputerUseStore(config.home);
+    await computerStore.load();
+    const computer: ComputerUse = new ComputerUse({
+        home: config.home,
+        store: computerStore,
+        helper: new ComputerHelper({
+            home: config.home,
+            appPath: locateHelperApp({ platform: process.platform, compiled, execPath: process.execPath, sourceDir: import.meta.dir })
+        }),
+        // A grant for this time ends with the shell or the CLI conversation it was given to.
+        runOf: (id) => {
+            const session = manager.get(id);
+            if (session && !session.exited) {
+                return `terminal:${session.hookToken}`;
+            }
+            const chat = chats.get(id);
+            return chat ? `chat:${chat.info.agentSessionId ?? id}` : null;
+        },
+        describe: async (id) => {
+            const place = projects.index.locate(id);
+            const project = place === null ? undefined : (await projects.known()).find((known) => known.projectId === place.projectId);
+            return {
+                surface: manager.get(id) ? 'terminal' : 'chat',
+                nodeTitle: projects.index.titleFor(id),
+                projectId: place?.projectId ?? null,
+                projectName: project?.name ?? null
+            };
+        }
+    });
+    await computer.start();
     const folderOf = (nodeId: string): string | null => projects.index.locate(nodeId)?.folder ?? null;
     const startCwd = startCwdGuard({
         madeByAgent: (nodeId) => lineage.madeBy(nodeId) !== null,
@@ -204,6 +239,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         firstPrompt: (sessionId) => prompts.take(sessionId),
         firstNotices: messagesFor,
         depthOf: (sessionId) => lineage.depthOf(sessionId),
+        computerUse: () => computer.enabled,
         // A node no project places yet has no folder to approve against, so its command waits for the save that adds it.
         commands: {
             approved: (sessionId, command) => {
@@ -262,6 +298,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         contextUrl,
         binDir,
         depthOf: (chatId) => lineage.depthOf(chatId),
+        computer: () => computer.enabled,
         modeCeiling: (chatId) => lineage.ceilingOf(chatId),
         checkCwd: startCwd,
         contextSources: (chatId) => context.list(chatId),
@@ -435,6 +472,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         worktrees: worktreeHost(worktrees, merges),
         browsers: browserDriver,
         agents: agentStates({ outbox, lineage, chats, sessions: manager }),
+        computer,
         context: {
             list: (targetId: string) => context.list(targetId),
             read: (targetId: string, sourceId: string, tail: number | null, subagent: string | null) => context.answer(targetId, sourceId, tail, subagent)
@@ -565,6 +603,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     });
     registerUsageHandlers(dispatcher, usage, limits);
     registerProcessHandlers(dispatcher, processes);
+    registerComputerHandlers(dispatcher, computer);
     registerGitHandlers(dispatcher, worktrees, merges, statuses, providers);
 
     // A TURN server that restarts under an allocation must not take the daemon with it.
@@ -669,7 +708,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         processes,
         tasks,
         worktrees,
-        plans
+        plans,
+        computer
     });
 
     const endpointInfo = (reachability: ClientAccess['reachability'], authenticated: boolean) => ({
@@ -856,7 +896,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                             changed,
                             messages: messagesFor(sessionId),
                             depth: lineage.depthOf(sessionId),
-                            verbs
+                            verbs,
+                            computer: computer.enabled
                         });
                     },
                     (token, body, signal) => manager.holdApproval(token, body, signal)
@@ -965,6 +1006,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         } catch (e) {
             console.error('Snapshot on shutdown failed:', errorText(e));
         }
+        await computer.stop();
         manager.killAll();
         browsers.closeAll();
         devices.closeAll();

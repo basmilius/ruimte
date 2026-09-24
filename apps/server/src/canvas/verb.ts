@@ -18,6 +18,7 @@ import {
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { z } from 'zod';
 import type { DriveOutcome, ShotOutcome } from '../browser/drive.ts';
+import type { ComputerUse } from '../computer/computer-use.ts';
 import type { NoticeDelivery, Notice } from '../context/notices.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -95,6 +96,8 @@ export interface CanvasHost {
     browsers?: BrowserDriveHost;
     /* What runs in an agent node now, which is what an operation of `agent` or `team` is read from. */
     agents?: AgentStateHost;
+    /* Operating the apps of this machine through its helper; absent on a host without one. */
+    computer?: ComputerHost;
     /* What a person linked into a session, which `list` and `read` answer with. */
     context?: ContextHost;
 }
@@ -129,6 +132,9 @@ export interface BrowserDriveHost {
     /* Writes a png of the page under the machine's own folder; null when nobody has the page open. */
     shot(browserId: string): Promise<ShotOutcome | null>;
 }
+
+/* What an agent's `computer` call reaches: the setting, and the rules every call passes before the helper acts. */
+export type ComputerHost = Pick<ComputerUse, 'enabled' | 'apps' | 'operate'>;
 
 export interface WorktreeHost {
     /* Every worktree of the repository a folder is in, with the work each holds. */
@@ -221,7 +227,7 @@ export type VerbEntry = Verb | Noun | ContextVerb;
 
 /* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
 export const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; node, link, browser, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; node, link, browser, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
 
 export const DRY_RUN_FLAG = 'dry-run';
 
