@@ -698,12 +698,13 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
         }
         /* Every section is filtered on its own, so the file results can keep their place in the
            middle. They answer to the query already, in the daemon's own ranking, and are not
-           filtered a second time here. */
+           filtered a second time here. Views go first: every node's hint names its view, so the
+           nodes of a view would otherwise bury the view itself under its own name. */
         const keep = (entry: Entry): boolean => matches(query, `${entry.label} ${entry.hint ?? ''}`);
         return [
+            ...viewSwitches.filter(keep),
             ...jumps.filter(keep),
             ...files,
-            ...viewSwitches.filter(keep),
             ...switches.filter(keep),
             ...commands.map((command) => asEntry(command, 'actions')).filter(keep)
         ];
