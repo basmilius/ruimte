@@ -405,6 +405,7 @@ describe('the tree', () => {
             'read',
             'done',
             'notify',
+            'answer',
             'agent',
             'team',
             'flag'

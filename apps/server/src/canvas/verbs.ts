@@ -5,6 +5,7 @@ import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 // First: verbs join the --dry-run list as they are defined, and node new has always led it.
 import { nodeDeleteAction, nodeListAction, nodeNewAction } from './node-verb.ts';
 import { agentVerb } from './agent-verb.ts';
+import { answerVerb } from './answer-verb.ts';
 import { arrangeAction } from './arrange-verb.ts';
 import { BROWSER_ACTIONS, BROWSER_DETAIL, BROWSER_SUMMARY } from './browser-verb.ts';
 import { COMPUTER_ACTIONS, COMPUTER_DETAIL, COMPUTER_SUMMARY } from './computer-verb.ts';
@@ -234,6 +235,7 @@ export const VERBS: readonly VerbEntry[] = [
     readVerb,
     doneVerb,
     notifyVerb,
+    answerVerb,
     agentVerb,
     teamVerb,
     flagVerb,

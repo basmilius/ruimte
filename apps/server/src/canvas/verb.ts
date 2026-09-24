@@ -4,6 +4,8 @@ import {
     type ContextSource,
     type AgentStatus,
     type BrowserDriveAction,
+    type ChatApprovalItem,
+    type ChatQuestionItem,
     type DiagramContent,
     type GitDiffResult,
     type ProjectCanvasView,
@@ -97,6 +99,8 @@ export interface CanvasHost {
     browsers?: BrowserDriveHost;
     /* What runs in an agent node now, which is what an operation of `agent` or `team` is read from. */
     agents?: AgentStateHost;
+    /* What the chats of agent nodes ask and wait on, which `answer` reaches. */
+    requests?: ChatRequestHost;
     /* Operating the apps of this machine through its helper; absent on a host without one. */
     computer?: ComputerHost;
     /* Seeing and operating the device under a device node; absent on a host without devices. */
@@ -124,6 +128,16 @@ export interface AgentStateHost {
     startedBy(nodeId: string): string | null;
     /* Stops the turn a chat node is working on; false when it is no chat or has no turn going. */
     cancelTurn(nodeId: string): boolean;
+}
+
+/* The questions and approvals a chat node asks, as its own thread holds them. */
+export interface ChatRequestHost {
+    /* The one under this request id, in whatever state; null when the chat holds none, or nobody loaded it. */
+    request(nodeId: string, requestId: string): ChatQuestionItem | ChatApprovalItem | null;
+    /* Those it waits on now, oldest first. */
+    waiting(nodeId: string): (ChatQuestionItem | ChatApprovalItem)[];
+    /* Answers a pending question the way a person's `chat.answer` does; false when it no longer waits. */
+    answer(nodeId: string, requestId: string, answers: Record<string, string>): boolean;
 }
 
 /*
@@ -236,7 +250,7 @@ export type VerbEntry = Verb | Noun | ContextVerb;
 
 /* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
 export const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, answer and worktree are the project itself, and plan is the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
 
 export const DRY_RUN_FLAG = 'dry-run';
 

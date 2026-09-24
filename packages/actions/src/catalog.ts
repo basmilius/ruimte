@@ -1540,6 +1540,23 @@ export const ACTION_DEFINITIONS = {
             detail: z.string()
         })
     },
+    'agent.answer': {
+        title: 'Answer an agent',
+        description: 'Answers a question an agent you opened asked and waits on, the way a person answers it in that node; an approval stays with the person.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            nodeId: nodeId.describe('The agent that asked, by id; only one you opened yourself'),
+            requestId: z.string().min(1).describe('The request the question came with, as the note about it names it'),
+            answer: z
+                .string()
+                .nullable()
+                .describe('The answer to a request with one question: a choice label as written, several separated by a comma, or your own words'),
+            answers: z.record(z.string(), z.string()).nullable().describe('The answers to a request with several questions, keyed by question id')
+        }),
+        output: z.object({ nodeId, requestId: z.string() })
+    },
     'task.list': {
         title: 'List tasks',
         description:

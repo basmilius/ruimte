@@ -7,6 +7,7 @@ import type { OutboxHandlers } from '../outbox/outbox-worker.ts';
 import { giveTaskHandler } from './give-task.ts';
 import { TaskCoordinator, type TaskCoordinatorDeps } from './task-coordinator.ts';
 import type { TaskStore } from './task-store.ts';
+import { chatRequests, deliverWaitingHandler, WaitingObserver } from './waiting-child.ts';
 import { oweWake, parkedNote, wakeParentHandler } from './wake-parent.ts';
 
 export interface TaskWiringDeps {
@@ -29,9 +30,11 @@ export interface TaskWiringDeps {
 
 export interface TaskWiring {
     coordinator: TaskCoordinator;
+    waiting: WaitingObserver;
     host: TaskHost;
     wakeParent: OutboxHandlers['wake-parent'];
     giveTask: OutboxHandlers['give-task'];
+    deliverWaiting: OutboxHandlers['deliver-waiting'];
     onParked(entry: OutboxEntry, error: unknown): void;
     onStartGaveUp(entry: StartAgentEntry, error: unknown): void;
     /* What the daemon does with the child's own prune of the project: cancel, then look at the parents again. */
@@ -64,8 +67,12 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
         }
     });
 
+    const requests = chatRequests(deps.chats);
+    const waiting = new WaitingObserver({ openTask: (childId) => deps.tasks.openFor(childId), enqueue: deps.enqueue });
+
     deps.chats.observe((event) => {
         coordinator.chatEvent(event);
+        waiting.chatEvent(event);
         if (event.event === 'chat.event' && deps.chats.get(event.payload.chatId)?.info.activeTurnId === null) {
             deps.wake(event.payload.chatId);
         }
@@ -82,6 +89,7 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
 
     return {
         coordinator,
+        waiting,
         host: {
             open: (record) => deps.tasks.open(record, now()),
             give: async (record) => {
@@ -103,6 +111,11 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
         },
         wakeParent: wakeParentHandler({ tasks: deps.tasks, chat: chatFor }),
         giveTask: giveTaskHandler({ tasks: deps.tasks, chat: chatFor, titleFor: deps.titleFor, placed: deps.placed }),
+        deliverWaiting: deliverWaitingHandler({
+            request: requests.request,
+            titleFor: deps.titleFor,
+            deliver: (chatId, delivery) => deps.chats.deliverNote(chatId, delivery)
+        }),
         onParked: (entry, error) => {
             // A task whose turn never opened is one nobody is working on: it fails, so its chat is not left waiting.
             if (entry.kind === 'give-task') {

@@ -694,3 +694,112 @@ describe('resume at reset', () => {
         expect(daemon.chats.get('chat-lead')?.info.resumeAt).toBeUndefined();
     });
 });
+
+describe('a child that waits on input', () => {
+    const waitingNotes = (daemon: Daemon): ChatItem[] => leadItems(daemon).filter((item) => item.kind === 'note' && item.id.startsWith('waiting-'));
+
+    /* A child with a task that asks, and the lead's note about it in place. */
+    const asking = async (daemon: Daemon, prompt: string): Promise<{ childId: string; taskId: string }> => {
+        const child = await delegate(daemon, 'Lexer', prompt);
+        await daemon.until(() => waitingNotes(daemon).length === 1);
+        await daemon.worker.settled();
+        return child;
+    };
+
+    test('an approval leaves the lead one note that a restart does not bring back, and the child finishing wakes it once', async () => {
+        const first = await boot();
+        first.worker.start();
+        await leadIdle(first);
+        const child = await asking(first, 'tool: date');
+
+        const [note] = waitingNotes(first);
+        expect(note).toMatchObject({ id: `waiting-${child.childId}-req-1`, level: 'info', turnId: null });
+        expect(note?.kind === 'note' ? note.text : '').toBe(`Lexer (node ${child.childId}) waits for a person to approve Bash: Run a command`);
+        // A note and no turn: two things wake a chat, and a waiting child is not one of them.
+        expect(wakeTurns(first)).toEqual([]);
+        expect(turnsOf(first, 'chat-lead')).toHaveLength(1);
+        expect(first.tasks.get(child.taskId)?.status).toBe('open');
+        // The lead's CLI hears it in front of its next turn, which is where an agent reads what happened meanwhile.
+        expect(first.chats.get('chat-lead')?.preambles.join('\n')).toContain(
+            `Ruimte: Lexer (node ${child.childId}), an agent you gave a task, waits for a person to approve Bash`
+        );
+        running.splice(running.indexOf(first), 1);
+        await first.stop();
+
+        const second = await boot();
+        second.worker.start();
+        await second.chats.create({ chatId: 'chat-lead' });
+        // The child's turn is taken up again, its approval gone with the process that asked it, and it finishes.
+        await second.chats.recoverInterrupted();
+        await second.until(() => wakeTurns(second).some((turn) => turn.state === 'done'));
+        await second.worker.settled();
+
+        expect(waitingNotes(second).map((item) => item.id)).toEqual([`waiting-${child.childId}-req-1`]);
+        expect(wakeTurns(second).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
+        expect(second.tasks.get(child.taskId)).toMatchObject({ status: 'done', wake: 'sent' });
+        expect(second.outbox.list()).toEqual([]);
+    });
+
+    test('the lead answers its own child, the child goes on with that answer, and a person answering after it is refused', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const child = await asking(daemon, 'ask: which color');
+        const [note] = waitingNotes(daemon);
+        // The fake asks its whole prompt, the task's brief included.
+        expect(note?.kind === 'note' ? note.text : '').toStartWith(`Lexer (node ${child.childId}) waits for an answer to "which color (This is a task`);
+        expect(note?.kind === 'note' ? note.text : '').toContain(`- question 0: "which color`);
+        expect(note?.kind === 'note' ? note.text : '').toContain(`(choices: Red (Warm) | Blue (Cool); pick one, or answer in your own words)`);
+        expect(note?.kind === 'note' ? note.text : '').toContain(
+            `ruimte-context answer ${child.childId} req-q --answer '<a choice label as written, or your own words>'`
+        );
+
+        expect(await verb(daemon, 'chat-lead', 'answer', [child.childId, 'req-q', '--answer', 'Red'])).toEqual([`answered\t${child.childId}\treq-q`]);
+        const person = await daemon.request('chat.answer', { chatId: child.childId, requestId: 'req-q', answers: { '0': 'Blue' } });
+        expect(person).toMatchObject({ ok: false, error: { code: 'request-not-found' } });
+
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'done', result: { text: 'you chose Red' } });
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
+        expect(waitingNotes(daemon)).toHaveLength(1);
+    });
+
+    test('a person who answers first wins, and the lead answering after is refused', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const child = await asking(daemon, 'ask: which color');
+
+        expect(await daemon.request('chat.answer', { chatId: child.childId, requestId: 'req-q', answers: { '0': 'Blue' } })).toMatchObject({ ok: true });
+        const [refused] = await verb(daemon, 'chat-lead', 'answer', [child.childId, 'req-q', '--answer', 'Red']);
+        expect(refused).toBe('refused\tnot-pending\treq-q no longer waits: it was answered');
+
+        await daemon.until(() => daemon.tasks.get(child.taskId)?.status === 'done');
+        expect(daemon.tasks.get(child.taskId)?.result?.text).toBe('you chose Blue');
+    });
+
+    test('an agent answers no question of a child it did not open, no approval, and no question that was answered', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const asker = await asking(daemon, 'ask: which color');
+
+        const [foreign] = await verb(daemon, 'term-lead', 'answer', [asker.childId, 'req-q', '--answer', 'Red']);
+        expect(foreign).toBe(`refused\tnot-yours\t${asker.childId} is not a node you opened; you only answer the questions of an agent you opened yourself`);
+
+        const [several] = await verb(daemon, 'chat-lead', 'answer', [asker.childId, 'req-q', '--answers', '{"0":"Red","1":"Blue"}']);
+        expect(several).toBe('refused\tunknown-question\t1 is not a question of this request; its ids are 0');
+        expect(await verb(daemon, 'chat-lead', 'answer', [asker.childId, 'req-q', '--answer', 'Red'])).toEqual([`answered\t${asker.childId}\treq-q`]);
+        const [again] = await verb(daemon, 'chat-lead', 'answer', [asker.childId, 'req-q', '--answer', 'Blue']);
+        expect(again).toBe('refused\tnot-pending\treq-q no longer waits: it was answered');
+        await daemon.until(() => daemon.tasks.get(asker.taskId)?.status === 'done');
+
+        const approver = await delegate(daemon, 'Runner', 'tool: date');
+        await daemon.until(() => waitingNotes(daemon).length === 2);
+        const approval = await verb(daemon, 'chat-lead', 'answer', [approver.childId, 'req-1', '--answer', 'allow']);
+        expect(approval[0]).toStartWith('refused\tnot-a-question\treq-1 asks a person to approve Bash;');
+        expect(approval.slice(1)).toEqual([`approval\t${approver.childId}\treq-1\tBash\ta person's alone`]);
+        expect(daemon.chats.get(approver.childId)?.thread.get('approval-req-1')).toMatchObject({ decision: 'pending' });
+    });
+});

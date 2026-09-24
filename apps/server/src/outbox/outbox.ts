@@ -61,6 +61,12 @@ const DeliverSummarySchema = z.object({
     payload: z.object({ forkId: z.string().min(1), turnId: z.string().min(1), text: z.string() })
 });
 
+const DeliverWaitingSchema = z.object({
+    kind: z.literal('deliver-waiting'),
+    // The target is the chat that gave the child its task; the child waits on this request of its own.
+    payload: z.object({ childId: z.string().min(1), requestId: z.string().min(1) })
+});
+
 const OutboxWorkSchema = z.discriminatedUnion('kind', [
     StartAgentSchema,
     ResumeRunSchema,
@@ -69,7 +75,8 @@ const OutboxWorkSchema = z.discriminatedUnion('kind', [
     GiveTaskSchema,
     DeliverMessageSchema,
     EndChildrenSchema,
-    DeliverSummarySchema
+    DeliverSummarySchema,
+    DeliverWaitingSchema
 ]);
 
 const OutboxEntrySchema = z.intersection(
@@ -95,6 +102,7 @@ export type GiveTaskEntry = Extract<OutboxEntry, { kind: 'give-task' }>;
 export type DeliverMessageEntry = Extract<OutboxEntry, { kind: 'deliver-message' }>;
 export type EndChildrenEntry = Extract<OutboxEntry, { kind: 'end-children' }>;
 export type DeliverSummaryEntry = Extract<OutboxEntry, { kind: 'deliver-summary' }>;
+export type DeliverWaitingEntry = Extract<OutboxEntry, { kind: 'deliver-waiting' }>;
 
 /* The nodes an entry is about. Work on any of them waits while it runs. Ending children holds their lanes too, so no start or resume of one runs beside it. */
 export const lanesOf = (entry: OutboxEntry): string[] => (entry.kind === 'end-children' ? [entry.target, ...entry.payload.nodeIds] : [entry.target]);

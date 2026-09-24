@@ -104,6 +104,7 @@ import { GitStatusWatcher } from './git/status-watcher.ts';
 import { worktreeAgents } from './git/worktree-agents.ts';
 import { worktreeHost } from './git/worktree-host.ts';
 import { agentStates } from './agents/agent-state.ts';
+import { chatRequests } from './tasks/waiting-child.ts';
 import { WorktreeMerge } from './git/worktree-merge.ts';
 import { Worktrees } from './git/worktrees.ts';
 import { ProcessMonitor } from './processes/monitor.ts';
@@ -504,6 +505,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         browsers: browserDriver,
         devices: deviceDriver,
         agents: agentStates({ outbox, lineage, chats, sessions: manager }),
+        requests: chatRequests(chats),
         computer,
         context: {
             list: (targetId: string) => context.list(targetId),
@@ -1042,6 +1044,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         selfUpdate.stop();
         outboxWorker.stop();
         taskWiring.coordinator.stop();
+        taskWiring.waiting.stop();
         summaries.coordinator.stop();
         snapshotSchedule.stop();
         usage.stop();

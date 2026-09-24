@@ -256,7 +256,7 @@ export const wireSummaries = (wiring: {
         locate: (id) => wiring.host.locate(id),
         titleFor: wiring.titleFor,
         mutate: (projectId, apply) => wiring.host.mutate(projectId, apply),
-        deliver: (chatId, summary) => wiring.chats.deliverSummary(chatId, summary),
+        deliver: (chatId, summary) => wiring.chats.deliverNote(chatId, summary),
         note: (chatId, text) => wiring.chats.addNote(chatId, 'warning', text)
     };
     return {

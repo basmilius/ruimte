@@ -619,17 +619,25 @@ export class ChatSession {
     }
 
     /*
-     * A summary a fork wrote, as a note a person reads and a preamble the CLI hears in front of the
-     * next real prompt, whether or not a turn runs now. Written under the id the delivery names, so
-     * a delivery that runs twice leaves one of each; false when it was here already.
+     * A note a person reads and a preamble the CLI hears in front of the next real prompt, whether or
+     * not a turn runs now: a fork's summary, a child that waits. Written under the id the delivery
+     * names, so a delivery that runs twice leaves one of each; false when it was here already.
      */
-    deliverSummary(summary: { noteId: string; note: string; from: string; preamble: string }): boolean {
-        if (this.thread.get(summary.noteId) !== undefined) {
+    deliverNote(delivery: { noteId: string; note: string; from?: string; preamble: string }): boolean {
+        if (this.thread.get(delivery.noteId) !== undefined) {
             return false;
         }
-        this.pendingPreambles = [...this.pendingPreambles, summary.preamble];
+        this.pendingPreambles = [...this.pendingPreambles, delivery.preamble];
         this.emit([
-            this.thread.upsert({ id: summary.noteId, kind: 'note', createdAt: Date.now(), turnId: null, level: 'info', text: summary.note, from: summary.from })
+            this.thread.upsert({
+                id: delivery.noteId,
+                kind: 'note',
+                createdAt: Date.now(),
+                turnId: null,
+                level: 'info',
+                text: delivery.note,
+                ...(delivery.from === undefined ? {} : { from: delivery.from })
+            })
         ]);
         this.options.persist();
         return true;

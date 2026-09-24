@@ -1,5 +1,6 @@
 import type { AgentKind, ServerFrame } from '@ruimte/contracts';
 import { agentStates } from '../agents/agent-state.ts';
+import { chatRequests } from './waiting-child.ts';
 import { AgentLineageStore } from '../agents/lineage.ts';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
@@ -267,7 +268,8 @@ export const bootTestDaemon = async ({
         writeDiagram: () => Promise.reject(new Error('not used here')),
         tasks: wiring.host,
         plans,
-        agents: agentStates({ outbox, lineage, chats, sessions })
+        agents: agentStates({ outbox, lineage, chats, sessions }),
+        requests: chatRequests(chats)
     };
 
     const dispatcher = new Dispatcher();
@@ -318,6 +320,7 @@ export const bootTestDaemon = async ({
             // The order the daemon's own shutdown takes: nothing that dies with it settles a task.
             worker.stop();
             wiring.coordinator.stop();
+            wiring.waiting.stop();
             summaries.coordinator.stop();
             chats.persistAllSync();
             await chats.shutdown();

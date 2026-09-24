@@ -204,7 +204,8 @@ export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
                 placed
             }),
             'end-children': endChildren.handler,
-            'deliver-summary': summaries.handler
+            'deliver-summary': summaries.handler,
+            'deliver-waiting': taskWiring.deliverWaiting
         },
         onParked: (entry, error) => {
             resumeRunParked(chats)(entry, error);

@@ -143,8 +143,8 @@ const parkedText = (entry: OutboxEntry, title: string, reason: string): string =
 export const parkedNote =
     (deps: ParkedNoteDeps) =>
     (entry: OutboxEntry, error: unknown): void => {
-        // A summary that was not delivered is said in its fork, by its own handler.
-        if (entry.kind === 'deliver-summary') {
+        // A summary that was not delivered is said in its fork, by its own handler; a note about a waiting child was only news.
+        if (entry.kind === 'deliver-summary' || entry.kind === 'deliver-waiting') {
             return;
         }
         /* A message is nobody's to answer for but the chat it was left for, which has no opener in this. */

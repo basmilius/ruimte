@@ -668,13 +668,13 @@ export class ChatManager {
         return this.require(chatId).wake({ ...wake, taskIds: [] });
     }
 
-    /* Leaves a fork's summary in the chat it is for, loading that chat when nobody has; false when it was there already. */
-    async deliverSummary(chatId: string, summary: { noteId: string; note: string; from: string; preamble: string }): Promise<boolean> {
+    /* Leaves a note and its preamble in a chat, loading that chat when nobody has; false when it was there already. */
+    async deliverNote(chatId: string, delivery: { noteId: string; note: string; from?: string; preamble: string }): Promise<boolean> {
         await this.creating.get(chatId)?.catch(() => undefined);
         if (!this.chats.has(chatId)) {
             await this.create({ chatId });
         }
-        return this.require(chatId).deliverSummary(summary);
+        return this.require(chatId).deliverNote(delivery);
     }
 
     /* The node a row of this chat stands for when a task opened it, or null for a subagent of the CLI's own. */
