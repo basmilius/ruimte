@@ -60,6 +60,38 @@ struct WireSchemaTests {
         #expect(try JSONValue.decode(JSONEncoder().encode(null))["brokerUrl"] == .null)
     }
 
+    @Test func aNewerMachinesAgentWordsStillValidate() throws {
+        let info = { (provider: String, mode: String, status: String) -> JSONValue in
+            .object([
+                "chatId": .string("chat-1"), "provider": .string(provider), "cwd": .string("/work"),
+                "agentSessionId": .null, "model": .null,
+                "selection": .object(["model": .string("model-1"), "options": .object([:])]),
+                "runtimeMode": .string(mode), "status": .string(status), "running": .bool(true),
+                "activeTurnId": .null, "slashCommands": .array([]),
+                "usage": .object([
+                    "contextTokens": .number(0), "contextWindow": .null, "costUsd": .number(0), "turns": .number(0),
+                ]),
+                "createdAt": .number(0),
+            ])
+        }
+        let known = try WireSchema.validate(
+            "event.chat.status", .object(["chatId": .string("chat-1"), "info": info("claude", "auto", "running")]))
+        #expect(known["info"]?["provider"] == .string("claude"))
+        let future = try WireSchema.validate(
+            "event.chat.status",
+            .object(["chatId": .string("chat-1"), "info": info("future-cli", "future-mode", "future-status")]))
+        #expect(future["info"]?["provider"] == .string("future-cli"))
+        #expect(future["info"]?["runtimeMode"] == .string("future-mode"))
+        #expect(future["info"]?["status"] == .string("future-status"))
+        #expect(AgentKind(rawValue: "future-cli") == nil)
+        var numbered = try #require(info("claude", "auto", "running").objectValue)
+        numbered["provider"] = .number(1)
+        #expect(throws: (any Error).self) {
+            try WireSchema.validate(
+                "event.chat.status", .object(["chatId": .string("chat-1"), "info": .object(numbered)]))
+        }
+    }
+
     @Test func stringBoundsUseTypeScriptUTF16() throws {
         #expect(throws: (any Error).self) {
             try WireSchema.validate(

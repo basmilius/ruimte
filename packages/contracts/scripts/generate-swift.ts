@@ -1,6 +1,7 @@
 import { createCipheriv, createPrivateKey, createPublicKey, diffieHellman, hkdfSync, sign } from 'node:crypto';
 import { CameraSchema, CanvasNodeSchema, NodeKindSchema, PROJECT_VIEW_KINDS, ProjectViewSchema, ProjectCanvasViewSchema } from '../src/project.ts';
 import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
+import { RuntimeModeSchema } from '../src/model.ts';
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES } from '../src/bytes.ts';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -223,6 +224,12 @@ const constantSource = Object.entries(constants)
     )
     .join('\n');
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
+/*
+ * Vocabularies a newer machine may extend without asking this app first. A released app validates whole replies,
+ * so one closed literal it never saw would refuse every `chat.list` or `project.open` holding it; on the wire these
+ * are any string, and the known words ride along as `x-open-enum` for the app to fall back from.
+ */
+const openVocabularies = new Set<z.ZodType>([agent.AgentKindSchema, agent.AgentStatusSchema, RuntimeModeSchema]);
 const apiRoots: Record<string, z.ZodType> = {};
 for (const [name, pair] of Object.entries(REQUEST_SCHEMAS)) {
     apiRoots[`request.${name}.payload`] = pair.payload;
@@ -237,6 +244,10 @@ for (const [name, schema] of Object.entries(apiRoots)) {
         io: 'input',
         unrepresentable: 'throw',
         override: ({ zodSchema, jsonSchema }) => {
+            if (openVocabularies.has(zodSchema) && Array.isArray(jsonSchema.enum)) {
+                jsonSchema['x-open-enum'] = jsonSchema.enum;
+                delete jsonSchema.enum;
+            }
             if (zodSchema instanceof z.ZodPipe && zodSchema.in === CameraSchema) {
                 jsonSchema['x-output-null'] = true;
             }

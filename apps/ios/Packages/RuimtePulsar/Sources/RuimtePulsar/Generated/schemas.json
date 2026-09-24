@@ -4993,7 +4993,7 @@
         "properties": {
           "kind": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "claude",
               "codex",
               "gemini",
@@ -5002,7 +5002,7 @@
           },
           "runtimeMode": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "supervised",
               "auto-accept-edits",
               "auto",
@@ -5078,7 +5078,7 @@
             "properties": {
               "kind": {
                 "type": "string",
-                "enum": [
+                "x-open-enum": [
                   "claude",
                   "codex",
                   "gemini",
@@ -5102,7 +5102,7 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
+                "x-open-enum": [
                   "running",
                   "needs-you",
                   "idle",
@@ -5584,7 +5584,7 @@
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "enum": [
+                      "x-open-enum": [
                         "claude",
                         "codex",
                         "gemini",
@@ -5608,7 +5608,7 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": [
+                      "x-open-enum": [
                         "running",
                         "needs-you",
                         "idle",
@@ -8099,7 +8099,7 @@
       },
       "provider": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "claude",
           "codex",
           "gemini",
@@ -8139,7 +8139,7 @@
       },
       "runtimeMode": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "supervised",
           "auto-accept-edits",
           "auto",
@@ -8161,7 +8161,7 @@
       },
       "provider": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "claude",
           "codex",
           "gemini",
@@ -8210,7 +8210,7 @@
       },
       "runtimeMode": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "supervised",
           "auto-accept-edits",
           "auto",
@@ -8219,7 +8219,7 @@
       },
       "status": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "running",
           "needs-you",
           "idle",
@@ -9441,7 +9441,7 @@
           },
           "provider": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "claude",
               "codex",
               "gemini",
@@ -9490,7 +9490,7 @@
           },
           "runtimeMode": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "supervised",
               "auto-accept-edits",
               "auto",
@@ -9499,7 +9499,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "running",
               "needs-you",
               "idle",
@@ -12467,7 +12467,7 @@
                     },
                     "provider": {
                       "type": "string",
-                      "enum": [
+                      "x-open-enum": [
                         "claude",
                         "codex",
                         "gemini",
@@ -12516,7 +12516,7 @@
                     },
                     "runtimeMode": {
                       "type": "string",
-                      "enum": [
+                      "x-open-enum": [
                         "supervised",
                         "auto-accept-edits",
                         "auto",
@@ -12525,7 +12525,7 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": [
+                      "x-open-enum": [
                         "running",
                         "needs-you",
                         "idle",
@@ -12801,7 +12801,7 @@
                     },
                     "provider": {
                       "type": "string",
-                      "enum": [
+                      "x-open-enum": [
                         "claude",
                         "codex",
                         "gemini",
@@ -12850,7 +12850,7 @@
                     },
                     "runtimeMode": {
                       "type": "string",
-                      "enum": [
+                      "x-open-enum": [
                         "supervised",
                         "auto-accept-edits",
                         "auto",
@@ -12859,7 +12859,7 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": [
+                      "x-open-enum": [
                         "running",
                         "needs-you",
                         "idle",
@@ -14396,7 +14396,7 @@
       },
       "runtimeMode": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "supervised",
           "auto-accept-edits",
           "auto",
@@ -14418,7 +14418,7 @@
       },
       "provider": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "claude",
           "codex",
           "gemini",
@@ -14467,7 +14467,7 @@
       },
       "runtimeMode": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "supervised",
           "auto-accept-edits",
           "auto",
@@ -14476,7 +14476,7 @@
       },
       "status": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "running",
           "needs-you",
           "idle",
@@ -14736,7 +14736,7 @@
     "properties": {
       "runtimeMode": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "supervised",
           "auto-accept-edits",
           "auto",
@@ -14745,7 +14745,7 @@
       },
       "terminalRuntimeMode": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "supervised",
           "auto-accept-edits",
           "auto",
@@ -14756,7 +14756,7 @@
         "type": "object",
         "propertyNames": {
           "type": "string",
-          "enum": [
+          "x-open-enum": [
             "claude",
             "codex",
             "gemini",
@@ -14970,7 +14970,7 @@
       },
       "provider": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "claude",
           "codex",
           "gemini",
@@ -15021,7 +15021,7 @@
           },
           "provider": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "claude",
               "codex",
               "gemini",
@@ -15070,7 +15070,7 @@
           },
           "runtimeMode": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "supervised",
               "auto-accept-edits",
               "auto",
@@ -15079,7 +15079,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "running",
               "needs-you",
               "idle",
@@ -16742,7 +16742,7 @@
           "properties": {
             "kind": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "claude",
                 "codex",
                 "gemini",
@@ -17285,7 +17285,7 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "enum": [
+                            "x-open-enum": [
                               "claude",
                               "codex",
                               "gemini",
@@ -17340,7 +17340,7 @@
                               "anyOf": [
                                 {
                                   "type": "string",
-                                  "enum": [
+                                  "x-open-enum": [
                                     "claude",
                                     "codex",
                                     "gemini",
@@ -17354,7 +17354,7 @@
                             },
                             "status": {
                               "type": "string",
-                              "enum": [
+                              "x-open-enum": [
                                 "running",
                                 "needs-you",
                                 "idle",
@@ -17402,7 +17402,7 @@
                                 "anyOf": [
                                   {
                                     "type": "string",
-                                    "enum": [
+                                    "x-open-enum": [
                                       "claude",
                                       "codex",
                                       "gemini",
@@ -17416,7 +17416,7 @@
                               },
                               "status": {
                                 "type": "string",
-                                "enum": [
+                                "x-open-enum": [
                                   "running",
                                   "needs-you",
                                   "idle",
@@ -18109,7 +18109,7 @@
                           },
                           "provider": {
                             "type": "string",
-                            "enum": [
+                            "x-open-enum": [
                               "claude",
                               "codex",
                               "gemini",
@@ -18121,7 +18121,7 @@
                           },
                           "runtimeMode": {
                             "type": "string",
-                            "enum": [
+                            "x-open-enum": [
                               "supervised",
                               "auto-accept-edits",
                               "auto",
@@ -18567,7 +18567,7 @@
                         },
                         "provider": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "claude",
                             "codex",
                             "gemini",
@@ -18579,7 +18579,7 @@
                         },
                         "runtimeMode": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "supervised",
                             "auto-accept-edits",
                             "auto",
@@ -18717,7 +18717,7 @@
                         },
                         "provider": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "claude",
                             "codex",
                             "gemini",
@@ -18729,7 +18729,7 @@
                         },
                         "runtimeMode": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "supervised",
                             "auto-accept-edits",
                             "auto",
@@ -20117,7 +20117,7 @@
                           },
                           "provider": {
                             "type": "string",
-                            "enum": [
+                            "x-open-enum": [
                               "claude",
                               "codex",
                               "gemini",
@@ -20129,7 +20129,7 @@
                           },
                           "runtimeMode": {
                             "type": "string",
-                            "enum": [
+                            "x-open-enum": [
                               "supervised",
                               "auto-accept-edits",
                               "auto",
@@ -20575,7 +20575,7 @@
                         },
                         "provider": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "claude",
                             "codex",
                             "gemini",
@@ -20587,7 +20587,7 @@
                         },
                         "runtimeMode": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "supervised",
                             "auto-accept-edits",
                             "auto",
@@ -20725,7 +20725,7 @@
                         },
                         "provider": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "claude",
                             "codex",
                             "gemini",
@@ -20737,7 +20737,7 @@
                         },
                         "runtimeMode": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "supervised",
                             "auto-accept-edits",
                             "auto",
@@ -27653,7 +27653,7 @@
       },
       "provider": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "claude",
           "codex",
           "gemini",
@@ -27800,7 +27800,7 @@
         "anyOf": [
           {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "claude",
               "codex",
               "gemini",
@@ -27832,7 +27832,7 @@
       },
       "provider": {
         "type": "string",
-        "enum": [
+        "x-open-enum": [
           "claude",
           "codex",
           "gemini",
@@ -30386,7 +30386,7 @@
             },
             "provider": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "claude",
                 "codex",
                 "gemini",
@@ -30435,7 +30435,7 @@
             },
             "runtimeMode": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "supervised",
                 "auto-accept-edits",
                 "auto",
@@ -30444,7 +30444,7 @@
             },
             "status": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "running",
                 "needs-you",
                 "idle",
@@ -31624,7 +31624,7 @@
             "properties": {
               "kind": {
                 "type": "string",
-                "enum": [
+                "x-open-enum": [
                   "claude",
                   "codex",
                   "gemini",
@@ -31648,7 +31648,7 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
+                "x-open-enum": [
                   "running",
                   "needs-you",
                   "idle",
@@ -32995,7 +32995,7 @@
                   },
                   "provider": {
                     "type": "string",
-                    "enum": [
+                    "x-open-enum": [
                       "claude",
                       "codex",
                       "gemini",
@@ -33044,7 +33044,7 @@
                   },
                   "runtimeMode": {
                     "type": "string",
-                    "enum": [
+                    "x-open-enum": [
                       "supervised",
                       "auto-accept-edits",
                       "auto",
@@ -33053,7 +33053,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "enum": [
+                    "x-open-enum": [
                       "running",
                       "needs-you",
                       "idle",
@@ -33329,7 +33329,7 @@
                   },
                   "provider": {
                     "type": "string",
-                    "enum": [
+                    "x-open-enum": [
                       "claude",
                       "codex",
                       "gemini",
@@ -33378,7 +33378,7 @@
                   },
                   "runtimeMode": {
                     "type": "string",
-                    "enum": [
+                    "x-open-enum": [
                       "supervised",
                       "auto-accept-edits",
                       "auto",
@@ -33387,7 +33387,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "enum": [
+                    "x-open-enum": [
                       "running",
                       "needs-you",
                       "idle",
@@ -34556,7 +34556,7 @@
           },
           "provider": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "claude",
               "codex",
               "gemini",
@@ -34605,7 +34605,7 @@
           },
           "runtimeMode": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "supervised",
               "auto-accept-edits",
               "auto",
@@ -34614,7 +34614,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
+            "x-open-enum": [
               "running",
               "needs-you",
               "idle",
@@ -35562,7 +35562,7 @@
                           },
                           "provider": {
                             "type": "string",
-                            "enum": [
+                            "x-open-enum": [
                               "claude",
                               "codex",
                               "gemini",
@@ -35574,7 +35574,7 @@
                           },
                           "runtimeMode": {
                             "type": "string",
-                            "enum": [
+                            "x-open-enum": [
                               "supervised",
                               "auto-accept-edits",
                               "auto",
@@ -36020,7 +36020,7 @@
                         },
                         "provider": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "claude",
                             "codex",
                             "gemini",
@@ -36032,7 +36032,7 @@
                         },
                         "runtimeMode": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "supervised",
                             "auto-accept-edits",
                             "auto",
@@ -36170,7 +36170,7 @@
                         },
                         "provider": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "claude",
                             "codex",
                             "gemini",
@@ -36182,7 +36182,7 @@
                         },
                         "runtimeMode": {
                           "type": "string",
-                          "enum": [
+                          "x-open-enum": [
                             "supervised",
                             "auto-accept-edits",
                             "auto",
