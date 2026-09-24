@@ -38,6 +38,8 @@ import {
     cellAt,
     closeCell,
     dropView,
+    evenCells,
+    evenColumns,
     focusCell,
     focusDirection,
     focusedViewId,
@@ -130,6 +132,9 @@ export interface DocumentState {
     /* A splitter dragged between two columns or two cells; the shares are of the axis they share. */
     resizeColumns(at: number, before: number, after: number): void;
     resizeCells(column: number, at: number, before: number, after: number): void;
+    /* A double click on a splitter: its two neighbors even out, or with `all` every column, or every cell of the column. */
+    evenColumns(at: number, all: boolean): void;
+    evenCells(column: number, at: number, all: boolean): void;
     setBodyFocused(focused: boolean): void;
     addCanvasView(name: string): string;
     /* A line in the sidebar with nothing behind it, to group the views around it. */
@@ -639,6 +644,14 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                     const columns = state.layout.columns.map((candidate, index) => (index === column ? { ...candidate, cells } : candidate));
                     return { layout: { ...state.layout, columns } };
                 });
+            },
+
+            evenColumns(at, all) {
+                set((state) => (state.layout === null ? {} : { layout: evenColumns(state.layout, at, all) }));
+            },
+
+            evenCells(column, at, all) {
+                set((state) => (state.layout === null ? {} : { layout: evenCells(state.layout, column, at, all) }));
             },
 
             setBodyFocused(focused) {

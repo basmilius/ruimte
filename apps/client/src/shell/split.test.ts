@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectView, SplitLayout } from '@ruimte/contracts';
-import { EVEN_SNAP_PX, snapToEven } from './split';
+import { EVEN_SNAP_PX, evenCells, evenColumns, snapToEven } from './split';
 import {
     canSplit,
     cellAt,
@@ -383,5 +383,84 @@ describe('snapToEven', () => {
     test('the middle is that of the two neighbors, not of the whole box', () => {
         // Two cells of a column of three that together take two thirds of it.
         expect(snapToEven(0.335, 2 / 3, 900)).toBeCloseTo(1 / 3, 10);
+    });
+});
+
+describe('evenColumns', () => {
+    const sized = (sizes: number[]): SplitLayout => ({
+        columns: sizes.map((size, index) => ({ size, cells: [{ viewId: `v${index}`, size: 1 }] })),
+        focus: { column: 0, cell: 0 }
+    });
+    const sizes = (layout: SplitLayout): number[] => layout.columns.map((column) => column.size);
+
+    test('the two neighbors of the splitter share what they held, and the third keeps its size', () => {
+        const next = evenColumns(sized([0.2, 0.5, 0.3]), 1, false);
+        expect(sizes(next)[0]).toBeCloseTo(0.35, 10);
+        expect(sizes(next)[1]).toBeCloseTo(0.35, 10);
+        expect(sizes(next)[2]).toBe(0.3);
+        sums(next);
+    });
+
+    test('with every column asked for, three become thirds', () => {
+        const next = evenColumns(sized([0.2, 0.5, 0.3]), 2, true);
+        for (const size of sizes(next)) {
+            expect(size).toBeCloseTo(1 / 3, 10);
+        }
+        sums(next);
+    });
+
+    test('two columns become halves either way', () => {
+        expect(sizes(evenColumns(sized([0.7, 0.3]), 1, false))).toEqual([0.5, 0.5]);
+        expect(sizes(evenColumns(sized([0.7, 0.3]), 1, true))).toEqual([0.5, 0.5]);
+    });
+
+    test('a splitter that is not there changes nothing', () => {
+        expect(sizes(evenColumns(sized([0.7, 0.3]), 0, true))).toEqual([0.7, 0.3]);
+        expect(sizes(evenColumns(sized([0.7, 0.3]), 2, false))).toEqual([0.7, 0.3]);
+    });
+});
+
+describe('evenCells', () => {
+    const layout: SplitLayout = {
+        columns: [
+            {
+                size: 0.5,
+                cells: [
+                    { viewId: 'a', size: 0.6 },
+                    { viewId: 'b', size: 0.3 },
+                    { viewId: 'c', size: 0.1 }
+                ]
+            },
+            {
+                size: 0.5,
+                cells: [
+                    { viewId: 'd', size: 0.8 },
+                    { viewId: 'e', size: 0.2 }
+                ]
+            }
+        ],
+        focus: { column: 0, cell: 0 }
+    };
+    const sizesIn = (next: SplitLayout, column: number): number[] => next.columns[column]!.cells.map((cell) => cell.size);
+
+    test('the two cells around the splitter share what they held', () => {
+        const next = evenCells(layout, 0, 2, false);
+        expect(sizesIn(next, 0)[0]).toBe(0.6);
+        expect(sizesIn(next, 0)[1]).toBeCloseTo(0.2, 10);
+        expect(sizesIn(next, 0)[2]).toBeCloseTo(0.2, 10);
+        sums(next);
+    });
+
+    test('every cell of the column, and only of that column', () => {
+        const next = evenCells(layout, 0, 1, true);
+        for (const size of sizesIn(next, 0)) {
+            expect(size).toBeCloseTo(1 / 3, 10);
+        }
+        expect(sizesIn(next, 1)).toEqual([0.8, 0.2]);
+        expect(next.columns.map((column) => column.size)).toEqual([0.5, 0.5]);
+    });
+
+    test('a column that is not there changes nothing', () => {
+        expect(evenCells(layout, 4, 1, true)).toBe(layout);
     });
 });

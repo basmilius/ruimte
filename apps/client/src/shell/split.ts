@@ -326,3 +326,32 @@ export const snapToEven = (before: number, total: number, span: number, threshol
     const middle = total / 2;
     return Math.abs(before - middle) * span <= threshold ? middle : before;
 };
+
+/*
+ * Even shares for the two neighbors of the splitter in front of `at`, which split the span they
+ * already hold between them so the rest of the axis stays put; with `all`, for every item on it.
+ */
+const evenOut = <T extends { size: number }>(items: readonly T[], at: number, all: boolean): T[] => {
+    if (at <= 0 || at >= items.length) {
+        return [...items];
+    }
+    if (all) {
+        return items.map((item) => ({ ...item, size: 1 / items.length }));
+    }
+    const half = (items[at - 1].size + items[at].size) / 2;
+    return items.map((item, index) => (index === at - 1 || index === at ? { ...item, size: half } : item));
+};
+
+/* A double click on the splitter in front of column `at`. */
+export const evenColumns = (layout: SplitLayout, at: number, all: boolean): SplitLayout => ({ ...layout, columns: evenOut(layout.columns, at, all) });
+
+/* A double click on the splitter in front of cell `at` of a column; `all` stays inside that column. */
+export const evenCells = (layout: SplitLayout, column: number, at: number, all: boolean): SplitLayout => {
+    if (layout.columns[column] === undefined) {
+        return layout;
+    }
+    return {
+        ...layout,
+        columns: layout.columns.map((candidate, index) => (index === column ? { ...candidate, cells: evenOut(candidate.cells, at, all) } : candidate))
+    };
+};

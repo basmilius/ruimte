@@ -66,7 +66,16 @@ const splitDrag = (
     };
 };
 
-function Splitter({ axis, onPointerDown }: { axis: 'x' | 'y'; onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void }) {
+/* A double click evens out the two neighbors, and with Option every column, or every cell of the column. */
+function Splitter({
+    axis,
+    onPointerDown,
+    onEven
+}: {
+    axis: 'x' | 'y';
+    onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+    onEven: (all: boolean) => void;
+}) {
     return (
         <div
             role="separator"
@@ -76,6 +85,7 @@ function Splitter({ axis, onPointerDown }: { axis: 'x' | 'y'; onPointerDown: (ev
                 axis === 'x' ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize'
             )}
             onPointerDown={onPointerDown}
+            onDoubleClick={(event) => onEven(event.altKey)}
         >
             {/* The line is one pixel, but nobody can hit one pixel: the grab area reaches past it. */}
             <span className={clsx('absolute', axis === 'x' ? '-inset-x-1 inset-y-0' : 'inset-x-0 -inset-y-1')} />
@@ -293,7 +303,7 @@ function Column({ layout, at }: { layout: SplitLayout; at: number }) {
             {drop !== null && <DropIndicator box={drop.box} zone={drop.zone} />}
             {column.cells.map((cell, index) => (
                 <Fragment key={cell.viewId}>
-                    {index > 0 && <Splitter axis="y" onPointerDown={resize(index)} />}
+                    {index > 0 && <Splitter axis="y" onPointerDown={resize(index)} onEven={(all) => useDocument.getState().evenCells(at, index, all)} />}
                     <div className="flex min-h-0 flex-col" style={{ flex: `${cell.size} 1 0` }}>
                         <Cell
                             at={{ column: at, cell: index }}
@@ -334,7 +344,7 @@ export function SplitGrid(): ReactElement | null {
         <div className="absolute inset-0 flex bg-border">
             {layout.columns.map((column, index) => (
                 <Fragment key={column.cells[0]!.viewId}>
-                    {index > 0 && <Splitter axis="x" onPointerDown={resize(index)} />}
+                    {index > 0 && <Splitter axis="x" onPointerDown={resize(index)} onEven={(all) => useDocument.getState().evenColumns(index, all)} />}
                     <Column layout={layout} at={index} />
                 </Fragment>
             ))}
