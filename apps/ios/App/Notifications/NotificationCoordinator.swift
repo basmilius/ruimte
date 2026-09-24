@@ -592,9 +592,13 @@ struct NotificationDestination: Identifiable, Hashable {
             else { throw PushCryptoError.unknownMachine }
             let route = NotificationDestination(
                 machineID: machineID, nodeID: alert.nodeId, target: alert.target.rawValue)
-            destination = route
             await markSeen(machineID: machineID, nodeID: alert.nodeId)
-            if action == "ruimte.allow" || action == "ruimte.deny" {
+            guard action == "ruimte.allow" || action == "ruimte.deny" else {
+                if action == UNNotificationDefaultActionIdentifier { destination = route }
+                return
+            }
+            // Allow or Deny leaves the open project where it was; only an answer that did not land opens the node.
+            do {
                 guard Double(alert.expiresAt) > Date().timeIntervalSince1970 * 1000 else {
                     throw PushCryptoError.expired
                 }
@@ -607,7 +611,9 @@ struct NotificationDestination: Identifiable, Hashable {
                 _ = try store.claim(
                     id: actionKey, expiresAt: Double(alert.expiresAt), now: Date().timeIntervalSince1970 * 1000)
                 try await answerInBackground(alert, machineID: machineID, allow: action == "ruimte.allow")
-                if destination?.id == route.id { destination = nil }
+            } catch {
+                destination = route
+                throw error
             }
         } catch { problem = error.localizedDescription }
     }
