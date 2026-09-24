@@ -39,7 +39,7 @@ const fakeLanguages = (): MonacoLanguages & { registered: string[]; providers: R
     };
 };
 
-const highlighter = await getSingletonHighlighter({ themes: ['github-light', 'github-dark'] });
+const highlighter = await getSingletonHighlighter({ themes: ['github-light', 'github-dark'], langs: ['typescript'] });
 
 // Shiki writes an opaque color with its alpha at times and Monaco without; both are the same paint.
 const opaque = (color: string): string => {
@@ -48,6 +48,9 @@ const opaque = (color: string): string => {
 };
 
 const LINE = 'export const answer: number = await compute("forty-two", 42);';
+
+// The grammar compiles its patterns on first use, which on a slow runner outlasts the 500 ms a Monaco tokenizer gets per line.
+highlighter.codeToTokensBase(LINE, { lang: 'typescript', theme: 'github-dark', tokenizeTimeLimit: 0 });
 
 /* The color Monaco paints each character in, by the scope the provider hands it and the rules of the theme. */
 const monacoColors = (provider: Provider, theme: ShikiTheme): string[] => {
