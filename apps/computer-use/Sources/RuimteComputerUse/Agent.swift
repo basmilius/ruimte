@@ -29,8 +29,16 @@ private enum Response {
         encode(["ok": true, "result": result])
     }
 
-    static func failure(_ message: String) -> Data {
-        encode(["ok": false, "error": message])
+    static func failure(_ message: String, code: String? = nil) -> Data {
+        var object: [String: Any] = ["ok": false, "error": message]
+        if let code {
+            object["code"] = code
+        }
+        return encode(object)
+    }
+
+    static func failure(_ error: AgentError) -> Data {
+        failure(error.message, code: error.code)
     }
 
     private static func encode(_ object: [String: Any]) -> Data {
@@ -84,7 +92,11 @@ final class Agent {
         }
         switch request.command {
         case "doctor":
-            return await respond { Permissions.doctor(prompt: request.prompt ?? true) }
+            return await respond {
+                var result = Permissions.doctor(prompt: request.prompt ?? true)
+                result["session"] = self.overlay.control.summary
+                return result
+            }
         case "apps":
             return await respond { Targets.list() }
         case "quit":
@@ -122,9 +134,9 @@ final class Agent {
         do {
             return Response.success(try await body())
         } catch is CancellationError {
-            return Response.failure((overlay.refusal ?? AgentError.stopped).message)
+            return Response.failure(overlay.refusal ?? AgentError.stopped)
         } catch let error as AgentError {
-            return Response.failure(error.message)
+            return Response.failure(error)
         } catch {
             return Response.failure("\(error)")
         }

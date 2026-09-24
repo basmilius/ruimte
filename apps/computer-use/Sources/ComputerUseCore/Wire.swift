@@ -44,12 +44,15 @@ public struct Credential: Decodable, Sendable {
 
 public struct AgentError: Error, Sendable {
     public let message: String
+    /// A stable name for a refusal a caller branches on; the message is for people and may be reworded.
+    public let code: String?
 
-    public init(_ message: String) {
+    public init(_ message: String, code: String? = nil) {
         self.message = message
+        self.code = code
     }
 
-    public static let stopped = AgentError("stopped by the person (⌥⎋ or the stop button). Run `cu state <app>` to continue.")
-    public static let paused = AgentError("the person paused the session; wait until they resume")
-    public static let takenOver = AgentError("the person took over; wait until they resume")
+    public static let stopped = AgentError("stopped by the person (⌥⎋ or the stop button). Run `cu state <app>` to continue.", code: "stopped")
+    public static let paused = AgentError("the person paused the session; wait until they resume", code: "paused")
+    public static let takenOver = AgentError("the person took over; wait until they resume", code: "taken-over")
 }

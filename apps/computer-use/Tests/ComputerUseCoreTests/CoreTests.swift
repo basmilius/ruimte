@@ -116,6 +116,25 @@ struct SessionControlTests {
         #expect(control.refusal == nil)
     }
 
+    @Test func refusalsCarryAStableCode() {
+        #expect(AgentError.paused.code == "paused")
+        #expect(AgentError.takenOver.code == "taken-over")
+        #expect(AgentError.stopped.code == "stopped")
+        #expect(AgentError("element 3 is gone").code == nil)
+    }
+
+    @Test func summarizesTheSessionForDoctor() {
+        var control = SessionControl()
+        #expect(control.summary["active"] as? Bool == false)
+        control.begin(at: 0)
+        control.takeOver(at: 1)
+        #expect(control.summary["active"] as? Bool == true)
+        #expect(control.summary["mode"] as? String == "takenOver")
+        control.stop(at: 2)
+        #expect(control.summary["stopped"] as? Bool == true)
+        #expect(control.summary["mode"] as? String == "running")
+    }
+
     @Test func formatsTheClock() {
         #expect(SessionControl.clock(134) == "02:14")
         #expect(SessionControl.clock(3725) == "1:02:05")

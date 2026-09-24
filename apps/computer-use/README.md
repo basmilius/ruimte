@@ -40,7 +40,7 @@ overlay.json      the words of the overlay, written by the daemon
 screenshots/      window captures; one older than an hour goes at the next capture
 ```
 
-A connection carries one request. The client writes one JSON object and half-closes, the helper answers with one JSON object and closes. The request is `Request` in `Sources/ComputerUseCore/Wire.swift`. It holds `command`, the fields that command takes, and `secret`, the content of `$RUIMTE_HOME/local.key`. The helper accepts a connection only from a process of the same user. It accepts a request only when `secret` matches that file, which it reads again for every request and compares in constant time. Whoever can read `local.key` can drive the daemon already, so the helper is no weaker than the daemon. The reply is `{"ok": true, "result": {...}}` or `{"ok": false, "error": "..."}`. A request without the secret gets `refused: ...` before the helper looks at anything else in it.
+A connection carries one request. The client writes one JSON object and half-closes, the helper answers with one JSON object and closes. The request is `Request` in `Sources/ComputerUseCore/Wire.swift`. It holds `command`, the fields that command takes, and `secret`, the content of `$RUIMTE_HOME/local.key`. The helper accepts a connection only from a process of the same user. It accepts a request only when `secret` matches that file, which it reads again for every request and compares in constant time. Whoever can read `local.key` can drive the daemon already, so the helper is no weaker than the daemon. The reply is `{"ok": true, "result": {...}}` or `{"ok": false, "error": "...", "code": "..."}`. `code` is there only for a refusal a caller branches on (`paused`, `taken-over`, `stopped`); the message is for people and may change. A request without the secret gets `refused: ...` before the helper looks at anything else in it.
 
 The commands are the ones `cu` sends, listed below. `--state` is `withState`, a menu index or path is `path`, and the key combos of `key` are `combos`.
 
@@ -72,7 +72,7 @@ The helper sets the action states itself from the commands it runs. What it cann
 { "command": "presence", "state": "think", "label": "Reading the inbox", "step": "Step 12 · Reading the inbox", "secret": "..." }
 ```
 
-`state` is `think`, `waiting`, `permission`, `error`, `done` or `idle`; `label` replaces the words beside the cursor and `step` the step line of the menu, both optional. The reply is `{"session": true, "shown": "<state on screen>", "mode": "running|paused|takenOver"}`. While the person holds the session, the state is kept and shows once they resume. `think`, `waiting`, `permission` and `error` start a session when none runs; `done` and `idle` without one answer `{"session": false}`. After a stop the first four are refused like an action. `done` ends the session once its cursor has faded.
+`state` is `think`, `waiting`, `permission`, `error`, `done` or `idle`; `label` replaces the words beside the cursor and `step` the step line of the menu, both optional. The reply is `{"session": true, "shown": "<state on screen>", "mode": "running|paused|takenOver"}`. While the person holds the session, the state is kept and shows once they resume. `think`, `waiting`, `permission` and `error` start a session when none runs; `done` and `idle` without one answer `{"session": false, "shown": null}`. After a stop the first four are refused like an action. `done` ends the session once its cursor has faded.
 
 ## Grant the permissions
 
@@ -182,6 +182,7 @@ The session bar at the top of the screen shows a mini cursor with the state, the
 - The person's own mouse (a click, or a move of a few points) takes over, and so does Take over in the menu. The cursor turns hollow and gray. Waiting for the person does not count: then the hand on the mouse is expected. The helper's own events carry a marker and are never mistaken for the person.
 - While paused or taken over, every command that reads or operates an app, `state` included, is refused with "the person paused the session; wait until they resume" or "the person took over; wait until they resume", and an action under way is cancelled. Resume from the bar, the menu or ⌥Space.
 - A stop cancels what runs and ends the session. Every later command fails with "stopped by the person" until the next `cu state`.
+- These three refusals carry `code` `paused`, `taken-over` and `stopped`. `doctor` answers with `session`, `{"active": true, "mode": "running|paused|takenOver", "stopped": false}`, so a caller can see how the session stands without changing it.
 
 ### The look
 

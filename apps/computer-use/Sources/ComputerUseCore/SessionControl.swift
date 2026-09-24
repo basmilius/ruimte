@@ -47,6 +47,11 @@ public struct SessionControl: Sendable {
         }
     }
 
+    /// How the session stands, for the `session` of a `doctor` reply.
+    public var summary: [String: Any] {
+        ["active": isActive, "mode": mode.rawValue, "stopped": stopped]
+    }
+
     /// The person's hand on the mouse takes over only while the agent is the one acting.
     public var acceptsTakeover: Bool {
         isActive && mode == .running && !agentState.waitsOnPerson && agentState != .done
