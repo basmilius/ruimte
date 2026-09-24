@@ -37,7 +37,7 @@ import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { SECTION_LABEL } from '@/ui/classes';
 
-type Reading = { request: WorktreeMergeRequest; worktrees: Worktree[]; failure: string | null };
+type Reading = { request: WorktreeMergeRequest; worktrees: Worktree[]; error: { message: string | null } | null };
 
 /*
  * The one question before worktrees are merged, for a single one from the git panel or a node's menu
@@ -81,11 +81,11 @@ export function MergeWorktreeDialog() {
                 }
                 const found = request.paths.map((path) => answer.worktrees.find((entry) => entry.path === path)).filter((entry) => entry !== undefined);
                 const usable = found.filter((entry) => !entry.missing);
-                setReading({ request, worktrees: usable, failure: usable.length === 0 ? t('merge.nothingLeft') : null });
+                setReading({ request, worktrees: usable, error: null });
             })
             .catch((error: unknown) => {
                 if (!cancelled) {
-                    setReading({ request, worktrees: [], failure: error instanceof Error ? error.message : t('merge.unreadable') });
+                    setReading({ request, worktrees: [], error: { message: error instanceof Error ? error.message : null } });
                 }
             });
         return () => {
@@ -95,6 +95,14 @@ export function MergeWorktreeDialog() {
 
     const shown = reading !== null && reading.request === request ? reading : null;
     const worktrees = useMemo(() => shown?.worktrees ?? [], [shown]);
+    const failure =
+        shown === null
+            ? null
+            : shown.error !== null
+              ? (shown.error.message ?? t('merge.unreadable'))
+              : shown.worktrees.length === 0
+                ? t('merge.nothingLeft')
+                : null;
     const working = useMemo(
         () => worktrees.flatMap((worktree) => nodesInWorktree(nodes, worktree)).filter((node) => nodeWorking(node, sessions, chats, endpointId)),
         [worktrees, nodes, sessions, chats, endpointId]
@@ -131,7 +139,7 @@ export function MergeWorktreeDialog() {
     const stopAgent = working.length > 0 || (draft.remove && live.length > 0);
     const blocked =
         shown === null ||
-        shown.failure !== null ||
+        failure !== null ||
         (loose && !draft.commitFirst) ||
         (loose && single !== undefined && draft.commitFirst && subject.trim() === '');
 
@@ -180,10 +188,10 @@ export function MergeWorktreeDialog() {
                 <Dialog.Popup className="dialog-popup w-[460px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">{worktrees.length > 0 ? mergeTitle(worktrees) : t('merge.title')}</Dialog.Title>
                     <p className="mt-1 text-sm text-text-muted">
-                        {shown === null ? t('removeWorktree.counting') : (shown.failure ?? t('merge.holds', { contents: mergeContents(worktrees) }))}
+                        {shown === null ? t('removeWorktree.counting') : (failure ?? t('merge.holds', { contents: mergeContents(worktrees) }))}
                     </p>
                     {agentLine !== null && <p className="mt-2 text-sm text-status-warning">{agentLine}</p>}
-                    {shown !== null && shown.failure === null && (
+                    {shown !== null && failure === null && (
                         <>
                             {loose && (
                                 <div className="mt-4 flex flex-col gap-1.5">

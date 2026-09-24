@@ -11,7 +11,7 @@ import { useUi } from '@/state/ui';
 import { worktreeLists } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
 
-type Reading = { key: string; worktrees: Worktree[]; failure: string | null };
+type Reading = { key: string; worktrees: Worktree[]; error: { message: string | null } | null };
 
 /*
  * The question before worktrees go, one from the git panel or a node's menu, or a group's all. It
@@ -41,12 +41,12 @@ export function RemoveWorktreeDialog() {
             .then((answer) => {
                 if (!cancelled) {
                     const worktrees = removal.paths.map((path) => answer.worktrees.find((entry) => entry.path === path)).filter((entry) => entry !== undefined);
-                    setReading({ key, worktrees, failure: worktrees.length === 0 ? t('removeWorktree.alreadyGone') : null });
+                    setReading({ key, worktrees, error: null });
                 }
             })
             .catch((error: unknown) => {
                 if (!cancelled) {
-                    setReading({ key, worktrees: [], failure: error instanceof Error ? error.message : t('removeWorktree.unreadable') });
+                    setReading({ key, worktrees: [], error: { message: error instanceof Error ? error.message : null } });
                 }
             });
         return () => {
@@ -60,6 +60,14 @@ export function RemoveWorktreeDialog() {
     };
 
     const shown = key !== null && reading?.key === key ? reading : null;
+    const failure =
+        shown === null
+            ? null
+            : shown.error !== null
+              ? (shown.error.message ?? t('removeWorktree.unreadable'))
+              : shown.worktrees.length === 0
+                ? t('removeWorktree.alreadyGone')
+                : null;
     const question = shown !== null && shown.worktrees.length > 0 ? removeAllQuestion(shown.worktrees) : null;
     const mergeable = shown?.worktrees.filter((worktree) => !worktree.missing) ?? [];
 
@@ -101,8 +109,8 @@ export function RemoveWorktreeDialog() {
             description={
                 shown === null ? (
                     t('removeWorktree.counting')
-                ) : shown.failure !== null ? (
-                    shown.failure
+                ) : failure !== null ? (
+                    failure
                 ) : (
                     <>
                         {question?.description}

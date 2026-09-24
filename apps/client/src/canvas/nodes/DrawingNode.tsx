@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PenTool } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { DrawingElement } from '@ruimte/contracts';
 import { boundsOfElements } from '@ruimte/drawing';
 import { cameraToFit } from '@/canvas/math';
 import { loadDrawingFont } from '@/drawing/fonts';
@@ -15,6 +16,8 @@ import { Icon } from '@/ui/Icon';
 /* World units of air around a mirrored drawing, so nothing touches the frame. */
 const PADDING = 24;
 
+const NO_ELEMENTS: DrawingElement[] = [];
+
 /*
  * A drawing view on a canvas: the same file, painted to fit, never edited here. A double-click
  * opens the view, which is where a drawing is drawn.
@@ -28,7 +31,7 @@ export function DrawingNode({ id }: { id: string }) {
     const [size, setSize] = useState({ w: 0, h: 0 });
     const [fontReady, setFontReady] = useState(false);
     const theme = useTheme((s) => s.resolved);
-    const elements = mirror?.snapshot ?? [];
+    const elements = mirror?.snapshot ?? NO_ELEMENTS;
 
     useEffect(() => {
         let alive = true;

@@ -48,12 +48,14 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
         clear();
     };
 
-    // A dialog opened again starts over, on the code it was opened with.
-    useEffect(() => {
+    // A dialog opened again starts over, on the code it was opened with, in the render that shows it.
+    const [shownFor, setShownFor] = useState({ open, initialCode });
+    if (shownFor.open !== open || shownFor.initialCode !== initialCode) {
+        setShownFor({ open, initialCode });
         if (open) {
             reset(initialCode ?? '');
         }
-    }, [open, initialCode]);
+    }
 
     // Takes the code rather than reading the state, since the lookup on open runs before the state holds it.
     const find = (typed: string = code): Promise<boolean> =>

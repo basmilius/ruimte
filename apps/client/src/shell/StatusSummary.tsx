@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { CircleCheck } from 'lucide-react';
@@ -46,20 +46,18 @@ function Walker({ label, count, ids, children }: { label: string; count: number;
  */
 export function StatusSummary() {
     const { t } = useTranslation('shell');
-    const views = useDocument((s) => s.views);
-    const activeViewId = useDocument((s) => s.activeViewId);
-    const order = useCanvas(useShallow((s) => s.order));
-    const canvasNodes = useCanvas((s) => s.nodes);
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.statusByKey);
     const unseen = useAttention((s) => s.unseen);
     const snoozes = useSnoozes((s) => s.byKey);
+    // Subscribed to render again when a node comes or goes; `projectNodes` reads the stores as they are.
+    useDocument((s) => s.views);
+    useDocument((s) => s.activeViewId);
+    useCanvas(useShallow((s) => s.order));
+    useCanvas((s) => s.nodes);
 
-    // The dependencies are what `projectNodes` reads; the call itself takes the stores as they are.
-    const nodes = useMemo(() => projectNodes(), [views, activeViewId, order, canvasNodes]);
-
-    const groups = groupAttention(nodes, sessions, chats, endpointId, unseen, snoozes);
+    const groups = groupAttention(projectNodes(), sessions, chats, endpointId, unseen, snoozes);
     if (groups.needsYou.length === 0 && groups.working.length === 0 && groups.finished.length === 0) {
         return null;
     }
