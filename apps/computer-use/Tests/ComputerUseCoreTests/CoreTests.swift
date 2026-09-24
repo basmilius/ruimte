@@ -163,6 +163,26 @@ struct SessionControlTests {
     }
 }
 
+struct TakeoverTests {
+    /// The answer for each event in turn: (press, distance, inside, time).
+    private func notes(_ events: [(Bool, CGFloat, Bool, TimeInterval)]) -> [Bool] {
+        var detector = TakeoverDetector()
+        return events.map { detector.note(press: $0.0, distance: $0.1, inside: $0.2, at: $0.3) }
+    }
+
+    @Test func aClickAnywhereTakesOver() {
+        #expect(notes([(true, 0, false, 0)]) == [true])
+    }
+
+    @Test func movementTakesOverOnlyInsideTheAppAndWithinHalfASecond() {
+        #expect(notes([(false, 30, false, 0), (false, 8, true, 1), (false, 8, true, 1.3)]) == [false, false, true])
+    }
+
+    @Test func aQuietMomentStartsTheCountOver() {
+        #expect(notes([(false, 8, true, 0), (false, 8, true, 0.6), (false, 3, true, 0.7)]) == [false, false, false])
+    }
+}
+
 struct HomeTests {
     @Test func explicitThenEnvironmentThenDefault() {
         let environment = ["RUIMTE_HOME": "/tmp/from-env"]

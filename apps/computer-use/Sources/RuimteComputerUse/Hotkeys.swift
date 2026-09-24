@@ -13,33 +13,37 @@ final class Hotkeys {
     nonisolated private static let signature: OSType = 0x5275_696D
     private static var handler: ((Action) -> Void)?
     private static var installed = false
-    private var references: [EventHotKeyRef] = []
+    private var references: [Action: EventHotKeyRef] = [:]
 
     init(handler: @escaping (Action) -> Void) {
         Self.handler = handler
         Self.installHandler()
     }
 
-    var isRegistered: Bool {
-        !references.isEmpty
+    /// The keys this session has; another app that holds ⌥Space or ⌥⎋ keeps it from the helper.
+    var registered: Set<Action> {
+        Set(references.keys)
     }
 
     func register() {
         guard references.isEmpty else {
             return
         }
-        let keys: [(UInt32, Action)] = [(UInt32(kVK_Space), .togglePause), (UInt32(kVK_Escape), .stop)]
-        for (keyCode, action) in keys {
+        let keys: [(UInt32, Action, String)] = [(UInt32(kVK_Space), .togglePause, "⌥Space"), (UInt32(kVK_Escape), .stop, "⌥⎋")]
+        for (keyCode, action, name) in keys {
             var reference: EventHotKeyRef?
             let identifier = EventHotKeyID(signature: Self.signature, id: action.rawValue)
-            if RegisterEventHotKey(keyCode, UInt32(optionKey), identifier, GetApplicationEventTarget(), 0, &reference) == noErr, let reference {
-                references.append(reference)
+            let status = RegisterEventHotKey(keyCode, UInt32(optionKey), identifier, GetApplicationEventTarget(), 0, &reference)
+            if status == noErr, let reference {
+                references[action] = reference
+            } else {
+                NSLog("Ruimte Computer Use: could not register \(name) (OSStatus \(status)); another app may hold it")
             }
         }
     }
 
     func unregister() {
-        for reference in references {
+        for reference in references.values {
             UnregisterEventHotKey(reference)
         }
         references.removeAll()

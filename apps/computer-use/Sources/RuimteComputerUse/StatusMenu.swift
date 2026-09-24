@@ -10,6 +10,8 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         var mode: SessionMode
         var time: String
         var step: String
+        /// The session's keys that are registered; a key another app holds is not offered as the shortcut.
+        var keys: Set<Hotkeys.Action>
     }
 
     var onTogglePause: (() -> Void)?
@@ -84,7 +86,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(step)
         menu.addItem(.separator())
 
-        let pause = NSMenuItem(title: content.mode == .running ? config.pause : config.resume, action: #selector(togglePause), keyEquivalent: " ")
+        let pause = NSMenuItem(title: content.mode == .running ? config.pause : config.resume, action: #selector(togglePause), keyEquivalent: content.keys.contains(.togglePause) ? " " : "")
         pause.keyEquivalentModifierMask = .option
         pause.target = self
         menu.addItem(pause)
@@ -94,7 +96,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(takeOver)
         menu.addItem(.separator())
 
-        let stop = NSMenuItem(title: config.stop, action: #selector(stop), keyEquivalent: "\u{1b}")
+        let stop = NSMenuItem(title: config.stop, action: #selector(stop), keyEquivalent: content.keys.contains(.stop) ? "\u{1b}" : "")
         stop.keyEquivalentModifierMask = .option
         let theme = PhantomTheme.current(NSApp.effectiveAppearance)
         stop.attributedTitle = NSAttributedString(string: config.stop, attributes: [

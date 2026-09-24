@@ -393,6 +393,7 @@ final class Agent {
     private func look(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
         let frame = AX.keyWindow(of: AXUIElementCreateApplication(app.processIdentifier)).flatMap(AX.frame)
         overlay.begin(near: frame.map { CGPoint(x: $0.midX, y: $0.midY) })
+        overlay.operating(in: frame)
         defer {
             overlay.finishAction()
         }
@@ -404,6 +405,7 @@ final class Agent {
     func act(_ app: NSRunningApplication, at point: CGPoint?, as action: ActionLook, reportPoint: Bool = true, _ body: () async throws -> [String: Any]) async throws -> [String: Any] {
         try checkStopped()
         overlay.begin(near: point)
+        overlay.operating(in: AX.keyWindow(of: AXUIElementCreateApplication(app.processIdentifier)).flatMap(AX.frame))
         defer {
             overlay.finishAction()
         }

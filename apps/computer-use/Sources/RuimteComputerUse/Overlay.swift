@@ -49,8 +49,6 @@ final class Overlay {
     private static let idleTimeout: Duration = .seconds(120)
     /// Long enough to read why the session ends; `done` needs no words and goes with its own fade.
     private static let endingLinger: Double = 3
-    /// Points the person's mouse travels before it counts as taking over, so a nudged desk does not.
-    private static let takeoverDistance: CGFloat = 12
 
     /// Called when the person pauses, takes over or stops, with what an agent command answers from then on.
     var onInterrupt: ((AgentError) -> Void)?
@@ -67,7 +65,9 @@ final class Overlay {
     private var presenceLabel: String?
     private var step = ""
     private var thinkTurn = -1
-    private var movedByPerson: CGFloat = 0
+    private var takeover = TakeoverDetector()
+    /// The key window of the app the agent last acted in, global and y down: where the person's movement takes over.
+    private var operatedFrame: CGRect?
     private var mouseMonitor: Any?
     private var tick: Timer?
     private var holdTask: Task<Void, Never>?
@@ -140,7 +140,7 @@ final class Overlay {
     func begin(near globalPoint: CGPoint?) {
         endTask?.cancel()
         holdTask?.cancel()
-        movedByPerson = 0
+        takeover.reset()
         config = OverlayConfig.load(from: configPath)
         let anchor = globalPoint ?? cursorGlobalPoint ?? SyntheticInput.currentPointer()
         guard let target = Geometry.screen(containingGlobal: anchor) else {
@@ -166,6 +166,11 @@ final class Overlay {
         }
         armIdleTimeout()
         refreshChrome()
+    }
+
+    /// The window the agent acts in now, which the person's movement has to be in to take over.
+    func operating(in frame: CGRect?) {
+        operatedFrame = frame
     }
 
     /// Moves the cursor to the target; the real pointer stays put.
@@ -350,18 +355,20 @@ final class Overlay {
             let synthetic = event.cgEvent?.getIntegerValueField(.eventSourceUserData) == SyntheticInput.marker
             let isPress = [.leftMouseDown, .rightMouseDown, .otherMouseDown].contains(event.type)
             let distance = hypot(event.deltaX, event.deltaY)
+            let time = event.timestamp
             MainActor.assumeIsolated {
-                self?.personMoved(synthetic: synthetic, press: isPress, distance: distance)
+                self?.personMoved(synthetic: synthetic, press: isPress, distance: distance, at: time)
             }
         }
     }
 
-    private func personMoved(synthetic: Bool, press: Bool, distance: CGFloat) {
+    private func personMoved(synthetic: Bool, press: Bool, distance: CGFloat, at time: TimeInterval) {
         guard !synthetic, !SyntheticInput.postedRecently, control.acceptsTakeover else {
             return
         }
-        movedByPerson += distance
-        if press || movedByPerson > Self.takeoverDistance {
+        let pointer = Geometry.global(fromCocoa: NSEvent.mouseLocation)
+        let inside = operatedFrame?.contains(pointer) ?? false
+        if takeover.note(press: press, distance: distance, inside: inside, at: time) {
             takeOver()
         }
     }
@@ -423,7 +430,7 @@ final class Overlay {
         let held = control.mode != .running
         bar.show(on: screen, SessionBarLayer.Content(title: config.title, state: shown, held: held, time: time, theme: theme), accent: accent, reduceMotion: reduceMotion)
         let stepLine = held ? config.step(for: shown, target: nil) : step
-        menu.show(StatusMenu.Content(state: shown, mode: control.mode, time: time, step: stepLine), config: config, accent: accent)
+        menu.show(StatusMenu.Content(state: shown, mode: control.mode, time: time, step: stepLine, keys: hotkeys.registered), config: config, accent: accent)
     }
 
     private func armIdleTimeout() {

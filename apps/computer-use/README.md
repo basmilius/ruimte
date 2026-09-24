@@ -14,7 +14,7 @@ This builds the package with Swift Package Manager and assembles `dist/Ruimte Co
 
 The script signs with the first Apple Development identity in the keychain (`security find-identity -v -p codesigning`), with the hardened runtime and the empty entitlements in `Resources/entitlements.plist`. A stable identity keeps the grants across rebuilds. Without one it signs ad hoc and says so; macOS then asks for the grants again after every build. `--identity <name|hash|->` or `RUIMTE_COMPUTER_USE_IDENTITY` picks another identity, and `-` signs ad hoc.
 
-`swift test` covers the parts that do not need a screen: key combos, menu paths, mapping screenshot pixels to screen points, the overlay config, the session control, the home and the local secret, and in `PhantomTests` the forms of the cursor against the design's path strings, the state table, the easings and where the label flips.
+`swift test` covers the parts that do not need a screen: key combos, menu paths, mapping screenshot pixels to screen points, the overlay config, the session control, when the person's mouse takes over, the home and the local secret, and in `PhantomTests` the forms of the cursor against the design's path strings, the state table, the easings and where the label flips.
 
 ### In Ruimte.app
 
@@ -180,8 +180,8 @@ The session bar at the top of the screen shows a mini cursor with the state, the
 
 ### Pause, take over, stop
 
-- ⌥Space, the pause button or the menu pauses the session and resumes it again. ⌥⎋, the stop button or the menu stops it. Both keys are registered only while a session runs and never reach the app in front.
-- The person's own mouse (a click, or a move of a few points) takes over, and so does Take over in the menu. The cursor turns hollow and gray. Waiting for the person does not count: then the hand on the mouse is expected. The helper's own events carry a marker and are never mistaken for the person.
+- ⌥Space, the pause button or the menu pauses the session and resumes it again. ⌥⎋, the stop button or the menu stops it. Both keys are registered only while a session runs and never reach the app in front. A key another app already holds cannot be registered: the helper logs that, and the menu shows no shortcut for it.
+- The person's own mouse takes over: a click anywhere, or more than 12 points of movement within half a second inside the window the agent acts in. Moving to another app, Ruimte included, to read along does not, and a quiet moment starts the count over. Take over in the menu does too. The cursor turns hollow and gray. Waiting for the person does not count: then the hand on the mouse is expected. The helper's own events carry a marker and are never mistaken for the person.
 - While paused or taken over, every command that reads or operates an app, `state` included, is refused with "the person paused the session; wait until they resume" or "the person took over; wait until they resume", and an action under way is cancelled. Resume from the bar, the menu or ⌥Space.
 - A stop cancels what runs and ends the session. Every later command fails with "stopped by the person" until the next `cu state`, or until `clear-stop` on the socket. The daemon sends that once it heard of the stop: it tells the agent that held the session itself, so no other agent is refused for it.
 - `pause`, `resume` and `stop` on the socket are the same buttons for a person who presses them in Ruimte. Each answers `{"session": {...}}` in the shape of `doctor`, and one that would change nothing (a pause while paused, anything without a session) changes nothing.
