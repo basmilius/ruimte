@@ -483,6 +483,11 @@ export const appCommands = (): Command[] => {
             label: i18next.t('shell:palette.commands.remote'),
             hint: i18next.t('shell:palette.hints.remote'),
             run: () => useUi.getState().setSettings({ open: true, section: 'machines' })
+        },
+        {
+            id: 'settings-computer',
+            label: i18next.t('shell:palette.commands.computerUse'),
+            run: () => useUi.getState().setSettings({ open: true, section: 'computer' })
         }
     ];
 };

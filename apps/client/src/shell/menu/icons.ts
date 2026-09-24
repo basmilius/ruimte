@@ -45,6 +45,7 @@ import {
     Maximize2,
     MessageSquare,
     Minus,
+    MousePointer2,
     PanelBottom,
     PanelLeft,
     PanelRight,
@@ -167,6 +168,7 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     usage: Gauge,
     models: ChartSpline,
     'settings-machines': Server,
+    'settings-computer': MousePointer2,
     'release-notes': ScrollText,
     'settings-keyboard': Keyboard
 };

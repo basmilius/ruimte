@@ -87,6 +87,7 @@ export const PALETTE_IDS = [
     'settings',
     'settings-keyboard',
     'settings-machines',
+    'settings-computer',
     'keep-awake-off',
     'keep-awake-working',
     'keep-awake-always'

@@ -101,6 +101,10 @@
             "label": "Voice",
             "description": "Microfoon, dicteren en Voice Control"
         },
+        "computer": {
+            "label": "Computer use",
+            "description": "Laat agents de apps op een Mac bedienen."
+        },
         "machines": {
             "label": "Remote",
             "description": "Je machines, het account dat ze delen en hoe elke machine bereikt wordt."
@@ -551,6 +555,41 @@
             "title": "Microfoon en taal",
             "description": "Gedeeld door Speech to Text en Voice Control. Wijzigingen gelden voor de volgende opname."
         }
+    },
+    "computer": {
+        "title": "Computer use",
+        "description": "Agents kunnen de apps op een Mac zien en bedienen. Ze komen pas bij een app nadat jij die toestaat.",
+        "enable": "Computer use toestaan op {{machine}}",
+        "failed": "Computer use kon niet laden",
+        "machine": {
+            "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Remote, of terwijl er een project op open staat.",
+            "checking": "Controleren…",
+            "macOnly": "Computer use werkt alleen op macOS.",
+            "unavailable": "Deze machine heeft geen Ruimte Computer Use. Dat zit in de Ruimte-app voor macOS.",
+            "off": "Uit. Agents op deze machine kunnen de apps niet zien of bedienen.",
+            "starting": "Ruimte Computer Use starten…",
+            "grants": "Wacht op twee toestemmingen in macOS.",
+            "ready": "Aan. Een agent vraagt het je voordat die een app gebruikt."
+        },
+        "grant": {
+            "accessibility": {
+                "label": "Toegankelijkheid",
+                "description": "Laat agents lezen en indrukken wat er op het scherm staat."
+            },
+            "screenRecording": {
+                "label": "Schermopname",
+                "description": "Laat agents een afbeelding zien van het venster waarin ze werken."
+            }
+        },
+        "state": {
+            "granted": "Toegestaan",
+            "missing": "Niet toegestaan",
+            "unknown": "Controleren"
+        },
+        "open": "Open Systeeminstellingen",
+        "restartNote": "macOS past Schermopname pas toe als Ruimte Computer Use opnieuw start. Ruimte herstart het zodra je terugkomt in dit venster.",
+        "checkAgain": "Opnieuw controleren",
+        "remote": "Sta deze toe op {{machine}} zelf, in Systeeminstellingen > Privacy en beveiliging."
     },
     "identity": {
         "name": "Naam",

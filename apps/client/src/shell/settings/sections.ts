@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { Bot, ChartNoAxesColumn, Folder, Info, Keyboard, Mic, Palette, PanelsTopLeft, Server, type LucideIcon } from 'lucide-react';
+import { Bot, ChartNoAxesColumn, Folder, Info, Keyboard, Mic, MousePointer2, Palette, PanelsTopLeft, Server, type LucideIcon } from 'lucide-react';
 import type { SettingsSectionId } from '@/state/ui';
 
 export interface SettingsSectionMeta {
@@ -9,7 +9,7 @@ export interface SettingsSectionMeta {
 
 /*
  * The left navigation, in groups with a separator between them: how the app looks and answers, the
- * surfaces you work in, the agents and what they cost, the machines, and the app itself. The pane
+ * surfaces you work in, the agents, what they cost and what they may operate, the machines, and the app itself. The pane
  * for each id lives in `panes/`, and its words under `sections.<id>` in the settings namespace.
  */
 export const SETTINGS_SECTIONS: readonly (readonly SettingsSectionMeta[])[] = [
@@ -24,7 +24,8 @@ export const SETTINGS_SECTIONS: readonly (readonly SettingsSectionMeta[])[] = [
     [
         { id: 'agents', icon: Bot },
         { id: 'usage', icon: ChartNoAxesColumn },
-        { id: 'voice', icon: Mic }
+        { id: 'voice', icon: Mic },
+        { id: 'computer', icon: MousePointer2 }
     ],
     [{ id: 'machines', icon: Server }],
     [{ id: 'about', icon: Info }]

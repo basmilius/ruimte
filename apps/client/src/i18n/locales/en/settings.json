@@ -101,6 +101,10 @@
             "label": "Voice",
             "description": "Microphone, dictation and Voice Control"
         },
+        "computer": {
+            "label": "Computer use",
+            "description": "Let agents operate the apps on a Mac."
+        },
         "machines": {
             "label": "Remote",
             "description": "Your machines, the account they share, and how each one is reached."
@@ -551,6 +555,41 @@
             "title": "Microphone and language",
             "description": "Shared by Speech to Text and Voice Control. Changes apply to the next recording."
         }
+    },
+    "computer": {
+        "title": "Computer use",
+        "description": "Agents can see and operate the apps on a Mac. They only reach an app after you allow it.",
+        "enable": "Allow computer use on {{machine}}",
+        "failed": "Computer use could not load",
+        "machine": {
+            "notConnected": "Not connected. Change this from the machine's dialog under Remote, or while a project on it is open.",
+            "checking": "Checking…",
+            "macOnly": "Computer use is only available on macOS.",
+            "unavailable": "This machine has no Ruimte Computer Use. It comes with the Ruimte app for macOS.",
+            "off": "Off. Agents on this machine cannot see or operate its apps.",
+            "starting": "Starting Ruimte Computer Use…",
+            "grants": "Waiting for two permissions in macOS.",
+            "ready": "On. An agent asks you before it uses an app."
+        },
+        "grant": {
+            "accessibility": {
+                "label": "Accessibility",
+                "description": "Lets agents read and press what is on the screen."
+            },
+            "screenRecording": {
+                "label": "Screen Recording",
+                "description": "Lets agents see a picture of the window they work in."
+            }
+        },
+        "state": {
+            "granted": "Allowed",
+            "missing": "Not allowed",
+            "unknown": "Checking"
+        },
+        "open": "Open System Settings",
+        "restartNote": "macOS applies Screen Recording once Ruimte Computer Use starts again. Ruimte restarts it when you come back to this window.",
+        "checkAgain": "Check again",
+        "remote": "Allow these on {{machine}} itself, in System Settings > Privacy & Security."
     },
     "identity": {
         "name": "Name",

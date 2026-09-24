@@ -322,6 +322,7 @@ export const menuModel = (context: MenuContext): MenuSpec => {
             command('usage', t('usage')),
             command('models', t('compareModels')),
             command('settings-machines', t('machines')),
+            command('settings-computer', t('computerUse')),
             ...only(desktop && apple, separator, role('front', t('front')))
         ]
     };
