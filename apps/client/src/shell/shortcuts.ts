@@ -5,6 +5,8 @@ export const APP_SHORTCUTS = {
     palette: shortcut('Mod+K'),
     findInFiles: shortcut('Mod+Shift+F'),
     settings: shortcut('Mod+,'),
+    // Only while the settings dialog is up, where it stands in for the canvas's find.
+    settingsSearch: shortcut('Mod+F'),
     sidebar: shortcut('Mod+B')
 } as const;
 

@@ -108,6 +108,7 @@ export const menuContext = (host: MenuHost): MenuContext => {
             .map((provider) => ({ kind: provider.kind, name: provider.name, chat: provider.capabilities.chat, terminal: provider.capabilities.terminal })),
         releaseNotes: typeof desktop()?.releaseNotes === 'function',
         fullscreen: typeof document !== 'undefined' && document.fullscreenElement !== null,
-        keepAwake: host === 'desktop' && canKeepAwake() ? useSettings.getState().keepAwake : null
+        keepAwake: host === 'desktop' && canKeepAwake() ? useSettings.getState().keepAwake : null,
+        settingsOpen: ui.settings.open
     };
 };

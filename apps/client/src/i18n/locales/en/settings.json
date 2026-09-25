@@ -37,6 +37,9 @@
             "language": "Follow language",
             "system": "System"
         },
+        "languageRegion": {
+            "title": "Language and region"
+        },
         "terminal": {
             "title": "Terminal",
             "font": {
@@ -89,6 +92,10 @@
             "label": "Files and Git",
             "description": "What the Files and Git panels show, and where browsing for a folder starts."
         },
+        "providers": {
+            "label": "Providers",
+            "description": "The agent CLIs on this machine and the accounts they sign in with."
+        },
         "agents": {
             "label": "Agents",
             "description": "Defaults, permissions and notifications for agents."
@@ -99,15 +106,15 @@
         },
         "voice": {
             "label": "Voice",
-            "description": "Microphone, dictation and Voice Control"
+            "description": "Microphone, dictation and Voice Control."
         },
         "computer": {
             "label": "Computer use",
-            "description": "Let agents operate the apps on a computer."
+            "description": "Let agents operate the apps on a computer. They only reach an app after you allow it."
         },
         "machines": {
             "label": "Account",
-            "description": "Your machines, the account they share, and how each one is reached."
+            "description": "Your Ruimte account, the machines on it, and how each one is reached."
         },
         "about": {
             "label": "About",
@@ -123,7 +130,6 @@
         }
     },
     "usage": {
-        "title": "Usage",
         "currency": {
             "label": "Currency",
             "dollars": "Prices as published, in dollars.",
@@ -133,7 +139,13 @@
                 "USD": "Dollars",
                 "EUR": "Euros"
             }
-        }
+        },
+        "page": {
+            "label": "Usage page",
+            "description": "Cost, tokens and plan limits, per account.",
+            "open": "Open usage"
+        },
+        "title": "Usage"
     },
     "gesture": {
         "drag": "drag",
@@ -348,18 +360,24 @@
     },
     "agents": {
         "deleteAnyView": {
-            "title": "What an agent may delete",
-            "sectionDescription": "Saved per machine. Applies to every client connected to it.",
+            "label": "Agents may delete any view or node",
             "rowLabel": "Agents on {{machine}} may delete any view or node",
             "description": "Off, an agent only deletes views and nodes it created. On, it can delete any view or node in any project there, including yours.",
-            "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open."
+            "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open.",
+            "title": "What an agent may delete",
+            "sectionDescription": "Saved per machine. Applies to every client connected to it."
         },
         "resumeAtReset": {
-            "title": "Resume after a limit",
-            "sectionDescription": "Saved per machine. Each chat can still turn it off for itself.",
+            "label": "Chats resume after a limit",
             "rowLabel": "Chats on {{machine}} resume after a limit",
             "description": "On, a chat that stopped on a usage limit goes on by itself once the limit resets, and a turn that failed because the model was overloaded is tried again after 1, 5 and 15 minutes.",
-            "notConnected": "Not connected. Change this while a project on the machine is open."
+            "notConnected": "Not connected. Change this while a project on the machine is open.",
+            "title": "Resume after a limit",
+            "sectionDescription": "Saved per machine. Each chat can still turn it off for itself."
+        },
+        "machine": {
+            "title": "On {{machine}}",
+            "description": "Saved per machine. Applies to every client connected to it."
         },
         "defaults": {
             "title": "Defaults for new agents",
@@ -371,14 +389,6 @@
             "legacyModel": "{{name}} (legacy)",
             "permissions": "Permissions",
             "terminalMode": "Terminal agents start in"
-        },
-        "here": {
-            "title": "What an agent may do here",
-            "description": "These settings apply to this client only.",
-            "showViews": {
-                "label": "Let an agent show you a view",
-                "description": "On, a view an agent opens replaces the one you are working in, and a banner takes you back. Off, the banner offers a button to go there."
-            }
         },
         "working": {
             "title": "While an agent works",
@@ -393,8 +403,6 @@
             }
         },
         "keepAwake": {
-            "title": "Keep this computer awake",
-            "description": "Sleep pauses every agent. These settings apply to this computer only.",
             "mode": {
                 "label": "Keep awake",
                 "off": "Off",
@@ -414,7 +422,9 @@
             "display": {
                 "label": "Keep the display on",
                 "description": "Off, the display can still turn off while the computer stays awake."
-            }
+            },
+            "title": "Keep this computer awake",
+            "description": "Sleep pauses every agent. These settings apply to this computer only."
         },
         "chats": {
             "title": "Chats",
@@ -432,6 +442,10 @@
                     "label": "When complete",
                     "description": "Waits until the reply is done."
                 }
+            },
+            "showViews": {
+                "label": "Let an agent show you a view",
+                "description": "On, a view an agent opens replaces the one you are working in, and a banner takes you back. Off, the banner offers a button to go there."
             }
         },
         "providers": {
@@ -445,11 +459,24 @@
             "noStatus": "Does not report agent status.",
             "installed": "Installed",
             "missing": "Missing"
+        },
+        "here": {
+            "title": "What an agent may do here",
+            "description": "These settings apply to this client only.",
+            "showViews": {
+                "label": "Let an agent show you a view",
+                "description": "On, a view an agent opens replaces the one you are working in, and a banner takes you back. Off, the banner offers a button to go there."
+            }
         }
     },
     "about": {
         "tagline": "Space for AI Engineering.",
         "version": "Version {{version}}",
+        "status": {
+            "available": "Update available",
+            "downloading": "Downloading",
+            "ready": "Ready to install"
+        },
         "unknownVersion": "unknown",
         "details": {
             "title": "Details",
@@ -476,7 +503,9 @@
             "check": "Check for updates",
             "checking": "Checking",
             "download": "Download",
-            "install": "Restart to install"
+            "install": "Restart to install",
+            "released": "Released {{date}}",
+            "whatsNew": "What's new in {{version}}"
         },
         "links": {
             "title": "Links",
@@ -560,9 +589,9 @@
         }
     },
     "computer": {
-        "title": "Computer use",
         "description": "Agents can see and operate the apps on a computer. They only reach an app after you allow it.",
         "enable": "Allow computer use on {{machine}}",
+        "allow": "Allow computer use",
         "failed": "Computer use could not load",
         "machine": {
             "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open.",
@@ -585,6 +614,7 @@
                 "description": "Lets agents see a picture of the window they work in."
             }
         },
+        "permissions": "Permissions",
         "state": {
             "granted": "Allowed",
             "missing": "Not allowed",
@@ -608,7 +638,8 @@
             "notTerminal": "Not a terminal",
             "notTerminalLabel": "{{app}} is not a terminal",
             "notTerminalHint": "An agent asks for it again. If it runs a shell, it counts as a terminal again."
-        }
+        },
+        "title": "Computer use"
     },
     "identity": {
         "name": "Name",
@@ -790,5 +821,28 @@
             "failed": "Pairing failed",
             "reclaimFailed": "{{machine}} is paired, but not back on your account"
         }
+    },
+    "nav": {
+        "groups": {
+            "workspace": "Workspace",
+            "ai": "AI"
+        },
+        "account": {
+            "signedOut": "Not signed in",
+            "machines_one": "Account · {{count}} machine",
+            "machines_other": "Account · {{count}} machines"
+        }
+    },
+    "search": {
+        "placeholder": "Search settings",
+        "clear": "Clear search",
+        "none": "Nothing matches \"{{query}}\".",
+        "results": "Search results",
+        "pane": "Section"
+    },
+    "scope": {
+        "client": "This client",
+        "computer": "This computer",
+        "machine": "Machine"
     }
 }

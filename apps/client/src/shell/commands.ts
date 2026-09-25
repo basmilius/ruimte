@@ -35,6 +35,7 @@ import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { runAppShortcut } from '@/shell/app-shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { cellCount, cellsRightOf, maximizedCell } from '@/shell/split';
 import type { Shortcut } from '@/ui/shortcut';
@@ -472,6 +473,12 @@ export const appCommands = (): Command[] => {
             label: i18next.t('shell:settingsDialog.title'),
             shortcut: APP_SHORTCUTS.settings,
             run: () => useUi.getState().setSettings({ open: true })
+        },
+        {
+            // The key works only while the dialog is up, so the row shows none.
+            id: 'settings-search',
+            label: i18next.t('shell:palette.commands.searchSettings'),
+            run: () => runAppShortcut('settings-search')
         },
         {
             id: 'settings-keyboard',

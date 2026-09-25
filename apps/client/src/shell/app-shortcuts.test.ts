@@ -4,8 +4,8 @@ import type { KeyLike } from '@/ui/shortcut';
 
 const key = (patch: Partial<KeyLike>): KeyLike => ({ metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, key: '', code: '', ...patch });
 
-const mac = { inNode: false, apple: true };
-const other = { inNode: false, apple: false };
+const mac = { inNode: false, apple: true, settingsOpen: false };
+const other = { inNode: false, apple: false, settingsOpen: false };
 
 describe('the shortcuts of the window', () => {
     test('the palette, find in files and the settings open over the workspace and the start screen alike', () => {
@@ -29,9 +29,9 @@ describe('the shortcuts of the window', () => {
     });
 
     test('off macOS Ctrl+B stays out of a node, where readline owns it', () => {
-        expect(appShortcutFor(key({ ctrlKey: true, key: 'b', code: 'KeyB' }), { inNode: true, apple: false })).toBeNull();
+        expect(appShortcutFor(key({ ctrlKey: true, key: 'b', code: 'KeyB' }), { inNode: true, apple: false, settingsOpen: false })).toBeNull();
         expect(appShortcutFor(key({ ctrlKey: true, key: 'b', code: 'KeyB' }), other)).toBe('sidebar');
-        expect(appShortcutFor(key({ metaKey: true, key: 'b', code: 'KeyB' }), { inNode: true, apple: true })).toBe('sidebar');
+        expect(appShortcutFor(key({ metaKey: true, key: 'b', code: 'KeyB' }), { inNode: true, apple: true, settingsOpen: false })).toBe('sidebar');
     });
 
     test('a shortcut that acts on one project is not one of them', () => {
@@ -41,6 +41,13 @@ describe('the shortcuts of the window', () => {
         expect(appShortcutFor(key({ metaKey: true, shiftKey: true, key: ']', code: 'BracketRight' }), mac)).toBeNull();
         expect(appShortcutFor(key({ metaKey: true, altKey: true, key: 'b', code: 'KeyB' }), mac)).toBeNull();
         expect(appShortcutFor(key({ metaKey: true, key: 'z', code: 'KeyZ' }), mac)).toBeNull();
+    });
+
+    test('Mod+F searches the settings while they are open, and is the canvas find otherwise', () => {
+        const find = key({ metaKey: true, key: 'f', code: 'KeyF' });
+        expect(appShortcutFor(find, { ...mac, settingsOpen: true })).toBe('settings-search');
+        expect(appShortcutFor(key({ ctrlKey: true, key: 'f', code: 'KeyF' }), { ...other, settingsOpen: true })).toBe('settings-search');
+        expect(appShortcutFor(find, mac)).toBeNull();
     });
 
     test('a key without the modifier belongs to nobody', () => {

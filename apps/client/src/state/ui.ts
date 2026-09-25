@@ -1,7 +1,7 @@
 import type { ProjectPanelKind, ProjectPanels } from '@ruimte/contracts';
 import { create } from 'zustand';
 
-export type SettingsSectionId = 'appearance' | 'keyboard' | 'views' | 'files' | 'voice' | 'computer' | 'agents' | 'usage' | 'machines' | 'about';
+export type SettingsSectionId = 'appearance' | 'keyboard' | 'views' | 'files' | 'providers' | 'voice' | 'computer' | 'agents' | 'usage' | 'machines' | 'about';
 
 export type PanelKind = ProjectPanelKind;
 
@@ -85,6 +85,10 @@ interface SettingsState {
     open: boolean;
     /* The section the dialog shows; it stays where it was so reopening lands on the same pane. */
     section: SettingsSectionId;
+    /* The row a search result points at, which scrolls itself into view and lights up once. */
+    target: string | null;
+    /* Bumped to put the keyboard in the search field; the field focuses on every change. */
+    searchAt: number;
 }
 
 export type ViewDialog =
@@ -217,7 +221,7 @@ export const useUi = create<UiStore>((set, get) => ({
     filePick: null,
     sidebarOpen: readSidebarOpen(),
     sidebarExpanded: null,
-    settings: { open: false, section: 'appearance' },
+    settings: { open: false, section: 'appearance', target: null, searchAt: 0 },
     /* Closed until a project says otherwise. The panels belong to a project and there is none
        yet, so the first paint of a reload cannot flash open a panel the project has closed. */
     panel: CLOSED_PANEL,

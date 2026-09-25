@@ -6,12 +6,13 @@ import { useUi } from '@/state/ui';
 import { matchesShortcut, type KeyLike } from '@/ui/shortcut';
 
 // Window shortcuts also work on the start screen; project shortcuts are bound by the workspace.
-export type AppShortcut = 'palette' | 'find-in-files' | 'settings' | 'sidebar';
+export type AppShortcut = 'palette' | 'find-in-files' | 'settings' | 'settings-search' | 'sidebar';
 
 export interface ShortcutContext {
     /* The keyboard is inside a node's content, which is what keeps Ctrl+B out of readline's way off macOS. */
     inNode: boolean;
     apple: boolean;
+    settingsOpen: boolean;
 }
 
 /*
@@ -19,7 +20,7 @@ export interface ShortcutContext {
  * focus: these work from anywhere, a node's content or a text field included. A focused terminal is the
  * exception, and it stops the shortcuts it owns before this listener (`terminal/keymap.ts`).
  */
-export const appShortcutFor = (e: KeyLike, { inNode, apple }: ShortcutContext): AppShortcut | null => {
+export const appShortcutFor = (e: KeyLike, { inNode, apple, settingsOpen }: ShortcutContext): AppShortcut | null => {
     if (matchesShortcut(APP_SHORTCUTS.palette, e, apple)) {
         return 'palette';
     }
@@ -28,6 +29,9 @@ export const appShortcutFor = (e: KeyLike, { inNode, apple }: ShortcutContext): 
     }
     if (matchesShortcut(APP_SHORTCUTS.settings, e, apple)) {
         return 'settings';
+    }
+    if (settingsOpen && matchesShortcut(APP_SHORTCUTS.settingsSearch, e, apple)) {
+        return 'settings-search';
     }
     // Ctrl+B is readline's backward-char and tmux's prefix, so off macOS it stays out of a node.
     if (matchesShortcut(APP_SHORTCUTS.sidebar, e, apple) && (apple || !inNode)) {
@@ -56,6 +60,10 @@ export const runAppShortcut = (shortcut: AppShortcut): void => {
         ui.setSettings({ open: true });
         return;
     }
+    if (shortcut === 'settings-search') {
+        ui.setSettings({ open: true, searchAt: ui.settings.searchAt + 1 });
+        return;
+    }
     ui.toggleSidebar();
 };
 
@@ -63,7 +71,7 @@ export const runAppShortcut = (shortcut: AppShortcut): void => {
 export const useAppShortcuts = (): void => {
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {
-            const shortcut = appShortcutFor(e, { inNode: isInNodeBody(e.target), apple: isApplePlatform() });
+            const shortcut = appShortcutFor(e, { inNode: isInNodeBody(e.target), apple: isApplePlatform(), settingsOpen: useUi.getState().settings.open });
             if (shortcut === null) {
                 return;
             }

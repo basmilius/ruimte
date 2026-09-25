@@ -43,6 +43,7 @@ const context = (patch: Partial<MenuContext> = {}): MenuContext => ({
     releaseNotes: true,
     fullscreen: false,
     keepAwake: null,
+    settingsOpen: false,
     ...patch
 });
 
@@ -104,6 +105,15 @@ describe('the menus', () => {
         for (const id of ['view-new', 'find-in-files', 'sidebar', 'split-right', 'view-previous', 'panel-processes', 'fit']) {
             expect(ids).not.toContain(id);
         }
+    });
+
+    test('while the settings are open, Find searches them, on the start screen as well', () => {
+        for (const base of [context(), START_SCREEN]) {
+            const spec = menuModel({ ...base, settingsOpen: true });
+            expect(find(spec, 'settings-search')?.accelerator).toBe('CommandOrControl+F');
+            expect(find(spec, 'find')).toBeUndefined();
+        }
+        expect(find(menuModel(context()), 'settings-search')).toBeUndefined();
     });
 
     test('the station has no shell, no clipboard roles and no release notes', () => {

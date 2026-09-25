@@ -54,6 +54,8 @@ export interface MenuContext {
     fullscreen: boolean;
     /* When this computer stays awake, or null where the shell cannot hold it awake. */
     keepAwake: KeepAwakeMode | null;
+    /* The settings dialog is up, where Find searches the settings instead. */
+    settingsOpen: boolean;
 }
 
 type CommandId = MenuActionId | PaletteId;
@@ -250,7 +252,8 @@ export const menuModel = (context: MenuContext): MenuSpec => {
                 command('edit-redo', t('redo'), { shortcut: CANVAS_SHORTCUTS.redo, enabled: zoomable })
             ),
             separator,
-            ...only(workspace, command('find', t('find'), { shortcut: CANVAS_SHORTCUTS.find })),
+            ...only(workspace && !context.settingsOpen, command('find', t('find'), { shortcut: CANVAS_SHORTCUTS.find })),
+            ...only(context.settingsOpen, command('settings-search', t('searchSettings'), { shortcut: APP_SHORTCUTS.settingsSearch })),
             ...only(workspace && context.folder, command('find-in-files', t('findInFiles'), { shortcut: APP_SHORTCUTS.findInFiles }))
         ]
     };

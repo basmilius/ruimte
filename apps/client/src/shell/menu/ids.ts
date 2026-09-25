@@ -85,6 +85,7 @@ export const PALETTE_IDS = [
     'panel-processes',
     'theme',
     'settings',
+    'settings-search',
     'settings-keyboard',
     'settings-machines',
     'settings-computer',

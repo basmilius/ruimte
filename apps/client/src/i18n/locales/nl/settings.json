@@ -37,6 +37,9 @@
             "language": "Volg de taal",
             "system": "Systeem"
         },
+        "languageRegion": {
+            "title": "Taal en regio"
+        },
         "terminal": {
             "title": "Terminal",
             "font": {
@@ -89,6 +92,10 @@
             "label": "Bestanden en Git",
             "description": "Wat de panelen Bestanden en Git tonen, en waar het bladeren naar een map begint."
         },
+        "providers": {
+            "label": "Providers",
+            "description": "De agent-CLI's op deze machine en de accounts waarmee ze inloggen."
+        },
         "agents": {
             "label": "Agents",
             "description": "Standaarden, permissies en meldingen voor agents."
@@ -99,15 +106,15 @@
         },
         "voice": {
             "label": "Voice",
-            "description": "Microfoon, dicteren en Voice Control"
+            "description": "Microfoon, dicteren en Voice Control."
         },
         "computer": {
             "label": "Computer use",
-            "description": "Laat agents de apps op een computer bedienen."
+            "description": "Laat agents de apps op een computer bedienen. Ze komen pas bij een app nadat je die toestaat."
         },
         "machines": {
             "label": "Account",
-            "description": "Je machines, het account dat ze delen en hoe elke machine bereikt wordt."
+            "description": "Je Ruimte-account, de machines erop en hoe elke machine bereikt wordt."
         },
         "about": {
             "label": "Over",
@@ -123,7 +130,6 @@
         }
     },
     "usage": {
-        "title": "Verbruik",
         "currency": {
             "label": "Valuta",
             "dollars": "Prijzen zoals gepubliceerd, in dollars.",
@@ -133,7 +139,13 @@
                 "USD": "Dollars",
                 "EUR": "Euro's"
             }
-        }
+        },
+        "page": {
+            "label": "Verbruikspagina",
+            "description": "Kosten, tokens en planlimieten, per account.",
+            "open": "Verbruik openen"
+        },
+        "title": "Verbruik"
     },
     "gesture": {
         "drag": "slepen",
@@ -348,18 +360,24 @@
     },
     "agents": {
         "deleteAnyView": {
-            "title": "Wat een agent mag verwijderen",
-            "sectionDescription": "Per machine opgeslagen. Geldt voor elke client die ermee verbonden is.",
+            "label": "Agents mogen elke weergave of node verwijderen",
             "rowLabel": "Agents op {{machine}} mogen elke weergave of node verwijderen",
             "description": "Uit verwijdert een agent alleen weergaven en nodes die hij zelf maakte. Aan mag hij elke weergave en node in elk project daar verwijderen, ook die van jou.",
-            "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat."
+            "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat.",
+            "title": "Wat een agent mag verwijderen",
+            "sectionDescription": "Per machine opgeslagen. Geldt voor elke client die ermee verbonden is."
         },
         "resumeAtReset": {
-            "title": "Verder na een limiet",
-            "sectionDescription": "Per machine opgeslagen. Elke chat kan het voor zichzelf nog uitzetten.",
+            "label": "Chats gaan verder na een limiet",
             "rowLabel": "Chats op {{machine}} gaan verder na een limiet",
             "description": "Aan gaat een chat die op een verbruikslimiet stopte vanzelf verder zodra de limiet reset, en wordt een turn die mislukte omdat het model overbelast was na 1, 5 en 15 minuten opnieuw geprobeerd.",
-            "notConnected": "Niet verbonden. Pas dit aan terwijl er een project op de machine open staat."
+            "notConnected": "Niet verbonden. Pas dit aan terwijl er een project op de machine open staat.",
+            "title": "Verder na een limiet",
+            "sectionDescription": "Per machine opgeslagen. Elke chat kan het voor zichzelf nog uitzetten."
+        },
+        "machine": {
+            "title": "Op {{machine}}",
+            "description": "Per machine opgeslagen. Geldt voor elke client die ermee verbonden is."
         },
         "defaults": {
             "title": "Standaarden voor nieuwe agents",
@@ -371,14 +389,6 @@
             "legacyModel": "{{name}} (legacy)",
             "permissions": "Permissies",
             "terminalMode": "Terminal-agents starten in"
-        },
-        "here": {
-            "title": "Wat een agent hier mag",
-            "description": "Deze instellingen gelden alleen voor deze client.",
-            "showViews": {
-                "label": "Een agent een weergave laten tonen",
-                "description": "Aan vervangt de weergave waarin je werkt door de weergave die een agent opent, en een banner brengt je terug. Uit biedt de banner een knop om ernaartoe te gaan."
-            }
         },
         "working": {
             "title": "Terwijl een agent werkt",
@@ -393,8 +403,6 @@
             }
         },
         "keepAwake": {
-            "title": "Deze computer wakker houden",
-            "description": "Slaap pauzeert elke agent. Deze instellingen gelden alleen voor deze computer.",
             "mode": {
                 "label": "Wakker houden",
                 "off": "Uit",
@@ -414,7 +422,9 @@
             "display": {
                 "label": "Het scherm aan laten",
                 "description": "Uit mag het scherm nog uitgaan terwijl de computer wakker blijft."
-            }
+            },
+            "title": "Deze computer wakker houden",
+            "description": "Slaap pauzeert elke agent. Deze instellingen gelden alleen voor deze computer."
         },
         "chats": {
             "title": "Chats",
@@ -432,6 +442,10 @@
                     "label": "Als het antwoord af is",
                     "description": "Wacht tot het antwoord af is."
                 }
+            },
+            "showViews": {
+                "label": "Een agent een weergave laten tonen",
+                "description": "Aan vervangt de weergave waarin je werkt door de weergave die een agent opent, en een banner brengt je terug. Uit biedt de banner een knop om ernaartoe te gaan."
             }
         },
         "providers": {
@@ -445,11 +459,24 @@
             "noStatus": "Meldt de status van de agent niet.",
             "installed": "Geïnstalleerd",
             "missing": "Ontbreekt"
+        },
+        "here": {
+            "title": "Wat een agent hier mag",
+            "description": "Deze instellingen gelden alleen voor deze client.",
+            "showViews": {
+                "label": "Een agent een weergave laten tonen",
+                "description": "Aan vervangt de weergave waarin je werkt door de weergave die een agent opent, en een banner brengt je terug. Uit biedt de banner een knop om ernaartoe te gaan."
+            }
         }
     },
     "about": {
         "tagline": "Space for AI Engineering.",
         "version": "Versie {{version}}",
+        "status": {
+            "available": "Update beschikbaar",
+            "downloading": "Downloaden",
+            "ready": "Klaar om te installeren"
+        },
         "unknownVersion": "onbekend",
         "details": {
             "title": "Details",
@@ -476,7 +503,9 @@
             "check": "Controleren op updates",
             "checking": "Bezig met controleren",
             "download": "Downloaden",
-            "install": "Herstarten om te installeren"
+            "install": "Herstarten om te installeren",
+            "released": "Verschenen op {{date}}",
+            "whatsNew": "Wat is er nieuw in {{version}}"
         },
         "links": {
             "title": "Links",
@@ -560,9 +589,9 @@
         }
     },
     "computer": {
-        "title": "Computer use",
         "description": "Agents kunnen de apps op een computer zien en bedienen. Ze komen pas bij een app nadat jij die toestaat.",
         "enable": "Computer use toestaan op {{machine}}",
+        "allow": "Computer use toestaan",
         "failed": "Computer use kon niet laden",
         "machine": {
             "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat.",
@@ -585,6 +614,7 @@
                 "description": "Laat agents een afbeelding zien van het venster waarin ze werken."
             }
         },
+        "permissions": "Toestemmingen",
         "state": {
             "granted": "Toegestaan",
             "missing": "Niet toegestaan",
@@ -608,7 +638,8 @@
             "notTerminal": "Geen terminal",
             "notTerminalLabel": "{{app}} is geen terminal",
             "notTerminalHint": "Een agent vraagt er weer om. Draait de app een shell, dan telt die weer als terminal."
-        }
+        },
+        "title": "Computer use"
     },
     "identity": {
         "name": "Naam",
@@ -790,5 +821,28 @@
             "failed": "Koppelen mislukt",
             "reclaimFailed": "{{machine}} is gekoppeld, maar staat niet terug op je account"
         }
+    },
+    "nav": {
+        "groups": {
+            "workspace": "Werkruimte",
+            "ai": "AI"
+        },
+        "account": {
+            "signedOut": "Niet ingelogd",
+            "machines_one": "Account · {{count}} machine",
+            "machines_other": "Account · {{count}} machines"
+        }
+    },
+    "search": {
+        "placeholder": "Instellingen zoeken",
+        "clear": "Zoekopdracht wissen",
+        "none": "Niets komt overeen met \"{{query}}\".",
+        "results": "Zoekresultaten",
+        "pane": "Onderdeel"
+    },
+    "scope": {
+        "client": "Deze client",
+        "computer": "Deze computer",
+        "machine": "Machine"
     }
 }
