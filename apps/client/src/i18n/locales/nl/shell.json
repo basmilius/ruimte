@@ -373,6 +373,8 @@
         "intoView": "Een nieuwe chatweergave gaat daarvandaan verder, direct na {{after}} in de zijbalk. Er wordt niets verstuurd tot je het eerste bericht schrijft.",
         "intoNode": "Een nieuwe chat-node gaat daarvandaan verder, naast het origineel en met een lijn ernaartoe. Er wordt niets verstuurd tot je het eerste bericht schrijft.",
         "continueWith": "Verder met",
+        "account": "Account",
+        "accountOf": "{{provider}}-account",
         "handoffNote": "De nieuwe agent krijgt het laatste deel van het gesprek als tekst en kan de rest van het origineel zelf lezen.",
         "titleLabel": "Titel",
         "into": "Forken naar",

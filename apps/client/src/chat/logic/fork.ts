@@ -153,10 +153,12 @@ export interface ForkWorktreeChoice {
     filesAfterTurn: boolean;
 }
 
-/* The CLI and model a fork goes on with; only what differs from the original is sent. */
+/* The CLI, model and account a fork goes on with; only what differs from the original is sent. */
 export interface ForkCliChoice {
     provider: AgentKind;
     selection: ModelSelection;
+    /* By id, the CLI's kind for its default account; absent leaves it to the machine. */
+    account?: string;
 }
 
 export const forkPayload = (input: {
@@ -174,6 +176,10 @@ export const forkPayload = (input: {
     ...(input.cli && input.cli.chosen.provider !== input.cli.original.provider ? { provider: input.cli.chosen.provider } : {}),
     ...(input.cli && (input.cli.chosen.provider !== input.cli.original.provider || input.cli.chosen.selection.model !== input.cli.original.selection.model)
         ? { selection: input.cli.chosen.selection }
+        : {}),
+    ...(input.cli?.chosen.account !== undefined &&
+    (input.cli.chosen.provider !== input.cli.original.provider || input.cli.chosen.account !== input.cli.original.account)
+        ? { account: input.cli.chosen.account }
         : {}),
     ...(input.worktree ? { worktree: { branch: input.worktree.branch }, ...(input.worktree.filesAfterTurn ? { filesAfterTurn: true } : {}) } : {})
 });

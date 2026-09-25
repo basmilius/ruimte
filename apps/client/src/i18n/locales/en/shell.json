@@ -373,6 +373,8 @@
         "intoView": "A new chat view goes on from there, right after {{after}} in the sidebar. Nothing is sent until you write the first message.",
         "intoNode": "A new chat node goes on from there, beside the original and with a line from it. Nothing is sent until you write the first message.",
         "continueWith": "Continue with",
+        "account": "Account",
+        "accountOf": "{{provider}} account",
         "handoffNote": "The new agent gets the last part of the conversation as text and can read the rest of the original itself.",
         "titleLabel": "Title",
         "into": "Fork into",

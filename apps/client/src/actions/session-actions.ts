@@ -476,7 +476,7 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
             }
             return { output: { chatId, chat, provider } };
         },
-        'chat.fork': async ({ chatId, turnId, title, branch, asView, filesAfterTurn, provider, selection }, call) => {
+        'chat.fork': async ({ chatId, turnId, title, branch, asView, filesAfterTurn, provider, selection, account }, call) => {
             const chat = chatNamed(chatId, call);
             const row = machine.chat(chatId);
             const turn = turnId ?? (row === null ? null : lastSettledTurn(row.structure, row.order));
@@ -508,7 +508,8 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
                 ...(asView === true ? { asView: true } : {}),
                 ...(branch == null ? {} : { worktree: { branch }, ...(filesAfterTurn === true ? { filesAfterTurn: true } : {}) }),
                 ...(provider == null ? {} : { provider }),
-                ...(selection == null ? {} : { selection })
+                ...(selection == null ? {} : { selection }),
+                ...(account == null ? {} : { account })
             });
             machine.revealFork(result);
             return { output: { chatId: result.nodeId, nodeId: result.nodeId, viewId: result.viewId, chat: named, branch: result.worktree?.branch ?? null } };

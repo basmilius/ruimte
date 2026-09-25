@@ -1167,8 +1167,8 @@ export const ACTION_DEFINITIONS = {
             // Letting the machine take a chat up again on a clock is a person's call alone.
             resumeAtReset: forActors(PERSON, z.boolean()).describe('Whether the chat goes on by itself once a limit it stopped on lifts'),
             selection: modelSelection,
-            // An account is someone's costs, so only a person picks one.
-            account: forActors(PERSON, ProviderAccountIdSchema).describe(
+            // An account is someone's costs, so only a person picks one, by hand or by voice.
+            account: forActors(PERSON_AND_VOICE, ProviderAccountIdSchema).describe(
                 'The account of the chat’s CLI on this machine that the next turn runs under. After the first turn only one that reads the same conversation'
             )
         }),
@@ -1203,7 +1203,10 @@ export const ACTION_DEFINITIONS = {
             asView: forActors(PERSON, z.boolean()).describe('Makes a chat view of a fork of a node'),
             filesAfterTurn: forActors(PERSON, z.boolean()).describe('Puts the files in the worktree as they were after the turn'),
             provider: forActors(PERSON, AgentKindSchema).describe('Another CLI to go on with'),
-            selection: modelSelection
+            selection: modelSelection,
+            account: forActors(PERSON_AND_VOICE, ProviderAccountIdSchema).describe(
+                'The account of the CLI on this machine the fork goes on under. Absent stays on the original’s account, or takes the default account of another CLI'
+            )
         }),
         output: z.object({ chatId: z.string(), nodeId: z.string(), viewId: z.string(), chat: z.string(), branch: z.string().nullable() })
     },

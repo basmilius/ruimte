@@ -116,6 +116,15 @@ describe('the shape of a fork', () => {
         );
     });
 
+    test('names an account only when it is not the one the fork would go on under anyway', () => {
+        const base = { chatId: 'chat-1', turnId: 't1', title: 'Lexer (fork)', shape: 'node' as const };
+        const original = { provider: 'claude' as const, selection: { model: 'opus', options: {} }, account: 'claude' };
+        expect(forkPayload({ ...base, cli: { original, chosen: original } }).account).toBeUndefined();
+        expect(forkPayload({ ...base, cli: { original, chosen: { ...original, account: 'claude_work' } } }).account).toBe('claude_work');
+        const codex = { provider: 'codex' as const, selection: { model: 'gpt-5.5', options: {} }, account: 'codex' };
+        expect(forkPayload({ ...base, cli: { original, chosen: codex } }).account).toBe('codex');
+    });
+
     test('a summary waits for the fork to end its turn and needs its original', () => {
         expect(summaryRefusal({ busy: false, originalPresent: true })).toBeNull();
         expect(summaryRefusal({ busy: true, originalPresent: true })).toBe('Wait for the turn to end');

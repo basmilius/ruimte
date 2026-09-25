@@ -4,6 +4,9 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import { GitFork } from 'lucide-react';
 import { CHAT_FORK_TITLE_MAX, type ChatForkInfoResult } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
+import { AccountDot } from '@/agents/AccountDot';
+import { canContinueOn } from '@/agents/accounts';
+import { useAccountChoice } from '@/chat/account-choice';
 import {
     branchRefusal,
     FORKABLE_PROVIDERS,
@@ -16,13 +19,15 @@ import {
     type ForkCliChoice,
     type ForkShape
 } from '@/chat/logic/fork';
-import { readChatPreferences, selectionFor } from '@/chat/preferences';
+import { accountFor, readChatPreferences, selectionFor } from '@/chat/preferences';
 import { ModelPicker } from '@/chat/ui/Pickers';
 import { useProviders } from '@/state/providers';
 import { Toggle } from '@/shell/settings/controls';
 import { canvasOfNode } from '@/state/canvas';
 import { useChatRow } from '@/state/chats';
 import { useDocument } from '@/state/document';
+import { useEndpointId } from '@/state/keys';
+import { knownAccounts, providerAccountsOf } from '@/state/provider-accounts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
@@ -87,6 +92,7 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
     const [cli, setCli] = useState<ForkCliChoice | null>(null);
     const [pickerOpen, setPickerOpen] = useState(false);
     const providers = useProviders((s) => s.providers);
+    const endpointId = useEndpointId();
 
     useEffect(() => {
         let current = true;
@@ -108,13 +114,32 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
     const worktree = folder?.repository === true && inWorktree;
     const branchName = branch ?? folder?.branch ?? '';
     const branchProblem = worktree ? branchRefusal(branchName, folder.branches) : null;
-    const originalCli: ForkCliChoice | null = info === null ? null : { provider: info.provider, selection: info.selection };
+    const originalCli: ForkCliChoice | null =
+        info === null ? null : { provider: info.provider, selection: info.selection, account: info.account ?? info.provider };
     const chosenCli = cli ?? originalCli;
+    const accountChoice = useAccountChoice(chosenCli?.provider ?? null, chosenCli?.account);
     const pickable = providers.filter((entry) => FORKABLE_PROVIDERS.has(entry.kind) && entry.installed && entry.capabilities.chat);
     const switching = chosenCli !== null && originalCli !== null && chosenCli.provider !== originalCli.provider;
+    // Another account of the same CLI that does not read the original's conversation gets it handed over, as another CLI does.
+    const handoff =
+        switching ||
+        (chosenCli !== null &&
+            originalCli !== null &&
+            accountChoice !== null &&
+            !canContinueOn(accountChoice.accounts, chosenCli.provider, originalCli.account, chosenCli.account));
+    /* The same CLI keeps the account picked here, another starts on the account picked for its new agents. */
+    const accountOn = (provider: ForkCliChoice['provider']): string => {
+        if (provider === chosenCli?.provider && chosenCli.account !== undefined) {
+            return chosenCli.account;
+        }
+        if (provider === originalCli?.provider && originalCli.account !== undefined) {
+            return originalCli.account;
+        }
+        return accountFor(readChatPreferences(), endpointId, provider, knownAccounts(providerAccountsOf(endpointId))) ?? provider;
+    };
     const chooseCli = (provider: ForkCliChoice['provider'], model: string): void => {
         const remembered = provider === info?.provider ? info.selection : selectionFor(readChatPreferences(), provider);
-        setCli({ provider, selection: remembered?.model === model ? remembered : { model, options: {} } });
+        setCli({ provider, selection: remembered?.model === model ? remembered : { model, options: {} }, account: accountOn(provider) });
     };
     const ready = refusal === null && point !== null && title.trim() !== '' && folder !== null && branchProblem === null;
 
@@ -141,7 +166,8 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                 asView: payload.asView ?? null,
                 filesAfterTurn: payload.filesAfterTurn ?? null,
                 provider: payload.provider ?? null,
-                selection: payload.selection ?? null
+                selection: payload.selection ?? null,
+                account: payload.account ?? null
             });
             onDone();
         } catch (e) {
@@ -170,7 +196,23 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                             onChange={chooseCli}
                         />
                     </div>
-                    {switching && <p className={FIELD_HINT}>{t('fork.handoffNote')}</p>}
+                    {accountChoice !== null && (
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                            <span className="text-xs text-text-muted">{t('fork.account')}</span>
+                            <Select
+                                label={t('fork.accountOf', { provider: accountChoice.providerName })}
+                                variant="outlined"
+                                value={accountChoice.currentId}
+                                onValueChange={(account) => setCli({ ...chosenCli, account })}
+                                items={accountChoice.offered.map((entry) => ({
+                                    value: entry.id,
+                                    label: accountChoice.nameOf(entry),
+                                    icon: <AccountDot color={entry.account.color} />
+                                }))}
+                            />
+                        </div>
+                    )}
+                    {handoff && <p className={FIELD_HINT}>{t('fork.handoffNote')}</p>}
                 </>
             )}
             <label className="mt-3 block text-xs text-text-muted" htmlFor="fork-title">
