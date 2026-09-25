@@ -42,13 +42,22 @@ test(
         const opened = await store.openProject({ folder });
         const path = documentPathInFolder(folder);
         const pulled = { ...(JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>), name: 'from git' };
-        await writeFile(`${path}.incoming`, JSON.stringify(pulled, null, 2));
-        await rename(`${path}.incoming`, path);
+        const pull = async (): Promise<void> => {
+            await writeFile(`${path}.incoming`, JSON.stringify(pulled, null, 2));
+            await rename(`${path}.incoming`, path);
+        };
 
+        // FSEvents starts a stream a moment after the watch returns and never reports what came before it, so the
+        // pull is repeated until one lands; the same text again is no change, so only one is reported.
         const deadline = Date.now() + DEADLINE_MS;
+        let nextPull = 0;
         while (changed.length === 0) {
             if (Date.now() > deadline) {
                 throw new Error('No project.changed arrived');
+            }
+            if (Date.now() >= nextPull) {
+                await pull();
+                nextPull = Date.now() + 1_000;
             }
             await Bun.sleep(25);
         }

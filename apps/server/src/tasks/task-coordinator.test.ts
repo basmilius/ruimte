@@ -141,8 +141,11 @@ describe('the coordinator', () => {
         // The wake went out and the child's turn about it ended: that answer is the result.
         await tasks.markWoken([grandchild.id]);
         threads.set('chat-child', [turn('t1', 'done'), answer('t1', 'I asked a helper'), turn('t2', 'done'), answer('t2', 'all done')]);
+        // Awaited so the wake lands in this test and not in the list of the next one.
+        const settled = nextOwed();
         ends('chat-child', turn('t2', 'done'));
         expect(tasks.get(task.id)).toMatchObject({ status: 'done', result: { text: 'all done' } });
+        await settled;
     });
 
     test('done wins over the end of the turn it was called in, and nothing settles a task twice', async () => {

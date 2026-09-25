@@ -6,6 +6,7 @@ import type { GitChangedEvent, GitStatusEvent } from '@ruimte/contracts';
 import { FakeWatch } from '../fs/watch-test-helpers.ts';
 import { GitStatusWatcher } from './status-watcher.ts';
 import { forgetBase } from './status.ts';
+import { gitIn } from './test-repo.ts';
 
 let root: string;
 let repo: string;
@@ -16,15 +17,7 @@ let changed: GitChangedEvent[];
 let unsubscribe: () => void;
 
 const git = async (args: string[]): Promise<void> => {
-    const proc = Bun.spawn(['git', ...args], {
-        cwd: repo,
-        stdout: 'ignore',
-        stderr: 'pipe',
-        env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' }
-    });
-    if ((await proc.exited) !== 0) {
-        throw new Error(await new Response(proc.stderr).text());
-    }
+    await gitIn(repo, args);
 };
 
 /* A watcher whose status runs take as long as `runMs` says, whatever the machine is doing. */

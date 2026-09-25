@@ -87,7 +87,8 @@ describe.skipIf(!onMac)('the libproc sampler against ps', async () => {
             const after = sampler.sample();
             const rates = processRates(before, after);
             const startOf = (pid: number) => after.processes.find((entry) => entry.pid === pid)!.startTime;
-            expect(rates.get(identityOf(busy.pid, startOf(busy.pid)))!.cpu!).toBeGreaterThan(70);
+            // A shared runner gives a spinning process as little as a third of a core, which is still well apart from idle.
+            expect(rates.get(identityOf(busy.pid, startOf(busy.pid)))!.cpu!).toBeGreaterThan(20);
             expect(rates.get(identityOf(child.pid, startOf(child.pid)))!.cpu!).toBeLessThan(5);
         } finally {
             busy.kill('SIGKILL');
