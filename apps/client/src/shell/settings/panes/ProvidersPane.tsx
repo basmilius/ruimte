@@ -43,7 +43,7 @@ function ListRow({
             <button
                 type="button"
                 aria-current={selected ? 'true' : undefined}
-                className="flex min-w-0 grow items-center gap-3 self-stretch py-2 pl-3 text-left"
+                className="flex min-w-0 grow items-center gap-3 self-stretch rounded-lg py-2 pl-3 text-left focus-visible:-outline-offset-2"
                 onClick={onSelect}
             >
                 {children}

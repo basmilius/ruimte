@@ -26,7 +26,7 @@ const findSettings = (query: string): SearchResult[] => {
 };
 
 const NAV_ITEM =
-    'flex h-8 min-w-0 shrink-0 items-center gap-2.5 rounded-md px-2.5 text-sm text-text-muted hover:bg-surface-hover hover:text-text data-active:bg-surface-active data-active:text-text';
+    'flex h-8 min-w-0 shrink-0 items-center gap-2.5 rounded-md px-2.5 text-sm focus-visible:-outline-offset-2 text-text-muted hover:bg-surface-hover hover:text-text data-active:bg-surface-active data-active:text-text';
 
 function NavTab({ section }: { section: SettingsSectionMeta }) {
     return (
@@ -62,7 +62,7 @@ function AccountTab() {
     return (
         <Tabs.Tab
             value={ACCOUNT_SECTION.id}
-            className="flex w-full min-w-0 shrink-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-surface-hover data-active:bg-surface-active"
+            className="flex w-full min-w-0 shrink-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left focus-visible:-outline-offset-2 hover:bg-surface-hover data-active:bg-surface-active"
         >
             <AccountAvatar account={signedIn ? account : null} />
             <span className="flex min-w-0 flex-col">

@@ -51,7 +51,7 @@ export function MasterItem({ selected, onSelect, children, className }: MasterIt
             type="button"
             aria-current={selected ? 'true' : undefined}
             className={clsx(
-                'flex w-full min-w-0 shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-text',
+                'flex w-full min-w-0 shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-text focus-visible:-outline-offset-2',
                 selected ? 'bg-text/5' : 'hover:bg-surface-hover',
                 className
             )}
