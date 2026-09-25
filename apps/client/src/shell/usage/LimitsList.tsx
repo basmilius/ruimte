@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { UsageLimitsProvider, UsageLimitsSnapshot, UsageWindow } from '@ruimte/contracts';
+import { limitsAccountId } from '@/agents/account-limits';
 import { Tooltip } from '@/ui/Tooltip';
 import { ProviderLogo } from '@/ui/ProviderLogo';
 import { formatClock, formatWeekdayClock, isSameDay } from '@/format/datetime';
@@ -124,7 +125,7 @@ export function LimitsList({ limits, now, compact = false }: LimitsListProps) {
             {limits.providers.map((provider) => {
                 const note = explain(provider);
                 return (
-                    <div key={provider.kind} className="flex flex-col gap-2">
+                    <div key={limitsAccountId(provider)} className="flex flex-col gap-2">
                         <p className="flex items-center gap-2 text-xs font-medium">
                             <span style={{ color: PROVIDER_COLORS[provider.kind] }}>
                                 <ProviderLogo provider={provider.kind} />

@@ -87,6 +87,7 @@ const usageOf = (summary: UsageSummaryResult): UsageOutput => {
 const limitsOf = (snapshot: UsageLimitsSnapshot): ActionOutput<'usage.limits'> => ({
     providers: snapshot.providers.map((provider) => ({
         provider: provider.kind,
+        account: provider.account?.label ?? null,
         plan: provider.plan,
         checkedAt: provider.checkedAt,
         unavailable: provider.unavailable === null ? null : (provider.unavailable.message ?? provider.unavailable.reason),
