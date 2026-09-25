@@ -264,7 +264,6 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         },
         modeCeiling: (sessionId) => lineage.ceilingOf(sessionId),
         checkCwd: startCwd,
-        approvals: config.approvals,
         claudeTitles,
         codexTitles: new CodexTitleReader()
     });
@@ -586,7 +585,6 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     chats.observe((event) => push.consume(event));
     manager.observe((event) => computer.observe(event));
     chats.observe((event) => computer.observe(event));
-    manager.offlineApprovals = () => push.hasOfflineApprovals();
 
     const dispatcher = new Dispatcher();
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
@@ -926,30 +924,24 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
-                return handleHookRequest(
-                    request,
-                    url.pathname,
-                    manager,
-                    (token, event, kind) => {
-                        const sessionId = manager.sessionIdForToken(token);
-                        if (!sessionId) {
-                            return null;
-                        }
-                        // Asked on every event that can carry an answer, so the memory of what this
-                        // agent was told keeps up with its turns even where nothing is printed.
-                        const changed = context.changeSince(sessionId);
-                        // A CLI the node launched got the verbs on its line; one typed by hand in the shell did not.
-                        const verbs = !(takesNoteOnLine(kind) && manager.get(sessionId)?.launch?.kind === kind);
-                        return hookContext(event, context.list(sessionId), {
-                            changed,
-                            messages: messagesFor(sessionId),
-                            depth: lineage.depthOf(sessionId),
-                            verbs,
-                            computer: computer.usable
-                        });
-                    },
-                    (token, body, signal) => manager.holdApproval(token, body, signal)
-                );
+                return handleHookRequest(request, url.pathname, manager, (token, event, kind) => {
+                    const sessionId = manager.sessionIdForToken(token);
+                    if (!sessionId) {
+                        return null;
+                    }
+                    // Asked on every event that can carry an answer, so the memory of what this
+                    // agent was told keeps up with its turns even where nothing is printed.
+                    const changed = context.changeSince(sessionId);
+                    // A CLI the node launched got the verbs on its line; one typed by hand in the shell did not.
+                    const verbs = !(takesNoteOnLine(kind) && manager.get(sessionId)?.launch?.kind === kind);
+                    return hookContext(event, context.list(sessionId), {
+                        changed,
+                        messages: messagesFor(sessionId),
+                        depth: lineage.depthOf(sessionId),
+                        verbs,
+                        computer: computer.usable
+                    });
+                });
             }
 
             if (url.pathname.startsWith(`${CANVAS_PATH}/`)) {

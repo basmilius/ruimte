@@ -286,9 +286,6 @@ describe('a team the daemon starts on its own', () => {
         const [lexer, parser, docs] = await openTeam(daemon);
         await daemon.worker.settled();
 
-        // Nobody is subscribed to either manager. No socket, no client, no mount.
-        expect(daemon.sessions.wantsApprovals()).toBe(false);
-
         // The terminal agent started at the headless size with its prompt on its launch line.
         const pty = daemon.adapter.forSession(lexer!);
         expect([pty.options.cols, pty.options.rows]).toEqual([HEADLESS_TERMINAL.cols, HEADLESS_TERMINAL.rows]);

@@ -131,63 +131,10 @@ describe('handleHookRequest', () => {
         expect(response.status).toBe(405);
     });
 
-    describe('a permission request', () => {
+    test('answers a permission request with nothing, so the CLI asks in its own prompt', async () => {
         const ask = '{"hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"rm -rf build"}}';
-
-        test('carries the decision back as the CLI spells it', async () => {
-            const allow = await handleHookRequest(post('/hooks/claude', ask, 'tok'), '/hooks/claude', target('applied'), undefined, async () => ({
-                behavior: 'allow' as const
-            }));
-            expect(allow.status).toBe(200);
-            expect(await allow.json()).toEqual({ hookSpecificOutput: { hookEventName: 'PermissionRequest', decision: { behavior: 'allow' } } });
-
-            const deny = await handleHookRequest(post('/hooks/claude', ask, 'tok'), '/hooks/claude', target('applied'), undefined, async () => ({
-                behavior: 'deny' as const,
-                message: 'no'
-            }));
-            expect(await deny.json()).toEqual({
-                hookSpecificOutput: { hookEventName: 'PermissionRequest', decision: { behavior: 'deny', message: 'no' } }
-            });
-        });
-
-        test('carries the rule the person chose to remember', async () => {
-            const rule = { type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: 'rm:*' }], behavior: 'allow', destination: 'localSettings' };
-            const response = await handleHookRequest(post('/hooks/claude', ask, 'tok'), '/hooks/claude', target('applied'), undefined, async () => ({
-                behavior: 'allow' as const,
-                updatedPermissions: [rule]
-            }));
-            expect(await response.json()).toEqual({
-                hookSpecificOutput: { hookEventName: 'PermissionRequest', decision: { behavior: 'allow', updatedPermissions: [rule] } }
-            });
-        });
-
-        test('says nothing when nobody answered, so the CLI keeps its own prompt', async () => {
-            const response = await handleHookRequest(post('/hooks/claude', ask, 'tok'), '/hooks/claude', target('applied'), undefined, async () => null);
-            expect(response.status).toBe(204);
-            expect(await response.text()).toBe('');
-        });
-
-        test('is not held for a token the daemon does not know', async () => {
-            let held = false;
-            const response = await handleHookRequest(post('/hooks/claude', ask, 'tok'), '/hooks/claude', target('unknown-token'), undefined, async () => {
-                held = true;
-                return { behavior: 'allow' as const };
-            });
-            expect(response.status).toBe(401);
-            expect(held).toBe(false);
-        });
-
-        test('leaves every other event alone', async () => {
-            const events: string[] = [];
-            const hold = async (_token: string, body: unknown) => {
-                events.push((body as { hook_event_name: string }).hook_event_name);
-                return { behavior: 'allow' as const };
-            };
-            expect(
-                (await handleHookRequest(post('/hooks/claude', '{"hook_event_name":"PreToolUse"}', 'tok'), '/hooks/claude', target('applied'), undefined, hold))
-                    .status
-            ).toBe(204);
-            expect(events).toEqual([]);
-        });
+        const response = await handleHookRequest(post('/hooks/claude', ask, 'tok'), '/hooks/claude', target('applied'));
+        expect(response.status).toBe(204);
+        expect(await response.text()).toBe('');
     });
 });

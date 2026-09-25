@@ -96,14 +96,6 @@
         "restartNow": "Nu herstarten",
         "whenIdle": "Zodra het stil is"
     },
-    "approvals": {
-        "terminal": "Terminal",
-        "title": "{{where}} vraagt toestemming",
-        "onMachine": "{{name}} op {{machine}}",
-        "body": "{{what}} ({{expires}})",
-        "expiresInSeconds": "verloopt over {{seconds}}s",
-        "expiresInMinutes": "verloopt over {{minutes}}m"
-    },
     "notifications": {
         "finished": "Klaar",
         "needsYou": "Wacht op jou"

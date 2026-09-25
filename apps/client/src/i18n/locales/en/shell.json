@@ -96,14 +96,6 @@
         "restartNow": "Restart now",
         "whenIdle": "When idle"
     },
-    "approvals": {
-        "terminal": "Terminal",
-        "title": "{{where}} needs permission",
-        "onMachine": "{{name}} on {{machine}}",
-        "body": "{{what}} ({{expires}})",
-        "expiresInSeconds": "expires in {{seconds}}s",
-        "expiresInMinutes": "expires in {{minutes}}m"
-    },
     "notifications": {
         "finished": "Finished",
         "needsYou": "Needs you"

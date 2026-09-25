@@ -19,8 +19,6 @@ export interface CanvasPromptsInput {
     endpointId: string;
     sessions: SessionsByKey;
     chats: ChatsById;
-    /* The agentsApprovals setting: off, a terminal's permission request is only answered in its TUI. */
-    approvalsOffered: boolean;
     /* The cards of this machine about operating its apps; each belongs to the chat or terminal whose agent asks. */
     computer: readonly ComputerApproval[];
     /* When each waiting terminal was first seen waiting, by session key, as the previous call returned it. */
@@ -50,7 +48,7 @@ export const pendingPromptsOf = (chat: Pick<ChatState, 'structure' | 'order'> | 
  * A waiting terminal is dated by when it was first seen waiting rather than by the agent's
  * `updatedAt`, which every later hook of the same prompt moves forward.
  */
-export const canvasPrompts = ({ nodes, endpointId, sessions, chats, approvalsOffered, computer, waitingSince }: CanvasPromptsInput): CanvasPrompts => {
+export const canvasPrompts = ({ nodes, endpointId, sessions, chats, computer, waitingSince }: CanvasPromptsInput): CanvasPrompts => {
     const prompts: CanvasPrompt[] = [];
     const since = new Map(waitingSince);
     const add = (node: CanvasPromptsInput['nodes'][number], subject: PromptSubject, provider: AgentKind | null, surface: CanvasPrompt['surface']) =>
@@ -77,11 +75,7 @@ export const canvasPrompts = ({ nodes, endpointId, sessions, chats, approvalsOff
         }
         const session = sessions[key];
         const provider = session?.agent?.kind ?? node.provider ?? null;
-        const approvals = approvalsOffered ? (session?.approvals ?? []) : [];
-        for (const request of approvals) {
-            add(node, { kind: 'terminal-approval', nodeId: node.id, request }, provider, 'terminal');
-        }
-        const waiting = approvals.length === 0 && nodeStatus(node, sessions, chats, endpointId) === 'needs-you';
+        const waiting = nodeStatus(node, sessions, chats, endpointId) === 'needs-you';
         if (!waiting) {
             since.delete(key);
             continue;
@@ -118,7 +112,6 @@ const payloadOf = (subject: PromptSubject): unknown => {
     switch (subject.kind) {
         case 'chat':
             return subject.item;
-        case 'terminal-approval':
         case 'computer-approval':
             return subject.request;
         case 'terminal-waiting':

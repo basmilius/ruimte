@@ -120,12 +120,6 @@ export interface Settings {
        Making is shared and the daemon enforces it; looking is one person at one screen, so moving
        someone's eyes is the one thing that is asked rather than done. */
     agentsShowViews: boolean;
-    /* Whether a permission a terminal agent asks for is offered in the node's header. On, because the
-       whole point of the canvas is that the terminal you would have answered in is somewhere else,
-       and either answer settles it, so this takes nothing away from the CLI's own prompt. Off, the
-       machine is told to hold nothing for this client and the prompt in the terminal is the only
-       place to answer; another client that wants them is asked as before. */
-    agentsApprovals: boolean;
     /* When this computer stays awake. About the computer this window runs on and nothing else, which is
        why it sits with the client and not with a project or a daemon. Off to start with: a laptop
        that never sleeps is not something to arrange behind someone. */
@@ -194,7 +188,6 @@ const DEFAULT_SETTINGS: Settings = {
     voiceConfirmDestructiveActions: true,
     updatesAutoDownload: true,
     agentsShowViews: false,
-    agentsApprovals: true,
     keepAwake: 'off',
     keepAwakeOnBattery: false,
     keepAwakeDisplay: false,
@@ -235,8 +228,7 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     keepAwake: keepAwakeFrom(stored.keepAwake, (stored as Partial<Settings> & { agentsKeepAwake?: unknown }).agentsKeepAwake),
     keepAwakeOnBattery: stored.keepAwakeOnBattery === true,
     keepAwakeDisplay: stored.keepAwakeDisplay === true,
-    // The two that start on, so only a stored `false` turns either of them off.
-    agentsApprovals: stored.agentsApprovals !== false,
+    // Starts on, so only a stored `false` turns it off.
     agentsTurnNotify: stored.agentsTurnNotify !== false,
     chatStreaming: chatStreamingFrom(stored.chatStreaming),
     voiceLanguage: isVoiceLanguage(stored.voiceLanguage) ? stored.voiceLanguage : 'nl',
@@ -331,7 +323,6 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 voiceConfirmDestructiveActions,
                 updatesAutoDownload,
                 agentsShowViews,
-                agentsApprovals,
                 keepAwake,
                 keepAwakeOnBattery,
                 keepAwakeDisplay,
@@ -366,7 +357,6 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 voiceConfirmDestructiveActions,
                 updatesAutoDownload,
                 agentsShowViews,
-                agentsApprovals,
                 keepAwake,
                 keepAwakeOnBattery,
                 keepAwakeDisplay,

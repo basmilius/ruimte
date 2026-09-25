@@ -38,9 +38,6 @@ export class SessionClient {
     private readonly exitHandlers = new HandlerTable<number>();
     private readonly screenHandlers = new HandlerTable<Pick<SessionAttachResult, 'screen'>>();
     private readonly unsubscribe: Array<() => void> = [];
-    // What this client last told the daemon about permission requests. A fresh socket is a fresh
-    // client over there, which knows nothing about the one before it, so it is told again.
-    private approvals = true;
 
     constructor(transport: Transport, sink: SessionSink) {
         this.transport = transport;
@@ -54,8 +51,6 @@ export class SessionClient {
                 this.exitHandlers.fanOut(sessionId, exitCode);
             }),
             transport.on('session.status', ({ sessionId, agent }) => this.sink.setAgent(sessionId, agent)),
-            // The whole pending list of that session, so a request another client answered disappears here too.
-            transport.on('session.approvals', ({ sessionId, approvals }) => this.sink.setApprovals(sessionId, approvals)),
             // Another client said yes to a held command; this one only learns it from the list.
             transport.on('session.list-changed', () => {
                 if (this.held.size > 0) {
@@ -64,6 +59,7 @@ export class SessionClient {
             }),
             transport.subscribeStatus((status) => this.onStatus(status))
         );
+        this.declineApprovals();
     }
 
     async ensure(nodeId: string, options: OpenOptions, cols: number, rows: number): Promise<void> {
@@ -79,7 +75,6 @@ export class SessionClient {
             });
             this.sink.setExited(nodeId, undefined);
             this.sink.setAgent(nodeId, info.agent ?? null);
-            this.sink.setApprovals(nodeId, info.approvals ?? []);
             this.setHeld(nodeId, info.heldCommand);
         } catch (e) {
             // The shell of a previous mount (or a previous tab) is still running; that is the whole point.
@@ -172,30 +167,6 @@ export class SessionClient {
         }
     }
 
-    /*
-     * Answers a permission request the agent in this shell is waiting on. False when it was already
-     * settled, another client was first, the person answered in the CLI's own prompt, or it expired.
-     * The daemon's `session.approvals` is what takes the row off the screen either way.
-     */
-    async answerApproval(nodeId: string, requestId: string, choiceId: string): Promise<boolean> {
-        try {
-            const result = await this.transport.request('agent.answerApproval', { sessionId: nodeId, requestId, choiceId });
-            return result.accepted;
-        } catch {
-            return false;
-        }
-    }
-
-    /*
-     * Tells the daemon whether this client offers a permission request to a person. Off, it holds
-     * none for this socket, so no hook waits out its 110 seconds on an answer that will never come;
-     * another client that wants them is asked exactly as before.
-     */
-    setApprovals(enabled: boolean): void {
-        this.approvals = enabled;
-        this.sendApprovals();
-    }
-
     onOutput(nodeId: string, handler: OutputHandler): () => void {
         return this.outputHandlers.listen(nodeId, handler);
     }
@@ -225,13 +196,17 @@ export class SessionClient {
         }
     }
 
-    private sendApprovals(): void {
-        void this.transport.request('agent.setApprovals', { enabled: this.approvals }).catch(() => undefined);
+    /*
+     * A terminal's permission request is answered in its CLI's own prompt. A daemon from before that
+     * holds one for every socket that does not say no, which keeps the CLI's prompt from showing.
+     */
+    private declineApprovals(): void {
+        void this.transport.request('agent.setApprovals', { enabled: false }).catch(() => undefined);
     }
 
     private onStatus(status: TransportStatus): void {
         if (status === 'open') {
-            this.sendApprovals();
+            this.declineApprovals();
             let listed: Promise<SessionInfo[] | null> | null = null;
             // One list for the whole pass, asked for once the first attach has answered.
             const sessions = (): Promise<SessionInfo[] | null> => (listed ??= this.listSessions());

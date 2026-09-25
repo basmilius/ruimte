@@ -1289,16 +1289,6 @@ export const ACTION_DEFINITIONS = {
         }),
         output: chatNamed.extend({ requestId: z.string() })
     },
-    'terminal.answerApproval': {
-        title: 'Answer a terminal approval',
-        description: 'Answers a permission request the agent in a terminal waits on with one of the choices it offered.',
-        effect: 'external',
-        domain: 'sessions',
-        actors: PERSON,
-        input: z.object({ terminalId: terminalTarget, requestId: z.string().min(1), choiceId: z.string().min(1) }),
-        // False when it was settled already: another client, the CLI's own prompt or its time ran out.
-        output: terminalNamed.extend({ accepted: z.boolean() })
-    },
     'terminal.stop': {
         title: 'Stop terminal session',
         description:

@@ -4,7 +4,7 @@ import { toolSummary } from '@/chat/logic/tools';
 import { isRuimteApp } from '@/computer/ruimte-app';
 import { answerValue, promptAnswers, questionAnswer, type PromptAction, type PromptDraft } from '@/prompts/logic/prompts';
 import { approvalButtons, type PromptSubject } from '@/prompts/logic/subjects';
-import { ApprovalBody, CommandBox } from '@/prompts/ui/ApprovalBody';
+import { ApprovalBody } from '@/prompts/ui/ApprovalBody';
 import { ApprovalActions, PromptPrimary, QuestionActions } from '@/prompts/ui/PromptActions';
 import { PromptCard } from '@/prompts/ui/PromptCard';
 import { QuestionBody } from '@/prompts/ui/QuestionBody';
@@ -48,23 +48,6 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
                 }
             >
                 <p className="text-sm text-text-muted">{t('waiting.body')}</p>
-            </PromptCard>
-        );
-    }
-
-    if (subject.kind === 'terminal-approval') {
-        const { request } = subject;
-        return (
-            <PromptCard
-                kind="approval"
-                heading={request.toolName === 'Bash' ? t('approval.runCommand') : request.toolName}
-                top={top}
-                busy={sending}
-                notice={notice}
-                error={error}
-                actions={<ApprovalActions buttons={buttons} locked={locked} sending={sending} />}
-            >
-                {request.summary !== '' && <CommandBox command={request.summary} />}
             </PromptCard>
         );
     }

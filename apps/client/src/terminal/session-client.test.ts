@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentInfo, ApprovalRequest, EventMap, EventType, RequestMap, RequestType, SessionInfo } from '@ruimte/contracts';
+import type { AgentInfo, EventMap, EventType, RequestMap, RequestType, SessionInfo } from '@ruimte/contracts';
 import type { SessionSink } from '../state/sessions';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { SessionClient } from './session-client';
@@ -112,7 +112,6 @@ class FakeSink implements SessionSink {
     readonly attached = new Map<string, boolean>();
     readonly exited = new Map<string, number | undefined>();
     readonly agents = new Map<string, AgentInfo | null>();
-    readonly approvals = new Map<string, ApprovalRequest[]>();
     readonly held = new Map<string, string | undefined>();
     readonly forgotten: string[] = [];
 
@@ -122,10 +121,6 @@ class FakeSink implements SessionSink {
 
     setExited(nodeId: string, exitCode: number | undefined): void {
         this.exited.set(nodeId, exitCode);
-    }
-
-    setApprovals(nodeId: string, approvals: ApprovalRequest[]): void {
-        this.approvals.set(nodeId, approvals);
     }
 
     setAgent(nodeId: string, agent: AgentInfo | null): void {
@@ -158,18 +153,14 @@ describe('SessionClient', () => {
         expect(transport.of('session.create')).toHaveLength(1);
     });
 
-    test('tells the daemon what this client does with permission requests, and says it again on a fresh socket', () => {
-        const { transport, client } = setup();
-        client.setApprovals(false);
+    test('tells a daemon from before terminal prompts stayed in the TUI to hold none, again on a fresh socket', () => {
+        const { transport } = setup();
         expect(transport.of('agent.setApprovals').map((call) => call.payload)).toEqual([{ enabled: false }]);
 
-        // A reconnect is a new client over there, so the answer this one gave has to travel again.
+        // A reconnect is a new client over there, so the answer has to travel again.
         transport.setStatus('closed');
         transport.setStatus('open');
         expect(transport.of('agent.setApprovals').map((call) => call.payload)).toEqual([{ enabled: false }, { enabled: false }]);
-
-        client.setApprovals(true);
-        expect(transport.of('agent.setApprovals')).toHaveLength(3);
     });
 
     test('a command the daemon holds is shown until a person runs it here or another client does', async () => {

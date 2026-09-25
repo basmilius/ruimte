@@ -19,9 +19,8 @@ describe('hookCommand', () => {
         expect(hookCommand('codex')).toContain('"$RUIMTE_HOOK_URL/codex"');
     });
 
-    test('gives the permission hook room to wait for a person and leaves the others quick', () => {
-        expect(hookCommand('claude', 'PermissionRequest')).toContain('curl -sf -m 120 ');
-        expect(hookCommand('claude', 'Stop')).toContain('curl -sf -m 2 ');
+    test('gives up quickly, so a daemon that is gone never holds the CLI', () => {
+        expect(hookCommand('claude')).toContain('curl -sf -m 2 ');
     });
 });
 
@@ -63,13 +62,12 @@ describe('mergeHooks', () => {
         expect(stop[0]?.hooks.map((h) => h.command)).toEqual(['echo other', hookCommand('claude')]);
     });
 
-    test('writes the permission hook with a timeout wide enough to hold a request', () => {
-        const { config } = mergeHooks({}, 'claude');
-        const hooks = config.hooks as Record<string, Array<{ hooks: Array<{ command: string; timeout: number }> }>>;
-        // Laddered above the daemon's own hold and above curl's, so the CLI is never the one to cut it off.
-        expect(hooks.PermissionRequest[0]?.hooks[0]?.timeout).toBe(125);
-        expect(hooks.PermissionRequest[0]?.hooks[0]?.command).toBe(hookCommand('claude', 'PermissionRequest'));
-        expect(hooks.Stop[0]?.hooks[0]?.timeout).toBe(3);
+    test('rewrites a permission hook that still waits for a person to the quick one', () => {
+        const held = { type: 'command', command: hookCommand('claude').replace('-m 2 ', '-m 120 '), timeout: 125 };
+        const { config, changed } = mergeHooks({ hooks: { PermissionRequest: [{ matcher: '', hooks: [held] }] } }, 'claude');
+        const hooks = config.hooks as Record<string, Array<{ hooks: Array<{ type: string; command: string; timeout: number }> }>>;
+        expect(changed).toBe(true);
+        expect(hooks.PermissionRequest[0]?.hooks).toEqual([{ type: 'command', command: hookCommand('claude'), timeout: 3 }]);
     });
 
     test('removes our hook from an event the daemon no longer listens for', () => {

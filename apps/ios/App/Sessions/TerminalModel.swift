@@ -12,7 +12,6 @@ final class TerminalModel {
     var exited = false
     var cols = 80
     var rows = 24
-    var approvals: [JSONValue] = []
     var error: String?
     @ObservationIgnored var render: ((String, Bool) -> Void)?
     @ObservationIgnored var resizeDisplay: ((Int, Int) -> Void)?
@@ -32,15 +31,14 @@ final class TerminalModel {
     func start() {
         guard unsubscribe.isEmpty else { return }
         attachment = client.acquireAttachment("session", id: sessionID)
-        for eventName in ["session.output", "session.resync", "session.exit", "session.approvals"] {
+        for eventName in ["session.output", "session.resync", "session.exit"] {
             unsubscribe.append(
                 client.subscribe(eventName) { [weak self] payload in
                     guard let self, payload["sessionId"]?.stringValue == sessionID else { return }
                     switch eventName {
                     case "session.output": deliver(payload["data"]?.stringValue ?? "", reset: false)
                     case "session.resync": deliver(payload["screen"]?.stringValue ?? "", reset: true)
-                    case "session.exit": exited = true
-                    default: approvals = payload["approvals"]?.arrayValue ?? []
+                    default: exited = true
                     }
                 })
         }
@@ -120,7 +118,6 @@ final class TerminalModel {
             if let info = result["sessions"]?.arrayValue?.first(where: { $0["sessionId"]?.stringValue == sessionID }) {
                 cols = Int(info["cols"]?.numberValue ?? Double(cols))
                 rows = Int(info["rows"]?.numberValue ?? Double(rows))
-                approvals = info["approvals"]?.arrayValue ?? []
                 exited = info["exited"]?.boolValue ?? exited
                 resizeDisplay?(cols, rows)
             }
@@ -164,17 +161,5 @@ final class TerminalModel {
         do { _ = try await client.request("session.clear", payload: target()) } catch {
             self.error = error.localizedDescription
         }
-    }
-
-    func answer(_ request: JSONValue, choice: JSONValue) async {
-        do {
-            let result = try await client.request(
-                "agent.answerApproval",
-                payload: target([
-                    "requestId": request["requestId"] ?? .null, "choiceId": choice["id"] ?? .null,
-                ]))
-            if result["accepted"]?.boolValue != true { error = "This request was already answered or has expired." }
-            await refreshInfo()
-        } catch { self.error = error.localizedDescription }
     }
 }

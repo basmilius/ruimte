@@ -109,7 +109,6 @@ export function AgentsPane() {
     const loaded = useProviders((s) => s.loaded);
     const preferences = useChatPreferences();
     const agentsShowViews = useSettings((s) => s.agentsShowViews);
-    const agentsApprovals = useSettings((s) => s.agentsApprovals);
     const keepAwake = useSettings((s) => s.keepAwake);
     const keepAwakeOnBattery = useSettings((s) => s.keepAwakeOnBattery);
     const keepAwakeDisplay = useSettings((s) => s.keepAwakeDisplay);
@@ -157,17 +156,6 @@ export function AgentsPane() {
                 />
             </SettingsSection>
             <SettingsSection title={t('agents.here.title')} description={t('agents.here.description')}>
-                <SettingsRow
-                    label={t('agents.here.approvals.label')}
-                    description={t('agents.here.approvals.description')}
-                    control={
-                        <Toggle
-                            checked={agentsApprovals}
-                            onChange={(checked) => update({ agentsApprovals: checked })}
-                            label={t('agents.here.approvals.label')}
-                        />
-                    }
-                />
                 <SettingsRow
                     label={t('agents.here.showViews.label')}
                     description={t('agents.here.showViews.description')}

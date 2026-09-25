@@ -1,12 +1,10 @@
 import i18next from 'i18next';
-import type { ApprovalChoice, ApprovalRequest, ComputerApproval, ComputerApprovalChoice } from '@ruimte/contracts';
+import type { ComputerApproval, ComputerApprovalChoice } from '@ruimte/contracts';
 import { isBlockingPrompt, type PendingPrompt, type PromptAction } from '@/prompts/logic/prompts';
 
 /* What a prompt card draws, whatever asked it. The chat's items pass through unchanged. */
 export type PromptSubject =
     | { kind: 'chat'; nodeId: string; item: PendingPrompt }
-    // A terminal's permission request, drawn as a chat's: the summary as the command, its choices as the buttons.
-    | { kind: 'terminal-approval'; nodeId: string; request: ApprovalRequest }
     // Only its TUI can answer; the card offers the way there.
     | { kind: 'terminal-waiting'; nodeId: string; since: number }
     // An agent in a chat or a terminal wants to operate an app of the machine; the machine asks, not the CLI.
@@ -18,9 +16,6 @@ export interface PromptClients {
         approve(chatId: string, requestId: string, decision: 'allow' | 'allow-always' | 'deny', message?: string): Promise<void>;
         answer(chatId: string, requestId: string, answers: Record<string, string>): Promise<void>;
         dismiss(chatId: string, itemId: string): Promise<void>;
-    } | null;
-    sessions: {
-        answerApproval(nodeId: string, requestId: string, choiceId: string): Promise<boolean>;
     } | null;
     computer: {
         answer(requestId: string, choice: ComputerApprovalChoice): Promise<boolean>;
@@ -44,8 +39,6 @@ export const promptIdOf = (subject: PromptSubject): string => {
     switch (subject.kind) {
         case 'chat':
             return `chat:${subject.nodeId}:${subject.item.requestId}`;
-        case 'terminal-approval':
-            return `terminal:${subject.nodeId}:${subject.request.requestId}`;
         case 'terminal-waiting':
             return `waiting:${subject.nodeId}`;
         case 'computer-approval':
@@ -57,8 +50,6 @@ export const promptCreatedAt = (subject: PromptSubject): number => {
     switch (subject.kind) {
         case 'chat':
             return subject.item.createdAt;
-        case 'terminal-approval':
-            return subject.request.createdAt;
         case 'terminal-waiting':
             return subject.since;
         case 'computer-approval':
@@ -69,15 +60,8 @@ export const promptCreatedAt = (subject: PromptSubject): number => {
 /* A terminal is held up by whatever it asks, so only a chat's optional question counts as not blocking. */
 export const isBlockingSubject = (subject: PromptSubject): boolean => subject.kind !== 'chat' || isBlockingPrompt(subject.item);
 
-const CHOICE_ORDER: Record<ApprovalChoice['kind'], number> = { remember: 0, deny: 1, allow: 2 };
-
 /* The buttons of a permission request in the order a chat draws them: a remembered rule, Deny, then Allow as the primary. */
 export const approvalButtons = (subject: PromptSubject, reason: string): ApprovalButtonSpec[] => {
-    if (subject.kind === 'terminal-approval') {
-        return [...subject.request.choices]
-            .sort((a, b) => CHOICE_ORDER[a.kind] - CHOICE_ORDER[b.kind])
-            .map((choice) => ({ id: choice.id, label: choice.label, primary: choice.kind === 'allow', action: { kind: 'choose', choiceId: choice.id } }));
-    }
     if (subject.kind === 'computer-approval') {
         const choose = (choiceId: ComputerApprovalChoice) => ({ kind: 'choose', choiceId }) as const;
         return [
@@ -135,21 +119,11 @@ export const answerPrompt = async (subject: PromptSubject, action: PromptAction,
     if (subject.kind === 'terminal-waiting' || action.kind !== 'choose') {
         throw new Error(i18next.t('prompts:error.terminalOnly'));
     }
-    if (subject.kind === 'computer-approval') {
-        const { computer } = clients;
-        if (computer === null) {
-            throw new Error(i18next.t('prompts:error.notConnected'));
-        }
-        if (!isComputerChoice(action.choiceId) || !(await computer.answer(subject.request.requestId, action.choiceId))) {
-            throw new Error(i18next.t('prompts:error.expired'));
-        }
-        return;
-    }
-    const { sessions } = clients;
-    if (sessions === null) {
+    const { computer } = clients;
+    if (computer === null) {
         throw new Error(i18next.t('prompts:error.notConnected'));
     }
-    if (!(await sessions.answerApproval(subject.nodeId, subject.request.requestId, action.choiceId))) {
+    if (!isComputerChoice(action.choiceId) || !(await computer.answer(subject.request.requestId, action.choiceId))) {
         throw new Error(i18next.t('prompts:error.expired'));
     }
 };

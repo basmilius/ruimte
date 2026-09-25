@@ -375,10 +375,6 @@
         "here": {
             "title": "What an agent may do here",
             "description": "These settings apply to this client only.",
-            "approvals": {
-                "label": "Ask me for permission in the node",
-                "description": "Permission requests from terminal agents appear in the node header, and the first answer wins. With this window in the background you also get a notification, since a request expires after a few minutes. Off, you answer in the terminal."
-            },
             "showViews": {
                 "label": "Let an agent show you a view",
                 "description": "On, a view an agent opens replaces the one you are working in, and a banner takes you back. Off, the banner offers a button to go there."

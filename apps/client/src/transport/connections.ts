@@ -16,7 +16,6 @@ import { PlanSync } from '@/state/plans';
 import { watchPushAttention } from '@/state/push-attention';
 import { providerSinkFor } from '@/state/providers';
 import { sessionSinkFor, useSessions } from '@/state/sessions';
-import { useSettings } from '@/state/settings';
 import { defaultWorkspaceStores } from '@/state/workspace';
 import { workspaceOf, useWindow, windowWorkspace } from '@/state/window';
 import { forgetProjectSessions } from '@/terminal/lifecycle';
@@ -97,8 +96,6 @@ const buildMachine = (endpoint: Endpoint): Machine => {
     const stopPushAttention = watchPushAttention(endpoint.id, transport);
     const plans = new PlanSync(endpoint.id, transport);
     const sessions = new SessionClient(transport, sessionSinkFor(endpoint.id));
-    // Every machine hears the same answer, since the switch is about this client and not about one of them.
-    sessions.setApprovals(useSettings.getState().agentsApprovals);
     const chats = new ChatClient(transport, chatSinkFor(endpoint.id), providerSinkFor(endpoint.id));
     const browsers = new BrowserClient(endpoint.id, transport);
     const devices = new DeviceClient(endpoint.id, transport);
@@ -396,13 +393,6 @@ export const startConnections = (): (() => void) => {
             activeMachine();
         }
     });
-    const offSettings = useSettings.subscribe((state, before) => {
-        if (state.agentsApprovals !== before.agentsApprovals) {
-            for (const machine of machines.values()) {
-                machine.sessions.setApprovals(state.agentsApprovals);
-            }
-        }
-    });
     const offChatPreferences = useChatPreferences.subscribe((state, before) => {
         if (state.changedAt !== before.changedAt) {
             for (const machine of machines.values()) {
@@ -412,7 +402,6 @@ export const startConnections = (): (() => void) => {
     });
     return () => {
         offEndpoints();
-        offSettings();
         offChatPreferences();
     };
 };

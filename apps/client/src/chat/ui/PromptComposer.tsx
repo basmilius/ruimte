@@ -90,7 +90,7 @@ export function PromptComposer({
                         onAction={(action) => {
                             refocus.hold();
                             void session
-                                .act(active, () => answerPrompt(active, action, { ...PERSON_PROMPT_CLIENTS, sessions: null }))
+                                .act(active, () => answerPrompt(active, action, PERSON_PROMPT_CLIENTS))
                                 .then((result) => {
                                     if (result === 'failed') {
                                         refocus.release();

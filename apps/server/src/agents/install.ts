@@ -16,23 +16,11 @@ const HOOK_TIMEOUT_S = 3;
 const HOOK_MAX_TIME_S = 2;
 
 /*
- * The permission hook is the one the daemon answers late: it holds the request while a person
- * decides in a node header. The three numbers are a ladder around `APPROVAL_HOLD_MS`, so the
- * daemon always lets go first and the CLI never has to cut anything off. The CLI is showing its
- * own prompt the whole time, so a hook that waits costs the agent nothing.
- */
-const APPROVAL_EVENT = 'PermissionRequest';
-const APPROVAL_TIMEOUT_S = 125;
-const APPROVAL_MAX_TIME_S = 120;
-
-/*
- * Outside Ruimte the hook only drains stdin. Inside it, stdout carries daemon context or a decision;
+ * Outside Ruimte the hook only drains stdin. Inside it, stdout carries daemon context;
  * failed HTTP responses stay silent and never block the CLI.
  */
-export const hookCommand = (kind: AgentKind, event?: string): string => {
-    const maxTime = event === APPROVAL_EVENT ? APPROVAL_MAX_TIME_S : HOOK_MAX_TIME_S;
-    return `if [ -n "$RUIMTE_HOOK_URL" ]; then curl -sf -m ${maxTime} -X POST "$RUIMTE_HOOK_URL/${kind}" -H "Authorization: Bearer $RUIMTE_HOOK_TOKEN" -H "Content-Type: application/json" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0`;
-};
+export const hookCommand = (kind: AgentKind): string =>
+    `if [ -n "$RUIMTE_HOOK_URL" ]; then curl -sf -m ${HOOK_MAX_TIME_S} -X POST "$RUIMTE_HOOK_URL/${kind}" -H "Authorization: Bearer $RUIMTE_HOOK_TOKEN" -H "Content-Type: application/json" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0`;
 
 // A `command` hook with curl, never Claude Code's `http` kind: that one cannot read the port from the
 // environment and reports an error whenever Ruimte is not running.
@@ -42,10 +30,10 @@ interface HookEntry {
     timeout: number;
 }
 
-const hookEntry = (kind: AgentKind, event: string): HookEntry => ({
+const hookEntry = (kind: AgentKind): HookEntry => ({
     type: 'command',
-    command: hookCommand(kind, event),
-    timeout: event === APPROVAL_EVENT ? APPROVAL_TIMEOUT_S : HOOK_TIMEOUT_S
+    command: hookCommand(kind),
+    timeout: HOOK_TIMEOUT_S
 });
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -66,9 +54,9 @@ export const mergeHooks = (config: unknown, kind: AgentKind): { config: Record<s
     const wantedEvents = new Set(HOOK_EVENTS[kind] ?? []);
     let changed = false;
 
+    const wanted = hookEntry(kind);
     const allEvents = new Set([...wantedEvents, ...Object.keys(hooks)]);
     for (const event of allEvents) {
-        const wanted = hookEntry(kind, event);
         const groups = Array.isArray(hooks[event]) ? (hooks[event] as unknown[]) : [];
         let placed = false;
         const nextGroups: unknown[] = [];

@@ -461,24 +461,14 @@ describe('answering', () => {
         expect(of('chat.dismiss')).toEqual([{ chatId: 'chat', itemId: 'optional' }]);
     });
 
-    test('an approval is the person’s alone, in a chat and in a terminal', async () => {
+    test('an approval is the person’s alone', async () => {
         const { registry, of } = fake();
         expect(
             await registry.execute('chat.approve', { chatId: 'chat', requestId: 'perm-1', decision: 'allow', message: null }, VOICE_ACTION_CALL)
         ).toMatchObject({ error: { code: 'forbidden-action' } });
-        expect(await registry.execute('terminal.answerApproval', { terminalId: 'term', requestId: 'r', choiceId: 'yes' }, VOICE_ACTION_CALL)).toMatchObject({
-            error: { code: 'forbidden-action' }
-        });
         expect(of('chat.approve')).toEqual([]);
         await registry.execute('chat.approve', { chatId: 'chat', requestId: 'perm-1', decision: 'deny', message: 'too broad' }, PERSON_ACTION_CALL);
         expect(of('chat.approve')).toEqual([{ chatId: 'chat', requestId: 'perm-1', decision: 'deny', message: 'too broad' }]);
-        expect(await registry.execute('terminal.answerApproval', { terminalId: 'term', requestId: 'r', choiceId: 'yes' }, PERSON_ACTION_CALL)).toMatchObject({
-            output: { accepted: true }
-        });
-        const settled = fake({ 'agent.answerApproval': () => Promise.reject(new TransportError('gone', 'settled')) });
-        expect(
-            await settled.registry.execute('terminal.answerApproval', { terminalId: 'term', requestId: 'r', choiceId: 'yes' }, PERSON_ACTION_CALL)
-        ).toMatchObject({ output: { accepted: false } });
     });
 });
 

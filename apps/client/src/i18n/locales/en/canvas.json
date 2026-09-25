@@ -144,12 +144,6 @@
     "position": "{{index}} of {{count}}",
     "failed": "This prompt failed to render"
   },
-  "approval": {
-    "wantsPermission": "{{tool}} wants permission",
-    "wantsToRun": "wants to run",
-    "more_one": "{{count}} more",
-    "more_other": "{{count}} more"
-  },
   "text": {
     "placeholder": "Type something",
     "copy": "Copy text",

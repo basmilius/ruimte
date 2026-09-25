@@ -642,32 +642,26 @@ struct NotificationDestination: Identifiable, Hashable {
     }
 
     private func answer(_ alert: PushAlertContent, machineID: String, allow: Bool) async throws {
+        // Only a chat's request is answered from a notification; a terminal's stays in its TUI.
         guard let runtime, let machine = runtime.machines.first(where: { $0.id == machineID }), alert.requestId != nil,
-            alert.kind == .approval
+            alert.kind == .approval, alert.target == .chat
         else { throw PushCryptoError.invalid }
         let session = runtime.session(for: machine)
         session.retain()
         defer { session.release() }
         try await session.waitForConnection()
         guard Double(alert.expiresAt) > Date().timeIntervalSince1970 * 1000 else { throw PushCryptoError.expired }
-        if alert.target == .chat {
-            let lease = session.rpc.acquireAttachment("chat", id: alert.nodeId)
-            defer {
-                await withTaskCancellationShield {
-                    await lease.release()
-                }
+        let lease = session.rpc.acquireAttachment("chat", id: alert.nodeId)
+        defer {
+            await withTaskCancellationShield {
+                await lease.release()
             }
-            let snapshot = try await lease.snapshot(
-                payload: .object(["chatId": .string(alert.nodeId), "historyLimit": .number(1)]))
-            try Task.checkCancellation()
-            let payload = try NotificationApproval.chatPayload(alert: alert, snapshot: snapshot, allow: allow)
-            _ = try await session.rpc.request("chat.approve", payload: payload)
-        } else {
-            let snapshot = try await session.rpc.request("session.list")
-            let payload = try NotificationApproval.terminalPayload(alert: alert, snapshot: snapshot, allow: allow)
-            let result = try await session.rpc.request("agent.answerApproval", payload: payload)
-            guard result["accepted"] == .bool(true) else { throw PushCryptoError.expired }
         }
+        let snapshot = try await lease.snapshot(
+            payload: .object(["chatId": .string(alert.nodeId), "historyLimit": .number(1)]))
+        try Task.checkCancellation()
+        let payload = try NotificationApproval.chatPayload(alert: alert, snapshot: snapshot, allow: allow)
+        _ = try await session.rpc.request("chat.approve", payload: payload)
     }
     private static let machineActivityNode = "__ruimte_machine_activity__"
     private static func hex(_ data: Data) -> String { data.map { String(format: "%02x", $0) }.joined() }

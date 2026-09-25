@@ -70,7 +70,7 @@ describe('Voice tools', () => {
     test('chats, terminals and plans leave out what only a person decides: approvals, the permission mode, unlocking and what the composer attaches', () => {
         const tool = (name: string) => VOICE_TOOL_DEFINITIONS.find((definition) => definition.name === name)!;
         const reachable = VOICE_TOOL_DEFINITIONS.flatMap((definition) => (definition.parameters.properties.action?.enum as string[] | undefined) ?? []);
-        for (const action of ['chat.approve', 'terminal.answerApproval', 'plan.unlock', 'plan.setStatus']) {
+        for (const action of ['chat.approve', 'plan.unlock', 'plan.setStatus']) {
             expect(reachable).not.toContain(action);
         }
         for (const field of ['runtimeMode', 'selection', 'asView', 'filesAfterTurn']) {

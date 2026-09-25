@@ -3,7 +3,6 @@ import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
-import { ApprovalStore, parsePermissionAsk, type ApprovalDecision } from '../agents/approvals.ts';
 import { modeOfHook, normalizeHook } from '../agents/hooks.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { narrowerMode } from '../canvas/mode.ts';
@@ -72,10 +71,6 @@ export interface SessionManagerOptions {
     computerUse?: () => boolean;
     // Lets a test move the clock the resume guard reads.
     now?: () => number;
-    // Whether a permission request may be held for a client; off leaves every one to the CLI's own prompt.
-    approvals?: boolean;
-    // Lets a test shorten how long a request is held.
-    approvalHoldMs?: number;
     // Where Claude Code's own name for a session is read from the transcript its hooks point at.
     claudeTitles?: { forTranscript(path: string): Promise<string | null> };
     // Where the Codex TUI's own name for a thread is read, by the thread id its hooks carry.
@@ -115,9 +110,7 @@ export class SessionManager {
     private readonly env: Record<string, string | undefined>;
     private readonly sessions = new Map<string, Session>();
     private readonly creating = new Map<string, Promise<SessionInfo>>();
-    private readonly sinks = new ClientSinks((clientId) => this.withoutApprovals.delete(clientId));
-    // The clients that said they never offer a permission request to a person, keyed like the sinks.
-    private readonly withoutApprovals = new Set<string>();
+    private readonly sinks = new ClientSinks();
     private readonly tokens = new Map<string, string>();
     // Ids whose kill is in flight: the exit that follows removes the session instead of parking it.
     private readonly killing = new Set<string>();
@@ -126,7 +119,6 @@ export class SessionManager {
     // When a resume was typed into a session, until its agent reports in; the guard against typing a second one.
     private readonly resuming = new Map<string, number>();
     private readonly now: () => number;
-    private readonly approvals: ApprovalStore | null;
     private readonly claudeTitles: SessionManagerOptions['claudeTitles'] | null;
     private readonly codexTitles: SessionManagerOptions['codexTitles'] | null;
     private readonly titleRetryMs: number;
@@ -169,12 +161,6 @@ export class SessionManager {
         this.commands = options.commands ?? null;
         this.modeCeiling = options.modeCeiling ?? (() => null);
         this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
-        this.approvals =
-            options.approvals === false
-                ? null
-                : new ApprovalStore((sessionId, approvals) => {
-                      this.broadcast({ event: 'session.approvals', payload: { sessionId, approvals } });
-                  }, options.approvalHoldMs);
     }
 
     /* The session a hook or context token belongs to. */
@@ -189,7 +175,6 @@ export class SessionManager {
     }
 
     private readonly observers = new Set<SessionSink>();
-    offlineApprovals: (() => Promise<boolean>) | null = null;
 
     observe(sink: SessionSink): () => void {
         this.observers.add(sink);
@@ -200,24 +185,6 @@ export class SessionManager {
 
     subscribe(clientId: string, sink: SessionSink): () => void {
         return this.sinks.subscribe(clientId, sink);
-    }
-
-    /*
-     * A client saying whether it offers permission requests to a person at all. Saying nothing means
-     * it does, which is what every client written before the switch existed meant, and the answer is
-     * this socket's alone: a second client that wants them is still asked.
-     */
-    setApprovalPreference(clientId: string, enabled: boolean): void {
-        if (enabled) {
-            this.withoutApprovals.delete(clientId);
-        } else {
-            this.withoutApprovals.add(clientId);
-        }
-    }
-
-    /* Whether anybody attached would show a permission request. The question `holdApproval` asks. */
-    wantsApprovals(): boolean {
-        return this.sinks.clientIds().some((clientId) => !this.withoutApprovals.has(clientId));
     }
 
     /*
@@ -361,54 +328,9 @@ export class SessionManager {
             this.refreshTitle(session, agent);
         }
         if (agent === null || agent.status === 'idle' || agent.status === 'error') {
-            /* Claude Code 2.1.270 leaves its hook open after a TUI answer. An idle or ended status
-               proves the prompt is gone; `running` does not, because tools may run concurrently. */
-            this.approvals?.dropSession(session.id);
             this.onProcessChange?.(session.id, 'changed');
         }
         return 'applied';
-    }
-
-    /*
-     * Holds a permission hook open while a person decides, and answers with what they chose. Null is
-     * the daemon staying out of it, which is what happens with the feature off, with nobody who wants
-     * to be asked, and when the hold runs out: in all three the CLI's own prompt is what asks, exactly
-     * as without Ruimte. An offline device may answer through a push, but only while its paired
-     * key still has an active approval subscription.
-     */
-    holdApproval(token: string, body: unknown, signal: AbortSignal): Promise<ApprovalDecision | null> {
-        const sessionId = this.tokens.get(token);
-        if (!this.approvals || sessionId === undefined) {
-            return Promise.resolve(null);
-        }
-        const ask = parsePermissionAsk(body);
-        if (ask === null) {
-            return Promise.resolve(null);
-        }
-        const hold = (): Promise<ApprovalDecision | null> => this.approvals!.hold({ sessionId, ask, signal });
-        return this.wantsApprovals() ? hold() : (this.offlineApprovals?.() ?? Promise.resolve(false)).then((available) => (available ? hold() : null));
-    }
-
-    /* A client's answer to a held request. False when it was already settled, here or in the CLI's prompt. */
-    answerApproval(sessionId: string, requestId: string, choiceId: string): boolean {
-        if (this.approvals?.answer(sessionId, requestId, choiceId) !== true) {
-            return false;
-        }
-        this.settleAfterApproval(sessionId);
-        return true;
-    }
-
-    /*
-     * Claude Code 2.1.270 emits no hook after an external approval until the tool finishes. Mark the
-     * session running now unless another request still needs an answer; later hooks remain authoritative.
-     */
-    private settleAfterApproval(sessionId: string): void {
-        const session = this.sessions.get(sessionId);
-        const agent = session?.agent;
-        if (!session || !agent || agent.status !== 'needs-you' || this.approvals?.forSession(sessionId).length !== 0) {
-            return;
-        }
-        void this.setAgent(session, { ...agent, status: 'running', updatedAt: Date.now() });
     }
 
     /* Types the CLI's resume command into the shell of a session whose agent is known but not running. */
@@ -634,8 +556,6 @@ export class SessionManager {
         if (!session) {
             return;
         }
-        // The shell is gone and every hook that was waiting in it with it, so nothing is left to answer.
-        this.approvals?.dropSession(sessionId);
         for (const clientId of session.attachedClients()) {
             this.emit(clientId, { event: 'session.exit', payload: { sessionId, exitCode } });
         }
@@ -750,7 +670,6 @@ export class SessionManager {
         }
         this.titleRetries.delete(session.id);
         this.tokens.delete(session.hookToken);
-        this.approvals?.dropSession(session.id);
         session.dispose();
     }
 
@@ -774,7 +693,6 @@ export class SessionManager {
             exited: session.exited,
             ...(session.exitCode !== null ? { exitCode: session.exitCode } : {}),
             agent: session.agent,
-            approvals: this.approvals?.forSession(session.id) ?? [],
             ...(session.heldCommand !== null ? { heldCommand: session.heldCommand } : {})
         };
     }

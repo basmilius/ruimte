@@ -40,7 +40,6 @@ extension AgentStatus {
 final class AttentionStore {
     private(set) var statuses: [String: AgentStatus] = [:]
     private(set) var unseen = Set<String>()
-    private(set) var approvalCounts: [String: Int] = [:]
     private var pushEntries: [String: JSONValue] = [:]
     private var readings: [String: SessionReading] = [:]
     /// When the machine began keeping entries a client may mark nodes from; nil for a machine that never says, whose
@@ -62,10 +61,6 @@ final class AttentionStore {
         subscriptions.append(
             client.subscribe("session.status") { [weak self] event in
                 self?.read(event.text("sessionId")) { $0.agent = event["agent"] }
-            })
-        subscriptions.append(
-            client.subscribe("session.approvals") { [weak self] event in
-                self?.approvalCounts[event.text("sessionId")] = event.list("approvals").count
             })
         subscriptions.append(
             client.subscribe("session.exit") { [weak self] event in
@@ -105,7 +100,7 @@ final class AttentionStore {
         markSeen(id)
     }
     func blur(_ id: String) { focused[id] = max(0, focused[id, default: 0] - 1) }
-    func needsYou(_ id: String) -> Bool { statuses[id] == .needsYou || approvalCounts[id, default: 0] > 0 }
+    func needsYou(_ id: String) -> Bool { statuses[id] == .needsYou }
 
     /// Folds one field of a session's reading in and writes the word that reading now derives. A session the client
     /// knows nothing about reads as idle, which is the mark the desktop draws for no status at all: none.
@@ -171,6 +166,9 @@ final class AttentionStore {
     }
 
     private func refresh() async {
+        // A terminal's permission request is answered in its TUI. A machine from before that holds one for
+        // every connection that does not say no, which keeps the CLI's own prompt from showing.
+        _ = try? await client.request("agent.setApprovals", payload: .object(["enabled": .bool(false)]))
         if let snapshot = try? await client.request("push.attention", payload: .object([:])) {
             guard !Task.isCancelled else { return }
             marksFrom = snapshot["marksFrom"]?.numberValue
@@ -185,7 +183,6 @@ final class AttentionStore {
                     $0.agent = session["agent"]
                     $0.shellExited = session["exited"] == .bool(true)
                 }
-                approvalCounts[id] = session.list("approvals").count
             }
             let chats = try await client.request("chat.list", payload: .object([:]))
             guard !Task.isCancelled else { return }
@@ -196,7 +193,6 @@ final class AttentionStore {
             }
             statuses = statuses.filter { ids.contains($0.key) }
             readings = readings.filter { ids.contains($0.key) }
-            approvalCounts = approvalCounts.filter { ids.contains($0.key) }
             unseen.formIntersection(ids.union(unreadPushIDs))
         } catch {}
     }

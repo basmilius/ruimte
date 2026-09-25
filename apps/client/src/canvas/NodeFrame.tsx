@@ -36,10 +36,8 @@ import { ProcessAlertMark } from '@/processes/ProcessAlertMark';
 import { useNodeAlerts } from '@/processes/use-node-alerts';
 import { useHasContextLinks } from '@/context/sources';
 import { accentColor } from '@/canvas/accents';
-import { ApprovalStrip } from '@/canvas/ApprovalStrip';
 import { DeviceOperatedStrip } from '@/devices/DeviceOperatedStrip';
 import { ComputerIndicator } from '@/computer/ComputerIndicator';
-import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { FlagMarkOf } from '@/project/FlagMark';
 import { SnoozeMenuItems } from '@/shell/Snooze';
@@ -380,7 +378,6 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                         </Tooltip>
                     </div>
                 </header>
-                {node.kind === 'terminal' && !collapsed && PROMPTS_IN_NODES && <ApprovalStrip id={id} />}
                 {node.kind === 'device' && !collapsed && <DeviceOperatedStrip id={id} />}
                 {isGroup ? (
                     // No body attribute: a press anywhere on the frame drags it, together with what it holds.

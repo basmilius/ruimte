@@ -115,12 +115,6 @@ export class PushService {
         };
     }
 
-    async hasOfflineApprovals(): Promise<boolean> {
-        return (await this.options.auth.pushSubscriptions()).some(
-            ({ sessionId, subscription }) => subscription.approvals && !this.connectedSessions.has(sessionId)
-        );
-    }
-
     consume(event: SessionEvent): void {
         if (event.event === 'session.exit') {
             this.nodes.delete(event.payload.sessionId);
@@ -132,24 +126,6 @@ export class PushService {
         if (event.event === 'session.status' && event.payload.agent) {
             const { sessionId, agent } = event.payload;
             this.status('terminal', sessionId, agent.status, agent.suggestedTitle ?? 'Agent');
-        } else if (event.event === 'session.approvals') {
-            const { sessionId, approvals } = event.payload;
-            const previous = this.approvals.get(sessionId) ?? new Set();
-            this.approvals.set(sessionId, new Set(approvals.map((approval) => approval.requestId)));
-            for (const approval of approvals) {
-                if (!previous.has(approval.requestId)) {
-                    this.enqueue({
-                        kind: 'approval',
-                        target: 'terminal',
-                        nodeId: sessionId,
-                        title: this.nodes.get(sessionId)?.title ?? 'Agent needs permission',
-                        body: approval.summary.slice(0, 500),
-                        requestId: approval.requestId,
-                        choices: approval.choices.slice(0, 8).map((choice) => ({ ...choice, label: choice.label.slice(0, 80) })),
-                        expiresAt: approval.expiresAt
-                    });
-                }
-            }
         } else if (event.event === 'chat.event') {
             const { chatId, event: chat } = event.payload;
             if (chat.type === 'info') {

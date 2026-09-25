@@ -1,6 +1,5 @@
 import { AgentKindSchema, type AgentKind } from '@ruimte/contracts';
 import type { HookResult } from '../sessions/manager.ts';
-import type { ApprovalDecision } from './approvals.ts';
 import { hasHooks, takesHookContext } from './hooks.ts';
 
 interface HookTarget {
@@ -8,12 +7,6 @@ interface HookTarget {
     knows(token: string): boolean;
     applyHook(kind: AgentKind, token: string, body: unknown): Promise<HookResult>;
 }
-
-/* Holds a permission request until someone answers it; null when nobody did, or when there is nobody to ask. */
-export type ApprovalHold = (token: string, body: unknown, signal: AbortSignal) => Promise<ApprovalDecision | null>;
-
-// A hook event whose answer decides whether a tool runs. Only Claude Code fires it.
-const PERMISSION_EVENT = 'PermissionRequest';
 
 export const HOOKS_PATH = '/hooks';
 
@@ -36,15 +29,14 @@ const eventOf = (body: unknown): string | null => {
 /*
  * Answers `POST /hooks/<kind>` from a CLI hook. The token in the bearer header names the
  * session. A Claude Code or Codex prompt hook gets the session's context hint back as JSON, which the
- * hook command prints and the CLI folds into the turn; a permission hook is answered late, once
- * a person has decided; every other hook gets an empty 204.
+ * hook command prints and the CLI folds into the turn; every other hook gets an empty 204. A permission
+ * request is only a status: the CLI's own prompt is where it is answered.
  */
 export const handleHookRequest = async (
     request: Request,
     pathname: string,
     target: HookTarget,
-    contextHintForToken?: (token: string, event: string, kind: AgentKind) => string | null,
-    holdApproval?: ApprovalHold
+    contextHintForToken?: (token: string, event: string, kind: AgentKind) => string | null
 ): Promise<Response> => {
     if (request.method !== 'POST') {
         return new Response('Method not allowed', { status: 405 });
@@ -76,14 +68,6 @@ export const handleHookRequest = async (
         return new Response('Unknown token', { status: 401 });
     }
     const event = eventOf(body);
-    if (result === 'applied' && holdApproval && event === PERMISSION_EVENT) {
-        // The CLI is showing its own prompt while this waits, so an answer of null is not a failure:
-        // it is the daemon stepping aside and leaving the question where it already was.
-        const decision = await holdApproval(token, body, request.signal);
-        if (decision !== null) {
-            return Response.json({ hookSpecificOutput: { hookEventName: PERMISSION_EVENT, decision } });
-        }
-    }
     if (takesHookContext(kind.data) && event !== null && CONTEXT_EVENTS.has(event)) {
         const hint = contextHintForToken?.(token, event, kind.data) ?? null;
         if (hint !== null) {

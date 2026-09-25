@@ -5,7 +5,6 @@ import { useChats } from '@/state/chats';
 import { computerApprovalsOf, useComputer } from '@/state/computer';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
-import { useSettings } from '@/state/settings';
 
 const NONE: CanvasPrompt[] = [];
 
@@ -26,7 +25,6 @@ export const useCanvasPrompts = (): CanvasPrompt[] => {
                 endpointId,
                 sessions: useSessions.getState().byKey,
                 chats: useChats.getState().byKey,
-                approvalsOffered: useSettings.getState().agentsApprovals,
                 computer: computerApprovalsOf(endpointId),
                 waitingSince: waitingSince.current
             });
@@ -34,13 +32,7 @@ export const useCanvasPrompts = (): CanvasPrompt[] => {
             setPrompts((current) => (samePrompts(current, next.prompts) ? current : next.prompts));
         };
         update();
-        const unsubscribe = [
-            canvasStore.subscribe(update),
-            useChats.subscribe(update),
-            useSessions.subscribe(update),
-            useSettings.subscribe(update),
-            useComputer.subscribe(update)
-        ];
+        const unsubscribe = [canvasStore.subscribe(update), useChats.subscribe(update), useSessions.subscribe(update), useComputer.subscribe(update)];
         return () => {
             for (const off of unsubscribe) {
                 off();

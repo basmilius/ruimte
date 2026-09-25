@@ -144,12 +144,6 @@
     "position": "{{index}} van {{count}}",
     "failed": "Deze prompt kon niet worden getekend"
   },
-  "approval": {
-    "wantsPermission": "{{tool}} vraagt toestemming",
-    "wantsToRun": "wil iets uitvoeren",
-    "more_one": "nog {{count}}",
-    "more_other": "nog {{count}}"
-  },
   "text": {
     "placeholder": "Typ iets",
     "copy": "Tekst kopiëren",

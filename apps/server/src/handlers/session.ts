@@ -65,14 +65,7 @@ export const registerSessionHandlers = (dispatcher: Dispatcher, manager: Session
         })
     );
 
-    // Answering a request that is already settled is not an error. A second client is simply late.
-    dispatcher.register('agent.answerApproval', (payload) => ({
-        accepted: manager.answerApproval(payload.sessionId, payload.requestId, payload.choiceId)
-    }));
-
-    // A client that will not show a permission request says so, and this daemon stops holding one for it.
-    dispatcher.register('agent.setApprovals', (payload, client) => {
-        manager.setApprovalPreference(client.id, payload.enabled);
-        return {};
-    });
+    // A terminal's permission request is answered in its CLI's own prompt; these two stay for clients built before that.
+    dispatcher.register('agent.answerApproval', () => ({ accepted: false }));
+    dispatcher.register('agent.setApprovals', () => ({}));
 };

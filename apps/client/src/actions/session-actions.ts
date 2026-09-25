@@ -659,15 +659,6 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
             await ask('chat.approve', { chatId, requestId, decision, ...(message == null ? {} : { message }) });
             return { output: { chatId, chat, requestId } };
         },
-        'terminal.answerApproval': async ({ terminalId, requestId, choiceId }, call) => {
-            const terminal = terminalNamed(terminalId, call);
-            // Settled already is an answer, not a failure: another client was first, or the CLI's own prompt was.
-            const accepted = await connected()
-                .request('agent.answerApproval', { sessionId: terminalId, requestId, choiceId })
-                .then((result) => result.accepted)
-                .catch(() => false);
-            return { output: { terminalId, terminal, accepted } };
-        },
         'computer.answerApproval': async ({ requestId, choice }) => {
             // Gone already is an answer, not a failure: another client was first, or the card ran out.
             const accepted = await connected()

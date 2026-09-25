@@ -170,7 +170,6 @@ describe('offline push delivery', () => {
     test('two connections of one paired key suppress delivery until both close', async () => {
         const first = service.connected(sessionId);
         const second = service.connected(sessionId);
-        expect(await service.hasOfflineApprovals()).toBe(false);
         first();
         status('running');
         status('needs-you');
@@ -181,7 +180,6 @@ describe('offline push delivery', () => {
         status('needs-you');
         await service.settled();
         expect(pushes.length).toBe(1);
-        expect(await service.hasOfflineApprovals()).toBe(true);
     });
 
     test('revocation removes persisted subscriptions and wins over queued notifications', async () => {
@@ -190,7 +188,6 @@ describe('offline push delivery', () => {
         await auth.revoke(sessionId);
         await service.settled();
         expect(pushes).toEqual([]);
-        expect(await service.hasOfflineApprovals()).toBe(false);
         expect(await new AuthStore(home).pushSubscriptions()).toEqual([]);
     });
 
@@ -217,29 +214,36 @@ describe('offline push delivery', () => {
         expect(await readFile(join(home, 'auth.json'), 'utf8')).toContain(subscription.publicKey);
     });
 
-    test('approvals notify once per request even outside followed nodes and carry expiry/choices', async () => {
-        const approval = {
-            requestId: 'request',
-            sessionId: 'other',
-            toolName: 'Shell',
-            summary: 'Run test',
-            choices: [{ id: 'allow', kind: 'allow' as const, label: 'Allow' }],
-            createdAt: NOW,
-            expiresAt: NOW + 110_000
-        };
-        service.consume({ event: 'session.approvals', payload: { sessionId: 'other', approvals: [approval] } });
-        service.consume({ event: 'session.approvals', payload: { sessionId: 'other', approvals: [approval] } });
+    test('a chat approval notifies once per request even outside followed nodes and carries its choices', async () => {
+        const approval = (requestId: string) => ({
+            event: 'chat.event' as const,
+            payload: {
+                chatId: 'other',
+                event: {
+                    type: 'item' as const,
+                    item: {
+                        id: requestId,
+                        createdAt: NOW,
+                        turnId: null,
+                        kind: 'approval' as const,
+                        requestId,
+                        toolUseId: null,
+                        toolName: 'Bash',
+                        input: {},
+                        description: 'Run test',
+                        canAllowAlways: false,
+                        decision: 'pending' as const
+                    }
+                }
+            }
+        });
+        service.consume(approval('request'));
+        service.consume(approval('request'));
         await service.settled();
         expect(pushes.length).toBe(1);
-        expect(decrypt(pushes[0]!)).toMatchObject({
-            kind: 'approval',
-            nodeId: 'other',
-            requestId: 'request',
-            expiresAt: approval.expiresAt,
-            choices: approval.choices
-        });
+        expect(decrypt(pushes[0]!)).toMatchObject({ kind: 'approval', target: 'chat', nodeId: 'other', requestId: 'request', body: 'Run test' });
         await auth.setPush(sessionId, { ...subscription, approvals: false });
-        service.consume({ event: 'session.approvals', payload: { sessionId: 'other', approvals: [{ ...approval, requestId: 'second' }] } });
+        service.consume(approval('second'));
         await service.settled();
         expect(pushes.length).toBe(1);
     });
@@ -279,46 +283,6 @@ describe('offline push delivery', () => {
         const activities = pushes.filter((push) => push.pushType === 'liveactivity');
         expect(activities.map((push) => push.activity.phase)).toEqual(['running', 'done']);
         expect(activities[0]!.activity).toEqual({ title: 'Secret project', phase: 'running', startedAt: NOW });
-    });
-
-    test('an offline paired approval subscription holds a real hook without counting the observer as a viewer', async () => {
-        const harness = await makeHarness();
-        try {
-            await harness.manager.create({ sessionId: 'node', cols: 80, rows: 24, shell: '/bin/sh', args: [], cwd: harness.home });
-            harness.manager.observe((event) => service.consume(event));
-            harness.manager.offlineApprovals = () => service.hasOfflineApprovals();
-            expect(harness.manager.wantsApprovals()).toBe(false);
-            let ready!: () => void;
-            const appeared = new Promise<void>((resolve) => {
-                ready = resolve;
-            });
-            const stop = harness.manager.observe((event) => {
-                if (event.event === 'session.approvals' && event.payload.approvals.length) {
-                    ready();
-                }
-            });
-            const token = harness.manager.get('node')!.hookToken;
-            const decision = harness.manager.holdApproval(
-                token,
-                { hook_event_name: 'PermissionRequest', session_id: 'cli', tool_name: 'Bash', tool_input: { command: 'pwd' } },
-                new AbortController().signal
-            );
-            await appeared;
-            const approval = harness.manager.list()[0]!.approvals![0]!;
-            expect(harness.manager.answerApproval('node', approval.requestId, approval.choices[0]!.id)).toBe(true);
-            expect(await decision).not.toBeNull();
-            stop();
-            await auth.revoke(sessionId);
-            expect(
-                await harness.manager.holdApproval(
-                    token,
-                    { hook_event_name: 'PermissionRequest', tool_name: 'Bash', tool_input: { command: 'pwd' } },
-                    new AbortController().signal
-                )
-            ).toBeNull();
-        } finally {
-            await harness.cleanup();
-        }
     });
 });
 

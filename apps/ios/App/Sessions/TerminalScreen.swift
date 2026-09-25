@@ -19,13 +19,6 @@ struct TerminalScreen: View {
     var body: some View {
         VStack(spacing: 0) {
             if let error = model.error { SessionErrorBanner(message: error) { model.attach() } }
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                if let request = model.approvals.first(where: {
-                    ($0["expiresAt"]?.numberValue ?? 0) > context.date.timeIntervalSince1970 * 1000
-                }) {
-                    approvalStrip(request, now: context.date)
-                }
-            }
             if model.loading { MobileLoadingRow("Loading terminal…").padding() }
             HStack {
                 MobileStatus(
@@ -102,28 +95,6 @@ struct TerminalScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
-    }
-
-    private func approvalStrip(_ request: JSONValue, now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label(request["toolName"]?.stringValue ?? "Permission", lucideIcon: "hand").font(.headline)
-                Spacer()
-                let seconds = max(0, Int((request["expiresAt"]?.numberValue ?? 0) / 1000 - now.timeIntervalSince1970))
-                Text("\(seconds)s").font(.caption.monospacedDigit()).foregroundStyle(MobileStyle.muted)
-            }
-            Text(request["summary"]?.stringValue ?? "").font(.callout).lineLimit(6).textSelection(.enabled)
-            ScrollView(.horizontal) {
-                HStack {
-                    ForEach(Array((request["choices"]?.arrayValue ?? []).enumerated()), id: \.offset) { _, choice in
-                        Button(choice["label"]?.stringValue ?? "Answer") {
-                            Task { await model.answer(request, choice: choice) }
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                }
-            }
-        }.padding().background(.regularMaterial).disabled(!model.connected)
     }
 }
 

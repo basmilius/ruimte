@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentInfo, ApprovalRequest, ChatInfo, ChatItem, ComputerApproval } from '@ruimte/contracts';
+import type { AgentInfo, ChatInfo, ChatItem, ComputerApproval } from '@ruimte/contracts';
 import { PROMPT_SAMPLES } from '@/prompts/logic/prompts.fixtures';
 import type { ChatsById } from '@/state/chats';
 import { endpointKey } from '@/state/keys';
@@ -26,30 +26,19 @@ const agent = (status: AgentInfo['status'], updatedAt: number): AgentInfo => ({
     updatedAt
 });
 
-const request = (requestId: string, createdAt: number): ApprovalRequest => ({
-    requestId,
-    sessionId: 'api',
-    toolName: 'Bash',
-    summary: 'bun test',
-    choices: [{ id: 'allow', kind: 'allow', label: 'Allow' }],
-    createdAt,
-    expiresAt: createdAt + 110_000
-});
-
 const node = (id: string, kind: 'chat' | 'terminal' | 'note') => ({ id, kind, title: id });
 
 const input = (overrides: Partial<CanvasPromptsInput> = {}): CanvasPromptsInput => ({
     nodes: [node('api', 'terminal'), node('docs', 'chat'), node('ios', 'terminal'), node('merge', 'chat'), node('note', 'note')],
     endpointId: ENDPOINT,
     sessions: {
-        [key('api')]: { attached: true, agent: agent('needs-you', 100), approvals: [request('api-1', 100)] },
+        [key('api')]: { attached: true, agent: agent('needs-you', 100) },
         [key('ios')]: { attached: true, agent: agent('needs-you', 400) }
     } satisfies SessionsByKey,
     chats: {
         [key('docs')]: chatOf([{ ...optional, id: 'docs-q', requestId: 'docs-q', createdAt: 50 }]),
         [key('merge')]: chatOf([{ ...approval, id: 'merge-a', requestId: 'merge-a', createdAt: 300 }])
     },
-    approvalsOffered: true,
     computer: [],
     waitingSince: new Map(),
     ...overrides
@@ -69,10 +58,10 @@ const computerCard = (nodeId: string, createdAt: number): ComputerApproval => ({
 });
 
 describe('canvasPrompts', () => {
-    test('four kinds of prompt come blocking first, oldest first, with an optional question last', () => {
+    test('prompts come blocking first, oldest first, with an optional question last', () => {
         const { prompts } = canvasPrompts(input());
         expect(prompts.map((prompt) => [prompt.subject.kind, prompt.title])).toEqual([
-            ['terminal-approval', 'api'],
+            ['terminal-waiting', 'api'],
             ['chat', 'merge'],
             ['terminal-waiting', 'ios'],
             ['chat', 'docs']
@@ -90,7 +79,7 @@ describe('canvasPrompts', () => {
         expect(prompts.map((prompt) => [prompt.subject.kind, prompt.title, prompt.surface])).toEqual([
             ['computer-approval', 'docs', 'chat'],
             ['computer-approval', 'ios', 'terminal'],
-            ['terminal-approval', 'api', 'terminal'],
+            ['terminal-waiting', 'api', 'terminal'],
             ['chat', 'merge', 'chat'],
             ['terminal-waiting', 'ios', 'terminal'],
             ['chat', 'docs', 'chat']
@@ -108,17 +97,9 @@ describe('canvasPrompts', () => {
             ...base.chats,
             [key('merge')]: chatOf([{ ...approval, id: 'merge-a', requestId: 'merge-a', createdAt: 300, decision: 'allow' } as ChatItem])
         };
-        const sessions = { ...base.sessions, [key('api')]: { attached: true, agent: agent('running', 500), approvals: [] } };
+        const sessions = { ...base.sessions, [key('api')]: { attached: true, agent: agent('running', 500) } };
         const { prompts } = canvasPrompts({ ...base, chats, sessions });
         expect(prompts.map((prompt) => prompt.title)).toEqual(['ios', 'docs']);
-    });
-
-    test('with approvals off a terminal that asks is a waiting card instead', () => {
-        const { prompts } = canvasPrompts(input({ approvalsOffered: false }));
-        expect(prompts.filter((prompt) => prompt.surface === 'terminal').map((prompt) => [prompt.subject.kind, prompt.title])).toEqual([
-            ['terminal-waiting', 'api'],
-            ['terminal-waiting', 'ios']
-        ]);
     });
 
     test('a waiting terminal keeps the time it was first seen waiting, and loses it once it stops', () => {
@@ -127,7 +108,7 @@ describe('canvasPrompts', () => {
         const later = input({ waitingSince: first.waitingSince });
         later.sessions = { ...later.sessions, [key('ios')]: { attached: true, agent: agent('needs-you', 900) } };
         const second = canvasPrompts(later);
-        const waiting = second.prompts.find((prompt) => prompt.subject.kind === 'terminal-waiting')!;
+        const waiting = second.prompts.find((prompt) => prompt.subject.kind === 'terminal-waiting' && prompt.title === 'ios')!;
         expect(waiting.subject).toEqual({ kind: 'terminal-waiting', nodeId: 'ios', since: 400 });
         later.sessions = { ...later.sessions, [key('ios')]: { attached: true, agent: agent('running', 950) } };
         expect(canvasPrompts({ ...later, waitingSince: second.waitingSince }).waitingSince.has(key('ios'))).toBe(false);
@@ -150,7 +131,13 @@ describe('samePrompts', () => {
         const base = input();
         const stable = { ...base, waitingSince: first.waitingSince };
         expect(samePrompts(canvasPrompts(stable).prompts, canvasPrompts(stable).prompts)).toBe(true);
-        const sessions = { ...base.sessions, [key('api')]: { attached: true, agent: agent('needs-you', 100), approvals: [request('api-2', 150)] } };
-        expect(samePrompts(canvasPrompts(stable).prompts, canvasPrompts({ ...stable, sessions }).prompts)).toBe(false);
+        const chats = {
+            ...base.chats,
+            [key('merge')]: chatOf([
+                { ...approval, id: 'merge-a', requestId: 'merge-a', createdAt: 300 },
+                { ...approval, id: 'merge-b', requestId: 'merge-b', createdAt: 350 }
+            ])
+        };
+        expect(samePrompts(canvasPrompts(stable).prompts, canvasPrompts({ ...stable, chats }).prompts)).toBe(false);
     });
 });

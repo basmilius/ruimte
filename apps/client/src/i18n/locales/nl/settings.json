@@ -375,10 +375,6 @@
         "here": {
             "title": "Wat een agent hier mag",
             "description": "Deze instellingen gelden alleen voor deze client.",
-            "approvals": {
-                "label": "Vraag mij om toestemming in de node",
-                "description": "Verzoeken om toestemming van terminal-agents verschijnen in de header van de node, en het eerste antwoord telt. Staat dit venster op de achtergrond, dan krijg je ook een notificatie, want een verzoek verloopt na een paar minuten. Uit antwoord je in de terminal."
-            },
             "showViews": {
                 "label": "Een agent een weergave laten tonen",
                 "description": "Aan vervangt de weergave waarin je werkt door de weergave die een agent opent, en een banner brengt je terug. Uit biedt de banner een knop om ernaartoe te gaan."

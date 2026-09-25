@@ -13,7 +13,6 @@ import { usePage } from '@/nodes/use-page';
 import { DeviceBody } from '@/devices/DeviceBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
-import { ApprovalStrip } from '@/canvas/ApprovalStrip';
 import { FileSurface } from '@/shell/panels/FileSurface';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
@@ -43,14 +42,7 @@ function StandaloneView({ view }: { view: ProjectView }) {
                     <ChatBody id={view.id} focused={focused} />
                 </div>
             )}
-            {view.kind === 'terminal' && (
-                <div className="flex h-full w-full flex-col">
-                    <ApprovalStrip id={view.id} />
-                    <div className="relative min-h-0 grow">
-                        <TerminalBody id={view.id} focused={focused} />
-                    </div>
-                </div>
-            )}
+            {view.kind === 'terminal' && <TerminalBody id={view.id} focused={focused} />}
             {view.kind === 'browser' && <BrowserViewSurface id={view.id} />}
             {view.kind === 'device' && <DeviceBody id={view.id} />}
             {view.kind === 'drawing' && (
