@@ -44,7 +44,7 @@ import type { ChatRecord, ChatStore } from './chat-store.ts';
 import { ComposerPreferences } from './composer-preferences.ts';
 import { DeltaCoalescer } from './delta-coalescer.ts';
 import { ChatError } from './errors.ts';
-import { continueOnWake, limitedTurn } from './limit-resume.ts';
+import { continueOnWake, continuedInForkNote, limitedTurn } from './limit-resume.ts';
 import type { CodexProcessSpec } from './codex-thread.ts';
 import { claudeProjectSlug } from './claude-transcript.ts';
 import { SubagentReader, type SubagentReaderOptions } from './subagent-reader.ts';
@@ -1122,9 +1122,10 @@ export class ChatManager {
         this.require(forkId).wake({ ...continueOnWake(limit, this.accountLabel(info.provider, info.account), true), taskIds: [] });
     }
 
-    /* The chat went on elsewhere, so a resume of its limited turn the outbox owes lapses. */
-    dropOwedResume(chatId: string): void {
-        this.chats.get(chatId)?.dropOwedResume();
+    /* The limited turn of the chat went on in a fork under `account`, so the chat itself never takes it up. */
+    continuedInFork(chatId: string, account: string | undefined): void {
+        const session = this.chats.get(chatId);
+        session?.continuedInFork(continuedInForkNote(this.accountLabel(session.info.provider, account)));
     }
 
     /* The machine's switch for resuming after a limit changed; every chat loaded here looks again. */

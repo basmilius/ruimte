@@ -7,6 +7,7 @@ import type {
     ChatQueuedMessage,
     ChatSkill,
     ChatSubagentItem,
+    ChatTurnItem,
     ContextSource,
     ModelSelection,
     RuntimeMode,
@@ -93,6 +94,9 @@ export const RESUME_PROMPT = 'The machine restarted while you were working on th
 
 // Said in front of a resume when the chat keeps a plan with steps left.
 export const PLAN_RESUME_PREAMBLE = 'You keep a plan in this chat: ruimte-context plan read shows where you were.';
+
+/* One per limited turn, so a second fork of the same turn writes no second note. */
+const continuedNoteId = (turnId: string): string => `continued-${turnId}`;
 
 const newId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -587,6 +591,11 @@ export class ChatSession {
         );
     }
 
+    /* A limited turn a fork went on with is that fork's to take up, never this chat's. */
+    private wentOn(turn: ChatTurnItem): boolean {
+        return this.thread.get(continuedNoteId(turn.id)) !== undefined;
+    }
+
     private resumeAllowed(): boolean {
         return this.options.limitResume?.allowed() === true && this.thread.info.resumeAtReset !== false;
     }
@@ -599,7 +608,7 @@ export class ChatSession {
     private oweResume(fresh: boolean): void {
         const hooks = this.options.limitResume;
         const turn = limitedTurn(this.thread.list());
-        if (!hooks || turn === null || this.thread.info.activeTurnId !== null || this.frozen || !this.resumeAllowed()) {
+        if (!hooks || turn === null || this.thread.info.activeTurnId !== null || this.frozen || !this.resumeAllowed() || this.wentOn(turn)) {
             return;
         }
         const now = hooks.now();
@@ -642,9 +651,18 @@ export class ChatSession {
         this.lapseResume();
     }
 
-    /* The limited turn went on elsewhere, so what the outbox owes for it lapses. */
-    dropOwedResume(): void {
+    /*
+     * The limited turn went on in a fork, so what the outbox owes for it lapses, and the note says where
+     * it went. The note is also the mark that keeps a switch turned on later from owing that turn again.
+     */
+    continuedInFork(note: string): void {
         this.lapseResume();
+        const turn = limitedTurn(this.thread.list());
+        if (turn === null || this.wentOn(turn)) {
+            return;
+        }
+        this.emit([this.thread.upsert({ id: continuedNoteId(turn.id), kind: 'note', createdAt: Date.now(), turnId: turn.id, level: 'info', text: note })]);
+        this.options.persist();
     }
 
     private lapseResume(): void {

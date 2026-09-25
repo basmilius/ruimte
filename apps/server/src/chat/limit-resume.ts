@@ -88,3 +88,6 @@ export const continueOnWake = (kind: ChatTurnLimit['kind'], account: string, for
         note: `Continued under the account '${account}' after the previous turn ${reason}`
     };
 };
+
+/* What the original of a fork that went on after its limited turn says under that turn. */
+export const continuedInForkNote = (account: string): string => `Continued under the account '${account}' in a fork`;

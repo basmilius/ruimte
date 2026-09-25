@@ -243,6 +243,20 @@ describe('going on under another account after a limit', () => {
         expect(daemon.chats.get('chat-lead')!.info.account).toBeUndefined();
         expect(daemon.chats.get('chat-lead')!.info.resumeAt).toBeUndefined();
         expect(turnsOf('chat-lead')).toHaveLength(1);
+
+        // The fork took the turn over: turning the original's switch off and on again, reset still ahead, owes it nothing.
+        const original = daemon.chats.get('chat-lead')!;
+        expect(original.thread.list().filter((item) => item.kind === 'note' && item.text === "Continued under the account 'Personal' in a fork")).toHaveLength(
+            1
+        );
+        original.configure({ resumeAtReset: false });
+        original.configure({ resumeAtReset: true });
+        machine.resumeAtReset = false;
+        daemon.chats.resumeSettingChanged();
+        machine.resumeAtReset = true;
+        daemon.chats.resumeSettingChanged();
+        expect(owedResumes().filter((entry) => entry.target === 'chat-lead')).toEqual([]);
+        expect(original.info.resumeAt).toBeUndefined();
     });
 
     test('is refused for a chat whose last turn did not stop on a limit, and for the account it already runs under', async () => {
