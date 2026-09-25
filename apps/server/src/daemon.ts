@@ -58,7 +58,7 @@ import { Handshake } from './auth/handshake.ts';
 import type { Relay } from './auth/relay.ts';
 import { HOOKS_PATH, handleHookRequest } from './agents/hook-receiver.ts';
 import { HOOK_EVENTS } from './agents/hooks.ts';
-import { defaultCodexRulesPath, defaultHookPaths, installCodexRules, installHooks } from './agents/install.ts';
+import { defaultCodexRulesPath, defaultHookPaths, installCodexRules, installHooks, installInFolder } from './agents/install.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './chat/attachment-route.ts';
 import { AttachmentStore } from './chat/attachment-store.ts';
 import { CANVAS_PATH, CANVAS_REQUEST_TIMEOUT_S, handleCanvasRequest } from './canvas/canvas-route.ts';
@@ -96,6 +96,7 @@ import { readMachineModel } from './machine-model.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
 import { registerProcessHandlers } from './handlers/processes.ts';
 import { registerUsageHandlers } from './handlers/usage.ts';
+import { registerProviderAccountHandlers } from './handlers/providers.ts';
 import { registerComputerHandlers } from './handlers/computer.ts';
 import { ComputerUse } from './computer/computer-use.ts';
 import { ComputerHelper, locateHelperApp } from './computer/helper.ts';
@@ -118,6 +119,7 @@ import { isTrackedPath } from './git/ignore.ts';
 import { ProjectStore } from './projects/project-store.ts';
 import { probeCodexNoDaemon, takesNoteOnLine } from './providers/launch.ts';
 import { ProviderRegistry } from './providers/registry.ts';
+import { ProviderAccountsService } from './providers/accounts/service.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
 import { SessionError, SessionManager } from './sessions/manager.ts';
 import { CommandApprovals, commandsSet } from './sessions/command-approvals.ts';
@@ -426,6 +428,20 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const statuses = new GitStatusWatcher();
     const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
     const limits = new UsageMonitor({ providers });
+    const providerAccounts = new ProviderAccountsService({
+        ruimteHome: config.home,
+        providers,
+        install: config.installHooks
+            ? async (kind, folder) => {
+                  for (const { path, result } of await installInFolder(kind, folder)) {
+                      if (result === 'written') {
+                          console.log(`Installed ${kind} status hooks in ${path}`);
+                      }
+                  }
+              }
+            : undefined
+    });
+    await providerAccounts.load();
     const sampler = await createSampler(process.platform, config.home);
     const processes = new ProcessMonitor({
         sampler,
@@ -649,6 +665,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         media: readMedia
     });
     registerUsageHandlers(dispatcher, usage, limits);
+    registerProviderAccountHandlers(dispatcher, providerAccounts);
     registerProcessHandlers(dispatcher, processes);
     registerComputerHandlers(dispatcher, computer);
     registerGitHandlers(dispatcher, worktrees, merges, statuses, providers);
@@ -753,6 +770,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         statuses,
         usage,
         limits,
+        providerAccounts,
         processes,
         tasks,
         worktrees,
@@ -996,6 +1014,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
 
     // The first read runs now, so a page opened straight after a start already has the plan on it.
     limits.start();
+    providerAccounts.start();
     processes.start();
 
     // Hooks and context always go over loopback, whatever interface the socket listens on.
@@ -1041,6 +1060,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         snapshotSchedule.stop();
         usage.stop();
         limits.stop();
+        providerAccounts.stop();
         processes.stop();
         // Before anything is awaited: a `bun --watch` reload restarts the module during the first
         // await, so a turn in flight would otherwise never reach its file.

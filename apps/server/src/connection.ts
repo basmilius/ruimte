@@ -56,6 +56,7 @@ export interface ConnectionServices {
     statuses: Attachable;
     usage: Subscribable;
     limits: Subscribable;
+    providerAccounts?: Subscribable;
     processes: Subscribable;
     tasks?: Subscribable;
     worktrees?: Subscribable;
@@ -116,6 +117,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             services.statuses.subscribe(clientId, sink),
             services.usage.subscribe(clientId, sink),
             services.limits.subscribe(clientId, sink),
+            services.providerAccounts?.subscribe(clientId, sink) ?? (() => undefined),
             services.processes.subscribe(clientId, sink),
             services.tasks?.subscribe(clientId, sink) ?? (() => undefined),
             services.worktrees?.subscribe(clientId, sink) ?? (() => undefined),

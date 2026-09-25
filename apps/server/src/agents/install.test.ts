@@ -3,7 +3,7 @@ import { chmod, lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { HOOK_EVENTS } from './hooks.ts';
-import { CODEX_RULES, HOOK_MARKER, defaultCodexRulesPath, hookCommand, installCodexRules, installHooks, mergeHooks } from './install.ts';
+import { CODEX_RULES, HOOK_MARKER, defaultCodexRulesPath, hookCommand, installCodexRules, installHooks, installInFolder, mergeHooks } from './install.ts';
 
 const other = { type: 'command', command: 'echo other' };
 
@@ -152,5 +152,35 @@ describe('installCodexRules', () => {
     test('lands in the rules folder of CODEX_HOME', () => {
         expect(defaultCodexRulesPath({ CODEX_HOME: '/x/codex', HOME: '/home/a' })).toBe('/x/codex/rules/ruimte.rules');
         expect(defaultCodexRulesPath({ HOME: '/home/a' })).toBe('/home/a/.codex/rules/ruimte.rules');
+    });
+});
+
+describe('installInFolder', () => {
+    let dir: string;
+
+    beforeEach(async () => {
+        dir = await mkdtemp(join(tmpdir(), 'ruimte-folder-'));
+    });
+
+    afterEach(async () => {
+        await rm(dir, { recursive: true, force: true });
+    });
+
+    test('puts the hooks of Claude Code in the settings of that folder', async () => {
+        expect(await installInFolder('claude', dir)).toEqual([{ path: join(dir, 'settings.json'), result: 'written' }]);
+        expect(await readFile(join(dir, 'settings.json'), 'utf8')).toContain(HOOK_MARKER);
+        expect(await installInFolder('claude', dir)).toEqual([{ path: join(dir, 'settings.json'), result: 'unchanged' }]);
+    });
+
+    test('gives a Codex folder its hooks and the rule', async () => {
+        expect(await installInFolder('codex', dir)).toEqual([
+            { path: join(dir, 'hooks.json'), result: 'written' },
+            { path: join(dir, 'rules', 'ruimte.rules'), result: 'written' }
+        ]);
+        expect(await readFile(join(dir, 'rules', 'ruimte.rules'), 'utf8')).toBe(CODEX_RULES);
+    });
+
+    test('writes nothing for a CLI whose hooks the daemon cannot read', async () => {
+        expect(await installInFolder('gemini', dir)).toEqual([]);
     });
 });

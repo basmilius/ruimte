@@ -133,12 +133,23 @@ export const installHooks = async (link: string, kind: AgentKind): Promise<Insta
     return 'written';
 };
 
+/* The file a CLI reads user-level hooks from inside one of its config folders; null for a CLI whose hooks the daemon cannot read. */
+export const hookPathIn = (kind: AgentKind, folder: string): string | null => {
+    if (kind === 'claude') {
+        return join(folder, 'settings.json');
+    }
+    if (kind === 'codex') {
+        return join(folder, 'hooks.json');
+    }
+    return null;
+};
+
 // Where each CLI reads user-level hooks from; a CLI whose hooks the daemon cannot read is not listed.
 export const defaultHookPaths = (env: Record<string, string | undefined> = process.env): Partial<Record<AgentKind, string>> => {
     const home = env.HOME ?? homedir();
     return {
-        claude: join(env.CLAUDE_CONFIG_DIR ?? join(home, '.claude'), 'settings.json'),
-        codex: join(env.CODEX_HOME ?? join(home, '.codex'), 'hooks.json')
+        claude: hookPathIn('claude', env.CLAUDE_CONFIG_DIR ?? join(home, '.claude'))!,
+        codex: hookPathIn('codex', env.CODEX_HOME ?? join(home, '.codex'))!
     };
 };
 
@@ -166,6 +177,30 @@ export const installCodexRules = async (path: string): Promise<InstallResult> =>
     return 'written';
 };
 
-// Codex loads every `*.rules` file in this folder.
+// Codex loads every `*.rules` file in the `rules` folder of its home.
+export const codexRulesPathIn = (folder: string): string => join(folder, 'rules', 'ruimte.rules');
+
 export const defaultCodexRulesPath = (env: Record<string, string | undefined> = process.env): string =>
-    join(env.CODEX_HOME ?? join(env.HOME ?? homedir(), '.codex'), 'rules', 'ruimte.rules');
+    codexRulesPathIn(env.CODEX_HOME ?? join(env.HOME ?? homedir(), '.codex'));
+
+export interface FolderInstall {
+    path: string;
+    result: InstallResult;
+}
+
+/*
+ * Everything the daemon puts in one config folder of a CLI: its hooks, and for Codex the rule that
+ * lets `ruimte-context` out of the sandbox. Answers what was written where, so the caller can say so.
+ */
+export const installInFolder = async (kind: AgentKind, folder: string): Promise<FolderInstall[]> => {
+    const hookPath = hookPathIn(kind, folder);
+    if (hookPath === null) {
+        return [];
+    }
+    const installs = [{ path: hookPath, result: await installHooks(hookPath, kind) }];
+    if (kind === 'codex') {
+        const rulesPath = codexRulesPathIn(folder);
+        installs.push({ path: rulesPath, result: await installCodexRules(rulesPath) });
+    }
+    return installs;
+};
