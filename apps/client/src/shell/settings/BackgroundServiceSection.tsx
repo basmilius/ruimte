@@ -58,8 +58,9 @@ export function BackgroundServiceSection() {
     };
 
     return (
-        <SettingsSection title={t('backgroundService.title')}>
+        <SettingsSection title={t('backgroundService.title')} scope="computer">
             <SettingsRow
+                searchId="machines.machine.keepRunning"
                 label={t('backgroundService.keepRunning.label')}
                 description={row.unavailable ?? t('backgroundService.keepRunning.description')}
                 muted={row.toggle === null}
@@ -74,7 +75,7 @@ export function BackgroundServiceSection() {
                     )
                 }
             />
-            {row.pending && <p className="px-4 pb-3 text-xs break-words text-text-muted">{row.pending}</p>}
+            {row.pending && <p className="px-4.5 pb-3 text-xs break-words text-text-muted">{row.pending}</p>}
             {restartLine && bridge.restartNow && (
                 <SettingsRow
                     label={t('backgroundService.restart.label')}
@@ -87,7 +88,7 @@ export function BackgroundServiceSection() {
                 />
             )}
             {row.failure && (
-                <p className={`${FORM_ERROR} px-4 pb-3 break-words`} role="alert">
+                <p className={`${FORM_ERROR} px-4.5 pb-3 break-words`} role="alert">
                     {t('backgroundService.failure', { reason: row.failure })}
                 </p>
             )}

@@ -20,7 +20,7 @@ export interface MachineDialogModel {
     canAddToAccountAgain: boolean;
 }
 
-/* What the dialog of one machine offers, from what this client knows about it. */
+/* What the detail of one machine offers, from what this client knows about it. */
 export const machineDialogModel = (entry: MachineEntry, context: MachineContext): MachineDialogModel => ({
     settings: entry.endpoint === null ? 'not-opened' : context.connected ? 'ready' : 'not-answering',
     direct: entry.endpoint !== null && entry.endpoint.httpBaseUrl !== '',

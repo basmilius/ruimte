@@ -19,7 +19,7 @@ import { linkDot, linkHint, machineLink } from '@/shell/palette-browse';
 import { SignInButtons } from '@/shell/SignInButtons';
 import { runAppShortcut } from '@/shell/app-shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import { AddMachineDialog } from '@/shell/settings/MachinesSection';
+import { AddMachineDialog } from '@/shell/settings/AddMachineDialog';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { mergeMachines, nameOf, type MachineEntry } from '@/shell/settings/machine-list';
 import { stationBoot } from '@/station';
@@ -313,12 +313,7 @@ function StartContent() {
                 </div>
             )}
 
-            <AddMachineDialog
-                nested={false}
-                open={dialog === 'add'}
-                onOpenChange={(open) => setDialog(open ? 'add' : null)}
-                onLinkWithCode={() => setDialog('link')}
-            />
+            <AddMachineDialog open={dialog === 'add'} onOpenChange={(open) => setDialog(open ? 'add' : null)} onLinkWithCode={() => setDialog('link')} />
             <LinkMachineDialog open={dialog === 'link'} initialCode={null} onOpenChange={(open) => setDialog(open ? 'link' : null)} />
         </div>
     );

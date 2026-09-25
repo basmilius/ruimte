@@ -32,7 +32,7 @@ export const useEndpointConnection = (endpointId: string): ConnectionState =>
 
 /*
  * Keeps one machine's link up for as long as this is on screen, opening it when there is none. Only
- * for a surface that is an explicit look at that machine (its dialog): a list, a dot or a page about
+ * for a surface that is an explicit look at that machine (its detail in settings): a list, a dot or a page about
  * every machine never holds, or opening settings would connect to all of them.
  */
 export const useMachineHold = (endpoint: Endpoint | null): void => {

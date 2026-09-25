@@ -1,7 +1,9 @@
 import i18next from 'i18next';
-import { canKeepAwake, canSwipeBetweenPages } from '@/desktop/bridge';
+import { canKeepAwake, canSwipeBetweenPages, desktop } from '@/desktop/bridge';
 import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
+import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { hasLocalMachine } from '@/state/local-machine';
 import type { SettingsSectionId } from '@/state/ui';
 import { formatShortcut } from '@/ui/shortcut';
 
@@ -15,6 +17,8 @@ interface SearchEntry {
     /* A row the pane only draws where it can act, so a result never leads to nothing. */
     available?: () => boolean;
 }
+
+const hasOpenedMachine = (): boolean => useEndpoints.getState().endpoints.some((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID || hasLocalMachine());
 
 /*
  * The rows a search can find. A pane draws only while it is open, so the rows cannot be read off the
@@ -159,6 +163,52 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         section: 'computer',
         label: 'settings:computer.grant.screenRecording.label',
         description: 'settings:computer.grant.screenRecording.description'
+    },
+    // On the account row of the Account pane.
+    { id: 'machines.signIn', section: 'machines', label: 'settings:machines.account.title', description: 'settings:machines.account.description' },
+    { id: 'machines.add', section: 'machines', label: 'settings:machines.add.title', description: 'settings:machines.add.hint' },
+    // On the detail of a machine this client opened: the one picked, else this machine.
+    {
+        id: 'machines.machine.identity',
+        section: 'machines',
+        label: 'settings:machineDialog.identity.title',
+        description: 'settings:machineDialog.identity.description',
+        available: hasOpenedMachine
+    },
+    {
+        id: 'machines.machine.broker',
+        section: 'machines',
+        label: 'settings:machine.broker.label',
+        description: 'settings:machine.broker.description',
+        available: hasOpenedMachine
+    },
+    {
+        id: 'machines.machine.direct',
+        section: 'machines',
+        label: 'settings:machine.direct.label',
+        description: 'settings:machine.direct.description',
+        available: hasOpenedMachine
+    },
+    {
+        id: 'machines.machine.refuse',
+        section: 'machines',
+        label: 'settings:machine.refuse.label',
+        description: 'settings:machine.refuse.description',
+        available: hasOpenedMachine
+    },
+    {
+        id: 'machines.machine.streaming',
+        section: 'machines',
+        label: 'settings:machine.streaming.label',
+        description: 'settings:machine.streaming.description',
+        available: hasOpenedMachine
+    },
+    {
+        id: 'machines.machine.keepRunning',
+        section: 'machines',
+        label: 'settings:backgroundService.keepRunning.label',
+        description: 'settings:backgroundService.keepRunning.description',
+        available: () => hasLocalMachine() && desktop()?.backgroundService !== undefined
     },
     { id: 'about.updates.auto', section: 'about', label: 'settings:about.updates.auto.label', description: 'settings:about.updates.auto.description' },
     {

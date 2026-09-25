@@ -70,3 +70,36 @@ export const reachLabel = (entry: MachineEntry): string => {
 
 /* The name a row shows: what this client calls the machine, or what the account does for one it never opened. */
 export const nameOf = (entry: MachineEntry): string => entry.endpoint?.label ?? entry.machine?.name ?? entry.id;
+
+/* What the Account pane shows: the account row, or one machine by its id. */
+export type MachinePick = { kind: 'account' } | { kind: 'machine'; id: string };
+
+/*
+ * What was picked while it is still in the list, else this machine, else the account. Never another
+ * machine by itself: its detail holds a link to it, and opening settings must not reach out to one.
+ */
+export const currentPick = (picked: MachinePick | null, entries: readonly MachineEntry[]): MachinePick => {
+    if (picked?.kind === 'account' || (picked !== null && entries.some((entry) => entry.id === picked.id))) {
+        return picked;
+    }
+    const local = entries.find((entry) => entry.local);
+    return local ? { kind: 'machine', id: local.id } : { kind: 'account' };
+};
+
+/*
+ * Where a search result of the Account pane lands, or null for one of another pane. A row of a
+ * machine's detail lands on the machine picked when this client opened it, else on this machine,
+ * else on the first one it opened.
+ */
+export const pickForTarget = (target: string, entries: readonly MachineEntry[], picked: MachineEntry | null): MachinePick | null => {
+    if (target === 'machines.signIn' || target === 'machines.add') {
+        return { kind: 'account' };
+    }
+    if (!target.startsWith('machines.machine.')) {
+        return null;
+    }
+    const local = entries.find((entry) => entry.local) ?? null;
+    const opened = picked?.endpoint ? picked : (local ?? entries.find((entry) => entry.endpoint !== null) ?? null);
+    const entry = target === 'machines.machine.keepRunning' ? local : opened;
+    return entry === null ? null : { kind: 'machine', id: entry.id };
+};

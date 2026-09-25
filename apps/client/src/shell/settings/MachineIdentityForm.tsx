@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type ProjectIconChoice } from '@ruimte/contracts';
+import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
 import { adoptMachineName } from '@/transport/server-info';
 import { Button } from '@/ui/Button';
-import { DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SECTION_LABEL } from '@/ui/classes';
+import { FORM_ERROR } from '@/ui/classes';
 import { IconPicker } from '@/ui/IconPicker';
 import { useAsyncAction } from '@/ui/useAsyncAction';
 import { Tooltip } from '@/ui/Tooltip';
@@ -60,41 +62,45 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
     );
 
     return (
-        <div className="flex min-w-0 flex-col p-4">
-            <div className={`${SECTION_LABEL} mb-1.5`}>{t('identity.name')}</div>
-            <input
-                className="field"
-                aria-label={t('identity.nameLabel')}
-                placeholder={label}
-                value={name}
-                disabled={disabled}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => {
-                    e.stopPropagation();
-                    if (e.key === 'Enter' && dirty) {
-                        void save();
-                    }
-                }}
+        <SettingsSection title={t('machineDialog.identity.title')} description={t('machineDialog.identity.description')}>
+            <SettingsRow
+                searchId="machines.machine.identity"
+                label={t('identity.name')}
+                description={t('identity.nameHint')}
+                control={
+                    <input
+                        className="field w-55"
+                        aria-label={t('identity.nameLabel')}
+                        placeholder={label}
+                        value={name}
+                        disabled={disabled}
+                        onChange={(e) => setName(e.target.value)}
+                        onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === 'Enter' && dirty) {
+                                void save();
+                            }
+                        }}
+                    />
+                }
             />
-            <p className={FIELD_HINT}>{t('identity.nameHint')}</p>
-
-            <IconPicker value={icon} disabled={disabled} onChange={setIcon} onClear={() => setIcon(null)} />
-
-            {failure && (
-                <p className={`${FORM_ERROR} mt-3 break-words`} role="alert">
-                    {failure}
-                </p>
-            )}
-
-            <div className={DIALOG_FOOTER}>
-                {disabled ? (
-                    <Tooltip label={disabledReason}>
-                        <span className="inline-flex">{saveButton}</span>
-                    </Tooltip>
-                ) : (
-                    saveButton
+            <div className="flex min-w-0 flex-col px-4.5 pb-3.5">
+                <IconPicker value={icon} disabled={disabled} onChange={setIcon} onClear={() => setIcon(null)} />
+                {failure && (
+                    <p className={`${FORM_ERROR} mt-3 break-words`} role="alert">
+                        {failure}
+                    </p>
                 )}
+                <div className="mt-3 flex justify-end">
+                    {disabled ? (
+                        <Tooltip label={disabledReason}>
+                            <span className="inline-flex">{saveButton}</span>
+                        </Tooltip>
+                    ) : (
+                        saveButton
+                    )}
+                </div>
             </div>
-        </div>
+        </SettingsSection>
     );
 }

@@ -11,7 +11,7 @@ import { formatAgo } from '@/format/duration';
 import { ConfirmDialog } from '@/shell/settings/ConfirmDialog';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Skeleton, Toggle } from '@/shell/settings/controls';
+import { Segmented, Skeleton, Toggle } from '@/shell/settings/controls';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
@@ -20,7 +20,6 @@ import { useEndpointConnection } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { FORM_ERROR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
-import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 
 /* A disabled control does not take the pointer, so the reason sits on a wrapper around it. */
@@ -88,7 +87,7 @@ export function DirectRow({ endpoint, available }: { endpoint: Endpoint; availab
     const failure = endpoint.direct === true && connection.status !== 'open' ? (connection.failure ?? null) : null;
 
     if (!available) {
-        return <SettingsRow muted label={t('machine.direct.label')} description={t('machine.direct.brokerOnly')} />;
+        return <SettingsRow muted searchId="machines.machine.direct" label={t('machine.direct.label')} description={t('machine.direct.brokerOnly')} />;
     }
 
     const toggle = (direct: boolean): void => {
@@ -98,6 +97,7 @@ export function DirectRow({ endpoint, available }: { endpoint: Endpoint; availab
 
     return (
         <SettingsRow
+            searchId="machines.machine.direct"
             label={t('machine.direct.label')}
             description={
                 failure !== null ? (
@@ -130,7 +130,7 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
     const [busy, setBusy] = useState(false);
     const [shown, setShown] = useState(setting);
 
-    // Another client may change it while the dialog is open; the row follows the machine during render rather than a render later.
+    // Another client may change it while the detail is open; the row follows the machine during render rather than a render later.
     if (shown !== setting) {
         setShown(setting);
         setMode(setting?.mode ?? 'default');
@@ -176,14 +176,15 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
 
     return (
         <SettingsRow
+            searchId="machines.machine.broker"
             label={t('machine.broker.label')}
             description={description()}
             control={
                 <WithReason reason={reason}>
-                    <Select
+                    <Segmented
                         value={mode}
-                        items={MODES.map((value) => ({ value, label: t(`machine.broker.modes.${value}`) }))}
-                        onValueChange={pick}
+                        options={MODES.map((id) => ({ id, label: t(`machine.broker.modes.${id}`) }))}
+                        onChange={pick}
                         label={t('machine.broker.selectLabel', { machine: endpoint.label })}
                         disabled={busy || reason !== null || setting === null}
                     />
@@ -240,6 +241,7 @@ export function RefuseStatementsRow({ endpoint, reason }: { endpoint: Endpoint; 
 
     return (
         <SettingsRow
+            searchId="machines.machine.refuse"
             label={t('machine.refuse.label')}
             description={reason === null ? t('machine.refuse.description') : t('machine.notAnswering')}
             control={
@@ -271,6 +273,7 @@ export function StreamingRow({ endpoint, reason }: { endpoint: Endpoint; reason:
 
     return (
         <SettingsRow
+            searchId="machines.machine.streaming"
             label={t('machine.streaming.label')}
             description={reason !== null ? t('machine.notAnswering') : allowed === null ? t('machine.unsupported') : t('machine.streaming.description')}
             control={

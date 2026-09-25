@@ -869,22 +869,19 @@
             "title": "{{machine}} van je account verwijderen?",
             "description": "Elke client die op je account is ingelogd laat hem vallen bij de volgende verversing, ook een client die via een link gekoppeld is. Clients die uitgelogd zijn houden hem. De machine houdt zijn pairings.",
             "action": "Verwijderen"
-        }
+        },
+        "subtitle": "{{reach}} · {{version}}"
     },
     "machines": {
         "title": "Machines",
-        "description": "Elke machine heeft zijn eigen sessies, projecten en bestanden. Open er een project op om daar te werken.",
         "empty": {
             "label": "Nog geen machines",
             "description": "Voeg er een toe om de projecten, terminals en agents ervan hiervandaan te openen."
         },
         "notOpened": "Niet geopend op deze client",
-        "notOpenedAria": "{{machine}}. Niet geopend op deze client",
         "mismatch": "Op dit adres antwoordt een andere machine. Koppel opnieuw om te verbinden.",
-        "rowAria": "{{machine}}, {{reach}}",
         "viaRelay": "{{reach}} · via relay",
         "dot": {
-            "aria": "{{machine}}. {{status}}",
             "brokerOnly": "Alleen bereikbaar via de broker",
             "direct": "Directe verbinding (experimenteel)",
             "directBroker": "Directe verbinding via de broker (experimenteel)"
@@ -907,19 +904,23 @@
             "signOut": "Uitloggen",
             "onlyIdentity": "{{detail}}. De enige manier om op dit account in te loggen, dus die blijft tot je er een toevoegt.",
             "finishWith": "Rond het inloggen met {{provider}} af en kom dan hier terug.",
-            "notAdded": "Niet toegevoegd. Voeg hem toe om dit account ook met {{provider}} te openen."
+            "notAdded": "Niet toegevoegd. Voeg hem toe om dit account ook met {{provider}} te openen.",
+            "row": "Ruimte-account"
         },
         "add": {
             "title": "Een machine toevoegen",
             "description": "Plak een pairing link van de andere machine.",
             "linkLabel": "Pairing link",
-            "hint": "Je vindt hem onder Pairing link tonen in het venster van die machine, of door daar `ruimte pair` te draaien. Een machine die iemand van je account haalde, komt er weer op zodra je koppelt terwijl je ingelogd bent.",
+            "hint": "Je vindt hem onder Pairing link tonen in de instellingen van die machine, of door daar `ruimte pair` te draaien. Een machine die iemand van je account haalde, komt er weer op zodra je koppelt terwijl je ingelogd bent.",
             "codeHint": "Voor een machine zonder de app die `ruimte login` draaide",
             "withCode": "Een machine koppelen met een code",
             "pair": "Koppelen",
             "failed": "Koppelen mislukt",
-            "reclaimFailed": "{{machine}} is gekoppeld, maar staat niet terug op je account"
-        }
+            "reclaimFailed": "{{machine}} is gekoppeld, maar staat niet terug op je account",
+            "short": "Toevoegen"
+        },
+        "listLabel": "Account en machines",
+        "failed": "De instellingen van het account konden niet worden getekend"
     },
     "nav": {
         "groups": {

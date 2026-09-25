@@ -869,22 +869,19 @@
             "title": "Remove {{machine}} from your account?",
             "description": "Every client signed in to your account drops it the next time it refreshes, including a client that paired by link. Clients that are signed out keep it. The machine keeps its pairings.",
             "action": "Remove"
-        }
+        },
+        "subtitle": "{{reach}} · {{version}}"
     },
     "machines": {
         "title": "Machines",
-        "description": "Each machine keeps its own sessions, projects and files. Open a project on it to work there.",
         "empty": {
             "label": "No machines yet",
             "description": "Add one to open its projects, terminals and agents from here."
         },
         "notOpened": "Not opened on this client",
-        "notOpenedAria": "{{machine}}. Not opened on this client",
         "mismatch": "A different machine answers at this address. Pair again to connect.",
-        "rowAria": "{{machine}}, {{reach}}",
         "viaRelay": "{{reach}} · via relay",
         "dot": {
-            "aria": "{{machine}}. {{status}}",
             "brokerOnly": "Reached through the broker only",
             "direct": "Direct connection (experimental)",
             "directBroker": "Direct connection through the broker (experimental)"
@@ -907,19 +904,23 @@
             "signOut": "Sign out",
             "onlyIdentity": "{{detail}}. The only way to sign in to this account, so it stays until you add another.",
             "finishWith": "Finish signing in with {{provider}}, then come back here.",
-            "notAdded": "Not added. Add it to open this account with {{provider}} as well."
+            "notAdded": "Not added. Add it to open this account with {{provider}} as well.",
+            "row": "Ruimte account"
         },
         "add": {
             "title": "Add a machine",
             "description": "Paste a pairing link from the other machine.",
             "linkLabel": "Pairing link",
-            "hint": "Find it under Show pairing link in that machine's dialog, or run `ruimte pair` there. A machine someone removed from your account goes back on it when you pair while signed in.",
+            "hint": "Find it under Show pairing link in the settings of that machine, or run `ruimte pair` there. A machine someone removed from your account goes back on it when you pair while signed in.",
             "codeHint": "For a machine without the app that ran `ruimte login`",
             "withCode": "Link a machine with a code",
             "pair": "Pair",
             "failed": "Pairing failed",
-            "reclaimFailed": "{{machine}} is paired, but not back on your account"
-        }
+            "reclaimFailed": "{{machine}} is paired, but not back on your account",
+            "short": "Add"
+        },
+        "listLabel": "Account and machines",
+        "failed": "The account settings failed to render"
     },
     "nav": {
         "groups": {
