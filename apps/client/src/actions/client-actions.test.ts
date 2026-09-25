@@ -764,6 +764,33 @@ describe('client actions', () => {
             expect(await createNode(registry(), { kind: 'note', provider: 'claude' })).toMatchObject({ error: { code: 'invalid-provider' } });
         });
 
+        test('a login runs its command in the shell of the account it signs in', async () => {
+            const login = { viewId: 'main', kind: 'terminal', title: 'Work login', content: null, url: null, path: null, at: null } as const;
+            const made = await registry().execute(
+                'node.create',
+                { ...login, provider: 'claude', account: 'claude_work', command: 'claude auth login' },
+                PERSON_ACTION_CALL
+            );
+            if (made.status !== 'completed') {
+                throw new Error('Expected a login terminal');
+            }
+            expect(canvas().nodes[made.output.nodeId]).toMatchObject({
+                title: 'Work login',
+                provider: 'claude',
+                account: 'claude_work',
+                command: 'claude auth login'
+            });
+            // Without an account the command would replace the CLI in nobody's shell in particular.
+            expect(await registry().execute('node.create', { ...login, provider: 'claude', command: 'claude auth login' }, PERSON_ACTION_CALL)).toMatchObject({
+                error: { code: 'invalid-provider' }
+            });
+            expect(
+                await registry().execute('node.create', { ...login, provider: null, account: 'claude_work', command: null }, PERSON_ACTION_CALL)
+            ).toMatchObject({
+                error: { code: 'missing-provider' }
+            });
+        });
+
         test('a session goes on in a node beside it, where it worked and in the mode it has', async () => {
             const chat = await registry().execute(
                 'node.create',

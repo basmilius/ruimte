@@ -231,20 +231,28 @@ const linesOf = (canvas: CanvasState, nodeId: string): number => canvas.edges.fi
 
 const linesRemoved = (lines: number): string => `${lines} ${lines === 1 ? 'line' : 'lines'} drawn to it will be removed.`;
 
-/* The CLI a new chat or terminal runs, as this machine reports it. */
+/*
+ * The CLI a new chat or terminal runs, as this machine reports it. A terminal that names an account
+ * may run a command in place of the CLI: the shell still gets the account's environment, which is how
+ * a login under that account runs.
+ */
 const agentFor = (
     providers: readonly ProviderInfo[],
     kind: string,
     provider: AgentKind | null,
-    command: string | null
+    command: string | null,
+    account: string | null = null
 ): { target: AgentTarget; info: ProviderInfo } | null => {
     if (provider === null) {
+        if (account !== null) {
+            throw new ActionRefusal('missing-provider', 'An account belongs to an agent CLI. Name the provider as well.');
+        }
         return null;
     }
     if (kind !== 'chat' && kind !== 'terminal') {
         throw new ActionRefusal('invalid-provider', 'Only an AI Chat or a terminal runs an agent CLI.');
     }
-    if (command !== null) {
+    if (command !== null && (account === null || kind !== 'terminal')) {
         throw new ActionRefusal('invalid-provider', 'A terminal runs either an agent CLI or a command, not both.');
     }
     const info = providers.find((entry) => entry.kind === provider);
@@ -609,16 +617,17 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                     : {})
             };
         },
-        'node.create': ({ viewId, kind, title, content, url, command, path, provider, at, cwd, resume }) => {
+        'node.create': ({ viewId, kind, title, content, url, command, path, provider, account, at, cwd, resume }) => {
             const { view, canvas } = canvasOnScreen(document, viewId);
             refuseResumeWithout(resume, provider);
-            const agent = agentFor(providers(), kind, provider, command);
+            const agent = agentFor(providers(), kind, provider, command, account ?? null);
             if (kind === 'file' && path === null) {
                 throw new ActionRefusal('missing-path', 'Name the file a file node shows.');
             }
             const depth = canvas.past.length;
             const options: AddNodeOptions = {
                 ...(agent === null ? {} : agentNodeOptions(agent.target, agent.info, sessionOf(resume, cwd))),
+                ...(agent !== null && account != null ? { account } : {}),
                 ...(agent === null && cwd != null && (kind === 'chat' || kind === 'terminal') ? { cwd } : {}),
                 ...(title
                     ? { title }
@@ -1541,6 +1550,10 @@ export interface CreateNodeOptions extends AgentSession {
     title?: string;
     url?: string;
     provider?: AgentKind;
+    /* The account of that CLI; absent is the one the person picked for new agents, else its default. */
+    account?: string;
+    /* Terminals only: typed in place of the CLI, in the environment of `account`. */
+    command?: string;
     path?: string;
     /* The node's middle in world units, which a click or a drop knows and a menu does not. */
     at?: Point;
@@ -1558,9 +1571,10 @@ export const createNodeAction = async (kind: CreatableNodeKind, options: CreateN
         title: carriedName(options.title),
         content: null,
         url: options.url ?? null,
-        command: null,
+        command: options.command ?? null,
         path: options.path ?? null,
         provider: options.provider ?? null,
+        account: options.account ?? null,
         at: options.at ?? null,
         resume: options.resume ?? null,
         cwd: options.cwd ?? null

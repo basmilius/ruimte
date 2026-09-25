@@ -47,6 +47,7 @@ import {
     ProcessAlertKindSchema,
     ProcessGroupKindSchema,
     ProcessSignalSchema,
+    ProviderAccountIdSchema,
     RuntimeModeSchema,
     TaskSchema,
     UNKNOWN_KIND,
@@ -714,6 +715,10 @@ export const ACTION_DEFINITIONS = {
             command: z.string().trim().min(1).nullable(),
             path: z.string().trim().min(1).nullable().describe('The file the node shows, relative to the project folder or absolute'),
             provider: AgentKindSchema.nullable(),
+            // An agent's children inherit their account from it and never pick one.
+            account: forActors(PERSON, ProviderAccountIdSchema).describe(
+                "The account of the provider's CLI on this machine. With a command, a terminal runs that command in the account's environment instead of the CLI"
+            ),
             at: worldPoint.nullable(),
             source: agentField(viewId).describe(
                 'The id of a view of this project of the same kind as the node, a drawing for a drawing and a diagram for a diagram'

@@ -41,6 +41,8 @@ export interface AddNodeOptions {
     command?: string;
     resume?: string;
     provider?: AgentKind;
+    /* The account of that CLI on this machine; absent is its default account. */
+    account?: string;
     /* Chats only: the CLI came from a menu, so the composer offers no other one. */
     providerFixed?: boolean;
     // Terminal agents only: the permission mode the CLI starts in.
@@ -510,6 +512,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 command: options.command,
                 resume: options.resume,
                 provider: options.provider,
+                account: options.account,
                 providerFixed: options.providerFixed,
                 runtimeMode: options.runtimeMode,
                 viewId: options.viewId,
