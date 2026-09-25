@@ -129,7 +129,7 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     public static let timedRequests: Set<WireRequest> = [
         .serverHello, .serverPing, .pushAttention, .sessionAttach, .sessionList, .browserDevServers, .deviceList,
         .deviceDetail, .chatHistory, .chatAttach, .chatTurnDiff, .chatForkInfo, .chatSubagent, .chatList, .skillsList,
-        .providerList, .projectSidebar, .projectList, .projectOpen, .projectSettings, .drawingPaths, .drawingOpen,
+        .providerList, .projectSidebar, .projectList, .projectOpen, .drawingPaths, .drawingOpen,
         .diagramLayout, .diagramOpen, .fsBrowse, .fsSearch, .fsGrep, .fsList, .fsRead, .bytesRead, .gitWorktreeList,
         .gitStatus, .gitDiff, .gitRefs, .gitRepos, .gitLog, .gitConflicts, .gitConflict, .gitCapabilities,
         .usageSummary, .usageLimits, .processesListAlerts, .endpointInfo, .authSessions, .taskList, .agentChildren,
