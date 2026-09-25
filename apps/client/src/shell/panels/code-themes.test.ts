@@ -178,8 +178,9 @@ describe('the scopes our code themes cover', () => {
             test(`${theme.name} colors ${lang}`, async () => {
                 const highlighter = await loading;
                 // Shiki joins neighbors of one color into a token and a grammar may split a word, so a word is looked up both ways.
+                // The explanation tokenizes each line twice under a 500 ms limit, and a loaded CI machine cut the first pass short.
                 const pieces = highlighter
-                    .codeToTokens(code, { lang: lang as never, theme: theme.name, includeExplanation: true })
+                    .codeToTokens(code, { lang: lang as never, theme: theme.name, includeExplanation: true, tokenizeTimeLimit: 0 })
                     .tokens.flat()
                     .flatMap((token) =>
                         [token.content, ...(token.explanation ?? []).map((piece) => piece.content)].map((text) => ({
