@@ -9,6 +9,7 @@ import { useLastSeen } from '@/state/last-seen';
 import { useSnoozes } from '@/state/snooze';
 import { LOCAL_ENDPOINT_ID, activeEndpoint, endpointForDaemon, parsePairingUrl, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
+import { useProviderAccountsStore } from '@/state/provider-accounts';
 import { useProvidersStore } from '@/state/providers';
 import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
@@ -132,6 +133,7 @@ const forgetEndpointState = (id: string): void => {
     useBrowser.getState().clear(id);
     useServers.getState().forget(id);
     useProvidersStore.getState().forget(id);
+    useProviderAccountsStore.getState().forget(id);
     useUsageStore.getState().forget(id);
     useProcesses.getState().forget(id);
     useProcessWarnings.getState().forget(id);

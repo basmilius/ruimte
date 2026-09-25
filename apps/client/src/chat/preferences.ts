@@ -12,6 +12,8 @@ export interface ChatPreferences {
     runtimeMode: RuntimeMode;
     // What an agent started as a terminal node runs in; a chat picks its own mode in the composer.
     terminalRuntimeMode: RuntimeMode;
+    /* Per machine, the account a new agent of each CLI starts under; an account id only means something on its own machine. */
+    accountByMachine: Record<string, Partial<Record<AgentKind, string>>>;
     /* When a person last changed any of it; what settles whose pick a machine uses when several clients told it one. */
     changedAt: number;
 }
@@ -21,6 +23,7 @@ export const DEFAULT_CHAT_PREFERENCES: ChatPreferences = {
     lastProvider: null,
     runtimeMode: 'full-access',
     terminalRuntimeMode: 'full-access',
+    accountByMachine: {},
     changedAt: 0
 };
 
@@ -40,6 +43,7 @@ export const parseChatPreferences = (raw: string | null): ChatPreferences => {
             lastProvider: stored.lastProvider ?? null,
             runtimeMode: stored.runtimeMode ?? DEFAULT_CHAT_PREFERENCES.runtimeMode,
             terminalRuntimeMode: stored.terminalRuntimeMode ?? DEFAULT_CHAT_PREFERENCES.terminalRuntimeMode,
+            accountByMachine: { ...stored.accountByMachine },
             changedAt: typeof stored.changedAt === 'number' ? stored.changedAt : 0
         };
     } catch {
@@ -66,13 +70,29 @@ export const withSelection = (preferences: ChatPreferences, provider: AgentKind,
     lastProvider: provider
 });
 
+/* The account a new agent of this CLI starts under on this machine; null is the CLI's default account. */
+export const accountFor = (preferences: ChatPreferences, endpointId: string, provider: AgentKind): string | null =>
+    preferences.accountByMachine[endpointId]?.[provider] ?? null;
+
+/* The default account is what an absent pick means, so picking it takes the pick away. */
+export const withAccount = (preferences: ChatPreferences, endpointId: string, provider: AgentKind, account: string | null): ChatPreferences => {
+    const { [provider]: _previous, ...others } = preferences.accountByMachine[endpointId] ?? {};
+    const picks = account === null || account === provider ? others : { ...others, [provider]: account };
+    const { [endpointId]: _machine, ...machines } = preferences.accountByMachine;
+    return { ...preferences, accountByMachine: Object.keys(picks).length === 0 ? machines : { ...machines, [endpointId]: picks } };
+};
+
 /* What a machine starts a chat with when it starts one with no client mounting it. */
-export const chatPreferencesPayload = (preferences: ChatPreferences): ChatPreferencesPayload => ({
-    runtimeMode: preferences.runtimeMode,
-    terminalRuntimeMode: preferences.terminalRuntimeMode,
-    selections: preferences.selectionByProvider,
-    changedAt: preferences.changedAt
-});
+export const chatPreferencesPayload = (preferences: ChatPreferences, endpointId: string): ChatPreferencesPayload => {
+    const accounts = preferences.accountByMachine[endpointId];
+    return {
+        runtimeMode: preferences.runtimeMode,
+        terminalRuntimeMode: preferences.terminalRuntimeMode,
+        selections: preferences.selectionByProvider,
+        ...(accounts === undefined ? {} : { accounts }),
+        changedAt: preferences.changedAt
+    };
+};
 
 const storage = persistedJson<ChatPreferences>(STORAGE_KEY, parseChatPreferences, DEFAULT_CHAT_PREFERENCES);
 
@@ -94,6 +114,10 @@ export const rememberChatPreferences = (patch: Partial<ChatPreferences>): void =
 
 export const rememberChatSelection = (provider: AgentKind, selection: ModelSelection): void => {
     write(withSelection(useChatPreferences.getState(), provider, selection));
+};
+
+export const rememberChatAccount = (endpointId: string, provider: AgentKind, account: string | null): void => {
+    write(withAccount(useChatPreferences.getState(), endpointId, provider, account));
 };
 
 /* Back to the CLI's own default for this provider; the other providers keep what they had. */

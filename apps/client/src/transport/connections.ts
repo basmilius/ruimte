@@ -14,6 +14,7 @@ import { isRealMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
 import { PlanSync } from '@/state/plans';
 import { watchPushAttention } from '@/state/push-attention';
+import { watchProviderAccounts } from '@/state/provider-accounts';
 import { providerSinkFor } from '@/state/providers';
 import { sessionSinkFor, useSessions } from '@/state/sessions';
 import { defaultWorkspaceStores } from '@/state/workspace';
@@ -94,12 +95,13 @@ const projectSink = (endpointId: () => string): ProjectSink => {
 const buildMachine = (endpoint: Endpoint): Machine => {
     const transport = machineTransport(endpoint.id);
     const stopPushAttention = watchPushAttention(endpoint.id, transport);
+    const stopAccounts = watchProviderAccounts(endpoint.id, transport);
     const plans = new PlanSync(endpoint.id, transport);
     const sessions = new SessionClient(transport, sessionSinkFor(endpoint.id));
     const chats = new ChatClient(transport, chatSinkFor(endpoint.id), providerSinkFor(endpoint.id));
     const browsers = new BrowserClient(endpoint.id, transport);
     const devices = new DeviceClient(endpoint.id, transport);
-    chats.setPreferences(chatPreferencesPayload(useChatPreferences.getState()));
+    chats.setPreferences(chatPreferencesPayload(useChatPreferences.getState(), endpoint.id));
     return {
         endpointId: endpoint.id,
         transport,
@@ -109,6 +111,7 @@ const buildMachine = (endpoint: Endpoint): Machine => {
         devices,
         dispose(): void {
             stopPushAttention();
+            stopAccounts();
             plans.dispose();
             sessions.dispose();
             chats.dispose();
@@ -396,7 +399,7 @@ export const startConnections = (): (() => void) => {
     const offChatPreferences = useChatPreferences.subscribe((state, before) => {
         if (state.changedAt !== before.changedAt) {
             for (const machine of machines.values()) {
-                machine.chats.setPreferences(chatPreferencesPayload(state));
+                machine.chats.setPreferences(chatPreferencesPayload(state, machine.endpointId));
             }
         }
     });

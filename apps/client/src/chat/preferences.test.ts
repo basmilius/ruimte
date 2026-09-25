@@ -1,11 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import type { ModelSelection } from '@ruimte/contracts';
 import {
+    accountFor,
     chatPreferencesPayload,
     DEFAULT_CHAT_PREFERENCES,
     defaultProvider,
     parseChatPreferences,
     selectionFor,
+    withAccount,
     withSelection,
     type ChatPreferences
 } from './preferences';
@@ -72,6 +74,7 @@ describe('reading what is stored', () => {
             lastProvider: 'claude',
             runtimeMode: 'auto',
             terminalRuntimeMode: 'supervised',
+            accountByMachine: { local: { claude: 'claude_work' } },
             changedAt: 42
         };
         expect(parseChatPreferences(JSON.stringify(stored))).toEqual(stored as ChatPreferences);
@@ -92,11 +95,37 @@ describe('what a machine is told', () => {
             changedAt: 7
         });
         // The terminal mode too, since the machine starts terminal agents a verb opened on its own.
-        expect(chatPreferencesPayload(remembered)).toEqual({
+        expect(chatPreferencesPayload(remembered, 'local')).toEqual({
             runtimeMode: 'supervised',
             terminalRuntimeMode: 'auto',
             selections: { claude: sonnet, codex: gpt },
             changedAt: 7
         });
+    });
+
+    test('only the accounts picked on that machine', () => {
+        const remembered = preferences({ accountByMachine: { local: { claude: 'claude_work' }, studio: { codex: 'codex_client' } } });
+        expect(chatPreferencesPayload(remembered, 'local').accounts).toEqual({ claude: 'claude_work' });
+        expect(chatPreferencesPayload(remembered, 'elsewhere').accounts).toBeUndefined();
+    });
+});
+
+describe('the account for new agents', () => {
+    test('is kept per machine and per CLI', () => {
+        const picked = withAccount(withAccount(preferences(), 'local', 'claude', 'claude_work'), 'studio', 'claude', 'claude_home');
+        expect(accountFor(picked, 'local', 'claude')).toBe('claude_work');
+        expect(accountFor(picked, 'studio', 'claude')).toBe('claude_home');
+        expect(accountFor(picked, 'local', 'codex')).toBeNull();
+    });
+
+    test('picking the default account takes the pick away', () => {
+        const picked = withAccount(preferences(), 'local', 'claude', 'claude_work');
+        expect(withAccount(picked, 'local', 'claude', 'claude').accountByMachine).toEqual({});
+        expect(withAccount(picked, 'local', 'claude', null).accountByMachine).toEqual({});
+    });
+
+    test('survives a reload', () => {
+        const stored = JSON.stringify({ accountByMachine: { local: { codex: 'codex_client' } } });
+        expect(parseChatPreferences(stored).accountByMachine).toEqual({ local: { codex: 'codex_client' } });
     });
 });
