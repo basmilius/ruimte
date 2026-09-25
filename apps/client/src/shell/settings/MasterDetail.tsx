@@ -31,7 +31,7 @@ export function MasterDetail({ list, listWidth, listLabel, detail }: MasterDetai
                 {list}
             </nav>
             <div className="min-h-0 min-w-0 grow overflow-y-auto">
-                <div className="flex max-w-160 min-w-0 flex-col gap-7 px-8 pt-6 pb-10 max-[960px]:px-4">{detail}</div>
+                <div className="flex min-w-0 flex-col gap-7 px-8 pt-6 pb-10 max-[960px]:px-4">{detail}</div>
             </div>
         </div>
     );
