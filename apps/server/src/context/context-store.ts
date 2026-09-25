@@ -36,6 +36,9 @@ interface ContextReaders {
     /* The chats a person attached to a message of this chat. Readable like a line, but never listed or
        announced as one: the message that attached them already said where they are. */
     referenced?(targetId: string): ContextSource[];
+    /* The agent under `sourceId` when `targetId` opened it itself. Readable like a line and never listed,
+       since the verb that opened it already named it. */
+    opened?(targetId: string, sourceId: string): ContextSource | null;
     /* The elements of a drawing view, or null when no open project has one under that id. */
     drawingElements(viewId: string): Promise<DrawingElement[] | null>;
     /* The diagram of a view in the project of the agent asking, whether or not anyone has that project open. */
@@ -153,10 +156,13 @@ export class ContextStore {
      * are rendered here) and because the wire then carries fifteen lines instead of two thousand.
      */
     async read(targetId: string, sourceId: string, tail: number | null = null, subagent: string | null = null): Promise<string | null> {
-        // Only what is linked into the asker matches, so a node id opens nothing an edge or a person's attachment did not.
-        const source = [...this.readers.sources(targetId), ...(this.readers.referenced?.(targetId) ?? [])].find(
-            (entry) => entry.id === sourceId || entry.nodeId === sourceId
-        );
+        // Only what is linked into the asker matches, so a node id opens nothing an edge, a person's attachment or the asker's own lineage did not.
+        const source =
+            [...this.readers.sources(targetId), ...(this.readers.referenced?.(targetId) ?? [])].find(
+                (entry) => entry.id === sourceId || entry.nodeId === sourceId
+            ) ??
+            this.readers.opened?.(targetId, sourceId) ??
+            null;
         if (!source) {
             return null;
         }

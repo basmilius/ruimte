@@ -2185,14 +2185,16 @@ export const ACTION_DEFINITIONS = {
             sourceId: z
                 .string()
                 .min(1)
-                .describe('The id of a source, as context.list gives it; a drawing or diagram also takes the id of the linked node that shows it'),
+                .describe(
+                    'The id of a source, as context.list gives it, or of an agent the caller opened itself; a drawing or diagram also takes the id of the linked node that shows it'
+                ),
             tail: z.number().int().min(1).nullable().describe('Only the last this many lines; without it the whole source'),
             subagent: z
                 .string()
                 .min(1)
                 .nullable()
                 .describe(
-                    `The whole conversation of one subagent of a linked chat instead of the chat, read from ${ChatSubagentSourceSchema.options.join(' or ')}`
+                    `The whole conversation of one subagent of a chat the caller may read instead of the chat, read from ${ChatSubagentSourceSchema.options.join(' or ')}`
                 )
         }),
         output: z.object({ text: z.string() })

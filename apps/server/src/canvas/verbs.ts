@@ -137,7 +137,7 @@ const listVerb: ContextVerb = {
     detail: [
         'prints\tid\tkind\ttitle\tflag\tone line per linked source, nothing when the person linked none; flag is the color the person flagged it with, or -',
         `kinds\t${ContextSourceSchema.shape.kind.options.join('\t')}\ta note and a text on the canvas both arrive as text`,
-        'note\tThe id is what ruimte-context read takes; this list is the whole of what you may read',
+        'note\tThe id is what ruimte-context read takes; this list is what your lines let you read, and besides it only a chat a person attached to your message and an agent you opened yourself',
         'note\tA line from a group lists what lies inside that frame, each on a line of its own, a frame inside it included; the group itself is never a line here',
         SCOPE_LINE
     ]
@@ -149,14 +149,15 @@ const readVerb: ContextVerb = {
     usage: '<id> [--tail N] [--subagent T]',
     summary: actionDescription('context.read', 'agent'),
     detail: [
-        'argument\t<id>\trequired\tThe id of a source, from ruimte-context list; a drawing or diagram also takes the id of the linked node that shows it',
+        'argument\t<id>\trequired\tThe id of a source, from ruimte-context list, or of an agent you opened yourself; a drawing or diagram also takes the id of the linked node that shows it',
         'flag\t--tail N\toptional\tOnly the last N lines, N a positive whole number; without it the whole source',
-        `flag\t--subagent T\toptional\tThe whole conversation of one subagent of a linked chat instead of the chat, T the id in its > Subagent line; read from ${ChatSubagentSourceSchema.options.join(' or ')}; --tail counts lines of that conversation`,
+        `flag\t--subagent T\toptional\tThe whole conversation of one subagent of a chat you may read instead of the chat, T the id in its > Subagent line; read from ${ChatSubagentSourceSchema.options.join(' or ')}; --tail counts lines of that conversation`,
         'prints\tThe source itself, as text, not as tab-separated lines',
         'kind\ttext\tThe text the person wrote: a note or a text on the canvas\t--tail counts its lines',
         `kind\tterminal\tThe screen of that session, its last ${MAX_SCREEN_LINES} lines, read the moment you ask\t--tail counts screen lines and cannot reach past those ${MAX_SCREEN_LINES}`,
         'kind\tchat\tThe plans of that chat as text, then the whole thread as markdown: who said what, what every tool ran, and one line per subagent with the id --subagent takes\t--tail counts lines of the thread and leaves the plans out',
         'kind\tchat\tA chat the person attached to one of your messages reads the same way, by the id that message named, with no line to it and without showing up in ruimte-context list',
+        'own\tAn agent you opened yourself, with agent or team, reads by its id with no line from it into you and without showing up in ruimte-context list, --tail and --subagent included; an agent it opened in turn is its to read, not yours',
         'kind\tdrawing\tThe text of the drawing in reading order, and the picture itself as SVG under it\t--tail counts lines of the reading order and leaves the SVG out',
         'kind\tdiagram\tIts title, every node layer by layer (sub in brackets), every edge with its label, what each group wraps, and the SVG under it\t--tail counts lines of that list and leaves the SVG out',
         'kind\tfile\tIts path and a line telling you to read it yourself, since your own tools see a fresher copy\t--tail does nothing here',
@@ -165,7 +166,7 @@ const readVerb: ContextVerb = {
         'kind\tdevice\tWhich device the node points at: its name, platform, kind and runtime, and the state, deviceId and backendId this machine knows it by, or a line saying the device is not here right now\t--tail does nothing here',
         'kind\tdevice\tReading leaves the device alone; ruimte-context device is what photographs and operates it, over the same line',
         'cheap\tThe last fifteen lines of a neighbour is usually the whole answer; read the source whole only when it is not',
-        'direction\tBetween two agents a line runs one way: the one you draw into another agent lets it read you, and reading it back takes a line from it into you, which ruimte-context link new --from <id> --to <you> draws',
+        'direction\tBetween two agents a line runs one way: the one you draw into another agent lets it read you, and reading it back takes a line from it into you, which ruimte-context link new --from <id> --to <you> draws; an agent you opened yourself needs none',
         'direction\tA node that is no agent, a note, a page, a file, a drawing or a diagram, you read over a line whichever way that line runs',
         'refusals\tnot-linked\tunreadable\tunknown-source\tunknown-subagent\tbad-arguments\tthe whole set this verb refuses with',
         SCOPE_LINE

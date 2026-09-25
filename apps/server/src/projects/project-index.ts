@@ -148,6 +148,22 @@ export class ProjectIndex {
         return null;
     }
 
+    /* The terminal or chat under `id`, a node or a view of its own, as a source a read takes; null for anything else. */
+    agentSource(id: string): ContextSource | null {
+        for (const project of this.projects.values()) {
+            for (const view of project.content.views) {
+                if ((view.kind === 'chat' || view.kind === 'terminal') && view.id === id) {
+                    return { id, kind: view.kind, title: view.name };
+                }
+                const node = isCanvasView(view) ? view.nodes.find((candidate) => candidate.id === id) : undefined;
+                if (node) {
+                    return node.kind === 'chat' || node.kind === 'terminal' ? { id, kind: node.kind, title: node.title } : null;
+                }
+            }
+        }
+        return null;
+    }
+
     /*
      * Every session this project holds, over every view it has. Read when a project closes from a
      * client that never had it on screen, which has no document of its own to count.

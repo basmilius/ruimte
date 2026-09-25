@@ -79,6 +79,7 @@ import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
 import { chatForkDeps, forkChat, readForkInfo } from './chat/fork.ts';
 import { withForkOrigin } from './context/fork-origin.ts';
+import { openedChildSource } from './context/opened-child.ts';
 import { referencedChats } from './context/chat-references.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
 import { FolderWatcher } from './fs/watch.ts';
@@ -279,6 +280,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 titleFor: (id) => projects.index.titleFor(id)
             }),
         referenced: (targetId) => referencedChats(chats.get(targetId)?.thread.list() ?? [], (id) => projects.index.chatTitleBeside(targetId, id)),
+        opened: (targetId, sourceId) =>
+            openedChildSource(targetId, sourceId, { madeBy: (id) => lineage.madeBy(id), agentSource: (id) => projects.index.agentSource(id) }),
         terminalText: (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null),
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
         browserPage: (browserId) => browserDriver.read(browserId),
