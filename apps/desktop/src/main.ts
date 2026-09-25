@@ -16,6 +16,7 @@ import {
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { editFrameOf, runGuestEdit } from './guest-edit';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE } from './keep-awake';
+import { createPageKeys } from './page-keys';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
@@ -469,6 +470,8 @@ onFromApp('agents:activity', (_event, activity: AgentActivity) => setAgentActivi
 /* Set once a person has said to quit with agents still working, so the question is asked once. */
 let quitConfirmed = false;
 
+const pageKeys = createPageKeys();
+
 const createWindow = (): Electron.BrowserWindow => {
     const window = new BrowserWindow({
         width: 1440,
@@ -505,6 +508,7 @@ const createWindow = (): Electron.BrowserWindow => {
         callback(requester === contents && details.isMainFrame && mediaTypes?.length === 1 && mediaTypes[0] === 'audio');
     });
     window.once('ready-to-show', () => window.show());
+    contents.on('before-input-event', (_event, input) => pageKeys.saw(input));
     window.on('closed', () => {
         mainWindow = null;
         setKeepAwake(null);
@@ -1186,17 +1190,20 @@ const setStaticMenu = (): void => {
 const DEVTOOLS_ACCELERATOR = process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I';
 
 /*
- * A command from the menu goes to the page, which runs it the way the palette does. One fired by its
- * accelerator is dropped: the page saw that key first and its own listeners answered it or let it
- * pass on purpose. Only a page in a browser node or an HTML preview never sees the key, so there the
- * menu answers.
+ * A command from the menu goes to the page, which runs it the way the palette does. One fired by a key
+ * the page already had is dropped: its own listeners answered it or let it pass on purpose. A page in
+ * a browser node or an HTML preview never sees the key, so there the menu answers. Only a minimized
+ * window is shown: showing activates the app, and a pick from behind the person's work must leave it there.
  */
 const runMenuCommand = (id: string, byKey: boolean): void => {
     const focused = webContents.getFocusedWebContents();
-    if (byKey && (focused === null || !(isBrowserGuest(focused) || isPreviewGuest(focused)))) {
+    const inGuest = focused !== null && (isBrowserGuest(focused) || isPreviewGuest(focused));
+    if (byKey && !inGuest && pageKeys.take()) {
         return;
     }
-    mainWindow?.show();
+    if (mainWindow?.isMinimized()) {
+        mainWindow.show();
+    }
     mainWindow?.webContents.send('menu:run', id);
 };
 
