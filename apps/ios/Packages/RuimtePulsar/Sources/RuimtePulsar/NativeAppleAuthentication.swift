@@ -22,6 +22,8 @@ struct NativeAppleCredential: Sendable {
     let state: String?
     let identityToken: Data?
     let authorizationCode: Data?
+    // Apple hands out the name only on the first authorization of an Apple ID for this app.
+    var fullName: PersonNameComponents? = nil
 
     func payload(for attempt: String) throws -> NativeAppleCompletePayload {
         guard state == attempt else { throw NativeAppleLoginError.wrongState }
@@ -29,8 +31,15 @@ struct NativeAppleCredential: Sendable {
             let identity = String(data: identityToken, encoding: .utf8),
             let code = String(data: authorizationCode, encoding: .utf8)
         else { throw NativeAppleLoginError.invalidCredential }
-        let payload = NativeAppleCompletePayload(attempt: attempt, identityToken: identity, authorizationCode: code)
+        let payload = NativeAppleCompletePayload(
+            attempt: attempt, identityToken: identity, authorizationCode: code, displayName: displayName)
         do { return try validatedAppleValue(payload) } catch { throw NativeAppleLoginError.invalidCredential }
+    }
+
+    private var displayName: String? {
+        guard let fullName else { return nil }
+        let name = PersonNameComponentsFormatter().string(from: fullName).trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : String(name.prefix(100))
     }
 }
 
@@ -127,7 +136,7 @@ final class NativeAppleSignIn {
                     presentationID = identifier
                     pending = continuation
                     let request = ASAuthorizationAppleIDProvider().createRequest()
-                    request.requestedScopes = []
+                    request.requestedScopes = [.fullName]
                     request.state = challenge.attempt
                     // The server checks this literal nonce against Apple's signed identity token.
                     request.nonce = challenge.nonce
@@ -156,7 +165,7 @@ final class NativeAppleSignIn {
                 .success(
                     NativeAppleCredential(
                         state: credential.state, identityToken: credential.identityToken,
-                        authorizationCode: credential.authorizationCode)))
+                        authorizationCode: credential.authorizationCode, fullName: credential.fullName)))
         }
 
         public func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {

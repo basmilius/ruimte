@@ -105,6 +105,21 @@ struct NativeAppleAuthenticationTests {
         #expect(store.read()?.account.provider == .apple)
     }
 
+    @Test func theNameAppleSendsOnceRidesAlongAndAnEmptyOneStaysOut() throws {
+        var name = PersonNameComponents()
+        name.givenName = "Bas"
+        name.familyName = "Milius"
+        let named = NativeAppleCredential(
+            state: appleAttempt, identityToken: Data("signed-token".utf8), authorizationCode: Data("apple-code".utf8),
+            fullName: name)
+        #expect(try named.payload(for: appleAttempt).displayName == "Bas Milius")
+        let empty = NativeAppleCredential(
+            state: appleAttempt, identityToken: Data("signed-token".utf8), authorizationCode: Data("apple-code".utf8),
+            fullName: PersonNameComponents())
+        #expect(try empty.payload(for: appleAttempt).displayName == nil)
+        #expect(try appleCredential().payload(for: appleAttempt).displayName == nil)
+    }
+
     @Test func incompleteWrongStateAndOversizedNativeCredentialsAreRejected() throws {
         #expect(throws: NativeAppleLoginError.wrongState) {
             try appleCredential(state: "other").payload(for: appleAttempt)
