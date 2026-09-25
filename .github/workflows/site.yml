@@ -35,4 +35,5 @@ jobs:
       - run: bun test
       - run: bun run deploy
       # A download has to land on a build of the latest release, or the button on the page leads nowhere.
-      - run: curl --fail --silent --show-error --max-time 20 --head https://ruimte.app/download/mac | grep -i '^location: https://github.com/basmilius/ruimte/releases/'
+      - run: |
+          curl --fail --silent --show-error --max-time 20 --head https://ruimte.app/download/mac | grep -i '^location: https://github.com/basmilius/ruimte/releases/'
