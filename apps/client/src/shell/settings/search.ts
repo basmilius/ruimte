@@ -210,13 +210,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         description: 'settings:backgroundService.keepRunning.description',
         available: () => hasLocalMachine() && desktop()?.backgroundService !== undefined
     },
-    { id: 'about.updates.auto', section: 'about', label: 'settings:about.updates.auto.label', description: 'settings:about.updates.auto.description' },
-    {
-        id: 'about.links.releaseNotes',
-        section: 'about',
-        label: 'settings:about.links.releaseNotes.label',
-        description: 'settings:about.links.releaseNotes.description'
-    }
+    { id: 'about.updates.auto', section: 'about', label: 'settings:about.updates.auto.label', description: 'settings:about.updates.auto.description' }
 ];
 
 export interface SearchResult {

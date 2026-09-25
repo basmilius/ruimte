@@ -96,7 +96,11 @@ export function AccountDetail({ endpointId, provider, entry, canLogIn, loginBloc
     return (
         <>
             <DetailHeader
-                mark={<AccountDot color={account.color} className="size-3" />}
+                mark={
+                    <span className="grid h-6 shrink-0 place-items-center">
+                        <AccountDot color={account.color} className="size-3" />
+                    </span>
+                }
                 title={name}
                 subtitle={
                     <>

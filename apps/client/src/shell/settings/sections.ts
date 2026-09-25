@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { Bot, ChartNoAxesColumn, Folder, Hand, Info, Keyboard, LogIn, Mic, Palette, PanelsTopLeft, Server, type LucideIcon } from 'lucide-react';
+import { Bot, Brain, ChartNoAxesColumn, Folder, Info, Keyboard, Mic, MousePointer2, Palette, PanelsTopLeft, Server, type LucideIcon } from 'lucide-react';
 import type { SettingsSectionId } from '@/state/ui';
 
 export interface SettingsSectionMeta {
@@ -38,9 +38,9 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
     {
         label: 'ai',
         sections: [
-            { id: 'providers', icon: LogIn, split: true },
+            { id: 'providers', icon: Brain, split: true },
             { id: 'agents', icon: Bot },
-            { id: 'computer', icon: Hand },
+            { id: 'computer', icon: MousePointer2 },
             { id: 'usage', icon: ChartNoAxesColumn },
             { id: 'voice', icon: Mic }
         ]

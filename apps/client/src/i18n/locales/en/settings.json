@@ -605,10 +605,6 @@
         },
         "links": {
             "title": "Links",
-            "releaseNotes": {
-                "label": "Release notes",
-                "description": "What changed in each version of Ruimte."
-            },
             "website": {
                 "label": "ruimte.app",
                 "description": "Website and downloads."
