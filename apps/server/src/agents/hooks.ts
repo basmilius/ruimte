@@ -7,6 +7,9 @@ interface HookOutcome {
     status: AgentStatus | null;
     // The CLI's own name for its permission mode, on the events that carry one.
     permissionMode: string | null;
+    event: string;
+    // The subagent the hook fired in, null for the agent the person talks to.
+    subagentId: string | null;
 }
 
 // What each hook event means for the person watching the node. Claude Code and Codex share the
@@ -101,7 +104,40 @@ export const normalizeHook = (body: unknown): HookOutcome | null => {
     if (status === undefined) {
         return null;
     }
-    return { agentSessionId, transcriptPath, status: status === 'gone' ? null : status, permissionMode: asString(hook.permission_mode) };
+    return {
+        agentSessionId,
+        transcriptPath,
+        status: status === 'gone' ? null : status,
+        permissionMode: asString(hook.permission_mode),
+        event,
+        // Claude Code 2.1.282 names the subagent on every hook fired inside one (measured); Codex names none.
+        subagentId: asString(hook.agent_id)
+    };
+};
+
+// The agent the person talks to, as a key beside the subagents' ids.
+const MAIN_AGENT = '';
+
+// Events of the main agent after which nothing on screen still waits: a new or ended conversation, a prompt the person typed, Escape.
+const SETTLING_EVENTS: ReadonlySet<string> = new Set(['SessionStart', 'UserPromptSubmit', 'Interrupt', 'SessionEnd']);
+
+/*
+ * The status a hook leaves, given who was still waiting on the person before it. A hook only settles
+ * a wait of its own agent: a background subagent working on does not answer the question the main
+ * agent asked, and the main agent's tools do not answer a subagent's approval.
+ */
+export const settleWaiting = (waiting: ReadonlySet<string>, outcome: HookOutcome): { waiting: Set<string>; status: AgentStatus | null } => {
+    const source = outcome.subagentId ?? MAIN_AGENT;
+    const next = new Set(source === MAIN_AGENT && SETTLING_EVENTS.has(outcome.event) ? [] : waiting);
+    if (outcome.status === 'needs-you') {
+        next.add(source);
+    } else {
+        next.delete(source);
+    }
+    if (outcome.status === null) {
+        return { waiting: new Set(), status: null };
+    }
+    return { waiting: next, status: next.size > 0 ? 'needs-you' : outcome.status };
 };
 
 /*

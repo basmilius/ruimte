@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
-import { modeOfHook, normalizeHook } from '../agents/hooks.ts';
+import { modeOfHook, normalizeHook, settleWaiting } from '../agents/hooks.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { narrowerMode } from '../canvas/mode.ts';
 import { contextHint, verbsNote } from '../context/context-note.ts';
@@ -118,6 +118,8 @@ export class SessionManager {
     private readonly deleted = new WeakSet<Session>();
     // When a resume was typed into a session, until its agent reports in; the guard against typing a second one.
     private readonly resuming = new Map<string, number>();
+    // Per session, the agents (main and subagents) whose question or approval still waits on the person.
+    private readonly waiting = new Map<string, ReadonlySet<string>>();
     private readonly now: () => number;
     private readonly claudeTitles: SessionManagerOptions['claudeTitles'] | null;
     private readonly codexTitles: SessionManagerOptions['codexTitles'] | null;
@@ -304,17 +306,19 @@ export class SessionManager {
         if (!outcome) {
             return 'ignored';
         }
+        const settled = settleWaiting(this.waiting.get(session.id) ?? new Set(), outcome);
+        this.waiting.set(session.id, settled.waiting);
         // A name belongs to the conversation it was given in; a new one in the same shell starts without.
         const suggestedTitle = session.agent?.agentSessionId === outcome.agentSessionId ? session.agent.suggestedTitle : undefined;
         const agent: AgentInfo | null =
-            outcome.status === null
+            settled.status === null
                 ? null
                 : {
                       kind,
                       agentSessionId: outcome.agentSessionId,
                       transcriptPath: outcome.transcriptPath ?? session.agent?.transcriptPath ?? null,
                       ...(suggestedTitle !== undefined ? { suggestedTitle } : {}),
-                      status: outcome.status,
+                      status: settled.status,
                       live: true,
                       updatedAt: Date.now()
                   };
@@ -663,6 +667,7 @@ export class SessionManager {
     private remove(session: Session): void {
         this.sessions.delete(session.id);
         this.resuming.delete(session.id);
+        this.waiting.delete(session.id);
         this.titleReadAt.delete(session.id);
         const retry = this.titleRetries.get(session.id);
         if (retry?.timer) {

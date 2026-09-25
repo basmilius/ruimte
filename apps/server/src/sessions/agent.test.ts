@@ -81,6 +81,24 @@ describe('agent status via hooks', () => {
         expect(await harness.agents.read('s1')).toBeNull();
     });
 
+    test('a question stays needs-you while a background subagent works on', async () => {
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await create('s1');
+        const token = harness.manager.get('s1')!.hookToken;
+        const subagent = { agent_id: 'a1', agent_type: 'general-purpose' };
+
+        await harness.manager.applyHook('claude', token, hook('UserPromptSubmit'));
+        await harness.manager.applyHook('claude', token, hook('PreToolUse', { tool_name: 'AskUserQuestion' }));
+        await harness.manager.applyHook('claude', token, hook('PreToolUse', { tool_name: 'Bash', ...subagent }));
+        await harness.manager.applyHook('claude', token, hook('PostToolUse', { tool_name: 'Bash', ...subagent }));
+        await harness.manager.applyHook('claude', token, hook('SubagentStop', subagent));
+        expect(harness.manager.list()[0]?.agent?.status).toBe('needs-you');
+
+        await harness.manager.applyHook('claude', token, hook('PostToolUse', { tool_name: 'AskUserQuestion' }));
+        expect(recorder.statusesOf('s1').filter((status, i, all) => status !== all[i - 1])).toEqual(['running', 'needs-you', 'running']);
+    });
+
     test('the permission mode the hooks last reported is kept per session until the CLI leaves', async () => {
         await createAgent('s1', { kind: 'claude', runtimeMode: 'full-access' });
         const session = harness.manager.get('s1')!;

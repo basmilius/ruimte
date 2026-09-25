@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { hasHooks, modeOfHook, normalizeHook } from './hooks.ts';
+import { hasHooks, modeOfHook, normalizeHook, settleWaiting } from './hooks.ts';
 
 const hook = (event: string, extra: Record<string, unknown> = {}) => ({
     session_id: 'abc',
@@ -35,7 +35,14 @@ describe('normalizeHook', () => {
     });
 
     test('carries the session id and transcript path', () => {
-        expect(normalizeHook(hook('Stop'))).toEqual({ agentSessionId: 'abc', transcriptPath: '/tmp/t.jsonl', status: 'idle', permissionMode: null });
+        expect(normalizeHook(hook('Stop'))).toEqual({
+            agentSessionId: 'abc',
+            transcriptPath: '/tmp/t.jsonl',
+            status: 'idle',
+            permissionMode: null,
+            event: 'Stop',
+            subagentId: null
+        });
         expect(normalizeHook(hook('Stop', { transcript_path: undefined }))?.transcriptPath).toBeNull();
     });
 });
@@ -71,5 +78,40 @@ describe('hasHooks', () => {
         expect(hasHooks('codex')).toBe(true);
         expect(hasHooks('gemini')).toBe(false);
         expect(hasHooks('copilot')).toBe(false);
+    });
+});
+
+describe('settleWaiting', () => {
+    const settle = (waiting: string[], event: string, extra: Record<string, unknown> = {}) => {
+        const outcome = normalizeHook(hook(event, extra));
+        if (!outcome) {
+            throw new Error(`${event} is not a status hook`);
+        }
+        const settled = settleWaiting(new Set(waiting), outcome);
+        return { waiting: [...settled.waiting].sort(), status: settled.status };
+    };
+    const subagent = { agent_id: 'a1' };
+
+    test('a subagent at work does not settle the question the main agent asked', () => {
+        expect(settle([''], 'PreToolUse', { tool_name: 'Bash', ...subagent })).toEqual({ waiting: [''], status: 'needs-you' });
+        expect(settle([''], 'SubagentStop', subagent)).toEqual({ waiting: [''], status: 'needs-you' });
+        expect(settle([''], 'PostToolUse', { tool_name: 'AskUserQuestion' })).toEqual({ waiting: [], status: 'running' });
+    });
+
+    test('the main agent at work does not settle an approval a subagent waits on', () => {
+        expect(settle([], 'PermissionRequest', { tool_name: 'Bash', ...subagent })).toEqual({ waiting: ['a1'], status: 'needs-you' });
+        expect(settle(['a1'], 'PreToolUse', { tool_name: 'Read' })).toEqual({ waiting: ['a1'], status: 'needs-you' });
+        expect(settle(['a1'], 'PostToolUse', { tool_name: 'Bash', ...subagent })).toEqual({ waiting: [], status: 'running' });
+    });
+
+    test('a prompt, Escape, a new conversation or its end settle every wait', () => {
+        expect(settle(['', 'a1'], 'UserPromptSubmit')).toEqual({ waiting: [], status: 'running' });
+        expect(settle(['a1'], 'Interrupt')).toEqual({ waiting: [], status: 'idle' });
+        expect(settle(['a1'], 'SessionStart')).toEqual({ waiting: [], status: 'idle' });
+        expect(settle(['a1'], 'SessionEnd')).toEqual({ waiting: [], status: null });
+    });
+
+    test('the end of the main turn leaves a subagent that still waits', () => {
+        expect(settle(['', 'a1'], 'Stop')).toEqual({ waiting: ['a1'], status: 'needs-you' });
     });
 });
