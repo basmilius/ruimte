@@ -111,6 +111,14 @@ describe('settleWaiting', () => {
         expect(settle(['a1'], 'SessionEnd')).toEqual({ waiting: [], status: null });
     });
 
+    test('a Codex subagent is told apart the same way, under the session of its parent', () => {
+        const codex = (event: string, extra: Record<string, unknown> = {}) =>
+            normalizeHook({ session_id: 'thread-1', turn_id: 'turn-2', hook_event_name: event, permission_mode: 'default', ...extra });
+        const pre = codex('PreToolUse', { tool_name: 'Bash', agent_id: 'thread-2', agent_type: 'default' });
+        expect(pre).toMatchObject({ agentSessionId: 'thread-1', subagentId: 'thread-2' });
+        expect(settleWaiting(new Set(['']), pre!).status).toBe('needs-you');
+    });
+
     test('the end of the main turn leaves a subagent that still waits', () => {
         expect(settle(['', 'a1'], 'Stop')).toEqual({ waiting: ['a1'], status: 'needs-you' });
     });

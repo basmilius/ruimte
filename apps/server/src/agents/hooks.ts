@@ -110,7 +110,7 @@ export const normalizeHook = (body: unknown): HookOutcome | null => {
         status: status === 'gone' ? null : status,
         permissionMode: asString(hook.permission_mode),
         event,
-        // Claude Code 2.1.282 names the subagent on every hook fired inside one (measured); Codex names none.
+        // Claude Code 2.1.282 and Codex 0.157 name the subagent on every hook fired inside one, under the parent's session id (measured).
         subagentId: asString(hook.agent_id)
     };
 };
