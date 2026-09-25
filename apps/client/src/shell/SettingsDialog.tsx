@@ -1,39 +1,31 @@
-import { useState } from 'react';
+import { Suspense, useState, type ComponentType } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Tabs } from '@base-ui-components/react/tabs';
 import { SettingsNav, SettingsSearch, SettingsSearchResults } from '@/shell/settings/SettingsNav';
-import { AboutPane } from '@/shell/settings/panes/AboutPane';
-import { AgentsPane } from '@/shell/settings/panes/AgentsPane';
-import { AppearancePane } from '@/shell/settings/panes/AppearancePane';
-import { ComputerPane } from '@/shell/settings/panes/ComputerPane';
-import { FilesPane } from '@/shell/settings/panes/FilesPane';
-import { KeyboardPane } from '@/shell/settings/panes/KeyboardPane';
-import { MachinesPane } from '@/shell/settings/panes/MachinesPane';
-import { ProvidersPane } from '@/shell/settings/panes/ProvidersPane';
-import { UsagePane } from '@/shell/settings/panes/UsagePane';
-import { ViewsPane } from '@/shell/settings/panes/ViewsPane';
-import { VoicePane } from '@/shell/settings/panes/VoicePane';
 import type { SearchResult } from '@/shell/settings/search';
 import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { CloseButton } from '@/ui/CloseButton';
+import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { lazyNamed } from '@/ui/lazy';
 import { Select } from '@/ui/Select';
 import { useDialogLayer } from '@/ui/dialog-layer';
 
-const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
-    appearance: AppearancePane,
-    views: ViewsPane,
-    files: FilesPane,
-    providers: ProvidersPane,
-    voice: VoicePane,
-    computer: ComputerPane,
-    usage: UsagePane,
-    agents: AgentsPane,
-    machines: MachinesPane,
-    keyboard: KeyboardPane,
-    about: AboutPane
+// Each pane is a chunk of its own, loaded when it is opened; the search index in `search.ts` never imports one.
+const PANES: Record<SettingsSectionId, ComponentType> = {
+    appearance: lazyNamed(() => import('@/shell/settings/panes/AppearancePane'), 'AppearancePane'),
+    views: lazyNamed(() => import('@/shell/settings/panes/ViewsPane'), 'ViewsPane'),
+    files: lazyNamed(() => import('@/shell/settings/panes/FilesPane'), 'FilesPane'),
+    providers: lazyNamed(() => import('@/shell/settings/panes/ProvidersPane'), 'ProvidersPane'),
+    voice: lazyNamed(() => import('@/shell/settings/panes/VoicePane'), 'VoicePane'),
+    computer: lazyNamed(() => import('@/shell/settings/panes/ComputerPane'), 'ComputerPane'),
+    usage: lazyNamed(() => import('@/shell/settings/panes/UsagePane'), 'UsagePane'),
+    agents: lazyNamed(() => import('@/shell/settings/panes/AgentsPane'), 'AgentsPane'),
+    machines: lazyNamed(() => import('@/shell/settings/panes/MachinesPane'), 'MachinesPane'),
+    keyboard: lazyNamed(() => import('@/shell/settings/panes/KeyboardPane'), 'KeyboardPane'),
+    about: lazyNamed(() => import('@/shell/settings/panes/AboutPane'), 'AboutPane')
 };
 
 /* Sections on the left, one pane on the right. Opens on the section the caller asked for, or the last one. */
@@ -111,7 +103,11 @@ export function SettingsDialog() {
                                         )}
                                         onScroll={(event) => event.currentTarget.toggleAttribute('data-fade-start', event.currentTarget.scrollTop > 0)}
                                     >
-                                        <Pane />
+                                        <ErrorBoundary label={t('settingsDialog.failed')} className="min-h-0 grow">
+                                            <Suspense fallback={null}>
+                                                <Pane />
+                                            </Suspense>
+                                        </ErrorBoundary>
                                     </Tabs.Panel>
                                 );
                             })}

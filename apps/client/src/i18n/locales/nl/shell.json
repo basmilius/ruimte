@@ -182,7 +182,8 @@
     "settingsDialog": {
         "title": "Instellingen",
         "section": "Onderdeel van de instellingen",
-        "close": "Instellingen sluiten"
+        "close": "Instellingen sluiten",
+        "failed": "Deze instellingenpagina kon niet worden getekend"
     },
     "worktreeDialog": {
         "title": "Aan een worktree koppelen",
