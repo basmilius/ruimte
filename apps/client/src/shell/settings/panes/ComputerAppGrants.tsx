@@ -4,10 +4,9 @@ import { useTranslation } from 'react-i18next';
 import type { ComputerAppEntry, ComputerAppGrants as Grants, ComputerRevokePayload } from '@ruimte/contracts';
 import { formatDayWithYear } from '@/format/datetime';
 import { useFormatLocale } from '@/format/locale';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow, TopIcon } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
 interface ComputerAppGrantsProps {
@@ -86,11 +85,7 @@ interface GrantRowProps {
 function GrantRow({ entry, icon, detail, children }: GrantRowProps) {
     return (
         <SettingsRow
-            leading={
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-surface-hover text-text-muted">
-                    <Icon icon={icon} size={16} />
-                </span>
-            }
+            leading={<TopIcon icon={icon} size={20} className="text-text-muted" />}
             label={
                 <Tooltip label={entry.bundleId}>
                     <span className="max-w-full truncate">{entry.name || entry.bundleId}</span>

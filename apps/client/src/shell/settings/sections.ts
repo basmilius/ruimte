@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { Bot, Brain, ChartNoAxesColumn, Folder, Info, Keyboard, Mic, MousePointer2, Palette, PanelsTopLeft, Server, type LucideIcon } from 'lucide-react';
+import { Bot, Brain, ChartNoAxesColumn, Folder, Info, Keyboard, LayoutGrid, Mic, MousePointer2, Palette, Server, type LucideIcon } from 'lucide-react';
 import type { SettingsSectionId } from '@/state/ui';
 
 export interface SettingsSectionMeta {
@@ -31,7 +31,7 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
     {
         label: 'workspace',
         sections: [
-            { id: 'views', icon: PanelsTopLeft },
+            { id: 'views', icon: LayoutGrid },
             { id: 'files', icon: Folder }
         ]
     },
