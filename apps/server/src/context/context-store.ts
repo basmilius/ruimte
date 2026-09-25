@@ -3,6 +3,8 @@ import type {
     ChatItem,
     ChatQuestion,
     ChatQuestionItem,
+    ChatWorkflow,
+    ChatWorkflowAgent,
     ContextSource,
     DeviceInfo,
     DiagramDocument,
@@ -10,6 +12,7 @@ import type {
     Plan,
     ProjectCanvasView
 } from '@ruimte/contracts';
+import { workflowAgentRef } from '@ruimte/contracts';
 import { renderPlanText } from '@ruimte/plan';
 import { contextChangeNote } from './context-note.ts';
 import { CodedError } from '../coded-error.ts';
@@ -103,6 +106,25 @@ const pendingQuestionLine = (question: ChatQuestion): string => {
     return `- question ${question.id}: ${how}`;
 };
 
+/* An agent of a workflow, by the id `--subagent` reads its conversation under. */
+const workflowAgentText = (agent: ChatWorkflowAgent): string =>
+    `${agent.label} (${agent.status}, ${agent.agentId === null ? 'not started yet' : workflowAgentRef(agent.agentId)})`;
+
+/* What a Workflow call runs, one line per phase, so a parent can follow a child's workflow without opening it. */
+const workflowLines = (workflow: ChatWorkflow): string[] => {
+    const inPhase = (index: number): ChatWorkflowAgent[] => workflow.agents.filter((agent) => agent.phaseIndex === index);
+    const phases = workflow.phases.map((phase) => {
+        const agents = inPhase(phase.index);
+        return `- phase ${phase.index} "${phase.title}": ${agents.length === 0 ? 'not started yet' : agents.map(workflowAgentText).join(', ')}`;
+    });
+    const loose = workflow.agents.filter((agent) => !workflow.phases.some((phase) => phase.index === agent.phaseIndex));
+    return [
+        `Workflow${workflow.name === null ? '' : ` "${workflow.name}"`}, each agent readable with --subagent and the id beside it:`,
+        ...phases,
+        ...(loose.length === 0 ? [] : [`- outside a phase: ${loose.map(workflowAgentText).join(', ')}`])
+    ];
+};
+
 /*
  * A chat thread as an agent should read it: who said what, and what tools ran. A subagent is one line:
  * the work it did inside its row is its own, and printed between the parent's lines it would read as
@@ -131,6 +153,9 @@ export const renderTranscript = (items: ChatItem[]): string => {
             case 'tool': {
                 const input = typeof item.input === 'object' && item.input !== null ? JSON.stringify(item.input) : String(item.input ?? '');
                 lines.push(`> Tool ${item.name} (${item.state}): ${input.slice(0, 300)}`);
+                if (item.workflow !== undefined) {
+                    lines.push(...workflowLines(item.workflow));
+                }
                 if (item.output) {
                     lines.push('', '```', item.output.slice(0, 2000), '```', '');
                 }

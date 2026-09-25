@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
+import type { ChatItem, ChatWorkflowAgent, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import { handleContextRequest } from './context-route.ts';
 import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
@@ -336,6 +336,62 @@ describe('renderTranscript', () => {
         expect(text.split('\n').filter((line) => line.startsWith('> '))).toEqual(['> Subagent "Survey the docs" (done, toolu_1): A guide is missing.']);
         expect(text).not.toContain('Glob');
         expect(text.match(/A guide is missing\./g)).toHaveLength(1);
+    });
+
+    test('a Workflow row lists each phase with its agents, their state and the id a --subagent read takes', () => {
+        const workflow = (name: string | null, agents: ChatWorkflowAgent[]): ChatItem => ({
+            id: 'wf',
+            kind: 'tool',
+            createdAt: 1,
+            turnId: 't',
+            toolUseId: 'toolu_wf',
+            name: 'Workflow',
+            input: { script: 'export const meta = { name: "write-and-read" }' },
+            output: null,
+            state: 'running',
+            parentToolUseId: null,
+            workflow: {
+                name,
+                phases: [
+                    { index: 1, title: 'Write' },
+                    { index: 2, title: 'Read' },
+                    { index: 3, title: 'Check' }
+                ],
+                agents
+            }
+        });
+        const agent = (
+            index: number,
+            label: string,
+            phaseIndex: number | null,
+            agentId: string | null,
+            status: ChatWorkflowAgent['status']
+        ): ChatWorkflowAgent => ({
+            index,
+            label,
+            phaseIndex,
+            agentId,
+            status,
+            startedAt: null,
+            durationMs: null,
+            lastTool: null
+        });
+        const text = renderTranscript([
+            workflow('write-and-read', [
+                agent(1, 'write-file', 1, 'a-writer', 'done'),
+                agent(2, 'read-file', 2, 'a-reader', 'running'),
+                agent(3, 'read-again', 2, null, 'running'),
+                agent(4, 'tidy', null, 'a-tidy', 'failed')
+            ])
+        ]);
+        expect(text.split('\n').slice(1)).toEqual([
+            'Workflow "write-and-read", each agent readable with --subagent and the id beside it:',
+            '- phase 1 "Write": write-file (done, workflow-agent:a-writer)',
+            '- phase 2 "Read": read-file (running, workflow-agent:a-reader), read-again (running, not started yet)',
+            '- phase 3 "Check": not started yet',
+            '- outside a phase: tidy (failed, workflow-agent:a-tidy)'
+        ]);
+        expect(renderTranscript([workflow(null, [])]).split('\n')[1]).toBe('Workflow, each agent readable with --subagent and the id beside it:');
     });
 });
 
