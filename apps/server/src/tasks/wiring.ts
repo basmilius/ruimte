@@ -1,5 +1,6 @@
 import type { Task } from '@ruimte/contracts';
 import type { TaskHost } from '../canvas/verb.ts';
+import { reportsOnBackgroundWork } from '../chat/background-work.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { chatOpener } from '../chat/wake-chat.ts';
 import type { OutboxEntry, OutboxWork, StartAgentEntry } from '../outbox/outbox.ts';
@@ -55,7 +56,14 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
         owedTurn: deps.owedTurn,
         oweWake: (task) => oweWake({ enqueue: deps.enqueue }, task),
         alert: (nodeId, title, body) => deps.alert(deps.chats.get(nodeId) ? 'chat' : 'terminal', nodeId, title, body),
-        ...(deps.retryAt ? { retryAt: deps.retryAt } : {})
+        ...(deps.retryAt ? { retryAt: deps.retryAt } : {}),
+        afterBackgroundWork: (chatId) => {
+            const chat = deps.chats.get(chatId);
+            if (!chat?.running) {
+                return 'gone';
+            }
+            return reportsOnBackgroundWork(chat.info.provider) ? 'reports' : 'silent';
+        }
     });
 
     // Deferred, so a row is never written into a parent from inside the broadcast of the child that settled it.

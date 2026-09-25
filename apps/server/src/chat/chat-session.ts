@@ -19,6 +19,7 @@ import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ChatProvider } from '../providers/provider.ts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { BackendEvent, BackendLaunch, ChatBackend } from './backend.ts';
+import { runningInBackground } from './background-work.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
@@ -1246,9 +1247,7 @@ export class ChatSession {
     }
 
     private runningBackgroundRows(): ChatSubagentItem[] {
-        return this.thread
-            .list()
-            .filter((item): item is ChatSubagentItem => item.kind === 'subagent' && item.status === 'running' && item.background && item.origin !== 'ruimte');
+        return runningInBackground(this.thread.list()).filter((item) => item.kind === 'subagent');
     }
 
     /* Done for every row whose transcript shows the end, unless something else settled the row while it was read. */

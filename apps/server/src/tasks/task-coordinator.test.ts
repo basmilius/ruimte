@@ -13,6 +13,7 @@ let threads: Map<string, ChatItem[]>;
 let owed: string[];
 let onOwed: (() => void) | null;
 let coordinator: TaskCoordinator;
+let after: 'reports' | 'silent' | 'gone';
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-task-coordinator-'));
@@ -20,6 +21,7 @@ beforeEach(async () => {
     threads = new Map();
     owed = [];
     onOwed = null;
+    after = 'reports';
     coordinator = new TaskCoordinator({
         tasks,
         now: () => 10,
@@ -31,7 +33,8 @@ beforeEach(async () => {
             owed.push(task.id);
             onOwed?.();
         },
-        alert: () => undefined
+        alert: () => undefined,
+        afterBackgroundWork: () => after
     });
 });
 
@@ -49,6 +52,19 @@ const answer = (turnId: string, text: string, parentToolUseId?: string): ChatIte
     text,
     streaming: false,
     ...(parentToolUseId ? { parentToolUseId } : {})
+});
+
+const workflow = (state: 'running' | 'done' | 'error'): ChatItem => ({
+    id: 'wf',
+    kind: 'tool',
+    createdAt: 6,
+    turnId: 't1',
+    toolUseId: 'toolu_wf',
+    name: 'Workflow',
+    input: {},
+    output: 'Workflow launched in background. Task ID: w1',
+    state,
+    parentToolUseId: null
 });
 
 /* The events a chat sends as a turn of it ends: the settled turn, then the info that frees it. */
@@ -123,6 +139,39 @@ describe('the coordinator', () => {
         expect(tasks.get(task.id)?.result?.text).toBe('explicit');
         expect(owed).toEqual([task.id]);
         expect(await coordinator.done('chat-child', 'again')).toBeNull();
+    });
+
+    test('a turn that ended with a workflow running settles nothing; the work ending settles on that turn when the CLI says no more', async () => {
+        const task = await open('chat-lead', 'chat-child');
+        after = 'silent';
+        const launched = workflow('running');
+        threads.set('chat-child', [turn('t1', 'done'), launched, answer('t1', 'waiting for the workflow')]);
+        ends('chat-child', turn('t1', 'done'));
+        expect(tasks.get(task.id)?.status).toBe('open');
+
+        const finished = workflow('done');
+        threads.set('chat-child', [turn('t1', 'done'), finished, answer('t1', 'waiting for the workflow')]);
+        const owedOnce = nextOwed();
+        coordinator.chatEvent({ event: 'chat.event', payload: { chatId: 'chat-child', event: { type: 'item', item: finished } } });
+        await owedOnce;
+        expect(tasks.get(task.id)).toMatchObject({ status: 'done', result: { text: 'waiting for the workflow', source: 'turn' } });
+    });
+
+    test('background work that ended with the process fails the task, and a CLI that reports on it holds the task for that turn', async () => {
+        const task = await open('chat-lead', 'chat-child');
+        threads.set('chat-child', [turn('t1', 'done'), workflow('running'), answer('t1', 'launched')]);
+        ends('chat-child', turn('t1', 'done'));
+
+        const failed = workflow('error');
+        threads.set('chat-child', [turn('t1', 'done'), failed, answer('t1', 'launched')]);
+        coordinator.chatEvent({ event: 'chat.event', payload: { chatId: 'chat-child', event: { type: 'item', item: failed } } });
+        expect(tasks.get(task.id)?.status).toBe('open');
+
+        after = 'gone';
+        const owedOnce = nextOwed();
+        coordinator.chatEvent({ event: 'chat.event', payload: { chatId: 'chat-child', event: { type: 'item', item: failed } } });
+        await owedOnce;
+        expect(tasks.get(task.id)).toMatchObject({ status: 'failed', result: { source: 'exit' } });
     });
 
     test('nothing that dies with the daemon settles a task', async () => {

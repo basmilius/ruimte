@@ -866,3 +866,120 @@ describe('a child that waits on input', () => {
         expect(daemon.chats.get(approver.childId)?.thread.get('approval-req-1')).toMatchObject({ decision: 'pending' });
     });
 });
+
+describe('a child with work running in the background', () => {
+    /* Lets every fake CLI do what it put off, as the real ones do once their background work moves on. */
+    const later = (daemon: Daemon): void => {
+        for (const fake of [...daemon.claude.started, ...daemon.codex.started]) {
+            fake.runLater();
+        }
+    };
+
+    const backgroundRow = (daemon: Daemon, childId: string): ChatSubagentItem | undefined =>
+        daemon.chats.get(childId)?.thread.find('subagent', (item) => item.background);
+
+    /* A Claude child whose first turn ended while the subagent it launched in the background works on. */
+    const launched = async (daemon: Daemon, title = 'Survey'): Promise<{ childId: string; taskId: string }> => {
+        const child = await delegate(daemon, title, 'background: read the docs');
+        await daemon.until(() => turnsOf(daemon, child.childId).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+        return child;
+    };
+
+    test('does not settle when its turn ends, and settles on the turn its CLI opens once the work is done, waking the lead once', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const child = await launched(daemon);
+
+        expect(backgroundRow(daemon, child.childId)?.status).toBe('running');
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'open', result: null });
+        expect(wakeTurns(daemon)).toEqual([]);
+
+        // The subagent works and reports; the CLI opens its own turn about it, which is the result.
+        later(daemon);
+        await daemon.worker.settled();
+        expect(daemon.tasks.get(child.taskId)?.status).toBe('open');
+        later(daemon);
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        expect(backgroundRow(daemon, child.childId)?.status).toBe('done');
+        expect(turnsOf(daemon, child.childId).map((turn) => [turn.origin, turn.state])).toEqual([
+            ['user', 'done'],
+            ['agent', 'done']
+        ]);
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'done', wake: 'sent', result: { source: 'turn' } });
+        expect(daemon.tasks.get(child.taskId)?.result?.text).toStartWith('the subagent says: read the docs');
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
+    });
+
+    test('takes done while the work still runs, and its CLI reporting afterwards wakes nobody again', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const child = await launched(daemon);
+
+        expect(await verb(daemon, child.childId, 'done', ['--result', 'the survey is under way'])).toEqual([`done\t${child.taskId}\tchat-lead`]);
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        later(daemon);
+        later(daemon);
+        await daemon.until(() => turnsOf(daemon, child.childId).length === 2 && turnsOf(daemon, child.childId).every((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'done', result: { text: 'the survey is under way', source: 'done' } });
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
+        expect(daemon.outbox.list()).toEqual([]);
+    });
+
+    test('in a team keeps the lead asleep until it is done too, then wakes it once for both', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const roles = [
+            { title: 'Survey', prompt: 'background: read the docs', provider: 'claude' },
+            { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude' }
+        ];
+        const lines = await verb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--task', '--roles', JSON.stringify(roles)]);
+        const [survey, lexer] = lines.slice(1, -1).map((line) => {
+            const fields = line.split('\t');
+            return { childId: fields[0]!, taskId: fields[6]! };
+        });
+        await daemon.until(() => daemon.tasks.get(lexer!.taskId)?.status === 'done');
+        await daemon.until(() => turnsOf(daemon, survey!.childId).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        expect(daemon.tasks.get(survey!.taskId)?.status).toBe('open');
+        expect(wakeTurns(daemon)).toEqual([]);
+
+        later(daemon);
+        later(daemon);
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[survey!.taskId, lexer!.taskId]]);
+        expect(daemon.tasks.get(survey!.taskId)?.result?.text).toStartWith('the subagent says: read the docs');
+    });
+
+    test('settles on its last turn when its CLI opens none once the agent it spawned completed', async () => {
+        const daemon = await bootTestDaemon({ home, store, clock, installed: ['claude', 'codex'] });
+        running.push(daemon);
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const [line] = await verb(daemon, 'chat-lead', 'agent', ['codex', '--task', 'Survey', '--prompt', 'spawn agent: survey the docs']);
+        const fields = line!.split('\t');
+        const childId = fields[0]!;
+        const taskId = fields[5]!;
+        await daemon.until(() => turnsOf(daemon, childId).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        expect(backgroundRow(daemon, childId)?.status).toBe('running');
+        expect(daemon.tasks.get(taskId)?.status).toBe('open');
+
+        later(daemon);
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        expect(turnsOf(daemon, childId)).toHaveLength(1);
+        expect(daemon.tasks.get(taskId)).toMatchObject({ status: 'done', result: { text: 'spawned' } });
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[taskId]]);
+    });
+});

@@ -1,5 +1,6 @@
 import type { ChatItem, ChatTurnItem, Task, TaskResult } from '@ruimte/contracts';
 import { abortedByMachine } from '@ruimte/contracts';
+import { isBackgroundWork, runningInBackground, runsInBackground } from '../chat/background-work.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import type { TaskStore } from './task-store.ts';
@@ -19,6 +20,11 @@ export interface TaskCoordinatorDeps {
     alert(nodeId: string, title: string, body: string): void;
     /* When the daemon takes up a turn that stopped on an overload again; null when it does not, which makes it an error like any other. */
     retryAt?(chatId: string, turn: ChatTurnItem, items: readonly ChatItem[]): number | null;
+    /*
+     * What comes after the work a chat left running in the background ended: a turn its CLI opens about
+     * it (`reports`), nothing (`silent`), or nothing ever again, since its process went (`gone`).
+     */
+    afterBackgroundWork(chatId: string): 'reports' | 'silent' | 'gone';
 }
 
 // A child's answer is its last word of the turn; the thinking and the tools before it are not the result.
@@ -59,12 +65,15 @@ export const resultOfTurn = (turn: ChatTurnItem, items: readonly ChatItem[], at:
 /*
  * Settles tasks from what children do and does nothing else: it writes the task store and owes wakes
  * in the outbox, never starts a turn, since it runs inside the broadcast of the child it heard. A chat
- * child settles when a turn ends with none of its own tasks still open or waiting to wake it; a
- * terminal child settles only on `done`, or fails when it exits without one.
+ * child settles when a turn ends with none of its own tasks still open or waiting to wake it and no work
+ * of its CLI's still running in the background; a terminal child settles only on `done`, or fails when
+ * it exits without one.
  */
 export class TaskCoordinator {
     private readonly deps: TaskCoordinatorDeps;
     private stopped = false;
+    // Per child, the last turn that ended while background work ran on, which is no answer while the CLI will still report on it.
+    private readonly outlived = new Map<string, string>();
 
     constructor(deps: TaskCoordinatorDeps) {
         this.deps = deps;
@@ -85,6 +94,8 @@ export class TaskCoordinator {
             this.turnStarted(chatId);
         } else if (chatEvent.type === 'item' && chatEvent.item.kind === 'turn') {
             this.turnEnded(chatId, chatEvent.item);
+        } else if (chatEvent.type === 'item' && isBackgroundWork(chatEvent.item) && !runsInBackground(chatEvent.item)) {
+            this.recheck(chatId);
         } else if (chatEvent.type === 'info' && chatEvent.info.activeTurnId === null) {
             // A child that waited on tasks of its own may be done now that its last wake turn went.
             this.recheck(chatId);
@@ -152,8 +163,9 @@ export class TaskCoordinator {
     /*
      * Whether this turn is the one the task's result comes from. A task given to an already-working agent
      * gets a turn of its own that names it; the turn that was in its way answers the person who sent it,
-     * not the task, and nothing settles while that turn is still owed. A child opened with its task has no
-     * turn of that kind, so its first turn settles it, as it always did.
+     * not the task, and nothing settles while that turn is still owed. A turn after it answers too, as the
+     * one the CLI opens about work that turn left running. A child opened with its task has no turn of that
+     * kind, so its first turn settles it, as it always did.
      */
     private answers(items: readonly ChatItem[], turn: ChatTurnItem, task: Task): boolean {
         if ((turn.taskIds ?? []).includes(task.id)) {
@@ -162,7 +174,8 @@ export class TaskCoordinator {
         if (this.deps.owedTurn(task.id)) {
             return false;
         }
-        return !items.some((item) => item.kind === 'turn' && (item.taskIds ?? []).includes(task.id));
+        const own = items.findIndex((item) => item.kind === 'turn' && (item.taskIds ?? []).includes(task.id));
+        return own === -1 || own < items.findIndex((item) => item.id === turn.id);
     }
 
     private turnEnded(chatId: string, turn: ChatTurnItem): void {
@@ -175,6 +188,21 @@ export class TaskCoordinator {
         if (paused !== null) {
             this.hold(task, paused);
             return;
+        }
+        // A turn a person stopped or that failed ends the task as it always did, whatever still runs beside it.
+        if (turn.state === 'done' && runningInBackground(items).length > 0) {
+            this.outlived.set(chatId, turn.id);
+            return;
+        }
+        if (this.outlived.get(chatId) === turn.id) {
+            const after = this.deps.afterBackgroundWork(chatId);
+            if (after === 'reports') {
+                return;
+            }
+            if (after === 'gone') {
+                this.settle(task, 'failed', { text: 'It ended before the work it ran in the background was done.', source: 'exit', at: this.deps.now() });
+                return;
+            }
         }
         const { status, result } = resultOfTurn(turn, items, this.deps.now());
         this.settle(task, status, result);
@@ -230,6 +258,7 @@ export class TaskCoordinator {
     }
 
     private async settleNow(task: Task, status: 'done' | 'failed', result: TaskResult): Promise<Task | null> {
+        this.outlived.delete(task.childId);
         const settled = await this.deps.tasks.settle(task.id, status, result, this.deps.now());
         if (!settled) {
             return null;
