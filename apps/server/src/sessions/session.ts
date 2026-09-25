@@ -12,6 +12,14 @@ const OUTPUT_TICK_MS = 16;
 // A shell that traps SIGHUP would otherwise keep a killed session alive forever.
 const KILL_ESCALATION_MS = 2000;
 
+/*
+ * A line typed before the shell reads input sits in the tty's canonical queue, which macOS caps at
+ * `MAX_CANON` (1024 bytes) and silently cuts, newline included. A longer line goes through the
+ * shell's environment instead, so what is typed stays short whatever the note or first prompt holds.
+ */
+const MAX_TYPED_LINE = 1000;
+export const START_LINE_ENV = 'RUIMTE_START_LINE';
+
 export const RESTORED_TEXT = '[session restored, previous shell ended]';
 const RESTORED_MARKER = `\r\n\x1b[2m${RESTORED_TEXT}\x1b[0m\r\n`;
 
@@ -112,20 +120,22 @@ export class Session {
             this.terminal.write(dimmed(options.motd));
         }
 
+        const command = options.command;
+        const long = command !== undefined && Buffer.byteLength(command) > MAX_TYPED_LINE;
         this.pty = options.adapter.spawn({
             shell: options.shell,
             args: options.args,
             cwd: options.cwd,
             cols: options.cols,
             rows: options.rows,
-            env: options.env
+            env: long ? { ...options.env, [START_LINE_ENV]: command } : options.env
         });
         this.pid = this.pty.pid;
         this.pty.onData((bytes) => this.receive(bytes));
         this.pty.onExit((exitCode) => this.handleExit(exitCode));
-        if (options.command) {
+        if (command) {
             // The line waits in the tty until the shell reads input, however long its profile takes.
-            this.pty.write(`${options.command}\n`);
+            this.pty.write(long ? `eval "$${START_LINE_ENV}"\n` : `${command}\n`);
         }
     }
 

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { CLAUDE_ALLOW_CONTEXT } from '../providers/claude.ts';
+import { START_LINE_ENV } from './session.ts';
 import { makeHarness, type Harness } from './test-helpers.ts';
 
 const ALLOW = `'${CLAUDE_ALLOW_CONTEXT}'`;
@@ -32,6 +33,20 @@ test('the prompt an agent node was made with lands on the line its CLI is starte
 test('a session without a prompt is started the way it always was', async () => {
     await start('terminal-b');
     expect(harness.adapter.forSession('terminal-b').input).toEqual([`claude ${ALLOW}\n`]);
+});
+
+test('a line longer than the tty takes before the shell reads is handed over in the environment', async () => {
+    const prompt = 'a long brief '.repeat(100);
+    await prompts!.put('project', 'terminal-c', prompt);
+    await start('terminal-c');
+    const pty = harness.adapter.forSession('terminal-c');
+    expect(pty.input).toEqual([`eval "$${START_LINE_ENV}"\n`]);
+    expect(pty.options.env[START_LINE_ENV]).toBe(`claude ${ALLOW} '${prompt}'`);
+});
+
+test('a short line leaves the environment alone', async () => {
+    await start('terminal-d');
+    expect(harness.adapter.forSession('terminal-d').options.env[START_LINE_ENV]).toBeUndefined();
 });
 
 test('two creates of one id at once, the machine starting the node and a client mounting it, spawn one shell', async () => {
