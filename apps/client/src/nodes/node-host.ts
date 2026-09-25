@@ -32,6 +32,8 @@ export interface NodeHost {
     command?: string;
     resume?: string;
     provider?: AgentKind;
+    /* The account of that CLI on this machine; absent is its default account. */
+    account?: string;
     providerFixed?: boolean;
     runtimeMode?: RuntimeMode;
     url?: string;
@@ -49,6 +51,7 @@ const hostOfNode = (node: ProjectNode): NodeHost => ({
     command: node.command,
     resume: node.resume,
     provider: node.provider,
+    account: node.account,
     providerFixed: node.providerFixed,
     runtimeMode: node.runtimeMode,
     url: node.url,

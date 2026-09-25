@@ -1,10 +1,11 @@
-import { stat } from 'node:fs/promises';
+import { statSync } from 'node:fs';
 import type { AgentKind, ProviderAccount, ProviderAccountMap, ProviderAccounts, ProviderAccountStatus, ProviderInfo } from '@ruimte/contracts';
 import { ClientSinks } from '../../client-sinks.ts';
 import { errorText } from '../../error-text.ts';
 import type { SessionSink } from '../../sessions/manager.ts';
 import type { ChatProvider } from '../provider.ts';
-import { accountEnv, accountFolder, expandHome, isDefaultAccount, isKnownKind, type Env } from './accounts.ts';
+import { accountEnv, accountFolder, canContinue, expandHome, isDefaultAccount, isKnownKind, transcriptFolder, type Env } from './accounts.ts';
+import { AccountError, isDefaultAccountOf, type AccountLaunches } from './launch.ts';
 import { prepareShadowHome, type ShadowHomeReport } from './shadow-home.ts';
 import { askAccount, type AskAccount } from './status.ts';
 import { acceptAccounts, accountsPath, readAccounts, wireAccounts, writeAccounts, type StoredAccounts } from './store.ts';
@@ -20,7 +21,7 @@ export interface ProviderAccountsOptions {
     // How to ask a CLI who is signed in; a test answers without starting one.
     ask?: AskAccount;
     prepareShadow?: (home: string, shadow: string) => Promise<ShadowHomeReport>;
-    folderExists?: (path: string) => Promise<boolean>;
+    folderExists?: (path: string) => boolean;
     // What the daemon puts in a config folder of an account (its hooks); absent puts nothing there.
     install?: (kind: AgentKind, folder: string) => Promise<void>;
     now?: () => number;
@@ -34,11 +35,8 @@ interface AccountState {
     nextAt: number;
 }
 
-const isFolder = (path: string): Promise<boolean> =>
-    stat(path).then(
-        (stats) => stats.isDirectory(),
-        () => false
-    );
+// Asked on every start of a CLI under an account, which is one stat and never worth an await in the way of a spawn.
+const isFolder = (path: string): boolean => statSync(path, { throwIfNoEntry: false })?.isDirectory() === true;
 
 /* A status without the moment it was drawn, to tell whether anything a person reads changed. */
 const sameStatus = (left: ProviderAccountStatus, right: ProviderAccountStatus): boolean =>
@@ -49,7 +47,7 @@ const sameStatus = (left: ProviderAccountStatus, right: ProviderAccountStatus): 
  * what each CLI says about who is signed in there. The list is the person's; the statuses are only
  * ever the CLI's answer, held in memory and asked again on a slow clock.
  */
-export class ProviderAccountsService {
+export class ProviderAccountsService implements AccountLaunches {
     private readonly path: string;
     private readonly providers: ProviderAccountsOptions['providers'];
     private readonly env: Env;
@@ -94,13 +92,63 @@ export class ProviderAccountsService {
         return this.accounts[id] ?? null;
     }
 
-    /* The environment a CLI of that account runs in; null for an id this machine does not have or a kind it does not know. */
-    envFor(id: string, baseEnv: Env): Env | null {
+    /*
+     * The environment a CLI of this kind runs in under this account. An account that cannot be used
+     * refuses the start, since falling back on the default account would run it on someone else's costs.
+     */
+    envFor(kind: AgentKind, id: string | undefined, baseEnv: Env): Env {
+        if (id === undefined || isDefaultAccountOf(kind, id)) {
+            return baseEnv;
+        }
         const account = this.accounts[id];
-        if (account === undefined || !isKnownKind(account.kind)) {
+        const refuse = (why: string): AccountError =>
+            new AccountError('account-unavailable', `The account '${this.labelOf(id)}' is not available on this machine: ${why}.`);
+        const provider = this.providers.get(kind);
+        if (account === undefined) {
+            throw refuse('no account on it has that id');
+        }
+        if (account.kind !== kind) {
+            throw refuse(`it is an account of ${isKnownKind(account.kind) ? this.providers.get(account.kind).name : account.kind}, not of ${provider.name}`);
+        }
+        if (account.enabled === false) {
+            throw refuse('it is turned off');
+        }
+        if (provider.home === undefined || account.home === undefined) {
+            throw refuse(`${provider.name} has no setting for its config folder`);
+        }
+        for (const folder of [account.home, account.shadowHome]) {
+            if (folder !== undefined && !this.folderExists(expandHome(folder, this.env))) {
+                throw refuse(`its folder ${folder} is missing`);
+            }
+        }
+        return accountEnv(id, account, provider, baseEnv);
+    }
+
+    transcriptFolder(kind: AgentKind, id: string | undefined): string | null {
+        const key = id ?? kind;
+        const account = this.accounts[key];
+        if (account === undefined || account.kind !== kind) {
             return null;
         }
-        return accountEnv(id, account, this.providers.get(account.kind), baseEnv);
+        return transcriptFolder(key, account, this.providers.get(kind), this.env);
+    }
+
+    canContinue(kind: AgentKind, from: string | undefined, to: string | undefined): boolean {
+        const fromId = from ?? kind;
+        const toId = to ?? kind;
+        const fromAccount = this.accounts[fromId];
+        const toAccount = this.accounts[toId];
+        if (fromId === toId) {
+            return true;
+        }
+        if (fromAccount === undefined || toAccount === undefined || fromAccount.kind !== kind) {
+            return false;
+        }
+        return canContinue({ id: fromId, account: fromAccount }, { id: toId, account: toAccount }, (each) => this.providers.get(each), this.env);
+    }
+
+    labelOf(id: string): string {
+        return this.accounts[id]?.label ?? id;
     }
 
     /* Checks every account once at once, and the ones due on the clock after that. */
@@ -224,7 +272,7 @@ export class ProviderAccountsService {
             ? []
             : [account.home, account.shadowHome].filter((folder) => folder !== undefined).map((folder) => expandHome(folder, this.env));
         for (const folder of folders) {
-            if (!(await this.folderExists(folder))) {
+            if (!this.folderExists(folder)) {
                 return this.status(id, account, 'folder-missing', { message: `${folder} does not exist` });
             }
         }

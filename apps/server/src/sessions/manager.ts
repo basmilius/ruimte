@@ -7,6 +7,7 @@ import { modeOfHook, normalizeHook, settleWaiting } from '../agents/hooks.ts';
 import { isTerminalReply } from './terminal-replies.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { narrowerMode } from '../canvas/mode.ts';
+import { launchEnv, type AccountLaunches } from '../providers/accounts/launch.ts';
 import { contextHint, verbsNote } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
@@ -94,6 +95,8 @@ export interface SessionManagerOptions {
     modeCeiling?: (sessionId: string) => RuntimeMode | null;
     // Refuses a directory this node may not start in, asked right before every spawn.
     checkCwd?: (sessionId: string, cwd: string) => Promise<void>;
+    // The accounts a launch may name; without them only a CLI's default account starts.
+    accounts?: AccountLaunches;
 }
 
 export interface CommandGate {
@@ -149,6 +152,7 @@ export class SessionManager {
     private readonly commands: CommandGate | null;
     private readonly modeCeiling: (sessionId: string) => RuntimeMode | null;
     private readonly checkCwd: (sessionId: string, cwd: string) => Promise<void>;
+    private readonly accounts: AccountLaunches | null;
     // Told when the process tree of a session is about to change or just did: the end of a turn, an exit, a kill.
     onProcessChange: ((sessionId: string, phase: ProcessChangePhase) => void) | null = null;
     // Whether the process monitor found the agent of a session gone while its status still says it runs.
@@ -176,6 +180,7 @@ export class SessionManager {
         this.commands = options.commands ?? null;
         this.modeCeiling = options.modeCeiling ?? (() => null);
         this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
+        this.accounts = options.accounts ?? null;
     }
 
     /* The session a hook or context token belongs to. */
@@ -225,6 +230,9 @@ export class SessionManager {
         }
         const cwd = options.cwd ?? this.env.HOME ?? homedir();
         await this.checkCwd(options.sessionId, cwd);
+        const launch = this.withinCeiling(options.sessionId, options.agent);
+        // On the shell and not on the typed line, so a resume and whatever a person types there run under the same account.
+        const env = launch ? launchEnv(this.accounts, launch.kind, launch.account, this.env) : this.env;
 
         let restoredScreen: string | undefined;
         let restoredAgent: AgentInfo | undefined;
@@ -238,7 +246,6 @@ export class SessionManager {
             restoredAgent = (await this.agents?.read(options.sessionId)) ?? undefined;
         }
 
-        const launch = this.withinCeiling(options.sessionId, options.agent);
         const held = options.command && this.commands?.approved(options.sessionId, options.command) === false ? options.command : null;
         const shell = options.shell ?? defaultShell(this.env);
         const session = this.spawn({
@@ -251,7 +258,8 @@ export class SessionManager {
             command: held === null ? (options.command ?? (await this.startLine(options.sessionId, launch, restoredAgent !== undefined))) : undefined,
             restoredScreen,
             restoredAgent,
-            launch
+            launch,
+            env
         });
         session.heldCommand = held;
         this.sessions.set(session.id, session);
@@ -568,9 +576,10 @@ export class SessionManager {
         restoredScreen?: string;
         restoredAgent?: AgentInfo;
         launch?: AgentLaunch;
+        env: Record<string, string | undefined>;
     }): Session {
         const env: Record<string, string> = {};
-        for (const [key, value] of Object.entries(this.env)) {
+        for (const [key, value] of Object.entries(options.env)) {
             if (value !== undefined) {
                 env[key] = value;
             }

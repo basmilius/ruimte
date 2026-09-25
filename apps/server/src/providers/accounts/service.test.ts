@@ -46,7 +46,7 @@ describe('ProviderAccountsService', () => {
                 }
                 return answer;
             },
-            folderExists: async (path) => folders.has(path),
+            folderExists: (path) => folders.has(path),
             prepareShadow: async (home, shadow) => {
                 shadows.push(`${home} <- ${shadow}`);
                 return shadowReport;
@@ -204,9 +204,47 @@ describe('ProviderAccountsService', () => {
 
     test('gives a launch the environment of its account', async () => {
         const service = await make();
-        await service.save({ claude_personal: { kind: 'claude', home: '~/.claude_personal' } });
-        expect(service.envFor('claude', env)).toBe(env);
-        expect(service.envFor('claude_personal', env)).toEqual({ HOME: '/home/bas', CLAUDE_CONFIG_DIR: '/home/bas/.claude_personal' });
-        expect(service.envFor('nobody', env)).toBeNull();
+        await service.save({ claude_personal: { kind: 'claude', label: 'Personal', home: '~/.claude_personal' } });
+        expect(service.envFor('claude', undefined, env)).toBe(env);
+        expect(service.envFor('claude', 'claude', env)).toBe(env);
+        expect(service.envFor('claude', 'claude_personal', env)).toEqual({ HOME: '/home/bas', CLAUDE_CONFIG_DIR: '/home/bas/.claude_personal' });
+    });
+
+    test('refuses an account it cannot start, and never falls back on the default one', async () => {
+        const service = await make();
+        await service.save({
+            claude_personal: { kind: 'claude', label: 'Personal', home: '~/.claude_personal' },
+            claude_gone: { kind: 'claude', label: 'Gone', home: '~/.claude_gone' },
+            claude_off: { kind: 'claude', home: '~/.claude_personal', enabled: false },
+            codex_personal: { kind: 'codex', home: '~/.codex_personal' }
+        });
+        const refusal = (kind: AgentKind, id: string): unknown => {
+            try {
+                service.envFor(kind, id, env);
+            } catch (e) {
+                return e;
+            }
+            return null;
+        };
+        expect(refusal('claude', 'claude_gone')).toMatchObject({
+            code: 'account-unavailable',
+            message: "The account 'Gone' is not available on this machine: its folder ~/.claude_gone is missing."
+        });
+        expect(refusal('claude', 'nobody')).toMatchObject({ code: 'account-unavailable' });
+        expect(refusal('claude', 'claude_off')).toMatchObject({ code: 'account-unavailable', message: expect.stringContaining('turned off') });
+        expect(refusal('claude', 'codex_personal')).toMatchObject({ code: 'account-unavailable', message: expect.stringContaining('an account of Codex') });
+    });
+
+    test('tells which accounts can go on with a conversation', async () => {
+        const service = await make();
+        await service.save({
+            claude_personal: { kind: 'claude', home: '~/.claude_personal' },
+            codex_personal: { kind: 'codex', home: '~/.codex', shadowHome: '~/.codex_personal' }
+        });
+        expect(service.canContinue('claude', undefined, 'claude')).toBe(true);
+        expect(service.canContinue('claude', undefined, 'claude_personal')).toBe(false);
+        expect(service.canContinue('codex', undefined, 'codex_personal')).toBe(true);
+        expect(service.transcriptFolder('claude', 'claude_personal')).toBe('/home/bas/.claude_personal');
+        expect(service.transcriptFolder('claude', 'nobody')).toBeNull();
     });
 });

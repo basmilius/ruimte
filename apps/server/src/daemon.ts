@@ -238,6 +238,22 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
     /* The other reader: what a chat has to show a person in its thread, which is never taken from the model. */
     const unshownFor = async (chatId: string): Promise<string[]> => (await notices.show(chatId)).map(noticeNote);
+    const providers = new ProviderRegistry();
+    // Before the managers, which start every CLI under the account its node or chat names.
+    const providerAccounts = new ProviderAccountsService({
+        ruimteHome: config.home,
+        providers,
+        install: config.installHooks
+            ? async (kind, folder) => {
+                  for (const { path, result } of await installInFolder(kind, folder)) {
+                      if (result === 'written') {
+                          console.log(`Installed ${kind} status hooks in ${path}`);
+                      }
+                  }
+              }
+            : undefined
+    });
+    await providerAccounts.load();
     // One reader for chats and terminals, so a transcript both look at is only read on from where either stopped.
     const claudeTitles = new ClaudeTitleReader();
     const manager = new SessionManager({
@@ -268,10 +284,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         modeCeiling: (sessionId) => lineage.ceilingOf(sessionId),
         checkCwd: startCwd,
         claudeTitles,
-        codexTitles: new CodexTitleReader()
+        codexTitles: new CodexTitleReader(),
+        accounts: providerAccounts
     });
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
-    const providers = new ProviderRegistry();
     void probeCodexNoDaemon();
     // A bearer token speaks for a terminal session or a chat, for reading context and for canvas verbs alike.
     const targetForToken = (token: string): string | null => manager.sessionIdForToken(token) ?? chats.chatIdForToken(token);
@@ -428,20 +444,6 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const statuses = new GitStatusWatcher();
     const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
     const limits = new UsageMonitor({ providers });
-    const providerAccounts = new ProviderAccountsService({
-        ruimteHome: config.home,
-        providers,
-        install: config.installHooks
-            ? async (kind, folder) => {
-                  for (const { path, result } of await installInFolder(kind, folder)) {
-                      if (result === 'written') {
-                          console.log(`Installed ${kind} status hooks in ${path}`);
-                      }
-                  }
-              }
-            : undefined
-    });
-    await providerAccounts.load();
     const sampler = await createSampler(process.platform, config.home);
     const processes = new ProcessMonitor({
         sampler,

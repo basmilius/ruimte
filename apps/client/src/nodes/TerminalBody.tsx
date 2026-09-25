@@ -216,7 +216,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         // A terminal without its own directory starts in the project folder, like one opened from the repo.
         const cwd = spec?.cwd ?? useProject.getState().current?.folder ?? undefined;
         // An agent says which CLI and how; the daemon turns that into the line the shell gets.
-        const agent = spec?.provider ? { kind: spec.provider, runtimeMode: spec.runtimeMode, resume: spec.resume } : undefined;
+        const agent = spec?.provider ? { kind: spec.provider, runtimeMode: spec.runtimeMode, resume: spec.resume, account: spec.account } : undefined;
         sessionClient
             .open(id, { cwd, command: spec?.command, agent }, term.cols, term.rows)
             .then((result) => {
