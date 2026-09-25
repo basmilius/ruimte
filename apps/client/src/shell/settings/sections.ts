@@ -17,7 +17,7 @@ export interface SettingsNavGroup {
 
 /*
  * The left navigation: how the app looks and answers, the surfaces you work in, and the agents with
- * what they cost and what they may operate. The pane for each id lives in `panes/`, and its words
+ * what they may operate and what they cost. The pane for each id lives in `panes/`, and its words
  * under `sections.<id>` in the settings namespace.
  */
 export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
@@ -40,9 +40,9 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
         sections: [
             { id: 'providers', icon: LogIn, split: true },
             { id: 'agents', icon: Bot },
+            { id: 'computer', icon: Hand },
             { id: 'usage', icon: ChartNoAxesColumn },
-            { id: 'voice', icon: Mic },
-            { id: 'computer', icon: Hand }
+            { id: 'voice', icon: Mic }
         ]
     }
 ];

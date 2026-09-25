@@ -109,7 +109,7 @@
             "description": "Microphone, dictation and Voice Control."
         },
         "computer": {
-            "label": "Computer use",
+            "label": "Computer Use",
             "description": "Let agents operate the apps on a computer. They only reach an app after you allow it."
         },
         "machines": {
@@ -581,11 +581,11 @@
         "description": "Agents can see and operate the apps on a computer. They only reach an app after you allow it.",
         "enable": "Allow computer use on {{machine}}",
         "allow": "Allow computer use",
-        "failed": "Computer use could not load",
+        "failed": "Computer Use could not load",
         "machine": {
             "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open.",
             "checking": "Checking…",
-            "unsupported": "Computer use is not available for this machine's system yet.",
+            "unsupported": "Computer Use is not available for this machine's system yet.",
             "unavailable": "This machine has no Ruimte Computer Use. It comes with the Ruimte desktop app.",
             "off": "Off. Agents on this machine cannot see or operate its apps.",
             "starting": "Starting Ruimte Computer Use…",

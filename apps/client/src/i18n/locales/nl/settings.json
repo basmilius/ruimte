@@ -109,7 +109,7 @@
             "description": "Microfoon, dicteren en Voice Control."
         },
         "computer": {
-            "label": "Computer use",
+            "label": "Computer Use",
             "description": "Laat agents de apps op een computer bedienen. Ze komen pas bij een app nadat je die toestaat."
         },
         "machines": {
@@ -579,13 +579,13 @@
     },
     "computer": {
         "description": "Agents kunnen de apps op een computer zien en bedienen. Ze komen pas bij een app nadat jij die toestaat.",
-        "enable": "Computer use toestaan op {{machine}}",
-        "allow": "Computer use toestaan",
-        "failed": "Computer use kon niet laden",
+        "enable": "Computer Use toestaan op {{machine}}",
+        "allow": "Computer Use toestaan",
+        "failed": "Computer Use kon niet laden",
         "machine": {
             "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat.",
             "checking": "Controleren…",
-            "unsupported": "Computer use is nog niet beschikbaar voor het systeem van deze machine.",
+            "unsupported": "Computer Use is nog niet beschikbaar voor het systeem van deze machine.",
             "unavailable": "Deze machine heeft geen Ruimte Computer Use. Dat zit in de desktop-app van Ruimte.",
             "off": "Uit. Agents op deze machine kunnen de apps niet zien of bedienen.",
             "starting": "Ruimte Computer Use starten…",
