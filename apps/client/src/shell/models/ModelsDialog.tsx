@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
@@ -15,6 +16,7 @@ import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { CloseButton } from '@/ui/CloseButton';
+import { useDialogLayer } from '@/ui/dialog-layer';
 
 const SCALES: readonly CostScale[] = ['log', 'linear'];
 
@@ -170,11 +172,12 @@ function Body() {
 /* Beside the usage dialog and outside any workspace: the numbers belong to no project and no machine. The body mounts only while open. */
 export function ModelsDialog() {
     const open = useUi((s) => s.modelsOpen);
+    const stacked = useDialogLayer(open);
     return (
         <Dialog.Root open={open} onOpenChange={(next) => useUi.getState().setModelsOpen(next)}>
             <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup flex h-[600px] w-[1080px] flex-col">
+                <Dialog.Backdrop className={clsx('dialog-backdrop', stacked && 'dialog-backdrop-nested')} forceRender={stacked} />
+                <Dialog.Popup className={clsx('dialog-popup flex h-[600px] w-[1080px] flex-col', stacked && 'dialog-popup-nested')}>
                     <ErrorBoundary label={i18next.t('models:dialog.failed')} className="grow">
                         <Body />
                     </ErrorBoundary>

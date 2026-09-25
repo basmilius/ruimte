@@ -35,6 +35,7 @@ import { UsageChart } from '@/shell/usage/UsageChart';
 import { UsageLimits } from '@/shell/usage/UsageLimits';
 import { UsageSummary } from '@/shell/usage/UsageSummary';
 import { UsageTiles } from '@/shell/usage/UsageTiles';
+import { useDialogLayer } from '@/ui/dialog-layer';
 
 const METRICS: readonly UsageMetric[] = ['cost', 'tokens'];
 
@@ -383,11 +384,12 @@ function Body() {
 /* Larger than the settings, since the chart and the breakdown need the width. The body mounts only while open, so nothing is scanned behind a closed dialog. */
 export function UsageDialog() {
     const open = useUi((s) => s.usageOpen);
+    const stacked = useDialogLayer(open);
     return (
         <Dialog.Root open={open} onOpenChange={(next) => useUi.getState().setUsageOpen(next)}>
             <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup flex h-[820px] w-[1080px] flex-col">
+                <Dialog.Backdrop className={clsx('dialog-backdrop', stacked && 'dialog-backdrop-nested')} forceRender={stacked} />
+                <Dialog.Popup className={clsx('dialog-popup flex h-[820px] w-[1080px] flex-col', stacked && 'dialog-popup-nested')}>
                     <ErrorBoundary label={i18next.t('usage:dialog.failed')} className="grow">
                         <Body />
                     </ErrorBoundary>

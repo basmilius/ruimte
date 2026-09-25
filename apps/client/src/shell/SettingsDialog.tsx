@@ -20,6 +20,7 @@ import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { CloseButton } from '@/ui/CloseButton';
 import { Select } from '@/ui/Select';
+import { useDialogLayer } from '@/ui/dialog-layer';
 
 const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
     appearance: AppearancePane,
@@ -39,6 +40,7 @@ const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
 export function SettingsDialog() {
     const { t } = useTranslation('shell');
     const open = useUi((s) => s.settings.open);
+    const stacked = useDialogLayer(open);
     const section = useUi((s) => s.settings.section);
     const setSettings = useUi((s) => s.setSettings);
     const [query, setQuery] = useState('');
@@ -60,10 +62,10 @@ export function SettingsDialog() {
             }}
         >
             <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" />
+                <Dialog.Backdrop className={clsx('dialog-backdrop', stacked && 'dialog-backdrop-nested')} forceRender={stacked} />
                 {/* The width steps down with the viewport: a narrower navigation on a tablet, and a menu of
                     sections instead of the column where even that leaves the panes too little room. */}
-                <Dialog.Popup className="dialog-popup flex h-[760px] w-[1200px]">
+                <Dialog.Popup className={clsx('dialog-popup flex h-[760px] w-[1200px]', stacked && 'dialog-popup-nested')}>
                     <Tabs.Root
                         value={section}
                         onValueChange={(value) => setSettings({ section: value as SettingsSectionId })}
