@@ -491,6 +491,89 @@ export const fakeClaude: FakeCli = (io) => {
             });
             return;
         }
+        /*
+         * A two-phase workflow, framed the way Claude Code 2.1.282 streams one: the call answers at launch,
+         * and its agents send no frames of their own; only some progress frames carry a report of the whole run.
+         */
+        if (text.startsWith('workflow:')) {
+            const summary = text.slice(9).trim() || 'Write a file, then read it';
+            const task = (frame: Record<string, unknown>): void => {
+                out({ type: 'system', task_id: 'wf-task', session_id: sessionId, ...frame });
+            };
+            const phases = [
+                { type: 'workflow_phase', index: 1, title: 'Write' },
+                { type: 'workflow_phase', index: 2, title: 'Read' }
+            ];
+            const writer = { type: 'workflow_agent', index: 1, label: 'write-file', phaseIndex: 1, phaseTitle: 'Write', agentId: 'a-writer', startedAt: 1000 };
+            const reader = { type: 'workflow_agent', index: 2, label: 'read-file', phaseIndex: 2, phaseTitle: 'Read', agentId: 'a-reader', startedAt: 6000 };
+            const writerDone = { ...writer, state: 'done', lastToolName: 'Write', tokens: 16264, toolCalls: 1, durationMs: 5000 };
+            const progress = (description: string, report?: unknown[]): void => {
+                task({
+                    subtype: 'task_progress',
+                    tool_use_id: 'toolu_wf',
+                    description,
+                    usage: { total_tokens: 16264, tool_uses: 1, duration_ms: 5000 },
+                    last_tool_name: description.split(': ')[1],
+                    summary,
+                    ...(report === undefined ? {} : { workflow_progress: report })
+                });
+            };
+            out({
+                type: 'assistant',
+                message: {
+                    id: `msg_${nonce}_${++messageCounter}`,
+                    model,
+                    role: 'assistant',
+                    content: [{ type: 'tool_use', id: 'toolu_wf', name: 'Workflow', input: { script: 'export const meta = { name: "write-and-read" }' } }],
+                    usage
+                },
+                session_id: sessionId
+            });
+            out({
+                type: 'system',
+                subtype: 'background_tasks_changed',
+                tasks: [{ task_id: 'wf-task', task_type: 'local_workflow', description: summary }],
+                session_id: sessionId
+            });
+            task({ subtype: 'task_started', tool_use_id: 'toolu_wf', description: summary, task_type: 'local_workflow', workflow_name: 'write-and-read' });
+            out({
+                type: 'user',
+                message: {
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'tool_result',
+                            tool_use_id: 'toolu_wf',
+                            content: `Workflow launched in background. Task ID: wf-task\nSummary: ${summary}\nRun ID: wf_fake`,
+                            is_error: false
+                        }
+                    ]
+                },
+                session_id: sessionId
+            });
+            progress('Write: write-file', [...phases, { ...writer, state: 'start' }]);
+            assistantText('the workflow runs');
+            result();
+            io.later(() => {
+                progress('Write: write-file');
+                progress('Read: read-file', [...phases, writerDone, { ...reader, state: 'start' }]);
+                progress('Read: read-file', [...phases, writerDone, { ...reader, state: 'done', lastToolName: 'Read', durationMs: 4000 }]);
+                out({ type: 'system', subtype: 'background_tasks_changed', tasks: [], session_id: sessionId });
+                task({ subtype: 'task_updated', patch: { status: 'completed', end_time: 10000 } });
+                task({
+                    subtype: 'task_notification',
+                    tool_use_id: 'toolu_wf',
+                    status: 'completed',
+                    output_file: '',
+                    summary: `Dynamic workflow "${summary}" completed`,
+                    usage: { total_tokens: 32403, tool_uses: 2, duration_ms: 9000 }
+                });
+                out({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: io.cwd, tools: ['Bash'], slash_commands: [], argv: args });
+                assistantText('the workflow is done');
+                result();
+            });
+            return;
+        }
         if (text.startsWith('run:')) {
             const command = text.slice(4).trim();
             const id = `msg_${nonce}_${++messageCounter}`;

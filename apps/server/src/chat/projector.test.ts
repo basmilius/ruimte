@@ -669,6 +669,40 @@ describe('background tasks', () => {
         expect(other.thread.get('1:toolu_wf')).toMatchObject({ state: 'error' });
     });
 
+    test("a workflow's row carries the latest report of its phases and agents, after its turn as well", () => {
+        const { thread, project } = setup();
+        const writer = { index: 1, label: 'write-file', phaseIndex: 1, agentId: 'a8a1', startedAt: 10, durationMs: null, lastTool: null };
+        const phases = [
+            { index: 1, title: 'Write' },
+            { index: 2, title: 'Read' }
+        ];
+        project(
+            { type: 'tool.started', ref: 'toolu_wf', name: 'Workflow', input: {}, parentRef: null },
+            { type: 'workflow.progress', ref: 'toolu_wf', workflow: { name: 'write-and-read', phases: [], agents: [] } },
+            { type: 'tool.done', ref: 'toolu_wf', output: 'Workflow launched in background. Task ID: w1', state: 'done' },
+            { type: 'workflow.progress', ref: 'toolu_wf', workflow: { name: null, phases, agents: [{ ...writer, status: 'running' }] } },
+            { type: 'turn.done', state: 'done', costUsd: 0 }
+        );
+        expect(thread.get('1:toolu_wf')).toMatchObject({ state: 'running', workflow: { name: 'write-and-read', phases, agents: [{ status: 'running' }] } });
+
+        const reader = {
+            index: 2,
+            label: 'read-file',
+            phaseIndex: 2,
+            agentId: 'a39a',
+            status: 'done' as const,
+            startedAt: 20,
+            durationMs: 5,
+            lastTool: 'Read'
+        };
+        const settled = { name: null, phases, agents: [{ ...writer, status: 'done' as const, durationMs: 9 }, reader] };
+        project(
+            { type: 'workflow.progress', ref: 'toolu_wf', workflow: settled },
+            { type: 'task.done', ref: 'toolu_wf', taskId: 'w1', summary: null, ok: true }
+        );
+        expect(thread.get('1:toolu_wf')).toMatchObject({ state: 'done', workflow: { ...settled, name: 'write-and-read' } });
+    });
+
     test('a task takes its kind and command from the call that started it and leaves with its process', () => {
         const { thread, project } = setup();
         project(

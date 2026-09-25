@@ -1,6 +1,7 @@
-import type { ChatInfo, ChatItem, ChatSubagentChangedEvent, ChatSubagentResult } from '@ruimte/contracts';
+import { dirname } from 'node:path';
+import { workflowAgentIdOf, type ChatInfo, type ChatItem, type ChatSubagentChangedEvent, type ChatSubagentResult } from '@ruimte/contracts';
 import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watch-seam.ts';
-import { findSubagentsDir, readSubagentMetas, TranscriptProjection, type SubagentMeta } from './claude-transcript.ts';
+import { findSubagentsDir, findWorkflowAgent, readSubagentMetas, TranscriptProjection, type SubagentMeta } from './claude-transcript.ts';
 import { listThreadItemsOnce, parseThreadItemsPage, projectCodexItems, type CodexProcessSpec, type ThreadItemsParams } from './codex-thread.ts';
 import { ChatError } from './errors.ts';
 import { readSubagentSettlement, type SubagentSettlement } from './subagent-settlement.ts';
@@ -60,6 +61,15 @@ const holdKey = (chatId: string, toolUseId: string): string => `${chatId}\n${too
 
 const findSubagent = (items: ChatItem[], toolUseId: string): ChatItem | undefined =>
     items.find((item) => item.kind === 'subagent' && item.toolUseId === toolUseId);
+
+// A workflow's agent works while its Workflow row runs and its last report has it running.
+const workflowAgentRunning = (items: ChatItem[], agentId: string): boolean =>
+    items.some(
+        (item) =>
+            item.kind === 'tool' &&
+            item.state === 'running' &&
+            item.workflow?.agents.some((agent) => agent.agentId === agentId && agent.status === 'running') === true
+    );
 
 /*
  * The whole conversation of a subagent, which the chat's own thread only keeps the beginning of:
@@ -207,6 +217,10 @@ export class SubagentReader {
 
     /* Running while its row says so, whether that row is in the chat's thread or in a conversation read before. */
     private live(chat: SubagentChat, toolUseId: string, inside: ChatItem[]): boolean {
+        const workflowAgent = workflowAgentIdOf(toolUseId);
+        if (workflowAgent !== null) {
+            return workflowAgentRunning(chat.items(), workflowAgent);
+        }
         const row = findSubagent(chat.items(), toolUseId) ?? findSubagent(inside, toolUseId);
         return row?.kind === 'subagent' && row.status === 'running';
     }
@@ -270,6 +284,13 @@ export class SubagentReader {
             seen.add(current.chatId);
             const sessionId = current.agentSessionId;
             const dir = sessionId === null ? null : await findSubagentsDir(this.options.claudeProjectsDir, current.cwd, sessionId);
+            const workflowAgent = workflowAgentIdOf(toolUseId);
+            if (dir !== null && workflowAgent !== null) {
+                const meta = await findWorkflowAgent(dir, workflowAgent);
+                if (meta !== null) {
+                    return { dir: dirname(meta.transcript), meta };
+                }
+            }
             // A grandchild has a file of its own in the same folder, found by the call that opened it like any other.
             const meta = dir === null ? undefined : (await readSubagentMetas(dir)).find((candidate) => candidate.toolUseId === toolUseId);
             if (dir !== null && meta !== undefined) {

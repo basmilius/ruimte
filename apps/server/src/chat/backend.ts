@@ -5,6 +5,7 @@ import type {
     ChatSkill,
     ChatSubagentUsage,
     ChatTurnLimit,
+    ChatWorkflow,
     ContextSource,
     ModelSelection,
     RuntimeMode
@@ -118,6 +119,8 @@ export type BackendEvent =
           usage?: ChatSubagentUsage | null;
           outputFile?: string | null;
       }
+    // What the workflow a Workflow call launched runs now, whole; a null name leaves the one said before.
+    | { type: 'workflow.progress'; ref: string; workflow: ChatWorkflow }
     // A command or a monitor the CLI keeps running beside its turns. `ref` is the call that started it, when a
     // call did; `monitor` is set when the CLI's own frame already says it is one.
     | { type: 'background.started'; taskId: string; ref: string | null; monitor: boolean; description: string | null }

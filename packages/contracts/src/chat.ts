@@ -246,6 +246,46 @@ export const ChatFileChangeSchema = z.object({
 });
 export type ChatFileChange = z.infer<typeof ChatFileChangeSchema>;
 
+export const ChatSubagentStatusSchema = z.enum(['running', 'done', 'failed']);
+export type ChatSubagentStatus = z.infer<typeof ChatSubagentStatusSchema>;
+
+export const ChatWorkflowPhaseSchema = z.object({
+    index: z.number().int(),
+    title: z.string()
+});
+export type ChatWorkflowPhase = z.infer<typeof ChatWorkflowPhaseSchema>;
+
+// One agent a Claude workflow started, as its latest progress report has it.
+export const ChatWorkflowAgentSchema = z.object({
+    // Its place in the order the script started agents, which is what the CLI keys it on.
+    index: z.number().int(),
+    label: z.string(),
+    // The phase it runs in; null for an agent the script started outside any phase.
+    phaseIndex: z.number().int().nullable(),
+    // Names its transcript beside the session; null while it still waits for its turn to start.
+    agentId: z.string().nullable(),
+    status: ChatSubagentStatusSchema,
+    startedAt: z.number().nullable(),
+    durationMs: z.number().int().nonnegative().nullable(),
+    lastTool: z.string().nullable()
+});
+export type ChatWorkflowAgent = z.infer<typeof ChatWorkflowAgentSchema>;
+
+// What a Workflow call runs: every phase the script announced, and the agents it started so far.
+export const ChatWorkflowSchema = z.object({
+    name: z.string().nullable(),
+    phases: z.array(ChatWorkflowPhaseSchema),
+    agents: z.array(ChatWorkflowAgentSchema)
+});
+export type ChatWorkflow = z.infer<typeof ChatWorkflowSchema>;
+
+// A workflow's agent has no call of its own, so `chat.subagent` names it by its agent id under this prefix.
+const WORKFLOW_AGENT_REF = 'workflow-agent:';
+
+export const workflowAgentRef = (agentId: string): string => `${WORKFLOW_AGENT_REF}${agentId}`;
+
+export const workflowAgentIdOf = (ref: string): string | null => (ref.startsWith(WORKFLOW_AGENT_REF) ? ref.slice(WORKFLOW_AGENT_REF.length) || null : null);
+
 export const ChatToolItemSchema = z.object({
     ...base,
     kind: z.literal('tool'),
@@ -257,11 +297,10 @@ export const ChatToolItemSchema = z.object({
     // Set for a tool call made by a subagent, with the id of the Task call that spawned it.
     parentToolUseId: z.string().nullable(),
     progress: ChatToolProgressSchema.optional(),
-    changes: z.array(ChatFileChangeSchema).optional()
+    changes: z.array(ChatFileChangeSchema).optional(),
+    // Set on a Workflow call once the CLI reports what the workflow runs, replaced whole by every report.
+    workflow: ChatWorkflowSchema.optional()
 });
-
-export const ChatSubagentStatusSchema = z.enum(['running', 'done', 'failed']);
-export type ChatSubagentStatus = z.infer<typeof ChatSubagentStatusSchema>;
 
 export const ChatSubagentUsageSchema = z.object({
     totalTokens: z.number().int().nonnegative(),
@@ -534,7 +573,7 @@ export const ChatHistoryResultSchema = z.object({ items: z.array(ChatItemSchema)
 export type ChatHistoryResult = z.infer<typeof ChatHistoryResultSchema>;
 
 export const ChatSubagentPayloadSchema = ChatTargetPayloadSchema.extend({
-    // The call that spawned it: a row of the chat's own thread, or of a subagent's conversation.
+    // The call that spawned it: a row of the chat's own thread, or of a subagent's conversation; a workflow's agent by `workflowAgentRef`.
     toolUseId: z.string().min(1).max(256),
     cursor: z.string().min(1).max(256).optional(),
     limit: z.number().int().min(1).max(100).optional(),

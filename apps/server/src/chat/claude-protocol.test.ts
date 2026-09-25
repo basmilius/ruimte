@@ -456,8 +456,7 @@ describe('ClaudeProtocol', () => {
         expect(protocol.stopTaskRequest('b2')).toMatchObject({ type: 'control_request', request: { subtype: 'stop_task', task_id: 'b2' } });
     });
 
-    // The launch text is what Claude Code 2.1.273 and 2.1.274 wrote to their transcripts, and 2.1.282 still carries; the
-    // task frames are the ones every other task sends, since no workflow ran with the stream captured.
+    // The launch text is what Claude Code 2.1.273 and 2.1.274 wrote to their transcripts; 2.1.282 still carries it and ends the task this way.
     test('a workflow ends on whichever says so first, its task status or its notification', () => {
         const launch = (protocol: ClaudeProtocol) =>
             protocol.handle({
@@ -497,5 +496,106 @@ describe('ClaudeProtocol', () => {
             byNotification.handle({ type: 'system', subtype: 'task_notification', task_id: 'w2', tool_use_id: 'toolu_wf2', status: 'completed', summary })
         ).toEqual([{ type: 'task.done', ref: 'toolu_wf2', taskId: 'w2', summary, ok: true, usage: null, outputFile: null }]);
         expect(byNotification.handle({ type: 'system', subtype: 'task_updated', task_id: 'w2', patch: { status: 'completed' } })).toEqual([]);
+    });
+
+    // As Claude Code 2.1.282 streamed a two-phase workflow, trimmed to what is read.
+    test("a workflow's progress is its phases and agents, whole, from the frames that carry it", () => {
+        const protocol = new ClaudeProtocol();
+        expect(
+            protocol.handle({
+                type: 'system',
+                subtype: 'task_started',
+                task_id: 'w4u5arky1',
+                tool_use_id: 'toolu_wf',
+                description: 'Write alpha to a.txt in phase 1, then read it in phase 2',
+                task_type: 'local_workflow',
+                workflow_name: 'write-and-read-workflow'
+            })
+        ).toEqual([
+            { type: 'workflow.progress', ref: 'toolu_wf', workflow: { name: 'write-and-read-workflow', phases: [], agents: [] } },
+            { type: 'tool.progress', ref: 'toolu_wf', startedAt: null, description: 'Write alpha to a.txt in phase 1, then read it in phase 2' }
+        ]);
+        const progress = (extra: Record<string, unknown>) =>
+            protocol.handle({
+                type: 'system',
+                subtype: 'task_progress',
+                task_id: 'w4u5arky1',
+                tool_use_id: 'toolu_wf',
+                description: 'Read: read-file',
+                usage: { total_tokens: 32403, tool_uses: 2, duration_ms: 9188 },
+                last_tool_name: 'read-file',
+                ...extra
+            });
+        // Most frames only count; they say nothing about the phases.
+        expect(progress({})).toEqual([{ type: 'tool.progress', ref: 'toolu_wf', startedAt: null, description: 'Read: read-file' }]);
+        expect(
+            progress({
+                workflow_progress: [
+                    { type: 'workflow_phase', index: 2, title: 'Read' },
+                    { type: 'workflow_phase', index: 1, title: 'Write' },
+                    { type: 'workflow_log', message: 'phase 2' },
+                    {
+                        type: 'workflow_agent',
+                        index: 2,
+                        label: 'read-file',
+                        phaseIndex: 2,
+                        phaseTitle: 'Read',
+                        agentId: 'a39a837ca1c2b3767',
+                        model: 'claude-haiku-4-5',
+                        state: 'start',
+                        startedAt: 1790321947950,
+                        queuedAt: 1790321947949
+                    },
+                    {
+                        type: 'workflow_agent',
+                        index: 1,
+                        label: 'write-file',
+                        phaseIndex: 1,
+                        phaseTitle: 'Write',
+                        agentId: 'a8a14782f2a71dcab',
+                        state: 'done',
+                        startedAt: 1790321942528,
+                        lastToolName: 'Write',
+                        tokens: 16264,
+                        toolCalls: 1,
+                        durationMs: 5421
+                    },
+                    { type: 'workflow_agent', index: 3, label: 'check', phaseIndex: 2, state: 'error', error: 'blocked', queuedAt: 1790321947960 }
+                ]
+            })[0]
+        ).toEqual({
+            type: 'workflow.progress',
+            ref: 'toolu_wf',
+            workflow: {
+                name: null,
+                phases: [
+                    { index: 1, title: 'Write' },
+                    { index: 2, title: 'Read' }
+                ],
+                agents: [
+                    {
+                        index: 1,
+                        label: 'write-file',
+                        phaseIndex: 1,
+                        agentId: 'a8a14782f2a71dcab',
+                        status: 'done',
+                        startedAt: 1790321942528,
+                        durationMs: 5421,
+                        lastTool: 'Write'
+                    },
+                    {
+                        index: 2,
+                        label: 'read-file',
+                        phaseIndex: 2,
+                        agentId: 'a39a837ca1c2b3767',
+                        status: 'running',
+                        startedAt: 1790321947950,
+                        durationMs: null,
+                        lastTool: null
+                    },
+                    { index: 3, label: 'check', phaseIndex: 2, agentId: null, status: 'failed', startedAt: null, durationMs: null, lastTool: null }
+                ]
+            }
+        });
     });
 });

@@ -497,6 +497,36 @@ describe('ChatManager', () => {
         expect(recorder.ofKind('turn')[1]).toMatchObject({ origin: 'agent', label: 'the chain is done', taskToolUseId: 'toolu_middle' });
     });
 
+    test("a workflow's row carries its phases and agents from the progress reports, and settles with its task", async () => {
+        await manager.create({ chatId: 'chat-wf', cwd: home });
+        manager.attach('chat-wf', 'c1');
+        await manager.send('chat-wf', 'workflow: Write a file, then read it');
+        await recorder.until(idle);
+        const phases = [
+            { index: 1, title: 'Write' },
+            { index: 2, title: 'Read' }
+        ];
+        expect(recorder.ofKind('tool')[0]).toMatchObject({
+            name: 'Workflow',
+            state: 'running',
+            workflow: { name: 'write-and-read', phases, agents: [{ label: 'write-file', phaseIndex: 1, agentId: 'a-writer', status: 'running' }] }
+        });
+
+        claude.started[0]!.runLater();
+        await recorder.until(() => recorder.ofKind('turn').length === 2 && idle());
+        expect(recorder.ofKind('tool')[0]).toMatchObject({
+            state: 'done',
+            workflow: {
+                name: 'write-and-read',
+                phases,
+                agents: [
+                    { label: 'write-file', status: 'done', durationMs: 5000, lastTool: 'Write' },
+                    { label: 'read-file', phaseIndex: 2, agentId: 'a-reader', status: 'done', startedAt: 6000, durationMs: 4000 }
+                ]
+            }
+        });
+    });
+
     test('a background subagent that settles opens a turn of the agent, with the summary as its label', async () => {
         await manager.create({ chatId: 'chat-bg', cwd: home });
         manager.attach('chat-bg', 'c1');

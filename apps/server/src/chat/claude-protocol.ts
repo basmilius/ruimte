@@ -1,4 +1,4 @@
-import type { ChatQuestion, ChatSubagentUsage, ChatTurnLimit } from '@ruimte/contracts';
+import type { ChatQuestion, ChatSubagentStatus, ChatSubagentUsage, ChatTurnLimit, ChatWorkflow, ChatWorkflowAgent, ChatWorkflowPhase } from '@ruimte/contracts';
 import { readClaudeEvent } from '../usage/limits/normalize.ts';
 import type { ApprovalDecision, BackendEvent } from './backend.ts';
 
@@ -37,6 +37,46 @@ const ENDED_TASK_STATUSES = new Set(['completed', 'failed', 'killed', 'stopped']
 
 // How Claude Code (2.1.273 through 2.1.282) answers a Workflow call, with the id of the task the workflow runs as.
 const WORKFLOW_LAUNCHED = /^Workflow launched in background\. Task ID: (\S+)/;
+
+const WORKFLOW_AGENT_STATUS: Record<string, ChatSubagentStatus> = { done: 'done', error: 'failed' };
+
+const intOrNull = (value: unknown): number | null => (typeof value === 'number' && Number.isInteger(value) ? value : null);
+
+/*
+ * A workflow's `workflow_progress` (Claude Code 2.1.282): every phase the script announced and every
+ * agent it started so far, one entry per index, beside log lines the thread does not show. An agent
+ * reads `start` while it waits and while it works, `done` or `error` once it stopped.
+ */
+const parseWorkflowProgress = (entries: unknown[]): Pick<ChatWorkflow, 'phases' | 'agents'> => {
+    const phases = new Map<number, ChatWorkflowPhase>();
+    const agents = new Map<number, ChatWorkflowAgent>();
+    for (const entry of entries) {
+        if (!isRecord(entry)) {
+            continue;
+        }
+        const index = intOrNull(entry.index);
+        if (index === null) {
+            continue;
+        }
+        if (entry.type === 'workflow_phase') {
+            phases.set(index, { index, title: str(entry.title) ?? '' });
+        } else if (entry.type === 'workflow_agent') {
+            const durationMs = intOrNull(entry.durationMs);
+            agents.set(index, {
+                index,
+                label: str(entry.label) ?? '',
+                phaseIndex: intOrNull(entry.phaseIndex),
+                agentId: str(entry.agentId),
+                status: WORKFLOW_AGENT_STATUS[str(entry.state) ?? ''] ?? 'running',
+                startedAt: typeof entry.startedAt === 'number' ? entry.startedAt : null,
+                durationMs: durationMs !== null && durationMs >= 0 ? durationMs : null,
+                lastTool: str(entry.lastToolName)
+            });
+        }
+    }
+    const byIndex = (a: { index: number }, b: { index: number }): number => a.index - b.index;
+    return { phases: [...phases.values()].sort(byIndex), agents: [...agents.values()].sort(byIndex) };
+};
 
 // The CLI's AskUserQuestion input, as far as the person needs to see it.
 const parseQuestions = (input: unknown): ChatQuestion[] => {
@@ -202,6 +242,10 @@ export class ClaudeProtocol {
             if (!ref) {
                 return;
             }
+            // Only some of a workflow's progress frames carry it; the rest only count what it spent.
+            if (Array.isArray(frame.workflow_progress)) {
+                events.push({ type: 'workflow.progress', ref, workflow: { name: null, ...parseWorkflowProgress(frame.workflow_progress) } });
+            }
             // Only a subagent reports what it spent; a task without that is a command with a description.
             if (frame.task_type === 'local_agent' || str(frame.subagent_type)) {
                 events.push({
@@ -263,6 +307,7 @@ export class ClaudeProtocol {
         const description = str(frame.description);
         if (taskId && ref && frame.task_type === 'local_workflow') {
             this.workflows.set(taskId, ref);
+            events.push({ type: 'workflow.progress', ref, workflow: { name: str(frame.workflow_name), phases: [], agents: [] } });
         }
         if (taskId && typeof frame.task_type === 'string' && BACKGROUND_TASK_TYPES.has(frame.task_type) && frame.ambient !== true) {
             if (frame.is_backgrounded === false) {

@@ -210,6 +210,14 @@ export class ThreadProjector {
             case 'tool.progress':
                 this.patchProgress(generation, event, events);
                 break;
+            case 'workflow.progress': {
+                const tool = this.thread.get(this.itemId(generation, event.ref));
+                if (tool?.kind === 'tool') {
+                    const name = event.workflow.name ?? tool.workflow?.name ?? null;
+                    events.push(this.thread.upsert({ ...tool, workflow: { ...event.workflow, name } }));
+                }
+                break;
+            }
             case 'tool.output': {
                 const delta = this.thread.appendText(this.itemId(generation, event.ref), event.text);
                 if (delta) {

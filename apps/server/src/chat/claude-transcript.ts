@@ -103,6 +103,31 @@ export const readSubagentMetas = async (dir: string): Promise<SubagentMeta[]> =>
 };
 
 /*
+ * The transcript of one agent a workflow started. Claude Code 2.1.282 keeps a folder per run under
+ * `workflows` in the subagents folder, and nothing but the agent id ties an agent to its run.
+ */
+export const findWorkflowAgent = async (subagentsDir: string, agentId: string): Promise<SubagentMeta | null> => {
+    if (!/^[\w-]+$/.test(agentId)) {
+        return null;
+    }
+    const workflowsDir = join(subagentsDir, 'workflows');
+    let runs: string[];
+    try {
+        runs = await readdir(workflowsDir);
+    } catch {
+        return null;
+    }
+    for (const run of runs) {
+        const dir = join(workflowsDir, run);
+        const transcript = join(dir, `agent-${agentId}.jsonl`);
+        if (existsSync(transcript)) {
+            return { agentId, toolUseId: null, parentAgentId: null, description: null, transcript };
+        }
+    }
+    return null;
+};
+
+/*
  * One subagent transcript as thread items, read on from where the last read stopped: a transcript only
  * grows, and a panel that follows a working agent asks again every time a line lands. The lines have
  * the envelope of the main transcript, so an assistant or a tool result goes through the same mapping

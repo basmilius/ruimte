@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { appendFile, cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { appendFile, cp, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatInfo, ChatItem, ChatSubagentChangedEvent, ChatSubagentItem } from '@ruimte/contracts';
+import { workflowAgentRef, type ChatInfo, type ChatItem, type ChatSubagentChangedEvent, type ChatSubagentItem } from '@ruimte/contracts';
 import { FakeWatch } from '../fs/watch-test-helpers.ts';
 import { claudeProjectSlug } from './claude-transcript.ts';
 import type { ThreadItemsParams } from './codex-thread.ts';
@@ -213,6 +213,50 @@ describe('a Claude subagent', () => {
         reader.release('client-b', 'chat-1', CHILD_CALL);
         expect(watcher.closed).toBe(true);
         expect(reader.holdCount).toBe(0);
+    });
+
+    // The folder of a run as Claude Code 2.1.282 writes it: a transcript and a meta per agent, and nothing naming a call.
+    test("a workflow's agent opens by its agent id from its run's folder, and is live while the run's report has it working", async () => {
+        const run = join(subagentsDir(), 'workflows', 'wf_7486973f-3a9');
+        await mkdir(run, { recursive: true });
+        await writeFile(
+            join(run, 'agent-a8a14782f2a71dcab.meta.json'),
+            JSON.stringify({ agentType: 'workflow-subagent', description: 'write-file', workflowPhase: 'Write' })
+        );
+        await writeFile(join(run, 'agent-a8a14782f2a71dcab.jsonl'), toolStep(1));
+        const agent = { index: 1, label: 'write-file', phaseIndex: 1, agentId: 'a8a14782f2a71dcab', startedAt: 0, durationMs: null, lastTool: null };
+        const workflowRow = (status: 'running' | 'done'): ChatItem => ({
+            id: '1:toolu_wf',
+            kind: 'tool',
+            createdAt: 0,
+            turnId: 'turn-1',
+            toolUseId: 'toolu_wf',
+            name: 'Workflow',
+            input: {},
+            output: null,
+            state: 'running',
+            parentToolUseId: null,
+            workflow: { name: 'write-and-read', phases: [{ index: 1, title: 'Write' }], agents: [{ ...agent, status }] }
+        });
+        const items = [workflowRow('running')];
+        chats.set('chat-1', claudeChat(items));
+        const reader = makeReader();
+        const ref = workflowAgentRef('a8a14782f2a71dcab');
+
+        const page = await reader.read('chat-1', ref);
+        expect(page.items.map((item) => item.kind)).toEqual(['tool']);
+        expect(page.live).toBe(true);
+        items[0] = workflowRow('done');
+        expect((await reader.read('chat-1', ref)).live).toBe(false);
+
+        reader.hold('client-a', 'chat-1', ref);
+        const watcher = watch.on(run);
+        await appendFile(join(run, 'agent-a8a14782f2a71dcab.jsonl'), toolStep(2));
+        watcher.emit('agent-a8a14782f2a71dcab.jsonl');
+        await watch.settle();
+        expect(told).toEqual([{ clientId: 'client-a', event: { chatId: 'chat-1', toolUseId: ref } }]);
+
+        await expect(reader.read('chat-1', workflowAgentRef('../elsewhere'))).rejects.toMatchObject({ code: 'subagent-not-found' });
     });
 
     test('a transcript that was rewritten shorter expires the cursors into the old one', async () => {
