@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { notResumedNote, type ChatItem, type ChatTurnItem, type Task } from '@ruimte/contracts';
+import { notResumedNote, type ChatBackgroundTask, type ChatItem, type ChatTurnItem, type Task } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { TaskCoordinator, resultOfTurn } from './task-coordinator.ts';
 import { TaskStore } from './task-store.ts';
@@ -14,6 +14,8 @@ let owed: string[];
 let onOwed: (() => void) | null;
 let coordinator: TaskCoordinator;
 let after: 'reports' | 'silent' | 'gone';
+let commands: Map<string, ChatBackgroundTask[]>;
+let limits: Map<string, { commands: readonly string[]; at: number }>;
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-task-coordinator-'));
@@ -22,6 +24,8 @@ beforeEach(async () => {
     owed = [];
     onOwed = null;
     after = 'reports';
+    commands = new Map();
+    limits = new Map();
     coordinator = new TaskCoordinator({
         tasks,
         now: () => 10,
@@ -34,7 +38,17 @@ beforeEach(async () => {
             onOwed?.();
         },
         alert: () => undefined,
-        afterBackgroundWork: () => after
+        afterBackgroundWork: () => after,
+        commandsOf: (chatId) => commands.get(chatId) ?? [],
+        limit: {
+            owed: (taskId) => limits.has(taskId),
+            owe: async (task, list, at) => {
+                limits.set(task.id, { commands: list, at });
+            },
+            lapse: async (taskId) => {
+                limits.delete(taskId);
+            }
+        }
     });
 });
 
@@ -172,6 +186,43 @@ describe('the coordinator', () => {
         coordinator.chatEvent({ event: 'chat.event', payload: { chatId: 'chat-child', event: { type: 'item', item: failed } } });
         await owedOnce;
         expect(tasks.get(task.id)).toMatchObject({ status: 'failed', result: { source: 'exit' } });
+    });
+
+    test('a command left in the background holds the task and owes its limit once; the limit settles it on that turn, saying what still ran', async () => {
+        const task = await open('chat-lead', 'chat-child');
+        commands.set('chat-child', [{ id: 'b1', kind: 'shell', description: 'Serve', command: 'bun dev', startedAt: 8 }]);
+        threads.set('chat-child', [turn('t1', 'done'), answer('t1', 'the server runs')]);
+        ends('chat-child', turn('t1', 'done'));
+        ends('chat-child', turn('t1', 'done'));
+        expect(tasks.get(task.id)?.status).toBe('open');
+        expect([...limits]).toEqual([[task.id, { commands: ['bun dev'], at: 10 + 30 * 60_000 }]]);
+
+        const owedOnce = nextOwed();
+        await coordinator.outlasted('chat-child', ['bun dev']);
+        await owedOnce;
+        expect(tasks.get(task.id)).toMatchObject({
+            status: 'done',
+            result: { text: 'the server runs\n\nThe task settled after 30 minutes while this still ran in the background: `bun dev`.', source: 'turn' }
+        });
+        expect(await coordinator.outlasted('chat-child', ['bun dev'])).toBeNull();
+        expect(owed).toEqual([task.id]);
+    });
+
+    test('a subagent beside a command holds the task with no limit, and the limit starts once the command is all that is left', async () => {
+        const task = await open('chat-lead', 'chat-child');
+        limits.set(task.id, { commands: ['bun dev'], at: 1 });
+        commands.set('chat-child', [{ id: 'b1', kind: 'shell', description: 'Serve', command: 'bun dev', startedAt: 8 }]);
+        threads.set('chat-child', [turn('t1', 'done'), workflow('running'), answer('t1', 'working')]);
+        ends('chat-child', turn('t1', 'done'));
+        await Promise.resolve();
+        expect(tasks.get(task.id)?.status).toBe('open');
+        expect(limits.size).toBe(0);
+
+        const finished = workflow('done');
+        threads.set('chat-child', [turn('t1', 'done'), finished, answer('t1', 'working')]);
+        coordinator.chatEvent({ event: 'chat.event', payload: { chatId: 'chat-child', event: { type: 'item', item: finished } } });
+        expect(tasks.get(task.id)?.status).toBe('open');
+        expect(limits.get(task.id)?.at).toBe(10 + 30 * 60_000);
     });
 
     test('nothing that dies with the daemon settles a task', async () => {

@@ -1,6 +1,6 @@
-import type { ChatItem, ChatTurnItem, Task, TaskResult } from '@ruimte/contracts';
+import type { ChatBackgroundTask, ChatItem, ChatTurnItem, Task, TaskResult } from '@ruimte/contracts';
 import { abortedByMachine } from '@ruimte/contracts';
-import { isBackgroundWork, runningInBackground, runsInBackground } from '../chat/background-work.ts';
+import { BACKGROUND_COMMAND_LIMIT_MS, commandLabel, isBackgroundWork, runningInBackground, runsInBackground } from '../chat/background-work.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import type { TaskStore } from './task-store.ts';
@@ -25,6 +25,14 @@ export interface TaskCoordinatorDeps {
      * it (`reports`), nothing (`silent`), or nothing ever again, since its process went (`gone`).
      */
     afterBackgroundWork(chatId: string): 'reports' | 'silent' | 'gone';
+    /* The commands and monitors a chat's CLI runs in the background right now. */
+    commandsOf(chatId: string): readonly ChatBackgroundTask[];
+    /* The `background-limit` outbox entry of a task, which settles it once its commands ran too long. */
+    limit: {
+        owed(taskId: string): boolean;
+        owe(task: Task, commands: readonly string[], at: number): Promise<void>;
+        lapse(taskId: string): Promise<void>;
+    };
 }
 
 // A child's answer is its last word of the turn; the thinking and the tools before it are not the result.
@@ -48,6 +56,9 @@ const lastNote = (items: readonly ChatItem[], turnId: string, levels: readonly s
     return null;
 };
 
+const outlastedNote = (commands: readonly string[]): string =>
+    `The task settled after ${BACKGROUND_COMMAND_LIMIT_MS / 60_000} minutes while this still ran in the background: ${commands.map((command) => `\`${command}\``).join(', ')}.`;
+
 /* What a settled turn of a child makes of its task. */
 export const resultOfTurn = (turn: ChatTurnItem, items: readonly ChatItem[], at: number): { status: 'done' | 'failed'; result: TaskResult } => {
     if (turn.state === 'done') {
@@ -66,8 +77,8 @@ export const resultOfTurn = (turn: ChatTurnItem, items: readonly ChatItem[], at:
  * Settles tasks from what children do and does nothing else: it writes the task store and owes wakes
  * in the outbox, never starts a turn, since it runs inside the broadcast of the child it heard. A chat
  * child settles when a turn ends with none of its own tasks still open or waiting to wake it and no work
- * of its CLI's still running in the background; a terminal child settles only on `done`, or fails when
- * it exits without one.
+ * of its CLI's still running in the background, or once the commands it runs there outlast their limit;
+ * a terminal child settles only on `done`, or fails when it exits without one.
  */
 export class TaskCoordinator {
     private readonly deps: TaskCoordinatorDeps;
@@ -144,6 +155,21 @@ export class TaskCoordinator {
         return this.settleNow(task, 'done', { text, source: 'done', at: this.deps.now() });
     }
 
+    /* The limit on the commands a child ran in the background passed: its task settles on its last turn, saying what still ran. */
+    async outlasted(childId: string, commands: readonly string[]): Promise<Task | null> {
+        const task = this.deps.tasks.openFor(childId);
+        const items = this.deps.chatItems(childId);
+        if (this.stopped || !task || items === null || this.delegating(childId)) {
+            return null;
+        }
+        const last = items.findLast((item): item is ChatTurnItem => item.kind === 'turn');
+        if (!last || last.state === 'running' || !this.answers(items, last, task)) {
+            return null;
+        }
+        const { status, result } = resultOfTurn(last, items, this.deps.now());
+        return this.settleNow(task, status, { ...result, text: `${result.text}\n\n${outlastedNote(commands)}` });
+    }
+
     /* Tasks of children a person removed; their parent may have been waiting on nothing else. */
     cancelled(tasks: readonly Task[]): void {
         for (const task of tasks) {
@@ -190,7 +216,7 @@ export class TaskCoordinator {
             return;
         }
         // A turn a person stopped or that failed ends the task as it always did, whatever still runs beside it.
-        if (turn.state === 'done' && runningInBackground(items).length > 0) {
+        if (turn.state === 'done' && this.heldInBackground(chatId, task, items)) {
             this.outlived.set(chatId, turn.id);
             return;
         }
@@ -203,9 +229,36 @@ export class TaskCoordinator {
                 this.settle(task, 'failed', { text: 'It ended before the work it ran in the background was done.', source: 'exit', at: this.deps.now() });
                 return;
             }
+        } else if (turn.state === 'done' && this.deps.limit.owed(task.id) && this.deps.afterBackgroundWork(chatId) === 'gone') {
+            // After a restart nothing here remembers the turn was held, but the limit it owes does, and that settles it.
+            return;
         }
         const { status, result } = resultOfTurn(turn, items, this.deps.now());
         this.settle(task, status, result);
+    }
+
+    /*
+     * Whether work in the background keeps this task open past the turn. Commands and monitors alone hold
+     * it only until the limit, owed from the moment they are all that is left; a subagent or a workflow
+     * running beside them holds it with no limit at all.
+     */
+    private heldInBackground(chatId: string, task: Task, items: readonly ChatItem[]): boolean {
+        if (runningInBackground(items).length > 0) {
+            if (this.deps.limit.owed(task.id)) {
+                void this.deps.limit.lapse(task.id).catch((e: unknown) => console.error(`Dropping the limit of task ${task.id} failed:`, errorText(e)));
+            }
+            return true;
+        }
+        const commands = this.deps.commandsOf(chatId);
+        if (commands.length === 0) {
+            return false;
+        }
+        if (!this.deps.limit.owed(task.id)) {
+            void this.deps.limit
+                .owe(task, commands.map(commandLabel), this.deps.now() + BACKGROUND_COMMAND_LIMIT_MS)
+                .catch((e: unknown) => console.error(`Owing the limit of task ${task.id} failed:`, errorText(e)));
+        }
+        return true;
     }
 
     /*

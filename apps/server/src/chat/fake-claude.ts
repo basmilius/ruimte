@@ -492,6 +492,117 @@ export const fakeClaude: FakeCli = (io) => {
             return;
         }
         /*
+         * A background subagent that sends a command to the background and answers at once, the way Claude
+         * Code 2.1.282 runs one: its notification opens a turn with that answer while the command runs on.
+         * The command's end takes the subagent up again, which notifies once more, and only the turn that
+         * opens then has what the command came to.
+         */
+        if (text.startsWith('background command:')) {
+            // The first line only: a task brief follows it.
+            const command = text.split('\n')[0]!.slice(19).trim() || 'sleep 30';
+            const agentUse = 'toolu_cmd_agent';
+            const bashUse = 'toolu_cmd_bash';
+            const subagent = (content: unknown[]): void => {
+                out({
+                    type: 'assistant',
+                    message: { id: `msg_${nonce}_${++messageCounter}`, model, role: 'assistant', content, usage },
+                    parent_tool_use_id: agentUse,
+                    session_id: sessionId
+                });
+            };
+            const subagentResult = (toolUseId: string, content: string): void => {
+                out({
+                    type: 'user',
+                    message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUseId, content, is_error: false }] },
+                    parent_tool_use_id: agentUse,
+                    session_id: sessionId
+                });
+            };
+            const agentNotified = (summary: string): void => {
+                out({
+                    type: 'system',
+                    subtype: 'task_notification',
+                    task_id: 'task-cmd-agent',
+                    status: 'completed',
+                    output_file: '',
+                    summary,
+                    usage: { total_tokens: 1500, tool_uses: 1, duration_ms: 250 },
+                    session_id: sessionId
+                });
+                out({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: io.cwd, tools: ['Bash'], slash_commands: [], argv: args });
+            };
+            out({
+                type: 'assistant',
+                message: {
+                    id: `msg_${nonce}_${++messageCounter}`,
+                    model,
+                    role: 'assistant',
+                    content: [{ type: 'tool_use', id: agentUse, name: 'Agent', input: { description: 'Run it', prompt: command, run_in_background: true } }],
+                    usage
+                },
+                session_id: sessionId
+            });
+            out({
+                type: 'system',
+                subtype: 'task_started',
+                task_id: 'task-cmd-agent',
+                tool_use_id: agentUse,
+                description: 'Run it',
+                subagent_type: 'general-purpose',
+                is_backgrounded: true,
+                task_type: 'local_agent',
+                session_id: sessionId
+            });
+            out({
+                type: 'user',
+                message: {
+                    role: 'user',
+                    content: [{ type: 'tool_result', tool_use_id: agentUse, content: 'Async agent launched successfully.', is_error: false }]
+                },
+                session_id: sessionId
+            });
+            assistantText('started');
+            result();
+            io.later(() => {
+                subagent([{ type: 'tool_use', id: bashUse, name: 'Bash', input: { command, run_in_background: true } }]);
+                out({
+                    type: 'system',
+                    subtype: 'task_started',
+                    task_id: 'b-cmd',
+                    tool_use_id: bashUse,
+                    description: command,
+                    task_type: 'local_bash',
+                    is_backgrounded: true,
+                    session_id: sessionId
+                });
+                subagentResult(bashUse, 'Command running in background with ID: b-cmd.');
+                subagent([{ type: 'text', text: 'Command started in the background.' }]);
+                agentNotified('Agent "Run it" finished');
+                assistantText('the subagent says: Command started in the background.');
+                result();
+                io.later(() => {
+                    out({ type: 'system', subtype: 'task_updated', task_id: 'b-cmd', patch: { status: 'completed', end_time: 30000 }, session_id: sessionId });
+                    out({
+                        type: 'system',
+                        subtype: 'task_notification',
+                        task_id: 'b-cmd',
+                        tool_use_id: bashUse,
+                        status: 'completed',
+                        output_file: '',
+                        summary: `Background command "${command}" completed (exit code 0)`,
+                        session_id: sessionId
+                    });
+                    subagent([{ type: 'tool_use', id: 'toolu_cmd_read', name: 'Read', input: { file_path: 'b-cmd.output' } }]);
+                    subagentResult('toolu_cmd_read', 'DONE');
+                    subagent([{ type: 'text', text: 'The command printed DONE.' }]);
+                    agentNotified('Agent "Run it" finished');
+                    assistantText('the subagent reports: DONE');
+                    result();
+                });
+            });
+            return;
+        }
+        /*
          * A two-phase workflow, framed the way Claude Code 2.1.282 streams one: the call answers at launch,
          * and its agents send no frames of their own; only some progress frames carry a report of the whole run.
          */

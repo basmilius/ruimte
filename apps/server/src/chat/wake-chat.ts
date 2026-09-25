@@ -1,5 +1,6 @@
 import type { ChatItem } from '@ruimte/contracts';
 import type { ChatManager } from './chat-manager.ts';
+import type { ChatSession } from './chat-session.ts';
 
 /* A chat the daemon may open a turn in, as the outbox handlers see it: what its thread holds, and the one call that opens one, false while a turn or an owed resume is in the way. */
 export interface WakeChat {
@@ -14,19 +15,24 @@ export interface ChatOpenerDeps {
 }
 
 /*
- * The chat a turn is to be opened in, loaded from disk when nobody has it, so work owed to a chat
- * nobody mounted since the restart still lands. Null for a node with no thread at all.
+ * A chat, loaded from disk when nobody has it, so work owed to a chat nobody mounted since the restart
+ * still lands. Null for a node with no thread at all.
  */
+export const loadChat = async (deps: ChatOpenerDeps, chatId: string): Promise<ChatSession | null> => {
+    if (!deps.chats.get(chatId)) {
+        if (!deps.placed(chatId) || !(await deps.chats.hasStored(chatId))) {
+            return null;
+        }
+        await deps.chats.create({ chatId });
+    }
+    return deps.chats.get(chatId) ?? null;
+};
+
+/* The chat a turn is to be opened in. */
 export const chatOpener =
     (deps: ChatOpenerDeps) =>
     async (chatId: string): Promise<WakeChat | null> => {
-        if (!deps.chats.get(chatId)) {
-            if (!deps.placed(chatId) || !(await deps.chats.hasStored(chatId))) {
-                return null;
-            }
-            await deps.chats.create({ chatId });
-        }
-        const session = deps.chats.get(chatId);
+        const session = await loadChat(deps, chatId);
         return session
             ? {
                   items: () => session.thread.list(),

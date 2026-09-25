@@ -3,8 +3,10 @@ import type { TaskHost } from '../canvas/verb.ts';
 import { reportsOnBackgroundWork } from '../chat/background-work.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { chatOpener } from '../chat/wake-chat.ts';
+import { errorText } from '../error-text.ts';
 import type { OutboxEntry, OutboxWork, StartAgentEntry } from '../outbox/outbox.ts';
 import type { OutboxHandlers } from '../outbox/outbox-worker.ts';
+import { backgroundLimitHandler } from './background-limit.ts';
 import { giveTaskHandler } from './give-task.ts';
 import { TaskCoordinator, type TaskCoordinatorDeps } from './task-coordinator.ts';
 import type { TaskStore } from './task-store.ts';
@@ -26,6 +28,7 @@ export interface TaskWiringDeps {
     wake(chatId: string): void;
     /* When the daemon tries a turn that stopped on an overload again; null when it does not. */
     retryAt?: TaskCoordinatorDeps['retryAt'];
+    backgroundLimit: TaskCoordinatorDeps['limit'];
     now?: () => number;
 }
 
@@ -34,6 +37,7 @@ export interface TaskWiring {
     waiting: WaitingObserver;
     host: TaskHost;
     wakeParent: OutboxHandlers['wake-parent'];
+    backgroundLimit: OutboxHandlers['background-limit'];
     giveTask: OutboxHandlers['give-task'];
     deliverWaiting: OutboxHandlers['deliver-waiting'];
     onParked(entry: OutboxEntry, error: unknown): void;
@@ -63,7 +67,9 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
                 return 'gone';
             }
             return reportsOnBackgroundWork(chat.info.provider) ? 'reports' : 'silent';
-        }
+        },
+        commandsOf: (chatId) => deps.chats.get(chatId)?.info.background ?? [],
+        limit: deps.backgroundLimit
     });
 
     // Deferred, so a row is never written into a parent from inside the broadcast of the child that settled it.
@@ -72,6 +78,10 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
         // A cancelled task owes no wake of its own, but it may be the last of a team whose held results now go out.
         if (task.status === 'cancelled' && task.batchId !== undefined) {
             deps.wake(task.parentId);
+        }
+        // However a task ended, the limit on its child's background commands has nothing left to settle.
+        if (task.status !== 'open' && deps.backgroundLimit.owed(task.id)) {
+            void deps.backgroundLimit.lapse(task.id).catch((e: unknown) => console.error(`Dropping the limit of task ${task.id} failed:`, errorText(e)));
         }
     });
 
@@ -118,6 +128,7 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
             involving: (nodeId) => deps.tasks.involving(nodeId)
         },
         wakeParent: wakeParentHandler({ tasks: deps.tasks, chat: chatFor }),
+        backgroundLimit: backgroundLimitHandler({ tasks: deps.tasks, coordinator, chats: deps.chats, placed: deps.placed }),
         giveTask: giveTaskHandler({ tasks: deps.tasks, chat: chatFor, titleFor: deps.titleFor, placed: deps.placed }),
         deliverWaiting: deliverWaitingHandler({
             request: requests.request,

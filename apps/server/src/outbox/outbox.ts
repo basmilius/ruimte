@@ -31,6 +31,12 @@ const ResumeLimitSchema = z.object({
     payload: z.object({ turnId: z.string().min(1) })
 });
 
+const BackgroundLimitSchema = z.object({
+    kind: z.literal('background-limit'),
+    // The target is the child; the task its background commands hold open, and what they were when the limit started, for a child whose process went since.
+    payload: z.object({ taskId: z.string().min(1), commands: z.array(z.string()) })
+});
+
 const WakeParentSchema = z.object({
     kind: z.literal('wake-parent'),
     // The target is the chat to wake; the task that settled is only what owed it, since a wake takes every settled task.
@@ -71,6 +77,7 @@ const OutboxWorkSchema = z.discriminatedUnion('kind', [
     StartAgentSchema,
     ResumeRunSchema,
     ResumeLimitSchema,
+    BackgroundLimitSchema,
     WakeParentSchema,
     GiveTaskSchema,
     DeliverMessageSchema,
@@ -97,6 +104,7 @@ export type OutboxEntry = z.infer<typeof OutboxEntrySchema>;
 export type StartAgentEntry = Extract<OutboxEntry, { kind: 'start-agent' }>;
 export type ResumeRunEntry = Extract<OutboxEntry, { kind: 'resume-run' }>;
 export type ResumeLimitEntry = Extract<OutboxEntry, { kind: 'resume-limit' }>;
+export type BackgroundLimitEntry = Extract<OutboxEntry, { kind: 'background-limit' }>;
 export type WakeParentEntry = Extract<OutboxEntry, { kind: 'wake-parent' }>;
 export type GiveTaskEntry = Extract<OutboxEntry, { kind: 'give-task' }>;
 export type DeliverMessageEntry = Extract<OutboxEntry, { kind: 'deliver-message' }>;
@@ -111,7 +119,8 @@ export const lanesOf = (entry: OutboxEntry): string[] => (entry.kind === 'end-ch
  * Work the daemon still owes, one file per entry under `$RUIMTE_HOME/outbox`, removed once it is
  * done. On disk because the owing outlives the process. A node written a moment before a restart
  * still has its agent started after it. Only a verb or a restart puts something here, never a clock;
- * the one exception is a `resume-limit`, due at a time, and only where a person turned it on.
+ * the exceptions are a `resume-limit`, only where a person turned it on, and a `background-limit`,
+ * both due at a time.
  */
 export class OutboxStore {
     readonly dir: string;

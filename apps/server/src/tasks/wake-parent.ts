@@ -131,6 +131,8 @@ const parkedText = (entry: OutboxEntry, title: string, reason: string): string =
             return `The machine could not give ${title} (${entry.target}) a turn on the message it was sent: ${reason}`;
         case 'resume-limit':
             return `The machine could not take up ${title} (${entry.target}) again after its limit: ${reason}`;
+        case 'background-limit':
+            return `The machine could not settle the task of ${title} (${entry.target}) once its background commands ran too long: ${reason}`;
         default:
             return `The machine could not resume the turn of ${title} (${entry.target}) after a restart: ${reason}`;
     }

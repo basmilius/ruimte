@@ -983,3 +983,116 @@ describe('a child with work running in the background', () => {
         expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[taskId]]);
     });
 });
+
+describe('a child with a command running in the background', () => {
+    const LIMIT_MS = 30 * 60_000;
+
+    const later = (daemon: Daemon): void => {
+        for (const fake of daemon.claude.started) {
+            fake.runLater();
+        }
+    };
+
+    const owedLimits = (daemon: Daemon) => daemon.outbox.list().filter((entry) => entry.kind === 'background-limit');
+
+    /*
+     * A Claude child whose background subagent sent `command` to the background and answered at once, as
+     * in Claude Code 2.1.282: the turn its CLI opened on that answer ended while the command runs on.
+     */
+    const commandRunning = async (daemon: Daemon, command: string): Promise<{ childId: string; taskId: string }> => {
+        const child = await delegate(daemon, 'Sleeper', `background command: ${command}`);
+        await daemon.until(() => turnsOf(daemon, child.childId).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+        later(daemon);
+        await daemon.until(() => turnsOf(daemon, child.childId).length === 2 && turnsOf(daemon, child.childId).every((turn) => turn.state === 'done'));
+        await daemon.until(() => owedLimits(daemon).length === 1);
+        await daemon.worker.settled();
+        return child;
+    };
+
+    test('whose subagent started it holds the task until it ended, and settles on the turn with what it came to, waking the lead once', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const child = await commandRunning(daemon, 'sleep 30');
+
+        expect(daemon.chats.get(child.childId)?.info.background?.map((task) => task.command)).toEqual(['sleep 30']);
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'open', result: null });
+        expect(owedLimits(daemon)).toMatchObject([
+            { target: child.childId, notBefore: clock.now() + LIMIT_MS, payload: { taskId: child.taskId, commands: ['sleep 30'] } }
+        ]);
+        expect(wakeTurns(daemon)).toEqual([]);
+
+        // The command ends, the subagent reads what it printed, and the CLI opens a turn on that.
+        later(daemon);
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        expect(turnsOf(daemon, child.childId)).toHaveLength(3);
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'done', wake: 'sent', result: { text: 'the subagent reports: DONE', source: 'turn' } });
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
+        expect(daemon.outbox.list()).toEqual([]);
+    });
+
+    test('that runs past the limit settles the task then, with the last result and what still ran, and nothing wakes the lead again', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const child = await commandRunning(daemon, 'sleep 3000');
+
+        clock.advance(LIMIT_MS - 1);
+        await daemon.worker.settled();
+        expect(daemon.tasks.get(child.taskId)?.status).toBe('open');
+
+        clock.advance(1);
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({
+            status: 'done',
+            wake: 'sent',
+            result: {
+                text: 'the subagent says: Command started in the background.\n\nThe task settled after 30 minutes while this still ran in the background: `sleep 3000`.',
+                source: 'turn'
+            }
+        });
+        expect(daemon.outbox.list()).toEqual([]);
+
+        // The command ends after all; the turn the CLI opens on it answers nobody.
+        later(daemon);
+        await daemon.until(() => turnsOf(daemon, child.childId).length === 3 && turnsOf(daemon, child.childId).every((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
+    });
+
+    test('keeps its limit across a restart, which settles the task once at that time and wakes the lead once', async () => {
+        const first = await boot();
+        first.worker.start();
+        await leadIdle(first);
+        const child = await commandRunning(first, 'sleep 3000');
+        const [entry] = owedLimits(first);
+        running.splice(running.indexOf(first), 1);
+        await first.stop();
+
+        const second = await boot();
+        second.worker.start();
+        await second.worker.settled();
+        expect(owedLimits(second)).toEqual([entry!]);
+        // A client mounting the child reads its thread back, with nothing left running beside its last turn.
+        await second.chats.create({ chatId: child.childId });
+        await second.worker.settled();
+        expect(second.chats.get(child.childId)?.info.background).toEqual([]);
+        expect(second.tasks.get(child.taskId)?.status).toBe('open');
+
+        clock.advance(entry!.notBefore - clock.now());
+        await second.until(() => wakeTurns(second).some((turn) => turn.state === 'done'));
+        await second.worker.settled();
+        expect(second.tasks.get(child.taskId)).toMatchObject({ status: 'done', wake: 'sent', result: { source: 'turn' } });
+        expect(second.tasks.get(child.taskId)?.result?.text).toEndWith('while this still ran in the background: `sleep 3000`.');
+        expect(second.outbox.list()).toEqual([]);
+
+        // Run again, as after a restart between settling and the removal of its file: nothing new.
+        await second.wiring.backgroundLimit(entry!);
+        await second.worker.settled();
+        expect(wakeTurns(second).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
+    });
+});
