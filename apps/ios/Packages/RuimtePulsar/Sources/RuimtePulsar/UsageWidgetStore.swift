@@ -29,14 +29,33 @@ public struct UsageWidgetSnapshot: Codable, Sendable, Equatable {
         }
     }
 
+    public struct Account: Codable, Sendable, Equatable {
+        public let id: String
+        public let label: String
+        /// A node accent id, as the account has it.
+        public let color: String?
+
+        public init(id: String, label: String, color: String? = nil) {
+            self.id = id
+            self.label = label
+            self.color = color
+        }
+    }
+
     public struct Provider: Codable, Sendable, Equatable {
         public let kind: String
+        /// Nil from a machine before accounts, and in a snapshot written before the account was kept.
+        public let account: Account?
         public let windows: [Window]
 
-        public init(kind: String, windows: [Window]) {
+        public init(kind: String, account: Account? = nil, windows: [Window]) {
             self.kind = kind
+            self.account = account
             self.windows = windows
         }
+
+        /// The default account of a CLI has the CLI's kind as its id.
+        public var accountID: String { account?.id ?? kind }
     }
 
     public struct Cost: Codable, Sendable, Equatable {
@@ -45,15 +64,19 @@ public struct UsageWidgetSnapshot: Codable, Sendable, Equatable {
         public let usd: Double
         /// Nil in a snapshot written before the cost was kept per provider.
         public let usdByProvider: [String: Double]?
+        /// By account id; only while a CLI has several accounts, and nil from a machine before accounts.
+        public let usdByAccount: [String: Double]?
         public let rate: JSONValue?
         public let fetchedAt: Date
 
         public init(
-            day: String, usd: Double, usdByProvider: [String: Double]? = nil, rate: JSONValue?, fetchedAt: Date
+            day: String, usd: Double, usdByProvider: [String: Double]? = nil, usdByAccount: [String: Double]? = nil,
+            rate: JSONValue?, fetchedAt: Date
         ) {
             self.day = day
             self.usd = usd
             self.usdByProvider = usdByProvider
+            self.usdByAccount = usdByAccount
             self.rate = rate
             self.fetchedAt = fetchedAt
         }

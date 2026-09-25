@@ -45,6 +45,7 @@ struct CodexUsageWidget: Widget {
 
 protocol UsageConfigurationIntent: WidgetConfigurationIntent {
     var machine: UsageMachineEntity? { get }
+    var account: UsageAccountEntity? { get }
 }
 
 struct UsageWidgetIntent: UsageConfigurationIntent {
@@ -52,6 +53,7 @@ struct UsageWidgetIntent: UsageConfigurationIntent {
     static let description = IntentDescription("Usage limits and today's cost of one machine.")
 
     @Parameter(title: "Machine") var machine: UsageMachineEntity?
+    @Parameter(title: "Account") var account: UsageAccountEntity?
 }
 
 struct ClaudeUsageWidgetIntent: UsageConfigurationIntent {
@@ -59,6 +61,7 @@ struct ClaudeUsageWidgetIntent: UsageConfigurationIntent {
     static let description = IntentDescription("Claude limits and today's cost of one machine.")
 
     @Parameter(title: "Machine") var machine: UsageMachineEntity?
+    @Parameter(title: "Account") var account: UsageAccountEntity?
 }
 
 struct CodexUsageWidgetIntent: UsageConfigurationIntent {
@@ -66,6 +69,7 @@ struct CodexUsageWidgetIntent: UsageConfigurationIntent {
     static let description = IntentDescription("Codex limits and today's cost of one machine.")
 
     @Parameter(title: "Machine") var machine: UsageMachineEntity?
+    @Parameter(title: "Account") var account: UsageAccountEntity?
 }
 
 struct UsageMachineEntity: AppEntity {
@@ -96,10 +100,62 @@ struct UsageMachineQuery: EntityQuery {
     }
 }
 
+/// An account of a CLI on one machine, as the machine last reported its limits. Absent, a widget shows the default
+/// account of every CLI.
+struct UsageAccountEntity: AppEntity {
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Account"
+    static let defaultQuery = UsageAccountQuery()
+    /// `<machine id>:<account id>`; an account id holds no colon, so the last one splits them.
+    let id: String
+    let label: String
+    let kind: String
+
+    var machineID: String { String(id[..<(id.lastIndex(of: ":") ?? id.endIndex)]) }
+    var accountID: String { id.lastIndex(of: ":").map { String(id[id.index(after: $0)...]) } ?? id }
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(label)", subtitle: "\(usageProviderName(kind))")
+    }
+
+    init(machineID: String, provider: UsageWidgetSnapshot.Provider) {
+        id = "\(machineID):\(provider.accountID)"
+        label = provider.account?.label ?? usageProviderName(provider.kind)
+        kind = provider.kind
+    }
+}
+
+/// The accounts of the machine the widget is set to, of its one CLI when it has one. Each widget has its own intent,
+/// so the query depends on the machine of whichever one asks.
+struct UsageAccountQuery: EntityQuery {
+    @IntentParameterDependency<UsageWidgetIntent>(\.$machine) var every
+    @IntentParameterDependency<ClaudeUsageWidgetIntent>(\.$machine) var claude
+    @IntentParameterDependency<CodexUsageWidgetIntent>(\.$machine) var codex
+
+    func entities(for identifiers: [String]) async throws -> [UsageAccountEntity] {
+        UsageWidgetStore.machines().flatMap { accounts(machineID: $0.id, provider: nil) }
+            .filter { identifiers.contains($0.id) }
+    }
+
+    func suggestedEntities() async throws -> [UsageAccountEntity] {
+        let chosen = every?.machine ?? claude?.machine ?? codex?.machine
+        guard let machineID = chosen?.id ?? UsageWidgetStore.machines().first?.id else { return [] }
+        return accounts(machineID: machineID, provider: claude != nil ? "claude" : codex != nil ? "codex" : nil)
+    }
+
+    /// A machine from before accounts names none, so there is nothing to choose there.
+    private func accounts(machineID: String, provider: String?) -> [UsageAccountEntity] {
+        (UsageWidgetStore.snapshot(machineID: machineID)?.providers ?? [])
+            .filter { $0.account != nil && (provider == nil || $0.kind == provider) }
+            .map { UsageAccountEntity(machineID: machineID, provider: $0) }
+    }
+}
+
 struct UsageEntry: TimelineEntry {
     let date: Date
     let machine: UsageWidgetMachine?
     let snapshot: UsageWidgetSnapshot?
+    /// The account the widget was set to; nil shows the default account of every CLI.
+    var account: String? = nil
 
     static var sample: UsageEntry {
         let now = Date.now
@@ -137,7 +193,9 @@ struct UsageTimeline<Intent: UsageConfigurationIntent>: AppIntentTimelineProvide
         let resets = current.snapshot?.providers.flatMap(\.windows).compactMap(\.resetsAt) ?? []
         let midnight = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: now))
         let moments = Set(resets + [midnight].compactMap { $0 }).filter { $0 > now }.sorted().prefix(12)
-        let later = moments.map { UsageEntry(date: $0, machine: current.machine, snapshot: current.snapshot) }
+        let later = moments.map {
+            UsageEntry(date: $0, machine: current.machine, snapshot: current.snapshot, account: current.account)
+        }
         return Timeline(entries: [current] + later, policy: .atEnd)
     }
 
@@ -145,17 +203,12 @@ struct UsageTimeline<Intent: UsageConfigurationIntent>: AppIntentTimelineProvide
         let machines = UsageWidgetStore.machines()
         let id = configuration.machine?.id ?? machines.first?.id
         let machine = machines.first { $0.id == id }
+        // An account picked on another machine than the one the widget shows now says nothing about this one.
+        let account = configuration.account.flatMap { $0.machineID == machine?.id ? $0.accountID : nil }
         return UsageEntry(
-            date: date, machine: machine, snapshot: machine.flatMap { UsageWidgetStore.snapshot(machineID: $0.id) })
+            date: date, machine: machine, snapshot: machine.flatMap { UsageWidgetStore.snapshot(machineID: $0.id) },
+            account: account)
     }
-}
-
-private struct UsageRow: Identifiable {
-    let id: String
-    let provider: String
-    let label: String
-    let title: String
-    let used: Double
 }
 
 struct UsageWidgetView: View {
@@ -179,11 +232,12 @@ struct UsageWidgetView: View {
                 if let snapshot = entry.snapshot {
                     if family == .systemMedium { medium(snapshot) } else { small(snapshot) }
                     Spacer(minLength: 0)
-                    if let cost = todayCost(snapshot) {
+                    if let cost = snapshot.todayUSD(provider: provider, account: entry.account, at: entry.date) {
                         HStack(alignment: .firstTextBaseline) {
                             Text("Today").font(.caption).foregroundStyle(.secondary)
                             Spacer(minLength: 4)
-                            Text(cost).font(.headline).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
+                            Text(UsageMoneyFormatter(locale: locale, rate: snapshot.cost?.rate).string(usd: cost))
+                                .font(.headline).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
                         }
                     }
                 } else {
@@ -243,38 +297,8 @@ struct UsageWidgetView: View {
         return date.formatted(.dateTime.day().month(.abbreviated))
     }
 
-    /// The windows of one kind, shared evenly between the providers that report one.
-    private func rows(_ snapshot: UsageWidgetSnapshot, kind: String, limit: Int) -> [UsageRow] {
-        let providers = snapshot.providers.filter { reported in
-            (provider == nil || reported.kind == provider) && reported.windows.contains { $0.kind == kind }
-        }
-        let each = max(1, limit / max(1, providers.count))
-        let rows = providers.flatMap { provider in
-            provider.windows.filter { $0.kind == kind }.prefix(each).map { window in
-                // Past its reset a window starts over; the app has not heard the new number yet.
-                let reset = window.resetsAt.map { $0 <= entry.date } ?? false
-                return UsageRow(
-                    id: "\(provider.kind):\(window.label)", provider: provider.kind, label: window.label,
-                    title: title(provider: provider.kind, label: window.label),
-                    used: reset ? 0 : window.used)
-            }
-        }
-        return Array(rows.prefix(limit))
-    }
-
-    /// "Weekly · Opus" reads as the model alone. Over every provider the provider's name stands in for "Weekly",
-    /// which every weekly row would repeat; in one provider's widget the header already names it.
-    private func title(provider kind: String, label: String) -> String {
-        let model = label.hasPrefix("Weekly · ") ? String(label.dropFirst("Weekly · ".count)) : nil
-        if provider != nil { return model ?? label }
-        return [kind.capitalized, model].compactMap { $0 }.joined(separator: " · ")
-    }
-
-    private func todayCost(_ snapshot: UsageWidgetSnapshot) -> String? {
-        guard let cost = snapshot.cost, cost.day == UsageWidgetSnapshot.day(of: entry.date) else { return nil }
-        let usd: Double?
-        if let provider { usd = cost.usdByProvider.map { $0[provider] ?? 0 } } else { usd = cost.usd }
-        return usd.map { UsageMoneyFormatter(locale: locale, rate: cost.rate).string(usd: $0) }
+    private func rows(_ snapshot: UsageWidgetSnapshot, kind: String, limit: Int) -> [UsageWidgetRow] {
+        snapshot.rows(kind: kind, limit: limit, provider: provider, account: entry.account, at: entry.date)
     }
 }
 
@@ -283,7 +307,7 @@ private func usagePercent(_ used: Double) -> Text {
 }
 
 private struct UsageBarRow: View {
-    let row: UsageRow
+    let row: UsageWidgetRow
     let marked: Bool
     @Environment(\.usageTheme) private var theme
 
@@ -323,7 +347,7 @@ private struct SegmentedBar: View {
 }
 
 private struct UsageRing: View {
-    let row: UsageRow
+    let row: UsageWidgetRow
     @Environment(\.usageTheme) private var theme
 
     var body: some View {

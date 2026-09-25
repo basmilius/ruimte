@@ -87,7 +87,8 @@ final class UsageWidgetRecorder {
                     models.map { ($0.text("provider"), $0.number("costUsd")) }, uniquingKeysWith: +)
                 snapshot.cost = UsageWidgetSnapshot.Cost(
                     day: day, usd: models.reduce(0) { $0 + $1.number("costUsd") }, usdByProvider: byProvider,
-                    rate: summary["rate"], fetchedAt: now)
+                    usdByAccount: await costByAccount(snapshot, payload: payload), rate: summary["rate"],
+                    fetchedAt: now)
             }
         }
         guard !Task.isCancelled else { return }
@@ -95,10 +96,31 @@ final class UsageWidgetRecorder {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
+    /// Only a CLI with several accounts needs the cost split per account, which a second summary asks for; the first
+    /// keeps the machine's total, which also counts the accounts that are gone.
+    private func costByAccount(_ snapshot: UsageWidgetSnapshot, payload: JSONValue) async -> [String: Double]? {
+        guard snapshot.providers.contains(where: { snapshot.accountCount($0.kind) > 1 }) else { return nil }
+        let ids = snapshot.providers.compactMap(\.account?.id)
+        let split = payload.setting("accounts", .array(ids.map(JSONValue.string)))
+        guard let summary = try? await client.request(WireRequest.usageSummary.rawValue, payload: split) else {
+            return nil
+        }
+        let models = summary.list("models").filter { $0["account"]?.stringValue != nil }
+        // A machine that ignores the filter folds every account into one, which says nothing per account.
+        guard !models.isEmpty || summary.list("models").isEmpty else { return nil }
+        return Dictionary(models.map { ($0.text("account"), $0.number("costUsd")) }, uniquingKeysWith: +)
+    }
+
     private static func providers(_ limits: JSONValue) -> [UsageWidgetSnapshot.Provider] {
         limits.list("providers").map { provider in
             UsageWidgetSnapshot.Provider(
                 kind: provider.text("kind"),
+                account: provider["account"].flatMap { account in
+                    account["id"]?.stringValue.map {
+                        UsageWidgetSnapshot.Account(
+                            id: $0, label: account.text("label", fallback: $0), color: account["color"]?.stringValue)
+                    }
+                },
                 windows: provider.list("windows").map { window in
                     UsageWidgetSnapshot.Window(
                         kind: window["kind"]?.stringValue, label: window.text("label"), used: window.number("used"),
