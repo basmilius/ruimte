@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { UsageLimitsSnapshot } from '@ruimte/contracts';
+import { limitGroups, type LimitGroup } from '@/shell/usage/limit-groups';
+import { useProviderAccountsStore } from '@/state/provider-accounts';
 import { useUsage, useUsageEndpointId, useUsageStore } from '@/state/usage';
 import { machineTransport } from '@/transport';
 
@@ -60,6 +62,13 @@ export const useUsageLimits = (): UsageLimitsSnapshot | null => {
     }, [endpointId]);
 
     return limits;
+};
+
+/* The snapshot per CLI and account, with the accounts of the same machine it is read from. */
+export const useLimitGroups = (limits: UsageLimitsSnapshot | null): LimitGroup[] => {
+    const endpointId = useUsageEndpointId();
+    const accounts = useProviderAccountsStore((s) => s.byEndpoint[endpointId]?.accounts ?? null);
+    return useMemo(() => (limits === null ? [] : limitGroups(limits, accounts)), [limits, accounts]);
 };
 
 /* A countdown that stands still lies within the minute; this is the cheapest way to keep it honest. */

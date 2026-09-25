@@ -1,18 +1,20 @@
 import i18next from 'i18next';
 import { useState, type ReactElement } from 'react';
 import { PreviewCard } from '@base-ui-components/react/preview-card';
-import { LimitsList } from '@/shell/usage/LimitsList';
-import { useMinute, useUsageLimits } from '@/shell/usage/limits';
+import { hasSeveralAccounts } from '@/shell/usage/limit-groups';
+import { AccountLimitsList, LimitsList } from '@/shell/usage/LimitsList';
+import { useLimitGroups, useMinute, useUsageLimits } from '@/shell/usage/limits';
 
 /* Asking the CLIs starts a process each, so the question waits until the card is actually opened. */
 function CardBody() {
     const limits = useUsageLimits();
+    const groups = useLimitGroups(limits);
     const now = useMinute();
 
     if (limits === null) {
         return <p className="text-xs text-text-faint">{i18next.t('usage:limits.loading')}</p>;
     }
-    return <LimitsList limits={limits} now={now} compact />;
+    return hasSeveralAccounts(groups) ? <AccountLimitsList groups={groups} now={now} /> : <LimitsList limits={limits} now={now} compact />;
 }
 
 /*

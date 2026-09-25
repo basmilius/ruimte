@@ -17,6 +17,10 @@
     "metrics": {
       "cost": "Cost",
       "tokens": "Tokens"
+    },
+    "accounts": {
+      "label": "Account",
+      "all": "All accounts"
     }
   },
   "empty": {
@@ -99,6 +103,16 @@
     "none": "No limits reported yet.",
     "notInstalled": "Not installed on this machine.",
     "noSubscription": "This account uses an API key, which has no plan limits.",
-    "unreachable": "The CLI could not be reached."
+    "unreachable": "The CLI could not be reached.",
+    "filter": "Accounts to show limits of",
+    "signedOut": "Not logged in",
+    "signedOutDetail": "Not logged in. Log in to see its limits.",
+    "logIn": "Log in",
+    "nextReset": "{{window}} resets {{at}}",
+    "checked": {
+      "now": "now",
+      "ago": "{{duration}} ago",
+      "fromTurn": "From a turn · {{when}}"
+    }
   }
 }

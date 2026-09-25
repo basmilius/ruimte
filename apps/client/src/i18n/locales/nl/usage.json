@@ -17,6 +17,10 @@
     "metrics": {
       "cost": "Kosten",
       "tokens": "Tokens"
+    },
+    "accounts": {
+      "label": "Account",
+      "all": "Alle accounts"
     }
   },
   "empty": {
@@ -99,6 +103,16 @@
     "none": "Nog geen limieten gemeld.",
     "notInstalled": "Niet geïnstalleerd op deze machine.",
     "noSubscription": "Dit account gebruikt een API-sleutel en kent geen abonnementslimieten.",
-    "unreachable": "De CLI was niet bereikbaar."
+    "unreachable": "De CLI was niet bereikbaar.",
+    "filter": "Accounts waarvan je de limieten ziet",
+    "signedOut": "Niet ingelogd",
+    "signedOutDetail": "Niet ingelogd. Log in om de limieten te zien.",
+    "logIn": "Inloggen",
+    "nextReset": "{{window}} reset {{at}}",
+    "checked": {
+      "now": "nu",
+      "ago": "{{duration}} geleden",
+      "fromTurn": "Uit een turn · {{when}}"
+    }
   }
 }

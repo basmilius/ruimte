@@ -1,13 +1,16 @@
+import { Fragment } from 'react';
 import clsx from 'clsx';
-import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import type { UsageLimitsProvider, UsageLimitsSnapshot, UsageWindow } from '@ruimte/contracts';
+import type { UsageLimitsSnapshot, UsageWindow } from '@ruimte/contracts';
 import { limitsAccountId } from '@/agents/account-limits';
+import { AccountDot } from '@/agents/AccountDot';
 import { Tooltip } from '@/ui/Tooltip';
 import { ProviderLogo } from '@/ui/ProviderLogo';
 import { formatClock, formatWeekdayClock, isSameDay } from '@/format/datetime';
 import { formatCountdown } from '@/format/duration';
+import { formatPercent } from '@/format/number';
 import { PROVIDER_COLORS, PROVIDER_LABELS } from '@/shell/usage/format';
+import { accountNote, explain, isSignedOut, nextReset, type LimitAccount, type LimitGroup } from '@/shell/usage/limit-groups';
 
 /* Red where a window is nearly spent, amber where it is worth knowing. A window with room to spare
    is not news, so it takes the text color rather than a hue that competes with the two that are. */
@@ -27,7 +30,7 @@ const elapsedShare = (window: UsageWindow, now: number): number | null => {
     return Math.min(1, Math.max(0, 1 - (window.resetsAt - now) / window.durationMs));
 };
 
-function WindowBar({ window, now, compact }: { window: UsageWindow; now: number; compact: boolean }) {
+export function WindowBar({ window, now, compact }: { window: UsageWindow; now: number; compact: boolean }) {
     const { t } = useTranslation('usage');
     const percent = Math.round(window.used * 100);
     const elapsed = elapsedShare(window, now);
@@ -98,19 +101,6 @@ function WindowBar({ window, now, compact }: { window: UsageWindow; now: number;
     );
 }
 
-const explain = (provider: UsageLimitsProvider): string | null => {
-    if (provider.unavailable === null) {
-        return provider.windows.length === 0 ? i18next.t('usage:limits.none') : null;
-    }
-    if (provider.unavailable.reason === 'not-installed') {
-        return i18next.t('usage:limits.notInstalled');
-    }
-    if (provider.unavailable.reason === 'no-subscription') {
-        return i18next.t('usage:limits.noSubscription');
-    }
-    return provider.unavailable.message ?? i18next.t('usage:limits.unreachable');
-};
-
 interface LimitsListProps {
     limits: UsageLimitsSnapshot;
     now: number;
@@ -145,6 +135,94 @@ export function LimitsList({ limits, now, compact = false }: LimitsListProps) {
                     </div>
                 );
             })}
+        </div>
+    );
+}
+
+/* One window on one line, for a card that holds several accounts: the label, a thin bar with the elapsed mark, the percent. */
+function WindowLine({ window, now }: { window: UsageWindow; now: number }) {
+    const { t } = useTranslation('usage');
+    const percent = Math.round(window.used * 100);
+    const elapsed = elapsedShare(window, now);
+    const mark = elapsed === null ? null : Math.round(elapsed * 100);
+    return (
+        <>
+            <span className="text-text-muted">{window.label}</span>
+            <div
+                role="progressbar"
+                aria-label={t('limits.bar', { window: window.label, percent })}
+                aria-valuenow={percent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="relative h-1.5 rounded-full bg-surface-sunken"
+            >
+                <div className={clsx('absolute inset-y-0 left-0 rounded-full', toneOf(window.used))} style={{ width: `${Math.min(100, percent)}%` }} />
+                {mark !== null && (
+                    // Cut out of the fill in the popup's own color, drawn on the track past it.
+                    <span
+                        aria-hidden
+                        className={clsx('absolute -inset-y-0.5 w-px -translate-x-1/2', mark <= percent ? 'bg-surface-raised' : 'bg-text-muted')}
+                        style={{ left: `${mark}%` }}
+                    />
+                )}
+            </div>
+            <span className={clsx('text-right tabular-nums', window.used >= 0.9 ? 'text-status-error' : 'text-text')}>{formatPercent(percent)}</span>
+        </>
+    );
+}
+
+function AccountLines({ account, now }: { account: LimitAccount; now: number }) {
+    const { t } = useTranslation('usage');
+    const signedOut = isSignedOut(account);
+    const note = signedOut ? null : accountNote(account);
+    const windows = signedOut || note !== null ? [] : (account.entry?.windows ?? []);
+    const next = nextReset(windows, now);
+    const resetsIn = next === null ? null : resetInLabel(next.resetsAt, now);
+    return (
+        <>
+            <p className="col-span-full mt-2 flex min-w-0 items-center gap-2">
+                <AccountDot color={account.color} />
+                <span className="truncate">{account.name}</span>
+                {signedOut ? (
+                    <span className="shrink-0 text-text-faint">· {t('limits.signedOut')}</span>
+                ) : (
+                    account.entry?.plan && <span className="shrink-0 text-text-muted">· {account.entry.plan}</span>
+                )}
+            </p>
+            {note !== null && <p className="col-span-full text-text-faint">{note}</p>}
+            {windows.map((window) => (
+                <WindowLine key={window.id} window={window} now={now} />
+            ))}
+            {next !== null && (
+                <p className="col-span-full whitespace-nowrap text-text-faint">
+                    {t('limits.nextReset', { window: next.label, at: resetAtLabel(next.resetsAt, now) })}
+                    {resetsIn !== null && ` · ${resetsIn}`}
+                </p>
+            )}
+        </>
+    );
+}
+
+/*
+ * The hover card once a CLI has several accounts: a block per account, a line per window. One grid over
+ * the whole card, so the bars of every account start and end at the same place whatever their labels.
+ */
+export function AccountLimitsList({ groups, now }: { groups: readonly LimitGroup[]; now: number }) {
+    return (
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 text-xs">
+            {groups.map((group) => (
+                <Fragment key={group.kind}>
+                    <p className="col-span-full mt-3 flex items-center gap-2 font-medium first:mt-0">
+                        <span style={{ color: PROVIDER_COLORS[group.kind] }}>
+                            <ProviderLogo provider={group.kind} />
+                        </span>
+                        {PROVIDER_LABELS[group.kind]}
+                    </p>
+                    {group.accounts.map((account) => (
+                        <AccountLines key={account.id} account={account} now={now} />
+                    ))}
+                </Fragment>
+            ))}
         </div>
     );
 }

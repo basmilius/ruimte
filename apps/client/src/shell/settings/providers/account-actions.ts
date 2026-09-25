@@ -66,8 +66,8 @@ export const linkAccount = async (endpointId: string, id: string, account: Provi
 
 /*
  * Opens a terminal node on the canvas on screen that runs the CLI's own login in the account's
- * environment, then has the machine watch for the login to land. The settings close, so the
- * terminal is what the person sees. A person making the node is what approves its command.
+ * environment, then has the machine watch for the login to land. The settings and the usage page
+ * close, so the terminal is what the person sees. A person making the node is what approves its command.
  */
 export const openLogin = async (endpointId: string, kind: AgentKind, id: string, name: string): Promise<void> => {
     const command = providerAccountsOf(endpointId).accounts?.loginCommands?.[kind];
@@ -80,6 +80,7 @@ export const openLogin = async (endpointId: string, kind: AgentKind, id: string,
         return;
     }
     useUi.getState().setSettings({ open: false });
+    useUi.getState().setUsageOpen(false);
     // Watching is a courtesy: the status still arrives on the machine's own clock.
     void transportFor(endpointId)
         ?.request('providers.watchLogin', { id })
