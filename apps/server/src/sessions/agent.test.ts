@@ -32,9 +32,9 @@ const create = (sessionId: string, command?: string) => harness.manager.create({
 
 const createAgent = (sessionId: string, agent: AgentLaunch) => harness.manager.create({ sessionId, cols: 80, rows: 24, cwd: harness.home, agent });
 
-const codeOf = (work: () => void): string => {
+const codeOf = async (work: () => Promise<void>): Promise<string> => {
     try {
-        work();
+        await work();
     } catch (e) {
         return e instanceof SessionError ? e.code : 'not-a-session-error';
     }
@@ -148,16 +148,16 @@ describe('agent status via hooks', () => {
         const pty = harness.adapter.forSession('s2');
         expect(pty.input).toEqual([]);
 
-        harness.manager.resumeAgent('s2');
+        await harness.manager.resumeAgent('s2');
         expect(pty.input).toEqual([`claude ${ALLOW} --resume 'claude-1'\n`]);
-        expect(() => harness.manager.resumeAgent('s3')).toThrow('No session');
+        await expect(harness.manager.resumeAgent('s3')).rejects.toThrow('No session');
     });
 
     test('a resume into a shell that has ended is refused', async () => {
         await create('s2');
         await harness.manager.applyHook('claude', harness.manager.get('s2')!.hookToken, hook('UserPromptSubmit'));
         await endShell('s2');
-        expect(codeOf(() => harness.manager.resumeAgent('s2'))).toBe('session-exited');
+        expect(await codeOf(() => harness.manager.resumeAgent('s2'))).toBe('session-exited');
     });
 
     test('a session the daemon has an agent for starts no CLI of its own, and a resume is typed once', async () => {
@@ -174,32 +174,48 @@ describe('agent status via hooks', () => {
         expect(pty.input).toEqual([]);
 
         const line = `claude ${ALLOW} --permission-mode bypassPermissions --resume 'claude-1'\n`;
-        harness.manager.resumeAgent('s6');
+        await harness.manager.resumeAgent('s6');
         // The mode the node was made in rides on the resume too, so it comes back the way it started.
         expect(pty.input).toEqual([line]);
-        expect(codeOf(() => harness.manager.resumeAgent('s6'))).toBe('agent-resuming');
+        expect(await codeOf(() => harness.manager.resumeAgent('s6'))).toBe('agent-resuming');
         clock += 14_999;
-        expect(codeOf(() => harness.manager.resumeAgent('s6'))).toBe('agent-resuming');
+        expect(await codeOf(() => harness.manager.resumeAgent('s6'))).toBe('agent-resuming');
         expect(pty.input).toEqual([line]);
 
         // The CLI never came up, so the next try is allowed after the grace period.
         clock += 1;
-        harness.manager.resumeAgent('s6');
+        await harness.manager.resumeAgent('s6');
         expect(pty.input).toEqual([line, line]);
 
         await harness.manager.applyHook('claude', harness.manager.get('s6')!.hookToken, hook('SessionStart'));
-        expect(codeOf(() => harness.manager.resumeAgent('s6'))).toBe('agent-live');
+        expect(await codeOf(() => harness.manager.resumeAgent('s6'))).toBe('agent-live');
         expect(pty.input).toEqual([line, line]);
     });
 
     test('an agent the process monitor found gone may be resumed although its status says live', async () => {
         await create('s12');
         await harness.manager.applyHook('claude', harness.manager.get('s12')!.hookToken, hook('UserPromptSubmit'));
-        expect(codeOf(() => harness.manager.resumeAgent('s12'))).toBe('agent-live');
+        expect(await codeOf(() => harness.manager.resumeAgent('s12'))).toBe('agent-live');
 
         harness.manager.isAgentGone = (sessionId) => sessionId === 's12';
-        harness.manager.resumeAgent('s12');
+        await harness.manager.resumeAgent('s12');
         expect(harness.adapter.forSession('s12').input).toEqual([`claude ${ALLOW} --resume 'claude-1'\n`]);
+    });
+
+    test('a resume is refused while another program holds the front of the shell', async () => {
+        await create('s13');
+        await harness.manager.applyHook('claude', harness.manager.get('s13')!.hookToken, hook('UserPromptSubmit'));
+        harness.manager.isAgentGone = (sessionId) => sessionId === 's13';
+        const pty = harness.adapter.forSession('s13');
+
+        harness.manager.holdsForeground = () => Promise.resolve(false);
+        expect(await codeOf(() => harness.manager.resumeAgent('s13'))).toBe('shell-busy');
+        expect(pty.input).toEqual([]);
+
+        // Refused, not typed: the next try need not wait out the grace period of a typed resume.
+        harness.manager.holdsForeground = (pid) => Promise.resolve(pid === pty.pid);
+        await harness.manager.resumeAgent('s13');
+        expect(pty.input).toEqual([`claude ${ALLOW} --resume 'claude-1'\n`]);
     });
 
     test('a restored agent whose transcript is gone launches the CLI fresh instead of resuming it', async () => {
@@ -213,7 +229,7 @@ describe('agent status via hooks', () => {
 
         await createAgent('s7', { kind: 'claude', runtimeMode: 'full-access' });
         const pty = harness.adapter.forSession('s7');
-        harness.manager.resumeAgent('s7');
+        await harness.manager.resumeAgent('s7');
         expect(pty.input).toEqual([`claude ${ALLOW} --permission-mode bypassPermissions\n`]);
     });
 
@@ -228,7 +244,7 @@ describe('agent status via hooks', () => {
 
         await createAgent('s8', { kind: 'codex', runtimeMode: 'full-access' });
         const pty = harness.adapter.forSession('s8');
-        harness.manager.resumeAgent('s8');
+        await harness.manager.resumeAgent('s8');
         expect(pty.input).toEqual([
             `codex resume --ask-for-approval never --sandbox danger-full-access 'codex-1' || ${terminalCommand({ kind: 'codex', runtimeMode: 'full-access' }, undefined, verbsNote({ depth: 0 }))}\n`
         ]);
@@ -266,7 +282,7 @@ describe('agent status via hooks', () => {
             // Nothing is typed at create: the client answers the restored agent with `agent.resume`.
             expect(pty.input).toEqual([]);
 
-            restarted.manager.resumeAgent('s10');
+            await restarted.manager.resumeAgent('s10');
             // Only the resume: the fallback a fresh line carries must not have been typed too.
             expect(pty.input).toEqual([`claude ${ALLOW} --permission-mode acceptEdits --model 'claude-opus-5' --resume 'claude-1'\n`]);
         } finally {
@@ -282,7 +298,7 @@ describe('agent status via hooks', () => {
 
         await createAgent('s11', { kind: 'codex', runtimeMode: 'supervised' });
         const pty = harness.adapter.forSession('s11');
-        harness.manager.resumeAgent('s11');
+        await harness.manager.resumeAgent('s11');
         expect(pty.input).toEqual([`claude ${ALLOW} --resume 'claude-1'\n`]);
     });
 

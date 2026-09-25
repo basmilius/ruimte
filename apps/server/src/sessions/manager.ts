@@ -14,7 +14,15 @@ import { errorText } from '../error-text.ts';
 import { CodedError } from '../coded-error.ts';
 import { ClientSinks } from '../client-sinks.ts';
 
-type SessionErrorCode = 'session-exists' | 'session-not-found' | 'session-exited' | 'spawn-failed' | 'agent-not-found' | 'agent-live' | 'agent-resuming';
+type SessionErrorCode =
+    | 'session-exists'
+    | 'session-not-found'
+    | 'session-exited'
+    | 'spawn-failed'
+    | 'agent-not-found'
+    | 'agent-live'
+    | 'agent-resuming'
+    | 'shell-busy';
 
 /*
  * How long a typed resume has to produce a live agent before another one is allowed. A CLI that is
@@ -142,6 +150,8 @@ export class SessionManager {
     onProcessChange: ((sessionId: string, phase: ProcessChangePhase) => void) | null = null;
     // Whether the process monitor found the agent of a session gone while its status still says it runs.
     isAgentGone: (sessionId: string) => boolean = () => false;
+    // Whether a shell holds its terminal's foreground; null when that cannot be told.
+    holdsForeground: (pid: number) => Promise<boolean | null> = () => Promise.resolve(null);
 
     constructor(options: SessionManagerOptions) {
         this.adapter = options.adapter;
@@ -338,7 +348,7 @@ export class SessionManager {
     }
 
     /* Types the CLI's resume command into the shell of a session whose agent is known but not running. */
-    resumeAgent(sessionId: string): void {
+    async resumeAgent(sessionId: string): Promise<void> {
         const session = this.require(sessionId);
         if (session.exited) {
             throw new SessionError('session-exited', `Session ${sessionId} has ended`);
@@ -354,8 +364,22 @@ export class SessionManager {
         if (typedAt !== undefined && this.now() - typedAt < RESUME_GRACE_MS) {
             throw new SessionError('agent-resuming', `A resume for ${sessionId} was typed already and its agent has not reported back yet`);
         }
-        session.write(`${this.resumeLine(session, session.agent)}\n`);
+        // Held while the foreground is asked, so a second resume in the meantime is refused as a repeat.
         this.resuming.set(sessionId, this.now());
+        // The line goes to whatever holds the terminal: a vim or an ssh started after the agent left would take it.
+        if ((await this.holdsForeground(session.pid)) === false) {
+            this.resuming.delete(sessionId);
+            throw new SessionError('shell-busy', `Another program runs in front of the shell of ${sessionId}; quit it and resume again`);
+        }
+        if (session.exited) {
+            this.resuming.delete(sessionId);
+            throw new SessionError('session-exited', `Session ${sessionId} has ended`);
+        }
+        if (!session.agent) {
+            this.resuming.delete(sessionId);
+            throw new SessionError('agent-not-found', `Session ${sessionId} has no agent to resume`);
+        }
+        session.write(`${this.resumeLine(session, session.agent)}\n`);
     }
 
     get(sessionId: string): Session | undefined {

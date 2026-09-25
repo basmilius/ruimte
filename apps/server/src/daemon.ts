@@ -108,6 +108,7 @@ import { agentStates } from './agents/agent-state.ts';
 import { chatRequests } from './tasks/waiting-child.ts';
 import { WorktreeMerge } from './git/worktree-merge.ts';
 import { Worktrees } from './git/worktrees.ts';
+import { holdsForeground } from './processes/foreground.ts';
 import { ProcessMonitor } from './processes/monitor.ts';
 import { createSampler } from './processes/sampler.ts';
 import { handleProjectRequest, PROJECTS_PATH } from './projects/icon-route.ts';
@@ -464,6 +465,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
     };
     manager.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);
+    manager.holdsForeground = holdsForeground;
 
     const worktrees = new Worktrees(config.home);
     const merges = new WorktreeMerge(
