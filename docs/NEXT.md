@@ -138,15 +138,19 @@ larger ones becomes a GitHub issue when it starts.
     folder per login passed as `CLAUDE_CONFIG_DIR` or `CODEX_HOME` at spawn, the CLI logs in
     itself and Ruimte never writes credentials. The account choice belongs in the local file, not
     in `project.json`.
-21. **Orchestration leftovers** (`docs/reports/2026-09-24-orchestration-upstream.html`). Built: a
-    turn that stops on a usage limit or on overload, with a task that pauses and a resume at the
-    reset a person turns on; a note for a child that waits on input and `ruimte-context answer`;
-    nested Claude subagents and Codex spawned agents as rows; a chat attached with `@`. Open: the
-    phases of a Claude workflow and opening its members wait on one captured stream of a real
-    workflow run, since whether `workflow_progress` is a snapshot or a delta is unknown; a Codex
-    `subAgentActivity` of kind `interacted` is not handled, never seen live; a resume whose CLI dies
-    before the resume records itself ends without its attempt and its note; stashing a draft drops
-    the chats attached to it.
+21. **Orchestration leftovers** (`docs/reports/2026-09-24-orchestration-upstream.html`). Built and
+    tested end to end in the dev app: limits and overload with a resume a person turns on, notes for
+    a child waiting on input and `ruimte-context answer`, nested subagents, Codex spawned agents, a
+    chat attached with `@`, a task that waits for the child's background work (commands up to 30
+    minutes), a parent reading its own child, request ids in `read`, the phases of a workflow and a
+    background agent's approval that outlives the turn. Open: a mode the CLI does not honor is
+    silent (auto on Haiku falls back to default and asks on every tool); a workflow or subagent a
+    restart took down settles its task as done, where background commands fail it; a workflow that
+    hangs in the CLI holds its task until a person stops the child; a Codex spawned agent's request
+    is still dropped at its own turn's end, unverified; the sub-agent list over the composer lacks a
+    workflow's agents and background subagent rows fold into their turn; a Codex `subAgentActivity`
+    of kind `interacted` is not handled; a resume whose CLI dies before the resume records itself
+    ends without its attempt and its note; stashing a draft drops the chats attached to it.
 
 Known gaps to keep in mind: the WebGL budget is a fixed 10 contexts, not a setting and not
 measured against what a given machine really keeps alive; the 30-node performance target is

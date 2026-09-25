@@ -185,11 +185,12 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   <p class="eyebrow">Ruimte / Onderzoek / 24 september 2026</p>
   <h1>Orchestratie: wat de rewrite sinds 16 september deed</h1>
   <p class="intro">De rewrite waar ons ontwerp van 16 september op leunde, is nog steeds niet gemerged. Het model zelf bleef gelijk: run, poging, stap, subagent en gedelegeerde taak. Het werk van de afgelopen acht dagen ging naar fouten aan de randen. Ruimte loopt op de kern niet achter, maar heeft vier gaten die de rewrite nu dicht: limieten van providers, een kind dat op invoer wacht, randgevallen van subagents en een chat als context.</p>
-  <p class="status">Gebouwd op 24 en 25 september; zie <a href="#resultaat">Resultaat</a></p>
+  <p class="status">Gebouwd en end-to-end getest op 24 en 25 september; zie <a href="#resultaat">Resultaat</a> en <a href="#ronde2">Tweede ronde</a></p>
   <p class="caption">Bronnen: de hoofd-PR van de rewrite, de deel-PR's en issues daaronder en de commitlijst van de integratiebranch, gelezen op 24 september 2026. De branch stond op <code>692ad0a8f</code> (23 september). Ruimte is nagekeken op <code>fea139ee</code>. PR-nummers verwijzen naar de repository van de rewrite.</p>
   <nav aria-label="Inhoud">
     <a href="#kort">Kort</a>
     <a href="#resultaat">Resultaat</a>
+    <a href="#ronde2">Tweede ronde</a>
     <a href="#stand">Stand</a>
     <a href="#themas">Per thema</a>
     <a href="#al-gedekt">Al gedekt</a>
@@ -292,6 +293,47 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
       <li>Laat een lead een kind met <code>--task</code> starten dat een vraag stelt. De lead hoort één notitie te krijgen zonder beurt, en moet de vraag kunnen beantwoorden met het commando uit de notitie.</li>
       <li>Type in de composer <code>@</code> en kies een andere chat. Hernoem die chat daarna en verstuur het bericht.</li>
       <li>Vraag een Claude-subagent op de achtergrond om zelf een agent te starten, en vraag Codex om een subagent die <code>sleep 20</code> draait.</li>
+    </ul>
+  </section>
+
+  <section id="ronde2">
+    <h2>Tweede ronde: end-to-end in Ruimte Dev</h2>
+    <p class="caption">25 september 2026, van <code>91a12cf8</code> tot <code>7aa97fa0</code> op main, gepusht. Getest met een lead-agent op een canvas in de dev-app, bediend via <code>ruimte-context computer</code>. Voor elke commit waren format, check en test groen.</p>
+
+    <h3>Wat de eerste test vond en wat er gebouwd is</h3>
+    <div class="table">
+      <table class="wide">
+        <caption>Gaten uit de test, met de fix</caption>
+        <thead><tr><th scope="col">Gat</th><th scope="col">Fix</th><th scope="col">Commit</th></tr></thead>
+        <tbody>
+          <tr><td>Een taak sloot na de eerste beurt, ook als het kind nog een subagent of workflow op de achtergrond had</td><td>Een taak sluit pas als het kind geen achtergrondwerk meer heeft. Bij Claude sluit hij op de vervolgbeurt van de CLI, bij Codex op de laatste beurt.</td><td><code>91a12cf8</code></td></tr>
+          <tr><td>Een achtergrondcommando van een subagent liet de taak te vroeg sluiten</td><td>Een commando of monitor houdt de taak ook open, tot hooguit 30 minuten: een outbox-entry <code>background-limit</code> met een tijd. Na een herstart mislukt zo'n taak meteen, met het laatste resultaat en wat verloren ging.</td><td><code>a9790a9e</code>, <code>17af2817</code></td></tr>
+          <tr><td><code>read</code> op een eigen kind vroeg een lijn terug</td><td>Een ouder leest een kind dat hij zelf opende zonder lijn. Dat wordt gecontroleerd via lineage, net als bij <code>answer</code>.</td><td><code>04f009bd</code></td></tr>
+          <tr><td><code>read</code> toonde geen request-id</td><td>Een vraag en een approval staan in <code>read</code> met hun request-id, de keuzes en de stand.</td><td><code>ced8a7a9</code></td></tr>
+          <tr><td>Geen fasen bij een workflow</td><td>De rij draagt de fasen en leden uit <code>workflow_progress</code>, en dat is een volledige snapshot per frame. Je kunt een lid openklikken, en <code>read</code> toont de fase-regels.</td><td><code>8a99562f</code>, <code>d57edc82</code>, <code>32bc2ae6</code></td></tr>
+          <tr><td>Aan het einde van een beurt werd de approval van een lid van een workflow geannuleerd, en de workflow bleef hangen</td><td>Een request eindigt nu alleen als de CLI hem intrekt, als het proces verdwijnt of als een persoon op Stop drukt. Bij Stop krijgt de CLI een weigering.</td><td><code>c656360c</code></td></tr>
+          <tr><td>De ouder kreeg notities voor approvals die direct goedgekeurd werden</td><td>Een notitie gaat pas uit als de request 15 s later nog wacht. Dat gebeurt via <code>notBefore</code> op de outbox-entry.</td><td><code>7aa97fa0</code></td></tr>
+          <tr><td>Computer use miste elementen onder de vouw en het menu "+ View". Menukeuzes werkten niet op de achtergrond</td><td>De helper houdt geclipte elementen in de tree en scrollt op de achtergrond. De shell laat alleen toetsen vallen die de pagina zelf kreeg.</td><td><code>6e4be97b</code>, <code>be7454f0</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Hertest</h3>
+    <ul>
+      <li><span class="badge confirmed">geslaagd</span> Het kind "Achtergrond 2" startte een subagent met <code>sleep 40</code>. De taak bleef open en sloot pas met "ACHTERGROND KLAAR". De lead werd één keer gewekt.</li>
+      <li><span class="badge confirmed">geslaagd</span> Workflow in mode supervised. De approval van het lid stond ruim 4 minuten open nadat de beurt van het kind was geëindigd. De fase-regel toonde "write-file (running)". Na Allow rondden beide fasen af, en de taak sloot met "delta". Er kwamen alleen notities voor approvals die langer dan 15 s wachtten.</li>
+      <li><span class="badge confirmed">geslaagd</span> Een eigen kind lezen zonder lijn, en het request-id in <code>read</code>. De lead antwoordde "Blauw" in dezelfde beurt, en een tweede antwoord gaf <code>not-pending</code>.</li>
+      <li><span class="badge confirmed">geslaagd</span> File &gt; New View &gt; Canvas werkte via computer use terwijl de app op de achtergrond stond.</li>
+    </ul>
+
+    <h3>Nog open</h3>
+    <ul>
+      <li>Een mode die de CLI niet volgt, blijft onzichtbaar. Mode auto op Haiku valt in Claude Code 2.1.282 terug naar <code>default</code> en vraagt dan bij elke tool om toestemming, terwijl de node "auto" toont.</li>
+      <li>Een workflow of subagent die met een herstart stopt, sluit zijn taak als "done" met het laatste resultaat. Voor achtergrondcommando's mislukt de taak in dat geval.</li>
+      <li>Een workflow die in de CLI blijft hangen, houdt zijn taak open tot een persoon het kind stopt. Voor workflows en subagents is er geen grens.</li>
+      <li>Een request van een subagent die Codex startte, verdwijnt nog aan het einde van de eigen beurt. Of Codex zo'n request openhoudt, is niet nagekeken.</li>
+      <li>In de lijst van subagents boven de composer ontbreken de leden van een workflow. Rijen van subagents op de achtergrond vallen in de fold van de beurt.</li>
+      <li>Een agent kan via computer use geen approval goedkeuren. De classifier van de agent-CLI blokkeert dat, niet Ruimte.</li>
     </ul>
   </section>
 
