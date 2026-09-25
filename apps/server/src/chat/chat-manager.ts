@@ -21,6 +21,7 @@ import type {
     ChatSubagentPayload,
     ChatSubagentResult,
     ChatTurnItem,
+    ChatTurnLimit,
     ContextSource,
     ModelSelection,
     RuntimeMode,
@@ -43,6 +44,7 @@ import type { ChatRecord, ChatStore } from './chat-store.ts';
 import { ComposerPreferences } from './composer-preferences.ts';
 import { DeltaCoalescer } from './delta-coalescer.ts';
 import { ChatError } from './errors.ts';
+import { continueOnWake, limitedTurn } from './limit-resume.ts';
 import type { CodexProcessSpec } from './codex-thread.ts';
 import { claudeProjectSlug } from './claude-transcript.ts';
 import { SubagentReader, type SubagentReaderOptions } from './subagent-reader.ts';
@@ -1066,6 +1068,63 @@ export class ChatManager {
             return;
         }
         session.takeUpAfterLimit(turnId);
+    }
+
+    /*
+     * The turn to go on after under another account: the chat's last one, which stopped on a limit.
+     * `inPlace` says whether that account reads the chat's conversation, which is when the chat itself
+     * can go on under it. Refuses an account it cannot start, and a chat with nothing to go on after.
+     */
+    async limitedTurnFor(chatId: string, account: string): Promise<{ turnId: string; limit: ChatTurnLimit['kind']; inPlace: boolean }> {
+        await this.creating.get(chatId)?.catch(() => undefined);
+        if (!this.chats.has(chatId) && (await this.store?.has(chatId))) {
+            await this.create({ chatId });
+        }
+        const session = this.require(chatId);
+        const { provider: kind, account: from } = session.info;
+        const to = storedAccount(kind, account);
+        if (to === from) {
+            throw new ChatError('same-account', `The chat already runs under the account '${this.accountLabel(kind, to)}'`);
+        }
+        this.requireAccount(kind, to);
+        if (session.info.activeTurnId !== null) {
+            throw new ChatError('chat-busy', 'The chat is working on a turn; go on under another account once it ends');
+        }
+        const turn = limitedTurn(session.thread.list());
+        if (turn === null) {
+            throw new ChatError('not-limited', 'The last turn of this chat did not stop on a limit');
+        }
+        return { turnId: turn.id, limit: turn.limit.kind, inPlace: this.canContinue(kind, from, to) };
+    }
+
+    /*
+     * Moves the chat to an account that reads its conversation and takes its limited turn up there at
+     * once, carrying the tasks and messages that turn answered, the way a resume at the reset does.
+     */
+    continueInPlace(chatId: string, account: string): void {
+        const session = this.require(chatId);
+        const turn = limitedTurn(session.thread.list());
+        if (turn === null) {
+            throw new ChatError('not-limited', 'The last turn of this chat did not stop on a limit');
+        }
+        this.switchAccount(session, account);
+        const { provider: kind, account: to } = session.info;
+        session.wake({
+            ...continueOnWake(turn.limit.kind, this.accountLabel(kind, to), false),
+            taskIds: turn.taskIds ?? [],
+            ...(turn.messageFrom === undefined ? {} : { messageFrom: turn.messageFrom })
+        });
+    }
+
+    /* Opens the first turn of a fork that goes on after the limited turn of its original. */
+    async continueInFork(forkId: string, limit: ChatTurnLimit['kind']): Promise<void> {
+        const info = await this.create({ chatId: forkId });
+        this.require(forkId).wake({ ...continueOnWake(limit, this.accountLabel(info.provider, info.account), true), taskIds: [] });
+    }
+
+    /* The chat went on elsewhere, so a resume of its limited turn the outbox owes lapses. */
+    dropOwedResume(chatId: string): void {
+        this.chats.get(chatId)?.dropOwedResume();
     }
 
     /* The machine's switch for resuming after a limit changed; every chat loaded here looks again. */

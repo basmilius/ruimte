@@ -642,6 +642,11 @@ export class ChatSession {
         this.lapseResume();
     }
 
+    /* The limited turn went on elsewhere, so what the outbox owes for it lapses. */
+    dropOwedResume(): void {
+        this.lapseResume();
+    }
+
     private lapseResume(): void {
         const hooks = this.options.limitResume;
         if (this.thread.info.resumeAt === undefined || !hooks) {

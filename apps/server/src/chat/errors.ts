@@ -28,6 +28,9 @@ type ChatErrorCode =
     // What a bookmark is refused with.
     | 'item-not-found'
     | 'bookmark-not-found'
-    | 'too-many-bookmarks';
+    | 'too-many-bookmarks'
+    // What going on under another account after a limit is refused with.
+    | 'not-limited'
+    | 'same-account';
 
 export class ChatError extends CodedError<ChatErrorCode> {}

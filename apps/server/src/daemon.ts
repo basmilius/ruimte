@@ -78,6 +78,7 @@ import { childCounter, workOf } from './service/work.ts';
 import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
+import { continueOn } from './chat/continue-on.ts';
 import { chatForkDeps, forkChat, readForkInfo } from './chat/fork.ts';
 import { withForkOrigin } from './context/fork-origin.ts';
 import { openedChildSource } from './context/opened-child.ts';
@@ -639,7 +640,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerChatHandlers(dispatcher, chats, providers, beforeChatKill, endChildren.stopNode, {
         fork: (payload) => forkChat(forkDeps, payload),
         info: (payload) => readForkInfo(forkDeps, payload),
-        summarize: (chatId) => summaries.summarize(chatId)
+        summarize: (chatId) => summaries.summarize(chatId),
+        continueOn: (payload) => continueOn({ chats, fork: (fork) => forkChat(forkDeps, fork) }, payload)
     });
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
     registerPlanHandlers(dispatcher, plans);

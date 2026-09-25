@@ -9,6 +9,7 @@ import { addWanted } from '../canvas/worktree.ts';
 import { AttachmentStore } from '../chat/attachment-store.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { ChatStore } from '../chat/chat-store.ts';
+import { continueOn } from '../chat/continue-on.ts';
 import { chatForkDeps, forkChat, readForkInfo } from '../chat/fork.ts';
 import { fakeClaude } from '../chat/fake-claude.ts';
 import { fakeCodex } from '../chat/fake-codex.ts';
@@ -314,7 +315,8 @@ export const bootTestDaemon = async ({
     registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, {
         fork: (payload) => forkChat(forkDeps, payload),
         info: (payload) => readForkInfo(forkDeps, payload),
-        summarize: (chatId) => summaries.summarize(chatId)
+        summarize: (chatId) => summaries.summarize(chatId),
+        continueOn: (payload) => continueOn({ chats, fork: (fork) => forkChat(forkDeps, fork) }, payload)
     });
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
     registerPlanHandlers(dispatcher, plans);

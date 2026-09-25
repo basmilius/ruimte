@@ -42,6 +42,7 @@ let projectId: string;
 let daemon: TestDaemon;
 let accounts: ProviderAccountsService;
 let limitUpdates: LimitsUpdate[];
+let machine: { resumeAtReset: boolean };
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-chat-account-'));
@@ -57,6 +58,7 @@ beforeEach(async () => {
     const env = { PATH: process.env.PATH, HOME: home, ANTHROPIC_API_KEY: 'sk-inherited' };
     folders = new Set([personal, join(home, '.codex'), join(root, 'codex_work')]);
     limitUpdates = [];
+    machine = { resumeAtReset: false };
     accounts = await testAccounts({
         ruimteHome: home,
         env,
@@ -74,6 +76,7 @@ beforeEach(async () => {
         installed: ['claude', 'codex'],
         accounts,
         env,
+        machine,
         onLimits: (update) => limitUpdates.push(update)
     });
     daemon.worker.start();
@@ -198,6 +201,65 @@ describe('a fork under an account', () => {
         expect(info.account).toBe('claude_personal');
         expect(existsSync(join(dir, `${info.agentSessionId}.jsonl`))).toBe(true);
         expect(existsSync(join(home, '.claude', 'projects', claudeProjectSlug(folder), `${info.agentSessionId}.jsonl`))).toBe(false);
+    });
+});
+
+describe('going on under another account after a limit', () => {
+    // The manual clock starts at 1 000 000 ms, so the fakes are told a reset ten minutes on, in seconds.
+    const RESET_AT = 1_600_000;
+    const owedResumes = () => daemon.outbox.list().filter((entry) => entry.kind === 'resume-limit');
+
+    test('a Codex chat moves to an account that shares its home and takes the limited turn up there', async () => {
+        await daemon.chats.create({ chatId: 'chat-codex', provider: 'codex', cwd: folder });
+        await say('chat-codex', `limit:${RESET_AT / 1000}`);
+        expect(turnsOf('chat-codex')[0]).toMatchObject({ state: 'error', limit: { kind: 'usage' } });
+
+        const answer = await daemon.request('chat.continueOn', { chatId: 'chat-codex', account: 'codex_work' });
+        expect(answer).toMatchObject({ ok: true, result: { chatId: 'chat-codex' } });
+        expect((answer as { result: { fork?: unknown } }).result.fork).toBeUndefined();
+        await daemon.until(() => turnsOf('chat-codex').length === 2 && daemon.chats.get('chat-codex')?.info.activeTurnId === null);
+        expect(daemon.chats.get('chat-codex')!.info.account).toBe('codex_work');
+        expect(turnsOf('chat-codex')[1]).toMatchObject({ origin: 'agent', label: 'Continued on Work', state: 'done' });
+        expect(daemon.chatEnvs.at(-1)!.CODEX_HOME).toBe(join(root, 'codex_work'));
+    });
+
+    test('a Claude chat goes on in a fork on the other account, and its own resume at the reset lapses', async () => {
+        machine.resumeAtReset = true;
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        await say('chat-lead', `limit:${RESET_AT / 1000}`);
+        await daemon.until(() => owedResumes().length === 1);
+
+        const answer = await daemon.request('chat.continueOn', { chatId: 'chat-lead', account: 'claude_personal' });
+        expect(answer).toMatchObject({ ok: true });
+        const { chatId, fork } = (answer as { result: { chatId: string; fork: { nodeId: string; info: ChatInfo } } }).result;
+        expect(chatId).toBe(fork.nodeId);
+        expect(fork.info).toMatchObject({ provider: 'claude', account: 'claude_personal' });
+        await daemon.until(() => turnsOf(chatId).length === 2 && daemon.chats.get(chatId)?.info.activeTurnId === null);
+        // The fake stops on the limit line again, which the handed over conversation still holds.
+        expect(turnsOf(chatId)[1]).toMatchObject({ origin: 'agent', label: 'Continued on Personal' });
+        expect(daemon.chatEnvs.at(-1)!.CLAUDE_CONFIG_DIR).toBe(personal);
+
+        expect(owedResumes().filter((entry) => entry.target === 'chat-lead')).toEqual([]);
+        expect(daemon.chats.get('chat-lead')!.info.account).toBeUndefined();
+        expect(daemon.chats.get('chat-lead')!.info.resumeAt).toBeUndefined();
+        expect(turnsOf('chat-lead')).toHaveLength(1);
+    });
+
+    test('is refused for a chat whose last turn did not stop on a limit, and for the account it already runs under', async () => {
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        await say('chat-lead', 'hello');
+        expect(await daemon.request('chat.continueOn', { chatId: 'chat-lead', account: 'claude_personal' })).toMatchObject({
+            ok: false,
+            error: { code: 'not-limited' }
+        });
+        expect(await daemon.request('chat.continueOn', { chatId: 'chat-lead', account: 'claude' })).toMatchObject({
+            ok: false,
+            error: { code: 'same-account' }
+        });
+        expect(await daemon.request('chat.continueOn', { chatId: 'chat-lead', account: 'claude_gone' })).toMatchObject({
+            ok: false,
+            error: { code: 'account-unavailable' }
+        });
     });
 });
 
