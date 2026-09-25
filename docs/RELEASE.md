@@ -170,8 +170,8 @@ defaults comes back as `MAC verification failed during PKCS12 import (wrong pass
 about the algorithm, not the password. Rebuild one with `-legacy -macalg sha1` and
 `-certpbe pbeWithSHA1And3-KeyTripleDES-CBC -keypbe pbeWithSHA1And3-KeyTripleDES-CBC`.
 
-And the workflow builds the keychain itself rather than handing electron-builder `CSC_LINK`, because
-electron-builder creates a keychain with a random password and then unlocks it with the `.p12`
-password, so `security set-key-partition-list` answers `SecKeychainUnlock: The user name or
-passphrase you entered is not correct`. With the identity in a keychain on the search list,
-electron-builder finds it by discovery and never touches the file.
+And electron-builder before 26.16.1 created its keychain with a random password and then unlocked it
+with the `.p12` password, so `security set-key-partition-list` answered `SecKeychainUnlock: The user
+name or passphrase you entered is not correct`. The workflow built the keychain itself until 26.16.1
+fixed that (electron-builder#10172); it now hands electron-builder `CSC_LINK` and
+`CSC_KEY_PASSWORD`. That error on a release means an older electron-builder came back.
