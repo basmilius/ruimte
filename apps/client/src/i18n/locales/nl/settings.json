@@ -357,6 +357,136 @@
         "onAccount": "Op je account",
         "openedThroughAccount": "Geopend via je account"
     },
+    "providers": {
+        "failed": "De instellingen van de providers konden niet worden getekend",
+        "list": {
+            "label": "Agent-CLI's en hun accounts",
+            "default": "Standaard",
+            "addAccount": "Een {{provider}}-account toevoegen",
+            "enable": "{{account}} gebruiken",
+            "notInstalled": "Niet geïnstalleerd",
+            "missing": "Ontbreekt",
+            "notInstalledNote": "Installeer er een en start Ruimte op die machine opnieuw om hem toe te voegen.",
+            "none": "Geen agent-CLI's gevonden op deze machine.",
+            "noAccounts": "Deze machine houdt nog geen accounts bij. Werk Ruimte daar bij om er een toe te voegen."
+        },
+        "abilities": {
+            "version": "Versie {{version}}.",
+            "chatAndTerminal": "Chat en terminal.",
+            "terminalOnly": "Alleen terminal.",
+            "reportsStatus": "Meldt de agentstatus.",
+            "noStatus": "Meldt geen agentstatus."
+        },
+        "status": {
+            "checking": "Controleren",
+            "disabled": "Uitgezet",
+            "notFound": "CLI niet gevonden",
+            "signedOut": "Niet ingelogd",
+            "ready": "Ingelogd",
+            "readyPlan": "Ingelogd · {{plan}}",
+            "available": "Klaar",
+            "folderMissing": "Map ontbreekt",
+            "unavailable": "Niet beschikbaar",
+            "failed": "Controle mislukt"
+        },
+        "cli": {
+            "addAccount": "Account toevoegen",
+            "onlyDefault": "{{provider}} heeft geen instelling voor zijn configuratiemap, dus alleen zijn standaardaccount.",
+            "defaults": {
+                "title": "Standaarden voor nieuwe chats",
+                "description": "Een model of account kiezen in een chat verandert hier ook de standaard.",
+                "account": "Account",
+                "accountFor": "Standaardaccount voor {{provider}}",
+                "model": "Model",
+                "modelFor": "Standaardmodel voor {{provider}}",
+                "shared": "Gedeeld door elk {{provider}}-account.",
+                "usesCliDefault": "Gebruikt het standaardmodel van de CLI zelf.",
+                "providerDefault": "Standaard van de provider",
+                "legacyModel": "{{name}} (legacy)"
+            },
+            "accounts": "Accounts"
+        },
+        "account": {
+            "kind": "{{provider}}-account",
+            "showFolder": "Map tonen",
+            "folderCopied": "Pad van de map gekopieerd",
+            "name": "Naam",
+            "color": "Kleur",
+            "colors": {
+                "blue": "Blauw",
+                "purple": "Paars",
+                "green": "Groen",
+                "orange": "Oranje",
+                "pink": "Roze"
+            },
+            "login": {
+                "title": "Login",
+                "signedInAs": "Ingelogd als {{email}}",
+                "signedIn": "Ingelogd",
+                "planDetail": "{{plan}}-abonnement. Opnieuw inloggen opent een terminal-node met de login van de CLI zelf.",
+                "detail": "Opnieuw inloggen opent een terminal-node met de login van de CLI zelf.",
+                "signedOut": "Niet ingelogd",
+                "signedOutDetail": "Opent een terminal-node die de login van de CLI met deze map draait.",
+                "logIn": "Inloggen",
+                "logInAgain": "Opnieuw inloggen",
+                "needsProject": "Open een project op deze machine om in te loggen. De login draait in een terminal-node op het canvas.",
+                "needsCanvas": "Open een canvas om in te loggen. De login draait in een terminal-node daarop.",
+                "failed": "Kon de login niet openen",
+                "nodeTitle": "Login {{account}}"
+            },
+            "folder": {
+                "label": "Map",
+                "detail": "Aan de CLI gegeven als <code>{{variable}}</code>. De CLI bewaart hier zijn eigen login, instellingen en geschiedenis.",
+                "detailPlain": "De CLI bewaart hier zijn eigen login, instellingen en geschiedenis."
+            },
+            "variables": {
+                "title": "Variabelen",
+                "description": "Extra omgeving voor alleen dit account. Gevoelige waarden blijven in de sleutelhanger.",
+                "add": "Variabele toevoegen",
+                "name": "Naam van variabele {{index}}",
+                "value": "Waarde van {{name}}",
+                "kept": "Bewaard in de sleutelhanger",
+                "lock": "{{name}} in de sleutelhanger bewaren",
+                "unlock": "{{name}} als platte tekst bewaren",
+                "noKeychain": "Deze machine heeft geen sleutelhanger, dus een waarde kan niet geheim blijven.",
+                "remove": "{{name}} verwijderen",
+                "none": "Geen variabelen",
+                "discard": "Weggooien",
+                "problem": {
+                    "noName": "Elke variabele heeft een naam nodig.",
+                    "invalidName": "{{name}} is geen naam voor een variabele.",
+                    "duplicate": "{{name}} staat er twee keer in.",
+                    "noValue": "{{name}} heeft een waarde nodig."
+                }
+            },
+            "remove": {
+                "label": "Account verwijderen",
+                "description": "Chats die het gebruiken vragen bij hun volgende turn om een ander account. De map blijft op de schijf.",
+                "defaultNote": "Het standaardaccount gebruikt de eigen map van de CLI en kan niet weg. Zet het in plaats daarvan uit in de lijst.",
+                "button": "Verwijderen",
+                "confirmTitle": "{{account}} verwijderen?",
+                "confirmDescription": "Ruimte vergeet dit account. De map blijft op de schijf staan op {{folder}}, met de login erin.",
+                "confirm": "Account verwijderen"
+            },
+            "saveFailed": "Kon het account niet opslaan"
+        },
+        "add": {
+            "title": "Een {{provider}}-account toevoegen",
+            "description": "Ruimte maakt er een map voor op de machine en opent dan een terminal-node waarin je inlogt.",
+            "name": "Naam",
+            "namePlaceholder": "Werk",
+            "color": "Kleur",
+            "advanced": "Geavanceerd",
+            "link": {
+                "label": "Een bestaande map koppelen",
+                "description": "Gebruik een configuratiemap die al op de machine staat in plaats van een nieuwe. Ruimte verplaatst of verwijdert hem nooit.",
+                "placeholder": "Pad op de machine"
+            },
+            "create": "Account toevoegen",
+            "linkButton": "Map koppelen",
+            "failed": "Kon het account niet toevoegen"
+        }
+    },
     "agents": {
         "deleteAnyView": {
             "label": "Agents mogen elke weergave of node verwijderen",
@@ -376,12 +506,7 @@
         },
         "defaults": {
             "title": "Standaarden voor nieuwe agents",
-            "description": "Een model kiezen in een chat verandert hier ook de standaard.",
-            "noChatCli": "Geen agent-CLI met chatondersteuning gevonden op deze machine.",
-            "usesCliDefault": "Gebruikt het standaardmodel van de CLI zelf.",
-            "modelFor": "Standaardmodel voor {{provider}}",
-            "providerDefault": "Standaard van de provider",
-            "legacyModel": "{{name}} (legacy)",
+            "description": "Geldt voor elke provider. Het model en account van elke CLI stel je in onder <link>Providers</link>.",
             "permissions": "Permissies",
             "terminalMode": "Terminal-agents starten in"
         },
@@ -440,18 +565,6 @@
                 "label": "Een agent een weergave laten tonen",
                 "description": "Aan vervangt de weergave waarin je werkt door de weergave die een agent opent, en een banner brengt je terug. Uit biedt de banner een knop om ernaartoe te gaan."
             }
-        },
-        "providers": {
-            "title": "Providers",
-            "description": "Agent-CLI's die op het PATH van de machine staan. Installeer er een en herstart Ruimte op die machine om er een toe te voegen.",
-            "none": "Geen providers gevonden",
-            "version": "Versie {{version}}.",
-            "chatAndTerminal": "Chat en terminal.",
-            "terminalOnly": "Alleen terminal.",
-            "reportsStatus": "Meldt de status van de agent.",
-            "noStatus": "Meldt de status van de agent niet.",
-            "installed": "Geïnstalleerd",
-            "missing": "Ontbreekt"
         }
     },
     "about": {

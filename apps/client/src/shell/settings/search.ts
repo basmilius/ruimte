@@ -79,6 +79,19 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     { id: 'files.git.layout', section: 'files', label: 'settings:files.git.layout.label', description: 'settings:files.git.layout.description' },
     { id: 'files.git.whitespace', section: 'files', label: 'settings:files.git.whitespace.label', description: 'settings:files.git.whitespace.description' },
+    // On the detail of the CLI the pane opens on.
+    {
+        id: 'providers.defaults.account',
+        section: 'providers',
+        label: 'settings:providers.cli.defaults.account',
+        description: 'settings:providers.cli.defaults.description'
+    },
+    {
+        id: 'providers.defaults.model',
+        section: 'providers',
+        label: 'settings:providers.cli.defaults.model',
+        description: 'settings:providers.cli.defaults.usesCliDefault'
+    },
     { id: 'agents.defaults.permissions', section: 'agents', label: 'settings:agents.defaults.permissions' },
     { id: 'agents.defaults.terminalMode', section: 'agents', label: 'settings:agents.defaults.terminalMode' },
     {

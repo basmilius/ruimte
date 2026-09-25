@@ -1,40 +1,238 @@
-import { useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { MasterDetail, MasterItem } from '@/shell/settings/MasterDetail';
-import { providerAbilities } from '@/shell/settings/provider-abilities';
-import { sectionLabel } from '@/shell/settings/sections';
+import { Plus, Terminal } from 'lucide-react';
+import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
+import { ACCOUNT_TONE_CLASSES, accountName, accountsOfKind, accountStatusLine, type AccountEntry } from '@/agents/accounts';
+import { Skeleton, Toggle } from '@/shell/settings/controls';
+import { MasterDetail } from '@/shell/settings/MasterDetail';
+import { openLogin, saveAccount } from '@/shell/settings/providers/account-actions';
+import { AccountDetail } from '@/shell/settings/providers/AccountDetail';
+import { AddAccountForm } from '@/shell/settings/providers/AddAccountForm';
+import { CliDetail } from '@/shell/settings/providers/CliDetail';
+import { AccountDot, CliMark } from '@/shell/settings/providers/parts';
+import { useEndpointId } from '@/state/keys';
+import { useProviderAccounts } from '@/state/provider-accounts';
 import { useProviders } from '@/state/providers';
+import { useUi } from '@/state/ui';
+import { useWindow } from '@/state/window';
+import { SECTION_LABEL } from '@/ui/classes';
+import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { Icon } from '@/ui/Icon';
+import { Tooltip } from '@/ui/Tooltip';
 
-/* The agent CLIs of the machine, one at a time. A first cut: the accounts of each CLI join it here. */
+type Picked = { kind: 'cli'; cli: AgentKind } | { kind: 'account'; id: string } | { kind: 'add'; cli: AgentKind };
+
+/* A row of the list with a control of its own beside the part that picks it, so the two never nest. */
+function ListRow({
+    selected,
+    onSelect,
+    children,
+    trailing,
+    className
+}: {
+    selected: boolean;
+    onSelect(): void;
+    children: ReactNode;
+    trailing?: ReactNode;
+    className?: string;
+}) {
+    return (
+        <div className={clsx('flex min-w-0 shrink-0 items-center gap-2 rounded-lg pr-2', selected ? 'bg-text/5' : 'hover:bg-surface-hover', className)}>
+            <button
+                type="button"
+                aria-current={selected ? 'true' : undefined}
+                className="flex min-w-0 grow items-center gap-3 self-stretch py-2 pl-3 text-left"
+                onClick={onSelect}
+            >
+                {children}
+            </button>
+            {trailing}
+        </div>
+    );
+}
+
+/* The agent CLIs of the machine in scope, each with its accounts, beside the detail of what is picked. */
 export function ProvidersPane() {
     const { t } = useTranslation('settings');
+    const endpointId = useEndpointId();
     const providers = useProviders((s) => s.providers);
-    const [picked, setPicked] = useState<string | null>(null);
-    const selected = providers.find((provider) => provider.kind === picked) ?? providers[0] ?? null;
+    const loaded = useProviders((s) => s.loaded);
+    const accounts = useProviderAccounts((s) => s.accounts);
+    const target = useUi((s) => s.settings.target);
+    // A login runs in a terminal node on a canvas of a project on this very machine.
+    const workspaceMachine = useWindow((s) => (s.content.kind === 'workspace' ? s.content.workspace.connection.endpointId : null));
+    const [picked, setPicked] = useState<Picked | null>(null);
+
+    const installed = useMemo(() => providers.filter((provider) => provider.installed), [providers]);
+    const missing = useMemo(() => providers.filter((provider) => !provider.installed), [providers]);
+    const entriesOf = (kind: AgentKind): AccountEntry[] => accountsOfKind(accounts, kind);
+    const canAddAccount = (kind: AgentKind): boolean => accounts?.loginCommands?.[kind] !== undefined;
+    const loginBlocked = workspaceMachine === endpointId ? null : t('providers.account.login.needsProject');
+
+    // What was picked may be gone since (an account removed elsewhere); the first CLI stands in for it.
+    const pickedEntry = picked?.kind === 'account' ? (Object.hasOwn(accounts?.accounts ?? {}, picked.id) ? picked.id : null) : null;
+    const current: Picked | null =
+        picked !== null && (picked.kind !== 'account' || pickedEntry !== null) ? picked : installed[0] ? { kind: 'cli', cli: installed[0].kind } : null;
+    const currentAccount = current?.kind === 'account' ? accounts?.accounts[current.id] : undefined;
+    const currentCli = current === null ? null : current.kind === 'account' ? (currentAccount?.kind as AgentKind | undefined) : current.cli;
+    const provider = installed.find((entry) => entry.kind === currentCli) ?? null;
+
+    // A search result lands on a row of a CLI's detail, so a picked account makes way for its CLI.
+    const [seenTarget, setSeenTarget] = useState(target);
+    if (target !== seenTarget) {
+        setSeenTarget(target);
+        if (target?.startsWith('providers.') && current?.kind !== 'cli' && provider !== null) {
+            setPicked({ kind: 'cli', cli: provider.kind });
+        }
+    }
+
+    const added = (id: string, name: string, made: boolean): void => {
+        setPicked({ kind: 'account', id });
+        if (made && provider !== null && loginBlocked === null) {
+            void openLogin(endpointId, provider.kind, id, name);
+        }
+    };
+
+    const group = (cli: ProviderInfo) => {
+        const entries = entriesOf(cli.kind);
+        return (
+            <div key={cli.kind} className="flex min-w-0 shrink-0 flex-col gap-0.5 pt-1">
+                <ListRow
+                    selected={current?.kind === 'cli' && current.cli === cli.kind}
+                    onSelect={() => setPicked({ kind: 'cli', cli: cli.kind })}
+                    className="pr-1"
+                    trailing={
+                        canAddAccount(cli.kind) && (
+                            <Tooltip label={t('providers.list.addAccount', { provider: cli.name })} name>
+                                <button type="button" className="icon-btn icon-btn-sm" onClick={() => setPicked({ kind: 'add', cli: cli.kind })}>
+                                    <Icon icon={Plus} size={14} />
+                                </button>
+                            </Tooltip>
+                        )
+                    }
+                >
+                    <CliMark kind={cli.kind} />
+                    <span className="min-w-0 grow truncate text-xs font-medium text-text">{cli.name}</span>
+                    {cli.version && <span className="shrink-0 font-mono text-code text-text-faint">{cli.version}</span>}
+                </ListRow>
+                {entries.map((entry) => {
+                    const name = accountName(entry, cli.name);
+                    const status = accountStatusLine(entry.status, canAddAccount(cli.kind));
+                    return (
+                        <ListRow
+                            key={entry.id}
+                            selected={current?.kind === 'account' && current.id === entry.id}
+                            onSelect={() => setPicked({ kind: 'account', id: entry.id })}
+                            trailing={
+                                <Toggle
+                                    checked={entry.account.enabled !== false}
+                                    label={t('providers.list.enable', { account: name })}
+                                    onChange={(checked) => {
+                                        const { enabled: _enabled, ...account } = entry.account;
+                                        void saveAccount(endpointId, entry.id, checked ? account : { ...account, enabled: false });
+                                    }}
+                                />
+                            }
+                        >
+                            <AccountDot color={entry.account.color} className="size-2.25" />
+                            <span className="flex min-w-0 grow flex-col">
+                                <span className="flex min-w-0 items-center gap-2 text-sm text-text">
+                                    <span className="truncate">{name}</span>
+                                    {entry.isDefault && (
+                                        <span className="shrink-0 rounded-md bg-surface-active px-1.5 text-xs text-text-muted">
+                                            {t('providers.list.default')}
+                                        </span>
+                                    )}
+                                </span>
+                                <span className={clsx('truncate text-xs', ACCOUNT_TONE_CLASSES[status.tone])}>{status.text}</span>
+                            </span>
+                        </ListRow>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    const list = !loaded ? (
+        <div className="flex flex-col gap-3 p-3">
+            <Skeleton className="w-32" />
+            <Skeleton className="w-40" />
+        </div>
+    ) : (
+        <>
+            {installed.map(group)}
+            {installed.length === 0 && <p className="px-3 py-2 text-xs text-text-muted">{t('providers.list.none')}</p>}
+            {missing.length > 0 && (
+                <div className="mt-1.5 flex min-w-0 shrink-0 flex-col border-t border-border pt-2.5 pb-2">
+                    <span className={clsx(SECTION_LABEL, 'px-3 pt-1 pb-1.5')}>{t('providers.list.notInstalled')}</span>
+                    {missing.map((cli) => (
+                        <div key={cli.kind} className="flex h-10 min-w-0 items-center gap-3 px-3 text-sm text-text-muted">
+                            <Icon icon={Terminal} size={14} className="shrink-0" />
+                            <span className="min-w-0 grow truncate">{cli.name}</span>
+                            <span className="shrink-0 text-xs text-text-faint">{t('providers.list.missing')}</span>
+                        </div>
+                    ))}
+                    <p className="mt-1 px-3 text-xs text-text-faint">{t('providers.list.notInstalledNote')}</p>
+                </div>
+            )}
+        </>
+    );
+
+    const detail = (): ReactNode => {
+        if (current === null || provider === null) {
+            return null;
+        }
+        if (current.kind === 'add') {
+            return (
+                <AddAccountForm
+                    key={provider.kind}
+                    endpointId={endpointId}
+                    provider={provider}
+                    entries={entriesOf(provider.kind)}
+                    onCancel={() => setPicked({ kind: 'cli', cli: provider.kind })}
+                    onAdded={added}
+                />
+            );
+        }
+        if (current.kind === 'account') {
+            const entry = entriesOf(provider.kind).find((candidate) => candidate.id === current.id);
+            return (
+                entry && (
+                    <AccountDetail
+                        key={entry.id}
+                        endpointId={endpointId}
+                        provider={provider}
+                        entry={entry}
+                        canLogIn={canAddAccount(provider.kind)}
+                        loginBlocked={loginBlocked}
+                        secretsAvailable={accounts?.secretsAvailable === true}
+                        onRemoved={() => setPicked({ kind: 'cli', cli: provider.kind })}
+                    />
+                )
+            );
+        }
+        return (
+            <CliDetail
+                endpointId={endpointId}
+                provider={provider}
+                entries={accounts === null ? null : entriesOf(provider.kind)}
+                canAddAccount={canAddAccount(provider.kind)}
+                onAddAccount={() => setPicked({ kind: 'add', cli: provider.kind })}
+                onPickAccount={(id) => setPicked({ kind: 'account', id })}
+            />
+        );
+    };
 
     return (
         <MasterDetail
             listWidth={340}
-            listLabel={sectionLabel('providers')}
-            list={providers.map((provider) => (
-                <MasterItem key={provider.kind} selected={provider === selected} onSelect={() => setPicked(provider.kind)}>
-                    <span className="min-w-0 grow truncate">{provider.name}</span>
-                    {provider.version && <span className="shrink-0 font-mono text-code text-text-faint">{provider.version}</span>}
-                </MasterItem>
-            ))}
+            listLabel={t('providers.list.label')}
+            list={list}
             detail={
-                selected === null ? (
-                    <p className="text-xs text-text-muted">{t('agents.providers.none')}</p>
-                ) : (
-                    <header className="flex min-w-0 flex-col gap-0.5">
-                        <h3 className="text-lg font-semibold text-text">{selected.name}</h3>
-                        <p className="text-xs text-text-muted">
-                            {selected.installed
-                                ? `${selected.version ? `${t('agents.providers.version', { version: selected.version })} ` : ''}${providerAbilities(selected)}`
-                                : t('agents.providers.missing')}
-                        </p>
-                    </header>
-                )
+                <ErrorBoundary label={t('providers.failed')} resetKeys={[endpointId, current?.kind, currentCli]}>
+                    <div className="flex min-w-0 flex-col gap-7">{detail()}</div>
+                </ErrorBoundary>
             }
         />
     );
