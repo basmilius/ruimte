@@ -592,6 +592,21 @@ describe('forking', () => {
         expect(await confirm(registry, asked)).toMatchObject({ output: { branch: 'try-b' } });
     });
 
+    test('a chat goes on under another account in place, or in a fork that then opens', async () => {
+        const inPlace = fake({ 'chat.continueOn': () => ({ chatId: 'chat' }) });
+        expect(await inPlace.registry.execute('chat.continueOn', { chatId: 'chat', account: 'claude_work' }, VOICE_ACTION_CALL)).toMatchObject({
+            output: { chatId: 'chat', forked: false }
+        });
+        expect(inPlace.of('chat.continueOn')).toEqual([{ chatId: 'chat', account: 'claude_work' }]);
+        expect(inPlace.revealed).toEqual([]);
+        const fork = { info: info({ chatId: 'fork-1' }), nodeId: 'fork-1', viewId: 'main', edgeId: null };
+        const forked = fake({ 'chat.continueOn': () => ({ chatId: 'fork-1', fork }) });
+        expect(await forked.registry.execute('chat.continueOn', { chatId: 'chat', account: 'claude_work' }, PERSON_ACTION_CALL)).toMatchObject({
+            output: { chatId: 'fork-1', forked: true }
+        });
+        expect(forked.revealed).toEqual([fork]);
+    });
+
     test('Voice cannot fork while a turn runs', async () => {
         const { registry } = fake();
         expect(await registry.execute('chat.fork', { chatId: 'chat', turnId: 'turn-1', title: null, branch: null }, VOICE_ACTION_CALL)).toMatchObject({

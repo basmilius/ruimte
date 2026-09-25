@@ -514,6 +514,14 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
             machine.revealFork(result);
             return { output: { chatId: result.nodeId, nodeId: result.nodeId, viewId: result.viewId, chat: named, branch: result.worktree?.branch ?? null } };
         },
+        'chat.continueOn': async ({ chatId, account }, call) => {
+            const chat = chatNamed(chatId, call);
+            const result = await ask('chat.continueOn', { chatId, account });
+            if (result.fork !== undefined) {
+                machine.revealFork(result.fork);
+            }
+            return { output: { chatId: result.chatId, chat, forked: result.fork !== undefined } };
+        },
         'chat.summarize': async ({ chatId }, call) => {
             const chat = chatNamed(chatId, call);
             const { info } = rowOf(chatId, chat);

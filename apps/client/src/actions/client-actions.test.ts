@@ -229,6 +229,7 @@ describe('client actions', () => {
             'chat.configure',
             'chat.setProvider',
             'chat.fork',
+            'chat.continueOn',
             'chat.summarize',
             'chat.turnDiff',
             'chat.readSubagent',

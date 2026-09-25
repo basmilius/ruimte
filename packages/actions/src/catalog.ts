@@ -1210,6 +1210,20 @@ export const ACTION_DEFINITIONS = {
         }),
         output: z.object({ chatId: z.string(), nodeId: z.string(), viewId: z.string(), chat: z.string(), branch: z.string().nullable() })
     },
+    'chat.continueOn': {
+        title: 'Continue AI Chat on another account',
+        description:
+            'Goes on after the last turn of an AI Chat, which stopped on a usage limit, under another account of its CLI on this machine, and sends that turn again. An account that reads the same conversation takes the chat over; any other goes on in a fork beside it.',
+        effect: 'external',
+        domain: 'sessions',
+        // Moving a turn onto someone's other plan is never done without a person asking for it.
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            chatId: chatTarget,
+            account: ProviderAccountIdSchema.describe('The account of the chat’s CLI to go on under')
+        }),
+        output: chatNamed.extend({ forked: z.boolean().describe('Whether it went on in a fork, whose chat id is `chatId`') })
+    },
     'chat.summarize': {
         title: 'Summarize a fork',
         description:
@@ -3145,6 +3159,8 @@ export const ACTION_DEFINITIONS = {
             providers: z.array(
                 z.object({
                     provider: UsageProviderSchema,
+                    // A CLI with several accounts has an entry for each.
+                    account: z.string().nullable().describe('The account these numbers are of, by name; null on a machine without accounts'),
                     plan: z.string().nullable(),
                     checkedAt: z.number(),
                     unavailable: z.string().nullable(),
