@@ -26,7 +26,7 @@ import { CodexTitleReader } from './agents/codex-title.ts';
 import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutboxStore } from './outbox/outbox.ts';
-import { nodeMode, startAgentWork } from './outbox/start-agent.ts';
+import { nodeAccount, nodeMode, startAgentWork } from './outbox/start-agent.ts';
 import { OutboxLink, wireOutbox } from './outbox/wiring.ts';
 import { restartBackgroundLimits } from './tasks/background-limit.ts';
 import { TaskStore } from './tasks/task-store.ts';
@@ -515,6 +515,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         holdPrompt: (projectId: string, nodeId: string, prompt: string) => prompts.put(projectId, nodeId, prompt),
         startAgent: (start: AgentStart) => outboxWorker.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
         modeOf: nodeMode(modes),
+        accountOf: nodeAccount({ chat: (id) => chats.get(id)?.info, session: (id) => manager.get(id) }),
         terminalModePreference: () => chats.composerPreferences.terminalMode(),
         branchesOf: (folder: string) => worktrees.branches(folder).catch(() => null),
         addWorktree: (folder: string, want: WorktreeWant, projectId: string) => addWanted(worktrees, folder, want, projectId),

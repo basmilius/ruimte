@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
 import { NODE_SIZE, type AgentKind, type ModelSelection, type ProjectEdge, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
-import { agentNode, groupLines, grownGroup, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
+import { agentNode, groupLines, grownGroup, inheritedAccount, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
 import { depthForOpening } from '../canvas/depth.ts';
 import { modeForOpening } from '../canvas/mode.ts';
 import { selectionForOpening } from '../canvas/model.ts';
@@ -60,6 +60,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
         }
         let cwd = input.cwd === null ? undefined : await checkCwd(place.folder, input.cwd, (folder) => host.worktreePaths(folder));
         const runtimeMode = chat ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling);
+        const account = inheritedAccount(caller, kind);
         let undoWorktrees = async (): Promise<void> => undefined;
         if (input.worktree) {
             await requireRepository(caller, place.folder);
@@ -127,6 +128,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                     title: input.title ?? input.task ?? undefined,
                     rect,
                     cwd,
+                    account,
                     ...(runtimeMode === undefined ? {} : { runtimeMode })
                 });
                 const edge: ProjectEdge | null = self ? { id: mint(), from: self.id, to: id, label: 'context' } : null;
@@ -179,7 +181,8 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                             provider: kind,
                             ...(selection ? { selection } : {}),
                             cwd: cwd ?? place.folder,
-                            ...(runtimeMode === undefined ? {} : { runtimeMode })
+                            ...(runtimeMode === undefined ? {} : { runtimeMode }),
+                            ...(account === undefined ? {} : { account })
                         });
                     },
                     content: {
@@ -247,6 +250,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
         const modes: Array<RuntimeMode | undefined> = roles.map((role) =>
             kindOf(role) === 'chat' ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling)
         );
+        const accounts = roles.map((role) => inheritedAccount(caller, role.provider));
 
         return host
             .mutate<{ output: ActionOutput<'team.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {
@@ -313,6 +317,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                             title: role.title,
                             rect: { ...rect, x: origin.x + rect.x, y: origin.y + rect.y },
                             cwd: roleCwds[index],
+                            account: accounts[index],
                             ...(modes[index] === undefined ? {} : { runtimeMode: modes[index] })
                         })
                     );
@@ -376,7 +381,8 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                                 provider: made.provider,
                                 ...(selections[index] ? { selection: selections[index] } : {}),
                                 cwd: roleCwds[index] ?? place.folder,
-                                ...(modes[index] === undefined ? {} : { runtimeMode: modes[index] })
+                                ...(modes[index] === undefined ? {} : { runtimeMode: modes[index] }),
+                                ...(accounts[index] === undefined ? {} : { account: accounts[index] })
                             });
                         }
                     },

@@ -31,7 +31,7 @@ import type { OutboxWorker } from '../outbox/outbox-worker.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
 import type { TaskWiring } from './wiring.ts';
 import { PlanStore } from '../plans/plan-store.ts';
-import { nodeMode, startAgentWork } from '../outbox/start-agent.ts';
+import { nodeAccount, nodeMode, startAgentWork } from '../outbox/start-agent.ts';
 import { OutboxLink, wireOutbox } from '../outbox/wiring.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { AccountLaunches } from '../providers/accounts/launch.ts';
@@ -224,6 +224,7 @@ export const bootTestDaemon = async ({
         holdPrompt: (id, nodeId, prompt) => prompts.put(id, nodeId, prompt),
         startAgent: (start: AgentStart) => outboxLink.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
         modeOf: nodeMode(modes),
+        accountOf: nodeAccount({ chat: (id) => chats.get(id)?.info, session: (id) => sessions.get(id) }),
         terminalModePreference: () => chats.composerPreferences.terminalMode(),
         branchesOf: async (folder) => (worktrees ? worktrees.branches(folder).catch(() => null) : null),
         addWorktree: (folder, want, projectId) => (worktrees ? addWanted(worktrees, folder, want, projectId) : Promise.reject(new Error('no worktrees here'))),

@@ -63,6 +63,8 @@ export interface CanvasHost {
     removeWorktree(folder: string, path: string): Promise<unknown>;
     /* The widest mode an agent this node opens may run in: its own, as far as the daemon knows it. */
     modeOf(nodeId: string): RuntimeMode;
+    /* The CLI and the account the agent of a node runs under; null for a node that runs none. */
+    accountOf?(nodeId: string): NodeAccount | null;
     /* The mode a person picked for terminal agents, from the clients connected now; undefined with none. */
     terminalModePreference(): RuntimeMode | undefined;
     /* The agent CLIs this machine has; a verb that starts one refuses the rest by name. */
@@ -184,6 +186,12 @@ export interface TaskHost {
     involving(nodeId: string): Task[];
 }
 
+export interface NodeAccount {
+    kind: AgentKind;
+    // Absent is the CLI's default account.
+    account?: string;
+}
+
 export interface AgentStart {
     projectId: string;
     nodeId: string;
@@ -196,6 +204,8 @@ export interface AgentStart {
     /* The mode `--mode` asked for, and for a terminal the mode it was written down with; absent leaves a chat to the daemon. */
     runtimeMode?: RuntimeMode;
     selection?: ModelSelection;
+    /* The account it starts under: its opener's, when that runs the same CLI. */
+    account?: string;
 }
 
 export interface VerbCall {

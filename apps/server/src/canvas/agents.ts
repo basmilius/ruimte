@@ -44,6 +44,15 @@ export const agentNode = (spec: AgentNodeSpec): ProjectNode => ({
     ...(spec.chat || spec.runtimeMode === undefined ? {} : { runtimeMode: spec.runtimeMode })
 });
 
+/*
+ * The account a child starts under: its opener's when it runs the same CLI, else that CLI's default
+ * one. Never one the agent picks, since an account is someone's costs.
+ */
+export const inheritedAccount = (call: VerbCall, kind: AgentKind): string | undefined => {
+    const opener = call.host.accountOf?.(call.caller) ?? null;
+    return opener !== null && opener.kind === kind ? opener.account : undefined;
+};
+
 /* The mode a terminal agent is written down with: the one asked for, else the person's default narrowed to the caller's. */
 export const terminalMode = (call: VerbCall, requested: RuntimeMode | undefined, ceiling: RuntimeMode): RuntimeMode =>
     requested ?? narrowerMode(call.host.terminalModePreference() ?? DEFAULT_RUNTIME_MODE, ceiling);

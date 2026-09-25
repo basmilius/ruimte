@@ -7,7 +7,7 @@ import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { testAccounts } from '../providers/accounts/test-accounts.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 import { ChatStore } from './chat-store.ts';
 import { claudeProjectSlug } from './claude-transcript.ts';
 
@@ -177,5 +177,35 @@ describe('a fork under an account', () => {
         expect(info.account).toBe('claude_personal');
         expect(existsSync(join(dir, `${info.agentSessionId}.jsonl`))).toBe(true);
         expect(existsSync(join(home, '.claude', 'projects', claudeProjectSlug(folder), `${info.agentSessionId}.jsonl`))).toBe(false);
+    });
+});
+
+describe('a child an agent opens', () => {
+    const open = async (argv: string[]): Promise<string> => {
+        const [line] = await runVerb(daemon, 'chat-lead', 'agent', argv);
+        return line!.split('\t')[0]!;
+    };
+
+    test('starts under the account of its opener when it runs the same CLI, and under the default one of another CLI', async () => {
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude_personal' });
+        await say('chat-lead', 'plan');
+
+        const chatChild = await open(['claude', '--prompt', 'look around']);
+        const terminalChild = await open(['claude', '--terminal', '--prompt', 'look around']);
+        const codexChild = await open(['codex', '--prompt', 'look around']);
+        await daemon.until(
+            () => daemon.chats.get(chatChild) !== undefined && daemon.sessions.get(terminalChild) !== undefined && daemon.chats.get(codexChild) !== undefined
+        );
+
+        expect(daemon.chats.get(chatChild)!.info.account).toBe('claude_personal');
+        expect(daemon.chats.get(codexChild)!.info.account).toBeUndefined();
+        expect(daemon.sessions.get(terminalChild)!.launch).toMatchObject({ kind: 'claude', account: 'claude_personal' });
+        expect(daemon.adapter.forSession(terminalChild).options.env.CLAUDE_CONFIG_DIR).toBe(personal);
+
+        // On the node too, so a client that starts it after a restart starts it the same way.
+        const canvas = (await store.read(projectId)).views[0] as ProjectCanvasView;
+        expect(canvas.nodes.find((node) => node.id === chatChild)?.account).toBe('claude_personal');
+        expect(canvas.nodes.find((node) => node.id === terminalChild)?.account).toBe('claude_personal');
+        expect(canvas.nodes.find((node) => node.id === codexChild)?.account).toBeUndefined();
     });
 });

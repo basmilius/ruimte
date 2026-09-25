@@ -1,5 +1,5 @@
-import type { AgentLaunch, ChatCreatePayload, RuntimeMode } from '@ruimte/contracts';
-import type { AgentStart } from '../canvas/verb.ts';
+import type { AgentInfo, AgentLaunch, ChatCreatePayload, ChatInfo, RuntimeMode } from '@ruimte/contracts';
+import type { AgentStart, NodeAccount } from '../canvas/verb.ts';
 import { errorText } from '../error-text.ts';
 import type { ComposerPreference } from '../chat/composer-preferences.ts';
 import { narrowerMode } from '../canvas/mode.ts';
@@ -20,6 +20,28 @@ export const nodeMode =
     (nodeId: string): RuntimeMode =>
         deps.chatMode(nodeId) ?? deps.reportedMode(nodeId) ?? launchedMode(deps.launch(nodeId) ?? null);
 
+export interface NodeAccountDeps {
+    chat(nodeId: string): Pick<ChatInfo, 'provider' | 'account'> | undefined;
+    session(nodeId: string): { launch: AgentLaunch | null; agent: AgentInfo | null } | undefined;
+}
+
+/* The CLI and account the agent of a node runs under. A CLI a person started by hand in a terminal runs under its default account. */
+export const nodeAccount =
+    (deps: NodeAccountDeps) =>
+    (nodeId: string): NodeAccount | null => {
+        const chat = deps.chat(nodeId);
+        if (chat !== undefined) {
+            return { kind: chat.provider, ...(chat.account === undefined ? {} : { account: chat.account }) };
+        }
+        const session = deps.session(nodeId);
+        const kind = session?.agent?.kind ?? session?.launch?.kind;
+        if (session === undefined || kind === undefined) {
+            return null;
+        }
+        const account = session.launch?.kind === kind ? session.launch.account : undefined;
+        return { kind, ...(account === undefined ? {} : { account }) };
+    };
+
 /*
  * The entry a verb owes for a node it made. A chat opened by a chat takes that chat's mode unless
  * `--mode` said otherwise, and every start carries the opener's mode as the ceiling, read now, since
@@ -35,7 +57,8 @@ export const startAgentWork = (start: AgentStart, deps: NodeModeDeps): OutboxWor
             ...(start.selection ? { selection: start.selection } : {}),
             cwd: start.cwd,
             ...(runtimeMode ? { runtimeMode } : {}),
-            ceiling: nodeMode(deps)(start.openedBy)
+            ceiling: nodeMode(deps)(start.openedBy),
+            ...(start.account === undefined ? {} : { account: start.account })
         }
     };
 };
@@ -60,7 +83,7 @@ export interface StartAgentDeps {
         cols: number;
         rows: number;
         cwd?: string;
-        agent: { kind: StartAgentEntry['payload']['provider']; runtimeMode?: RuntimeMode };
+        agent: { kind: StartAgentEntry['payload']['provider']; runtimeMode?: RuntimeMode; account?: string };
     }): Promise<unknown>;
     killSession(sessionId: string): Promise<void>;
     /* Refuses a directory the node may not start in; asked right before the start, not when the verb ran. */
@@ -80,7 +103,7 @@ export interface StartAgentDeps {
 export const startAgentHandler =
     (deps: StartAgentDeps) =>
     async (entry: StartAgentEntry): Promise<void> => {
-        const { node, provider, cwd, runtimeMode, ceiling, selection } = entry.payload;
+        const { node, provider, cwd, runtimeMode, ceiling, selection, account } = entry.payload;
         const nodeId = entry.target;
         const log = deps.log ?? ((line: string) => console.error(line));
         if (!deps.placed(nodeId)) {
@@ -102,6 +125,7 @@ export const startAgentHandler =
                 await deps.createChat({
                     chatId: nodeId,
                     provider,
+                    ...(account === undefined ? {} : { account }),
                     ...(cwd === null ? {} : { cwd }),
                     ...(modelSelection ? { selection: modelSelection } : {}),
                     ...(mode === undefined ? {} : { runtimeMode: mode })
@@ -117,6 +141,7 @@ export const startAgentHandler =
                     // The node carries the same mode, so a reload starts the CLI the way this did.
                     agent: {
                         kind: provider,
+                        ...(account === undefined ? {} : { account }),
                         ...(runtimeMode === undefined ? {} : { runtimeMode: ceiling === undefined ? runtimeMode : narrowerMode(runtimeMode, ceiling) })
                     }
                 });

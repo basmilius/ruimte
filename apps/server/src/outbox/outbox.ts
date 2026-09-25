@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { RecordDirectory } from '../record-directory.ts';
-import { AgentKindSchema, ModelSelectionSchema, RuntimeModeSchema } from '@ruimte/contracts';
+import { AgentKindSchema, ModelSelectionSchema, ProviderAccountIdSchema, RuntimeModeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 
 const StartAgentSchema = z.object({
@@ -15,7 +15,9 @@ const StartAgentSchema = z.object({
         // The mode `--mode` asked for, the mode of the chat that opened a chat, or the mode a terminal was written down with.
         runtimeMode: RuntimeModeSchema.optional(),
         // The mode of the node that opened it, which nothing the agent starts with may be wider than; absent on an older entry.
-        ceiling: RuntimeModeSchema.optional()
+        ceiling: RuntimeModeSchema.optional(),
+        // The account of its CLI, inherited from the node that opened it; absent is the default account.
+        account: ProviderAccountIdSchema.optional()
     })
 });
 
