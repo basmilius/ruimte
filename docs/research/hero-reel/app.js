@@ -2,27 +2,19 @@
 (() => {
     'use strict';
 
-    const ORDER = [
-        'room-in-a-room',
-        'letterspace',
-        'patch-bay',
-        'split-flap',
-        'floating-rooms',
-        'making-room',
-        'cursor-flock',
-        'ball-test',
-        'transit',
-        'loupe',
-        'resonance',
-        'shuffle',
-        'napkin',
-        'monospace',
-        'mitosis',
-        'in-step',
-        'phosphor',
-        'overnight',
-        'interference',
-        'flipside'
+    const ROLLS = [
+        {
+            name: 'Roll A',
+            title: 'Space and craft',
+            note: 'The first twenty: space, rooms and the craft of motion itself.',
+            ids: ['room-in-a-room', 'letterspace', 'patch-bay', 'split-flap', 'floating-rooms', 'making-room', 'cursor-flock', 'ball-test', 'transit', 'loupe', 'resonance', 'shuffle', 'napkin', 'monospace', 'mitosis', 'in-step', 'phosphor', 'overnight', 'interference', 'flipside']
+        },
+        {
+            name: 'Roll B',
+            title: 'Agents at work',
+            note: 'Twenty more, each one a real Ruimte feature or a real moment of agentic work.',
+            ids: ['needs-you', 'context-lines', 'delegation', 'question-card', 'stream', 'wake-chain', 'phantom-cursor', 'grid-views', 'plan-tree', 'handshake', 'three-ways', 'agent-loop', 'attention-stack', 'browser-drive', 'limit-clock', 'reading-order', 'device', 'infinite-canvas', 'voice', 'mission-control']
+        }
     ];
     const PRINCIPLES = [
         'Squash and stretch',
@@ -40,7 +32,14 @@
     ];
     const STAR_ICON = document.querySelector('#c-star svg').outerHTML;
 
-    const takes = ORDER.map((id) => Reel.get(id)).filter(Boolean);
+    const takes = [];
+    for (const roll of ROLLS) {
+        roll.takes = roll.ids.map((id) => Reel.get(id)).filter(Boolean);
+        for (const take of roll.takes) {
+            take.roll = roll;
+            takes.push(take);
+        }
+    }
     const pad = (n) => String(n).padStart(2, '0');
     const $ = (id) => document.getElementById(id);
 
@@ -71,8 +70,10 @@
         motion: store.read('motion', !reducedQuery.matches)
     };
     const fromHash = /^#take-(\d{1,2})$/.exec(location.hash);
-    const remembered = takes.findIndex((take) => take.id === store.read('current', null));
-    state.current = fromHash ? Math.min(takes.length - 1, Math.max(0, Number(fromHash[1]) - 1)) : Math.max(0, remembered);
+    // Roll B opens on its own first take; what a person picked after that is remembered.
+    const remembered = takes.findIndex((take) => take.id === store.read('current-b', null));
+    const firstOfB = takes.findIndex((take) => take.roll === ROLLS[1]);
+    state.current = fromHash ? Math.min(takes.length - 1, Math.max(0, Number(fromHash[1]) - 1)) : remembered >= 0 ? remembered : Math.max(0, firstOfB);
 
     $('slate-takes').textContent = String(takes.length);
     $('c-of').textContent = 'of ' + takes.length;
@@ -111,7 +112,7 @@
                 old.destroy();
             }, reducedQuery.matches ? 0 : 460);
         }
-        store.write('current', def.id);
+        store.write('current-b', def.id);
         renderCredits();
         for (const tile of tiles) {
             tile.el.classList.toggle('is-current', tile.def === def);
@@ -125,6 +126,7 @@
         const def = takes[state.current];
         const n = state.current + 1;
         $('c-num').textContent = pad(n);
+        $('c-roll').textContent = def.roll.name;
         $('c-title').textContent = def.title;
         $('c-line').textContent = def.line || '';
         $('c-tech').textContent = def.tech || '';
@@ -254,6 +256,16 @@
     };
 
     takes.forEach((def, index) => {
+        if (def.roll.takes[0] === def) {
+            const head = document.createElement('div');
+            head.className = 'roll-head';
+            head.innerHTML = '<span class="roll-name"></span><h3 class="roll-title"></h3><p class="roll-note"></p>';
+            head.querySelector('.roll-name').textContent = def.roll.name;
+            head.querySelector('.roll-title').textContent = def.roll.title;
+            head.querySelector('.roll-note').textContent = def.roll.note;
+            grid.append(head);
+            def.roll.head = head;
+        }
         const el = document.createElement('article');
         el.className = 'tile';
         el.id = 'take-' + pad(index + 1);
@@ -321,6 +333,11 @@
             syncTile(tile);
         }
         $('empty').hidden = shown > 0;
+        for (const roll of ROLLS) {
+            if (roll.head) {
+                roll.head.hidden = tiles.every((tile) => tile.def.roll !== roll || tile.el.hidden);
+            }
+        }
         for (const button of skillButtons) {
             button.setAttribute('aria-pressed', String(button.dataset.principle === state.principle));
         }
@@ -371,6 +388,8 @@
     });
 
     const boot = () => {
+        const gl = takes.filter((take) => /^WebGL/.test(take.tech || '')).length;
+        $('tech-count').textContent = `${takes.length - gl} draw with Canvas 2D and ${gl} share one WebGL context.`;
         renderMotion();
         renderStars();
         applyFilter();

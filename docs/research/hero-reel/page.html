@@ -183,6 +183,13 @@ kbd { font: 500 12px/1 var(--font-mono); padding: 2px 5px; border: 1px solid var
 .tile-principles { grid-column: 2 / -1; margin-top: 8px; font-size: 13px; color: var(--text); }
 .tile-tech { grid-column: 2 / -1; margin-top: 4px; font: 500 12px/1.5 var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--faint); }
 .empty { padding: 48px 0; color: var(--muted); }
+.roll-head { grid-column: 1 / -1; display: grid; gap: 4px 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+.roll-head:first-child { border-top: 0; padding-top: 0; }
+@media (min-width: 900px) { .roll-head { grid-template-columns: auto auto minmax(0, 1fr); align-items: baseline; } }
+.roll-name { font: 500 12px/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.roll-title { font: 600 28px/1.15 var(--font-display); letter-spacing: -0.03em; }
+.roll-note { color: var(--muted); }
+.roll-head[hidden] { display: none; }
 
 .colophon { margin-top: 96px; padding-block: 32px 48px; border-top: 1px solid var(--border); display: grid; gap: 12px 48px; font-size: 14px; color: var(--muted); }
 @media (min-width: 900px) { .colophon { grid-template-columns: 1fr 1fr; } }
@@ -200,6 +207,7 @@ kbd { font: 500 12px/1 var(--font-mono); padding: 2px 5px; border: 1px solid var
             <div><dt>Prod.</dt><dd>ruimte.app</dd></div>
             <div><dt>Scene</dt><dd>Hero visual</dd></div>
             <div><dt>Takes</dt><dd id="slate-takes">20</dd></div>
+            <div><dt>Rolls</dt><dd>A, B</dd></div>
             <div><dt>Frame</dt><dd>560 &times; 500</dd></div>
             <div><dt>Date</dt><dd>25 Sep 2026</dd></div>
         </dl>
@@ -207,7 +215,7 @@ kbd { font: 500 12px/1 var(--font-mono); padding: 2px 5px; border: 1px solid var
 
     <section class="intro">
         <h1>Hero reel</h1>
-        <p>Twenty new takes for the space beside the headline on ruimte.app. Each one is a proposal and a piece of evidence: it names the principles of animation it puts to work, and it moves when you point at it. Try a take in the fitting room, star the ones worth keeping, and tell Claude the number you want on the site.</p>
+        <p>Forty takes for the space beside the headline on ruimte.app, in two rolls. Roll A is about space and the craft of motion; roll B shows agents at work, one real Ruimte feature per take. Each take names the principles of animation it puts to work and moves when you point at it. Try one in the fitting room, star the ones worth keeping, and tell Claude the number you want on the site.</p>
     </section>
 
     <section id="fitting" aria-labelledby="fitting-title">
@@ -252,7 +260,7 @@ kbd { font: 500 12px/1 var(--font-mono); padding: 2px 5px; border: 1px solid var
         </div>
 
         <div class="credits" aria-live="polite">
-            <div class="credits-num"><span>Take</span><strong id="c-num">01</strong><span id="c-of">of 20</span></div>
+            <div class="credits-num"><span id="c-roll">Roll A</span><span>Take</span><strong id="c-num">01</strong><span id="c-of">of 20</span></div>
             <div class="credits-body">
                 <h2 id="c-title"></h2>
                 <p class="line" id="c-line"></p>
@@ -299,7 +307,7 @@ kbd { font: 500 12px/1 var(--font-mono); padding: 2px 5px; border: 1px solid var
 
     <footer class="colophon">
         <p><strong>How to choose.</strong> Put a take in the fitting room and look at it beside the headline for a while: a hero is seen a thousand times, so the one that still feels calm on the tenth loop wins. Tell Claude the number, and it goes onto the site in place of the current visuals.</p>
-        <p><strong>How they are made.</strong> Every take draws into the same 560 by 500 frame on the site's own tokens: ground #0d0d10, accent #155dfc, the status colors, Geist, JetBrains Mono and Kalam. Sixteen are Canvas 2D, four share one WebGL context. Tiles run only while they are on screen, and all of them stop when your system asks for less motion.</p>
+        <p><strong>How they are made.</strong> Every take draws into the same 560 by 500 frame on the site's own tokens: ground #0d0d10, accent #155dfc, the status colors, Geist, JetBrains Mono and Kalam. <span id="tech-count"></span> Tiles run only while they are on screen, and all of them stop when your system asks for less motion.</p>
     </footer>
 </div>
 
