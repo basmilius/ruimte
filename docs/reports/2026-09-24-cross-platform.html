@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Hoe macOS-specifiek is Ruimte nog?</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+.col-where { min-width: 220px; }
+</style>
+</head>
+<body>
+<a class="skip" href="#summary">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">Ruimte / platformonderzoek / 24 september 2026</p>
+  <h1>Hoe macOS-specifiek is Ruimte nog?</h1>
+  <p class="intro">Minder dan je zou denken. Linux wordt al uitgebracht. Windows heeft één harde blokkade: de terminal. Bun opent een PTY alleen op POSIX-systemen. Daaromheen staat een handvol aannames over een POSIX-shell. De client, de contracten en de Electron-shell zijn grotendeels platformneutraal.</p>
+  <p class="status">Linux: uitgebracht, niet getest in CI · Windows: start niet voorbij de terminal</p>
+  <p class="caption">Statische analyse van <code>main</code> op <code>4a9be828</code> plus de ongecommitte computer-use-wijzigingen. Op 25 september aangevuld met de Windows-audit van 22 september en de regelnummers gecontroleerd op <code>e4ca4990</code>. Niets is gedraaid op Windows of Linux. De iPhone-app valt buiten de telling.</p>
+  <nav aria-label="Inhoud">
+    <a href="#summary">Samenvatting</a>
+    <a href="#neutral">Al platformneutraal</a>
+    <a href="#mac-only">Alleen macOS</a>
+    <a href="#linux">Linux</a>
+    <a href="#windows">Windows</a>
+    <a href="#plan">Plan</a>
+    <a href="#vm">Test-VM</a>
+    <a href="#questions">Keuzes</a>
+  </nav>
+</header>
+<main>
+  <section id="summary" class="recommendation">
+    <h2>Samenvatting</h2>
+    <div class="stats">
+      <div><strong>~8,6%</strong><span>van de code is macOS-only (±15.000 van ±173.000 regels)</span></div>
+      <div><strong>1</strong><span>harde blokkade voor Windows: de PTY</span></div>
+      <div><strong>~20</strong><span>POSIX- en padaannames in de daemon die Windows raken</span></div>
+      <div><strong>0</strong><span>CI-jobs op Linux of Windows</span></div>
+    </div>
+    <p>Het macOS-deel zit bijna helemaal in drie afgebakende features: computer use, iOS-apparaten en Speech to Text. Die staan elk al achter een platformcheck en melden zichzelf als niet beschikbaar. Daarbuiten is het meeste werk voor Windows klein en mechanisch, met de PTY als uitzondering.</p>
+    <p>Begin morgen met Linux in CI. Dat is goedkoop, het legt kapotte aannames bloot en een groene Linux-run is ook de basis voor Windows. Op Windows loopt de PTY via een Rust-helper op ConPTY, en de Windows-build gaat ongesigneerd naar GitHub, buiten de Store (zie <a href="#questions">Keuzes</a>).</p>
+  </section>
+
+  <section id="neutral">
+    <h2>Wat al platformneutraal is</h2>
+    <p>Een flink deel van het voorwerk voor Windows ligt er al. Deze plekken hebben een Windows- of Linux-tak, of hebben er geen nodig:</p>
+    <ul>
+      <li>De client en alle gedeelde packages (<code>contracts</code>, <code>actions</code>, <code>plan</code>, <code>drawing</code>, <code>diagram</code>, <code>merge</code>) gebruiken geen Node- of Bun-API's.</li>
+      <li>Shortcuts werken met <code>mod</code> (Cmd op macOS, Ctrl elders), in <code>apps/client/src/ui/shortcut.ts:3</code>. De terminal-keymap houdt off macOS de control-tekens voor het programma vast (<code>apps/client/src/terminal/keymap.ts:50</code>).</li>
+      <li>Opgeslagen paden kennen stationsletters en backslashes (<code>packages/contracts/src/stored-path.ts:37</code>). Hetzelfde geldt voor de bestandsboom (<code>files-tree.ts:42</code>), de palette (<code>palette-browse.ts:6</code>) en bladeren (<code>fs/browse.ts:35</code>).</li>
+      <li>Electron: buiten macOS de titlebar-overlay in plaats van traffic lights (<code>apps/desktop/src/main.ts:326</code>), een File-menu, stoppen bij het sluiten van het laatste venster, <code>ruimte.exe</code> als daemonnaam (<code>main.ts:150</code>), sessies versleuteld via <code>safeStorage</code>.</li>
+      <li>Daemon: <code>writeAtomic</code> slaat de directory-sync over op Windows (<code>apps/server/src/fs.ts:35</code>). Tonen in de bestandsbeheerder (<code>fs/reveal.ts</code>) en het machinemodel (<code>machine-model.ts:211</code>) hebben een Windows-tak. De Android SDK kent <code>.exe</code> (<code>devices/android-sdk.ts:36</code>).</li>
+      <li>Browserpagina's op de daemon gebruiken de Chrome-backend van <code>Bun.WebView</code> (<code>browser/manager.ts:499</code>). Die draait volgens de types van Bun 1.4.2 overal waar Chrome staat.</li>
+      <li><code>compile.ts</code> kent <code>--os win</code> en schrijft <code>ruimte.exe</code>. <code>after-pack.cjs</code> zoekt op win32 al naar <code>ruimte.exe</code>.</li>
+    </ul>
+  </section>
+
+  <section id="mac-only">
+    <h2>Wat bewust alleen op macOS draait</h2>
+    <div class="table">
+      <table class="wide">
+        <caption>macOS-only features en hun gedrag op andere systemen</caption>
+        <thead><tr><th>Feature</th><th>Omvang</th><th>Nu op Linux en Windows</th><th>Porteerbaar?</th></tr></thead>
+        <tbody>
+          <tr><td>Computer use</td><td>Swift-app 8.797 regels; daemon <code>computer/</code> 2.893; client 263</td><td>Uit. <code>computer/helper.ts:45</code> en <code>client/src/computer/setup.ts:42</code> weigeren buiten darwin.</td><td><span class="badge danger">nieuw bouwen</span> Een helper per platform achter hetzelfde protocol. Het protocol en de daemonkant (goedkeuringen, presence, tree-diff) zijn herbruikbaar.</td></tr>
+          <tr><td>iOS-apparaten (simulator en fysiek)</td><td>Rust-bridge 1.648; daemon ±1.130</td><td>Niet geregistreerd (<code>daemon.ts:407</code>).</td><td><span class="badge">nee</span> Xcode en Apple's apparaatprotocollen bestaan alleen op macOS.</td></tr>
+          <tr><td>Android-apparaten</td><td>deel van <code>devices/</code></td><td>Linux: ja. Windows: lege lijst (<code>daemon.ts:420</code>), en <code>compile.ts:117</code> downloadt de scrcpy-server alleen voor mac en linux.</td><td><span class="badge confirmed">klein</span> Twee regels plus een test op Windows.</td></tr>
+          <tr><td>Speech to Text</td><td>Rust 263 regels plus ONNX Runtime</td><td>Niet meegebouwd; Settings meldt het als niet beschikbaar.</td><td><span class="badge warning">Linux geblokkeerd</span> ONNX Runtime wil een nieuwere glibc dan de Linux-vloer (<code>apps/speech-bridge/README.md</code>). Windows is niet onderzocht.</td></tr>
+          <tr><td>Wakker houden</td><td>klein</td><td>Genegeerd (<code>desktop/src/keep-awake.ts:29</code>, <code>client/src/state/keep-awake.ts:32</code>).</td><td><span class="badge confirmed">klein</span> Electron's <code>powerSaveBlocker</code> werkt op alle drie; alleen de gate en een test.</td></tr>
+          <tr><td>Processenpaneel</td><td>darwin-sampler 255 regels via <code>libproc</code></td><td>Linux: eigen sampler. Windows: <code>null</code>, het paneel legt het uit (<code>ProcessesPanel.tsx:218</code>).</td><td><span class="badge warning">middel</span> Een Windows-sampler is aparte uitbreiding, geen blokkade.</td></tr>
+          <tr><td>Achtergrondservice</td><td><code>packages/service</code></td><td>Linux: systemd, behalve als AppImage. Windows: geen (<code>service/src/platform.ts:32</code>); stoppen met de app stopt de machine.</td><td><span class="badge warning">later</span> Geen blokkade voor een eerste Windows-build.</td></tr>
+          <tr><td>Kleine UI-dingen</td><td>n.v.t.</td><td>Swipen tussen pagina's, traffic lights, microfoonrechten, Writing Tools in het contextmenu (<code>client/src/desktop/bridge.ts:227</code>, <code>main.ts:631</code>).</td><td><span class="badge">bewust</span> Platformgedrag, geen werk.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="linux">
+    <h2>Linux: uitgebracht, maar niet getest</h2>
+    <p>Linux is geen nieuw doel. <code>release.yml</code> bouwt AppImage, deb en rpm voor x64 en arm64. npm levert <code>linux-x64</code> en <code>linux-arm64</code> (<code>packages/npm/src/targets.ts:13</code>). De daemon heeft een Linux-sampler, systemd, Android en een bestandswatcher die zonder recursieve watch werkt (<code>fs/watch-seam.ts:24</code>).</p>
+    <p class="note">Alle drie de testjobs in <code>ci.yml</code> draaien op <code>macos-latest</code>. Unit- en integratietests zijn dus nooit op Linux gedraaid; alleen compileren en verpakken gebeurt daar. Juist de Linux-takken (de watcher zonder recursie, <code>processes/linux.ts</code>, systemd) krijgen zo geen echte shell of echt bestandssysteem te zien.</p>
+    <p>Wat op Linux nog open staat:</p>
+    <ul>
+      <li>Linux in CI, voor <code>bun run test</code> en <code>bun run test:integration</code>.</li>
+      <li>Wakker houden, dezelfde kleine wijziging als voor Windows.</li>
+      <li>Speech to Text, geblokkeerd op de glibc-vloer. Dit is een keuze tussen doelgroepen, geen code.</li>
+      <li>Computer use, als die ooit buiten macOS moet (AT-SPI plus X11 of Wayland is een eigen project).</li>
+    </ul>
+  </section>
+
+  <section id="windows">
+    <h2>Windows: wat er nu breekt</h2>
+    <p>De npm-launcher weigert Windows expliciet (<code>packages/npm/src/launcher.ts:20</code>). Er is geen Windows-target in npm, geen <code>win:</code>-sectie in <code>electron-builder.yml</code> en geen Windows-job in CI of release. Zonder die weigering zou de daemon starten, maar geen enkele terminal of agent-node openen.</p>
+    <div class="table">
+      <table class="wide">
+        <caption>POSIX-aannames in de daemon, op volgorde van ernst</caption>
+        <thead><tr><th>Ernst</th><th>Wat</th><th class="col-where">Waar</th><th>Richting</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge danger">blokkade</span></td><td>De PTY komt uit <code>Bun.spawn({ terminal })</code>. De types van Bun 1.4.2 zeggen letterlijk: "Only available on POSIX systems (Linux, macOS)." Geen terminal betekent ook geen agent-node, want die draait in een terminal.</td><td><code>apps/server/src/pty/bun-pty.ts:18</code></td><td>Een tweede <code>PtyAdapter</code> op ConPTY. De seam bestaat al (<code>pty.ts:21</code>). Een kleine Rust-helper over een pipe past bij <code>speech-bridge</code> en <code>ios-device-bridge</code>; een native addon in de gecompileerde Bun-binary is het alternatief.</td></tr>
+          <tr><td><span class="badge danger">hoog</span></td><td>De standaardshell valt terug op <code>/bin/bash</code> als <code>SHELL</code> leeg is, en dat is hij op Windows altijd. <code>-l</code> bestaat niet voor PowerShell of cmd.</td><td><code>pty/pty.ts:32</code>, <code>pty.ts:39</code></td><td>Kiezen via <code>COMSPEC</code> of pwsh, met args per shellfamilie.</td></tr>
+          <tr><td><span class="badge danger">hoog</span></td><td>Agent-starts worden als regel in de shell getypt, met POSIX-quoting (<code>'\''</code>) en <code>a || b</code>. PowerShell escapet een enkel aanhalingsteken als <code>''</code>, en cmd kent geen enkele quotes.</td><td><code>providers/launch.ts:61</code>, <code>launch.ts:136</code></td><td>Quoting en ketenen per shellfamilie, met tests op een notitie die een aanhalingsteken bevat.</td></tr>
+          <tr><td><span class="badge danger">hoog</span></td><td><code>ruimte-context</code> is een <code>#!/bin/sh</code>-script en de installatie zet er <code>chmod 755</code> op.</td><td><code>apps/server/bin/ruimte-context</code>, <code>scripts/compile.ts</code> (einde)</td><td>Op Windows een <code>ruimte-context.cmd</code> die <code>ruimte.exe context</code> aanroept.</td></tr>
+          <tr><td><span class="badge danger">hoog</span></td><td>Agent-hooks zijn een <code>sh</code>-regel met <code>if [ -n … ]</code> en <code>curl</code>. Hooks zijn de enige bron van agentstatus.</td><td><code>agents/install.ts:34</code></td><td>Een subcommando <code>ruimte hook &lt;kind&gt;</code> in de eigen binary, die de env leest en post. Dat werkt op alle drie en schrapt de afhankelijkheid van curl.</td></tr>
+          <tr><td><span class="badge danger">hoog</span></td><td>Agent-CLI's starten als kale naam. Een npm-installatie op Windows levert <code>claude.cmd</code> op, en die start <code>Bun.spawn</code> niet zonder cmd.exe. Via cmd.exe gaat de prompt als argument door cmd heen, en dat is een injectierisico. Mislukt de spawn, dan meldt de detectie stil "niet geïnstalleerd".</td><td><code>providers/claude-provider.ts:12</code>, <code>codex-provider.ts:13</code>, <code>providers/detect.ts:9</code>, <code>chat/chat-process.ts:29</code>, <code>usage/limits/probe.ts:23</code></td><td>Eén resolver die tegen <code>PATHEXT</code> zoekt, voor elke plek die een CLI start. Prompttekst gaat nooit als argument door cmd.exe.</td></tr>
+          <tr><td><span class="badge danger">hoog</span></td><td>Git antwoordt op Windows met <code>C:/…</code>, en de code vergelijkt dat met de backslash-paden van <code>node:path</code>. Het worktree-register gebruikt op de ene plek de vorm van git als sleutel en op de andere <code>resolve()</code>, dus origin, node en claim raken zoek. De status-watcher telt elk event als buiten de repository en watcht de common dir dubbel. Een checkpoint hasht de ene keer de ene vorm en de andere keer de andere, en lekt.</td><td><code>git/worktrees.ts:187</code>, <code>:295</code>, <code>:330</code>, <code>:383</code>, <code>git/status-watcher.ts:90</code>, <code>:161</code>, <code>git/checkpoints.ts:16</code></td><td>Eén normalisatie voor alles wat uit git komt, met tests die Windows-paden als invoer gebruiken. Dit kan op de Mac.</td></tr>
+          <tr><td><span class="badge warning">middel</span></td><td>PATH wordt geplakt met <code>:</code>. Op Windows is dat <code>;</code>, en <code>C:</code> breekt het. Ook de sleutel klopt niet: Windows noemt de variabele meestal <code>Path</code>. Code die <code>env.PATH</code> leest ziet de geërfde waarde dan niet. Code die <code>env.PATH</code> schrijft in een kopie van <code>process.env</code> geeft het kind twee variabelen die alleen in hoofdletters verschillen.</td><td><code>sessions/manager.ts:612</code>, <code>chat/chat-manager.ts:263</code>, <code>cli/service.ts:54</code></td><td>Eén helper die de sleutel gebruikt die de env al heeft en scheidt met <code>path.delimiter</code>, met een test op een env met <code>Path</code>.</td></tr>
+          <tr><td><span class="badge warning">middel</span></td><td>Een chat en een git-proces eindigen via hun procesgroep (<code>detached</code> plus <code>process.kill(-pid)</code>). Windows kent geen procesgroepen; de fout wordt stil opgevangen, dus een devserver van een agent blijft draaien.</td><td><code>chat/chat-process.ts:46</code>, <code>git/run.ts:145</code></td><td>Een procesboom beëindigen met <code>taskkill /T</code> of een job object.</td></tr>
+          <tr><td><span class="badge warning">middel</span></td><td>Sessies eindigen met <code>SIGHUP</code>, daarna <code>SIGKILL</code>. Op Windows wordt elk signaal een harde terminate.</td><td><code>sessions/session.ts:296</code></td><td>Komt mee met de ConPTY-adapter: het sluiten van de pseudoconsole is de Windows-versie van een hangup.</td></tr>
+          <tr><td><span class="badge warning">middel</span></td><td>Een pad op een andere drive telt als binnen de projectmap. <code>relative()</code> naar <code>D:\</code> geeft een absoluut pad terug, en dat begint niet met <code>..</code>. Projectpaden worden daarnaast hoofdlettergevoelig vergeleken, dus <code>c:\Proj</code> en <code>C:\proj</code> worden twee projecten.</td><td><code>git/repos.ts:23</code>, <code>:97</code>, <code>projects/project-store.ts:430</code></td><td>Dezelfde check als <code>canvas/project-paths.ts:7</code>, die ook <code>isAbsolute</code> toetst. Op Windows paden zonder hoofdletters vergelijken.</td></tr>
+          <tr><td><span class="badge warning">middel</span></td><td>De desktop stopt de daemon met <code>SIGTERM</code>, en de daemon ruimt op bij <code>SIGINT</code> en <code>SIGTERM</code>. Op Windows is dat <code>TerminateProcess</code>, dus de shutdown-flush valt weg. De npm-launcher stuurt <code>SIGHUP</code> en <code>SIGQUIT</code> door, en die doen daar niets.</td><td><code>desktop/src/main.ts:279</code>, <code>daemon.ts:1074</code>, <code>packages/npm/src/bin.ts:54</code></td><td>Een stopverzoek over HTTP of IPC, zodat elk platform dezelfde shutdown doorloopt.</td></tr>
+          <tr><td><span class="badge warning">middel</span></td><td>De thuismap is <code>env.HOME ?? homedir()</code>. Git Bash zet <code>HOME</code> en de CLI's lezen <code>USERPROFILE</code>, dus de daemon en de CLI kijken dan in verschillende <code>~/.claude</code>-mappen.</td><td><code>sessions/manager.ts:244</code>, <code>chat/chat-manager.ts:390</code>, <code>agents/install.ts:145</code>, <code>usage/roots.ts:13</code></td><td>Op Windows <code>homedir()</code>, die <code>USERPROFILE</code> leest.</td></tr>
+          <tr><td><span class="badge warning">middel</span></td><td>Een worktree krijgt een symlink zonder type. Op Windows vraagt dat Developer Mode of admin.</td><td><code>git/worktrees.ts:435</code></td><td>Een map wordt een junction.</td></tr>
+          <tr><td><span class="badge warning">middel</span></td><td>Twee renames zonder de <code>EBUSY</code>-retry die <code>writeAtomic</code> wel heeft. Houdt een virusscanner of indexer het bestand even vast, dan faalt de rename. In de view-store gebeurt dat stil, en de view blijft in de verkeerde map staan.</td><td><code>projects/project-files.ts:98</code>, <code>projects/view-file-store.ts:173</code></td><td>Dezelfde retry als in <code>fs.ts</code>.</td></tr>
+          <tr><td><span class="badge info">controleren</span></td><td>Bestanden onder <code>$RUIMTE_HOME</code> krijgen mode <code>0o600</code> en mappen <code>0o700</code>, waaronder <code>local.key</code>. Windows negeert die modes. De bescherming hangt dan af van de ACL's van het gebruikersprofiel.</td><td><code>auth/local-secret.ts:38</code>, <code>fs.ts:51</code></td><td>Nagaan of <code>~\.ruimte</code> alleen voor de gebruiker leesbaar is. Dit is een securitygrens, dus niet aannemen.</td></tr>
+          <tr><td><span class="badge info">controleren</span></td><td><code>localFileUrl</code> percent-encodet ook het stationsdeel, wat <code>file:///C%3A/…</code> oplevert.</td><td><code>client/src/shell/panels/file-url.ts:10</code></td><td>Testen in Electron op Windows.</td></tr>
+          <tr><td><span class="badge info">controleren</span></td><td>De diff van een ongevolgd bestand loopt via <code>--no-index /dev/null</code>. Git for Windows vangt dat waarschijnlijk op.</td><td><code>git/diff.ts:134</code>, <code>git/status.ts:123</code></td><td>Testen op Windows.</td></tr>
+          <tr><td><span class="badge info">controleren</span></td><td>Een recursieve watch houdt een handle op de map. Een <code>git worktree remove</code> van een map onder watch kan dan <code>EBUSY</code> geven.</td><td><code>git/status-watcher.ts:90</code></td><td>Testen op Windows.</td></tr>
+          <tr><td><span class="badge info">controleren</span></td><td>Explorer krijgt <code>/select,C:\a b</code> als één argument, dat bij een spatie tussen aanhalingstekens gaat. Explorer leest dat verkeerd.</td><td><code>fs/reveal.ts:15</code></td><td>Testen op Windows met een pad met een spatie.</td></tr>
+          <tr><td><span class="badge info">controleren</span></td><td>Claude Code mag <code>Bash(ruimte-context *)</code> zonder vraag. Kiest het op Windows een PowerShell-tool, dan vraagt elke aanroep om toestemming.</td><td><code>providers/claude.ts:21</code></td><td>Nagaan welke tool Claude Code op Windows gebruikt, en die ook toestaan.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Wat Windows niet raakt: de WebSocket op <code>localhost</code>, WebRTC via <code>werift</code> (puur TypeScript), <code>@xterm/headless</code> en de projectbestanden. Git start via <code>Bun.spawn(['git', …])</code> gewoon, maar de paden die het teruggeeft niet (zie hierboven).</p>
+    <h3>Desktop-shell en client</h3>
+    <p>De shell heeft al een <code>titleBarOverlay</code>, <code>safeStorage</code> gebruikt DPAPI, er is een single-instance-lock, en Settings en About staan buiten macOS in het menu van de client (<code>shell/menu/model.ts:226</code>). Dit ontbreekt nog:</p>
+    <ul>
+      <li><code>desktop/src/main.ts:186</code> start de daemon zonder <code>windowsHide</code>. Er verschijnt dan een consolevenster naast de app.</li>
+      <li><code>desktop/scripts/icon.ts</code> maakt alleen <code>AppIcon.icns</code> en <code>Assets.car</code>. Een <code>.ico</code> ontbreekt; electron-builder kan er een maken uit <code>build/icon.png</code>.</li>
+      <li>Vier helpers in de client splitsen alleen op <code>/</code> of op spaties: <code>chat/ui/Composer.tsx:149</code>, <code>chat/ui/ImageView.tsx:48</code>, <code>shell/usage/format.ts:66</code> en <code>canvas/drop.ts:30</code>. De laatste splitst op spaties, dus <code>C:\Users\Jan de Vries</code> valt uit elkaar.</li>
+      <li><code>--font-mono</code> in <code>styles.css:350</code> noemt geen Windows-lettertype zoals Cascadia Mono of Consolas.</li>
+    </ul>
+    <h3>Tests en docs</h3>
+    <p>Zo'n 46 testbestanden bevatten hardgecodeerde POSIX-paden als <code>/tmp</code> of <code>/Users</code>, en een deel leunt op sh, signalen, mode bits of symlinks. Die hoeven niet in één keer om. De Windows-job in CI mag beginnen met een lijst tests die daar worden overgeslagen, zolang die lijst krimpt. De docs noemen alleen macOS en Linux: <code>README.md</code>, <code>docs/RELEASE.md</code>, <code>docs/NEXT.md</code>, <code>apps/server/README.md</code> en <code>site/index.html</code>.</p>
+  </section>
+
+  <section id="plan">
+    <h2>Voorstel voor de volgorde</h2>
+    <ol class="steps">
+      <li class="step"><div><h3>Linux in CI</h3><p>Voeg <code>ubuntu-latest</code> toe aan de test- en integratiejob in <code>ci.yml</code>. Tests die stilletjes macOS aannemen komen hier boven.</p><p><strong>Klaar als:</strong> beide jobs groen zijn op Linux.</p></div></li>
+      <li class="step"><div><h3>De kleine platformgates</h3><p>Wakker houden via <code>powerSaveBlocker</code> op alle drie, Android in de Windows-tak van <code>daemon.ts:420</code>, scrcpy in de win-build, en de PATH-helper (sleutel plus <code>path.delimiter</code>) op de drie PATH-plekken.</p><p><strong>Klaar als:</strong> de tests per platform-argument slagen; <code>keepAwakeBlocker</code> geeft een blocker terug op linux en win32.</p></div></li>
+      <li class="step"><div><h3>Een shellfamilie als begrip</h3><p>Eén module die voor posix en powershell de standaardshell, de args, de quoting en het ketenen levert. <code>pty.ts</code> en <code>launch.ts</code> gebruiken die. Dit is puur en volledig te testen op de Mac.</p><p><strong>Klaar als:</strong> een agentregel met een aanhalingsteken in de notitie per familie correct gequote is.</p></div></li>
+      <li class="step"><div><h3>Paden, CLI's en stoppen</h3><p>Eén normalisatie voor paden uit git, drive- en hoofdletterbewuste vergelijkingen, een CLI-resolver tegen <code>PATHEXT</code>, <code>homedir()</code> in plaats van <code>HOME</code>, een junction voor mappen, de <code>EBUSY</code>-retry op de twee renames en een stopverzoek in plaats van <code>SIGTERM</code>. Alles kan op de Mac, met Windows-paden als testinvoer.</p><p><strong>Klaar als:</strong> de bestaande tests op macOS groen blijven en de nieuwe tests Windows-paden en een env met <code>Path</code> en <code>USERPROFILE</code> gebruiken.</p></div></li>
+      <li class="step"><div><h3>ruimte-context en hooks via de eigen binary</h3><p><code>ruimte hook &lt;kind&gt;</code> vervangt de sh-plus-curl-regel. Op Windows komt er een <code>ruimte-context.cmd</code> naast. Dit maakt Linux en macOS ook minder afhankelijk van curl.</p><p><strong>Klaar als:</strong> agentstatus op macOS nog steeds werkt via het nieuwe hookcommando, met bestaande tests groen.</p></div></li>
+      <li class="step"><div><h3>ConPTY achter PtyAdapter</h3><p>Het grootste stuk, en het enige dat je op Windows zelf moet bouwen en proberen. Via een Rust-helper, zie <a href="#questions">Keuzes</a>, en te proberen op de <a href="#vm">test-VM</a>.</p><p><strong>Klaar als:</strong> op Windows een terminalnode een pwsh-prompt toont, resize werkt, <code>session.attach</code> na een reload hetzelfde scherm geeft en de exitcode klopt.</p></div></li>
+      <li class="step"><div><h3>Procesbomen beëindigen</h3><p>Een Windows-tak voor <code>chat-process.ts</code> en <code>git/run.ts</code>.</p><p><strong>Klaar als:</strong> het beëindigen van een chat ook een devserver stopt die de agent startte.</p></div></li>
+      <li class="step"><div><h3>Shell en client</h3><p><code>windowsHide</code>, een <code>.ico</code>, de vier padhelpers en een Windows-lettertype in <code>--font-mono</code>.</p><p><strong>Klaar als:</strong> een visuele ronde in de VM geen consolevenster, geen kapot pad en een terminal in Cascadia Mono of Consolas laat zien.</p></div></li>
+      <li class="step"><div><h3>Build, CI en release</h3><p><code>windows-latest</code> in <code>ci.yml</code>, een <code>win:</code>-target in <code>electron-builder.yml</code> (NSIS, ongesigneerd, met auto-update), <code>win32-x64</code> in <code>targets.ts</code>, de weigering uit de launcher, en een job in <code>release.yml</code>.</p><p><strong>Klaar als:</strong> een getagde build een installeerbare Windows-app oplevert, waarin een agentnode start en status meldt.</p></div></li>
+    </ol>
+    <p>Een Windows-service, een Windows-sampler, Speech to Text en computer use buiten macOS komen pas na deze stappen.</p>
+  </section>
+
+  <section id="vm">
+    <h2>Een Windows-VM om op te testen</h2>
+    <p>Op de Mac staat nog geen hypervisor. De opzet is Windows 11 ARM in een VM, met de OpenSSH Server van Windows zelf. Claude voert daarna tests, de daemon en de PTY-spike uit met <code>ssh win '...'</code>.</p>
+    <ol class="steps">
+      <li class="step"><div><h3>Hypervisor en Windows 11 ARM</h3><p>Parallels Desktop werkt het soepelst met Windows op ARM, en <code>prlctl capture</code> maakt screenshots die Claude kan lezen, maar het kost geld. UTM en VMware Fusion zijn gratis en goed genoeg voor SSH en tests; screenshots lopen daar via een script in de VM. Download de ARM64-ISO bij Microsoft. Zonder activatie werkt Windows met een watermerk, en voor development is dat genoeg. Geef de VM minstens 8 GB geheugen en 80 GB schijf.</p></div></li>
+      <li class="step"><div><h3>Gereedschap in de VM</h3><p>Git for Windows, Bun, Node en de CLI's <code>claude</code> en <code>codex</code>, bijvoorbeeld met <code>winget</code>. Rust en de build tools komen erbij voor de ConPTY-helper.</p></div></li>
+      <li class="step"><div><h3>OpenSSH Server aanzetten</h3><p>In een PowerShell als admin:</p><pre><code>Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+Start-Service sshd
+Set-Service -Name sshd -StartupType Automatic</code></pre><p>Zet je publieke sleutel in <code>C:\ProgramData\ssh\administrators_authorized_keys</code> als je account admin is, anders in <code>~\.ssh\authorized_keys</code>. Maak PowerShell de standaardshell van sshd, zodat commando's niet in cmd.exe landen.</p></div></li>
+      <li class="step"><div><h3>Verbinden vanaf de Mac</h3><p>Een <code>Host win</code> in <code>~/.ssh/config</code> met het IP van de VM. Clone de repo in de VM; een gedeelde map raad ik af, want <code>bun install</code> en symlinks gaan daarop vaak mis. Wijzigingen gaan erheen als patch of via een WIP-branch.</p><p><strong>Klaar als:</strong> <code>ssh win 'bun --version; git --version'</code> antwoordt en <code>bun install</code> slaagt in de clone.</p></div></li>
+    </ol>
+    <p>Een programma dat via SSH start, draait in een sessie zonder bureaublad, dus het Electron-venster verschijnt nergens. De app start daarom via een geplande taak in de ingelogde sessie (<code>schtasks /run</code>). Klikken en visuele QA blijven mensenwerk.</p>
+    <p>Met een tunnel koppelt de Electron-app op de Mac aan de daemon in de VM: <code>ssh -L 4212:localhost:4211 win</code>. Zo test je terminals, shells en agents op Windows voordat de Windows-shell af is.</p>
+    <p>De VM draait ARM64 en Bun kent <code>bun-windows-arm64</code>, dus native testen kan. Problemen die alleen x64 heeft, zoals prebuilds van native modules, dekt de VM maar deels. De x64-build hoort in CI op <code>windows-latest</code>.</p>
+  </section>
+
+  <section id="questions">
+    <h2>Keuzes</h2>
+    <h3>ConPTY via een Rust-helper</h3>
+    <p>Eén helper die alle sessies multiplext over een pipe, naast <code>speech-bridge</code> en <code>ios-device-bridge</code>. Een native addon zou afhangen van hoe een met <code>bun build --compile</code> gebouwde binary een <code>.node</code>-bestand laadt, en dat heb ik niet geverifieerd. De helper houdt de daemon zuiver TypeScript. De eerste taak in stap 6 is een helper die één pwsh opent en bytes heen en weer stuurt.</p>
+    <h3>PowerShell als standaardshell, twee quotingfamilies</h3>
+    <p><code>pwsh</code> als die op PATH staat, anders Windows PowerShell 5.1. cmd alleen als iemand hem zelf instelt. Er zijn dan twee families: posix en powershell. Let op: <code>a || b</code> bestaat pas sinds pwsh 7. Voor beide PowerShell-versies ketent de agentregel dus met <code>a; if ($LASTEXITCODE -ne 0) { b }</code>.</p>
+    <h3>Alleen x64, geen WSL-route</h3>
+    <p>De eerste Windows-build is x64. arm64 volgt als x64 werkt. WSL2 als tussenstap valt af. De Windows-app kan wel al met een daemon in WSL verbinden als een gewone machine, maar agents op Linux-paden zijn niet het product voor Windows.</p>
+    <h3 id="signing">Signing: ongesigneerd, buiten de Store</h3>
+    <p>Ruimte gaat niet in de Microsoft Store. De Windows-build is een ongesigneerde NSIS-installer op de GitHub-release, net als de builds voor macOS en Linux. Een gratis handtekening bestaat buiten de Store niet voor Ruimte. SignPath Foundation vraagt een OSI-licentie, en de Functional Source License is dat niet.</p>
+    <div class="table">
+      <table class="wide">
+        <caption>Routes voor Windows buiten de Store</caption>
+        <thead><tr><th>Route</th><th>Kosten</th><th>Voor Ruimte</th></tr></thead>
+        <tbody>
+          <tr><td>Ongesigneerd</td><td>gratis</td><td><span class="badge confirmed">gekozen</span> Bij de eerste installatie klikt de gebruiker door SmartScreen heen.</td></tr>
+          <tr><td>Azure Artifact Signing</td><td>±$9,99 per maand</td><td><span class="badge">later</span> Organisaties in de EU mogen, individuen alleen in de VS en Canada. Een organisatie moet een verifieerbare belastinghistorie van minstens drie jaar hebben. Eenmanszaken in de EU melden wisselend succes bij de identiteitscontrole.</td></tr>
+          <tr><td>OV-certificaat</td><td>$150 tot $300 per jaar</td><td><span class="badge">later</span> Overal beschikbaar, sleutel op een HSM of token.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Wat ongesigneerd betekent:</p>
+    <ul>
+      <li><strong>SmartScreen bij de download.</strong> De installer heeft een Mark of the Web, dus Windows toont "Windows heeft uw pc beschermd", daarna Meer info en Toch uitvoeren. Reputatie hangt aan de hash van het bestand, dus elke release begint opnieuw. Beheerde bedrijfsmachines kunnen de installer helemaal blokkeren.</li>
+      <li><strong>Auto-update gaat aan.</strong> Zonder auto-update blijft iedereen op de versie van de eerste installatie, en moet elke handmatige update opnieuw door SmartScreen. Een bestand dat <code>electron-updater</code> zelf downloadt, krijgt naar verwachting geen Mark of the Web, dus updates installeren zonder prompt. Dat moet de eerste echte update op Windows bevestigen. <code>electron-updater</code> controleert de sha512 uit <code>latest.yml</code>. Dat beschermt tegen een kapotte download, maar niet tegen een gecompromitteerde release. Zonder <code>publisherName</code> is er geen controle op de uitgever. De GitHub-release is dan de enige vertrouwensbron.</li>
+      <li><strong>Defender kan vals alarm geven.</strong> Ongesigneerde, zelfstandige binaries zoals <code>ruimte.exe</code> en de ConPTY-helper worden sneller heuristisch gemarkeerd. Controleer elke Windows-release in CI met een Defender-scan en dien een vals alarm in via het indienportaal van Microsoft.</li>
+      <li><strong>Geen extra release-stap.</strong> Er is geen certificaat, geen geheim en geen wachttijd; de Windows-job in <code>release.yml</code> bouwt en uploadt zoals de andere.</li>
+    </ul>
+    <p>De signeerstap blijft wel mogelijk. Als het ooit Azure of een OV-certificaat wordt, hoort een half ingestelde configuratie de build te laten falen, zodat er nooit stil een ongesigneerde build uitgaat uit een pipeline die denkt te signen.</p>
+    <h3>Nog open</h3>
+    <ul>
+      <li>Welke shell de agent-CLI's op Windows starten voor een hook-commando. Stap 5 maakt dat minder belangrijk, maar het moet op een echte Windows-machine blijken.</li>
+      <li>Welke hypervisor de test-VM krijgt: Parallels, UTM of VMware Fusion.</li>
+    </ul>
+  </section>
+</main>
+<footer><p>Methode: gerichte greps op platformchecks, shell- en POSIX-aannames, gevolgd door het lezen van de gevonden plekken. Regeltellingen met <code>wc -l</code> op <code>.ts</code>, <code>.tsx</code>, <code>.swift</code> en <code>.rs</code>, zonder tests en zonder de iPhone-app, inclusief commentaar en lege regels. De POSIX-beperkingen van de PTY en de Chrome-backend van WebView komen uit de meegeleverde types van Bun 1.4.2, niet uit een test op Windows. Er is niets gedraaid op Linux of Windows.</p></footer>
+</body>
+</html>
