@@ -1,4 +1,4 @@
-import type { PushAttentionEntry, ServerFrame } from '@ruimte/contracts';
+import type { EventMap, PushAttentionEntry, ServerFrame } from '@ruimte/contracts';
 import type { ServerWebSocket } from 'bun';
 import { OutputGate } from './backpressure.ts';
 import { sendEvent, type ClientAccess, type ClientConnection, type Dispatcher } from './dispatcher.ts';
@@ -38,6 +38,7 @@ export interface ConnectionServices {
     dispatcher: Pick<Dispatcher, 'handle'>;
     presence?: {
         connected(sessionId: string | null): () => void;
+        observeNotification?(listener: (alert: EventMap['push.notification']) => void): () => void;
         observeAttention?(listener: (entry: PushAttentionEntry) => void): () => void;
     };
     sessions: Attachable & { get(sessionId: string): ScreenSource | undefined };
@@ -103,6 +104,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
         const unsubscribes = [
             services.presence?.connected(access.sessionId) ?? (() => undefined),
             services.presence?.observeAttention?.((entry) => sendEvent(client, 'push.attention', entry)) ?? (() => undefined),
+            services.presence?.observeNotification?.((alert) => sendEvent(client, 'push.notification', alert)) ?? (() => undefined),
             services.sessions.subscribe(clientId, sink),
             services.chats.subscribe(clientId, sink),
             services.browsers?.subscribe(clientId, sink) ?? (() => undefined),

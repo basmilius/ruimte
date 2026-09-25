@@ -255,6 +255,7 @@
   ],
   "eventTypes": [
     "push.attention",
+    "push.notification",
     "session.output",
     "session.resync",
     "session.size",

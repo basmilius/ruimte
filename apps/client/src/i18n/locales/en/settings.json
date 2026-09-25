@@ -524,10 +524,6 @@
         "working": {
             "title": "While an agent works",
             "description": "Sleep pauses every agent.",
-            "turnNotify": {
-                "label": "Tell me when a turn ends",
-                "description": "Sends a notification when an agent finishes while this window is in the background."
-            },
             "sound": {
                 "label": "Play a sound with a notification",
                 "description": "Applies to every agent notification."

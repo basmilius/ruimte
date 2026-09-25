@@ -87,6 +87,7 @@ export interface CanvasHost {
     showView(projectId: string, viewId: string, by: string): boolean;
     /* Ends the shell or the CLI behind a node; a canvas that is removed takes its sessions with it. */
     endSession(kind: 'terminal' | 'chat', nodeId: string): Promise<void>;
+    alert(nodeId: string, text: string): void;
     /* Puts a message in front of another node's agent, and says whether it landed or is waiting. */
     notify(notice: Omit<Notice, 'createdAt'>): Promise<NoticeDelivery>;
     /* Replaces the diagram of a view, whether or not anyone has its project open, and answers the new rev. */
@@ -260,7 +261,7 @@ export type VerbEntry = Verb | Noun | ContextVerb;
 
 /* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
 export const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, answer and worktree are the project itself, and plan is the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, alert, answer and worktree are the project itself, and plan is the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
 
 export const DRY_RUN_FLAG = 'dry-run';
 

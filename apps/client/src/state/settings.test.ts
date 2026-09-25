@@ -46,20 +46,9 @@ describe('keeping the machine awake', () => {
     });
 });
 
-describe('being told a turn ended', () => {
-    test('starts on: it only ever fires while you are elsewhere, which is when it is worth having', () => {
-        expect(settingsFrom({}).agentsTurnNotify).toBe(true);
-        expect(settingsFrom({ keepAwake: 'always' }).agentsTurnNotify).toBe(true);
-    });
-
-    test('is off for a stored false and for nothing else', () => {
-        expect(settingsFrom({ agentsTurnNotify: false }).agentsTurnNotify).toBe(false);
-        expect(settingsFrom({ agentsTurnNotify: 0 as unknown as boolean }).agentsTurnNotify).toBe(true);
-    });
-
+describe('agent notifications', () => {
     test('makes no sound until somebody asks for one', () => {
         expect(settingsFrom({}).agentsTurnSound).toBe(false);
-        expect(settingsFrom({ agentsTurnNotify: true }).agentsTurnSound).toBe(false);
         expect(settingsFrom({ agentsTurnSound: true }).agentsTurnSound).toBe(true);
         expect(settingsFrom({ agentsTurnSound: 1 as unknown as boolean }).agentsTurnSound).toBe(false);
     });

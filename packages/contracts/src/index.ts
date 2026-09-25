@@ -475,6 +475,13 @@ export type RequestMap = {
 
 export const EVENT_SCHEMAS = {
     'push.attention': PushAttentionEntrySchema,
+    'push.notification': z.object({
+        projectId: z.string().min(1),
+        viewId: z.string().min(1),
+        nodeId: z.string().min(1),
+        title: z.string().max(160),
+        body: z.string().max(500)
+    }),
     'session.output': SessionOutputEventSchema,
     'session.resync': SessionResyncEventSchema,
     'session.size': SessionSizeEventSchema,

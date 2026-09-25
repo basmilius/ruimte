@@ -267,6 +267,7 @@ export const bootTestDaemon = async ({
             await endChildren.owe(nodeId);
             await (kind === 'terminal' ? sessions.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
         },
+        alert: () => undefined,
         notify: async (notice) => {
             const delivery = await deliverNotice(
                 notices,

@@ -1,3 +1,4 @@
+import { notifyRequested } from '@/shell/notifications';
 import i18next from 'i18next';
 import { ChatClient } from '@/chat/chat-client';
 import { BrowserClient } from '@/browser/browser-client';
@@ -94,6 +95,7 @@ const projectSink = (endpointId: () => string): ProjectSink => {
 
 const buildMachine = (endpoint: Endpoint): Machine => {
     const transport = machineTransport(endpoint.id);
+    const stopNotifications = transport.on('push.notification', (alert) => notifyRequested(endpoint.id, alert));
     const stopPushAttention = watchPushAttention(endpoint.id, transport);
     const stopAccounts = watchProviderAccounts(endpoint.id, transport);
     const plans = new PlanSync(endpoint.id, transport);
@@ -110,6 +112,7 @@ const buildMachine = (endpoint: Endpoint): Machine => {
         browsers,
         devices,
         dispose(): void {
+            stopNotifications();
             stopPushAttention();
             stopAccounts();
             plans.dispose();

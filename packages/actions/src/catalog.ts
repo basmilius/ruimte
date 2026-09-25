@@ -1523,6 +1523,15 @@ export const ACTION_DEFINITIONS = {
         input: z.object({ viewId, edgeId: z.string().min(1) }),
         output: z.object({ viewId, edgeId: z.string(), from: nodeId, to: nodeId, label: z.string().nullable() })
     },
+    'agent.alert': {
+        title: 'Notify the person',
+        description: 'Sends the person a notification from your own session. Use only when they asked for one, such as when your work is done.',
+        effect: 'external',
+        domain: 'communicate',
+        actors: AGENT,
+        input: z.object({ text: z.string().trim().min(1).max(500).describe('The notification message') }),
+        output: z.object({ nodeId })
+    },
     'agent.notify': {
         title: 'Notify an agent',
         description:

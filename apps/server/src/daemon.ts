@@ -558,6 +558,16 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         tasks: taskWiring.host,
         plans,
         endSession,
+        alert: (nodeId: string, text: string) => {
+            const place = projects.index.locate(nodeId);
+            if (!place) {
+                throw new Error('The notifying session is no longer in a project');
+            }
+            push.notify(chats.get(nodeId) ? 'chat' : 'terminal', nodeId, projects.index.titleFor(nodeId) ?? 'Agent', text, {
+                projectId: place.projectId,
+                viewId: place.canvasId ?? nodeId
+            });
+        },
         notify: async (notice: Omit<Notice, 'createdAt'>) => {
             const delivery = await deliverNotice(
                 notices,

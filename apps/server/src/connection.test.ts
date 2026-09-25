@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ServerFrame } from '@ruimte/contracts';
+import type { EventMap, ServerFrame } from '@ruimte/contracts';
 import { HIGH_WATER_MARK } from './backpressure.ts';
 import { connectionOpener, type ClientChannel, type ConnectionServices } from './connection.ts';
 import { Dispatcher } from './dispatcher.ts';
@@ -77,7 +77,7 @@ class FakeSource {
 
 const NAMES = ['sessions', 'chats', 'identity', 'projects', 'drawings', 'diagrams', 'folders', 'statuses', 'usage', 'limits', 'processes'] as const;
 
-const setup = (screens: Record<string, string> = {}) => {
+const setup = (screens: Record<string, string> = {}, presence?: ConnectionServices['presence']) => {
     const order: string[] = [];
     const sources = Object.fromEntries(NAMES.map((name) => [name, new FakeSource(name, order)])) as Record<(typeof NAMES)[number], FakeSource>;
     const dispatcher = new Dispatcher();
@@ -91,7 +91,7 @@ const setup = (screens: Record<string, string> = {}) => {
                   }
                 : undefined
     });
-    const services: ConnectionServices = { ...sources, sessions, dispatcher };
+    const services: ConnectionServices = { ...sources, sessions, dispatcher, presence };
     return { open: connectionOpener(services), sources, order };
 };
 
@@ -173,4 +173,29 @@ describe('connectionOpener', () => {
             { type: 'event', event: 'session.resync', payload: { sessionId: 'a', screen: 'screen-a' } }
         ]);
     });
+});
+
+test('requested notifications travel over the connection and unsubscribe on close', () => {
+    const listeners = new Set<(alert: EventMap['push.notification']) => void>();
+    const { open } = setup(
+        {},
+        {
+            connected: () => () => undefined,
+            observeNotification: (listener) => {
+                listeners.add(listener);
+                return () => {
+                    listeners.delete(listener);
+                };
+            }
+        }
+    );
+    const channel = new FakeChannel();
+    open(channel, { reachability: 'loopback', sessionId: null });
+    const payload = { projectId: 'project', viewId: 'main', nodeId: 'node', title: 'Build', body: 'Ready' };
+    for (const listener of listeners) {
+        listener(payload);
+    }
+    expect(channel.frames).toEqual([{ type: 'event', event: 'push.notification', payload }]);
+    channel.fireClose();
+    expect(listeners.size).toBe(0);
 });

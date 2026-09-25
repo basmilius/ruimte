@@ -35049,6 +35049,39 @@
       "readThrough"
     ]
   },
+  "event.push.notification": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "nodeId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "title": {
+        "type": "string",
+        "maxLength": 160
+      },
+      "body": {
+        "type": "string",
+        "maxLength": 500
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "nodeId",
+      "title",
+      "body"
+    ]
+  },
   "event.session.output": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

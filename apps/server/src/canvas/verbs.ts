@@ -1,3 +1,4 @@
+import { alertVerb } from './alert-verb.ts';
 import { actionDescription } from '@ruimte/actions';
 import { ChatSubagentSourceSchema, ContextSourceSchema } from '@ruimte/contracts';
 import { z } from 'zod';
@@ -238,6 +239,7 @@ export const VERBS: readonly VerbEntry[] = [
     readVerb,
     doneVerb,
     notifyVerb,
+    alertVerb,
     answerVerb,
     agentVerb,
     teamVerb,

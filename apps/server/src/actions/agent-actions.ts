@@ -82,6 +82,11 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
         }
         return { output: { nodeId, requestId } };
     },
+    'agent.alert': async ({ text }, { actor, context }) => {
+        void context.place;
+        context.host.alert(actor.id, text);
+        return { output: { nodeId: actor.id } };
+    },
     'agent.notify': async ({ nodeId, text }, { actor, context }) => {
         const { host, place } = context;
         const caller = actor.id;

@@ -129,11 +129,7 @@ export interface Settings {
     /* Whether the display stays on as well, which only `always` offers: while an agent works nobody
        needs to watch it. */
     keepAwakeDisplay: boolean;
-    /* Whether a turn that ends while this window is not the one in front says so, as a notification
-       of the operating system. On. The point of the whole thing is the moment somebody walked away,
-       and it never fires while the window is in front, so it cannot land on top of what you are doing. */
-    agentsTurnNotify: boolean;
-    /* Whether those notifications make a sound. Off, because a sound arrives in whatever the person
+    /* Whether agent notifications make a sound. Off, because a sound arrives in whatever the person
        walked away to do, which may be a call. */
     agentsTurnSound: boolean;
     /* Whether two fingers sideways on a trackpad go back and forward in a browser page. On, because
@@ -191,7 +187,6 @@ const DEFAULT_SETTINGS: Settings = {
     keepAwake: 'off',
     keepAwakeOnBattery: false,
     keepAwakeDisplay: false,
-    agentsTurnNotify: true,
     agentsTurnSound: false,
     browserSwipe: true,
     directStunServers: DEFAULT_STUN_SERVER,
@@ -228,8 +223,6 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     keepAwake: keepAwakeFrom(stored.keepAwake, (stored as Partial<Settings> & { agentsKeepAwake?: unknown }).agentsKeepAwake),
     keepAwakeOnBattery: stored.keepAwakeOnBattery === true,
     keepAwakeDisplay: stored.keepAwakeDisplay === true,
-    // Starts on, so only a stored `false` turns it off.
-    agentsTurnNotify: stored.agentsTurnNotify !== false,
     chatStreaming: chatStreamingFrom(stored.chatStreaming),
     voiceLanguage: isVoiceLanguage(stored.voiceLanguage) ? stored.voiceLanguage : 'nl',
     liveVoice: isLiveVoice(stored.liveVoice)
@@ -242,7 +235,6 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
             ? stored.voiceInputDeviceId
             : DEFAULT_SETTINGS.voiceInputDeviceId,
     voiceConfirmDestructiveActions: stored.voiceConfirmDestructiveActions !== false,
-    // Same rule as the block. Nothing makes a sound unless a stored `true` asked for it.
     agentsTurnSound: stored.agentsTurnSound === true,
     browserSwipe: stored.browserSwipe !== false,
     worktreeMergeStrategy: WORKTREE_MERGE_STRATEGIES.find((strategy) => strategy === stored.worktreeMergeStrategy) ?? DEFAULT_SETTINGS.worktreeMergeStrategy,
@@ -326,7 +318,6 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 keepAwake,
                 keepAwakeOnBattery,
                 keepAwakeDisplay,
-                agentsTurnNotify,
                 agentsTurnSound,
                 browserSwipe,
                 directStunServers,
@@ -360,7 +351,6 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 keepAwake,
                 keepAwakeOnBattery,
                 keepAwakeDisplay,
-                agentsTurnNotify,
                 agentsTurnSound,
                 browserSwipe,
                 directStunServers,

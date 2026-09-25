@@ -193,3 +193,11 @@ describe('contextChangeNote', () => {
         expect(note).toContain('Removed: "Sprint goals" (text).');
     });
 });
+
+test('every agent learns how to send a notification only when requested', () => {
+    for (const standalone of [false, true]) {
+        const note = verbsNote({ depth: 0, standalone });
+        expect(note).toContain('ruimte-context alert --text');
+        expect(note).toContain('Use alert only when they asked for one');
+    }
+});

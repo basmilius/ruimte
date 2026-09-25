@@ -28,6 +28,9 @@ const opensAt = (depth: number): string | null => {
     return null;
 };
 
+const ALERT_NOTE =
+    'When the person asks you to notify them, use `ruimte-context alert --text "..."` at the requested moment. Ordinary completed turns do not send a notification. Use alert only when they asked for one.';
+
 /* Said only while a person turned computer use on for this machine; off, the noun only refuses. */
 const COMPUTER_NOTE =
     'With `ruimte-context computer` you read and operate the apps of this Mac, each only once the person lets you into it; use it only when they ask you to work in an app. You work in the background by default, so the person can go on with their own work; ask them before you use `--front`, which brings the app forward and interrupts them. The person can pause you, take over or stop you at any moment: then wait for them, or ask them, instead of calling again in a loop. A call holds 6 s for their answer or their pause; `--wait 60` holds longer and goes on as soon as they are done, so give that shell command a timeout above the wait.';
@@ -55,6 +58,7 @@ export const verbsNote = ({
             "Ruimte: `ruimte-context` is a command you run in your shell, not a tool. It reads the context linked to this chat and manages the project's views; `ruimte-context help` lists its verbs and nouns.",
             "Delegate work within this chat with your CLI's own subagents, and keep any model the person asked for.",
             'Only when the person asks for an agent, note or drawing in Ruimte itself, open it with `ruimte-context` and name where it goes with --view.',
+            ALERT_NOTE,
             ...(computer ? [COMPUTER_NOTE] : []),
             ...(device ? [DEVICE_NOTE] : []),
             'Ids in its output are for your commands; to the person, name things by their title, never by id.'
@@ -65,6 +69,7 @@ export const verbsNote = ({
         `Ruimte: \`ruimte-context\` is a command you run in your shell, not a tool. It reads context linked to you and opens nodes on the person's canvas (\`node new\`): ${NODE_KINDS}. A note or drawing they ask for is one of those, not a file you write.`,
         '`ruimte-context help` lists the verbs and nouns, and `ruimte-context help <verb or noun>` details one.'
     ];
+    parts.push(ALERT_NOTE);
     const opens = opensAt(depth);
     if (opens !== null) {
         parts.push(opens);

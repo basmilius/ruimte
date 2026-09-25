@@ -3,7 +3,6 @@ import { isCanvasView, type ProjectView, type SplitLayout } from '@ruimte/contra
 import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas/math';
 import { desktop } from '@/desktop/bridge';
 import { projectNodes } from '@/project/views';
-import { notifyTurnDone } from '@/shell/notifications';
 import { viewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
 import { nodesInSight, seenNodes, type CanvasSight } from '@/state/in-sight';
@@ -247,18 +246,9 @@ export const startAttentionWatch = (): (() => void) => {
             unseen: new Set([...Object.keys(useAttention.getState().unseen), ...unreadOnMachine(endpointId).map(keyOf)]),
             known: new Set(nodes.map((node) => keyOf(node.id)))
         };
-        const settled = settledSince(result);
         const marks = nextUnseen(result);
         previous = result.working;
         useAttention.getState().setUnseen(marks);
-        // A mark is exactly "this ended and nobody saw it", which is what deserves a notification. The
-        // window being in front says nothing about it, since the node may sit on a view behind the one up.
-        for (const key of settled) {
-            const node = marks.has(key) ? nodes.find((candidate) => keyOf(candidate.id) === key) : undefined;
-            if (node) {
-                notifyTurnDone(node.id, node.title);
-            }
-        }
         // The marks this pass just set are part of the badge, so it counts them and not the old ones.
         const activity = { working: groups.working.length, attention: groups.needsYou.length + marks.size };
         const line = `${activity.working}/${activity.attention}`;

@@ -502,3 +502,32 @@ test('killing the last terminal ends its machine round before another terminal s
         await harness.cleanup();
     }
 });
+
+test('requested notifications reach connected clients and subscribed offline devices without changing agent status', async () => {
+    const notifications: unknown[] = [];
+    const off = service.observeNotification((alert) => notifications.push(alert));
+    status('running');
+    service.notify('terminal', 'node', 'Build', 'The build is ready.', { projectId: 'project', viewId: 'main' });
+    status('idle');
+    await service.settled();
+    expect(notifications).toEqual([{ projectId: 'project', viewId: 'main', nodeId: 'node', title: 'Build', body: 'The build is ready.' }]);
+    expect(pushes).toHaveLength(1);
+    expect(decrypt(pushes[0]!)).toMatchObject({ kind: 'attention', target: 'terminal', nodeId: 'node', body: 'The build is ready.' });
+    off();
+    service.notify('terminal', 'unfollowed', 'Build', 'Done', { projectId: 'project', viewId: 'main' });
+    await service.settled();
+    expect(notifications).toHaveLength(1);
+    expect(pushes).toHaveLength(1);
+});
+
+test('a requested notification uses the connected event without also pushing to that device', async () => {
+    const disconnect = service.connected(sessionId);
+    const notifications: unknown[] = [];
+    const off = service.observeNotification((alert) => notifications.push(alert));
+    service.notify('chat', 'node', 'Review', 'Review complete.', { projectId: 'project', viewId: 'node' });
+    await service.settled();
+    expect(notifications).toHaveLength(1);
+    expect(pushes).toEqual([]);
+    off();
+    disconnect();
+});

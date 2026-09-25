@@ -115,12 +115,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     { id: 'providers.apple', section: 'providers', label: 'settings:providers.apple.label', description: 'settings:providers.apple.description' },
     { id: 'agents.resumeAtReset', section: 'agents', label: 'settings:agents.resumeAtReset.label', description: 'settings:agents.resumeAtReset.description' },
     { id: 'agents.deleteAnyView', section: 'agents', label: 'settings:agents.deleteAnyView.label', description: 'settings:agents.deleteAnyView.description' },
-    {
-        id: 'agents.working.turnNotify',
-        section: 'agents',
-        label: 'settings:agents.working.turnNotify.label',
-        description: 'settings:agents.working.turnNotify.description'
-    },
     { id: 'agents.working.sound', section: 'agents', label: 'settings:agents.working.sound.label', description: 'settings:agents.working.sound.description' },
     {
         id: 'agents.keepAwake.mode',

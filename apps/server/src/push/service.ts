@@ -10,7 +10,7 @@ import {
     type PushEnvelope,
     type PushRouting
 } from '@ruimte/pulsar';
-import type { AgentStatus, PushSubscribePayload, PushAttentionEntry } from '@ruimte/contracts';
+import type { EventMap, AgentStatus, PushSubscribePayload, PushAttentionEntry } from '@ruimte/contracts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { PushAttention } from './attention.ts';
@@ -49,6 +49,7 @@ const sendToAddressBook = async (push: PushEnvelope): Promise<number> => {
 export class PushService {
     readonly attention: PushAttention;
     private readonly listeners = new Set<(entry: PushAttentionEntry) => void>();
+    private readonly notificationListeners = new Set<(alert: EventMap['push.notification']) => void>();
     private alertQueue = Promise.resolve();
     private readonly options: PushServiceOptions;
     private readonly connectedSessions = new Map<string, number>();
@@ -72,6 +73,27 @@ export class PushService {
         return () => {
             this.listeners.delete(listener);
         };
+    }
+
+    observeNotification(listener: (alert: EventMap['push.notification']) => void): () => void {
+        this.notificationListeners.add(listener);
+        return () => {
+            this.notificationListeners.delete(listener);
+        };
+    }
+
+    notify(
+        target: PushAlertContent['target'],
+        nodeId: string,
+        title: string,
+        body: string,
+        destination: Pick<EventMap['push.notification'], 'projectId' | 'viewId'>
+    ): void {
+        const alert = { ...destination, nodeId, title: title.slice(0, 160), body: body.slice(0, 500) };
+        this.alert(target, nodeId, alert.title, alert.body);
+        for (const listener of this.notificationListeners) {
+            listener(alert);
+        }
     }
 
     read(nodeId: string, issuedAt: number): void {

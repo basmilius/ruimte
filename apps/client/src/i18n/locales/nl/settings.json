@@ -524,10 +524,6 @@
         "working": {
             "title": "Terwijl een agent werkt",
             "description": "Slaap pauzeert elke agent.",
-            "turnNotify": {
-                "label": "Laat het weten als een turn eindigt",
-                "description": "Stuurt een notificatie als een agent klaar is terwijl dit venster op de achtergrond staat."
-            },
             "sound": {
                 "label": "Een geluid spelen bij een notificatie",
                 "description": "Geldt voor elke notificatie van een agent."

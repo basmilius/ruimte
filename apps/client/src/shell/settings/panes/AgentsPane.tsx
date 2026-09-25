@@ -31,7 +31,6 @@ export function AgentsPane() {
     const keepAwake = useSettings((s) => s.keepAwake);
     const keepAwakeOnBattery = useSettings((s) => s.keepAwakeOnBattery);
     const keepAwakeDisplay = useSettings((s) => s.keepAwakeDisplay);
-    const agentsTurnNotify = useSettings((s) => s.agentsTurnNotify);
     const agentsTurnSound = useSettings((s) => s.agentsTurnSound);
     const chatStreaming = useSettings((s) => s.chatStreaming);
     const update = useSettings((s) => s.update);
@@ -120,20 +119,6 @@ export function AgentsPane() {
             </SettingsSection>
             <MachineSwitchSections />
             <SettingsSection title={t('agents.working.title')} description={awake ? t('agents.working.description') : undefined} scope="computer">
-                <SettingsRow
-                    searchId="agents.working.turnNotify"
-                    label={t('agents.working.turnNotify.label')}
-                    description={t('agents.working.turnNotify.description')}
-                    control={
-                        <Toggle
-                            checked={agentsTurnNotify}
-                            onChange={(checked) => update({ agentsTurnNotify: checked })}
-                            label={t('agents.working.turnNotify.label')}
-                        />
-                    }
-                />
-                {/* No longer hidden behind the switch above it. A question and a permission notify
-                    whatever that one says, so this is the only answer to "may this make noise". */}
                 <SettingsRow
                     searchId="agents.working.sound"
                     label={t('agents.working.sound.label')}

@@ -1,11 +1,11 @@
 import i18next from 'i18next';
-import type { ChatTurnItem } from '@ruimte/contracts';
-import { agentTurnLabel, turnLabel } from '@/chat/logic/timeline';
+import type { EventMap } from '@ruimte/contracts';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
+import { openSidebarTarget } from '@/shell/sidebar-navigation';
 import { projectNodes, revealNode } from '@/project/views';
-import { useChats, type ChatsById } from '@/state/chats';
+import { useChats } from '@/state/chats';
 import { seenNodeIds } from '@/state/in-sight';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { currentEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
@@ -21,55 +21,28 @@ const mayNotify = (): boolean => 'Notification' in window && Notification.permis
 const canNotify = (nodeId: string, seen: ReadonlySet<string>): boolean => mayNotify() && !seen.has(nodeId);
 
 /* Clicking any of these brings the window up and goes to the node, in whichever view it lives. */
-const notify = (nodeId: string, title: string, body: string, tag: string, silent: boolean): Notification => {
+const notify = (nodeId: string, title: string, body: string, tag: string, silent: boolean, reveal?: () => void): Notification => {
     const notification = new Notification(title, { body, tag, silent });
     notification.onclick = () => {
         window.focus();
-        revealNode(nodeId);
-        bringPromptToFront(nodeId);
+        if (reveal) {
+            reveal();
+        } else {
+            revealNode(nodeId);
+            bringPromptToFront(nodeId);
+        }
         notification.close();
     };
     return notification;
 };
 
-/* The newest turn of a chat, once it has settled; null while one is running and for a thread with none. */
-const settledTurn = (chat: ChatsById[string] | undefined): ChatTurnItem | null => {
-    if (chat === undefined) {
-        return null;
-    }
-    for (let i = chat.order.length - 1; i >= 0; i--) {
-        const item = chat.items[chat.order[i]!];
-        if (item?.kind === 'turn') {
-            return item.state === 'running' ? null : item;
-        }
-    }
-    return null;
-};
-
-/* What a turn that ended did, as far as anything outside the thread can say. */
-const turnBody = (nodeId: string): string => {
-    const turn = settledTurn(useChats.getState().byKey[endpointKey(currentEndpointId(), nodeId)]);
-    if (turn === null) {
-        return i18next.t('shell:notifications.finished');
-    }
-    const chat = useChats.getState().byKey[endpointKey(currentEndpointId(), nodeId)];
-    const items = chat ? chat.order.flatMap((id) => (chat.items[id]?.turnId === turn.id ? [chat.items[id]!] : [])) : [];
-    return turn.origin === 'agent' ? agentTurnLabel(turn) : turnLabel(turn, items);
-};
-
-/*
- * A turn that ended while nobody was looking at the node it ended in. `state/attention.ts` decides
- * that and calls this, so what is announced, what is marked and what is counted are the same event.
- * Silent unless somebody asked for the sound: a notification arrives while a person is doing
- * something else, and that is the moment to be quiet about it.
- */
-export const notifyTurnDone = (nodeId: string, title: string): void => {
-    const { agentsTurnNotify, agentsTurnSound } = useSettings.getState();
-    // The watcher only calls this for a turn nobody watched end, so the node is unseen by construction.
-    if (!agentsTurnNotify || !mayNotify()) {
+export const notifyRequested = (endpointId: string, alert: EventMap['push.notification']): void => {
+    if (!mayNotify() || (endpointId === currentEndpointId() && seenNodeIds().has(alert.nodeId))) {
         return;
     }
-    notify(nodeId, title, turnBody(nodeId), `ruimte-turn-${nodeId}`, !agentsTurnSound);
+    notify(alert.nodeId, alert.title, alert.body, `ruimte-requested-${endpointId}-${alert.nodeId}`, !useSettings.getState().agentsTurnSound, () => {
+        void openSidebarTarget({ endpointId, projectId: alert.projectId, viewId: alert.viewId, nodeId: alert.nodeId });
+    });
 };
 
 /* Notify once while a hidden node needs input, then withdraw when it resumes. */

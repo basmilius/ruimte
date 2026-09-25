@@ -214,6 +214,7 @@ const boot = async (): Promise<Daemon> => {
         agentsDeleteAnyView: () => false,
         showView: () => false,
         endSession: unused,
+        alert: () => undefined,
         notify: unused,
         writeDiagram: unused,
         tasks: { open: unused, give: unused, chatState: unused, done: unused, involving: () => [] },

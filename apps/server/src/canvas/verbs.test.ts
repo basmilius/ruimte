@@ -60,6 +60,7 @@ const nounNamed = (name: string): Noun => VERBS.find((entry): entry is Noun => e
 
 const VIEW_SUBS = nounNamed('view').actions;
 
+let alerts: { nodeId: string; text: string }[];
 let root: string;
 let folder: string;
 let outside: string;
@@ -128,6 +129,7 @@ const content = (): ProjectContent => ({
 });
 
 beforeEach(async () => {
+    alerts = [];
     root = await mkdtemp(join(tmpdir(), 'ruimte-verbs-'));
     folder = join(root, 'repo');
     outside = join(root, 'elsewhere');
@@ -227,6 +229,9 @@ const host = (): CanvasHost => ({
     showView: (projectId, viewId, by) => store.showView(projectId, viewId, by),
     endSession: async (kind, nodeId) => {
         ended.push(`${kind}\t${nodeId}`);
+    },
+    alert: (nodeId, text) => {
+        alerts.push({ nodeId, text });
     },
     notify: async (notice) => {
         notified.push(notice);
@@ -405,6 +410,7 @@ describe('the tree', () => {
             'read',
             'done',
             'notify',
+            'alert',
             'answer',
             'agent',
             'team',
@@ -3397,5 +3403,23 @@ describe('browser', () => {
         const id = await ownPage();
         expect((await post('browser', ['go', id, '--url', 'ftp://example.com'])).lines[0]).toContain('refused\tbad-url');
         expect(driven).toEqual([]);
+    });
+});
+
+describe('alert', () => {
+    test('notifies from the authenticated caller, including a standalone chat', async () => {
+        expect(await post('alert', ['--text', 'The build is ready.'])).toMatchObject({ status: 200, lines: ['alerted\tterm-1'] });
+        expect(await post('alert', ['--text', 'The review is ready.'], 'chat')).toMatchObject({ status: 200, lines: ['alerted\tchat-1'] });
+        expect(alerts).toEqual([
+            { nodeId: 'term-1', text: 'The build is ready.' },
+            { nodeId: 'chat-1', text: 'The review is ready.' }
+        ]);
+    });
+
+    test('rejects empty, oversized messages and another session as a destination', async () => {
+        for (const args of [[], ['--text', '   '], ['--text', 'x'.repeat(501)], ['term-2', '--text', 'Done']]) {
+            expect((await post('alert', args)).status).toBe(422);
+        }
+        expect(alerts).toEqual([]);
     });
 });
