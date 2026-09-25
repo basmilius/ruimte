@@ -148,6 +148,7 @@
     "chat.clear",
     "chat.turnDiff",
     "chat.fork",
+    "chat.continueOn",
     "chat.forkInfo",
     "chat.summarize",
     "chat.subagent",

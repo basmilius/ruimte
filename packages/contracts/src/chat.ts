@@ -791,6 +791,25 @@ export const ChatForkResultSchema = z.object({
 });
 export type ChatForkResult = z.infer<typeof ChatForkResultSchema>;
 
+/*
+ * Goes on after the last turn of a chat, which stopped on a limit, under another account of its CLI.
+ * An account that reads the same transcripts takes the chat over in place; any other goes on in a
+ * fork that gets the conversation handed over. Only ever asked by a person, never done on its own.
+ */
+export const ChatContinueOnPayloadSchema = z.object({
+    chatId: ChatIdSchema,
+    account: ProviderAccountIdSchema
+});
+export type ChatContinueOnPayload = z.infer<typeof ChatContinueOnPayloadSchema>;
+
+export const ChatContinueOnResultSchema = z.object({
+    // The chat that goes on: this one, or the fork.
+    chatId: ChatIdSchema,
+    // Set when it went on in a fork, which is where the client goes.
+    fork: ChatForkResultSchema.optional()
+});
+export type ChatContinueOnResult = z.infer<typeof ChatContinueOnResultSchema>;
+
 export const ChatSummarizePayloadSchema = z.object({ chatId: ChatIdSchema });
 export type ChatSummarizePayload = z.infer<typeof ChatSummarizePayloadSchema>;
 

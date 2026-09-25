@@ -16630,6 +16630,492 @@
       "edgeId"
     ]
   },
+  "request.chat.continueOn.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "account": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+      }
+    },
+    "required": [
+      "chatId",
+      "account"
+    ]
+  },
+  "request.chat.continueOn.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "fork": {
+        "type": "object",
+        "properties": {
+          "info": {
+            "type": "object",
+            "properties": {
+              "chatId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "provider": {
+                "type": "string",
+                "x-open-enum": [
+                  "claude",
+                  "codex",
+                  "gemini",
+                  "copilot"
+                ]
+              },
+              "account": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+              },
+              "cwd": {
+                "type": "string"
+              },
+              "agentSessionId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "selection": {
+                "type": "object",
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "options": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": [
+                        "string",
+                        "boolean"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "model",
+                  "options"
+                ]
+              },
+              "runtimeMode": {
+                "type": "string",
+                "x-open-enum": [
+                  "supervised",
+                  "auto-accept-edits",
+                  "auto",
+                  "full-access"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "x-open-enum": [
+                  "running",
+                  "needs-you",
+                  "idle",
+                  "error",
+                  "exited"
+                ]
+              },
+              "running": {
+                "type": "boolean"
+              },
+              "activeTurnId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "slashCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "queue": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "turnId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "mentions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "skills": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "chats": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "attachments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "mime": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "mime",
+                          "size",
+                          "path"
+                        ]
+                      }
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "text",
+                    "createdAt"
+                  ]
+                }
+              },
+              "background": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "shell",
+                        "monitor"
+                      ]
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "command": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "startedAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "description",
+                    "command",
+                    "startedAt"
+                  ]
+                }
+              },
+              "usage": {
+                "type": "object",
+                "properties": {
+                  "contextTokens": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "contextWindow": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "costUsd": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "turns": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "breakdown": {
+                    "type": "object",
+                    "properties": {
+                      "toolOutput": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "filesRead": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "conversation": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "system": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "toolOutput",
+                      "filesRead",
+                      "conversation",
+                      "system"
+                    ]
+                  }
+                },
+                "required": [
+                  "contextTokens",
+                  "contextWindow",
+                  "costUsd",
+                  "turns"
+                ]
+              },
+              "suggestedTitle": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "forkOf": {
+                "type": "object",
+                "properties": {
+                  "chatId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "turnId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "at": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "chatId",
+                  "turnId",
+                  "at"
+                ]
+              },
+              "resumeAtReset": {
+                "type": "boolean"
+              },
+              "limit": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "usage",
+                      "overload"
+                    ]
+                  },
+                  "resetsAt": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "resumeAt": {
+                "type": "number"
+              },
+              "createdAt": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "chatId",
+              "provider",
+              "cwd",
+              "agentSessionId",
+              "model",
+              "selection",
+              "runtimeMode",
+              "status",
+              "running",
+              "activeTurnId",
+              "slashCommands",
+              "usage",
+              "createdAt"
+            ]
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "viewId": {
+            "type": "string"
+          },
+          "edgeId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "worktree": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "branch": {
+                "type": "string"
+              },
+              "from": {
+                "type": "object",
+                "properties": {
+                  "branch": {
+                    "type": "string"
+                  },
+                  "commit": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "commit"
+                ]
+              },
+              "projectId": {
+                "type": "string"
+              },
+              "nodeId": {
+                "type": "string"
+              },
+              "madeAt": {
+                "type": "number"
+              },
+              "missing": {
+                "type": "boolean"
+              },
+              "locked": {
+                "type": "boolean"
+              },
+              "work": {
+                "type": "object",
+                "properties": {
+                  "changed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "untracked": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "ahead": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "operation": {
+                    "type": "string"
+                  },
+                  "behind": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "changed",
+                  "untracked",
+                  "ahead"
+                ]
+              }
+            },
+            "required": [
+              "path",
+              "branch"
+            ]
+          }
+        },
+        "required": [
+          "info",
+          "nodeId",
+          "viewId",
+          "edgeId"
+        ]
+      }
+    },
+    "required": [
+      "chatId"
+    ]
+  },
   "request.chat.forkInfo.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
