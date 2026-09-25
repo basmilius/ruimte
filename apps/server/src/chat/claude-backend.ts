@@ -94,6 +94,15 @@ export class ClaudeBackend implements ChatBackend {
         return true;
     }
 
+    declineRequest(requestId: string, message: string): boolean {
+        const frame = this.protocol.declineResponse(requestId, message);
+        if (frame === null) {
+            return false;
+        }
+        this.write(frame);
+        return true;
+    }
+
     stop(): void {
         this.closeStdin();
         this.child?.endAfterGrace();

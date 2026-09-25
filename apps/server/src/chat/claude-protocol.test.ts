@@ -315,6 +315,27 @@ describe('ClaudeProtocol', () => {
         expect(protocol.approvalResponse('r3', 'allow')).toBeNull();
     });
 
+    test("a background agent's request outlives the result, and a decline turns it down under the agent's own call", () => {
+        const protocol = new ClaudeProtocol();
+        protocol.handle({
+            type: 'control_request',
+            request_id: 'r4',
+            request: {
+                subtype: 'can_use_tool',
+                tool_name: 'AskUserQuestion',
+                input: { questions: [{ question: 'Which?', options: [] }] },
+                tool_use_id: 'toolu_q',
+                agent_id: 'a-1'
+            }
+        });
+        protocol.handle({ type: 'result', subtype: 'success', is_error: false, total_cost_usd: 0 });
+        expect(protocol.declineResponse('r4', 'The user stopped the turn')).toEqual({
+            type: 'control_response',
+            response: { subtype: 'success', request_id: 'r4', response: { behavior: 'deny', message: 'The user stopped the turn', toolUseID: 'toolu_q' } }
+        });
+        expect(protocol.declineResponse('r4', 'again')).toBeNull();
+    });
+
     test('the result frame ends the turn with the cost, and the window it reports is left alone', () => {
         const protocol = new ClaudeProtocol();
         protocol.handle({ type: 'system', subtype: 'init', session_id: 'sid', model: 'm' });

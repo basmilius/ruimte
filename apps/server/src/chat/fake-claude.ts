@@ -142,7 +142,50 @@ export const fakeClaude: FakeCli = (io) => {
 
     let pendingApproval: { command: string } | null = null;
     let pendingQuestion: string | null = null;
+    // What a background agent asked; its answer comes in after the turn that launched it, whenever a person gives one.
+    let backgroundAsk: { requestId: string; command: string } | null = null;
     let slow = false;
+
+    // The rest of a background agent once its request was answered: its call's result, its report, and the turn the CLI opens about it.
+    const finishBackgroundAgent = (command: string, allowed: boolean, message: string | undefined): void => {
+        const toolUseId = 'toolu_bgask';
+        out({
+            type: 'user',
+            message: {
+                role: 'user',
+                content: [
+                    {
+                        type: 'tool_result',
+                        tool_use_id: `${toolUseId}_bash`,
+                        content: allowed ? `ran: ${command}` : (message ?? 'denied by user'),
+                        is_error: !allowed
+                    }
+                ]
+            },
+            parent_tool_use_id: toolUseId,
+            session_id: sessionId
+        });
+        const report = allowed ? `the agent ran ${command}` : 'the agent could not run it';
+        out({
+            type: 'assistant',
+            message: { id: `msg_${nonce}_${++messageCounter}`, model, role: 'assistant', content: [{ type: 'text', text: report }], usage },
+            parent_tool_use_id: toolUseId,
+            session_id: sessionId
+        });
+        out({
+            type: 'system',
+            subtype: 'task_notification',
+            task_id: 'task-bgask',
+            tool_use_id: toolUseId,
+            status: 'completed',
+            output_file: '',
+            summary: report,
+            session_id: sessionId
+        });
+        out({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: io.cwd, tools: ['Bash'], slash_commands: [], argv: args });
+        assistantText(report);
+        result();
+    };
 
     const handleUser = (text: string): void => {
         if (text === 'crash') {
@@ -158,6 +201,82 @@ export const fakeClaude: FakeCli = (io) => {
         if (text === 'start a grandchild') {
             const grandchild = Bun.spawn(['sleep', '600'], { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore' });
             assistantText(`grandchild ${grandchild.pid}`);
+            result();
+            return;
+        }
+        /*
+         * A background agent that asks to run a command while the turn that launched it ends, framed the way Claude
+         * Code 2.1.282 sends it: the request names the agent's own call and its `agent_id`, the result of the turn
+         * comes anyway, and the request stays open until it is answered or the CLI takes it back. A line `slow`
+         * under it keeps the turn open instead, for a person to stop it.
+         */
+        if (text.startsWith('background approval:')) {
+            const [first = '', ...rest] = text.split('\n');
+            const command = first.slice(20).trim() || 'ls';
+            const toolUseId = 'toolu_bgask';
+            out({
+                type: 'assistant',
+                message: {
+                    id: `msg_${nonce}_${++messageCounter}`,
+                    model,
+                    role: 'assistant',
+                    content: [
+                        { type: 'tool_use', id: toolUseId, name: 'Agent', input: { description: 'check files', prompt: command, run_in_background: true } }
+                    ],
+                    usage
+                },
+                session_id: sessionId
+            });
+            out({
+                type: 'system',
+                subtype: 'task_started',
+                task_id: 'task-bgask',
+                tool_use_id: toolUseId,
+                description: 'check files',
+                subagent_type: 'general-purpose',
+                is_backgrounded: true,
+                task_type: 'local_agent',
+                session_id: sessionId
+            });
+            out({
+                type: 'user',
+                message: {
+                    role: 'user',
+                    content: [{ type: 'tool_result', tool_use_id: toolUseId, content: 'Async agent launched successfully.', is_error: false }]
+                },
+                session_id: sessionId
+            });
+            out({
+                type: 'assistant',
+                message: {
+                    id: `msg_${nonce}_${++messageCounter}`,
+                    model,
+                    role: 'assistant',
+                    content: [{ type: 'tool_use', id: `${toolUseId}_bash`, name: 'Bash', input: { command } }],
+                    usage
+                },
+                parent_tool_use_id: toolUseId,
+                session_id: sessionId
+            });
+            backgroundAsk = { requestId: 'req-bg', command };
+            out({
+                type: 'control_request',
+                request_id: 'req-bg',
+                request: {
+                    subtype: 'can_use_tool',
+                    tool_name: 'Bash',
+                    display_name: 'Bash',
+                    input: { command },
+                    description: `Run ${command}`,
+                    tool_use_id: `${toolUseId}_bash`,
+                    agent_id: 'a-bgask'
+                }
+            });
+            if (rest.includes('slow')) {
+                slow = true;
+                return;
+            }
+            assistantText('the agent runs');
             result();
             return;
         }
@@ -769,8 +888,14 @@ export const fakeClaude: FakeCli = (io) => {
 
     const handleControlResponse = (response: Record<string, unknown>): void => {
         const inner = response.response as
-            | { behavior?: string; updatedInput?: { answers?: Record<string, string> }; updatedPermissions?: unknown[] }
+            | { behavior?: string; message?: string; updatedInput?: { answers?: Record<string, string> }; updatedPermissions?: unknown[] }
             | undefined;
+        if (backgroundAsk !== null && response.request_id === backgroundAsk.requestId) {
+            const { command } = backgroundAsk;
+            backgroundAsk = null;
+            finishBackgroundAgent(command, inner?.behavior === 'allow', inner?.message);
+            return;
+        }
         if (pendingQuestion) {
             const answer = inner?.updatedInput?.answers?.[pendingQuestion] ?? 'no answer';
             pendingQuestion = null;

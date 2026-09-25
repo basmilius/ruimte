@@ -865,6 +865,28 @@ describe('a child that waits on input', () => {
         expect(approval.slice(1)).toEqual([`approval\t${approver.childId}\treq-1\tBash\ta person's alone`]);
         expect(daemon.chats.get(approver.childId)?.thread.get('approval-req-1')).toMatchObject({ decision: 'pending' });
     });
+
+    test("a background agent's approval outlives the child's turn with one note and its task open, and a person allowing it lets the child finish", async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const child = await asking(daemon, 'background approval: ls');
+        await daemon.until(() => turnsOf(daemon, child.childId).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        expect(daemon.chats.get(child.childId)?.thread.get('approval-req-bg')).toMatchObject({ decision: 'pending' });
+        expect(daemon.chats.get(child.childId)?.info.status).toBe('needs-you');
+        expect(daemon.tasks.get(child.taskId)?.status).toBe('open');
+        expect(wakeTurns(daemon)).toEqual([]);
+
+        daemon.chats.approve(child.childId, 'req-bg', 'allow');
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        expect(waitingNotes(daemon).map((item) => item.id)).toEqual([`waiting-${child.childId}-req-bg`]);
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'done', wake: 'sent', result: { text: 'the agent ran ls', source: 'turn' } });
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
+    });
 });
 
 describe('a child with work running in the background', () => {

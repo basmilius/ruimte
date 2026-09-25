@@ -50,7 +50,7 @@ describe('chat history', () => {
         const approval = { id: 'a', kind: 'approval', decision: 'pending', requestId: 'r' } as ChatItem;
         const thread = new ChatThread(info, [approval, message(0), message(1)]);
         expect(thread.history(1).items).toEqual([message(1)]);
-        expect(thread.pending()).toEqual([approval]);
+        expect(thread.pending() as ChatItem[]).toEqual([approval]);
         expect(thread.upsert({ ...approval, decision: 'allow' } as ChatItem)).toMatchObject({ historyIndex: 0 });
         expect(thread.pending()).toEqual([]);
         expect(thread.upsert(message(2))).toMatchObject({ historyIndex: 3 });

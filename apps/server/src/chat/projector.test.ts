@@ -156,6 +156,36 @@ describe('ThreadProjector', () => {
         expect(thread.info.status).toBe('running');
     });
 
+    test('a request left open as the turn ends waits on until it is answered, a stop or the process takes it', () => {
+        const approval = (requestId: string): BackendEvent => ({
+            type: 'approval.requested',
+            requestId,
+            ref: 'toolu_member',
+            toolName: 'Bash',
+            input: { command: 'ls' },
+            description: null,
+            canAllowAlways: false
+        });
+        const { thread, project } = setup();
+        project(approval('r1'), { type: 'turn.done', state: 'done', costUsd: 0 });
+        expect(thread.get('approval-r1')).toMatchObject({ decision: 'pending' });
+        expect(thread.info).toMatchObject({ status: 'needs-you', activeTurnId: null });
+        project({ type: 'request.withdrawn', requestId: 'r1' });
+        expect(thread.info.status).toBe('idle');
+
+        const stopped = setup();
+        stopped.project(approval('r2'), { type: 'turn.done', state: 'aborted', costUsd: 0 });
+        expect(stopped.thread.get('approval-r2')).toMatchObject({ decision: 'cancelled' });
+        expect(stopped.thread.info.status).toBe('idle');
+
+        const gone = setup();
+        gone.project(approval('r3'), { type: 'turn.done', state: 'done', costUsd: 0 }, { type: 'exit', exitCode: 0 });
+        expect(gone.thread.get('approval-r3')).toMatchObject({ decision: 'cancelled' });
+        // Waiting on a person between turns is no turn the exit broke off.
+        expect(gone.thread.info.status).toBe('idle');
+        expect(gone.thread.list().some((item) => item.kind === 'note')).toBe(false);
+    });
+
     test('a question waits under its request id', () => {
         const { thread, project } = setup();
         const questions = [{ id: '0', header: 'Pick', question: 'Which?', choices: [{ label: 'A', description: '' }], multiSelect: false }];

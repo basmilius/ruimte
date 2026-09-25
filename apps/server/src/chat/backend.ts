@@ -163,6 +163,8 @@ export interface ChatBackend {
     respondQuestion(requestId: string, answers: Record<string, string>): boolean;
     // Ends one command or monitor the CLI runs beside its turns, for a protocol that can name one.
     stopTask?(taskId: string): void;
+    // Turns down a request the CLI still holds after a person stopped the turn, for a protocol that leaves one open past it.
+    declineRequest?(requestId: string, message: string): boolean;
     // Drops an asynchronous question without telling the CLI, for a protocol that keeps one waiting.
     dismissRequest?(requestId: string): boolean;
     // Gives the CLI's own thread the name the chat got, for a protocol whose thread list and resume carry one.

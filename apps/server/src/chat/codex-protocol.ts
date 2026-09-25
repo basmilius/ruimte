@@ -587,6 +587,10 @@ export class CodexProtocol {
         const limit = status === 'failed' && isRecord(turn.error) ? this.limitOf(turn.error.codexErrorInfo) : null;
         const turnId = str(turn.id) ?? this.codexTurnId;
         this.codexTurnId = null;
+        // Forgotten here, so the thread may not keep waiting on any of it: nothing could answer it past the turn.
+        for (const requestId of this.pending.keys()) {
+            events.push({ type: 'request.withdrawn', requestId });
+        }
         this.pending.clear();
         // A terminal session still open as the turn ends is one Codex left running; it only completes once its process does.
         for (const [ref, processId] of this.openTerminals) {

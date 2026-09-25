@@ -527,6 +527,38 @@ describe('ChatManager', () => {
         });
     });
 
+    test("a background agent's approval outlives the turn, and a person allowing it later lets the agent finish", async () => {
+        await manager.create({ chatId: 'chat-ask', cwd: home });
+        manager.attach('chat-ask', 'c1');
+        await manager.send('chat-ask', 'background approval: ls');
+        await recorder.until(() => recorder.ofKind('turn')[0]?.state === 'done');
+
+        expect(recorder.items.get('approval-req-bg')).toMatchObject({ decision: 'pending', toolName: 'Bash', toolUseId: 'toolu_bgask_bash' });
+        expect(recorder.info).toMatchObject({ status: 'needs-you', activeTurnId: null });
+
+        manager.approve('chat-ask', 'req-bg', 'allow');
+        expect(recorder.items.get('approval-req-bg')).toMatchObject({ decision: 'allow' });
+        await recorder.until(() => recorder.ofKind('turn')[1]?.state === 'done' && idle());
+        expect(recorder.ofKind('turn')[1]).toMatchObject({ origin: 'agent' });
+        expect(recorder.ofKind('subagent')[0]).toMatchObject({ toolUseId: 'toolu_bgask', status: 'done' });
+        expect(subagentWork().find((item) => item.kind === 'tool')).toMatchObject({ output: 'ran: ls', state: 'done' });
+    });
+
+    test("stopping the turn cancels a background agent's approval and turns it down for the CLI", async () => {
+        await manager.create({ chatId: 'chat-stop-ask', cwd: home });
+        manager.attach('chat-stop-ask', 'c1');
+        await manager.send('chat-stop-ask', 'background approval: ls\nslow');
+        await recorder.until(() => recorder.items.get('approval-req-bg') !== undefined);
+        expect(recorder.info?.status).toBe('needs-you');
+
+        manager.cancel('chat-stop-ask');
+        await recorder.until(() => recorder.ofKind('turn')[0]?.state === 'aborted');
+        expect(recorder.items.get('approval-req-bg')).toMatchObject({ decision: 'cancelled' });
+        // The agent heard no, so it finishes instead of waiting on an answer nobody can give any more.
+        await recorder.until(() => recorder.ofKind('turn')[1]?.state === 'done' && idle());
+        expect(subagentWork().find((item) => item.kind === 'tool')).toMatchObject({ output: 'The user stopped the turn', state: 'error' });
+    });
+
     test('a background subagent that settles opens a turn of the agent, with the summary as its label', async () => {
         await manager.create({ chatId: 'chat-bg', cwd: home });
         manager.attach('chat-bg', 'c1');

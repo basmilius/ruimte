@@ -330,6 +330,16 @@ describe('CodexProtocol', () => {
         expect(protocol.approvalDecision('1-3', 'allow')).toBeNull();
     });
 
+    test('a request still open as the turn completes is withdrawn with it', () => {
+        const protocol = new CodexProtocol(1);
+        protocol.handle({ method: 'item/fileChange/requestApproval', id: 4, params: { ...ids, itemId: 'patch-2', reason: null } });
+        expect(protocol.handle({ method: 'turn/completed', params: { threadId: 't1', turn: { id: 'ct1', status: 'completed' } } })).toEqual([
+            { type: 'request.withdrawn', requestId: '1-4' },
+            { type: 'turn.done', state: 'done', costUsd: 0, native: { turnId: 'ct1' } }
+        ]);
+        expect(protocol.approvalDecision('1-4', 'allow')).toBeNull();
+    });
+
     test('a blocking question keeps the ids Codex gave and is answered by reply', () => {
         const protocol = new CodexProtocol(1);
         expect(

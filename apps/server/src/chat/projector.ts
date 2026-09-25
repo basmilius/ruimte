@@ -382,24 +382,25 @@ export class ThreadProjector {
                 costUsd: 0
             })
         );
-        events.push(this.thread.patchInfo({ status: 'running', activeTurnId: turnId }));
+        events.push(this.thread.patchInfo({ status: this.thread.statusFor(turnId), activeTurnId: turnId }));
     }
 
     /*
      * Whatever was open when the turn or the process ended: nobody is going to answer it now. A
      * background subagent is the exception, since it outlives the turn that launched it on purpose;
-     * only a process that is gone takes it down too.
+     * only a process that is gone takes it down too. A request is another: the CLI takes one of its own
+     * turn back itself, and one of work running beside the turn waits until a person stops the turn.
      */
-    private settleOpenItems(events: ChatEvent[], processGone = false): void {
+    private settleOpenItems(events: ChatEvent[], processGone = false, dropRequests = processGone): void {
         this.thinking = null;
         for (const item of this.thread.list()) {
             if (item.kind === 'assistant' && item.streaming) {
                 events.push(this.thread.upsert({ ...item, streaming: false }));
             } else if (item.kind === 'thinking' && item.streaming) {
                 events.push(this.thread.upsert({ ...item, streaming: false, endedAt: this.now() }));
-            } else if (item.kind === 'approval' && item.decision === 'pending') {
+            } else if (item.kind === 'approval' && item.decision === 'pending' && dropRequests) {
                 events.push(this.thread.upsert({ ...item, decision: 'cancelled' }));
-            } else if (item.kind === 'question' && item.state === 'pending') {
+            } else if (item.kind === 'question' && item.state === 'pending' && dropRequests) {
                 events.push(this.thread.upsert({ ...item, state: 'cancelled' }));
             } else if (item.kind === 'tool' && item.state === 'running' && (processGone || !this.backgroundCalls.has(item.id))) {
                 events.push(this.thread.upsert({ ...item, state: 'error' }));
@@ -809,12 +810,12 @@ export class ThreadProjector {
         const approval = this.thread.get(`approval-${requestId}`);
         if (approval?.kind === 'approval' && approval.decision === 'pending') {
             events.push(this.thread.upsert({ ...approval, decision: 'cancelled' }));
-            events.push(this.thread.setStatus('running'));
+            events.push(this.thread.setStatus(this.thread.statusFor(this.thread.info.activeTurnId)));
         }
         const question = this.thread.get(`question-${requestId}`);
         if (question?.kind === 'question' && question.state === 'pending') {
             events.push(this.thread.upsert({ ...question, state: 'cancelled' }));
-            events.push(this.thread.setStatus('running'));
+            events.push(this.thread.setStatus(this.thread.statusFor(this.thread.info.activeTurnId)));
         }
     }
 
@@ -829,12 +830,12 @@ export class ThreadProjector {
         if (error) {
             events.push(this.note('error', error));
         }
-        this.settleOpenItems(events);
+        this.settleOpenItems(events, false, state === 'aborted');
         this.closeTurn(state, costUsd, events, native, limit);
         const usage = this.thread.info.usage;
         events.push(
             this.thread.patchInfo({
-                status: 'idle',
+                status: this.thread.statusFor(null),
                 activeTurnId: null,
                 usage: { ...usage, costUsd: costUsd || usage.costUsd, turns: usage.turns + 1 },
                 limit: state === 'error' ? limit : undefined
@@ -844,7 +845,9 @@ export class ThreadProjector {
 
     private finishProcess(exitCode: number | null, stderr: string | null, events: ChatEvent[]): void {
         this.settleOpenItems(events, true);
-        const busy = this.thread.info.status === 'running' || this.thread.info.status === 'needs-you';
+        // Waiting on a person between turns is not a turn the process took down with it.
+        const { status, activeTurnId } = this.thread.info;
+        const busy = status === 'running' || (status === 'needs-you' && activeTurnId !== null);
         if (busy || (exitCode !== null && exitCode !== 0)) {
             const reason = exitCode === null ? `${this.providerName} stopped` : `${this.providerName} exited with code ${exitCode}`;
             // A note shows its first line and folds the rest open as markdown.

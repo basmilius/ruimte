@@ -222,6 +222,19 @@ export class ClaudeProtocol {
         };
     }
 
+    /* The `control_response` that turns down an approval or a question the CLI still holds, or null when nothing waits under that id. */
+    declineResponse(requestId: string, message: string): unknown | null {
+        const pending = this.pending.get(requestId);
+        if (pending === undefined) {
+            return null;
+        }
+        this.pending.delete(requestId);
+        return {
+            type: 'control_response',
+            response: { subtype: 'success', request_id: requestId, response: { behavior: 'deny', message, toolUseID: pending.toolUseId ?? undefined } }
+        };
+    }
+
     forgetPending(): void {
         this.pending.clear();
     }

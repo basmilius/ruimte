@@ -334,7 +334,7 @@ export class ChatSession {
         if (item?.kind !== 'approval' || item.decision !== 'pending' || this.backend?.respondApproval(requestId, decision, message) !== true) {
             return false;
         }
-        this.emit([this.thread.upsert({ ...item, decision }), this.thread.setStatus('running')]);
+        this.emit([this.thread.upsert({ ...item, decision }), this.thread.setStatus(this.thread.statusFor(this.thread.info.activeTurnId))]);
         return true;
     }
 
@@ -344,7 +344,7 @@ export class ChatSession {
         if (item?.kind !== 'question' || item.state !== 'pending' || this.backend?.respondQuestion(requestId, answers) !== true) {
             return false;
         }
-        this.emit([this.thread.upsert({ ...item, answers, state: 'answered' }), this.thread.setStatus('running')]);
+        this.emit([this.thread.upsert({ ...item, answers, state: 'answered' }), this.thread.setStatus(this.thread.statusFor(this.thread.info.activeTurnId))]);
         return true;
     }
 
@@ -358,8 +358,7 @@ export class ChatSession {
             return false;
         }
         this.backend?.dismissRequest?.(item.requestId);
-        const status = this.thread.info.activeTurnId === null ? 'idle' : 'running';
-        this.emit([this.thread.upsert({ ...item, state: 'dismissed' }), this.thread.setStatus(status)]);
+        this.emit([this.thread.upsert({ ...item, state: 'dismissed' }), this.thread.setStatus(this.thread.statusFor(this.thread.info.activeTurnId))]);
         return true;
     }
 
@@ -537,7 +536,7 @@ export class ChatSession {
                 ? []
                 : [this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: wake.note })]),
             ...(note === null ? [] : [this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: note })]),
-            this.thread.patchInfo({ status: 'running', activeTurnId: turnId })
+            this.thread.patchInfo({ status: this.thread.statusFor(turnId), activeTurnId: turnId })
         ]);
         this.options.persist();
         this.turnReady = this.checkpoint(turnId);
@@ -925,7 +924,7 @@ export class ChatSession {
             const attachments = extras.attachments?.length ? extras.attachments : undefined;
             events.push(this.thread.upsert({ id: newId('user'), kind: 'user', createdAt: now, turnId, text, mentions, skills, chats, attachments }));
         }
-        events.push(this.thread.patchInfo({ status: 'running', activeTurnId: turnId }));
+        events.push(this.thread.patchInfo({ status: this.thread.statusFor(turnId), activeTurnId: turnId }));
         this.emit(events);
         // On disk before the CLI answers, so a daemon that goes down mid-turn still shows the question.
         this.options.persist();
@@ -1135,6 +1134,12 @@ export class ChatSession {
         const openTurnId = this.thread.info.activeTurnId;
         // Settled as failed by the exit below; the transcript may still show that they finished first.
         const orphaned = event.type === 'exit' && this.info.provider === 'claude' ? this.runningBackgroundRows() : [];
+        if (event.type === 'turn.done' && event.state === 'aborted') {
+            // A request of work beside the turn outlives the interrupt; turned down, that work goes on instead of waiting forever.
+            for (const item of this.thread.pending()) {
+                this.backend?.declineRequest?.(item.requestId, 'The user stopped the turn');
+            }
+        }
         this.emit(this.projector.project(generation, event));
         if (orphaned.length > 0) {
             void this.settleFromTranscripts(orphaned.flatMap((row) => this.thread.get(row.id) ?? []).filter((item) => item.kind === 'subagent'));

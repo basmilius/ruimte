@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { ChatError } from './errors.ts';
-import type { AgentStatus, ChatEvent, ChatInfo, ChatItem, ChatHistoryResult } from '@ruimte/contracts';
+import type { AgentStatus, ChatApprovalItem, ChatEvent, ChatHistoryResult, ChatInfo, ChatItem, ChatQuestionItem } from '@ruimte/contracts';
 
 /*
  * The state of one chat as the client sees it. Every mutation answers the event that describes
@@ -104,9 +104,18 @@ export class ChatThread {
         return this.patchInfo({ status });
     }
 
-    pending(): ChatItem[] {
+    /* A request can outlive the turn it came in, when work the CLI runs beside its turns asked it. */
+    statusFor(activeTurnId: string | null): AgentStatus {
+        if (this.pending().length > 0) {
+            return 'needs-you';
+        }
+        return activeTurnId === null ? 'idle' : 'running';
+    }
+
+    pending(): Array<ChatApprovalItem | ChatQuestionItem> {
         return this.list().filter(
-            (item) => (item.kind === 'approval' && item.decision === 'pending') || (item.kind === 'question' && item.state === 'pending')
+            (item): item is ChatApprovalItem | ChatQuestionItem =>
+                (item.kind === 'approval' && item.decision === 'pending') || (item.kind === 'question' && item.state === 'pending')
         );
     }
 
