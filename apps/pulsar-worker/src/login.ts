@@ -14,7 +14,16 @@ import { clientIp, failure, json, noContent, readBody } from './http.ts';
 import { resolveAccount, spendLinkToken, storeLinkCode } from './identities.ts';
 import type { OAuthProvider } from './providers.ts';
 import { LIMITS, overAnyLimit } from './rate-limit.ts';
-import { accountLoginSql, accountProviderSql, authenticate, createSession, revokeSession, rotateSession, type AccountRow } from './sessions.ts';
+import {
+    accountDisplayNameSql,
+    accountLoginSql,
+    accountProviderSql,
+    authenticate,
+    createSession,
+    revokeSession,
+    rotateSession,
+    type AccountRow
+} from './sessions.ts';
 
 // Long enough to type a password and a second factor at the provider.
 const LOGIN_ATTEMPT_LIFETIME_MS = 10 * 60_000;
@@ -175,7 +184,7 @@ export const finishLogin = async (request: Request, env: Env, provider: OAuthPro
     }
     let identity;
     try {
-        identity = await provider.identify(env, { code, codeVerifier: attempt.provider_verifier, redirectUri: callbackUrl(env, provider) });
+        identity = await provider.identify(env, { code, codeVerifier: attempt.provider_verifier, redirectUri: callbackUrl(env, provider), callback: params });
     } catch (error) {
         console.error('provider refused the login', error);
         return redirectToApp(attempt.app_redirect_uri, { error: 'server_error', state: attempt.app_state });
@@ -217,7 +226,8 @@ export const exchangeLoginCode = async (request: Request, env: Env): Promise<Res
         `DELETE FROM login_code WHERE code_hash = ?1 RETURNING app_redirect_uri, app_code_challenge, expires_at,
              (SELECT id FROM account WHERE account.id = login_code.account_id) AS account_id,
              ${accountProviderSql('login_code.account_id')} AS provider,
-             ${accountLoginSql('login_code.account_id')} AS login`
+             ${accountLoginSql('login_code.account_id')} AS login,
+             ${accountDisplayNameSql('login_code.account_id')} AS display_name`
     )
         .bind(await sha256(code))
         .first<{
@@ -227,6 +237,7 @@ export const exchangeLoginCode = async (request: Request, env: Env): Promise<Res
             account_id: string | null;
             provider: ProviderId;
             login: string | null;
+            display_name: string | null;
         }>();
     if (!row || !row.account_id || row.expires_at <= Date.now()) {
         return failure('unauthorized', 'The login code expired or was already used');
@@ -238,7 +249,7 @@ export const exchangeLoginCode = async (request: Request, env: Env): Promise<Res
     if (!(await verifySignature(sessionKey, sessionKeyMessage(code, sessionKey), sessionKeySignature))) {
         return failure('bad-signature', 'The session key did not sign this login');
     }
-    const account: AccountRow = { id: row.account_id, provider: row.provider, login: row.login };
+    const account: AccountRow = { id: row.account_id, provider: row.provider, login: row.login, displayName: row.display_name };
     return json(await createSession(env.DB, account, label ?? null, sessionKey));
 };
 

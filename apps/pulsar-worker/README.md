@@ -33,6 +33,23 @@ in `packages/pulsar/src/statement-key.ts`. The wire shapes live in `packages/pul
 | `DELETE /v1/machines/<id>`                 | Take a machine off the list and remember that it was removed                               |
 | `POST /v1/statements`                      | A signed statement for one machine and one client key, two minutes                         |
 
+## The account
+
+An account (`AccountSchema` in `packages/pulsar`) is its `id`, the `provider` and `login` of the identity it
+is shown as (the oldest with a login, else the oldest), and a `displayName`. Each identity carries its own
+`displayName` too: the person's name at the provider, or `null`. The account's `displayName` is that of the
+identity it is shown as, and when that one has none, of the first identity in the same order that has one.
+A client from before names ignores the field, and one reading an older Worker finds it missing.
+
+GitHub hands the public name of the profile to every sign-in and link, so a rename on GitHub follows at the
+next one. Apple sends the name only on the first authorization of an Apple ID for this app: on the web as
+the `user` field of its form post, native as the credential's `fullName`, which the app may pass on as
+`displayName` to `/v1/apple/complete` (the iOS app asks for no scope and sends none yet). Neither is signed, but each arrives with the id_token that proves the
+identity it names. A sign-in without a name keeps the stored one; to have Apple send it again, stop using
+Sign in with Apple for Ruimte in the Apple ID settings and sign in once more. A name has its control
+characters and runs of whitespace folded and is cut at 100 characters. Migration `0013_display_name.sql`
+adds the nullable columns, so the Worker still running while it applies keeps working.
+
 ## Local dev
 
 ```sh
@@ -160,7 +177,7 @@ GitHub, Settings, Developer settings, OAuth Apps, New OAuth App:
 - Enable Device Flow: off
 
 Generate a client secret on the app's page and put both values in the secrets above. The Worker asks
-for no scope: the numeric user id and the login come with any token, and the token is dropped after
+for no scope: the numeric user id, the login and the public name come with any token, and the token is dropped after
 one request to `/user`.
 
 ## Sign in with Apple
@@ -177,7 +194,7 @@ Apple Developer, Certificates, Identifiers & Profiles:
    key's page, the team id in the top right of the portal and under Membership.
 4. Put the four secrets above with `wrangler secret put`, and check `/health` says `"apple": true`.
 
-No scope is asked, so no email relay has to be configured. If the portal asks to verify the domain, put
+Only the `name` scope is asked, never `email`, so no email relay has to be configured. If the portal asks to verify the domain, put
 the file it hands out in the `APPLE_DOMAIN_ASSOCIATION` secret: the Worker serves it at
 `/.well-known/apple-developer-domain-association.txt`.
 

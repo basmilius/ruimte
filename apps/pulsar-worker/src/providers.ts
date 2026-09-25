@@ -1,11 +1,14 @@
 import type { ProviderId } from '@ruimte/pulsar';
 import { apple } from './apple.ts';
+import { cleanDisplayName } from './display-name.ts';
 import type { Env } from './env.ts';
 
 export interface ProviderIdentity {
     // The provider's own user id, stable across a rename and never an email.
     subject: string;
     login: string | null;
+    // `null` when the provider did not say, which never clears a name stored before.
+    displayName: string | null;
 }
 
 /*
@@ -22,8 +25,11 @@ export interface OAuthProvider {
     configured(env: Env): boolean;
     /* `codeChallenge` is the SHA-256 of the verifier `identify` gets: a PKCE challenge, or a nonce for a provider without PKCE. */
     authorizeUrl(env: Env, input: { state: string; codeChallenge: string; redirectUri: string }): string;
-    // Throws when the provider refuses the code; the caller turns that into an error for the app.
-    identify(env: Env, input: { code: string; codeVerifier: string; redirectUri: string }): Promise<ProviderIdentity>;
+    /*
+     * Throws when the provider refuses the code; the caller turns that into an error for the app.
+     * `callback` is everything the provider sent back, for a provider that says more there than in its token.
+     */
+    identify(env: Env, input: { code: string; codeVerifier: string; redirectUri: string; callback: URLSearchParams }): Promise<ProviderIdentity>;
 }
 
 const USER_AGENT = 'ruimte-pulsar';
@@ -35,7 +41,7 @@ const github: OAuthProvider = {
         return Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET);
     },
     authorizeUrl(env, input) {
-        // No scope: the numeric user id and the login come with any token.
+        // No scope: the numeric user id, the login and the public name come with any token.
         const url = new URL('https://github.com/login/oauth/authorize');
         url.searchParams.set('client_id', env.GITHUB_CLIENT_ID ?? '');
         url.searchParams.set('redirect_uri', input.redirectUri);
@@ -64,12 +70,12 @@ const github: OAuthProvider = {
         const userResponse = await fetch('https://api.github.com/user', {
             headers: { accept: 'application/vnd.github+json', authorization: `Bearer ${token.access_token}`, 'user-agent': USER_AGENT }
         });
-        const user = (await userResponse.json().catch(() => null)) as { id?: unknown; login?: unknown } | null;
+        const user = (await userResponse.json().catch(() => null)) as { id?: unknown; login?: unknown; name?: unknown } | null;
         if (!userResponse.ok || typeof user?.id !== 'number') {
             throw new Error(`GitHub did not say who signed in: ${userResponse.status}`);
         }
         // The GitHub token is dropped here: the address book never acts on GitHub for anyone.
-        return { subject: String(user.id), login: typeof user.login === 'string' ? user.login : null };
+        return { subject: String(user.id), login: typeof user.login === 'string' ? user.login : null, displayName: cleanDisplayName(user.name) };
     }
 };
 

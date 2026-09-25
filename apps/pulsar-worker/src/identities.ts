@@ -13,7 +13,7 @@ import type { Env } from './env.ts';
 import { clientIp, failure, json, readBody } from './http.ts';
 import { PROVIDERS, type ProviderIdentity } from './providers.ts';
 import { LIMITS, overAnyLimit } from './rate-limit.ts';
-import { accountLoginSql, accountProviderSql, authenticate, type AccountRow, type SessionContext } from './sessions.ts';
+import { accountDisplayNameSql, accountLoginSql, accountProviderSql, authenticate, type AccountRow, type SessionContext } from './sessions.ts';
 
 // The start URL is opened the moment the token comes back; a token nobody used by then is worth dropping.
 export const LINK_REQUEST_LIFETIME_MS = 5 * 60_000;
@@ -35,12 +35,13 @@ const providerLinked = (provider: ProviderId): Response =>
  * The account an identity opens, made on its first sign-in. A lookup by identity first; then an account
  * row without identities that names it, which only a Worker from before identities writes during a
  * deploy; then a new account with the identity in one batch. A second sign-in racing the first for a new
- * identity fails the batch on the primary key and reads what the first one made.
+ * identity fails the batch on the primary key and reads what the first one made. A known identity takes
+ * the login and any name the provider sent this time.
  */
 export const resolveAccount = async (db: D1Database, provider: ProviderId, identity: ProviderIdentity, now = Date.now()): Promise<string | null> => {
     const known = await db
-        .prepare('UPDATE identity SET login = ?3 WHERE provider = ?1 AND subject = ?2 RETURNING account_id')
-        .bind(provider, identity.subject, identity.login)
+        .prepare('UPDATE identity SET login = ?3, display_name = COALESCE(?4, display_name) WHERE provider = ?1 AND subject = ?2 RETURNING account_id')
+        .bind(provider, identity.subject, identity.login, identity.displayName)
         .first<{ account_id: string }>();
     if (known) {
         return known.account_id;
@@ -54,8 +55,10 @@ export const resolveAccount = async (db: D1Database, provider: ProviderId, ident
         .first<{ id: string }>();
     if (legacy) {
         await db
-            .prepare('INSERT INTO identity (provider, subject, account_id, login, created_at) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT DO NOTHING')
-            .bind(provider, identity.subject, legacy.id, identity.login, now)
+            .prepare(
+                'INSERT INTO identity (provider, subject, account_id, login, display_name, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT DO NOTHING'
+            )
+            .bind(provider, identity.subject, legacy.id, identity.login, identity.displayName, now)
             .run();
     } else {
         const accountId = crypto.randomUUID();
@@ -65,8 +68,8 @@ export const resolveAccount = async (db: D1Database, provider: ProviderId, ident
                     .prepare('INSERT INTO account (id, provider, subject, login, created_at) VALUES (?1, ?2, ?3, ?4, ?5)')
                     .bind(accountId, provider, identity.subject, identity.login, now),
                 db
-                    .prepare('INSERT INTO identity (provider, subject, account_id, login, created_at) VALUES (?1, ?2, ?3, ?4, ?5)')
-                    .bind(provider, identity.subject, accountId, identity.login, now)
+                    .prepare('INSERT INTO identity (provider, subject, account_id, login, display_name, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)')
+                    .bind(provider, identity.subject, accountId, identity.login, identity.displayName, now)
             ]);
             return accountId;
         } catch (error) {
@@ -84,21 +87,26 @@ export const accountResult = async (db: D1Database, accountId: string): Promise<
     const [accountRows, identityRows] = await db.batch([
         db
             .prepare(
-                `SELECT account.id, ${accountProviderSql('account.id')} AS provider, ${accountLoginSql('account.id')} AS login FROM account WHERE account.id = ?1`
+                `SELECT account.id, ${accountProviderSql('account.id')} AS provider, ${accountLoginSql('account.id')} AS login,
+                     ${accountDisplayNameSql('account.id')} AS display_name
+                 FROM account WHERE account.id = ?1`
             )
             .bind(accountId),
-        db.prepare('SELECT provider, login, created_at FROM identity WHERE account_id = ?1 ORDER BY created_at, provider').bind(accountId)
+        db.prepare('SELECT provider, login, display_name, created_at FROM identity WHERE account_id = ?1 ORDER BY created_at, provider').bind(accountId)
     ]);
-    const account = (accountRows?.results ?? [])[0] as AccountRow | undefined;
+    const account = (accountRows?.results ?? [])[0] as (Omit<AccountRow, 'displayName'> & { display_name: string | null }) | undefined;
     if (!account) {
         return null;
     }
-    const identities: Identity[] = ((identityRows?.results ?? []) as { provider: ProviderId; login: string | null; created_at: number }[]).map((row) => ({
+    const identities: Identity[] = (
+        (identityRows?.results ?? []) as { provider: ProviderId; login: string | null; display_name: string | null; created_at: number }[]
+    ).map((row) => ({
         provider: row.provider,
         login: row.login,
+        displayName: row.display_name,
         createdAt: row.created_at
     }));
-    return { account: { id: account.id, provider: account.provider, login: account.login }, identities };
+    return { account: { id: account.id, provider: account.provider, login: account.login, displayName: account.display_name }, identities };
 };
 
 const answerAccount = async (db: D1Database, session: SessionContext): Promise<Response> => {
@@ -179,8 +187,8 @@ export const storeLinkCode = async (
     const code = randomToken();
     await db
         .prepare(
-            `INSERT INTO identity_link_code (code_hash, account_id, session_id, provider, subject, login, app_redirect_uri, app_code_challenge, expires_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`
+            `INSERT INTO identity_link_code (code_hash, account_id, session_id, provider, subject, login, display_name, app_redirect_uri, app_code_challenge, expires_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
         )
         .bind(
             await sha256(code),
@@ -189,6 +197,7 @@ export const storeLinkCode = async (
             input.provider,
             input.identity.subject,
             input.identity.login,
+            input.identity.displayName,
             input.appRedirectUri,
             input.appCodeChallenge,
             Date.now() + LINK_CODE_LIFETIME_MS
@@ -203,6 +212,7 @@ interface LinkCodeRow {
     provider: ProviderId;
     subject: string;
     login: string | null;
+    display_name: string | null;
     app_redirect_uri: string;
     app_code_challenge: string;
     expires_at: number;
@@ -243,11 +253,16 @@ export const completeIdentityLink = async (request: Request, env: Env): Promise<
     if (owner && owner.account_id !== session.account.id) {
         return identityTaken(row.provider);
     }
-    if (!owner) {
+    if (owner) {
+        await env.DB.prepare('UPDATE identity SET login = ?3, display_name = COALESCE(?4, display_name) WHERE provider = ?1 AND subject = ?2')
+            .bind(row.provider, row.subject, row.login, row.display_name)
+            .run();
+    } else {
         const inserted = await env.DB.prepare(
-            'INSERT INTO identity (provider, subject, account_id, login, created_at) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT DO NOTHING RETURNING account_id'
+            `INSERT INTO identity (provider, subject, account_id, login, display_name, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT DO NOTHING RETURNING account_id`
         )
-            .bind(row.provider, row.subject, session.account.id, row.login, Date.now())
+            .bind(row.provider, row.subject, session.account.id, row.login, row.display_name, Date.now())
             .first<{ account_id: string }>();
         if (!inserted) {
             // Either unique pair held: the identity went to another account in the meantime, or this account got one of the provider.

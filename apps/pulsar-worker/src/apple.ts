@@ -1,4 +1,5 @@
 import { APPLE_NATIVE_CLIENT_ID, sha256 } from '@ruimte/pulsar';
+import { cleanDisplayName } from './display-name.ts';
 import type { Env } from './env.ts';
 import { decodeJwt, signEs256Jwt, verifyRs256 } from './jwt.ts';
 import type { OAuthProvider } from './providers.ts';
@@ -121,6 +122,29 @@ export const identifyNativeApple = async (env: Env, input: { identityToken: stri
 };
 
 /*
+ * The `user` field Apple posts beside the code, only on the first authorization of an Apple ID for this
+ * app. Nothing signs it, but it arrives in the same post as the signed id_token and only ever names that
+ * identity, so the worst a forged one does is misname the person's own account to themselves.
+ */
+export const appleUserName = (field: string | null): string | null => {
+    if (field === null) {
+        return null;
+    }
+    let user: unknown;
+    try {
+        user = JSON.parse(field);
+    } catch {
+        return null;
+    }
+    const name = typeof user === 'object' && user !== null ? (user as { name?: unknown }).name : null;
+    if (typeof name !== 'object' || name === null) {
+        return null;
+    }
+    const { firstName, lastName } = name as { firstName?: unknown; lastName?: unknown };
+    return cleanDisplayName([firstName, lastName].filter((part) => typeof part === 'string').join(' '));
+};
+
+/*
  * Apple web login uses a form post to keep the code out of URL logs. Apple has no web PKCE, so the
  * verifier hash travels as the nonce and must return in the identity token.
  */
@@ -135,7 +159,9 @@ export const apple: OAuthProvider = {
         url.searchParams.set('client_id', env.APPLE_CLIENT_ID ?? '');
         url.searchParams.set('redirect_uri', input.redirectUri);
         url.searchParams.set('response_type', 'code');
+        // A name scope requires the form post.
         url.searchParams.set('response_mode', 'form_post');
+        url.searchParams.set('scope', 'name');
         url.searchParams.set('state', input.state);
         url.searchParams.set('nonce', input.codeChallenge);
         return url.toString();
@@ -160,6 +186,6 @@ export const apple: OAuthProvider = {
         // Apple's access and refresh tokens are dropped with the response: the address book never acts on Apple for anyone.
         // The web flow's own Services ID only; a native app's token carries its bundle id and would pass its own list.
         const subject = await verifyAppleIdToken(token.id_token, { audiences: [clientId], nonce: await sha256(input.codeVerifier) });
-        return { subject, login: null };
+        return { subject, login: null, displayName: appleUserName(input.callback.get('user')) };
     }
 };

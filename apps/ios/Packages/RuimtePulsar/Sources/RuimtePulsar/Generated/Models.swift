@@ -136,11 +136,13 @@ public struct Account: Codable, Sendable, Equatable {
     public let `id`: String
     public let `provider`: ProviderId
     public let `login`: String?
+    public let `displayName`: Presence<String>
 
-    public init(`id`: String, `provider`: ProviderId, `login`: String?) {
+    public init(`id`: String, `provider`: ProviderId, `login`: String?, `displayName`: Presence<String> = .missing) {
         self.`id` = `id`
         self.`provider` = `provider`
         self.`login` = `login`
+        self.`displayName` = `displayName`
     }
 
     public init(from decoder: Decoder) throws {
@@ -149,6 +151,7 @@ public struct Account: Codable, Sendable, Equatable {
         `id` = try container.decode(String.self, forKey: .`id`)
         `provider` = try container.decode(ProviderId.self, forKey: .`provider`)
         `login` = try container.decode(String?.self, forKey: .`login`)
+        `displayName` = try container.contains(.`displayName`) ? (container.decodeNil(forKey: .`displayName`) ? .null : .value(container.decode(String.self, forKey: .`displayName`))) : .missing
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -156,12 +159,18 @@ public struct Account: Codable, Sendable, Equatable {
         try container.encode(`id`, forKey: .`id`)
         try container.encode(`provider`, forKey: .`provider`)
         try container.encode(`login`, forKey: .`login`)
+        switch `displayName` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`displayName`)
+        case .value(let value): try container.encode(value, forKey: .`displayName`)
+        }
     }
 
     private enum CodingKeys: String, CodingKey {
         case `id` = "id"
         case `provider` = "provider"
         case `login` = "login"
+        case `displayName` = "displayName"
     }
 }
 
@@ -173,11 +182,13 @@ public enum ProviderId: String, CaseIterable, Codable, Sendable, Equatable {
 public struct Identity: Codable, Sendable, Equatable {
     public let `provider`: ProviderId
     public let `login`: String?
+    public let `displayName`: Presence<String>
     public let `createdAt`: Int64
 
-    public init(`provider`: ProviderId, `login`: String?, `createdAt`: Int64) {
+    public init(`provider`: ProviderId, `login`: String?, `displayName`: Presence<String> = .missing, `createdAt`: Int64) {
         self.`provider` = `provider`
         self.`login` = `login`
+        self.`displayName` = `displayName`
         self.`createdAt` = `createdAt`
     }
 
@@ -186,6 +197,7 @@ public struct Identity: Codable, Sendable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `provider` = try container.decode(ProviderId.self, forKey: .`provider`)
         `login` = try container.decode(String?.self, forKey: .`login`)
+        `displayName` = try container.contains(.`displayName`) ? (container.decodeNil(forKey: .`displayName`) ? .null : .value(container.decode(String.self, forKey: .`displayName`))) : .missing
         `createdAt` = try container.decode(Int64.self, forKey: .`createdAt`)
     }
 
@@ -193,12 +205,18 @@ public struct Identity: Codable, Sendable, Equatable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(`provider`, forKey: .`provider`)
         try container.encode(`login`, forKey: .`login`)
+        switch `displayName` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`displayName`)
+        case .value(let value): try container.encode(value, forKey: .`displayName`)
+        }
         try container.encode(`createdAt`, forKey: .`createdAt`)
     }
 
     private enum CodingKeys: String, CodingKey {
         case `provider` = "provider"
         case `login` = "login"
+        case `displayName` = "displayName"
         case `createdAt` = "createdAt"
     }
 }
@@ -566,11 +584,13 @@ public struct NativeAppleCompletePayload: Codable, Sendable, Equatable {
     public let `attempt`: String
     public let `identityToken`: String
     public let `authorizationCode`: String
+    public let `displayName`: String?
 
-    public init(`attempt`: String, `identityToken`: String, `authorizationCode`: String) {
+    public init(`attempt`: String, `identityToken`: String, `authorizationCode`: String, `displayName`: String? = nil) {
         self.`attempt` = `attempt`
         self.`identityToken` = `identityToken`
         self.`authorizationCode` = `authorizationCode`
+        self.`displayName` = `displayName`
     }
 
     public init(from decoder: Decoder) throws {
@@ -579,6 +599,7 @@ public struct NativeAppleCompletePayload: Codable, Sendable, Equatable {
         `attempt` = try container.decode(String.self, forKey: .`attempt`)
         `identityToken` = try container.decode(String.self, forKey: .`identityToken`)
         `authorizationCode` = try container.decode(String.self, forKey: .`authorizationCode`)
+        `displayName` = try container.decodeIfPresent(String.self, forKey: .`displayName`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -586,12 +607,14 @@ public struct NativeAppleCompletePayload: Codable, Sendable, Equatable {
         try container.encode(`attempt`, forKey: .`attempt`)
         try container.encode(`identityToken`, forKey: .`identityToken`)
         try container.encode(`authorizationCode`, forKey: .`authorizationCode`)
+        try container.encodeIfPresent(`displayName`, forKey: .`displayName`)
     }
 
     private enum CodingKeys: String, CodingKey {
         case `attempt` = "attempt"
         case `identityToken` = "identityToken"
         case `authorizationCode` = "authorizationCode"
+        case `displayName` = "displayName"
     }
 }
 

@@ -168,6 +168,8 @@ const migrate = async (on: Miniflare, files?: (file: string) => boolean): Promis
 // A code GitHub handed out, with the challenge the address book sent along, so the mock checks PKCE the way GitHub does.
 const githubCodes = new Map<string, { userId: number; challenge: string }>();
 const githubTokens = new Map<string, number>();
+// The public name on a GitHub profile, per user id; a user without an entry has none.
+const githubNames = new Map<number, string>();
 
 const APPLE_TEAM_ID = 'TEAMID0001';
 const APPLE_KEY_ID = 'APPLEKEY01';
@@ -266,7 +268,9 @@ const outbound = async (request: Request): Promise<Response> => {
     }
     if (url.href === 'https://api.github.com/user') {
         const userId = githubTokens.get((request.headers.get('authorization') ?? '').replace('Bearer ', ''));
-        return userId ? Response.json({ id: userId, login: `user-${userId}` }) : Response.json({ message: 'Bad credentials' }, { status: 401 });
+        return userId
+            ? Response.json({ id: userId, login: `user-${userId}`, name: githubNames.get(userId) ?? null })
+            : Response.json({ message: 'Bad credentials' }, { status: 401 });
     }
     return new Response(`unexpected outbound request to ${url.href}`, { status: 599 });
 };
@@ -353,12 +357,17 @@ const githubCallback = async (start: LoginStart, userId: number, cookie = start.
     return dispatch(`/auth/github/callback?${new URLSearchParams({ code, state: start.providerState })}`, { headers: { cookie }, ip: start.ip, on: start.on });
 };
 
-const appleCallback = async (start: LoginStart, sub: string, options: { cookie?: string; code?: Partial<AppleCode> } = {}): Promise<Response> => {
+// `user` is the field Apple posts beside the code on the first authorization of an Apple ID.
+const appleCallback = async (
+    start: LoginStart,
+    sub: string,
+    options: { cookie?: string; code?: Partial<AppleCode>; user?: string } = {}
+): Promise<Response> => {
     const code = randomBytes(8).toString('hex');
     appleCodes.set(code, { sub, nonce: start.providerChallenge, ...options.code });
     return dispatch('/auth/apple/callback', {
         method: 'POST',
-        form: { code, state: start.providerState },
+        form: { code, state: start.providerState, ...(options.user === undefined ? {} : { user: options.user }) },
         headers: { cookie: options.cookie ?? start.cookie, origin: APPLE_ISSUER },
         ip: start.ip,
         on: start.on
@@ -1304,7 +1313,7 @@ describe('sign in with Apple', () => {
         expect(again.account.id).toBe(session.account.id);
     });
 
-    test('the start asks for a form post with a nonce and no scope, with a cookie that survives a cross-site post', async () => {
+    test('the start asks for a form post with a nonce and the name scope, with a cookie that survives a cross-site post', async () => {
         const start = await startLogin('apple');
         const response = await dispatch(
             `/auth/apple/start?${new URLSearchParams({ redirect_uri: REDIRECT_URI, state: base64url(randomBytes(16)), code_challenge: sha256('y'.repeat(43)), code_challenge_method: 'S256' })}`
@@ -1314,7 +1323,7 @@ describe('sign in with Apple', () => {
         expect(authorize.searchParams.get('response_type')).toBe('code');
         expect(authorize.searchParams.get('client_id')).toBe(APPLE_CLIENT_ID);
         expect(authorize.searchParams.get('redirect_uri')).toBe(`${PUBLIC_ORIGIN}/auth/apple/callback`);
-        expect(authorize.searchParams.has('scope')).toBe(false);
+        expect(authorize.searchParams.get('scope')).toBe('name');
         expect(start.providerChallenge.length).toBe(43);
         expect(start.setCookie).toContain('SameSite=None');
         expect(start.setCookie).toContain('Secure');
@@ -1411,7 +1420,7 @@ describe('identities', () => {
         const result = (await linked.json()) as AccountResult;
         expect(result.identities.map((identity) => identity.provider)).toEqual(['github', 'apple']);
         // The account keeps being shown as the identity that has a login.
-        expect(result.account).toEqual({ id: session.account.id, provider: 'github', login: 'user-7201' });
+        expect(result.account).toEqual({ id: session.account.id, provider: 'github', login: 'user-7201', displayName: null });
 
         const withApple = await signInWithApple('apple-7201');
         expect(withApple.account).toEqual(result.account);
@@ -1421,7 +1430,7 @@ describe('identities', () => {
     test('an account made with Apple adds GitHub and is shown as the GitHub login from then on', async () => {
         const session = await signInWithApple('apple-7202');
         expect((await completeLink(session, await linkLogin(session, 'github', '7202'))).status).toBe(200);
-        expect((await accountOf(session)).account).toEqual({ id: session.account.id, provider: 'github', login: 'user-7202' });
+        expect((await accountOf(session)).account).toEqual({ id: session.account.id, provider: 'github', login: 'user-7202', displayName: null });
     });
 
     test('a link token is spent by the first start, and only works for the provider it was asked for', async () => {
@@ -1543,6 +1552,104 @@ describe('identities', () => {
     });
 });
 
+describe('display names', () => {
+    const appleUser = (firstName: string, lastName: string): string => JSON.stringify({ name: { firstName, lastName }, email: 'person@example.com' });
+
+    const signInWithAppleNamed = async (sub: string, user?: string): Promise<SignedIn> => {
+        const start = await startLogin('apple');
+        const code = codeOf(await appleCallback(start, sub, { user }));
+        const key = newKeyPair();
+        const response = await dispatch('/v1/session', {
+            method: 'POST',
+            body: { code, codeVerifier: start.verifier, redirectUri: REDIRECT_URI, ...bindKey(code, key) },
+            ip: start.ip
+        });
+        expect(response.status).toBe(200);
+        return { ...((await response.json()) as SessionResult), key };
+    };
+
+    test('a GitHub name comes with every sign-in, so a rename on GitHub follows', async () => {
+        githubNames.set(7301, '  Ada\t Lovelace ');
+        const session = await signIn(7301);
+        expect(session.account.displayName).toBe('Ada Lovelace');
+        expect((await accountOf(session)).identities).toEqual([
+            { provider: 'github', login: 'user-7301', displayName: 'Ada Lovelace', createdAt: expect.any(Number) }
+        ]);
+
+        githubNames.set(7301, 'Ada King');
+        expect((await signIn(7301)).account.displayName).toBe('Ada King');
+        expect((await accountOf(session)).account.displayName).toBe('Ada King');
+    });
+
+    test('Apple names the identity on the first authorization, and a sign-in without a name keeps it', async () => {
+        const first = await signInWithAppleNamed('apple-7302', appleUser('Bas', 'Milius'));
+        expect(first.account).toEqual({ id: first.account.id, provider: 'apple', login: null, displayName: 'Bas Milius' });
+
+        const again = await signInWithAppleNamed('apple-7302');
+        expect(again.account.displayName).toBe('Bas Milius');
+        expect((await accountOf(again)).identities[0]?.displayName).toBe('Bas Milius');
+
+        // Revoked at Apple and authorized again: Apple sends the name once more, and it replaces the stored one.
+        const renamed = await signInWithAppleNamed('apple-7302', appleUser('Bas', 'M.'));
+        expect(renamed.account.displayName).toBe('Bas M.');
+    });
+
+    test('a user field Apple could not have sent names nobody', async () => {
+        for (const user of ['not json', '{"name":"Bas"}', '{"name":{"firstName":7}}', JSON.stringify({ name: { firstName: ' ', lastName: '' } })]) {
+            const session = await signInWithAppleNamed(`apple-7303-${user.length}`, user);
+            expect(session.account.displayName).toBeNull();
+        }
+    });
+
+    test('native Apple takes the name the app read off the credential', async () => {
+        const verifier = base64url(randomBytes(32));
+        const start = await dispatch('/v1/apple/start', { method: 'POST', body: { codeChallenge: sha256(verifier) } });
+        const attempt = (await start.json()) as NativeAppleStartResult;
+        const authorizationCode = base64url(randomBytes(32));
+        appleCodes.set(authorizationCode, { native: true, sub: 'native-7304', nonce: attempt.nonce });
+        const identityToken = signRs256(
+            { iss: APPLE_ISSUER, aud: APPLE_NATIVE_CLIENT_ID, sub: 'native-7304', nonce: attempt.nonce, exp: Math.floor(Date.now() / 1000) + 600 },
+            appleSigningKey.privateKey
+        );
+        const complete = await dispatch('/v1/apple/complete', {
+            method: 'POST',
+            body: { attempt: attempt.attempt, identityToken, authorizationCode, displayName: 'Grace Hopper' }
+        });
+        expect(complete.status).toBe(200);
+        const { code } = (await complete.json()) as { code: string };
+        const key = newKeyPair();
+        const session = await dispatch('/v1/session', {
+            method: 'POST',
+            body: { code, codeVerifier: verifier, redirectUri: APP_REDIRECT_SCHEME_URI, ...bindKey(code, key) }
+        });
+        expect(((await session.json()) as SessionResult).account.displayName).toBe('Grace Hopper');
+    });
+
+    test('the account takes the name of the identity it is shown as, else the first that has one', async () => {
+        const session = await signInWithAppleNamed('apple-7305', appleUser('Bas', 'Milius'));
+        expect((await completeLink(session, await linkLogin(session, 'github', '7305'))).status).toBe(200);
+        // Shown as the GitHub login from here on, which has no name, so the Apple ID's name stands in.
+        expect((await accountOf(session)).account).toEqual({ id: session.account.id, provider: 'github', login: 'user-7305', displayName: 'Bas Milius' });
+
+        githubNames.set(7305, 'Bas on GitHub');
+        expect((await signIn(7305)).account.displayName).toBe('Bas on GitHub');
+        const result = await accountOf(session);
+        expect(result.account.displayName).toBe('Bas on GitHub');
+        expect(result.identities.map((identity) => [identity.provider, identity.displayName])).toEqual([
+            ['apple', 'Bas Milius'],
+            ['github', 'Bas on GitHub']
+        ]);
+    });
+
+    test('a link carries the name Apple sent to the identity it adds', async () => {
+        const session = await signIn(7306);
+        const start = await startLogin('apple', { link: await requestLink(session, 'apple') });
+        const login = { start, code: codeOf(await appleCallback(start, 'apple-7306', { user: appleUser('Linus', 'T') })) };
+        const linked = (await (await completeLink(session, login)).json()) as AccountResult;
+        expect(linked.account).toEqual({ id: session.account.id, provider: 'github', login: 'user-7306', displayName: 'Linus T' });
+    });
+});
+
 describe('the identity migration', () => {
     let old: Miniflare;
 
@@ -1584,14 +1691,14 @@ describe('the identity migration', () => {
         const account = await dispatch('/v1/account', { headers, on: old });
         expect(account.status).toBe(200);
         expect(await account.json()).toEqual({
-            account: { id: 'before', provider: 'github', login: 'user-before' },
-            identities: [{ provider: 'github', login: 'user-before', createdAt: 1 }]
+            account: { id: 'before', provider: 'github', login: 'user-before', displayName: null },
+            identities: [{ provider: 'github', login: 'user-before', displayName: null, createdAt: 1 }]
         });
         const machines = (await (await dispatch('/v1/machines', { headers, on: old })).json()) as MachineListResult;
         expect(machines.machines.map((machine) => machine.id)).toEqual(['machine-before']);
 
         const again = await signIn(9001, newKeyPair(), old);
-        expect(again.account).toEqual({ id: 'before', provider: 'github', login: 'user-9001' });
+        expect(again.account).toEqual({ id: 'before', provider: 'github', login: 'user-9001', displayName: null });
     });
 });
 

@@ -98,7 +98,9 @@ export type NativeAppleStartResult = z.infer<typeof NativeAppleStartResultSchema
 export const NativeAppleCompletePayloadSchema = z.object({
     attempt: TokenSchema,
     identityToken: z.string().min(1).max(16384),
-    authorizationCode: z.string().min(1).max(4096)
+    authorizationCode: z.string().min(1).max(4096),
+    // The credential's full name, which Apple hands the app only on the first authorization of an Apple ID.
+    displayName: z.string().max(1024).optional()
 });
 export type NativeAppleCompletePayload = z.infer<typeof NativeAppleCompletePayloadSchema>;
 
@@ -145,7 +147,12 @@ export const AccountSchema = z.object({
      * the oldest. Not the one this session signed in with, so every client names the account alike.
      */
     provider: ProviderIdSchema,
-    login: z.string().nullable()
+    login: z.string().nullable(),
+    /*
+     * The name of the identity the account is shown as, else of the first identity in that order that
+     * has one. Optional for an address book from before names; `null` when no identity has one.
+     */
+    displayName: z.string().nullable().optional()
 });
 export type Account = z.infer<typeof AccountSchema>;
 
@@ -153,6 +160,8 @@ export type Account = z.infer<typeof AccountSchema>;
 export const IdentitySchema = z.object({
     provider: ProviderIdSchema,
     login: z.string().nullable(),
+    // The person's name at the provider. Apple tells it only on the first sign-in, so it can lag a rename there.
+    displayName: z.string().nullable().optional(),
     createdAt: z.number().int()
 });
 export type Identity = z.infer<typeof IdentitySchema>;

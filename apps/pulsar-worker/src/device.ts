@@ -28,7 +28,7 @@ import type { Env } from './env.ts';
 import { clientIp, failure, json, noContent, readBody } from './http.ts';
 import { storeMachine } from './machines.ts';
 import { LIMITS, overAnyLimit } from './rate-limit.ts';
-import { accountLoginSql, accountProviderSql, authenticate, type SessionContext } from './sessions.ts';
+import { accountDisplayNameSql, accountLoginSql, accountProviderSql, authenticate, type SessionContext } from './sessions.ts';
 
 /*
  * Linking a machine with a code (`ruimte login`). The terminal starts a link and holds the device
@@ -195,12 +195,13 @@ const linkOfDeviceCode = async (env: Env, deviceCode: string) =>
         `SELECT ${LINK_COLUMNS.split(', ')
             .map((column) => `device_link.${column}`)
             .join(', ')}, CASE WHEN account.id IS NULL THEN NULL ELSE ${accountProviderSql('account.id')} END AS provider,
-             CASE WHEN account.id IS NULL THEN NULL ELSE ${accountLoginSql('account.id')} END AS login
+             CASE WHEN account.id IS NULL THEN NULL ELSE ${accountLoginSql('account.id')} END AS login,
+             CASE WHEN account.id IS NULL THEN NULL ELSE ${accountDisplayNameSql('account.id')} END AS display_name
          FROM device_link LEFT JOIN account ON account.id = device_link.account_id
          WHERE device_link.device_code_hash = ?1 AND device_link.status != 'done'`
     )
         .bind(await sha256(deviceCode))
-        .first<LinkRow & { provider: ProviderId | null; login: string | null }>();
+        .first<LinkRow & { provider: ProviderId | null; login: string | null; display_name: string | null }>();
 
 const deviceCodeBody = async (request: Request, env: Env, bucket: string, limit: number) => {
     const limited = await overAnyLimit(env.DB, [[`ip:${clientIp(request)}:${bucket}`, limit]]);
@@ -224,7 +225,9 @@ export const pollDeviceLink = async (request: Request, env: Env): Promise<Respon
     // A denial or a cancel is said as such until the cleanup; only a link still waiting runs out.
     const status: DeviceLinkStatus = decided ? (row.status as DeviceLinkStatus) : row.expires_at <= Date.now() ? 'expired' : (row.status as DeviceLinkStatus);
     const account: Account | null =
-        status === 'approved' && row.account_id !== null && row.provider !== null ? { id: row.account_id, provider: row.provider, login: row.login } : null;
+        status === 'approved' && row.account_id !== null && row.provider !== null
+            ? { id: row.account_id, provider: row.provider, login: row.login, displayName: row.display_name }
+            : null;
     const result: DeviceLinkPollResult = { status, interval: DEVICE_LINK_POLL_INTERVAL_S, account };
     return json(result);
 };
@@ -272,7 +275,7 @@ export const completeDeviceLink = async (request: Request, env: Env): Promise<Re
     if ('response' in stored) {
         return stored.response;
     }
-    return json({ machine: stored.machine, account: { id: row.account_id, provider: row.provider, login: row.login } });
+    return json({ machine: stored.machine, account: { id: row.account_id, provider: row.provider, login: row.login, displayName: row.display_name } });
 };
 
 // `POST /v1/device/cancel`: the terminal stopped waiting, so the code stops working on the page too.

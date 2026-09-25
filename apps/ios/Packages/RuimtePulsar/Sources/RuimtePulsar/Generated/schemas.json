@@ -94,6 +94,12 @@
               "string",
               "null"
             ]
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -115,6 +121,12 @@
               ]
             },
             "login": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "displayName": {
               "type": [
                 "string",
                 "null"
@@ -156,6 +168,12 @@
         ]
       },
       "login": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "displayName": {
         "type": [
           "string",
           "null"
@@ -373,6 +391,12 @@
         ]
       },
       "login": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "displayName": {
         "type": [
           "string",
           "null"
@@ -669,6 +693,10 @@
         "type": "string",
         "minLength": 1,
         "maxLength": 4096
+      },
+      "displayName": {
+        "type": "string",
+        "maxLength": 1024
       }
     },
     "required": [
@@ -1039,6 +1067,12 @@
             ]
           },
           "login": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "displayName": {
             "type": [
               "string",
               "null"

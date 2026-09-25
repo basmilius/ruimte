@@ -28,10 +28,18 @@ export const accountProviderSql = (ref: string): string =>
 export const accountLoginSql = (ref: string): string =>
     `CASE WHEN EXISTS (SELECT 1 FROM identity WHERE identity.account_id = ${ref}) THEN ${DISPLAY_IDENTITY(ref, 'login')} ELSE (SELECT account.login FROM account WHERE account.id = ${ref}) END`;
 
+/*
+ * The first name in the order `DISPLAY_IDENTITY` picks the identity in, so the name of the identity the
+ * account is shown as wins, and another identity's name stands in when that one has none.
+ */
+export const accountDisplayNameSql = (ref: string): string =>
+    `(SELECT identity.display_name FROM identity WHERE identity.account_id = ${ref} ORDER BY identity.display_name IS NULL, identity.login IS NULL, identity.created_at, identity.provider LIMIT 1)`;
+
 export interface AccountRow {
     id: string;
     provider: ProviderId;
     login: string | null;
+    displayName: string | null;
 }
 
 export interface SessionContext {
@@ -92,10 +100,11 @@ export const rotateSession = async (db: D1Database, payload: SessionRefreshPaylo
              WHERE id = ?4 AND refresh_hash = ?5 AND revoked_at IS NULL
              RETURNING expires_at, (SELECT id FROM account WHERE account.id = session.account_id) AS account_id,
                  ${accountProviderSql('session.account_id')} AS provider,
-                 ${accountLoginSql('session.account_id')} AS login`
+                 ${accountLoginSql('session.account_id')} AS login,
+                 ${accountDisplayNameSql('session.account_id')} AS display_name`
         )
         .bind(await sha256(accessToken), accessExpiresAt, await sha256(nextRefreshToken), session.id, hash)
-        .first<{ expires_at: number; account_id: string; provider: ProviderId; login: string | null }>();
+        .first<{ expires_at: number; account_id: string; provider: ProviderId; login: string | null; display_name: string | null }>();
     if (!row) {
         await revokeSession(db, session.id);
         return null;
@@ -105,7 +114,7 @@ export const rotateSession = async (db: D1Database, payload: SessionRefreshPaylo
         accessExpiresAt,
         refreshToken: nextRefreshToken,
         expiresAt: row.expires_at,
-        account: { id: row.account_id, provider: row.provider, login: row.login }
+        account: { id: row.account_id, provider: row.provider, login: row.login, displayName: row.display_name }
     };
 };
 
@@ -117,16 +126,17 @@ export const authenticate = async (request: Request, db: D1Database): Promise<Se
     const now = Date.now();
     const row = await db
         .prepare(
-            `SELECT session.id, session.label, account.id AS account_id, ${accountProviderSql('account.id')} AS provider, ${accountLoginSql('account.id')} AS login
+            `SELECT session.id, session.label, account.id AS account_id, ${accountProviderSql('account.id')} AS provider, ${accountLoginSql('account.id')} AS login,
+                 ${accountDisplayNameSql('account.id')} AS display_name
              FROM session JOIN account ON account.id = session.account_id
              WHERE session.access_hash = ?1 AND session.revoked_at IS NULL AND session.access_expires_at > ?2 AND session.expires_at > ?2`
         )
         .bind(await sha256(match[1]), now)
-        .first<{ id: string; label: string | null; account_id: string; provider: ProviderId; login: string | null }>();
+        .first<{ id: string; label: string | null; account_id: string; provider: ProviderId; login: string | null; display_name: string | null }>();
     if (!row) {
         return null;
     }
-    return { id: row.id, label: row.label, account: { id: row.account_id, provider: row.provider, login: row.login } };
+    return { id: row.id, label: row.label, account: { id: row.account_id, provider: row.provider, login: row.login, displayName: row.display_name } };
 };
 
 export const revokeSession = async (db: D1Database, sessionId: string): Promise<void> => {

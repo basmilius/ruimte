@@ -1,5 +1,6 @@
 import { APP_REDIRECT_SCHEME_URI, NativeAppleCompletePayloadSchema, NativeAppleStartPayloadSchema, randomToken, sha256 } from '@ruimte/pulsar';
 import { identifyNativeApple, nativeAppleConfigured } from './apple.ts';
+import { cleanDisplayName } from './display-name.ts';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, readBody } from './http.ts';
 import { resolveAccount } from './identities.ts';
@@ -59,7 +60,8 @@ export const completeNativeApple = async (request: Request, env: Env): Promise<R
     if (attempt.expires_at <= Date.now()) {
         return failure('unauthorized', 'This Apple sign-in expired. Start again.');
     }
-    const accountId = await resolveAccount(env.DB, 'apple', { subject, login: null });
+    // Like the web flow's `user` field: unsigned, but it only names the identity Apple just vouched for.
+    const accountId = await resolveAccount(env.DB, 'apple', { subject, login: null, displayName: cleanDisplayName(body.value.displayName) });
     if (!accountId) {
         return failure('internal', 'The account could not be opened. Start signing in again.');
     }
