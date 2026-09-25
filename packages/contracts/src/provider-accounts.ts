@@ -65,6 +65,8 @@ export const ProviderAccountStatusSchema = z.object({
     organization: z.string().nullable(),
     // The folder the CLI is started with, resolved; empty for a CLI without a config folder variable.
     home: z.string(),
+    // Where the account's conversations are written, resolved: a chat goes on under another account only when both write here.
+    transcripts: z.string().optional(),
     // Why the state is what it is, in a sentence, when the CLI or the daemon said.
     message: z.string().nullable(),
     // Milliseconds since the epoch; 0 while the account was never checked.

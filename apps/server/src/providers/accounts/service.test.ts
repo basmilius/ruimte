@@ -264,6 +264,18 @@ describe('ProviderAccountsService', () => {
         expect(service.transcriptFolder('claude', 'nobody')).toBeNull();
     });
 
+    test('tells a client where each account writes its conversations, so it can say which can go on with one', async () => {
+        const service = await make();
+        await service.save({
+            claude_personal: { kind: 'claude', home: '~/.claude_personal' },
+            codex_personal: { kind: 'codex', home: '~/.codex', shadowHome: '~/.codex_personal' }
+        });
+        const snapshot = service.snapshot();
+        expect(stateOf(snapshot, 'claude_personal')?.transcripts).toBe('/home/bas/.claude_personal');
+        expect(stateOf(snapshot, 'codex_personal')?.home).toBe('/home/bas/.codex_personal');
+        expect(stateOf(snapshot, 'codex_personal')?.transcripts).toBe(stateOf(snapshot, 'codex')?.transcripts);
+    });
+
     test('creates a Claude account in a folder of its own that only the person can read', async () => {
         const service = await make();
         const created = await service.create({ kind: 'claude', label: 'Personal', color: 'green' });

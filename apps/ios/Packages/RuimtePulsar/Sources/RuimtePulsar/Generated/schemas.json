@@ -18956,6 +18956,9 @@
             "home": {
               "type": "string"
             },
+            "transcripts": {
+              "type": "string"
+            },
             "message": {
               "type": [
                 "string",
@@ -19186,6 +19189,9 @@
             "home": {
               "type": "string"
             },
+            "transcripts": {
+              "type": "string"
+            },
             "message": {
               "type": [
                 "string",
@@ -19348,6 +19354,9 @@
               ]
             },
             "home": {
+              "type": "string"
+            },
+            "transcripts": {
               "type": "string"
             },
             "message": {
@@ -19534,6 +19543,9 @@
               ]
             },
             "home": {
+              "type": "string"
+            },
+            "transcripts": {
               "type": "string"
             },
             "message": {
@@ -42848,6 +42860,9 @@
               ]
             },
             "home": {
+              "type": "string"
+            },
+            "transcripts": {
               "type": "string"
             },
             "message": {
