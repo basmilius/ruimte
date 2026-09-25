@@ -10,6 +10,8 @@ export interface ProviderHome {
     readonly fallback: string;
     // Variables that sign the CLI in on their own, over whatever login the folder holds.
     readonly loginEnv: readonly string[];
+    // What a person types in a terminal to sign in; the account's folder comes from the terminal's environment.
+    readonly loginCommand: string;
 }
 
 /*

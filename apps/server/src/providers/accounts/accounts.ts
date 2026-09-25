@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { AgentKindSchema, ProviderAccountSchema, type AgentKind, type ProviderAccount, type ProviderAccountMap } from '@ruimte/contracts';
 import type { ChatProvider } from '../provider.ts';
+import { variablesProblem } from './variables.ts';
 
 export type Env = Record<string, string | undefined>;
 
@@ -30,9 +31,19 @@ const isRootedPath = (path: string): boolean => path === '~' || path.startsWith(
  * What is wrong with an account of a CLI this version knows, or null when nothing is. An account of
  * an unknown kind is never judged: it is kept the way it was written, for a version that knows it.
  */
-export const accountProblem = (id: string, account: ProviderAccount, provider: ChatProvider, env: Env): string | null => {
+export const accountProblem = (
+    id: string,
+    account: ProviderAccount,
+    provider: ChatProvider,
+    env: Env,
+    folderVariables: readonly string[] = []
+): string | null => {
     if (isKnownKind(id) && id !== account.kind) {
         return `"${id}" is the id of the default ${id} account`;
+    }
+    const variables = variablesProblem(account.env ?? [], folderVariables);
+    if (variables !== null) {
+        return variables;
     }
     if (isDefaultAccount(id, account)) {
         return account.home !== undefined || account.shadowHome !== undefined ? 'The default account uses the folder of the CLI itself' : null;
@@ -60,6 +71,13 @@ export const accountProblem = (id: string, account: ProviderAccount, provider: C
     }
     return null;
 };
+
+/* The variables that point a CLI at its folder, which no account may set by hand. */
+export const folderVariablesOf = (providerOf: (kind: AgentKind) => ChatProvider): string[] =>
+    AgentKindSchema.options.flatMap((kind) => {
+        const home = providerOf(kind).home;
+        return home === undefined ? [] : [home.env];
+    });
 
 /* The map with a default account for every CLI this version knows, those first and in catalog order. */
 export const withDefaults = (accounts: ProviderAccountMap): ProviderAccountMap => {
@@ -101,18 +119,20 @@ export const transcriptFolder = (id: string, account: ProviderAccount, provider:
  * The environment of a CLI process of this account. The default account runs in the daemon's own. Any
  * other gets its folder in the CLI's variable, and loses the variables that would sign the CLI in over
  * that folder's login: an inherited key would win, and only the bill would tell. Never HOME, which
- * moves where Claude Code looks in the keychain.
+ * moves where Claude Code looks in the keychain. The account's own variables come last, so a key a
+ * person set there is the one that counts.
  */
-export const accountEnv = (id: string, account: ProviderAccount, provider: ChatProvider, baseEnv: Env): Env => {
+export const accountEnv = (id: string, account: ProviderAccount, provider: ChatProvider, baseEnv: Env, variables: Record<string, string> = {}): Env => {
+    const withVariables = (env: Env): Env => (Object.keys(variables).length === 0 ? env : { ...env, ...variables });
     if (isDefaultAccount(id, account) || provider.home === undefined || account.home === undefined) {
-        return baseEnv;
+        return withVariables(baseEnv);
     }
     const env = { ...baseEnv };
     for (const name of provider.home.loginEnv) {
         delete env[name];
     }
     env[provider.home.env] = accountFolder(id, account, provider, baseEnv);
-    return env;
+    return withVariables(env);
 };
 
 export interface NamedAccount {
@@ -152,7 +172,7 @@ export const readAccount = (id: string, raw: unknown, providerOf: (kind: AgentKi
         return isKnownKind(id) ? null : raw;
     }
     const parsed = ProviderAccountSchema.safeParse(raw);
-    if (!parsed.success || accountProblem(id, parsed.data, providerOf(kind), env) !== null) {
+    if (!parsed.success || accountProblem(id, parsed.data, providerOf(kind), env, folderVariablesOf(providerOf)) !== null) {
         return null;
     }
     return parsed.data;

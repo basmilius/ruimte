@@ -4,7 +4,19 @@ import { ProviderAccountIdSchema, ProviderAccountSchema, type AgentKind, type Pr
 import { CodedError } from '../../coded-error.ts';
 import { isNotFound, writeAtomic } from '../../fs.ts';
 import type { ChatProvider } from '../provider.ts';
-import { accountProblem, isKnownKind, readAccount, withDefaults, type Env } from './accounts.ts';
+import {
+    accountFolder,
+    accountProblem,
+    defaultFolder,
+    expandHome,
+    folderVariablesOf,
+    isDefaultAccount,
+    isKnownKind,
+    readAccount,
+    withDefaults,
+    type Env
+} from './accounts.ts';
+import { redactVariables } from './variables.ts';
 
 const FILE_VERSION = 1;
 
@@ -51,7 +63,10 @@ export const writeAccounts = async (path: string, stored: StoredAccounts): Promi
 /* What a client reads of an entry of a kind it may not know either: the fields this version knows. */
 const wireAccount = (entry: unknown): ProviderAccount => {
     const parsed = ProviderAccountSchema.safeParse(entry);
-    return parsed.success ? parsed.data : { kind: String((entry as { kind?: unknown }).kind) };
+    if (!parsed.success) {
+        return { kind: String((entry as { kind?: unknown }).kind) };
+    }
+    return parsed.data.env === undefined ? parsed.data : { ...parsed.data, env: redactVariables(parsed.data.env) };
 };
 
 export const wireAccounts = (stored: StoredAccounts): ProviderAccountMap =>
@@ -63,13 +78,56 @@ export class InvalidAccountError extends CodedError<'invalid-account'> {
     }
 }
 
+const storedFolders = (entry: unknown): Pick<ProviderAccount, 'home' | 'shadowHome'> => {
+    const parsed = ProviderAccountSchema.safeParse(entry);
+    return parsed.success ? { home: parsed.data.home, shadowHome: parsed.data.shadowHome } : {};
+};
+
+/*
+ * What is wrong with the folders of an account a person points somewhere new, or null. An account
+ * whose folders did not change is left alone, so one whose folder went missing can still be renamed.
+ */
+const linkProblem = (
+    id: string,
+    account: ProviderAccount,
+    before: unknown,
+    provider: ChatProvider,
+    env: Env,
+    isDirectory: (path: string) => boolean
+): string | null => {
+    if (isDefaultAccount(id, account) || provider.home === undefined || account.home === undefined) {
+        return null;
+    }
+    const was = storedFolders(before);
+    if (was.home === account.home && was.shadowHome === account.shadowHome) {
+        return null;
+    }
+    for (const folder of [account.home, account.shadowHome]) {
+        if (folder !== undefined && !isDirectory(expandHome(folder, env))) {
+            return `${folder} is not a folder on this machine`;
+        }
+    }
+    if (accountFolder(id, account, provider, env) === defaultFolder(provider, env)) {
+        return `${defaultFolder(provider, env)} is the folder of the default ${provider.name} account`;
+    }
+    return null;
+};
+
 /*
  * The whole map a person saved, as the file will hold it. A mistake in an account of a known kind
  * refuses the save; an account of an unknown kind keeps the entry the file had under its id, which a
- * client that knows the kind no better than this daemon could only have cut short.
+ * client that knows the kind no better than this daemon could only have cut short. Sensitive values
+ * are still in it: the caller puts them in the keychain before the file is written.
  */
-export const acceptAccounts = (saved: ProviderAccountMap, before: StoredAccounts, providerOf: (kind: AgentKind) => ChatProvider, env: Env): StoredAccounts => {
+export const acceptAccounts = (
+    saved: ProviderAccountMap,
+    before: StoredAccounts,
+    providerOf: (kind: AgentKind) => ChatProvider,
+    env: Env,
+    isDirectory: (path: string) => boolean
+): StoredAccounts => {
     const stored: StoredAccounts = {};
+    const folderVariables = folderVariablesOf(providerOf);
     for (const [id, account] of Object.entries(withDefaults(saved))) {
         if (!isKnownKind(account.kind)) {
             if (isKnownKind(id)) {
@@ -80,7 +138,8 @@ export const acceptAccounts = (saved: ProviderAccountMap, before: StoredAccounts
             stored[id] = keptKind === account.kind ? kept : account;
             continue;
         }
-        const problem = accountProblem(id, account, providerOf(account.kind), env);
+        const provider = providerOf(account.kind);
+        const problem = accountProblem(id, account, provider, env, folderVariables) ?? linkProblem(id, account, before[id], provider, env, isDirectory);
         if (problem !== null) {
             throw new InvalidAccountError(`${id}: ${problem}`);
         }

@@ -1,18 +1,35 @@
-import { statSync } from 'node:fs';
-import type { AgentKind, ProviderAccount, ProviderAccountMap, ProviderAccounts, ProviderAccountStatus, ProviderInfo } from '@ruimte/contracts';
+import { existsSync, statSync } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import {
+    AgentKindSchema,
+    type AgentKind,
+    type ProviderAccount,
+    type ProviderAccountCreatePayload,
+    type ProviderAccountCreateResult,
+    type ProviderAccountMap,
+    type ProviderAccounts,
+    type ProviderAccountStatus,
+    type ProviderAccountVariable,
+    type ProviderInfo
+} from '@ruimte/contracts';
 import { ClientSinks } from '../../client-sinks.ts';
 import { errorText } from '../../error-text.ts';
 import type { SessionSink } from '../../sessions/manager.ts';
 import type { ChatProvider } from '../provider.ts';
-import { accountEnv, accountFolder, canContinue, expandHome, isDefaultAccount, isKnownKind, transcriptFolder, type Env } from './accounts.ts';
+import { accountEnv, accountFolder, canContinue, defaultFolder, expandHome, isDefaultAccount, isKnownKind, transcriptFolder, type Env } from './accounts.ts';
 import { AccountError, isDefaultAccountOf, type AccountLaunches } from './launch.ts';
 import { prepareShadowHome, type ShadowHomeReport } from './shadow-home.ts';
 import { askAccount, type AskAccount } from './status.ts';
-import { acceptAccounts, accountsPath, readAccounts, wireAccounts, writeAccounts, type StoredAccounts } from './store.ts';
+import { acceptAccounts, accountsPath, InvalidAccountError, readAccounts, wireAccounts, writeAccounts, type StoredAccounts } from './store.ts';
+import { platformSecrets, secretKey, SecretsUnavailableError, type SecretStore } from './variables.ts';
 
 /* Who is signed in changes by hand and rarely; often enough to notice, rarely enough not to start CLIs all day. */
 const CHECK_INTERVAL_MS = 15 * 60_000;
 const MAX_BACKOFF_MS = 60 * 60_000;
+// A login in a terminal is a browser round trip: quick enough to notice at once, and given up on after a while.
+const LOGIN_POLL_MS = 3_000;
+const LOGIN_WATCH_MS = 5 * 60_000;
 
 export interface ProviderAccountsOptions {
     ruimteHome: string;
@@ -24,7 +41,16 @@ export interface ProviderAccountsOptions {
     folderExists?: (path: string) => boolean;
     // What the daemon puts in a config folder of an account (its hooks); absent puts nothing there.
     install?: (kind: AgentKind, folder: string) => Promise<void>;
+    // Where sensitive values are kept; null on a machine without a keychain. Absent is the platform's own.
+    secrets?: SecretStore | null;
     now?: () => number;
+    // How a login watch waits between two checks; a test moves its clock instead.
+    sleep?: (ms: number) => Promise<void>;
+}
+
+interface LoginWatch {
+    deadline: number;
+    done: Promise<void>;
 }
 
 interface AccountState {
@@ -38,6 +64,31 @@ interface AccountState {
 // Asked on every start of a CLI under an account, which is one stat and never worth an await in the way of a spawn.
 const isFolder = (path: string): boolean => statSync(path, { throwIfNoEntry: false })?.isDirectory() === true;
 
+const sleep = (ms: number): Promise<void> =>
+    new Promise((resolve) => {
+        setTimeout(resolve, ms).unref();
+    });
+
+/* The part of a label an id can hold: `Work (EU)` becomes `work-eu`. */
+const slugOf = (label: string): string =>
+    label
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+const sensitiveNames = (entry: unknown): string[] => {
+    const variables = typeof entry === 'object' && entry !== null ? (entry as { env?: unknown }).env : undefined;
+    if (!Array.isArray(variables)) {
+        return [];
+    }
+    return variables.flatMap((variable: unknown) => {
+        const { name, sensitive } = (variable ?? {}) as { name?: unknown; sensitive?: unknown };
+        return sensitive === true && typeof name === 'string' ? [name] : [];
+    });
+};
+
 /* A status without the moment it was drawn, to tell whether anything a person reads changed. */
 const sameStatus = (left: ProviderAccountStatus, right: ProviderAccountStatus): boolean =>
     JSON.stringify({ ...left, checkedAt: 0 }) === JSON.stringify({ ...right, checkedAt: 0 });
@@ -49,13 +100,20 @@ const sameStatus = (left: ProviderAccountStatus, right: ProviderAccountStatus): 
  */
 export class ProviderAccountsService implements AccountLaunches {
     private readonly path: string;
+    private readonly ruimteHome: string;
     private readonly providers: ProviderAccountsOptions['providers'];
     private readonly env: Env;
     private readonly ask: AskAccount;
     private readonly prepareShadow: NonNullable<ProviderAccountsOptions['prepareShadow']>;
     private readonly folderExists: NonNullable<ProviderAccountsOptions['folderExists']>;
     private readonly install: ProviderAccountsOptions['install'];
+    private readonly secrets: SecretStore | null;
+    // The sensitive values by `secretKey`, read from the keychain once, since a spawn asks for them without waiting.
+    private readonly secretValues = new Map<string, string>();
     private readonly now: () => number;
+    private readonly sleep: (ms: number) => Promise<void>;
+    private readonly watches = new Map<string, LoginWatch>();
+    private writes: Promise<unknown> = Promise.resolve();
     private readonly sinks = new ClientSinks();
     private readonly states = new Map<string, AccountState>();
     private stored: StoredAccounts = {};
@@ -65,18 +123,22 @@ export class ProviderAccountsService implements AccountLaunches {
 
     constructor(options: ProviderAccountsOptions) {
         this.path = accountsPath(options.ruimteHome);
+        this.ruimteHome = options.ruimteHome;
         this.providers = options.providers;
         this.env = options.env ?? process.env;
         this.ask = options.ask ?? askAccount;
         this.prepareShadow = options.prepareShadow ?? prepareShadowHome;
         this.folderExists = options.folderExists ?? isFolder;
         this.install = options.install;
+        this.secrets = options.secrets === undefined ? platformSecrets() : options.secrets;
         this.now = options.now ?? Date.now;
+        this.sleep = options.sleep ?? sleep;
     }
 
     async load(): Promise<void> {
         this.stored = await readAccounts(this.path, (kind) => this.providers.get(kind), this.env);
         this.accounts = wireAccounts(this.stored);
+        await this.readSecrets();
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -84,7 +146,19 @@ export class ProviderAccountsService implements AccountLaunches {
     }
 
     snapshot(): ProviderAccounts {
-        return { accounts: this.accounts, statuses: Object.entries(this.accounts).map(([id, account]) => this.statusOf(id, account)) };
+        const loginCommands: Partial<Record<AgentKind, string>> = {};
+        for (const kind of AgentKindSchema.options) {
+            const command = this.providers.get(kind).home?.loginCommand;
+            if (command !== undefined) {
+                loginCommands[kind] = command;
+            }
+        }
+        return {
+            accounts: this.accounts,
+            statuses: Object.entries(this.accounts).map(([id, account]) => this.statusOf(id, account)),
+            secretsAvailable: this.secrets !== null,
+            loginCommands
+        };
     }
 
     /* The account under an id, for a launch; null for an id this machine does not have. */
@@ -97,13 +171,22 @@ export class ProviderAccountsService implements AccountLaunches {
      * refuses the start, since falling back on the default account would run it on someone else's costs.
      */
     envFor(kind: AgentKind, id: string | undefined, baseEnv: Env): Env {
-        if (id === undefined || isDefaultAccountOf(kind, id)) {
-            return baseEnv;
-        }
-        const account = this.accounts[id];
+        const key = id ?? kind;
         const refuse = (why: string): AccountError =>
-            new AccountError('account-unavailable', `The account '${this.labelOf(id)}' is not available on this machine: ${why}.`);
+            new AccountError('account-unavailable', `The account '${this.labelOf(key)}' is not available on this machine: ${why}.`);
         const provider = this.providers.get(kind);
+        const variables = (account: ProviderAccount): Record<string, string> => {
+            const { values, missing } = this.variablesOf(key, account);
+            if (missing !== null) {
+                throw refuse(`the keychain does not give the value of ${missing}`);
+            }
+            return values;
+        };
+        if (isDefaultAccountOf(kind, id)) {
+            const account = this.accounts[kind] ?? { kind };
+            return accountEnv(kind, account, provider, baseEnv, variables(account));
+        }
+        const account = this.accounts[key];
         if (account === undefined) {
             throw refuse('no account on it has that id');
         }
@@ -121,7 +204,7 @@ export class ProviderAccountsService implements AccountLaunches {
                 throw refuse(`its folder ${folder} is missing`);
             }
         }
-        return accountEnv(id, account, provider, baseEnv);
+        return accountEnv(key, account, provider, baseEnv, variables(account));
     }
 
     transcriptFolder(kind: AgentKind, id: string | undefined): string | null {
@@ -165,19 +248,52 @@ export class ProviderAccountsService implements AccountLaunches {
     }
 
     /* Answers at once; an account that changed reads `checking` until its CLI answered, which arrives as `providers.changed`. */
-    async save(accounts: ProviderAccountMap): Promise<ProviderAccounts> {
-        const stored = acceptAccounts(accounts, this.stored, (kind) => this.providers.get(kind), this.env);
-        await writeAccounts(this.path, stored);
-        this.stored = stored;
-        this.accounts = wireAccounts(stored);
-        for (const id of this.states.keys()) {
-            if (this.accounts[id] === undefined) {
-                this.states.delete(id);
+    save(accounts: ProviderAccountMap): Promise<ProviderAccounts> {
+        return this.serial(() => this.commit(accounts, this.folderExists));
+    }
+
+    /*
+     * An account in a folder of its own under `$RUIMTE_HOME/accounts`, signed in by nobody yet. A
+     * Codex account is a shadow home over the CLI's own folder, so its threads go on under the other.
+     */
+    create(payload: ProviderAccountCreatePayload): Promise<ProviderAccountCreateResult> {
+        return this.serial(async () => {
+            const { kind, label, color } = payload;
+            const provider = this.providers.get(kind);
+            if (provider.home === undefined) {
+                throw new InvalidAccountError(`${provider.name} has no setting for its config folder, so it only has its default account`);
             }
+            const id = this.mintId(kind, label);
+            const folder = join(this.accountsFolder(), id);
+            await mkdir(this.accountsFolder(), { recursive: true, mode: 0o700 });
+            await mkdir(folder, { mode: 0o700 });
+            const folders = kind === 'codex' ? { home: defaultFolder(provider, this.env), shadowHome: folder } : { home: folder };
+            const account: ProviderAccount = { kind, label, ...(color === undefined ? {} : { color }), ...folders };
+            await this.prepare(id, kind, account);
+            const snapshot = await this.commit({ ...this.accounts, [id]: account }, (path) => path === folder || this.folderExists(path));
+            return { ...snapshot, id };
+        });
+    }
+
+    /*
+     * Asks the CLI of one account again every few seconds, for a login running in a terminal, until
+     * it is signed in or a few minutes passed. Resolves when the watch ends; a second call for the
+     * same account only moves the end.
+     */
+    watchLogin(id: string): Promise<void> {
+        if (this.accounts[id] === undefined) {
+            throw new AccountError('account-unavailable', `The account '${id}' is not available on this machine: no account on it has that id.`);
         }
-        this.emit();
-        void this.queue(false);
-        return this.snapshot();
+        const deadline = this.now() + LOGIN_WATCH_MS;
+        const running = this.watches.get(id);
+        if (running !== undefined) {
+            running.deadline = deadline;
+            return running.done;
+        }
+        const watch: LoginWatch = { deadline, done: Promise.resolve() };
+        watch.done = this.runWatch(id, watch).finally(() => this.watches.delete(id));
+        this.watches.set(id, watch);
+        return watch.done;
     }
 
     /* Asks every CLI again, and answers once they all did. */
@@ -186,9 +302,154 @@ export class ProviderAccountsService implements AccountLaunches {
         return this.snapshot();
     }
 
+    private async runWatch(id: string, watch: LoginWatch): Promise<void> {
+        while (this.now() < watch.deadline) {
+            await this.sleep(LOGIN_POLL_MS);
+            if (this.accounts[id] === undefined) {
+                return;
+            }
+            await this.queue(true, id);
+            if (this.states.get(id)?.status.state === 'ready') {
+                return;
+            }
+        }
+    }
+
+    /* One change of the file at a time: a create and a save both read what the other just wrote. */
+    private serial<T>(work: () => Promise<T>): Promise<T> {
+        const next = this.writes.then(work);
+        this.writes = next.catch(() => undefined);
+        return next;
+    }
+
+    private async commit(accounts: ProviderAccountMap, isDirectory: (path: string) => boolean): Promise<ProviderAccounts> {
+        const stored = acceptAccounts(accounts, this.stored, (kind) => this.providers.get(kind), this.env, isDirectory);
+        const { writes, removals } = this.planSecrets(stored);
+        for (const [key, value] of writes) {
+            await this.requireSecrets().write(key, value);
+            this.secretValues.set(key, value);
+        }
+        await writeAccounts(this.path, stored);
+        this.stored = stored;
+        this.accounts = wireAccounts(stored);
+        for (const key of removals) {
+            this.secretValues.delete(key);
+            await this.secrets?.remove(key).catch((e: unknown) => console.error(`Could not remove ${key} from the keychain:`, errorText(e)));
+        }
+        const rewritten = new Set([...writes.keys()].map((key) => key.slice(0, key.indexOf('/'))));
+        for (const id of this.states.keys()) {
+            // A new secret can be a new login, which the account as the file holds it does not show.
+            if (this.accounts[id] === undefined || rewritten.has(id)) {
+                this.states.delete(id);
+            }
+        }
+        this.emit();
+        void this.queue(false);
+        return this.snapshot();
+    }
+
+    /*
+     * Takes every sensitive value out of the accounts about to be written, leaving the redacted form
+     * the file keeps. Answers which values go into the keychain and which keys no account has any more.
+     */
+    private planSecrets(stored: StoredAccounts): { writes: Map<string, string>; removals: string[] } {
+        const writes = new Map<string, string>();
+        const kept = new Set<string>();
+        for (const [id, entry] of Object.entries(stored)) {
+            const kind = (entry as { kind: string }).kind;
+            if (!isKnownKind(kind)) {
+                for (const name of sensitiveNames(entry)) {
+                    kept.add(secretKey(id, name));
+                }
+                continue;
+            }
+            const account = entry as ProviderAccount;
+            if (account.env === undefined) {
+                continue;
+            }
+            const had = new Set(sensitiveNames(this.stored[id]));
+            const variables = account.env.map((variable): ProviderAccountVariable => {
+                if (!variable.sensitive) {
+                    return { name: variable.name, value: variable.value, sensitive: false };
+                }
+                const key = secretKey(id, variable.name);
+                this.requireSecrets();
+                if (variable.value !== '') {
+                    writes.set(key, variable.value);
+                } else if (variable.valueRedacted !== true || !had.has(variable.name)) {
+                    throw new InvalidAccountError(`${id}: ${variable.name} has no value`);
+                }
+                kept.add(key);
+                return { name: variable.name, value: '', sensitive: true, valueRedacted: true };
+            });
+            const { env: _env, ...rest } = account;
+            stored[id] = variables.length === 0 ? rest : { ...rest, env: variables };
+        }
+        const removals = Object.entries(this.stored).flatMap(([id, entry]) =>
+            sensitiveNames(entry)
+                .map((name) => secretKey(id, name))
+                .filter((key) => !kept.has(key))
+        );
+        return { writes, removals };
+    }
+
+    private requireSecrets(): SecretStore {
+        if (this.secrets === null) {
+            throw new SecretsUnavailableError();
+        }
+        return this.secrets;
+    }
+
+    private async readSecrets(): Promise<void> {
+        if (this.secrets === null) {
+            return;
+        }
+        for (const [id, entry] of Object.entries(this.stored)) {
+            for (const name of sensitiveNames(entry)) {
+                const key = secretKey(id, name);
+                try {
+                    const value = await this.secrets.read(key);
+                    if (value !== null) {
+                        this.secretValues.set(key, value);
+                    }
+                } catch (e) {
+                    console.error(`Could not read ${key} from the keychain:`, errorText(e));
+                }
+            }
+        }
+    }
+
+    /* The variables of an account as a CLI gets them, and the first sensitive one the keychain did not give. */
+    private variablesOf(id: string, account: ProviderAccount): { values: Record<string, string>; missing: string | null } {
+        const values: Record<string, string> = {};
+        for (const variable of account.env ?? []) {
+            const value = variable.sensitive ? this.secretValues.get(secretKey(id, variable.name)) : variable.value;
+            if (value === undefined) {
+                return { values, missing: variable.name };
+            }
+            values[variable.name] = value;
+        }
+        return { values, missing: null };
+    }
+
+    private accountsFolder(): string {
+        return join(this.ruimteHome, 'accounts');
+    }
+
+    /* A free id for a new account; a folder a removed account left behind is never handed to another. */
+    private mintId(kind: AgentKind, label: string): string {
+        const base = `${kind}_${slugOf(label) || 'account'}`.slice(0, 60).replace(/-+$/, '');
+        const taken = (id: string): boolean => this.accounts[id] !== undefined || this.stored[id] !== undefined || existsSync(join(this.accountsFolder(), id));
+        let id = base;
+        for (let suffix = 2; taken(id); suffix += 1) {
+            id = `${base}-${suffix}`;
+        }
+        return id;
+    }
+
     /* One pass at a time, in the order they were asked for, so a save during a pass is checked after it. */
-    private queue(force: boolean): Promise<void> {
-        const pass = this.passes.then(() => this.runAll(force));
+    private queue(force: boolean, only?: string): Promise<void> {
+        const pass = this.passes.then(() => this.runAll(force, only));
         this.passes = pass.catch((e: unknown) => console.error('Could not check the provider accounts:', errorText(e)));
         return this.passes;
     }
@@ -222,9 +483,12 @@ export class ProviderAccountsService implements AccountLaunches {
         };
     }
 
-    private async runAll(force: boolean): Promise<void> {
+    private async runAll(force: boolean, only: string | undefined): Promise<void> {
         const installed = await this.providers.list();
         const due = Object.entries(this.accounts).filter(([id, account]) => {
+            if (only !== undefined && id !== only) {
+                return false;
+            }
             const state = this.states.get(id);
             return force || state === undefined || state.drawnFor !== JSON.stringify(account) || this.now() >= state.nextAt;
         });
@@ -278,7 +542,11 @@ export class ProviderAccountsService implements AccountLaunches {
         }
         try {
             const message = await this.prepare(id, kind, account);
-            const reading = await this.ask(kind, provider.command, accountEnv(id, account, provider, this.env));
+            const { values, missing } = this.variablesOf(id, account);
+            if (missing !== null) {
+                throw new Error(`The keychain does not give the value of ${missing}`);
+            }
+            const reading = await this.ask(kind, provider.command, accountEnv(id, account, provider, this.env, values));
             return this.status(id, account, reading.signedIn ? 'ready' : 'signed-out', {
                 email: reading.email,
                 plan: reading.plan,

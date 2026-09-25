@@ -8,4 +8,13 @@ export const registerProviderAccountHandlers = (dispatcher: Dispatcher, accounts
     dispatcher.register('providers.save', (payload) => translate(() => accounts.save(payload.accounts)));
 
     dispatcher.register('providers.refresh', () => accounts.refresh());
+
+    dispatcher.register('providers.create', (payload) => translate(() => accounts.create(payload)));
+
+    dispatcher.register('providers.watchLogin', (payload) =>
+        translate(() => {
+            void accounts.watchLogin(payload.id);
+            return {};
+        })
+    );
 };
