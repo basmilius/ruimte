@@ -43,7 +43,7 @@ export function DownloadButton() {
         <div className="flex flex-col items-start gap-3">
             <a
                 href={`/download/${platform}`}
-                className="inline-flex items-center gap-2.5 rounded-full bg-text px-6 py-3.5 text-[17px] font-medium text-bg shadow-[0_0_0_1px_rgb(255_255_255/0.1),0_10px_40px_-8px_rgb(21_93_252/0.6)] transition-transform hover:-translate-y-px active:translate-y-0"
+                className="inline-flex items-center gap-2.5 rounded-full bg-text px-6 py-3.5 text-[15px] font-medium text-bg shadow-[0_1px_2px_rgb(0_0_0/0.2)] transition-[background-color,transform] hover:bg-white active:scale-[0.96]"
             >
                 <Download size={18} strokeWidth={2.2} />
                 Download for {os}

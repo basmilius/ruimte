@@ -36,7 +36,7 @@ export function CanvasChapter({ step }: { readonly step: number }) {
                     <div> </div>
                     <div>
                         {'  '}
-                        <span className="text-ansi-green">VITE</span> v7.1.4 <span className="text-term-dim">ready in</span> 312 ms
+                        <span className="text-ansi-green">Vite</span> v7.1.4 <span className="text-term-dim">ready in</span> 312 ms
                     </div>
                     <div> </div>
                     <div>

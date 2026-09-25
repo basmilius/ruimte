@@ -37,6 +37,7 @@ export function Scaled({
         <div ref={ref} role="img" aria-label={label} className={`relative w-full ${className}`} style={{ aspectRatio: `${width} / ${height}` }}>
             <div
                 aria-hidden
+                inert
                 className="absolute top-0 left-0 origin-top-left"
                 style={{ width, height, transform: `scale(${scale ?? 1})`, opacity: scale === null ? 0 : 1 }}
             >

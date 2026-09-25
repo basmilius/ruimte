@@ -1,5 +1,5 @@
 import { createContext, type RefObject, useCallback, useContext, useEffect, useLayoutEffect, useState } from 'react';
-import { useReducedMotion } from 'motion/react';
+import { useReducedAnimations } from '../motion-preferences.ts';
 
 export const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -80,7 +80,7 @@ export function useFilm(chapters: readonly (readonly number[])[]): FilmPosition 
  */
 export function useStagePlayback(ref: RefObject<HTMLElement | null>): Playback {
     const [visible, setVisible] = useState(false);
-    const reduced = useReducedMotion() ?? false;
+    const reduced = useReducedAnimations();
 
     useLayoutEffect(() => {
         const element = ref.current;

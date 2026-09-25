@@ -7,7 +7,10 @@ import { DrawingVignette } from '@/components/features/DrawingVignette.tsx';
 import { MachinesVignette } from '@/components/features/MachinesVignette.tsx';
 import { SessionsVignette } from '@/components/features/SessionsVignette.tsx';
 import { Film } from '@/components/film/Film.tsx';
-import { Orbit } from '@/components/Orbit.tsx';
+import { NeuralField } from '@/components/NeuralField.tsx';
+import { ContextVignette } from '@/components/features/ContextVignette.tsx';
+import { PlanVignette } from '@/components/features/PlanVignette.tsx';
+import { ArrowUpRight } from 'lucide-react';
 import { SiteHeader } from '@/components/SiteHeader.tsx';
 import { PLATFORMS, type Platform, REPOSITORY_URL } from '@/lib/release.ts';
 
@@ -19,34 +22,34 @@ const LINUX_BUILDS: readonly (readonly [Platform, Platform])[] = [
     ['rpm-x64', 'rpm-arm64']
 ];
 
-/** The glow behind a feature's picture takes the status color the feature is about. */
-const GLOW = {
-    running: 'rgb(96 165 250 / 0.3)',
-    'needs-you': 'rgb(251 191 36 / 0.22)',
-    idle: 'rgb(74 222 128 / 0.2)',
-    accent: 'rgb(21 93 252 / 0.4)',
-    violet: 'rgb(139 92 246 / 0.3)'
-} as const;
-
 export default function Home() {
     return (
         <>
+            <a href="#content" className="fixed top-3 left-3 z-50 -translate-y-24 rounded-lg bg-text px-4 py-3 text-bg focus:translate-y-0">
+                Skip to content
+            </a>
             <SiteHeader>
-                <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-6 px-5 sm:px-8">
+                <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-3 px-5 sm:px-8">
                     <a href="#top" className="flex items-center gap-2.5">
                         <AppIcon size={30} />
                         <span className="font-brand text-[19px] font-semibold tracking-[-0.01em]">Ruimte</span>
                     </a>
-                    <nav aria-label="Site" className="ml-auto flex items-center gap-6 text-[15px]">
-                        <a href={STATION_URL} className="hidden text-text-muted transition-colors hover:text-text sm:inline">
+                    <nav aria-label="Site" className="ml-auto flex items-center gap-3 text-[14px] sm:gap-6">
+                        <a href="#features" className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text md:inline-flex">
+                            Features
+                        </a>
+                        <a href={STATION_URL} className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text sm:inline-flex">
                             Web app
                         </a>
-                        <a href={REPOSITORY_URL} className="text-text-muted transition-colors hover:text-text">
+                        <a
+                            href={REPOSITORY_URL}
+                            className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text min-[400px]:inline-flex"
+                        >
                             GitHub
                         </a>
                         <a
                             href="#download"
-                            className="rounded-full border border-border-strong px-3.5 py-1.5 font-medium transition-colors hover:bg-surface-hover"
+                            className="inline-flex min-h-10 items-center rounded-full border border-border-strong px-3.5 py-1.5 font-medium transition-colors hover:bg-surface-hover"
                         >
                             Download
                         </a>
@@ -55,45 +58,72 @@ export default function Home() {
             </SiteHeader>
 
             <main id="top">
-                <section className="relative isolate overflow-hidden">
+                <section id="content" className="relative isolate overflow-hidden">
                     <Backdrop />
                     <div className="mx-auto max-w-[1240px] px-5 pb-24 sm:px-8">
-                        <div className="grid items-center gap-6 pt-36 sm:pt-40 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-0 lg:pt-24">
+                        <div className="grid items-center gap-2 pt-32 sm:pt-36 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-8 lg:pt-40 lg:pb-12">
                             <div className="relative z-10">
-                                <span className="mb-7 inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface-raised/60 py-1 pr-3 pl-2.5 text-[13px] font-medium text-text-muted backdrop-blur">
-                                    <span className="status-pulse size-2 rounded-full bg-status-running" />
-                                    Early preview
-                                </span>
-                                <h1 className="font-display text-[52px] leading-[0.98] font-semibold tracking-[-0.045em] sm:text-[80px]">
-                                    Space for <span className="whitespace-nowrap">AI Engineering.</span>
+                                <a
+                                    href={`${REPOSITORY_URL}/releases`}
+                                    className="group mb-7 inline-flex min-h-10 items-center gap-3 text-[13px] text-text-muted transition-colors hover:text-text"
+                                >
+                                    <span className="h-px w-6 bg-accent" />
+                                    <span>Ruimte is in early preview</span>
+                                    <ArrowUpRight
+                                        size={14}
+                                        strokeWidth={1.5}
+                                        className="text-text-muted transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none"
+                                    />
+                                </a>
+                                <h1 className="font-display text-[clamp(42px,7vw,76px)] leading-[1.04] font-medium tracking-[-0.045em]">
+                                    Space for
+                                    <br />
+                                    <span className="text-accent">AI Engineering.</span>
                                 </h1>
-                                <p className="mt-7 max-w-[46ch] text-[18px] leading-relaxed text-text-muted sm:text-[20px]">
-                                    Terminals, coding agents and browsers side by side on one canvas. Ruimte shows you which agent is waiting on you, and every
-                                    session keeps running when you close the window.
+                                <p className="mt-6 max-w-[43ch] text-[17px] leading-relaxed text-text-muted sm:text-[19px]">
+                                    Your agents, terminals and browsers. One workspace. Connect their context, follow the work, and pick up where you left off.
                                 </p>
-                                <div className="mt-10">
+                                <div className="mt-8 flex flex-wrap items-start gap-x-6 gap-y-4">
                                     <DownloadButton />
                                 </div>
                             </div>
-                            <Orbit className="mx-auto w-full max-w-[420px] lg:-mr-16 lg:max-w-[640px]" />
+                            <NeuralField />
                         </div>
-                        <div className="relative mt-16 lg:mt-8">
-                            <div
-                                aria-hidden
-                                className="absolute inset-x-[8%] top-[6%] -z-10 h-[70%] rounded-full bg-[radial-gradient(closest-side,rgb(21_93_252/0.3),transparent)] blur-3xl"
-                            />
+                        <div id="preview" className="relative z-10 mt-6 lg:mt-12">
                             <Film />
                         </div>
-                        <p className="mt-6 text-[15px] text-text-faint">Chats run Claude Code and Codex. Any other CLI runs in a terminal.</p>
+                        <p className="mt-6 text-[14px] text-text-muted">Chats run Claude Code and Codex. Any other CLI runs in a terminal.</p>
                     </div>
                 </section>
 
-                <div className="mx-auto max-w-[1240px] space-y-32 px-5 py-24 sm:space-y-44 sm:px-8 sm:py-32">
-                    <Feature title="Close the window, keep the work" glow="running" picture={<SessionsVignette />}>
+                <section id="features" className="mx-auto max-w-[1240px] px-5 pt-12 pb-24 sm:px-8 sm:pb-32">
+                    <div className="mb-12 max-w-[620px]">
+                        <p className="mb-4 text-[14px] font-medium text-text-muted">Context, connected</p>
+                        <h2 className="font-display text-[34px] leading-[1.1] font-medium tracking-[-0.035em] sm:text-[46px]">
+                            Less repeating yourself.
+                            <br />
+                            More building together.
+                        </h2>
+                        <p className="mt-5 text-[17px] leading-relaxed text-text-muted">
+                            Put the brief next to the work. Give an agent the context it needs, then follow its progress without digging through a conversation.
+                        </p>
+                    </div>
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        <PreviewCard title="Draw a line. Share the context." picture={<ContextVignette />}>
+                            Link a note, terminal or another chat to an agent. It can read the sources you connected when it needs them.
+                        </PreviewCard>
+                        <PreviewCard title="A plan you can follow." picture={<PlanVignette />}>
+                            Open the agent's plan beside the chat. See the current step, check the results and leave a note where it matters.
+                        </PreviewCard>
+                    </div>
+                </section>
+
+                <div className="mx-auto max-w-[1240px] space-y-24 border-t border-border px-5 py-24 sm:space-y-32 sm:px-8 sm:py-32">
+                    <Feature title="Close the window, keep the work" eyebrow="Persistent sessions" picture={<SessionsVignette />}>
                         Terminals and agents run on your machine, not in the window. Quit Ruimte halfway through a test run, open it tomorrow, and the terminal
                         is where you left it, scrollback included.
                     </Feature>
-                    <Feature title="Every machine, and your phone" glow="needs-you" picture={<MachinesVignette />} flip>
+                    <Feature title="Every machine, and your phone" eyebrow="Connected machines" picture={<MachinesVignette />} flip>
                         Pair another computer once and its projects open as if they were local. Answer an agent from your iPhone, or open any of your machines
                         at{' '}
                         <a href={STATION_URL} className="text-text underline decoration-border-strong underline-offset-4 hover:decoration-text">
@@ -101,10 +131,10 @@ export default function Home() {
                         </a>
                         .
                     </Feature>
-                    <Feature title="Sketch it, and the agent reads it" glow="violet" picture={<DrawingVignette />}>
+                    <Feature title="Sketch it, and the agent reads it" eyebrow="Visual context" picture={<DrawingVignette />}>
                         Draw boxes and arrows next to your code. Link the drawing to a chat and the agent reads what you drew, in the order you meant it.
                     </Feature>
-                    <Feature title="Let an agent use an app" glow="accent" picture={<ComputerUseVignette />} flip>
+                    <Feature title="Let an agent use an app" eyebrow="Computer use" picture={<ComputerUseVignette />} flip>
                         Give an agent a Mac app to work in and it gets a cursor of its own, so yours stays free. You decide which apps it may use. Press ⌥Space
                         to pause it and take over.
                     </Feature>
@@ -113,7 +143,7 @@ export default function Home() {
                 <section id="download" className="relative isolate overflow-hidden border-t border-border">
                     <div
                         aria-hidden
-                        className="absolute -top-40 left-1/2 -z-10 size-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgb(21_93_252/0.18),transparent_60%)] blur-3xl"
+                        className="absolute -top-40 left-1/2 -z-10 size-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgb(21_93_252/0.08),transparent_60%)] blur-3xl"
                     />
                     <div className="mx-auto grid max-w-[1240px] gap-12 px-5 py-28 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
                         <div>
@@ -179,13 +209,13 @@ export default function Home() {
 
 function Feature({
     title,
-    glow,
+    eyebrow,
     picture,
     flip = false,
     children
 }: {
     readonly title: string;
-    readonly glow: keyof typeof GLOW;
+    readonly eyebrow: string;
     readonly picture: ReactNode;
     readonly flip?: boolean;
     readonly children: ReactNode;
@@ -195,18 +225,24 @@ function Feature({
             className={`grid items-center gap-10 lg:gap-16 ${flip ? 'lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]' : 'lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]'}`}
         >
             <div className={flip ? 'lg:order-2' : ''}>
-                <h2 className="font-display text-[34px] leading-[1.05] font-semibold tracking-[-0.035em] text-balance sm:text-[46px]">{title}</h2>
+                <p className="mb-4 text-[14px] font-medium text-text-muted">{eyebrow}</p>
+                <h2 className="font-display text-[34px] leading-[1.1] font-medium tracking-[-0.035em] text-balance sm:text-[46px]">{title}</h2>
                 <p className="mt-5 max-w-[48ch] text-[17px] leading-relaxed text-text-muted sm:text-[18px]">{children}</p>
             </div>
-            <div className="relative">
-                <div
-                    aria-hidden
-                    className="absolute -inset-10 -z-10 rounded-full blur-3xl"
-                    style={{ background: `radial-gradient(closest-side, ${GLOW[glow]}, transparent)` }}
-                />
-                {picture}
-            </div>
+            <div className="relative min-w-0">{picture}</div>
         </section>
+    );
+}
+
+function PreviewCard({ title, picture, children }: { readonly title: string; readonly picture: ReactNode; readonly children: ReactNode }) {
+    return (
+        <article className="min-w-0">
+            <div className="relative">{picture}</div>
+            <div className="px-5 pt-6 sm:px-6">
+                <h3 className="font-display text-[23px] font-medium tracking-[-0.025em]">{title}</h3>
+                <p className="mt-3 max-w-[48ch] text-[16px] leading-relaxed text-text-muted">{children}</p>
+            </div>
+        </article>
     );
 }
 
@@ -223,7 +259,7 @@ function DownloadLink({ platform, label, primary = false }: { readonly platform:
     return (
         <a
             href={`/download/${platform}`}
-            className={`rounded-lg px-3 py-1.5 text-[15px] font-medium transition-colors ${primary ? 'bg-text text-bg hover:bg-white' : 'border border-border-strong hover:bg-surface-hover'}`}
+            className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-[15px] font-medium transition-colors ${primary ? 'bg-text text-bg hover:bg-white' : 'border border-border-strong hover:bg-surface-hover'}`}
         >
             {label ?? PLATFORMS[platform].arch}
         </a>

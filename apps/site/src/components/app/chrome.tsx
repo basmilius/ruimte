@@ -69,7 +69,7 @@ export function Sidebar({ waiting, rows }: { readonly waiting: readonly SidebarR
         <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-border bg-surface">
             <div className="relative flex h-12 shrink-0 items-center justify-between pr-2 pl-[92px]">
                 <TrafficLights className="absolute top-[18px] left-[17px]" />
-                <span className="inline-flex h-6 items-center font-brand text-[13px] font-semibold tracking-[0.2em] text-text-faint">RUIMTE</span>
+                <span className="inline-flex h-6 items-center font-brand text-[13px] font-semibold text-text-faint">Ruimte</span>
                 <IconButton icon={PanelLeftClose} />
             </div>
             <div className="mt-2 min-h-0 grow overflow-hidden px-2">

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Geist, JetBrains_Mono, Kalam } from 'next/font/google';
+import { MotionProvider } from '@/components/MotionPreferences.tsx';
 import './globals.css';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist', display: 'swap' });
@@ -29,7 +30,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
     return (
         <html lang="en" className={`${geist.variable} ${jetbrains.variable} ${kalam.variable}`}>
-            <body>{children}</body>
+            <body>
+                <MotionProvider>{children}</MotionProvider>
+            </body>
         </html>
     );
 }

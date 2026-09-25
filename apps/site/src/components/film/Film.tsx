@@ -1,19 +1,23 @@
 'use client';
 
 import { useRef } from 'react';
-import { Frame, Globe, PenTool, StickyNote, Terminal } from 'lucide-react';
+import { Frame, GitBranch, Globe, PanelsTopLeft, PenTool, StickyNote, Terminal } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { AppWindow, Sidebar, type SidebarRow, Toolbar } from '../app/chrome.tsx';
 import { CanvasChapter } from './CanvasChapter.tsx';
 import { DelegateChapter } from './DelegateChapter.tsx';
 import { GridChapter } from './GridChapter.tsx';
 import { CANVAS_STEPS, CHILDREN, chatStatus, childStatus, DELEGATE_STEPS, GRID_STEPS, leadStatus } from './script.ts';
-import { EASE, PlaybackContext, useFilm, useStagePlayback } from './playback.ts';
+import { EASE, PlaybackContext, useFilm, usePlayback, useStagePlayback } from './playback.ts';
 import { Scaled } from './Stage.tsx';
 
 const CHAPTERS = [CANVAS_STEPS, GRID_STEPS, DELEGATE_STEPS] as const;
 
-const TITLES = ['One canvas', 'Views side by side', 'Agents that delegate'] as const;
+const CHAPTER_DETAILS = [
+    { title: 'One canvas', detail: 'Connect the context around your work.', icon: Frame },
+    { title: 'Views side by side', detail: 'Keep every part of a project in view.', icon: PanelsTopLeft },
+    { title: 'Agents that delegate', detail: 'Follow the work as your agents split it up.', icon: GitBranch }
+] as const;
 
 const LOGS: SidebarRow = { id: 'logs', name: 'logs', icon: Terminal };
 const ARCHITECTURE: SidebarRow = { id: 'architecture', name: 'Architecture', icon: PenTool };
@@ -96,6 +100,7 @@ export function Film() {
 
 function FilmBody() {
     const { chapter, step, jump } = useFilm(CHAPTERS);
+    const { still } = usePlayback();
     const { waiting, rows } = sidebarOf(chapter, step);
 
     return (
@@ -110,10 +115,10 @@ function FilmBody() {
                         <motion.div
                             key={chapter}
                             className="absolute inset-0"
-                            initial={{ opacity: 0 }}
+                            initial={still ? false : { opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.5, ease: EASE }}
+                            transition={{ duration: still ? 0 : 0.5, ease: EASE }}
                         >
                             {chapter === 0 && <CanvasChapter step={step} />}
                             {chapter === 1 && <GridChapter step={step} />}
@@ -129,9 +134,10 @@ function FilmBody() {
 
 /** Which part plays, with a line that fills along it; a click starts that part over. */
 function ChapterBar({ chapter, step, jump }: { readonly chapter: number; readonly step: number; readonly jump: (chapter: number) => void }) {
+    const { playing, still } = usePlayback();
     return (
-        <div className="mt-6 flex flex-wrap gap-2">
-            {TITLES.map((title, i) => {
+        <div aria-label="Product preview chapters" className="mt-8 grid gap-3 sm:grid-cols-3 sm:gap-8">
+            {CHAPTER_DETAILS.map(({ title, detail, icon: Icon }, i) => {
                 const steps = CHAPTERS[i];
                 const total = steps.reduce((sum, duration) => sum + duration, 0);
                 const passed = steps.slice(0, step).reduce((sum, duration) => sum + duration, 0);
@@ -142,17 +148,26 @@ function ChapterBar({ chapter, step, jump }: { readonly chapter: number; readonl
                         type="button"
                         onClick={() => jump(i)}
                         aria-pressed={active}
-                        className={`relative overflow-hidden rounded-full border px-4 py-2 text-[15px] font-medium transition-colors ${active ? 'border-border-strong bg-surface-raised text-text' : 'border-border text-text-muted hover:text-text'}`}
+                        aria-label={title}
+                        className={`group relative flex min-h-16 items-start gap-3 rounded-sm px-1 py-4 text-left transition-colors sm:pt-5 ${active ? 'text-text' : 'text-text-muted hover:text-text'}`}
                     >
-                        {title}
-                        <span className="absolute inset-x-0 bottom-0 h-[3px] bg-transparent">
+                        <Icon
+                            size={19}
+                            strokeWidth={1.5}
+                            className={`mt-0.5 shrink-0 transition-colors ${active ? 'text-accent' : 'text-text-muted group-hover:text-text'}`}
+                        />
+                        <span>
+                            <span className="block text-[15px] font-medium">{title}</span>
+                            <span className="mt-1 hidden text-[13px] leading-relaxed text-text-muted sm:block">{detail}</span>
+                        </span>
+                        <span aria-hidden className="absolute inset-x-0 top-0 h-px overflow-hidden bg-border-strong">
                             {active && (
                                 <motion.span
                                     key={`${chapter}-${step}`}
                                     className="block h-full bg-accent"
-                                    initial={{ width: `${(passed / total) * 100}%` }}
-                                    animate={{ width: `${((passed + steps[step]) / total) * 100}%` }}
-                                    transition={{ duration: steps[step] / 1000, ease: 'linear' }}
+                                    initial={still ? false : { width: `${(passed / total) * 100}%` }}
+                                    animate={{ width: still ? '100%' : `${((passed + (playing ? steps[step] : 0)) / total) * 100}%` }}
+                                    transition={{ duration: still || !playing ? 0 : steps[step] / 1000, ease: 'linear' }}
                                 />
                             )}
                         </span>
