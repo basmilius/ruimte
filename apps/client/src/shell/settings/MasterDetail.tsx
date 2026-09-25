@@ -14,8 +14,8 @@ interface MasterDetailProps {
 
 /*
  * A list beside the detail of what is picked in it, for a pane of many things of one kind (providers,
- * machines, shortcut categories). Each side scrolls on its own; the detail keeps a readable width
- * however wide the dialog is. The section id must be `split` in `sections.ts`, so the dialog hands the
+ * machines, shortcut categories). Each side scrolls on its own, and the detail takes the rest of the
+ * width, like a single-column pane. The section id must be `split` in `sections.ts`, so the dialog hands the
  * pane its whole height instead of a padded scrolling column.
  */
 export function MasterDetail({ list, listWidth, listLabel, detail }: MasterDetailProps) {
