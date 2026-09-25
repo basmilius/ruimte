@@ -358,7 +358,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             owe: (chatId, turnId, at) => outboxLink.oweLimitResume(chatId, turnId, at),
             lapse: (chatId) => outboxLink.lapseLimitResume(chatId),
             owed: (chatId) => outboxLink.owesLimitResume(chatId)
-        }
+        },
+        accounts: providerAccounts
     });
     const projects = new ProjectStore(config.home);
     projects.attachTracked(isTrackedPath);

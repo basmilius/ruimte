@@ -17,6 +17,8 @@ import { isConnectionError, type Transport, type TransportStatus } from '../tran
 interface ChatOpenOptions {
     /* Which agent CLI answers; a chat that exists on the daemon keeps its own. */
     provider?: AgentKind;
+    /* The account of that CLI; a chat that exists on the daemon keeps its own. */
+    account?: string;
     cwd?: string;
     /* A CLI session to continue, for a chat opened from a terminal that ran the agent. */
     resume?: string;
@@ -122,7 +124,8 @@ export class ChatClient {
         if (!entry) {
             return;
         }
-        const { attached: _attached, ...options } = entry;
+        // The account belonged to the CLI the chat leaves.
+        const { attached: _attached, account: _account, ...options } = entry;
         this.mounted.delete(chatId);
         await this.transport.request('chat.kill', { chatId });
         this.sink.forget(chatId);
@@ -253,6 +256,7 @@ export class ChatClient {
         await this.transport.request('chat.create', {
             chatId,
             provider: entry?.provider,
+            account: entry?.account,
             cwd: entry?.cwd,
             resume: entry?.resume,
             selection: entry?.selection,

@@ -31,9 +31,9 @@ export class ClaudeTitleReader {
         this.chunkBytes = chunkBytes;
     }
 
-    /* The title of a session found by its id, for a chat, which knows no transcript path. */
-    async forSession(agentSessionId: string): Promise<string | null> {
-        const path = await this.locate(agentSessionId);
+    /* The title of a session found by its id, for a chat, which knows no transcript path; in the projects of its account. */
+    async forSession(agentSessionId: string, projectsDir: string = this.projectsDir): Promise<string | null> {
+        const path = await this.locate(agentSessionId, projectsDir);
         return path === null ? null : await this.forTranscript(path);
     }
 
@@ -79,23 +79,23 @@ export class ClaudeTitleReader {
     }
 
     /* The folder a transcript sits in is named after the working directory, so the file name is the only key a session id gives. */
-    private async locate(agentSessionId: string): Promise<string | null> {
+    private async locate(agentSessionId: string, projectsDir: string): Promise<string | null> {
         const known = this.found.get(agentSessionId);
         if (known !== undefined && existsSync(known)) {
             return known;
         }
-        if (this.projectsDir === '' || agentSessionId.includes('/')) {
+        if (projectsDir === '' || agentSessionId.includes('/')) {
             return null;
         }
         let dirs: string[];
         try {
-            dirs = await readdir(this.projectsDir);
+            dirs = await readdir(projectsDir);
         } catch {
             return null;
         }
         const file = `${agentSessionId}.jsonl`;
         for (const dir of dirs) {
-            const path = join(this.projectsDir, dir, file);
+            const path = join(projectsDir, dir, file);
             if (existsSync(path)) {
                 this.found.set(agentSessionId, path);
                 return path;

@@ -32,6 +32,7 @@ import { freeBranch, type Worktrees } from '../git/worktrees.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { AgentLineageStore } from '../agents/lineage.ts';
+import { AccountError, storedAccount } from '../providers/accounts/launch.ts';
 import { codexServiceTier, codexThreadOptions } from '../providers/codex.ts';
 import type { ChatManager } from './chat-manager.ts';
 import { forkClaudeTranscript, type TranscriptCutPoint } from './claude-fork.ts';
@@ -80,6 +81,13 @@ export interface ChatForkDeps {
     copyBookmarks(fromChatId: string, toChatId: string, itemIds: ReadonlySet<string>): Promise<void>;
     newSessionId(): string;
     now(): number;
+    /* The accounts a fork may go on under; without them only a CLI's default account. */
+    accounts?: {
+        /* Throws for an account a CLI of this kind cannot start under on this machine. */
+        require(kind: AgentKind, account: string | undefined): void;
+        canContinue(kind: AgentKind, from: string | undefined, to: string | undefined): boolean;
+        label(kind: AgentKind, account: string | undefined): string;
+    };
 }
 
 const MAX_TITLE = 120;
@@ -212,15 +220,23 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
         throw new ChatError('chat-busy', 'The chat is working on a turn; fork it once that turn ends');
     }
     const provider = payload.provider ?? info.provider;
-    // Another CLI has no copy of the conversation to make; it reads it as text instead.
     const switching = provider !== info.provider;
+    // The original's account while the fork stays with its CLI; another CLI starts on its own default one.
+    const account = storedAccount(provider, payload.account ?? (switching ? undefined : info.account));
+    const sameAccount = !switching && account === info.account;
+    if (!sameAccount) {
+        requireAccount(deps, provider, account);
+    }
+    /* Another CLI, or an account that cannot read the original's transcripts, has no copy of the
+       conversation to make; it reads it as text instead. */
+    const handoff = switching || (!sameAccount && deps.accounts?.canContinue(provider, info.account, account) !== true);
     if (!CHAT_CLIS.has(info.provider) || !CHAT_CLIS.has(provider)) {
         throw new ChatError('chat-unsupported', `${nameOf(CHAT_CLIS.has(provider) ? info.provider : provider)} has no chat that can be forked`);
     }
     if (!(await deps.installed()).includes(provider)) {
         throw new ChatError('provider-not-installed', `${nameOf(provider)} is not installed on this machine`);
     }
-    if (info.agentSessionId === null && !switching) {
+    if (info.agentSessionId === null && !handoff) {
         throw new ChatError('transcript-missing', `${nameOf(info.provider)} never started a conversation in this chat, so there is nothing to fork`);
     }
     const place = deps.locate(payload.chatId);
@@ -281,7 +297,7 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
 
     let agentSessionId: string | null = null;
     try {
-        if (switching) {
+        if (handoff) {
             agentSessionId = null;
         } else if (info.provider === 'codex') {
             agentSessionId = await deps.forkCodex({
@@ -317,7 +333,9 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
         const point = deps.startingPoint(provider, payload.selection);
         // Going on with another CLI is no way to be allowed more than the original was.
         start = { ...point, runtimeMode: narrowerMode(point.runtimeMode ?? info.runtimeMode, info.runtimeMode) };
-        const handoff = handoffText(copied, {
+    }
+    if (handoff) {
+        const text = handoffText(copied, {
             fromName: nameOf(info.provider),
             originalId: payload.chatId,
             originalTitle,
@@ -328,13 +346,15 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
             cwd,
             worktree: files.kind === 'worktree' ? { branch: files.branch, afterTurn: files.afterTurn } : null
         });
-        notes = { note: switchNote(cut, original, files, { to: nameOf(provider), turns: handoff.turns, all: handoff.all }), preamble: handoff.text };
+        const to = switching ? nameOf(provider) : `${nameOf(provider)} under the account '${deps.accounts?.label(provider, account) ?? account}'`;
+        notes = { note: switchNote(cut, original, files, { to, turns: text.turns, all: text.all }), preamble: text.text };
     }
-    const { queue: _queue, suggestedTitle: _suggestedTitle, skills: _skills, resumeAt: _resumeAt, limit: _limit, ...kept } = info;
+    const { queue: _queue, suggestedTitle: _suggestedTitle, skills: _skills, resumeAt: _resumeAt, limit: _limit, account: _account, ...kept } = info;
     const forkInfo: ChatInfo = {
         ...kept,
         chatId: forkId,
         provider,
+        ...(account === undefined ? {} : { account }),
         cwd,
         agentSessionId,
         ...(switching ? { model: null, slashCommands: [] } : {}),
@@ -373,7 +393,7 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
                     id: forkId,
                     name: title,
                     titleSource: 'user',
-                    node: { provider, providerFixed: true, ...(nodeCwd === undefined ? {} : { cwd: nodeCwd }) }
+                    node: { provider, providerFixed: true, ...(account === undefined ? {} : { account }), ...(nodeCwd === undefined ? {} : { cwd: nodeCwd }) }
                 };
                 return {
                     content: { ...content, views: withView(content.views, view, originViewOf(content, place, payload.chatId)) },
@@ -387,7 +407,7 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
             }
             const anchor = place.canvasId === null ? null : (canvas.nodes.find((node) => node.id === payload.chatId) ?? null);
             const rect = placeFree(canvas.nodes, NODE_SIZE.chat, anchor);
-            const node = agentNode({ id: forkId, chat: true, kind: provider, title, rect, cwd: nodeCwd });
+            const node = agentNode({ id: forkId, chat: true, kind: provider, title, rect, cwd: nodeCwd, account });
             const edge: ProjectEdge | null = anchor ? { id: newId('edge', content, [forkId]), from: anchor.id, to: forkId, label: 'context' } : null;
             return {
                 content: {
@@ -404,6 +424,16 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
             await undo();
             throw error;
         });
+};
+
+const requireAccount = (deps: ChatForkDeps, kind: AgentKind, account: string | undefined): void => {
+    if (account === undefined) {
+        return;
+    }
+    if (!deps.accounts) {
+        throw new AccountError('account-unavailable', `The account '${account}' is not available on this machine: it keeps no accounts.`);
+    }
+    deps.accounts.require(kind, account);
 };
 
 /*
@@ -469,7 +499,7 @@ export const chatForkDeps = (wiring: {
     recordFork: (record) => wiring.lineage.put({ ...record, agent: true, relation: 'fork' }),
     forkClaude: ({ source, at, newSessionId, cwd }) =>
         forkClaudeTranscript({
-            projectsDir: wiring.chats.claudeProjectsDir,
+            projectsDir: wiring.chats.claudeProjectsDirOf(source),
             cwd: source.cwd,
             sessionId: source.agentSessionId ?? '',
             at,
@@ -478,7 +508,7 @@ export const chatForkDeps = (wiring: {
         }),
     forkCodex: ({ source, at, cwd }) => {
         const tier = codexServiceTier(source.selection);
-        return forkThreadOnce(wiring.chats.codexProcess(source.cwd), {
+        return forkThreadOnce(wiring.chats.codexProcess(source), {
             threadId: source.agentSessionId ?? '',
             at,
             options: {
@@ -521,5 +551,10 @@ export const chatForkDeps = (wiring: {
     copyPlans: (fromChatId, toChatId) => wiring.chats.copyPlans(fromChatId, toChatId),
     copyBookmarks: (fromChatId, toChatId, itemIds) => wiring.chats.copyBookmarks(fromChatId, toChatId, itemIds),
     newSessionId: () => randomUUID(),
-    now: () => Date.now()
+    now: () => Date.now(),
+    accounts: {
+        require: (kind, account) => wiring.chats.requireAccount(kind, account),
+        canContinue: (kind, from, to) => wiring.chats.canContinue(kind, from, to),
+        label: (kind, account) => wiring.chats.accountLabel(kind, account)
+    }
 });

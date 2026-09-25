@@ -24,6 +24,8 @@ export interface AgentNodeSpec {
     cwd: string | undefined;
     /* Terminal only: the mode its CLI starts in, kept on the node so a reload starts it the same way. */
     runtimeMode?: RuntimeMode;
+    /* The account of the CLI on this machine, kept on the node so a reload starts it under the same one. */
+    account?: string;
 }
 
 /* The node a person's own click would have made: titled after the CLI, and a chat fixed to it, so
@@ -38,6 +40,7 @@ export const agentNode = (spec: AgentNodeSpec): ProjectNode => ({
     provider: spec.kind,
     ...(spec.chat ? { providerFixed: true } : {}),
     ...(spec.cwd === undefined ? {} : { cwd: spec.cwd }),
+    ...(spec.account === undefined ? {} : { account: spec.account }),
     ...(spec.chat || spec.runtimeMode === undefined ? {} : { runtimeMode: spec.runtimeMode })
 });
 

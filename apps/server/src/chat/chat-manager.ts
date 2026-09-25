@@ -28,6 +28,7 @@ import type {
 } from '@ruimte/contracts';
 import { narrowerMode } from '../canvas/mode.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
+import { AccountError, definedEnv, isDefaultAccountOf, launchEnv, storedAccount, type AccountLaunches } from '../providers/accounts/launch.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { SkillIndex } from '../skills/skills.ts';
@@ -119,8 +120,8 @@ interface ChatManagerOptions {
     attachments: AttachmentStore;
     // What a running turn says about the plan its CLI runs on; the usage monitor takes it from here.
     onLimits?: (update: LimitsUpdate) => void;
-    // Where Claude Code's own name for a session is read; the other CLIs write none down.
-    claudeTitles?: { forSession(agentSessionId: string): Promise<string | null> };
+    // Where Claude Code's own name for a session is read, in the projects folder of the chat's account; the other CLIs write none down.
+    claudeTitles?: { forSession(agentSessionId: string, projectsDir: string): Promise<string | null> };
     // A name for a Codex chat, asked of a one-shot CLI: its app-server names no thread on its own.
     nameChat?: (provider: AgentKind, input: ChatTitleInput) => Promise<string | null>;
     // Where a subagent's whole conversation is read and how its growth is noticed; a test hands in fakes.
@@ -152,6 +153,8 @@ interface ChatManagerOptions {
         // Whether the outbox holds that entry for this chat now.
         owed(chatId: string): boolean;
     };
+    // The accounts a chat may run under; without them every chat runs under its CLI's default account.
+    accounts?: AccountLaunches;
 }
 
 // Above this the record is big enough that rewriting it for every small change costs more than it saves.
@@ -208,8 +211,9 @@ export class ChatManager {
     private readonly dropWakes: (chatId: string) => Promise<void>;
     private readonly plans: ChatPlans | null;
     private readonly bookmarks: BookmarkStore | null;
-    /* Where Claude Code keeps its projects on this machine; empty when it has none. */
+    /* Where Claude Code keeps the projects of its default account on this machine; empty when it has none. */
     readonly claudeProjectsDir: string;
+    private readonly accounts: AccountLaunches | null;
     // Clients following the conversation of a node a task opened, per row of the chat that gave it.
     private readonly childHolds = new Map<string, { parentId: string; toolUseId: string; childId: string; clients: Set<string> }>();
 
@@ -221,6 +225,7 @@ export class ChatManager {
         this.dropWakes = options.dropWakes ?? (() => Promise.resolve());
         this.plans = options.plans ?? null;
         this.bookmarks = options.bookmarks ?? null;
+        this.accounts = options.accounts ?? null;
         // Only whoever reads the thread has anything to point a bookmark at, so the list goes where the thread goes.
         this.bookmarks?.listen((chatId, bookmarks) => {
             for (const clientId of this.attached.get(chatId) ?? []) {
@@ -267,6 +272,7 @@ export class ChatManager {
         this.subagents = new SubagentReader({
             ...options.subagents,
             claudeProjectsDir: this.claudeProjectsDir,
+            claudeProjectsDirOf: (info) => this.claudeProjectsDirOf(info),
             chatInfo: async (chatId) => (await this.forkSource(chatId))?.info ?? null,
             chat: (chatId) => {
                 const session = this.chats.get(chatId);
@@ -280,14 +286,46 @@ export class ChatManager {
                       }
                     : null;
             },
-            codexProcess: (info) => this.codexProcess(info.cwd),
+            codexProcess: (info) => this.codexProcess(info),
             notify: (clientId, event) => this.sinks.to(clientId, { event: 'chat.subagentChanged', payload: event })
         });
     }
 
-    /* How an app-server is started for a question about a thread, apart from any chat's own process. */
-    codexProcess(cwd: string): CodexProcessSpec {
-        return { command: this.commands.codex ?? this.providers.get('codex').command, cwd, env: this.env, ...(this.spawn ? { spawn: this.spawn } : {}) };
+    /* How an app-server is started for a question about a thread of this chat, under its account, apart from any chat's own process. */
+    codexProcess(info: Pick<ChatInfo, 'cwd' | 'account'>): CodexProcessSpec {
+        return {
+            command: this.commands.codex ?? this.providers.get('codex').command,
+            cwd: info.cwd,
+            env: definedEnv(launchEnv(this.accounts, 'codex', info.account, this.env)),
+            ...(this.spawn ? { spawn: this.spawn } : {})
+        };
+    }
+
+    /* Where Claude Code keeps the projects of this chat's account; empty for an account this machine does not have. */
+    claudeProjectsDirOf(info: Pick<ChatInfo, 'account'>): string {
+        if (isDefaultAccountOf('claude', info.account)) {
+            return this.claudeProjectsDir;
+        }
+        const folder = this.accounts?.transcriptFolder('claude', info.account) ?? null;
+        return folder === null ? '' : join(folder, 'projects');
+    }
+
+    /* Whether a conversation of one account of this CLI can go on under the other. */
+    canContinue(kind: AgentKind, from: string | undefined, to: string | undefined): boolean {
+        if ((from ?? kind) === (to ?? kind)) {
+            return true;
+        }
+        return this.accounts?.canContinue(kind, from, to) ?? false;
+    }
+
+    /* Throws for an account a CLI of this kind cannot start under on this machine. */
+    requireAccount(kind: AgentKind, account: string | undefined): void {
+        launchEnv(this.accounts, kind, account, this.env);
+    }
+
+    /* What a person calls an account of this CLI. */
+    accountLabel(kind: AgentKind, account: string | undefined): string {
+        return isDefaultAccountOf(kind, account) || account === undefined ? this.providers.get(kind).name : (this.accounts?.labelOf(account) ?? account);
     }
 
     /* A chat as it stands: the thread in memory, else the record on disk; null when this machine has no such chat. */
@@ -389,6 +427,11 @@ export class ChatManager {
         const selection = catalog.normalize(stored?.info.selection ?? this.openingSelection(payload.chatId, kind) ?? payload.selection);
         const cwd = stored?.info.cwd ?? payload.cwd ?? this.env.HOME ?? homedir();
         await this.checkCwd(payload.chatId, cwd);
+        // A thread on disk keeps its account too. One it lost still opens, and says why on its next turn.
+        const account = stored ? stored.info.account : storedAccount(kind, payload.account);
+        if (!stored) {
+            this.requireAccount(kind, account);
+        }
         const ceiling = this.modeCeiling(payload.chatId);
         const withinCeiling = (mode: RuntimeMode): RuntimeMode => (ceiling === null ? mode : narrowerMode(mode, ceiling));
         const info: ChatInfo = stored?.info
@@ -396,6 +439,7 @@ export class ChatManager {
             : {
                   chatId: payload.chatId,
                   provider: kind,
+                  ...(account === undefined ? {} : { account }),
                   cwd,
                   agentSessionId: payload.resume ?? null,
                   model: null,
@@ -413,6 +457,7 @@ export class ChatManager {
         this.tokens.set(token, payload.chatId);
         const claudeTitles = this.claudeTitles;
         const nameChat = this.nameChat;
+        const base = this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env;
         this.logs.set(payload.chatId, await this.openLog(payload.chatId, stored ?? null));
         const session = new ChatSession({
             info,
@@ -422,7 +467,7 @@ export class ChatManager {
             provider,
             command: this.commands[kind] ?? provider.command,
             ...(this.spawn ? { spawn: this.spawn } : {}),
-            env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
+            env: (chatAccount) => definedEnv(launchEnv(this.accounts, kind, chatAccount, base)),
             depth: () => this.depthOf(payload.chatId),
             standalone: () => this.standalone(payload.chatId),
             computer: () => this.computer(),
@@ -434,7 +479,9 @@ export class ChatManager {
             ...(this.onLimits ? { onLimits: this.onLimits } : {}),
             persist: () => this.persist(payload.chatId),
             persistSoon: () => this.persistSoon(payload.chatId),
-            ...(kind === 'claude' && claudeTitles ? { readTitle: (agentSessionId: string) => claudeTitles.forSession(agentSessionId) } : {}),
+            ...(kind === 'claude' && claudeTitles
+                ? { readTitle: (agentSessionId: string) => claudeTitles.forSession(agentSessionId, this.claudeProjectsDirOf(session.info)) }
+                : {}),
             ...(kind === 'codex' && nameChat ? { nameThread: (input: ChatTitleInput) => nameChat(kind, input) } : {}),
             ...(kind === 'claude' ? { subagentSettlement: (toolUseId: string) => this.subagents.claudeSettlement(payload.chatId, toolUseId) } : {}),
             ...(this.limitResume ? { limitResume: limitHooks(this.limitResume, payload.chatId) } : {})
@@ -472,7 +519,33 @@ export class ChatManager {
     }
 
     configure(payload: ChatConfigurePayload): ChatInfo {
-        return this.require(payload.chatId).configure(payload);
+        const session = this.require(payload.chatId);
+        if (payload.account !== undefined) {
+            this.switchAccount(session, payload.account);
+        }
+        return session.configure(payload);
+    }
+
+    /*
+     * Any account of the chat's CLI before its first turn. After it only one that reads the same
+     * transcripts, since the CLI would not find the conversation in another folder; a fork carries it over instead.
+     */
+    private switchAccount(session: ChatSession, requested: string): void {
+        const { provider: kind, account: from } = session.info;
+        const to = storedAccount(kind, requested);
+        if (to === from) {
+            return;
+        }
+        this.requireAccount(kind, to);
+        const spoke = session.info.agentSessionId !== null || session.info.usage.turns > 0;
+        if (spoke && !this.canContinue(kind, from, to)) {
+            const label = this.accountLabel(kind, to);
+            throw new AccountError(
+                'account-incompatible',
+                `This conversation is kept by the account '${this.accountLabel(kind, from)}', which '${label}' cannot read. Fork the chat to go on under '${label}'.`
+            );
+        }
+        session.setAccount(to);
     }
 
     /*
@@ -905,13 +978,14 @@ export class ChatManager {
     /* The transcript copy of a Claude fork nobody resumed; Codex keeps its forked thread where Ruimte cannot remove it. */
     private async dropForkCopy(chat: { info: ChatInfo; items: readonly ChatItem[] }): Promise<void> {
         const { info } = chat;
-        if (info.provider !== 'claude' || info.agentSessionId === null || this.claudeProjectsDir === '' || !unspokenFork(chat.items, info)) {
+        const projectsDir = this.claudeProjectsDirOf(info);
+        if (info.provider !== 'claude' || info.agentSessionId === null || projectsDir === '' || !unspokenFork(chat.items, info)) {
             return;
         }
         if (/[/\\]|\.\./.test(info.agentSessionId)) {
             return;
         }
-        await rm(join(this.claudeProjectsDir, claudeProjectSlug(info.cwd), `${info.agentSessionId}.jsonl`), { force: true });
+        await rm(join(projectsDir, claudeProjectSlug(info.cwd), `${info.agentSessionId}.jsonl`), { force: true });
     }
 
     /*

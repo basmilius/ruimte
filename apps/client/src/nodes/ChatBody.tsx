@@ -43,6 +43,7 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
         chatClient
             .open(id, {
                 provider,
+                account: host?.account,
                 cwd: host?.cwd ?? useProject.getState().current?.folder ?? undefined,
                 resume: host?.resume,
                 selection: selectionFor(preferences, provider) ?? undefined,

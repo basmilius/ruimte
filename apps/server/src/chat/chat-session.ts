@@ -38,7 +38,8 @@ interface ChatSessionOptions {
     provider: ChatProvider;
     // The executable and leading arguments; a test points this at a fake CLI.
     command: string[];
-    env: Record<string, string>;
+    /* The environment of the CLI under the chat's account, asked at every start; throws for an account that cannot start. */
+    env(account: string | undefined): Record<string, string>;
     spawn?: SpawnChatProcess;
     depth?(): number;
     standalone?(): boolean;
@@ -189,6 +190,17 @@ export class ChatSession {
         }
         this.restartPending = this.backend !== null;
         this.emit([this.thread.patchInfo(next)]);
+        this.options.persist();
+        return this.thread.info;
+    }
+
+    /* The account the next CLI of this chat starts under; a turn in flight keeps its process until it ends. */
+    setAccount(account: string | undefined): ChatInfo {
+        if (account === this.thread.info.account) {
+            return this.thread.info;
+        }
+        this.restartPending = this.backend !== null;
+        this.emit([this.thread.patchInfo({ account })]);
         this.options.persist();
         return this.thread.info;
     }
@@ -1033,6 +1045,12 @@ export class ChatSession {
         if (this.backend && this.starting) {
             return this.starting;
         }
+        let env: Record<string, string>;
+        try {
+            env = this.options.env(this.thread.info.account);
+        } catch (error) {
+            return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+        }
         this.generation += 1;
         const generation = this.generation;
         const info = this.thread.info;
@@ -1040,7 +1058,7 @@ export class ChatSession {
         const launch: BackendLaunch = {
             command: this.options.command,
             cwd: info.cwd,
-            env: this.options.env,
+            env,
             selection: info.selection,
             modelName: this.options.provider.catalog.nameOf(info.selection.model),
             runtimeMode: info.runtimeMode,

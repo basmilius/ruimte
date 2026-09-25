@@ -34,6 +34,7 @@ import { PlanStore } from '../plans/plan-store.ts';
 import { nodeMode, startAgentWork } from '../outbox/start-agent.ts';
 import { OutboxLink, wireOutbox } from '../outbox/wiring.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
+import type { AccountLaunches } from '../providers/accounts/launch.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
@@ -55,6 +56,8 @@ export interface TestDaemon {
     adapter: FakePtyAdapter;
     claude: InProcessCli;
     codex: InProcessCli;
+    /* The environment of every chat CLI started, oldest first. */
+    chatEnvs: Array<Record<string, string>>;
     wiring: TaskWiring;
     endChildren: EndChildrenWiring;
     host: CanvasHost;
@@ -83,6 +86,10 @@ export interface TestDaemonOptions {
     claudeCli?: FakeCli;
     /* The machine's switches a test flips; resuming after a limit is off, as on a fresh machine. */
     machine?: { resumeAtReset: boolean };
+    /* The accounts of the CLIs; without them every CLI has only its default account. */
+    accounts?: AccountLaunches;
+    /* The environment every CLI starts from. */
+    env?: Record<string, string | undefined>;
 }
 
 export const bootTestDaemon = async ({
@@ -93,7 +100,9 @@ export const bootTestDaemon = async ({
     worktrees,
     installed = ['claude'],
     claudeCli = fakeClaude,
-    machine = { resumeAtReset: false }
+    machine = { resumeAtReset: false },
+    accounts,
+    env = { PATH: process.env.PATH, HOME: home }
 }: TestDaemonOptions): Promise<TestDaemon> => {
     const prompts = new PendingPromptStore(home);
     await prompts.load();
@@ -109,7 +118,7 @@ export const bootTestDaemon = async ({
     const adapter = new FakePtyAdapter();
     const claude = inProcess(claudeCli);
     const codex = inProcess(fakeCodex);
-    const sessions = new SessionManager({ adapter, env: { HOME: home, PATH: process.env.PATH }, firstPrompt: (id) => prompts.take(id) });
+    const sessions = new SessionManager({ adapter, env, firstPrompt: (id) => prompts.take(id), ...(accounts ? { accounts } : {}) });
     const attachments = new AttachmentStore(home);
     const drops: Promise<void>[] = [];
     const enqueued: OutboxWork[] = [];
@@ -124,13 +133,18 @@ export const bootTestDaemon = async ({
         }
     });
     const plans = new PlanStore(home, { now: () => clock.now() });
+    const chatEnvs: Array<Record<string, string>> = [];
     const chats = new ChatManager({
         providers,
         store: new ChatStore(home, attachments),
         attachments,
         ...(checkpoints ? { checkpoints } : {}),
-        spawn: (options) => (options.command[0]?.endsWith('codex') ? codex.spawn(options) : claude.spawn(options)),
-        env: { PATH: process.env.PATH, HOME: home },
+        spawn: (options) => {
+            chatEnvs.push(options.env);
+            return options.command[0]?.endsWith('codex') ? codex.spawn(options) : claude.spawn(options);
+        },
+        env,
+        ...(accounts ? { accounts } : {}),
         firstPrompt: (id) => prompts.take(id),
         onInterruptedRun: outboxLink.onInterruptedRun,
         messages: (chatId) => notices.take(chatId).map(renderNotice),
@@ -305,6 +319,7 @@ export const bootTestDaemon = async ({
         adapter,
         claude,
         codex,
+        chatEnvs,
         wiring,
         endChildren,
         host,

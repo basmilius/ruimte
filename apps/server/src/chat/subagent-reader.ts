@@ -36,6 +36,8 @@ export interface SubagentReaderOptions {
     chatInfo?(chatId: string): Promise<ChatInfo | null>;
     /* Where Claude Code keeps its projects; empty when it has none on this machine. */
     claudeProjectsDir: string;
+    /* Where it keeps those of a chat's account, when that is not the default one's. */
+    claudeProjectsDirOf?(info: ChatInfo): string;
     /* How a Codex app-server is started for a chat whose own is not running. */
     codexProcess(info: ChatInfo): CodexProcessSpec;
     /* Tells one client that a conversation it holds has more in it. */
@@ -283,7 +285,10 @@ export class SubagentReader {
         while (current !== null && !seen.has(current.chatId)) {
             seen.add(current.chatId);
             const sessionId = current.agentSessionId;
-            const dir = sessionId === null ? null : await findSubagentsDir(this.options.claudeProjectsDir, current.cwd, sessionId);
+            const dir =
+                sessionId === null
+                    ? null
+                    : await findSubagentsDir(this.options.claudeProjectsDirOf?.(current) ?? this.options.claudeProjectsDir, current.cwd, sessionId);
             const workflowAgent = workflowAgentIdOf(toolUseId);
             if (dir !== null && workflowAgent !== null) {
                 const meta = await findWorkflowAgent(dir, workflowAgent);
