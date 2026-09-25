@@ -99,6 +99,23 @@ enum AX {
         return result
     }
 
+    /// An element and what sits inside it, in tree order, with their frames, read one round trip per element.
+    static func layout(of root: AXUIElement, limit: Int) -> [(element: AXUIElement, laid: Clipping.Laid)] {
+        let names = [kAXPositionAttribute, kAXSizeAttribute, kAXChildrenAttribute] as CFArray
+        var result: [(element: AXUIElement, laid: Clipping.Laid)] = []
+        var pending: [(element: AXUIElement, depth: Int)] = [(root, 0)]
+        while let (node, depth) = pending.popLast(), result.count < limit {
+            var raw: CFArray?
+            let values = AXUIElementCopyMultipleAttributeValues(node, names, AXCopyMultipleAttributeOptions(rawValue: 0), &raw) == .success
+                ? raw as? [AnyObject] ?? [] : []
+            let value: (Int) -> CFTypeRef? = { index in values.indices.contains(index) ? values[index] : nil }
+            result.append((node, Clipping.Laid(depth: depth, frame: frame(position: value(0), size: value(1)))))
+            let children = value(2) as? [AXUIElement] ?? []
+            pending.append(contentsOf: children.reversed().map { ($0, depth + 1) })
+        }
+        return result
+    }
+
     /// The window an element sits in, and the sheet in between when there is one.
     static func container(of element: AXUIElement) -> (window: AXUIElement?, sheet: AXUIElement?) {
         var sheet: AXUIElement?
@@ -310,6 +327,8 @@ struct TreeWalker {
     private(set) var handles: HandleTable
     private var visibleRect = CGRect.infinite
     private var visits = 0
+    private var offscreenLines = 0
+    private var offscreenLeftOut = 0
     private var depthCutoffs = 0
     private var hitElementLimit = false
     private var hitVisitLimit = false
@@ -330,6 +349,9 @@ struct TreeWalker {
         }
         if hitVisitLimit {
             reasons.append("stopped after visiting \(maxVisits) accessibility nodes")
+        }
+        if offscreenLeftOut > 0 {
+            reasons.append("\(offscreenLeftOut) elements out of view left out after \(Clipping.offscreenLines(of: maxElements)) (raise with --max-elements, or find them with --find)")
         }
         if depthCutoffs > 0 {
             reasons.append("\(depthCutoffs) branches deeper than \(maxDepth) levels left out (raise with --max-depth)")
@@ -359,12 +381,9 @@ struct TreeWalker {
         guard let info = ElementInfo.read(element), !Self.skippedRoles.contains(info.role) else {
             return
         }
-        if let frame = info.frame, frame.width < 1 || frame.height < 1 {
-            return
-        }
         let repeatsParent = info.role == kAXStaticTextRole && info.label != nil && info.label == parentLabel
         let separator = info.role == kAXMenuItemRole && info.label == nil
-        let meaningful = !repeatsParent && !separator
+        var meaningful = !repeatsParent && !separator
             && (Self.landmarkRoles.contains(info.role) || info.label != nil || (info.valueIsText && info.value != nil))
         // An open menu hangs outside its window, so nothing in it is offscreen.
         let outerVisible = visibleRect
@@ -373,6 +392,14 @@ struct TreeWalker {
         }
         defer {
             visibleRect = outerVisible
+        }
+        if meaningful, info.role != kAXWindowRole, let frame = info.frame, Clipping.isOffscreen(frame, within: visibleRect) {
+            if offscreenLines >= Clipping.offscreenLines(of: maxElements) {
+                offscreenLeftOut += 1
+                meaningful = false
+            } else {
+                offscreenLines += 1
+            }
         }
 
         var childIndent = indent
@@ -418,7 +445,7 @@ struct TreeWalker {
         }
         if let frame = info.frame {
             parts.append("(\(Self.whole(frame.minX)),\(Self.whole(frame.minY)) \(Self.whole(frame.width))x\(Self.whole(frame.height)))")
-            if info.role != kAXWindowRole && !frame.intersects(visibleRect) {
+            if info.role != kAXWindowRole && Clipping.isOffscreen(frame, within: visibleRect) {
                 parts.append("offscreen")
             }
         }

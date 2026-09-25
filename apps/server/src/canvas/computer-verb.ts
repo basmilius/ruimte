@@ -420,6 +420,7 @@ const scroll = defineActionVerb('computer', {
     ]),
     detail: [
         'note\tIn the background it scrolls an element through accessibility, where the app offers that; wheel events need --front, and so does scrolling by pixel',
+        'note\tAn element marked offscreen can be clicked, read and set as it is; scroll --element N brings it into view',
         ...OUTCOME_PRINTS,
         ...COMMON_DETAIL
     ],

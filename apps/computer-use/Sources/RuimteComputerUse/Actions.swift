@@ -11,9 +11,19 @@ extension Agent {
         return snapshot
     }
 
+    /// A frame without area is an element its container scrolled out of view, which accessibility still reaches.
     func liveFrame(_ element: AXUIElement, index: Int) throws -> CGRect {
-        guard let frame = AX.frame(element), frame.width > 0, frame.height > 0 else {
+        guard let frame = AX.frame(element) else {
             throw AgentError("element \(index) is gone or has no frame any more; run `cu state` again")
+        }
+        return frame
+    }
+
+    /// A mouse event needs a point on the element, which one scrolled out of view does not have.
+    func pointableFrame(_ element: AXUIElement, index: Int) throws -> CGRect {
+        let frame = try liveFrame(element, index: index)
+        guard !Clipping.isOffscreen(frame, within: .infinite) else {
+            throw AgentError("element \(index) is scrolled out of view; bring it in with `cu scroll --element \(index)` first")
         }
         return frame
     }
@@ -76,7 +86,8 @@ extension Agent {
 
         if let index = request.element {
             let element = try snapshot.element(index)
-            let point = visibleCenter(of: element, frame: try liveFrame(element, index: index))
+            let frame = try liveFrame(element, index: index)
+            let point = visibleCenter(of: element, frame: frame)
             let axAction = right ? kAXShowMenuAction : (count == 1 ? kAXPressAction : nil)
             let pressable = axAction.map { AX.actions(element).contains($0) } ?? false
             // A click on a field is how an agent puts the focus there; behind the person's work focusing it does the same.
@@ -117,6 +128,7 @@ extension Agent {
                         throw AgentError.needsFront("\(Targets.name(app)) refused \(axAction) on element \(index) (AXError \(result.rawValue)), so it needs a click with the real pointer, and so the app in front")
                     }
                 }
+                _ = try self.pointableFrame(element, index: index)
                 let hit = try await self.prepareMouse(app, at: point, window: snapshot.window, expecting: element, index: index)
                 let target = AX.summary(hit)
                 self.overlay.press(target: nil)
@@ -172,11 +184,14 @@ extension Agent {
                 throw AgentError("scroll needs --element N")
             }
             return try await act(app, request, at: point, as: look) {
-                var answer = try Self.scrollBehind(expected, direction: direction, pages: pages)
+                var answer = try await Self.scrollBehind(expected, direction: direction, pages: pages)
                 answer["element"] = index
                 answer["target"] = AX.summary(expected)
                 return answer
             }
+        }
+        if let expected, let index {
+            _ = try pointableFrame(expected, index: index)
         }
         return try await act(app, request, at: point, as: look) {
             let hit = try await self.prepareMouse(app, at: point, window: snapshot.window, expecting: expected, index: index)
@@ -210,7 +225,7 @@ extension Agent {
         var grabbed: AXUIElement?
         if let index = request.element {
             let element = try snapshot.element(index)
-            start = visibleCenter(of: element, frame: try liveFrame(element, index: index))
+            start = visibleCenter(of: element, frame: try pointableFrame(element, index: index))
             grabbed = element
         } else {
             start = try screenPoint(snapshot, request)
@@ -218,7 +233,7 @@ extension Agent {
         let end: CGPoint
         if let index = request.toElement {
             let element = try snapshot.element(index)
-            end = visibleCenter(of: element, frame: try liveFrame(element, index: index))
+            end = visibleCenter(of: element, frame: try pointableFrame(element, index: index))
         } else if let toX = request.toX, let toY = request.toY {
             end = try screenPoint(snapshot, pixelX: toX, pixelY: toY)
         } else {
@@ -544,8 +559,9 @@ extension Agent {
     }
 
     /// Scrolls through accessibility, since wheel events posted to an app behind the person's work never scroll:
-    /// the page actions of the element or what it sits in, or else the value of a scroll area's scroll bar.
-    private static func scrollBehind(_ element: AXUIElement, direction: String, pages: Double) throws -> [String: Any] {
+    /// the page actions of the element or what it sits in, the value of a scroll area's scroll bar, or else what
+    /// Chromium offers for any element it scrolls, bringing an element into view.
+    private static func scrollBehind(_ element: AXUIElement, direction: String, pages: Double) async throws -> [String: Any] {
         let chain = [element] + AX.ancestors(of: element)
         let pageAction = "AXScroll\(direction.prefix(1).uppercased() + direction.dropFirst())ByPage"
         let times = max(1, Int(pages.rounded()))
@@ -579,6 +595,56 @@ extension Agent {
             }
             return ["method": "AXValue of the scroll bar", "direction": direction, "pages": pages, "moved": target != now]
         }
+        if let scrollDirection = ScrollDirection(rawValue: direction), chain.contains(where: { AX.actions($0).contains(scrollToVisible) }) {
+            return await revealBehind(element, chain: chain, direction: scrollDirection, steps: times)
+        }
         throw AgentError.needsFront("Nothing around this element scrolls through accessibility, so scrolling it needs the wheel, and so the app in front")
+    }
+
+    private static let scrollToVisible = "AXScrollToVisible"
+
+    /// Chromium gives a scrolling element neither page actions nor a scroll bar, only a way to bring any element into
+    /// view. A step brings in the next element hidden past the edge, from inside the element or else from what it sits
+    /// in, and Chromium centers it, so a step is about half a page; an element that is itself out of view comes in first.
+    private static func revealBehind(_ element: AXUIElement, chain: [AXUIElement], direction: ScrollDirection, steps: Int) async -> [String: Any] {
+        let web = chain.filter { AX.actions($0).contains(scrollToVisible) }
+        var revealed = 0
+        for step in 0..<steps {
+            guard let target = revealTarget(element, within: web, direction: direction, first: step == 0) else {
+                break
+            }
+            let before = AX.frame(target)
+            guard AXUIElementPerformAction(target, scrollToVisible as CFString) == .success else {
+                break
+            }
+            // The page scrolls a moment later, and the next step reads where things went.
+            let clock = ContinuousClock()
+            let deadline = clock.now + .milliseconds(500)
+            while clock.now < deadline, AX.frame(target) == before {
+                try? await Task.sleep(for: .milliseconds(25))
+            }
+            guard AX.frame(target) != before else {
+                break
+            }
+            revealed += 1
+        }
+        var answer: [String: Any] = ["method": scrollToVisible, "direction": direction.rawValue, "pages": revealed, "moved": revealed > 0]
+        if revealed == 0 {
+            answer["note"] = "nothing is hidden past that edge; there is nothing to scroll"
+        }
+        return answer
+    }
+
+    /// Reads the outermost scrolling element once; what each nearer one holds is a stretch of that read.
+    private static func revealTarget(_ element: AXUIElement, within web: [AXUIElement], direction: ScrollDirection, first: Bool) -> AXUIElement? {
+        if first, let frame = AX.frame(element), Clipping.isOffscreen(frame, within: .infinite) {
+            return element
+        }
+        guard let outermost = web.last else {
+            return nil
+        }
+        let laid = AX.layout(of: outermost, limit: 5000)
+        let containers = web.compactMap { container in laid.firstIndex { CFEqual($0.element, container) } }
+        return Clipping.revealTarget(in: laid.map(\.laid), containers: containers, direction: direction).map { laid[$0].element }
     }
 }
