@@ -18,7 +18,6 @@ import { BrandSymbol } from '@/ui/Brand';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
-import { Tooltip } from '@/ui/Tooltip';
 
 /* The three links, each with its words under `about.links.<id>`. */
 const LINKS = [
@@ -171,11 +170,9 @@ export function AboutPane() {
                         label={t('about.links.releaseNotes.label')}
                         description={t('about.links.releaseNotes.description')}
                         control={
-                            <Tooltip label={t('common:action.open')} name>
-                                <button type="button" className="icon-btn" onClick={() => openReleaseNotes(null)}>
-                                    <Icon icon={ArrowRight} size={16} />
-                                </button>
-                            </Tooltip>
+                            <Button variant="secondary" size="sm" onClick={() => openReleaseNotes(null)}>
+                                {t('common:action.open')} <Icon icon={ArrowRight} size={12} />
+                            </Button>
                         }
                     />
                 )}
@@ -185,11 +182,9 @@ export function AboutPane() {
                         label={t(`about.links.${link.id}.label`)}
                         description={t(`about.links.${link.id}.description`)}
                         control={
-                            <Tooltip label={t('common:action.open')} name>
-                                <a className="icon-btn" href={link.href} target="_blank" rel="noreferrer">
-                                    <Icon icon={ArrowUpRight} size={16} />
-                                </a>
-                            </Tooltip>
+                            <Button variant="secondary" size="sm" href={link.href}>
+                                {t('common:action.open')} <Icon icon={ArrowUpRight} size={12} />
+                            </Button>
                         }
                     />
                 ))}
