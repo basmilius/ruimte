@@ -9,9 +9,10 @@ import { PROVIDER_NAMES, type Account, type Identity, type ProviderId } from '@r
 // The order sign-in choices are drawn in, whatever order an address book lists them.
 export const PROVIDER_ORDER: readonly ProviderId[] = ['github', 'apple'];
 
-/* "someone" for a GitHub login, "your Apple ID" for an account shown as Apple. */
-export const accountName = (account: Account): string => account.login ?? i18next.t(`machines:account.yours.${account.provider}`);
+/* The person's name when a provider told it, else "someone" for a GitHub login, else "your Apple ID". */
+export const accountName = (account: Account): string => account.displayName ?? account.login ?? i18next.t(`machines:account.yours.${account.provider}`);
 
+/* The login rather than the name, since the login is what tells one identity from another. */
 export const signedInLabel = (account: Account): string =>
     account.login === null
         ? i18next.t('machines:account.signedInWithProvider', { provider: PROVIDER_NAMES[account.provider] })

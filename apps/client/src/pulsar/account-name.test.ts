@@ -5,10 +5,18 @@ describe('naming an account', () => {
     test('a login names the account, and an account without one is named after its provider', () => {
         expect(accountName({ id: 'a', provider: 'github', login: 'someone' })).toBe('someone');
         expect(accountName({ id: 'a', provider: 'apple', login: null })).toBe('your Apple ID');
+        expect(accountName({ id: 'a', provider: 'apple', login: null, displayName: null })).toBe('your Apple ID');
         expect(signedInLabel({ id: 'a', provider: 'github', login: 'someone' })).toBe('Signed in as someone');
         expect(signedInLabel({ id: 'a', provider: 'apple', login: null })).toBe('Signed in with Apple');
         expect(identityDetail({ provider: 'apple', login: null, createdAt: 1 })).toBe('Apple ID');
         expect(identityDetail({ provider: 'github', login: 'someone', createdAt: 1 })).toBe('someone');
+    });
+
+    test('a name wins over the login at the top, and the signed-in line keeps the login', () => {
+        const account = { id: 'a', provider: 'github' as const, login: 'someone', displayName: 'Some One' };
+        expect(accountName(account)).toBe('Some One');
+        expect(signedInLabel(account)).toBe('Signed in as someone');
+        expect(accountName({ id: 'a', provider: 'apple', login: null, displayName: 'Some One' })).toBe('Some One');
     });
 
     test('the warning names every identity that opens the account', () => {
