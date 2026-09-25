@@ -2,12 +2,11 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useTranslation } from 'react-i18next';
 import { Bot } from 'lucide-react';
-import type { ChatSubagentItem } from '@ruimte/contracts';
 import { deriveTimelineRows } from '@/chat/logic/timeline';
 import { INITIAL_CONVERSATION, SubagentConversation, type SubagentConversationState } from '@/chat/subagent-conversation';
 import { useSubagentSupport } from '@/chat/subagent-support';
 import { EMPTY_TARGET, readTimelineTarget, type TimelineTarget } from '@/chat/logic/timeline-target';
-import { crumbOf, openBelow, useSubagentTrail } from '@/chat/subagent-view';
+import { openBelow, useSubagentTrail, type SubagentStep } from '@/chat/subagent-view';
 import { Row } from '@/chat/ui/rows/Rows';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { FOLLOW_THRESHOLD_PX, rowRhythm } from '@/chat/ui/rows/row-rhythm';
@@ -87,8 +86,8 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
         return <EmptyState icon={Bot}>{state.unsupported ? t('subagents.unsupported') : (state.error ?? t('subagents.unreadable'))}</EmptyState>;
     }
 
-    const openChild = (item: ChatSubagentItem): void => {
-        show(openBelow(trail, crumbOf(item)));
+    const openChild = (step: SubagentStep): void => {
+        show(openBelow(trail, step));
     };
 
     const loadEarlier = (): void => {

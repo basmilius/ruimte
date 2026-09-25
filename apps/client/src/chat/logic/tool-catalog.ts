@@ -1,4 +1,4 @@
-import { Bot, Eye, FolderSearch, Globe, ListTodo, Search, SquarePen, Terminal, Zap, type LucideIcon } from 'lucide-react';
+import { Bot, Eye, FolderSearch, Globe, ListTodo, Search, SquarePen, Terminal, Workflow, Zap, type LucideIcon } from 'lucide-react';
 
 /* Everything the thread knows about one tool by name. */
 export interface ToolEntry {
@@ -50,7 +50,9 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     Agent: entry(Bot, ['description']),
     Skill: entry(Zap, ['skill']),
     // A plan is a list of objects, so there is no line to lift out of it.
-    TodoWrite: entry(ListTodo, [])
+    TodoWrite: entry(ListTodo, []),
+    // Its input is the whole script; the line takes what the CLI says the workflow is about instead.
+    Workflow: entry(Workflow, [], { grouped: false })
 };
 
 export const toolEntry = (name: string): ToolEntry | undefined => TOOL_CATALOG[name];

@@ -238,6 +238,27 @@ describe('deriveTimelineRows', () => {
         ];
         expect(deriveTimelineRows(items, options).map((row) => row.kind)).toEqual(['user', 'assistant']);
     });
+
+    test('a workflow is a row of its own, and stays out of the fold of its settled turn until it ends', () => {
+        const workflow = { name: 'review', phases: [{ index: 1, title: 'Read' }], agents: [] };
+        const items = (state: ChatToolItem['state']): ChatItem[] => [
+            thread[0]!,
+            thread[1]!,
+            tool('r1', 'Read', { file_path: 'a.ts' }),
+            { ...tool('wf', 'Workflow', { script: '' }, state), workflow },
+            tool('r2', 'Read', { file_path: 'b.ts' }),
+            { id: 'a1', kind: 'assistant', createdAt: 5000, turnId: 't1', text: 'It runs.', streaming: false }
+        ];
+        expect(deriveTimelineRows(items('running'), options).map((row) => [row.kind, row.id])).toEqual([
+            ['user', 'u1'],
+            ['turn-fold', 'fold-t1'],
+            ['workflow', 'wf'],
+            ['assistant', 'a1']
+        ]);
+        expect(deriveTimelineRows(items('done'), options).map((row) => row.kind)).toEqual(['user', 'turn-fold', 'assistant']);
+        const unfolded = deriveTimelineRows(items('done'), { ...options, expandedTurns: new Set(['t1']) });
+        expect(unfolded.map((row) => row.kind)).toEqual(['user', 'turn-fold', 'work', 'workflow', 'work', 'assistant']);
+    });
 });
 
 describe('labels', () => {

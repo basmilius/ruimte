@@ -125,6 +125,7 @@ export const turnIdOfRow = (row: TimelineRow): string | null => {
             return row.turnId;
         case 'work':
         case 'work-live':
+        case 'workflow':
             return row.tool.turnId;
         case 'work-group':
             return row.tools[0]?.turnId ?? null;

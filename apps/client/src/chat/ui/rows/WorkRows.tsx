@@ -109,7 +109,7 @@ function ToolBody({ tool }: { tool: ChatToolItem }) {
 
 /* One settled tool call: a line, and its input and output behind it. An image the call looked at
    is drawn under the line, because a picture says more about that read than its path does. */
-export function WorkRow({ tool, nested }: { tool: ChatToolItem; nested?: boolean }) {
+export function WorkRow({ tool, nested, detail }: { tool: ChatToolItem; nested?: boolean; detail?: string }) {
     const [open, setOpen] = useState(false);
     const image = tool.state === 'done' ? readImagePath(tool.name, tool.input) : null;
     useOpenForFind(tool.id, 'output', setOpen);
@@ -118,7 +118,7 @@ export function WorkRow({ tool, nested }: { tool: ChatToolItem; nested?: boolean
             <ToggleLine
                 icon={toolIcon(tool.name)}
                 label={tool.name}
-                detail={toolSummary(tool.name, tool.input)}
+                detail={detail ?? toolSummary(tool.name, tool.input)}
                 open={open}
                 onToggle={() => setOpen((o) => !o)}
                 failed={tool.state === 'error'}

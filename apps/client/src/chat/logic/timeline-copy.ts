@@ -39,6 +39,7 @@ export const messageTextOf = (row: TimelineRow): string | null => {
             return row.item.text || null;
         case 'work':
         case 'work-live':
+        case 'workflow':
             return outputOf(row.tool);
         case 'work-group': {
             const outputs = row.tools.map(outputOf).filter((output): output is string => output !== null);

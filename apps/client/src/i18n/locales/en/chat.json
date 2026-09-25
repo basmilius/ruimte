@@ -134,6 +134,11 @@
       "truncated": "Only the beginning of this agent's work is kept.",
       "showResult": "Show result",
       "hideResult": "Hide result"
+    },
+    "workflow": {
+      "notStarted": "not started",
+      "waiting": "waiting",
+      "stopped": "stopped"
     }
   },
   "work": {

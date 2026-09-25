@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
-import type { ChatBookmark, ChatSubagentItem } from '@ruimte/contracts';
+import type { ChatBookmark } from '@ruimte/contracts';
 import { useForkedTurns } from '@/chat/forks';
 import { bookmarkRows } from '@/chat/logic/bookmarks';
 import { deriveTimelineRows, findSubagentBranch, type TimelineRow } from '@/chat/logic/timeline';
-import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
+import { openFromMain, useSubagentTrail, type SubagentStep } from '@/chat/subagent-view';
 import { registerItemJumper, registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
 import {
     SCRUBBER_MIN_TICKS,
@@ -358,8 +358,8 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     useEffect(() => registerMessageStepper(endpointKey(endpointId, chatId), (direction) => stepRef.current(direction)), [endpointId, chatId]);
 
     /* The whole of what a sub-agent did, in the thread's place. Its row only keeps the beginning. */
-    const openConversation = (item: ChatSubagentItem): void => {
-        show(openFromMain(crumbOf(item)));
+    const openConversation = (step: SubagentStep): void => {
+        show(openFromMain(step));
     };
 
     /* The header of a turn a sub-agent woke. It points at the row that agent worked in, or the one it hangs under. */

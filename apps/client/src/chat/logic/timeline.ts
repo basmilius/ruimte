@@ -9,7 +9,8 @@ import type {
     ChatThinkingItem,
     ChatToolItem,
     ChatTurnItem,
-    ChatUserItem
+    ChatUserItem,
+    ChatWorkflow
 } from '@ruimte/contracts';
 import { abortedByMachine } from '@ruimte/contracts';
 import { formatElapsedShort } from '@/format/duration';
@@ -41,6 +42,8 @@ export type TimelineRow =
     | { kind: 'work'; id: string; tool: ChatToolItem }
     | { kind: 'work-group'; id: string; tools: ChatToolItem[]; summary: string; expanded: boolean }
     | { kind: 'work-live'; id: string; tool: ChatToolItem }
+    // A Workflow call the machine reports phases and agents for, drawn with them under it.
+    | { kind: 'workflow'; id: string; tool: ChatToolItem; workflow: ChatWorkflow }
     | ({ kind: 'subagent' } & SubagentBranch)
     | { kind: 'approval'; id: string; item: ChatApprovalItem }
     | { kind: 'question'; id: string; item: ChatQuestionItem }
@@ -242,6 +245,11 @@ const rowsForItems = (items: ChatItem[], options: TimelineOptions, children: Map
             continue;
         }
         const report = handbackReportOf(item);
+        if (item.kind === 'tool' && item.workflow !== undefined) {
+            flushTools(tools, rows, options);
+            rows.push({ kind: 'workflow', id: item.id, tool: item, workflow: item.workflow });
+            continue;
+        }
         if (item.kind === 'tool' && report === null) {
             tools.push(item);
             continue;
@@ -369,7 +377,10 @@ export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions):
         }
         // The closing answer stays visible; everything before it folds behind the label.
         const finalAssistant = lastAssistantRow(work);
-        const folded = finalAssistant ? work.slice(0, work.indexOf(finalAssistant)) : work;
+        const before = finalAssistant ? work.slice(0, work.indexOf(finalAssistant)) : work;
+        // A workflow runs on past the turn that launched it, so its row stays in sight until it ends.
+        const standing = before.filter((row) => row.kind === 'workflow' && row.tool.state === 'running');
+        const folded = before.filter((row) => !standing.includes(row));
         const expanded = options.expandedTurns.has(turnId);
         if (folded.length > 0) {
             const tools = rest.filter((item): item is ChatToolItem => item.kind === 'tool' && parentOf(item) === null && handbackReportOf(item) === null);
@@ -386,6 +397,7 @@ export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions):
                 rows.push(...folded);
             }
         }
+        rows.push(...standing);
         const changed = changedFilesRow(turn, rest);
         if (changed) {
             rows.push(changed);

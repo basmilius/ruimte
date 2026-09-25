@@ -10,7 +10,7 @@ import { Markdown } from '@/chat/ui/Markdown';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from '@/chat/ui/rows/WorkRows';
 import { entryTimeOf, statusWordOf, taskIdOf } from '@/chat/subagent-list';
 import { useSubagentSupport } from '@/chat/subagent-support';
-import { canOpenSubagent } from '@/chat/subagent-view';
+import { canOpenSubagent, crumbOf, type SubagentStep } from '@/chat/subagent-view';
 import { useEndpointId } from '@/state/keys';
 import { useTasks } from '@/state/tasks';
 import { Icon } from '@/ui/Icon';
@@ -172,7 +172,7 @@ export function SubagentBranchRow({
 }: {
     branch: SubagentBranch;
     onToggle(id: string): void;
-    onOpenConversation?(item: ChatSubagentItem): void;
+    onOpenConversation?(step: SubagentStep): void;
 }) {
     return (
         <>
@@ -181,7 +181,7 @@ export function SubagentBranchRow({
                 work={branch.children}
                 expanded={branch.expanded}
                 onToggle={() => onToggle(branch.id)}
-                onOpenConversation={onOpenConversation ? () => onOpenConversation(branch.item) : undefined}
+                onOpenConversation={onOpenConversation ? () => onOpenConversation(crumbOf(branch.item)) : undefined}
             />
             {branch.nested.length > 0 && (
                 <div className="ml-6">

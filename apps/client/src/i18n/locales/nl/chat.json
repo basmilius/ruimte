@@ -134,6 +134,11 @@
       "truncated": "Alleen het begin van het werk van deze agent is bewaard.",
       "showResult": "Resultaat tonen",
       "hideResult": "Resultaat verbergen"
+    },
+    "workflow": {
+      "notStarted": "nog niet begonnen",
+      "waiting": "wacht",
+      "stopped": "gestopt"
     }
   },
   "work": {

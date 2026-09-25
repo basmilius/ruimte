@@ -1,5 +1,5 @@
-import type { ChatSubagentItem } from '@ruimte/contracts';
 import type { TimelineRow } from '@/chat/logic/timeline';
+import type { SubagentStep } from '@/chat/subagent-view';
 import {
     AgentTurnRow,
     ApprovalHistoryRow,
@@ -13,6 +13,7 @@ import {
 } from '@/chat/ui/rows/MessageRows';
 import { ForksRow } from '@/chat/ui/rows/ForksRow';
 import { SubagentBranchRow } from '@/chat/ui/rows/SubagentRow';
+import { WorkflowRow } from '@/chat/ui/rows/WorkflowRow';
 import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
 
 export interface RowProps {
@@ -22,8 +23,8 @@ export interface RowProps {
     toggleTurn(id: string): void;
     toggleSubagent(id: string): void;
     openSubagent(toolUseId: string): void;
-    /* Opens a subagent's whole conversation in the thread's place; absent where there is nowhere to open it. */
-    openConversation?(item: ChatSubagentItem): void;
+    /* Opens the whole conversation of a subagent or a workflow's agent in the thread's place; absent where there is nowhere to open it. */
+    openConversation?(step: SubagentStep): void;
 }
 
 /* One row of a thread, the chat's own or a subagent's read back, drawn the same way in both. */
@@ -45,6 +46,8 @@ export function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, open
             return <WorkRow tool={row.tool} />;
         case 'work-live':
             return <WorkLiveRow tool={row.tool} />;
+        case 'workflow':
+            return <WorkflowRow tool={row.tool} workflow={row.workflow} onOpenAgent={openConversation} />;
         case 'work-group':
             return <WorkGroupRow tools={row.tools} summary={row.summary} expanded={row.expanded} onToggle={() => toggleGroup(row.id)} />;
         case 'subagent':
