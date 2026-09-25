@@ -5,9 +5,9 @@ import { Plus, Terminal } from 'lucide-react';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { AccountDot } from '@/agents/AccountDot';
 import { ACCOUNT_TONE_CLASSES, accountName, accountsOfKind, accountStatusLine, type AccountEntry } from '@/agents/accounts';
-import { Skeleton, Toggle } from '@/shell/settings/controls';
+import { Skeleton } from '@/shell/settings/controls';
 import { MasterDetail } from '@/shell/settings/MasterDetail';
-import { openLogin, saveAccount } from '@/shell/settings/providers/account-actions';
+import { openLogin } from '@/shell/settings/providers/account-actions';
 import { AccountDetail } from '@/shell/settings/providers/AccountDetail';
 import { AddAccountForm } from '@/shell/settings/providers/AddAccountForm';
 import { CliDetail } from '@/shell/settings/providers/CliDetail';
@@ -125,16 +125,6 @@ export function ProvidersPane() {
                             key={entry.id}
                             selected={current?.kind === 'account' && current.id === entry.id}
                             onSelect={() => setPicked({ kind: 'account', id: entry.id })}
-                            trailing={
-                                <Toggle
-                                    checked={entry.account.enabled !== false}
-                                    label={t('providers.list.enable', { account: name })}
-                                    onChange={(checked) => {
-                                        const { enabled: _enabled, ...account } = entry.account;
-                                        void saveAccount(endpointId, entry.id, checked ? account : { ...account, enabled: false });
-                                    }}
-                                />
-                            }
                         >
                             <span className="grid w-3.5 shrink-0 place-items-center">
                                 <AccountDot color={entry.account.color} className="size-2.25" />

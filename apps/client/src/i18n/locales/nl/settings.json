@@ -363,7 +363,6 @@
             "label": "Agent-CLI's en hun accounts",
             "default": "Standaard",
             "addAccount": "Een {{provider}}-account toevoegen",
-            "enable": "{{account}} gebruiken",
             "notInstalled": "Niet geïnstalleerd",
             "missing": "Ontbreekt",
             "notInstalledNote": "Installeer er een en start Ruimte op die machine opnieuw om hem toe te voegen.",
@@ -408,6 +407,10 @@
         },
         "account": {
             "kind": "{{provider}}-account",
+            "enabled": {
+                "label": "Dit account gebruiken",
+                "description": "Uitgezet wordt het niet aangeboden voor nieuwe chats en agents."
+            },
             "showFolder": "Map tonen",
             "folderCopied": "Pad van de map gekopieerd",
             "name": "Naam",
@@ -455,7 +458,7 @@
             "remove": {
                 "label": "Account verwijderen",
                 "description": "Chats die het gebruiken vragen bij hun volgende turn om een ander account. De map blijft op de schijf.",
-                "defaultNote": "Het standaardaccount gebruikt de eigen map van de CLI en kan niet weg. Zet het in plaats daarvan uit in de lijst.",
+                "defaultNote": "Het standaardaccount gebruikt de eigen map van de CLI en kan niet weg. Zet het in plaats daarvan hierboven uit.",
                 "button": "Verwijderen",
                 "confirmTitle": "{{account}} verwijderen?",
                 "confirmDescription": "Ruimte vergeet dit account. De map blijft op de schijf staan op {{folder}}, met de login erin.",

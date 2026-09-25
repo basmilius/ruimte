@@ -363,7 +363,6 @@
             "label": "Agent CLIs and their accounts",
             "default": "Default",
             "addAccount": "Add a {{provider}} account",
-            "enable": "Use {{account}}",
             "notInstalled": "Not installed",
             "missing": "Missing",
             "notInstalledNote": "To add one, install it and restart Ruimte on that machine.",
@@ -408,6 +407,10 @@
         },
         "account": {
             "kind": "{{provider}} account",
+            "enabled": {
+                "label": "Use this account",
+                "description": "Turned off, it is not offered for new chats and agents."
+            },
             "showFolder": "Show folder",
             "folderCopied": "Folder path copied",
             "name": "Name",
@@ -455,7 +458,7 @@
             "remove": {
                 "label": "Remove account",
                 "description": "Chats that use it ask for another account on their next turn. The folder stays on disk.",
-                "defaultNote": "The default account uses the CLI's own folder and cannot be removed. Turn it off in the list instead.",
+                "defaultNote": "The default account uses the CLI's own folder and cannot be removed. Turn it off above instead.",
                 "button": "Remove",
                 "confirmTitle": "Remove {{account}}?",
                 "confirmDescription": "Ruimte forgets this account. Its folder stays on disk at {{folder}}, with its login in it.",

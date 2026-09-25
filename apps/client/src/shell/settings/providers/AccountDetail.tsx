@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/shell/settings/ConfirmDialog';
 import { openLogin, removeAccount, saveAccount } from '@/shell/settings/providers/account-actions';
 import { AccountVariables } from '@/shell/settings/providers/AccountVariables';
 import { AccentSwatches } from '@/shell/settings/AccentSwatches';
+import { Toggle } from '@/shell/settings/controls';
 import { CliMark, DetailHeader, REMOVE_BUTTON } from '@/shell/settings/providers/parts';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -112,6 +113,20 @@ export function AccountDetail({ endpointId, provider, entry, canLogIn, loginBloc
                 }
             />
             <SettingsSection>
+                <SettingsRow
+                    label={t('providers.account.enabled.label')}
+                    description={t('providers.account.enabled.description')}
+                    control={
+                        <Toggle
+                            checked={account.enabled !== false}
+                            label={t('providers.account.enabled.label')}
+                            onChange={(checked) => {
+                                const { enabled: _enabled, ...rest } = account;
+                                void saveAccount(endpointId, id, checked ? rest : { ...rest, enabled: false });
+                            }}
+                        />
+                    }
+                />
                 <SettingsRow
                     label={t('providers.account.name')}
                     control={
