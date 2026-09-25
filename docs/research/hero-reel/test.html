@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body { margin: 0; padding: 12px; background: #0d0d10; color: #ececf1; font: 13px system-ui, sans-serif; }
+#strip { display: flex; flex-wrap: wrap; gap: 12px; width: max-content; max-width: 1570px; }
+figure { margin: 0; }
+figcaption { font: 12px ui-monospace, monospace; color: #9a9aa6; padding: 4px 0; }
+.host { position: relative; width: var(--w, 560px); aspect-ratio: 560 / 500; background: radial-gradient(ellipse at 70% 40%, rgba(21, 93, 252, 0.10), transparent 65%), #0d0d10; outline: 1px dashed rgba(255, 255, 255, 0.06); }
+.take-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#err { color: #f87171; white-space: pre-wrap; font: 12px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<div id="strip"></div>
+<pre id="err"></pre>
+<script>
+window.__errors = [];
+window.addEventListener('error', (e) => { window.__errors.push(String(e.message)); document.getElementById('err').textContent += e.message + '\n'; });
+const origError = console.error;
+console.error = (...args) => { window.__errors.push(args.map(String).join(' ')); origError(...args); };
+</script>
+<script src="harness.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+document.write('<script src="pieces/' + q.get('piece') + '.js"><\/script>');
+</script>
+<script>
+(async () => {
+    const fontLoads = ['600 40px Geist', '400 20px Geist', '500 16px "JetBrains Mono"', '700 16px "JetBrains Mono"', '400 20px Kalam', '700 20px Kalam'].map((f) => document.fonts.load(f).catch(() => null));
+    await Promise.race([Promise.all(fontLoads), new Promise((r) => setTimeout(r, 3000))]);
+    const def = Reel.get(q.get('piece'));
+    if (!def) { document.getElementById('err').textContent = 'no take ' + q.get('piece'); window.__done = true; return; }
+    const width = +(q.get('w') || 560);
+    const times = q.has('t') ? q.get('t').split(',').map(Number) : null;
+    const strip = document.getElementById('strip');
+    const make = (label) => {
+        const fig = document.createElement('figure');
+        const host = document.createElement('div');
+        host.className = 'host';
+        host.style.setProperty('--w', width + 'px');
+        const cap = document.createElement('figcaption');
+        cap.textContent = label;
+        fig.append(host, cap);
+        strip.append(fig);
+        const runner = new ReelRunner(def, host, { quality: +(q.get('q') || 1), maxDpr: +(q.get('dpr') || 1) });
+        if (q.has('p')) {
+            const [px, py] = q.get('p').split(',').map(Number);
+            Object.assign(runner.pointer, { tx: px, ty: py, x: px, y: py, inside: true, active: 1 });
+        }
+        return runner;
+    };
+    if (times) {
+        for (const t of times) {
+            const runner = make(def.id + '  t=' + t + 's');
+            runner.seek(t);
+            if (runner.error) document.getElementById('err').textContent += runner.error.stack + '\n';
+        }
+    } else {
+        const runner = make(def.id + '  live');
+        ReelClock.play(runner);
+    }
+    if (q.has('bench')) {
+        const host = document.createElement('div');
+        host.className = 'host';
+        host.style.setProperty('--w', width + 'px');
+        document.body.append(host);
+        const runner = new ReelRunner(def, host, { quality: +(q.get('q') || 1), maxDpr: +(q.get('dpr') || 1) });
+        runner.seek(2);
+        const start = performance.now();
+        for (let i = 0; i < 120; i++) runner.tick(1 / 60);
+        window.__bench = (performance.now() - start) / 120;
+        host.remove();
+    }
+    window.__done = true;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,314 @@
+<title>Ruimte Hero Reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* One dark look on purpose: the site these takes are for has no light theme, and they are judged on its ground. */
+:root {
+    color-scheme: dark;
+    --bg: #0d0d10;
+    --surface: #131316;
+    --raised: #18181c;
+    --sunken: #08080a;
+    --hover: #202024;
+    --active: #28282e;
+    --border: rgb(255 255 255 / 0.07);
+    --border-strong: rgb(255 255 255 / 0.13);
+    --text: #ececf1;
+    --muted: #9a9aa6;
+    --faint: #5f5f6b;
+    --accent: #155dfc;
+    --amber: #fbbf24;
+    --font-display: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Geist", Roboto, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; background-clip: padding-box; }
+html { background: var(--bg); scroll-padding-top: 16px; }
+body { background: var(--bg); color: var(--text); font: 400 16px/1.55 var(--font-sans); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+p { text-wrap: pretty; margin: 0; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+::selection { background: rgb(21 93 252 / 0.6); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.mono { font-family: var(--font-mono); }
+
+.wrap { max-width: 1240px; margin-inline: auto; padding-inline: 16px; }
+@media (min-width: 640px) { .wrap { padding-inline: 32px; } }
+
+/* Slate: the clapperboard that opens every take on a real reel. */
+.slate { margin-top: 24px; border: 1px solid var(--border-strong); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.clapper { height: 16px; background: repeating-linear-gradient(-58deg, #d6d6de 0 16px, var(--sunken) 16px 32px); opacity: 0.9; border-bottom: 1px solid var(--border-strong); }
+.slate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); margin: 0; }
+.slate-grid > div { padding: 10px 16px 12px; border-left: 1px solid var(--border); margin-left: -1px; border-top: 1px solid var(--border); margin-top: -1px; }
+.slate-grid dt { font: 500 12px/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.slate-grid dd { margin: 2px 0 0; font: 500 16px/1.4 var(--font-display); color: var(--text); font-variant-numeric: tabular-nums; }
+
+.intro { display: grid; gap: 16px 48px; padding-block: 48px 32px; align-items: end; }
+@media (min-width: 900px) { .intro { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); } }
+.intro h1 { font: 600 56px/1 var(--font-display); letter-spacing: -0.045em; }
+.intro p { color: var(--muted); max-width: 60ch; }
+
+/* The fitting room: the real hero of ruimte.app, rebuilt from its own tokens, with the take in its visual slot. */
+.fitting-label { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font: 500 12px/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.fitting-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.mock { border: 1px solid var(--border-strong); border-radius: 16px; overflow: hidden; background: var(--bg); box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.25), 0 32px 80px rgb(0 0 0 / 0.35); }
+.mock-bar { display: flex; align-items: center; gap: 12px; height: 36px; padding-inline: 14px; border-bottom: 1px solid var(--border); background: var(--sunken); }
+.mock-lights { display: flex; gap: 6px; }
+.mock-lights span { width: 10px; height: 10px; border-radius: 50%; background: var(--hover); }
+.mock-url { margin-inline: auto; padding: 2px 16px; border-radius: 6px; background: var(--surface); font: 400 12px/1.6 var(--font-sans); color: var(--muted); }
+.mock-lights-spacer { width: 42px; }
+.mock-page { position: relative; isolation: isolate; overflow: hidden; padding-inline: 20px; }
+@media (min-width: 640px) { .mock-page { padding-inline: 40px; } }
+.mock-backdrop { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.mock-backdrop::before { content: ""; position: absolute; top: 40px; right: -25%; width: 1100px; height: 900px; background: radial-gradient(ellipse, rgb(21 93 252 / 0.15), rgb(21 93 252 / 0) 65%); }
+.mock-backdrop::after { content: ""; position: absolute; inset: 0; opacity: 0.4; background-image: radial-gradient(rgb(21 93 252 / 0.5) 0.7px, rgb(21 93 252 / 0) 0.7px); background-size: 38px 38px; -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent); mask-image: linear-gradient(to bottom, black 40%, transparent); }
+.mock-header { display: flex; align-items: center; gap: 12px; height: 64px; }
+.mock-brand { display: flex; align-items: center; gap: 10px; font: 600 19px/1 var(--font-display); letter-spacing: -0.01em; }
+.mock-brand img { width: 30px; height: 30px; }
+.mock-nav { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
+@media (min-width: 640px) { .mock-nav { gap: 24px; } }
+.mock-visual-pill .label { display: none; }
+@media (min-width: 640px) { .mock-visual-pill .label { display: inline; } }
+.mock-nav .hide-sm { display: none; }
+@media (min-width: 900px) { .mock-nav .hide-sm { display: inline; } }
+.mock-visual-pill { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding-inline: 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); transition: border-color 0.2s, color 0.2s; }
+.mock-visual-pill:hover { border-color: var(--border-strong); color: var(--text); }
+.mock-visual-pill .count { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.mock-download-sm { display: inline-flex; align-items: center; min-height: 36px; padding-inline: 14px; border: 1px solid var(--border-strong); border-radius: 999px; color: var(--text); font-weight: 500; }
+.mock-hero { display: grid; gap: 8px; align-items: center; padding-block: 56px 48px; }
+@media (min-width: 900px) { .mock-hero { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 32px; padding-block: 72px 56px; } }
+.mock-copy { position: relative; z-index: 1; }
+.mock-eyebrow { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 28px; font-size: 13px; color: var(--muted); }
+.mock-eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--accent); }
+.mock-h1 { font: 600 clamp(40px, 5.8vw, 72px)/1.04 var(--font-display); letter-spacing: -0.045em; }
+.mock-h1 b { font-weight: 700; }
+.mock-lede { margin-top: 24px; max-width: 43ch; font-size: 17px; line-height: 1.625; color: var(--muted); }
+@media (min-width: 640px) { .mock-lede { font-size: 19px; } }
+.mock-cta { margin-top: 32px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.mock-download { display: inline-flex; align-items: center; gap: 10px; padding: 14px 24px; border-radius: 999px; background: var(--text); color: var(--bg); font-size: 15px; font-weight: 500; }
+.mock-download svg { width: 18px; height: 18px; }
+.mock-cta small { font-size: 14px; color: var(--muted); }
+.mock-cta small u { color: var(--text); text-decoration-color: var(--border-strong); text-underline-offset: 4px; }
+.mock-visual { position: relative; width: 100%; max-width: 540px; margin-inline: auto; aspect-ratio: 560 / 500; margin-top: 24px; }
+@media (min-width: 900px) { .mock-visual { margin-top: 0; } }
+.mock-hint { position: absolute; inset-inline: 0; bottom: -4px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--faint); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.mock-hint::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+.mock-visual:hover .mock-hint { opacity: 1; }
+@media (hover: none) { .mock-hint { display: none; } }
+
+.take-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; transition: opacity 0.45s ease; }
+.take-canvas.entering { opacity: 0; }
+.take-canvas.leaving { opacity: 0; }
+[data-error]::after { content: "This take stopped: " attr(data-error); position: absolute; inset: auto 12px 12px; padding: 8px 10px; border-radius: 8px; background: var(--sunken); color: #f87171; font: 12px/1.4 var(--font-mono); }
+
+/* Credits: the lower third of the take in the fitting room. */
+.credits { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px 24px; margin-top: 16px; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+@media (min-width: 900px) { .credits { grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; padding: 24px 28px; } }
+.credits-num { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 64px; }
+.credits-num span { font: 500 12px/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.credits-num strong { font: 600 56px/0.9 var(--font-display); letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+.credits-body h2 { font: 600 28px/1.15 var(--font-display); letter-spacing: -0.03em; }
+.credits-body .line { margin-top: 6px; color: var(--muted); max-width: 62ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: 13px; color: var(--text); }
+.chip::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.tech { margin-top: 12px; font: 500 12px/1.5 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+.credits-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+@media (min-width: 900px) { .credits-actions { grid-column: auto; justify-content: flex-end; } }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding-inline: 14px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--text); transition: background-color 0.2s, border-color 0.2s, color 0.2s; }
+.btn:hover { background: var(--hover); }
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn-icon { width: 40px; padding: 0; }
+.btn-star[aria-pressed="true"] { border-color: color-mix(in srgb, var(--amber) 55%, transparent); color: var(--amber); }
+.btn-star[aria-pressed="true"] svg { fill: currentColor; }
+.btn-group { display: inline-flex; }
+.btn-group .btn:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.btn-group .btn:last-child { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -1px; }
+.keys { width: 100%; font-size: 12px; color: var(--faint); text-align: right; }
+@media (max-width: 899px) { .keys { display: none; } }
+kbd { font: 500 12px/1 var(--font-mono); padding: 2px 5px; border: 1px solid var(--border-strong); border-radius: 4px; color: var(--muted); }
+
+.section { padding-block: 80px 0; }
+.section-head { display: grid; gap: 12px 48px; margin-bottom: 32px; align-items: end; }
+@media (min-width: 900px) { .section-head { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); } }
+.section-head h2 { font: 600 40px/1.05 var(--font-display); letter-spacing: -0.04em; }
+.section-head p { color: var(--muted); max-width: 60ch; }
+
+/* Skills: the principles as a CV lists them, each with the takes that prove it. */
+.skill-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); display: grid; }
+@media (min-width: 900px) { .skill-list { grid-template-columns: 1fr 1fr; column-gap: 48px; } }
+.skill-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.skill { display: flex; align-items: center; gap: 12px; min-height: 36px; text-align: left; border-radius: 8px; }
+.skill-name { font: 500 16px/1.3 var(--font-display); letter-spacing: -0.01em; }
+.skill:hover .skill-name { color: #fff; }
+.skill[aria-pressed="true"] .skill-name { color: #fff; text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+.meter { display: inline-flex; gap: 3px; }
+.meter i { width: 6px; height: 6px; border-radius: 1px; background: var(--hover); }
+.meter i.on { background: var(--text); }
+.skill-takes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.take-chip { min-width: 32px; height: 28px; padding-inline: 6px; border-radius: 6px; border: 1px solid var(--border); font: 500 12px/26px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.take-chip:hover { border-color: var(--border-strong); color: var(--text); background: var(--hover); }
+
+/* The reel: a contact sheet of every take, live while it is on screen. */
+.reel-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.reel-head h2 { font: 600 40px/1.05 var(--font-display); letter-spacing: -0.04em; }
+.reel-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.filter-state { font-size: 14px; color: var(--muted); }
+.filter-state button { color: var(--text); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 4px; }
+.grid { display: grid; gap: 32px 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 560px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tile { display: flex; flex-direction: column; gap: 12px; transition: opacity 0.3s; }
+.tile.dim { opacity: 0.22; }
+.tile[hidden] { display: none; }
+.tile-frame { position: relative; display: block; width: 100%; aspect-ratio: 560 / 500; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: radial-gradient(ellipse 80% 70% at 68% 38%, rgb(21 93 252 / 0.1), rgb(21 93 252 / 0) 70%), var(--bg); background-clip: padding-box; transition: border-color 0.2s; }
+.tile-frame:hover { border-color: var(--border-strong); }
+.tile.is-current .tile-frame { border-color: color-mix(in srgb, var(--accent) 75%, transparent); }
+.tile-badge { position: absolute; top: 10px; left: 10px; z-index: 1; display: none; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 22%, var(--sunken)); font-size: 12px; color: var(--text); }
+.tile.is-current .tile-badge { display: inline-flex; }
+.tile-meta { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 10px; align-items: baseline; }
+.tile-num { font: 500 12px/1 var(--font-mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+.tile-title { font: 600 20px/1.2 var(--font-display); letter-spacing: -0.02em; }
+.tile-title button { text-align: left; border-radius: 4px; }
+.tile-title button:hover { color: #fff; }
+.tile .star { align-self: center; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; color: var(--faint); }
+.tile .star:hover { color: var(--text); background: var(--hover); }
+.tile .star[aria-pressed="true"] { color: var(--amber); }
+.tile .star[aria-pressed="true"] svg { fill: currentColor; }
+.tile .star svg { width: 16px; height: 16px; }
+.tile-line { grid-column: 2 / -1; margin-top: 6px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.tile-principles { grid-column: 2 / -1; margin-top: 8px; font-size: 13px; color: var(--text); }
+.tile-tech { grid-column: 2 / -1; margin-top: 4px; font: 500 12px/1.5 var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--faint); }
+.empty { padding: 48px 0; color: var(--muted); }
+
+.colophon { margin-top: 96px; padding-block: 32px 48px; border-top: 1px solid var(--border); display: grid; gap: 12px 48px; font-size: 14px; color: var(--muted); }
+@media (min-width: 900px) { .colophon { grid-template-columns: 1fr 1fr; } }
+.colophon strong { color: var(--text); font-weight: 500; }
+
+@media (prefers-reduced-motion: reduce) {
+    .take-canvas, .tile, .mock-hint { transition: none; }
+}
+</style>
+
+<div class="wrap">
+    <header class="slate" aria-label="Reel slate">
+        <div class="clapper" aria-hidden="true"></div>
+        <dl class="slate-grid">
+            <div><dt>Prod.</dt><dd>ruimte.app</dd></div>
+            <div><dt>Scene</dt><dd>Hero visual</dd></div>
+            <div><dt>Takes</dt><dd id="slate-takes">20</dd></div>
+            <div><dt>Frame</dt><dd>560 &times; 500</dd></div>
+            <div><dt>Date</dt><dd>25 Sep 2026</dd></div>
+        </dl>
+    </header>
+
+    <section class="intro">
+        <h1>Hero reel</h1>
+        <p>Twenty new takes for the space beside the headline on ruimte.app. Each one is a proposal and a piece of evidence: it names the principles of animation it puts to work, and it moves when you point at it. Try a take in the fitting room, star the ones worth keeping, and tell Claude the number you want on the site.</p>
+    </section>
+
+    <section id="fitting" aria-labelledby="fitting-title">
+        <h2 id="fitting-title" class="fitting-label">Fitting room, the hero as it would ship</h2>
+        <div class="mock">
+            <div class="mock-bar" aria-hidden="true">
+                <div class="mock-lights"><span></span><span></span><span></span></div>
+                <div class="mock-url">ruimte.app</div>
+                <div class="mock-lights-spacer"></div>
+            </div>
+            <div class="mock-page">
+                <div class="mock-backdrop" aria-hidden="true"></div>
+                <div class="mock-header">
+                    <div class="mock-brand"><img src="__ICON__" alt="" width="30" height="30">Ruimte</div>
+                    <div class="mock-nav">
+                        <span class="hide-sm">Features</span>
+                        <span class="hide-sm">Web app</span>
+                        <span class="hide-sm">GitHub</span>
+                        <button type="button" class="mock-visual-pill" id="pill" aria-label="Next take">
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z"/><path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z"/></svg>
+                            <span class="label">Visual</span><span class="count" id="pill-count">1/20</span>
+                        </button>
+                        <span class="mock-download-sm">Download</span>
+                    </div>
+                </div>
+                <div class="mock-hero">
+                    <div class="mock-copy">
+                        <div class="mock-eyebrow">Ruimte is in early preview</div>
+                        <div class="mock-h1">Space for<br><b>AI Engineering.</b></div>
+                        <p class="mock-lede">Your agents, terminals and browsers. One workspace. Connect their context, follow the work, and pick up where you left off.</p>
+                        <div class="mock-cta">
+                            <span class="mock-download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download for macOS</span>
+                            <small>Apple silicon <span style="color: var(--faint); margin-inline: 8px">/</span><u>Linux and other builds</u></small>
+                        </div>
+                    </div>
+                    <div class="mock-visual" id="stage-host">
+                        <p class="sr-only" id="stage-desc"></p>
+                        <div class="mock-hint" id="stage-hint"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="credits" aria-live="polite">
+            <div class="credits-num"><span>Take</span><strong id="c-num">01</strong><span id="c-of">of 20</span></div>
+            <div class="credits-body">
+                <h2 id="c-title"></h2>
+                <p class="line" id="c-line"></p>
+                <ul class="chips" id="c-principles"></ul>
+                <p class="tech" id="c-tech"></p>
+            </div>
+            <div class="credits-actions">
+                <button type="button" class="btn btn-star" id="c-star" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.8a.56.56 0 0 1 1 0l2.56 5.18a.56.56 0 0 0 .42.31l5.72.83a.56.56 0 0 1 .31.96l-4.14 4.03a.56.56 0 0 0-.16.5l.98 5.7a.56.56 0 0 1-.82.59l-5.11-2.69a.56.56 0 0 0-.52 0l-5.11 2.69a.56.56 0 0 1-.82-.6l.98-5.69a.56.56 0 0 0-.16-.5L2.5 10.08a.56.56 0 0 1 .31-.96l5.72-.83a.56.56 0 0 0 .42-.31Z"/></svg>
+                    <span id="c-star-label">Shortlist</span>
+                </button>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-icon" id="prev" aria-label="Previous take"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+                    <button type="button" class="btn btn-icon" id="next" aria-label="Next take"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+                </div>
+                <p class="keys"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> to step through</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" aria-labelledby="skills-title">
+        <div class="section-head">
+            <h2 id="skills-title">Skills</h2>
+            <p>The twelve principles of animation, and the takes that put each one to work. Choose a principle to filter the reel, or a number to put that take in the hero.</p>
+        </div>
+        <ol class="skill-list" id="skills"></ol>
+    </section>
+
+    <section class="section" id="reel" aria-labelledby="reel-title">
+        <div class="reel-head">
+            <h2 id="reel-title">The reel</h2>
+            <div class="reel-tools">
+                <span class="filter-state" id="filter-state"></span>
+                <button type="button" class="btn btn-star" id="only-starred" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.8a.56.56 0 0 1 1 0l2.56 5.18a.56.56 0 0 0 .42.31l5.72.83a.56.56 0 0 1 .31.96l-4.14 4.03a.56.56 0 0 0-.16.5l.98 5.7a.56.56 0 0 1-.82.59l-5.11-2.69a.56.56 0 0 0-.52 0l-5.11 2.69a.56.56 0 0 1-.82-.6l.98-5.69a.56.56 0 0 0-.16-.5L2.5 10.08a.56.56 0 0 1 .31-.96l5.72-.83a.56.56 0 0 0 .42-.31Z"/></svg>
+                    <span id="only-starred-label">Shortlist only</span>
+                </button>
+                <button type="button" class="btn" id="motion" aria-pressed="true">Motion on</button>
+            </div>
+        </div>
+        <div class="grid" id="grid"></div>
+        <p class="empty" id="empty" hidden>Nothing on the shortlist yet. Star a take to keep it here.</p>
+    </section>
+
+    <footer class="colophon">
+        <p><strong>How to choose.</strong> Put a take in the fitting room and look at it beside the headline for a while: a hero is seen a thousand times, so the one that still feels calm on the tenth loop wins. Tell Claude the number, and it goes onto the site in place of the current visuals.</p>
+        <p><strong>How they are made.</strong> Every take draws into the same 560 by 500 frame on the site's own tokens: ground #0d0d10, accent #155dfc, the status colors, Geist, JetBrains Mono and Kalam. Sixteen are Canvas 2D, four share one WebGL context. Tiles run only while they are on screen, and all of them stop when your system asks for less motion.</p>
+    </footer>
+</div>
+
+<script>
+/*HARNESS*/
+</script>
+<script>
+/*PIECES*/
+</script>
+<script>
+/*APP*/
+</script>

@@ -1,7 +1,8 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react", "typescript", "oxc"],
-  "ignorePatterns": ["apps/ios/App/Resources/document-renderer.js"],
+  // The hero reel is a throwaway prototype page, built into one artifact; a take that ships is ported to TypeScript.
+    "ignorePatterns": ["apps/ios/App/Resources/document-renderer.js", "docs/research/hero-reel/**"],
   "rules": {
     "curly": "error",
     "react/rules-of-hooks": "error",
