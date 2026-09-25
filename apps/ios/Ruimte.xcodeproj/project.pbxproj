@@ -140,6 +140,7 @@
 		DBAB23D19384984149C8E454 /* UsageWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A2764A51BCE359F3B4CCA36 /* UsageWidget.swift */; };
 		DCDA9FE7463803051C29BB51 /* TerminalModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A531355B6DBA1AEA2747E700 /* TerminalModel.swift */; };
 		DD033916C188637B3EA2D645 /* DrawingEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073C4EC8E14E8D8910DEF111 /* DrawingEditorTests.swift */; };
+		DEBEAF340DCE410AB89AF227 /* AccountDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FC200AD66C0ACA562FAF1D4 /* AccountDot.swift */; };
 		DF70EC4BAFF7F692F3C49854 /* PlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03DC65E136B10CDF5015742E /* PlanSheet.swift */; };
 		E2188F2FE2D263B6F0876E58 /* RichChatComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3831E0DF8E82C62D0BB8F805 /* RichChatComposer.swift */; };
 		E95A1AC133CF67657CEA99A3 /* ProjectArtworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ABABCDEEE659AD8B4D227A8 /* ProjectArtworkTests.swift */; };
@@ -220,6 +221,7 @@
 		0C17D413F96B8051800FD0DC /* RemotePageStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemotePageStateTests.swift; sourceTree = "<group>"; };
 		0E13420E1D28A681FA26B33B /* MachineIconState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineIconState.swift; sourceTree = "<group>"; };
 		0F3F8DD20F1E6829F55FE104 /* ChatActivityViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatActivityViews.swift; sourceTree = "<group>"; };
+		0FC200AD66C0ACA562FAF1D4 /* AccountDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDot.swift; sourceTree = "<group>"; };
 		111FDB97EC13D539638EFBEC /* ChatScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScreen.swift; sourceTree = "<group>"; };
 		13C495C7F630954ED25CCCA0 /* GitPrompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPrompts.swift; sourceTree = "<group>"; };
 		17236BE0F16BF4DE8C134009 /* TerminalScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalScreen.swift; sourceTree = "<group>"; };
@@ -457,6 +459,7 @@
 		216D77BAC36FAAC08D0296C5 /* Design */ = {
 			isa = PBXGroup;
 			children = (
+				0FC200AD66C0ACA562FAF1D4 /* AccountDot.swift */,
 				3B40C228DD8D4FB4A5D62BB5 /* Lucide-LICENSE.txt */,
 				92115E2E20A2788AC95AD41F /* LucideIcon.swift */,
 				F1D776C986DA3812669E3E1D /* MobileByteCount.swift */,
@@ -987,6 +990,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DEBEAF340DCE410AB89AF227 /* AccountDot.swift in Sources */,
 				8C9FF1DDE620F87C9C84679C /* AppHome.swift in Sources */,
 				525328BF92CFEE7D18F48DD5 /* AppRuntime.swift in Sources */,
 				13BAE6AC89AFF1FD2B6383B4 /* AttentionStore.swift in Sources */,

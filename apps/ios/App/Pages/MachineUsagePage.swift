@@ -7,6 +7,7 @@ struct MachineUsagePage: View {
     let client: any MachineRequesting
     @State private var state = RemotePageState()
     @State private var limits: JSONValue?
+    @State private var accounts: ProviderAccountList?
     @State private var days = 7
     @Environment(\.locale) private var locale
     private var models: [JSONValue] { state.value?.list("models") ?? [] }
@@ -25,7 +26,7 @@ struct MachineUsagePage: View {
         .navigationTitle("Usage")
         .task(id: days) {
             await RemotePageLifecycle.run(
-                client: client, events: ["usage.changed", "usage.limitsChanged"],
+                client: client, events: ["usage.changed", "usage.limitsChanged", "providers.changed"],
                 subscription: {
                     client.acquireSubscription(
                         start: "usage.subscribe", stop: "usage.unsubscribe", payload: .object([:]),
@@ -98,35 +99,53 @@ struct MachineUsagePage: View {
                     if models.isEmpty { Text("No usage in this period.").foregroundStyle(MobileStyle.muted) }
                 }
             }
-            ForEach(Array((limits?.list("providers") ?? []).enumerated()), id: \.offset) { item in
-                let provider = item.element
-                Section("\(provider.text("kind").capitalized) limits") {
-                    if let plan = provider["plan"]?.stringValue { Text(plan).font(.headline) }
-                    if let unavailable = provider["unavailable"], unavailable != .null {
-                        Text(unavailable.text("message", fallback: unavailable.text("reason"))).foregroundStyle(
-                            .secondary)
-                    }
-                    ForEach(provider.list("windows"), id: \.stableID) { window in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text(window.text("label"))
-                                Spacer()
-                                Text(window.number("used").formatted(.percent.precision(.fractionLength(0))))
-                                    .monospacedDigit()
-                            }
-                            ProgressView(value: window.number("used"))
-                            if let resets = window["resetsAt"]?.numberValue {
-                                Text("Resets \(Date(timeIntervalSince1970: resets / 1000), style: .relative)").font(
-                                    .caption
-                                ).foregroundStyle(MobileStyle.muted)
-                            }
-                        }.padding(.vertical, 4)
+            ForEach(UsageLimitSection.sections(limits: limits, accounts: accounts)) { section in
+                Section {
+                    limitRows(section)
+                } header: {
+                    HStack(spacing: 6) {
+                        if section.named { AccountDot(color: section.color) }
+                        Text(section.title)
                     }
                 }
             }
         }
         .refreshable { await load() }
     }
+    @ViewBuilder private func limitRows(_ section: UsageLimitSection) -> some View {
+        switch section.quiet {
+        case .signedOut:
+            Text("Not logged in. Log in on the machine to see its limits.").foregroundStyle(MobileStyle.muted)
+        case .notRead(let message):
+            Text(message ?? "Not read yet. Its limits appear once the machine has read them.")
+                .foregroundStyle(MobileStyle.muted)
+        case nil:
+            if let provider = section.entry {
+                if let plan = provider["plan"]?.stringValue { Text(plan).font(.headline) }
+                if let unavailable = provider["unavailable"], unavailable != .null {
+                    Text(unavailable.text("message", fallback: unavailable.text("reason"))).foregroundStyle(
+                        .secondary)
+                }
+                ForEach(provider.list("windows"), id: \.stableID) { window in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(window.text("label"))
+                            Spacer()
+                            Text(window.number("used").formatted(.percent.precision(.fractionLength(0))))
+                                .monospacedDigit()
+                        }
+                        ProgressView(value: window.number("used"))
+                        if let resets = window["resetsAt"]?.numberValue {
+                            Text("Resets \(Date(timeIntervalSince1970: resets / 1000), style: .relative)").font(
+                                .caption
+                            ).foregroundStyle(MobileStyle.muted)
+                        }
+                    }.padding(.vertical, 4)
+                }
+            }
+        }
+    }
+
     private func load() async {
         await state.load {
             let formatter = DateFormatter()
@@ -143,6 +162,8 @@ struct MachineUsagePage: View {
                     "resolution": .string("day"), "timeZone": .string(TimeZone.current.identifier),
                 ]))
             limits = try await client.request("usage.limits")
+            // A machine from before accounts does not know the request, and its limits read as they always did.
+            accounts = (try? await client.request(WireRequest.providersList.rawValue)).map(ProviderAccountList.init)
             return result
         }
     }

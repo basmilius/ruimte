@@ -45,4 +45,17 @@ public enum RuimteColors {
     public static let statusIdle = RuimteColorToken(light: 0x16a34a, dark: 0x4ade80)
     /// The ground a Live Activity puts under its own card, which the system never lightens.
     public static let activityTint = RuimteColorToken(light: 0x1b1b21, dark: 0x1b1b21)
+
+    /// The node accents by id, as `apps/client/src/canvas/accents.ts` paints them; an account wears one of these.
+    public static let nodeAccents: [String: UInt32] = [
+        "red": 0xe7000b, "orange": 0xf54900, "amber": 0xe17100, "yellow": 0xd08700, "lime": 0x5ea500,
+        "green": 0x00a63e, "emerald": 0x009966, "teal": 0x009689, "cyan": 0x0092b8, "sky": 0x0084d1,
+        "blue": 0x155dfc, "indigo": 0x4f39f6, "violet": 0x7f22fe, "purple": 0x9810fa, "fuchsia": 0xc800de,
+        "pink": 0xe60076, "rose": 0xec003f,
+    ]
+
+    /// Nil for an id that is no accent, which the caller paints with the app's accent.
+    public static func nodeAccent(_ id: String?) -> Color? {
+        id.flatMap { nodeAccents[$0] }.map(RuimteColorToken.color)
+    }
 }
