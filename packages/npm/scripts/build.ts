@@ -59,6 +59,14 @@ for (const target of targets) {
             await copyFile(join(source, 'native', name), join(dir, 'bin', 'native', name));
         }
     }
+    const foundationHelper = join(source, 'native', 'ruimte-foundation-models');
+    if (existsSync(foundationHelper)) {
+        await mkdir(join(dir, 'bin', 'native'), { recursive: true });
+        const targetHelper = join(dir, 'bin', 'native', 'ruimte-foundation-models');
+        await copyFile(foundationHelper, targetHelper);
+        await copyFile(`${foundationHelper}.NOTICES`, `${targetHelper}.NOTICES`);
+        await chmod(targetHelper, 0o755);
+    }
     // An artifact download drops the mode, and npm packs the mode it finds.
     await chmod(join(dir, 'bin', 'ruimte'), 0o755);
     await chmod(join(dir, 'bin', 'ruimte-context'), 0o755);

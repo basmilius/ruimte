@@ -11,6 +11,7 @@ import { providerFor } from './registry.ts';
  * still ask share one policy and differ in nothing; the sandbox is what full access widens.
  */
 const RUNTIME_FLAGS: Record<AgentKind, Record<RuntimeMode, string[]>> = {
+    apple: { supervised: [], 'auto-accept-edits': [], auto: [], 'full-access': [] },
     claude: {
         supervised: [],
         'auto-accept-edits': ['--permission-mode', 'acceptEdits'],
@@ -119,6 +120,9 @@ const launchFlags = (launch: AgentLaunch, runtimeMode: RuntimeMode | undefined):
  */
 export const terminalCommand = (launch: AgentLaunch, firstPrompt?: string, note?: string): string => {
     const provider = providerFor(launch.kind);
+    if (!provider.capabilities.terminal) {
+        throw new Error(`${provider.name} is only available as a chat.`);
+    }
     if (launch.resume) {
         return resumeCommandFor(provider.resumeCommand, launch.resume, launchFlags(launch, launch.runtimeMode));
     }

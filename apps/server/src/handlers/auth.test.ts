@@ -18,6 +18,7 @@ let dispatcher: Dispatcher;
 let minted: number;
 let disconnected: string[];
 let streamingChanges: boolean[];
+let appleChanges: boolean[];
 
 const client = (access?: ClientAccess): { connection: ClientConnection; frames: ServerFrame[] } => {
     const frames: ServerFrame[] = [];
@@ -47,12 +48,16 @@ beforeEach(async () => {
     minted = 0;
     disconnected = [];
     streamingChanges = [];
+    appleChanges = [];
     registerAuthHandlers(dispatcher, store, {
         identity,
         version: '0.0.0',
         broker: () => ({ brokerUrl: identity.broker.mode === 'custom' ? identity.broker.url : null, brokerFixed: false }),
         pairingUrl: () => `http://box:4210/pair#${store.issuePairingToken()}${minted++}`,
         streamingChanged: (allowed) => streamingChanges.push(allowed),
+        appleFoundationChanged: async (on) => {
+            appleChanges.push(on);
+        },
         disconnect: (sessionId) => disconnected.push(sessionId)
     });
 });
@@ -85,6 +90,17 @@ describe('auth handlers', () => {
         expect(await ask(loopback, 'auth.revoke', { id: paired!.id })).toMatchObject({ ok: true });
         expect(await store.list(null)).toEqual([]);
         expect(disconnected).toEqual([paired!.id]);
+    });
+
+    test('Apple setting invokes lifecycle changes and leaves it alone on unrelated edits', async () => {
+        expect(await ask(undefined, 'endpoint.info')).toMatchObject({ result: { appleFoundationEnabled: false } });
+        expect(await ask(undefined, 'endpoint.setIdentity', { name: null, icon: null, appleFoundationEnabled: true })).toMatchObject({
+            ok: true,
+            result: { appleFoundationEnabled: true }
+        });
+        await ask(undefined, 'endpoint.setIdentity', { name: 'Box', icon: null });
+        await ask(undefined, 'endpoint.setIdentity', { name: null, icon: null, appleFoundationEnabled: false });
+        expect(appleChanges).toEqual([true, false]);
     });
 
     test('endpoint.info carries the key a client pins the machine on', async () => {
@@ -123,6 +139,7 @@ describe('auth handlers', () => {
                     refuseStatements: false,
                     streamingAllowed: true,
                     resumeAtReset: false,
+                    appleFoundationEnabled: false,
                     broker: { mode: 'default' }
                 }
             }

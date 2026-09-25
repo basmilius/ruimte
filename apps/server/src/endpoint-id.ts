@@ -42,6 +42,7 @@ const FileSchema = z.object({
        overload, when its own switch lets it. The daemon keeps that clock, so the switch is the machine's.
        Absent is off. */
     resumeAtReset: z.boolean().optional().catch(undefined),
+    appleFoundationEnabled: z.boolean().optional().catch(undefined),
     /* Which broker this machine announces itself to, set from a client. Absent is the build's default;
        one that will not read falls back to it too, since a machine on the default broker is findable. */
     broker: BrokerSettingSchema.optional().catch(undefined)
@@ -60,6 +61,7 @@ interface IdentityOptions {
     refuseStatements: boolean;
     streamingAllowed: boolean;
     resumeAtReset: boolean;
+    appleFoundationEnabled: boolean;
     broker: BrokerSetting;
 }
 
@@ -75,6 +77,7 @@ export interface IdentityFlags {
     refuseStatements?: boolean;
     streamingAllowed?: boolean;
     resumeAtReset?: boolean;
+    appleFoundationEnabled?: boolean;
     broker?: BrokerSetting;
 }
 
@@ -98,6 +101,7 @@ export class EndpointIdentity {
     private noStatements: boolean;
     private allowStreaming: boolean;
     private resumeLimited: boolean;
+    private appleEnabled: boolean;
     private brokerSetting: BrokerSetting;
     private brokerSwitch: IdentityBroker | null = null;
 
@@ -113,6 +117,7 @@ export class EndpointIdentity {
         this.noStatements = options.refuseStatements;
         this.allowStreaming = options.streamingAllowed;
         this.resumeLimited = options.resumeAtReset;
+        this.appleEnabled = options.appleFoundationEnabled;
         this.brokerSetting = options.broker;
     }
 
@@ -150,6 +155,10 @@ export class EndpointIdentity {
         return this.resumeLimited;
     }
 
+    get appleFoundationEnabled(): boolean {
+        return this.appleEnabled;
+    }
+
     /* The broker a person picked for this machine, which a flag or the environment may still override. */
     get broker(): BrokerSetting {
         return this.brokerSetting;
@@ -181,6 +190,7 @@ export class EndpointIdentity {
         this.noStatements = flags.refuseStatements ?? this.noStatements;
         this.allowStreaming = flags.streamingAllowed ?? this.allowStreaming;
         this.resumeLimited = flags.resumeAtReset ?? this.resumeLimited;
+        this.appleEnabled = flags.appleFoundationEnabled ?? this.appleEnabled;
         this.brokerSetting = flags.broker ?? this.brokerSetting;
         await this.persist();
         if (flags.broker !== undefined) {
@@ -197,6 +207,7 @@ export class EndpointIdentity {
                 refuseStatements: this.noStatements,
                 streamingAllowed: this.allowStreaming,
                 resumeAtReset: this.resumeLimited,
+                appleFoundationEnabled: this.appleEnabled,
                 broker: this.brokerSetting,
                 ...this.brokerSwitch?.describe()
             }
@@ -217,6 +228,7 @@ export class EndpointIdentity {
             ...(this.noStatements ? { refuseStatements: true } : {}),
             ...(!this.allowStreaming ? { streamingAllowed: false } : {}),
             ...(this.resumeLimited ? { resumeAtReset: true } : {}),
+            ...(this.appleEnabled ? { appleFoundationEnabled: true } : {}),
             ...(this.brokerSetting.mode === 'default' ? {} : { broker: this.brokerSetting })
         };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
@@ -251,6 +263,7 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
         refuseStatements: file?.refuseStatements ?? false,
         streamingAllowed: file?.streamingAllowed ?? true,
         resumeAtReset: file?.resumeAtReset ?? false,
+        appleFoundationEnabled: file?.appleFoundationEnabled ?? false,
         broker: file?.broker ?? { mode: 'default' }
     });
     if (!keys) {

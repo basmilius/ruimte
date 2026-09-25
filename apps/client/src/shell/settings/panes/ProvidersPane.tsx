@@ -10,6 +10,7 @@ import { MasterDetail } from '@/shell/settings/MasterDetail';
 import { openLogin } from '@/shell/settings/providers/account-actions';
 import { AccountDetail } from '@/shell/settings/providers/AccountDetail';
 import { AddAccountForm } from '@/shell/settings/providers/AddAccountForm';
+import { AppleFoundationSection } from '@/shell/settings/providers/AppleFoundationSection';
 import { CliDetail } from '@/shell/settings/providers/CliDetail';
 import { CliMark } from '@/shell/settings/providers/parts';
 import { useEndpointId } from '@/state/keys';
@@ -63,10 +64,10 @@ export function ProvidersPane() {
     const target = useUi((s) => s.settings.target);
     // A login runs in a terminal node on a canvas of a project on this very machine.
     const workspaceMachine = useWindow((s) => (s.content.kind === 'workspace' ? s.content.workspace.connection.endpointId : null));
-    const [picked, setPicked] = useState<Picked | null>(null);
+    const [picked, setPicked] = useState<Picked | null>(() => (target === 'providers.apple' ? { kind: 'cli', cli: 'apple' } : null));
 
-    const installed = useMemo(() => providers.filter((provider) => provider.installed), [providers]);
-    const missing = useMemo(() => providers.filter((provider) => !provider.installed), [providers]);
+    const installed = useMemo(() => providers.filter((provider) => provider.installed || provider.kind === 'apple'), [providers]);
+    const missing = useMemo(() => providers.filter((provider) => !provider.installed && provider.kind !== 'apple'), [providers]);
     const entriesOf = (kind: AgentKind): AccountEntry[] => accountsOfKind(accounts, kind);
     const canAddAccount = (kind: AgentKind): boolean => accounts?.loginCommands?.[kind] !== undefined;
     const loginBlocked = workspaceMachine === endpointId ? null : t('providers.account.login.needsProject');
@@ -83,7 +84,9 @@ export function ProvidersPane() {
     const [seenTarget, setSeenTarget] = useState(target);
     if (target !== seenTarget) {
         setSeenTarget(target);
-        if (target?.startsWith('providers.') && current?.kind !== 'cli' && provider !== null) {
+        if (target === 'providers.apple') {
+            setPicked({ kind: 'cli', cli: 'apple' });
+        } else if (target?.startsWith('providers.') && current?.kind !== 'cli' && provider !== null) {
             setPicked({ kind: 'cli', cli: provider.kind });
         }
     }
@@ -96,7 +99,7 @@ export function ProvidersPane() {
     };
 
     const group = (cli: ProviderInfo) => {
-        const entries = entriesOf(cli.kind);
+        const entries = cli.installed ? entriesOf(cli.kind) : [];
         return (
             <div key={cli.kind} className="flex min-w-0 shrink-0 flex-col gap-0.5 pt-1">
                 <ListRow
@@ -115,7 +118,7 @@ export function ProvidersPane() {
                 >
                     <CliMark kind={cli.kind} />
                     <span className="min-w-0 grow truncate text-xs font-medium text-text">{cli.name}</span>
-                    {cli.version && <span className="shrink-0 font-mono text-code text-text-faint">{cli.version}</span>}
+                    {cli.kind !== 'apple' && cli.version && <span className="shrink-0 font-mono text-code text-text-faint">{cli.version}</span>}
                 </ListRow>
                 {entries.map((entry) => {
                     const name = accountName(entry, cli.name);
@@ -175,6 +178,9 @@ export function ProvidersPane() {
     const detail = (): ReactNode => {
         if (current === null || provider === null) {
             return null;
+        }
+        if (provider.kind === 'apple' && current.kind === 'cli') {
+            return <AppleFoundationSection endpointId={endpointId} provider={provider} />;
         }
         if (current.kind === 'add') {
             return (

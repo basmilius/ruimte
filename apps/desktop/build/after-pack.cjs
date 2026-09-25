@@ -16,8 +16,15 @@ module.exports = async (context) => {
     if (context.electronPlatformName === 'darwin' && !existsSync(join(resources, 'bin', 'native', 'speech-bridge'))) {
         throw new Error('No speech helper; compile the server resources for this os and arch first');
     }
-    if (context.electronPlatformName === 'darwin' && !existsSync(join(resources, '..', 'Helpers', 'Ruimte Computer Use.app', 'Contents', 'MacOS', 'RuimteComputerUse'))) {
+    if (
+        context.electronPlatformName === 'darwin' &&
+        !existsSync(join(resources, '..', 'Helpers', 'Ruimte Computer Use.app', 'Contents', 'MacOS', 'RuimteComputerUse'))
+    ) {
         throw new Error('No computer use helper; compile the server resources for this os and arch first');
+    }
+    // electron-builder uses builder-util's numeric Arch.arm64 (3) in packaging contexts.
+    if (context.electronPlatformName === 'darwin' && context.arch === 3 && !existsSync(join(resources, 'bin', 'native', 'ruimte-foundation-models'))) {
+        throw new Error('No Apple Foundation Models helper; compile the server resources for macOS arm64 first');
     }
     if (!existsSync(join(resources, 'client', 'index.html'))) {
         throw new Error('No built client; run `bun run --cwd apps/client build` first');

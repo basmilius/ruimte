@@ -38,6 +38,7 @@ export const EndpointInfoSchema = z.object({
     /* Whether the daemon may take up a chat that stopped on a limit on a clock, when the chat's own
        switch lets it. Absent from an older daemon, which never does. */
     resumeAtReset: z.boolean().optional(),
+    appleFoundationEnabled: z.boolean().optional(),
     platform: z.string(),
     version: z.string(),
     // The wire version (`PROTOCOL_VERSION`). Absent from a daemon from before versions, which a client reads as older.
@@ -94,6 +95,7 @@ export const EndpointSetIdentityPayloadSchema = z.object({
     streamingAllowed: z.boolean().optional(),
     // Whether a limited chat may be taken up on a clock; left out, the machine stays as it stands.
     resumeAtReset: z.boolean().optional(),
+    appleFoundationEnabled: z.boolean().optional(),
     // Which broker the machine announces itself to; left out, the machine stays on the one it has.
     broker: BrokerSettingSchema.optional()
 });
@@ -109,6 +111,7 @@ export const EndpointChangedEventSchema = z.object({
     refuseStatements: z.boolean().optional(),
     streamingAllowed: z.boolean().optional(),
     resumeAtReset: z.boolean().optional(),
+    appleFoundationEnabled: z.boolean().optional(),
     broker: BrokerSettingSchema.optional(),
     // What the machine hands clients as its broker now, so a client follows a change without asking again.
     brokerUrl: z.string().nullish(),

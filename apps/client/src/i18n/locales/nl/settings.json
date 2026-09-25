@@ -483,6 +483,19 @@
             "create": "Account toevoegen",
             "linkButton": "Map koppelen",
             "failed": "Kon het account niet toevoegen"
+        },
+        "apple": {
+            "label": "Apple Foundation Models inschakelen",
+            "description": "Gebruik het model op deze Mac voor chats en tools. Vereist Apple silicon, macOS 26.4 of nieuwer en Apple Intelligence.",
+            "toggleDescription": "Uitschakelen stopt actieve Apple-chats en openstaande toolgoedkeuringen op deze machine.",
+            "tools": "Het model draait op deze Mac. Webzoeken, pagina’s ophalen en MCP-tools kunnen na goedkeuring gegevens naar hun ingestelde diensten sturen.",
+            "status": "Beschikbaarheid",
+            "disabled": "Uitgeschakeld op deze machine.",
+            "ready": "Het lokale model is beschikbaar.",
+            "unavailable": "Het lokale model is niet beschikbaar.",
+            "updateRequired": "Werk Ruimte op deze machine bij om Apple Foundation Models in te stellen.",
+            "saveFailed": "Apple Foundation Models kon niet worden gewijzigd",
+            "requiresMac": "Vereist een Mac met Apple silicon."
         }
     },
     "agents": {

@@ -33,7 +33,7 @@ const LOGIN_WATCH_MS = 5 * 60_000;
 
 export interface ProviderAccountsOptions {
     ruimteHome: string;
-    providers: { list(): Promise<ProviderInfo[]>; get(kind: AgentKind): ChatProvider };
+    providers: { list(): Promise<ProviderInfo[]>; get(kind: AgentKind): ChatProvider; enabled?(kind: AgentKind): boolean };
     env?: Env;
     // How to ask a CLI who is signed in; a test answers without starting one.
     ask?: AskAccount;
@@ -554,7 +554,7 @@ export class ProviderAccountsService implements AccountLaunches {
                 message: `${provider.name} has no setting for its config folder, so it only has its default account`
             });
         }
-        if (account.enabled === false) {
+        if (account.enabled === false || this.providers.enabled?.(kind) === false) {
             return this.status(id, account, 'disabled');
         }
         if (installed.find((info) => info.kind === kind)?.installed !== true) {

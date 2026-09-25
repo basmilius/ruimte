@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Apple Foundation Models als lokale agent</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+#tools th[scope="row"] { white-space: nowrap; width: 18%; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step > div { min-width: 0; }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+.handoff-prompt { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.handoff-prompt code { overflow-wrap: anywhere; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#summary">Ga naar de conclusie</a>
+<header>
+  <p class="eyebrow">Ruimte / Implementatieverslag / 25 september 2026</p>
+  <h1>Apple Foundation Models als lokale agent</h1>
+  <p class="intro">Ruimte heeft nu elf tools voor het lokale Apple-model, een schakelaar per machine en opgeslagen gespreksgeheugen. Bestanden, shell, web en MCP lopen via de bestaande chatkaarten.</p>
+  <p class="status">Weigeringen afgedwongen · Contextsamenvatting en herstel getest · Taakkwaliteit nog wisselend</p>
+  <p class="caption">Overdracht bij de experimentele AFM-commit op <code>main</code>, gebaseerd op <code>a42db32a</code>. De provider blijft standaard uit. Er is geen release gepubliceerd; de volledige werkdagtest is niet als geslaagd aangemerkt.</p>
+  <nav aria-label="Inhoud"><a href="#summary">Besluit</a><a href="#comparison">Codex en Claude</a><a href="#tools">Onze tools</a><a href="#settings">Inschakelen</a><a href="#context">Context</a><a href="#reference">Overgenomen verbeteringen</a><a href="#boundaries">Grenzen</a><a href="#evidence">Verificatie</a><a href="#next">Volgende fase</a><a href="#handoff">Startprompt</a></nav>
+</header>
+<main>
+<section id="summary" class="recommendation">
+  <h2>Opt-in experiment; de volledige werkdagtest is nog niet betrouwbaar</h2>
+  <p>Het werk wordt in deze staat overgedragen. De integratie, begrenzing en gerichte bewerkingstest werken. De volgende fase gaat over herhaalbare taakkwaliteit. De uitbreidingen en evaluaties onderaan zijn voorgesteld, nog niet uitgevoerd.</p>
+  <p>De basis volgt bekende coding agents: gericht lezen, zoeken, wijzigen, commando's uitvoeren en om een beslissing vragen. Webzoeken, pagina's ophalen en MCP horen bij dezelfde toolflow. Het Apple-model kiest een tool; Ruimte controleert de argumenten en voert die pas uit nadat je de kaart goedkeurt.</p>
+  <p>De instelling staat standaard uit. Het model stelt zich voor als Apple Foundation Models; Ruimte is de host-app. Modelberekeningen blijven op de Mac. Goedgekeurde web- en MCP-aanroepen kunnen informatie naar hun ingestelde diensten sturen. De tool <code>AskUserQuestion</code> toont een vraagkaart in plaats van een goedkeuringskaart.</p>
+  <p>Het antwoord bevat ook een gestructureerde beslissing of gebruikersinvoer nodig is. Daarmee kan de helper een vraagkaart openen als het model geen expliciete toolcall deed. Het antwoord gaat terug naar het model; Stop trekt de kaart in. Beide routes gebruiken dezelfde vraagafhandeling. De keuze welke informatie nodig is, blijft modelgedrag: in de werkdagtest vroeg AFM nog om verduidelijking voordat het de aangeleverde bestanden las.</p>
+  <div class="stats"><div><strong>11</strong><span>tools in het native modelschema</span></div><div><strong>Per machine</strong><span>één opgeslagen aan/uit-instelling</span></div><div><strong>Lokaal</strong><span>model en gespreksopslag</span></div></div>
+  <p class="caption">Implementatie: <a href="../../packages/contracts/src/apple-foundation.ts">gedeelde toolschema's</a>, <a href="../../apps/server/src/chat/apple-backend.ts">chatbackend</a> en <a href="../../apps/foundation-models/Sources/FoundationModelsHelper/Tools.swift">native Apple-tools</a>.</p>
+</section>
+<section id="comparison">
+  <h2>Welke tools hebben Codex en Claude?</h2>
+  <p>Hieronder staat een selectie die relevant is voor Ruimte. Een agent heeft geen universele, vaste toollijst: model, versie, runtime en aangesloten diensten bepalen het aanbod. Bij Codex staan ook protocolnamen in de tabel. Een item als <code>commandExecution</code> is niet automatisch de naam waarmee het model de tool aanroept.</p>
+  <div class="table" role="region" aria-label="Vergelijking van relevante toolgroepen" tabindex="0"><table class="wide">
+  <caption>Functionele vergelijking, geen belofte van gelijke mogelijkheden</caption>
+  <thead><tr><th scope="col">Taak</th><th scope="col"><a href="https://learn.chatgpt.com/docs/app-server">Codex App Server</a></th><th scope="col"><a href="https://code.claude.com/docs/en/tools-reference">Claude Code</a></th><th scope="col">Apple in Ruimte</th></tr></thead>
+  <tbody>
+  <tr><th scope="row">Lezen en zoeken</th><td>Shellgereedschap; <code>commandExecution</code></td><td><code>Read</code>, shell; <code>Glob</code>/<code>Grep</code> afhankelijk van omgeving</td><td><code>ListFiles</code>, <code>Read</code>, <code>Grep</code></td></tr>
+  <tr><th scope="row">Bestanden wijzigen</th><td><code>apply_patch</code>; protocolitem <code>fileChange</code></td><td><code>Edit</code>, <code>Write</code></td><td><code>Edit</code>, <code>Write</code></td></tr>
+  <tr><th scope="row">Commando uitvoeren</th><td><code>commandExecution</code></td><td><code>Bash</code></td><td><code>Bash</code></td></tr>
+  <tr><th scope="row">Vraag aan gebruiker</th><td><code>tool/requestUserInput</code></td><td><code>AskUserQuestion</code></td><td><code>AskUserQuestion</code></td></tr>
+  <tr><th scope="row">Web</th><td><code>webSearch</code></td><td><code>WebSearch</code>, <code>WebFetch</code></td><td><code>WebSearch</code>, <code>WebFetch</code></td></tr>
+  <tr><th scope="row">Externe tools</th><td>MCP-aanroepen</td><td>MCP-tools en resources</td><td><code>MCPListTools</code>, <code>MCPCall</code></td></tr>
+  <tr><th scope="row">Afbeeldingen</th><td><code>imageView</code></td><td>Onderdeel van <code>Read</code></td><td>Niet aangesloten</td></tr>
+  </tbody></table></div>
+  <p>Claude documenteert daarnaast onder meer <code>Agent</code>, <code>LSP</code>, <code>Skill</code>, <code>NotebookEdit</code>, plan- en worktreetools. Taaktools zijn modelafhankelijk. <code>Glob</code> en <code>Grep</code> staan op macOS en Linux niet standaard aan. Deze extra mogelijkheden zijn niet in de Apple-provider overgenomen. <a href="https://code.claude.com/docs/en/tools-reference">Claude-toolreferentie</a>.</p>
+  <p>De keuze voor Ruimte is gericht: kleine, expliciete tools met korte resultaten. We nemen geen vendorprotocol over. De Swift-helper biedt eigen native tools aan en de daemon vertaalt de gebeurtenissen naar de bestaande chatweergave.</p>
+</section>
+<section id="tools">
+  <h2>De elf beschikbare tools</h2>
+  <div class="table" role="region" aria-label="Apple-toolcatalogus" tabindex="0"><table class="wide">
+  <thead><tr><th scope="col">Tool</th><th scope="col">Wat doet hij?</th><th scope="col">Gedrag en grens</th></tr></thead><tbody>
+  <tr><th scope="row"><code>ListFiles</code></th><td>Een projectmap bekijken.</td><td>Maximaal 40 zichtbare bestanden en mappen; vermeldt afkapping.</td></tr>
+  <tr><th scope="row"><code>Read</code></th><td>Een tekstfragment lezen.</td><td>Regeloffset begint bij 0. Standaard maximaal 100 regels per aanvraag. Bij meer inhoud volgt een vervolgoffset.</td></tr>
+  <tr><th scope="row"><code>Grep</code></th><td>Letterlijke tekst zoeken in projectbestanden.</td><td>Optionele bestandsfilter; begrensde wandeling en resultaten. Geen algemene regex-engine.</td></tr>
+  <tr><th scope="row"><code>Edit</code></th><td>Een exact tekstfragment vervangen.</td><td>Het oude fragment moet uniek zijn. Controleert wijzigingen tijdens de bewerking en retourneert diffgegevens.</td></tr>
+  <tr><th scope="row"><code>Write</code></th><td>Een nieuw tekstbestand maken.</td><td>Weigert een bestaand bestand te overschrijven. Gebruik <code>Edit</code> voor een gerichte wijziging.</td></tr>
+  <tr><th scope="row"><code>Bash</code></th><td>Een shellcommando uitvoeren vanuit de projectmap.</td><td>Maximaal 30 seconden; begrensde output. Geen interactieve terminal of blijvend achtergrondproces.</td></tr>
+  <tr><th scope="row"><code>AskUserQuestion</code></th><td>Een vraagkaart tonen, eventueel met keuzes.</td><td>Wacht op antwoord. Stop trekt de vraag in.</td></tr>
+  <tr><th scope="row"><code>WebSearch</code></th><td>Zoeken via Brave Search of een ingestelde SearXNG-dienst.</td><td>Maximaal vijf resultaten met titel, URL en fragment. Configuratie vereist.</td></tr>
+  <tr><th scope="row"><code>WebFetch</code></th><td>Een publieke webpagina ophalen als tekst.</td><td>Geen browser, JavaScript-uitvoering of ingelogde browsersessie. Lokale en private netwerkadressen geweigerd.</td></tr>
+  <tr><th scope="row"><code>MCPListTools</code></th><td>Ingestelde servers, hun tools of één invoerschema opvragen.</td><td>In stappen ontdekken houdt het modelschema klein.</td></tr>
+  <tr><th scope="row"><code>MCPCall</code></th><td>Een tool op een ingestelde MCP-server aanroepen.</td><td>Server, toolnaam en JSON-argumenten op de kaart; optionele toegestane toollijst per server.</td></tr>
+  </tbody></table></div>
+  <p>Alle uitvoerende tools vragen per aanroep toestemming, ook in full-access mode. Er is geen "altijd toestaan". Een weigering gaat terug naar het model. Stop annuleert wachtende kaarten en lopende uitvoeringen; al geschreven bestanden of verstuurde verzoeken worden daarmee niet teruggedraaid.</p>
+  <p class="caption">Broncode: <a href="../../apps/server/src/chat/apple-file-tools.ts">bestanden</a>, <a href="../../apps/server/src/chat/apple-command-tool.ts">shell</a>, <a href="../../apps/server/src/chat/apple-network-tools.ts">web en MCP-dispatch</a>.</p>
+</section>
+<section id="settings">
+  <h2>Inschakelen en diensten aansluiten</h2>
+  <ol class="steps">
+    <li class="step"><div><h3>Zet de provider aan op de juiste machine</h3><p>Open <strong>Settings → Providers → Apple Foundation Models</strong>. De schakelaar geldt voor de geselecteerde machine en staat standaard uit. De status onderscheidt uitgeschakeld, een ontbrekende helper en een niet-beschikbaar Apple-model. Vereist Apple silicon, macOS 26.4 of nieuwer en Apple Intelligence met een beschikbaar model.</p><p>Alle verbonden clients krijgen de wijziging door. Uitschakelen sluit actieve Apple-chats en trekt hun openstaande kaarten in. Nieuwe model- en toolaanroepen worden geweigerd totdat je de provider weer aanzet.</p></div></li>
+    <li class="step"><div><h3>Kies een zoekdienst</h3><p>Open het standaardaccount onder de Apple-provider en voeg <code>BRAVE_SEARCH_API_KEY</code> toe als gevoelige accountvariabele. De bestaande keychainopslag bewaart de waarde. Als alternatief kun je <code>SEARXNG_URL</code> instellen op een publiek bereikbare JSON-zoekendpoint, bijvoorbeeld <code>https://zoeken.example.org/search</code>.</p><p>Als beide zijn ingesteld, gebruikt Ruimte Brave. Zonder zoekconfiguratie geeft <code>WebSearch</code> een concrete fout; <code>WebFetch</code> heeft geen zoekabonnement nodig.</p></div></li>
+    <li class="step"><div><h3>Configureer MCP per machine</h3><p>Maak <code>$RUIMTE_HOME/apple-mcp.json</code> met de servers die deze provider mag bereiken. Zowel stdio als Streamable HTTP wordt ondersteund. Dit voorbeeld is een sjabloon; vervang het adres, de variabelenaam en toolnaam door die van je eigen dienst.</p>
+<pre><code>{
+  "mcpServers": {
+    "kennis": {
+      "type": "http",
+      "url": "https://mcp.example.org/mcp",
+      "headers": { "Authorization": "Bearer ${KNOWLEDGE_TOKEN}" },
+      "allowedTools": ["search"]
+    }
+  }
+}</code></pre>
+<p>Voeg <code>KNOWLEDGE_TOKEN</code> als gevoelige variabele aan het Apple-account toe. Gebruik een placeholder in de configuratie. Voor stdio zijn <code>command</code>, <code>args</code> en optioneel <code>env</code> beschikbaar. Zet <code>enabled: false</code> om één server uit te zetten. Er is geen automatische overname van de MCP-configuratie van andere agents.</p></div></li>
+  </ol>
+  <p class="caption">Implementatie: <a href="../../apps/client/src/shell/settings/providers/AppleFoundationSection.tsx">instellingen</a>, <a href="../../apps/server/src/endpoint-id.ts">machineopslag</a> en <a href="../../apps/server/src/chat/apple-mcp.ts">MCP-configuratie en verbindingen</a>.</p>
+  <details open><summary>Ontwikkelbuild en voorbeeldprompts</summary>
+<pre><code>bun apps/foundation-models/scripts/build.ts
+bun run dev:server
+bun run dev:client</code></pre>
+<p>De laatste twee commando's draaien in afzonderlijke terminals. Zet de provider daarna aan in de ontwikkelclient. De helper-build wordt voor macOS arm64 ook meegenomen in de server-, desktop- en npm-verpakking. De ontwikkeloverride <code>RUIMTE_APPLE_FOUNDATION_HELPER</code> blijft beschikbaar.</p>
+<pre><code>Use Grep to find "TODO" in src with glob "**/*.ts".
+Read notes.txt, then replace the unique text "draft" with "review".
+Ask me which of two approaches I want before making changes.
+Search the web for the latest Swift release, then fetch the official page.
+List the configured MCP servers, inspect the search tool and ask before calling it.</code></pre>
+  </details>
+</section>
+<section id="context">
+  <h2>Context blijft behouden na een herstart</h2>
+  <p>Een chat gebruikt een eigen native <code>LanguageModelSession</code>. Na een geslaagde turn bewaart de helper het Apple-transcript onder <code>$RUIMTE_HOME/apple-foundation/sessions/&lt;uuid&gt;.json</code>. Een herstart herstelt dat transcript via de opgeslagen sessie-id. De opslag gebruikt privébestanden, atomische vervanging en een proceslock.</p>
+  <p>Het contextvenster wordt uit het geïnstalleerde model gelezen. Op de geteste Mac rapporteert het SDK-model 8192 tokens. Dit is een meting van deze omgeving, geen vaste Apple-garantie. De helper gebruikt de Apple-tokenizer om invoer en geschiedenis tegen het modelbudget te toetsen. Deze integratie vereist daarom macOS 26.4 of nieuwer. De instructies, elf tools, het antwoordschema, berichten en resultaten delen dat budget. Ruimte laadt geen volledige repository of alle gekoppelde nodes vooraf.</p>
+  <div class="split"><div class="panel"><h3>Automatisch samenvatten</h3><p>Bij contexttekort of twaalf native uitwisselingen vat een aparte lokale sessie zonder tools oudere inhoud samen. De laatste twee uitwisselingen blijven letterlijk behouden. De oorspronkelijke geschiedenis blijft apart in het checkpoint staan.</p></div><div class="panel"><h3>Handmatig compacteren</h3><p>Gebruikt hetzelfde pad. Toolcalls moeten complete uitwisselingen vormen. De nieuwe context wordt opnieuw gemeten voordat deze wordt gebruikt. Een lege of te grote samenvatting geeft een fout en laat de opgeslagen geschiedenis intact.</p></div></div>
+  <p>Checkpointformaat 2 bewaart ook een fingerprint van de tooldefinities en een onderbrekingsmarkering. Oudere checkpoints worden gemigreerd. Na een onverwachte processtop wordt vermeld dat acties al gevolgen kunnen hebben gehad. Er volgt geen automatische herhaling. Veranderde tooldefinities vereisen een nieuwe chat; de oude geschiedenis blijft bewaard.</p>
+  <p>Een geannuleerde of mislukte turn wordt uit het modelgeheugen teruggedraaid tot het checkpoint ervoor. Dit herstelt geen externe toolgevolgen. De invoer is begrensd op 6000 UTF-8-bytes, een toolresultaat op 6000 bytes en de modeloutput op 1024 tokens. Er zijn maximaal twaalf toolcalls en drie gebruikersvragen per turn. De machine beëindigt de beurt bij weigeringen en uitvoeringsfouten. Een Edit zonder unieke match verandert niets en laat maximaal twee correcties toe. Een onherstelde Edit blokkeert de succesmelding. Generatie is begrensd op 120 seconden tussen tools, uitvoering op 60 seconden per tool; wachten op een persoon telt niet mee. Grote toolresultaten kunnen alsnog onvoldoende contextruimte overlaten.</p>
+  <p>De toolnamen volgen nu de Claude-stijl, waaronder <code>Read</code>, <code>Edit</code>, <code>Write</code>, <code>Bash</code> en <code>WebFetch</code>. De mogelijkheden en grenzen hierboven blijven gelden.</p>
+  <p>Een eerdere streamingmeting, vóór de huidige wijzigingen in vraagafhandeling en contextbeheer, gaf 2,2 tot 3,1 seconden tot de eerste tekst en daarna 187 tot 246 tekens per seconde. De doorgifte van helper naar backend kostte maximaal 1,02 ms. Vooraf opwarmen is toegevoegd, maar deze meting toont geen duidelijke snelheidswinst. Browserweergave en netwerk zitten niet in deze meting. De <a href="../../apps/foundation-models/stream-benchmark.ts">herhaalbare benchmark</a> gebruikt een tijdelijke sessie.</p>
+  <p class="caption">Broncode: <a href="../../apps/foundation-models/Sources/FoundationModelsHelper/SessionStore.swift">transcriptopslag</a>, <a href="../../apps/foundation-models/Sources/FoundationModelsHelper/main.swift">sessie- en contextbeheer</a>.</p>
+</section>
+<section id="reference">
+  <h2>Wat is overgenomen uit FoundationModelsAgent?</h2>
+  <p>De vergelijking gebruikt <a href="https://github.com/rudrankriyam/FoundationModelsAgent/tree/4bc5676bb25b78d691cbcca4b8c2f98d430eaba7">revisie 4bc5676</a>. De relevante patronen zijn aangepast aan Ruimtes bestaande Swift-helper en toestemmingskaarten. We houden macOS 26.4 als ondergrens; het referentieproject vereist macOS 27. Er is geen afhankelijkheid van zijn volledige pakket toegevoegd. De <a href="../../apps/foundation-models/THIRD_PARTY_NOTICES.txt">MIT-bronvermelding</a> wordt naast de helper meegeleverd.</p>
+  <div class="table" role="region" aria-label="Overgenomen patronen" tabindex="0"><table>
+  <thead><tr><th scope="col">Patroon</th><th scope="col">Nu in Ruimte</th><th scope="col">Verificatie</th></tr></thead><tbody>
+  <tr><th scope="row">Getypeerde weigering en fout</th><td>Een weigering is geen tekst waarover het model verder mag onderhandelen. De machine sluit de beurt voor nieuwe acties en negeert late antwoorden.</td><td>Tests voor late calls, mislukte Write, vragen na weigering en een volgende beurt. Een echte AFM-run stopt na een geweigerde Read zonder vervolgvraag.</td></tr>
+  <tr><th scope="row">Harde uitvoeringslimieten</th><td>Twaalf calls, drie vragen, model- en tooltime-outs. Menselijke wachttijd wordt uitgesloten. Geen automatische herhaling van uitgevoerde acties; een afgewezen Edit mag beperkt worden gecorrigeerd.</td><td>Native tests voor call- en vraaglimieten; backendtests met een bestuurbare klok voor time-outs en late resultaten.</td></tr>
+  <tr><th scope="row">Vollediger contextbudget</th><td>Het antwoordschema telt expliciet mee. Vaste onderdelen moeten passen voordat oudere context wordt samengevat.</td><td>Native tokenmeting. Bewaarde context en schema hebben afzonderlijke waarden in de meetframes.</td></tr>
+  <tr><th scope="row">Samenvatting met oorspronkelijke geschiedenis</th><td>Een lokale sessie zonder tools maakt de samenvatting. Complete tooluitwisselingen worden gecontroleerd en de nieuwe context wordt opnieuw gemeten.</td><td>Een native integratietest bewaart de volledige oorspronkelijke geschiedenis en haalt na sessieherstel de kleur violet en lanceerdag Thursday terug. Een aparte stresstest verlaagt de samenvattingsinvoer van 7522 naar 632 tokens en bewaart alle 24 oorspronkelijke uitwisselingen.</td></tr>
+  <tr><th scope="row">Herstel en toolcompatibiliteit</th><td>Privé, atomische checkpoints met SHA-256-fingerprint en onderbrekingsmarkering. Geen automatisch opnieuw uitvoeren van mogelijk uitgevoerde mutaties.</td><td>Tests voor oude formaten, gewijzigde definities, behouden geschiedenis, markering, symlinks en een te groot checkpoint.</td></tr>
+  <tr><th scope="row">Herhaalbare uitvoeringscontroles</th><td>Swift-tests sturen de echte ToolBridge aan; backendtests gebruiken een gescripte helper. Dit werkt ook op de ondersteunde macOS 26.4-interface.</td><td>De gewone tests hebben geen genererend model nodig. Echte taak- en contexttests blijven apart beschikbaar.</td></tr>
+  <tr><th scope="row">Metingen</th><td>Beurtduur, tijd tot eerste antwoordtekst, aantal calls en gemeten context. Geen prompts, toolargumenten of credentials in het meetframe.</td><td>De backend geeft gemeten context door aan de bestaande gebruiksweergave. Duur omvat eventuele menselijke wachttijd.</td></tr>
+  </tbody></table></div>
+  <p>Het referentieproject biedt ook optionele providerroutering, geheugen over meerdere chats, child agents en een duurzame achtergrondwachtrij. Die zijn niet toegevoegd. Het zijn aparte productmogelijkheden; Ruimte houdt de huidige provider lokaal en gebruikt zijn bestaande chat- en toestemmingsinfrastructuur. De vergelijkbare onderdelen voor opslag, prewarming, web en MCP waren al aanwezig en blijven daarop aansluiten.</p>
+  <p class="caption">Referentiecode: <a href="https://github.com/rudrankriyam/FoundationModelsAgent/blob/4bc5676bb25b78d691cbcca4b8c2f98d430eaba7/Sources/FoundationModelsAgent/FoundationModelsAgentPolicy.swift">toolbeleid</a>, <a href="https://github.com/rudrankriyam/FoundationModelsAgent/blob/4bc5676bb25b78d691cbcca4b8c2f98d430eaba7/Sources/FoundationModelsAgent/AgentSession.swift">sessie en gevalideerde compactie</a>. Nieuwe lokale modules: <a href="../../apps/foundation-models/Sources/FoundationModelsHelper/ToolBridge.swift">ToolBridge</a>, <a href="../../apps/foundation-models/Sources/FoundationModelsHelper/ContextCompaction.swift">ContextCompaction</a> en <a href="../../apps/foundation-models/Sources/FoundationModelsHelper/ToolManifest.swift">ToolManifest</a>.</p>
+</section>
+<section id="boundaries">
+  <h2>Waar de grenzen liggen</h2>
+  <p class="note"><strong>Een goedgekeurd shellcommando heeft de toegang van de machineaccount.</strong> De projectmap is alleen de startmap. De beperkingen van de losse bestandstools gelden niet als OS-sandbox voor <code>Bash</code> of een vertrouwde MCP-server.</p>
+  <p>De bestandstools accepteren projectrelatieve tekstbestanden van maximaal 256 KiB. Ze weigeren padtraversal, symlinks, verborgen staat en veel voorkomende credentialbestanden. Dit filter herkent niet ieder geheim. Webinhoud en toolresultaten worden als onbetrouwbare inhoud aangeboden aan het model; toestemming en uitvoering blijven bij Ruimte.</p>
+  <p>Publiek webverkeer blokkeert private adressen en controleert redirects. Een MCP-server is een expliciet ingestelde vertrouwensrelatie en mag bijvoorbeeld lokaal draaien. Het starten van een stdio-server gebeurt pas binnen een goedgekeurde MCP-aanroep. Alleen de benodigde omgevingsvariabelen gaan naar dat proces.</p>
+  <div class="table" role="region" aria-label="Niet aangesloten mogelijkheden" tabindex="0"><table>
+  <thead><tr><th scope="col">Nog niet beschikbaar</th><th scope="col">Gevolg</th></tr></thead><tbody>
+  <tr><th scope="row">Native subagents, LSP en skills</th><td>Geen eigen gespecialiseerde agents, taalservertools of automatisch geladen skillbibliotheek.</td></tr>
+  <tr><th scope="row">Computer use en browserbediening</th><td>Geen screenshots, klikken, typen of navigeren in een ingelogde browser.</td></tr>
+  <tr><th scope="row">Vision en attachments</th><td>De provider verwerkt tekst. Niet-tekstuele MCP-resultaten worden als zodanig gemeld en niet aan het model gevoerd.</td></tr>
+  <tr><th scope="row">Interactieve MCP-OAuth</th><td>Authenticatie loopt via ingestelde headers of omgevingsvariabelen. Geen loginvenster, OAuth-redirectflow of MCP-vraagdialoog.</td></tr>
+  <tr><th scope="row">Autonome goedkeuringen</th><td>Elke uitvoerende tool blijft toestemming vragen. Een accountmodus slaat deze kaarten niet over.</td></tr>
+  <tr><th scope="row">Native forks en volledige gebruiksmeting</th><td>Geen Apple-transcriptfork of exacte aantallen gegenereerde tokens. De Apple-tokenizer meet wel de bewaarde context voor de bestaande gebruiksweergave.</td></tr>
+  </tbody></table></div>
+  <p>De nieuwe providerwaarde <code>apple</code> vereist bijpassende clients. Oudere iOS-clients die deze enumwaarde niet kennen moeten eerst worden bijgewerkt. Alleen optionele velden toevoegen aan de nieuwe instelling lost die bestaande compatibiliteitsgrens niet op.</p>
+</section>
+<section id="evidence">
+  <h2>Wat is aangetoond?</h2>
+  <div class="table" role="region" aria-label="Verificatiestatus" tabindex="0"><table>
+  <thead><tr><th scope="col">Onderdeel</th><th scope="col">Status</th><th scope="col">Bewijs en beperking</th></tr></thead><tbody>
+  <tr><th scope="row">Volledige native smoketest</th><td><span class="badge info">Wisselend, niet groen</span></td><td>Een run doorliep geheugen, volledig en gepagineerd lezen, zoeken, wijzigen, schrijven en shellgebruik. Deze stopte op te grote samenvattingsinvoer; die fout is gericht opgelost en getest. De laatste volledige run stopte eerder doordat het model het gevraagde geheugentoken niet teruggaf. Er is geen volledig geslaagde lange run van de huidige versie aangetoond.</td></tr>
+  <tr><th scope="row">Vraagkaart zonder toolnaam</th><td><span class="badge confirmed">Geslaagd</span></td><td>Een gewone Nederlandstalige vraag over een teamlunch opent een kaart. Het model verwerkt het antwoord donderdag. Een aparte run trekt de kaart via Stop in en beëindigt de beurt.</td></tr>
+  <tr><th scope="row">Herstel van een afgewezen Edit</th><td><span class="badge confirmed">Gericht geslaagd</span></td><td>In Ruimte Dev: bewust niet-passende Edit afgewezen, planning opnieuw gelezen, gecorrigeerde exacte Edit geslaagd en op schijf gecontroleerd. Read geeft het model tekst met echte regeleinden. Afgewezen edits blijven zichtbaar; een onherstelde Edit blokkeert de afronding. Dit bewijst niet dat de volledige werkdagopdracht goed gaat.</td></tr>
+  <tr><th scope="row">Volledige werkdagopdracht</th><td><span class="badge info">Nog onvoldoende</span></td><td>Ook zichtbaar getest via Ruimte computer use in Ruimte Dev. Het model vraagt te vroeg om verduidelijking en leverde in een tweede run een Edit zonder verplicht pad aan. De volledige opdracht slaagt nog niet.</td></tr>
+  <tr><th scope="row">Reactie na geweigerde tool</th><td><span class="badge confirmed">Afgedwongen</span></td><td>De eerdere doorvraaglus is in de uitvoering opgelost. Een weigering eindigt als geannuleerd; de volgende beurt blijft bruikbaar. Echte modeltest en tests voor late, herhaalde calls slagen.</td></tr>
+  <tr><th scope="row">Eerdere gebruikerstest Studio Noord</th><td><span class="badge info">Deels uitgevoerd</span></td><td>Historische inspectie vóór het resetten: concept-reactie.md was gemaakt, planning.md niet aangepast. Het concept claimde een wijziging en stelde 10:00 voor ondanks beschikbaarheid vanaf 11:00. De latere gerichte test wijzigde alleen de prioriteitsregel van Bas; het conceptbestand is bij de reset verwijderd.</td></tr>
+  <tr><th scope="row">Herstart en contextbeheer</th><td><span class="badge confirmed">Geslaagd</span></td><td>Lokaal samenvatten, behoud van originele geschiedenis, herstel met dezelfde toolset, ophalen van samengevatte feiten en native contextmeting slagen in de expliciete native integratietest.</td></tr>
+  <tr><th scope="row">Instelling en provider</th><td><span class="badge confirmed">Geslaagd</span></td><td>Tests voor standaard uit, persistentie, event naar meerdere clients, live gate, late detectie en weigeren van terminalgebruik. De volledige workspace-check met typechecks, lint en gegenereerde Swift-contracten slaagt.</td></tr>
+  <tr id="network-status"><th scope="row">Web en MCP</th><td><span class="badge confirmed">Geslaagd</span></td><td>Code aanwezig voor zoekdiensten, publieke pagina's, MCP stdio en HTTP. Gerichte unit- en transportgrenzentests slagen. Een echte publieke pagina is opgehaald en als titel en tekst verwerkt. Echte MCP-tests slagen voor stdio en HTTP, waaronder initialiseren, tools opvragen/aanroepen, annuleren, procesopruiming, invoerlimieten en het begrenzen van credentialgebruik bij redirects. Een live zoekopdracht via Brave is niet getest; daarvoor is een eigen sleutel nodig.</td></tr>
+  <tr><th scope="row">Verpakking en platforms</th><td><span class="badge info">Aangesloten</span></td><td>De arm64-releasehelper is gebouwd en gekopieerd; de beschikbaarheidsprobe slaagt. Native Swift-tests slagen. Desktop-signering is aangesloten. Geen gepubliceerde of genotariseerde release. macOS 26.4 is de ondergrens; die versie is niet op een testmachine doorlopen.</td></tr>
+  </tbody></table></div>
+  <p>De oudere native smoketest beantwoordt zijn eigen testkaarten automatisch. De latere app-tests zijn zichtbaar via Ruimte computer use in Ruimte Dev uitgevoerd en vragen zijn daarbij door de testende agent beantwoord. Er is geen volledige handmatige acceptatietest van alle instellingen gedaan. De testresultaten bewijzen de onderzochte paden. Ze maken van het lokale model geen gelijkwaardige vervanger voor de redeneerkwaliteit en langere workflows van Codex of Claude. Gebruik kleine opdrachten met gerichte context; bekijk toolargumenten en wijzigingen voordat je verdergaat.</p>
+  <p class="caption">De vastgelegde <a href="2026-09-25-apple-foundation-verification.json">testresultaten</a> onderscheiden uitvoeringscontroles en modelkwaliteit. Herhaalbare checks en actuele startinstructies: <a href="../../apps/foundation-models/README.md">helper-README</a>, <a href="../../apps/foundation-models/smoke.ts">native smoketest</a>, <a href="../../apps/server/src/chat/apple-backend.test.ts">backendtests</a>, <a href="../../apps/server/src/providers/apple-provider.test.ts">instellingsgate-tests</a>.</p>
+</section>
+<section id="next">
+  <h2>Volgende fase: betrouwbaarheid meten</h2>
+  <p>Begin met een vaste evaluatieset voor lezen, vergelijken, één bewerking en een concept. Combineer die daarna in de werkdagopdracht. Doe bijvoorbeeld vijf vooraf vastgelegde runs per variant in schone sessies. Dit aantal is een praktisch startvoorstel, geen statistische garantie.</p>
+  <div class="table" role="region" aria-label="Voorgestelde experimenten" tabindex="0"><table>
+  <thead><tr><th scope="col">Onderzoek</th><th scope="col">Aanleiding</th><th scope="col">Acceptatie</th></tr></thead><tbody>
+  <tr><th scope="row">Toolargumenten vereenvoudigen</th><td>Native Edit zonder verplicht pad; verwisselde inhoud tussen bestanden.</td><td>Meet ongeldige argumenten en exacte wijzigingen per run. Alleen een andere foutmelding is geen betere taakuitvoering.</td></tr>
+  <tr><th scope="row">Relevante tools selecteren</th><td>Nu staan alle elf tools in het modelschema.</td><td>Vergelijk alle tools met een kleine selectie op identieke taken. Behoud weigeringen, budgetten en toestemming.</td></tr>
+  <tr><th scope="row">Afronding controleren</th><td>Een eerder antwoord claimde wijzigingen zonder geslaagde Edit.</td><td>Controleer het resultaat op schijf, bronbestanden en ontbrekend werk. De huidige controle dekt alleen bekende afgewezen Edits.</td></tr>
+  </tbody></table></div>
+  <p>De volledige eindtoets vereist alle vier bestanden gelezen, beide gevraagde documenten correct, het tijdconflict benoemd, voorstellen onbevestigd en bronnen intact. Zelfstandige en handmatig geholpen runs krijgen aparte resultaten. De huidige smoketest toetst de inhoud nog niet volledig.</p>
+  <h3>Bewijs bij overdracht</h3>
+  <p>Laatste vastgelegde controles: 115 backend/tooltests, 342 assertions en 20 gewone Swift-tests geslaagd. Twee native tests zijn in die gewone Swift-run overgeslagen; hun eerdere expliciete resultaten staan apart beschreven. Workspacecheck en helperbuild slagen. Deze documentoverdracht voegt geen nieuwe modelrun toe. Volledige Bun-testsuite bij de commitcontrole: 5.640 geslaagd, 0 mislukt, 46.472 assertions. Alleen voor tijdelijke Git-testrepositories stond commitondertekening uit via procesconfiguratie; de normale Git-configuratie bleef ongewijzigd.</p>
+  <h3>Een schone testmap maken</h3>
+  <p>De oorspronkelijke bestanden staan nu blijvend bij het rapport: <a href="fixtures/apple-workday/README.md">README</a>, <a href="fixtures/apple-workday/overlegnotities.md">overlegnotities</a>, <a href="fixtures/apple-workday/klantmail.md">klantmail</a>, <a href="fixtures/apple-workday/planning.md">beginplanning</a> en <a href="fixtures/apple-workday/STARTPROMPT.txt">de originele testprompt</a>. Kopieer deze vijf naar een nieuwe tijdelijke map. Bewerk de bewaarde exemplaren niet tijdens een modeltest.</p>
+  <p>De oude map <code>/private/tmp/afm-werkdag-or6_jbrv</code> bevat na de laatste gerichte test alleen een gewijzigde prioriteitsregel in de planning en geen conceptbericht. Bestaande chats blijven bewaard. Tijdelijke logs en backups kunnen verdwijnen; de bewaarde fixture en het verificatiebestand zijn het vertrekpunt.</p>
+</section>
+<section id="handoff">
+  <h2>Startprompt voor de volgende agent</h2>
+  <p>Deze prompt bevat de werkstand, de open problemen, de relevante code en de voorgestelde volgende opdracht. <a href="2026-09-25-apple-foundation-startprompt.txt" download>Download de startprompt als tekst</a>.</p>
+  <pre class="handoff-prompt" tabindex="0" aria-label="Kopieerbare startprompt"><code>Pak de experimentele Apple Foundation Models-provider in Ruimte verder op. Werk vanuit /Users/bas/Development/Projects/ruimte. Je hebt deze eerdere chat niet nodig; gebruik de overdracht en de code als bron.
+
+Lees eerst:
+- CLAUDE.md en apps/server/src/chat/CLAUDE.md.
+- docs/reports/2026-09-25-apple-foundation-integration.html, vooral de actuele stand, verificatie en overdracht.
+- docs/reports/2026-09-25-apple-foundation-verification.json.
+- apps/foundation-models/README.md.
+Controleer git status en de huidige branch. De implementatie wordt op main vastgelegd; ga niet uit van een schone werkboom en behoud ander werk. Committen, pushen en releasen van vervolgwerk vragen een eigen opdracht.
+
+Doel van de volgende fase: maak kleine dagelijkse taken aantoonbaar betrouwbaarder. Voeg voorlopig geen tools toe. Bouw eerst een vaste evaluatie voor volledig lezen, feiten uit twee bronnen vergelijken, één exacte bewerking, een nieuw concept schrijven en de gecombineerde werkdagopdracht. Gebruik per scenario een schone tijdelijke map en een nieuwe native sessie. Draai bijvoorbeeld vijf vooraf vastgelegde herhalingen per variant en rapporteer alle uitkomsten, inclusief mislukte pogingen. Een handmatig geholpen run telt apart van een zelfstandige run.
+
+Huidige implementatie:
+- De machine-instelling appleFoundationEnabled staat standaard uit. Elf tools: ListFiles, Read, Grep, Edit, Write, Bash, WebSearch, WebFetch, MCPListTools, MCPCall en AskUserQuestion. Calculator is verwijderd. Het model identificeert zich als Apple Foundation Models, met Ruimte als host.
+- Elke uitvoerende tool vraagt toestemming, ook bij Full access. Weigering, annulering en uitvoeringsfouten blijven definitief. Er is geen automatische herhaling van mogelijk uitgevoerde mutaties.
+- Read geeft het model gewone tekst met echte regeleinden en paginametadata. De backend bewaart zijn gestructureerde resultaat. Lees door totdat nextOffset null is.
+- Edit vereist één unieke exacte match. Alleen een ontbrekende of dubbele match vóór enige mutatie is recoverable_error. Hoogstens twee correcties; de derde afwijzing stopt. Geen fuzzy matching of blind decoderen van backslash-n.
+- ToolBridge houdt onherstelde Edit-paden bij. Alleen een geslaagde Edit op hetzelfde pad heft dat op. De helper houdt antwoordtekst tegen en vraagt begrensd om correctie zolang een Edit onhersteld is. Dit is geen algemene controle of de complete gebruikstaak is uitgevoerd.
+- Write maakt uitsluitend nieuwe bestanden. Niet ongemerkt veranderen in overschrijven.
+- Helperprotocol 3, checkpointformaat 2, tooldefinitiefingerprint, lokale samenvatting en apart bewaarde oorspronkelijke geschiedenis. Veranderde tooldefinities vereisen een nieuwe chat. Geannuleerde/mislukte beurten herstellen modelcontext, geen bestanden.
+- Grenzen: 12 toolcalls, 3 vragen, 6000 bytes invoer/toolresultaat, 1024 responstokens, 120 seconden modeltijd tussen tools en 60 seconden uitvoering per tool. Wachten op een persoon is uitgezonderd. Bash heeft 30 seconden.
+
+Bewezen en open:
+- Laatste gerichte controle: 115 backend/tooltests en 20 gewone Swift-tests geslaagd; 2 native tests waren in die Swift-run overgeslagen. Workspacecheck en release-helperbuild geslaagd. Eerdere expliciete native contexttests staan als historisch bewijs in het rapport.
+- Volledige Bun-testsuite bij de commitcontrole: 5.640 geslaagd, 0 mislukt. Tijdelijke Git-testrepositories draaiden met procesgebonden commit.gpgsign=false; de normale Git-configuratie bleef ongewijzigd.
+- Zichtbare regressietest in Ruimte Dev slaagde: bewust verkeerde Edit, opnieuw Read, gecorrigeerde Edit, de wijziging op schijf gecontroleerd.
+- De volledige werkdagtest slaagt NIET betrouwbaar. AFM vraagt naar informatie die in aangeleverde bestanden staat, verwart feiten en bronnen en genereerde een native Edit zonder het verplichte veld path. Eerder claimde het een wijziging na alleen opnieuw lezen; daarna is de gerichte Edit-afrondingscontrole toegevoegd.
+- Er is geen bewezen oorzaak voor ontbrekende argumenten of te vroege vragen. Onderzoek modelgedrag én onze instructies/schema&#x27;s. Presenteer kortere toolbeschrijvingen, minder argumenten of een kleinere toolselectie als experimenten, niet als bewezen oplossingen.
+- Vergelijk op identieke scenario&#x27;s alle elf tools met een kleine relevante selectie. Verander één factor tegelijk. Meet correcte resultaten, onnodige vragen, ongeldige argumenten, ongegronde succesclaims en doorlooptijd zonder menselijke wachttijd. Controleer de bestanden onafhankelijk van de modeltekst.
+
+Belangrijkste code:
+- apps/foundation-models/Sources/FoundationModelsHelper/{main.swift,Tools.swift,FileReadOutput.swift,ToolBridge.swift,AssistantReply.swift,ContextCompaction.swift,SessionStore.swift,ToolManifest.swift}.
+- apps/server/src/chat/{apple-backend.ts,apple-tools.ts,apple-file-tools.ts} en naastliggende tests.
+- apps/server/src/providers/apple-provider.ts; packages/contracts/src/apple-foundation.ts.
+- apps/client/src/shell/settings/providers/AppleFoundationSection.tsx.
+
+Testdata en eindtoets:
+Gebruik docs/reports/fixtures/apple-workday als onveranderde bron. Kopieer alle vijf bestanden naar een nieuwe tijdelijke projectmap; voer STARTPROMPT.txt ongewijzigd uit. Zet verwachte antwoorden buiten de map die AFM leest. De oude map /private/tmp/afm-werkdag-or6_jbrv is GEEN schone fixture: alleen de prioriteitsregel van Bas is door de gerichte test gewijzigd en concept-reactie.md ontbreekt. Bewaar oude chats; wis geen .ruimte-state om te resetten.
+Een geslaagde eindtoets leest alle vier inhoudelijke bestanden volledig, werkt planning.md bij en maakt concept-reactie.md van maximaal 180 woorden. Contactformulier eerst, logo na eerste oplevering, Mila 30 september, Jules vrijdag 2 oktober 12:00. Maandag 5 oktober vervalt; Noors voorstel dinsdag 6 oktober 10:00 botst met beschikbaarheid vanaf 11:00. Bijvoorbeeld 11:00 mag als onbevestigd voorstel, nooit als bevestigde afspraak. Budget blijft open. Bewaar de drie bronbestanden, verstuur niets en claim alleen bewezen wijzigingen. Geen onnodige vraag vóór het lezen.
+
+Uitvoeren en zichtbaar controleren:
+- bun run check; gerichte Bun-tests zoals beschreven in de helper-README.
+- swift test --package-path apps/foundation-models.
+- bun apps/foundation-models/scripts/build.ts om de release-helper te verversen. De provider geeft dist voorrang boven een debugbuild.
+- workflow-smoke.ts test standaard vraag/annulering/weigering. Met --evaluate-workday kapt de huidige evaluator al af als vóór alle reads een vraag komt. Verwar die afgebroken test niet met een volledig uitgevoerde opdracht. De huidige controles vervangen geen inhoudelijke evaluatie.
+- Test de eindflow ook zichtbaar in Ruimte Dev via ruimte-context computer, zoals de gebruiker verzocht. Begin met ruimte-context help computer, apps en state app.ruimte.desktop.dev. Werk op de achtergrond; geen --front zonder toestemming. Stop bij pauze/overname. Gebruik de gewone app app.ruimte.desktop niet als dev-app en herstart de gewone machine niet.
+- Dev gebruikt poort 4211 en normaal ~/.ruimte-dev; de gewone installatie 4210 en ~/.ruimte. Controleer bestaande processen vóór starten. Verander geen persoonlijke instellingen voor een blinde test.
+- macOS 26.4 is de ondergrens; getest is Apple silicon met macOS 27.2, Swift 6.4 en SDK 27. Claim geen verificatie op 26.4 zonder die uit te voeren.
+
+Werk het HTML-rapport en het verificatiebestand bij met de volledige meetreeks, resterende beperkingen en een nieuwe overdracht. Houd rapporten vrij van verwijzingen naar andere lokale referentieprojecten. Stop niet bij één toevallige geslaagde modelrun.
+</code></pre>
+</section>
+</main>
+<footer><p>Ruimte · 25 september 2026 · Overdracht van een opt-in experiment. De app-tests voegden chats toe in Ruimte Dev en wijzigden de tijdelijke testplanning. De gewone Ruimte-installatie is niet voor deze tests herstart.</p><p id="document-qa">Documentcontrole: lokale bestandslinks en ankers gecontroleerd; standalone HTML zonder externe assets. Licht, donker, mobiel en print zijn met een afzonderlijke headless browser gecontroleerd.</p></footer>
+</body>
+</html>

@@ -5,6 +5,7 @@ import { codexProvider } from './codex-provider.ts';
 import type { CliDetection } from './detect.ts';
 import type { ChatProvider } from './provider.ts';
 import { copilotProvider, geminiProvider } from './terminal-providers.ts';
+import { createAppleProvider, appleProvider } from './apple-provider.ts';
 
 // How long a "is it installed" answer stays good; an install mid-session shows up on the next check.
 const DETECTION_TTL_MS = 60_000;
@@ -13,10 +14,12 @@ const DETECTION_TTL_MS = 60_000;
 const BUILT_IN_PROVIDERS: ChatProvider[] = [claudeProvider, codexProvider, geminiProvider, copilotProvider];
 
 /* The provider of a kind, for the places that have no registry at hand (the hooks). */
-export const providerFor = (kind: AgentKind): ChatProvider => BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? claudeProvider;
+export const providerFor = (kind: AgentKind): ChatProvider =>
+    kind === 'apple' ? appleProvider : (BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? claudeProvider);
 
 interface ProviderRegistryOptions {
     providers?: ChatProvider[];
+    appleEnabled?: () => boolean;
     // The executables to probe, when they are not the ones the providers name.
     commands?: Partial<Record<AgentKind, string>>;
     // How to probe; a test answers without spawning anything.
@@ -26,12 +29,14 @@ interface ProviderRegistryOptions {
 /* What the daemon knows about each agent CLI: whether it is there, what it offers and what it can do. */
 export class ProviderRegistry {
     private readonly providers: ChatProvider[];
+    private readonly appleEnabled: () => boolean;
     private readonly commands: Partial<Record<AgentKind, string>>;
     private readonly detect: ((command: string) => Promise<CliDetection>) | null;
     private readonly cache = new Map<AgentKind, { at: number; detection: CliDetection }>();
 
     constructor(options: ProviderRegistryOptions = {}) {
-        this.providers = options.providers ?? BUILT_IN_PROVIDERS;
+        this.appleEnabled = options.appleEnabled ?? (() => false);
+        this.providers = options.providers ?? [...BUILT_IN_PROVIDERS, createAppleProvider(this.appleEnabled)];
         this.commands = options.commands ?? {};
         this.detect = options.detect ?? null;
     }
@@ -73,13 +78,27 @@ export class ProviderRegistry {
         return this.get(kind).catalog;
     }
 
+    enabled(kind: AgentKind): boolean {
+        return kind !== 'apple' || this.appleEnabled();
+    }
+
+    invalidate(kind: AgentKind): void {
+        this.cache.delete(kind);
+    }
+
     private async detection(provider: ChatProvider): Promise<CliDetection> {
+        if (provider.kind === 'apple' && !this.appleEnabled()) {
+            return { installed: false, version: 'Disabled in Settings' };
+        }
         const cached = this.cache.get(provider.kind);
         if (cached && Date.now() - cached.at < DETECTION_TTL_MS) {
             return cached.detection;
         }
         const command = this.commands[provider.kind] ?? provider.command[0]!;
         const detection = this.detect ? await this.detect(command) : await provider.detect(command, process.env);
+        if (provider.kind === 'apple' && !this.appleEnabled()) {
+            return { installed: false, version: 'Disabled in Settings' };
+        }
         this.cache.set(provider.kind, { at: Date.now(), detection });
         return detection;
     }

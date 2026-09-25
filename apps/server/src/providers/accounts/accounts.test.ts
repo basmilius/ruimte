@@ -63,7 +63,7 @@ describe('accountProblem', () => {
 describe('withDefaults', () => {
     test('always holds a default account per CLI, first and in catalog order', () => {
         const accounts = withDefaults({ claude_personal: { kind: 'claude', home: '~/.cp' }, codex: { kind: 'codex', label: 'Work' } });
-        expect(Object.keys(accounts)).toEqual(['claude', 'codex', 'gemini', 'copilot', 'claude_personal']);
+        expect(Object.keys(accounts)).toEqual(['claude', 'codex', 'gemini', 'copilot', 'apple', 'claude_personal']);
         expect(accounts.codex).toEqual({ kind: 'codex', label: 'Work' });
     });
 });

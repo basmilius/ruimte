@@ -1,0 +1,49 @@
+Pak de experimentele Apple Foundation Models-provider in Ruimte verder op. Werk vanuit /Users/bas/Development/Projects/ruimte. Je hebt deze eerdere chat niet nodig; gebruik de overdracht en de code als bron.
+
+Lees eerst:
+- CLAUDE.md en apps/server/src/chat/CLAUDE.md.
+- docs/reports/2026-09-25-apple-foundation-integration.html, vooral de actuele stand, verificatie en overdracht.
+- docs/reports/2026-09-25-apple-foundation-verification.json.
+- apps/foundation-models/README.md.
+Controleer git status en de huidige branch. De implementatie wordt op main vastgelegd; ga niet uit van een schone werkboom en behoud ander werk. Committen, pushen en releasen van vervolgwerk vragen een eigen opdracht.
+
+Doel van de volgende fase: maak kleine dagelijkse taken aantoonbaar betrouwbaarder. Voeg voorlopig geen tools toe. Bouw eerst een vaste evaluatie voor volledig lezen, feiten uit twee bronnen vergelijken, één exacte bewerking, een nieuw concept schrijven en de gecombineerde werkdagopdracht. Gebruik per scenario een schone tijdelijke map en een nieuwe native sessie. Draai bijvoorbeeld vijf vooraf vastgelegde herhalingen per variant en rapporteer alle uitkomsten, inclusief mislukte pogingen. Een handmatig geholpen run telt apart van een zelfstandige run.
+
+Huidige implementatie:
+- De machine-instelling appleFoundationEnabled staat standaard uit. Elf tools: ListFiles, Read, Grep, Edit, Write, Bash, WebSearch, WebFetch, MCPListTools, MCPCall en AskUserQuestion. Calculator is verwijderd. Het model identificeert zich als Apple Foundation Models, met Ruimte als host.
+- Elke uitvoerende tool vraagt toestemming, ook bij Full access. Weigering, annulering en uitvoeringsfouten blijven definitief. Er is geen automatische herhaling van mogelijk uitgevoerde mutaties.
+- Read geeft het model gewone tekst met echte regeleinden en paginametadata. De backend bewaart zijn gestructureerde resultaat. Lees door totdat nextOffset null is.
+- Edit vereist één unieke exacte match. Alleen een ontbrekende of dubbele match vóór enige mutatie is recoverable_error. Hoogstens twee correcties; de derde afwijzing stopt. Geen fuzzy matching of blind decoderen van backslash-n.
+- ToolBridge houdt onherstelde Edit-paden bij. Alleen een geslaagde Edit op hetzelfde pad heft dat op. De helper houdt antwoordtekst tegen en vraagt begrensd om correctie zolang een Edit onhersteld is. Dit is geen algemene controle of de complete gebruikstaak is uitgevoerd.
+- Write maakt uitsluitend nieuwe bestanden. Niet ongemerkt veranderen in overschrijven.
+- Helperprotocol 3, checkpointformaat 2, tooldefinitiefingerprint, lokale samenvatting en apart bewaarde oorspronkelijke geschiedenis. Veranderde tooldefinities vereisen een nieuwe chat. Geannuleerde/mislukte beurten herstellen modelcontext, geen bestanden.
+- Grenzen: 12 toolcalls, 3 vragen, 6000 bytes invoer/toolresultaat, 1024 responstokens, 120 seconden modeltijd tussen tools en 60 seconden uitvoering per tool. Wachten op een persoon is uitgezonderd. Bash heeft 30 seconden.
+
+Bewezen en open:
+- Laatste gerichte controle: 115 backend/tooltests en 20 gewone Swift-tests geslaagd; 2 native tests waren in die Swift-run overgeslagen. Workspacecheck en release-helperbuild geslaagd. Eerdere expliciete native contexttests staan als historisch bewijs in het rapport.
+- Volledige Bun-testsuite bij de commitcontrole: 5.640 geslaagd, 0 mislukt. Tijdelijke Git-testrepositories draaiden met procesgebonden commit.gpgsign=false; de normale Git-configuratie bleef ongewijzigd.
+- Zichtbare regressietest in Ruimte Dev slaagde: bewust verkeerde Edit, opnieuw Read, gecorrigeerde Edit, de wijziging op schijf gecontroleerd.
+- De volledige werkdagtest slaagt NIET betrouwbaar. AFM vraagt naar informatie die in aangeleverde bestanden staat, verwart feiten en bronnen en genereerde een native Edit zonder het verplichte veld path. Eerder claimde het een wijziging na alleen opnieuw lezen; daarna is de gerichte Edit-afrondingscontrole toegevoegd.
+- Er is geen bewezen oorzaak voor ontbrekende argumenten of te vroege vragen. Onderzoek modelgedrag én onze instructies/schema's. Presenteer kortere toolbeschrijvingen, minder argumenten of een kleinere toolselectie als experimenten, niet als bewezen oplossingen.
+- Vergelijk op identieke scenario's alle elf tools met een kleine relevante selectie. Verander één factor tegelijk. Meet correcte resultaten, onnodige vragen, ongeldige argumenten, ongegronde succesclaims en doorlooptijd zonder menselijke wachttijd. Controleer de bestanden onafhankelijk van de modeltekst.
+
+Belangrijkste code:
+- apps/foundation-models/Sources/FoundationModelsHelper/{main.swift,Tools.swift,FileReadOutput.swift,ToolBridge.swift,AssistantReply.swift,ContextCompaction.swift,SessionStore.swift,ToolManifest.swift}.
+- apps/server/src/chat/{apple-backend.ts,apple-tools.ts,apple-file-tools.ts} en naastliggende tests.
+- apps/server/src/providers/apple-provider.ts; packages/contracts/src/apple-foundation.ts.
+- apps/client/src/shell/settings/providers/AppleFoundationSection.tsx.
+
+Testdata en eindtoets:
+Gebruik docs/reports/fixtures/apple-workday als onveranderde bron. Kopieer alle vijf bestanden naar een nieuwe tijdelijke projectmap; voer STARTPROMPT.txt ongewijzigd uit. Zet verwachte antwoorden buiten de map die AFM leest. De oude map /private/tmp/afm-werkdag-or6_jbrv is GEEN schone fixture: alleen de prioriteitsregel van Bas is door de gerichte test gewijzigd en concept-reactie.md ontbreekt. Bewaar oude chats; wis geen .ruimte-state om te resetten.
+Een geslaagde eindtoets leest alle vier inhoudelijke bestanden volledig, werkt planning.md bij en maakt concept-reactie.md van maximaal 180 woorden. Contactformulier eerst, logo na eerste oplevering, Mila 30 september, Jules vrijdag 2 oktober 12:00. Maandag 5 oktober vervalt; Noors voorstel dinsdag 6 oktober 10:00 botst met beschikbaarheid vanaf 11:00. Bijvoorbeeld 11:00 mag als onbevestigd voorstel, nooit als bevestigde afspraak. Budget blijft open. Bewaar de drie bronbestanden, verstuur niets en claim alleen bewezen wijzigingen. Geen onnodige vraag vóór het lezen.
+
+Uitvoeren en zichtbaar controleren:
+- bun run check; gerichte Bun-tests zoals beschreven in de helper-README.
+- swift test --package-path apps/foundation-models.
+- bun apps/foundation-models/scripts/build.ts om de release-helper te verversen. De provider geeft dist voorrang boven een debugbuild.
+- workflow-smoke.ts test standaard vraag/annulering/weigering. Met --evaluate-workday kapt de huidige evaluator al af als vóór alle reads een vraag komt. Verwar die afgebroken test niet met een volledig uitgevoerde opdracht. De huidige controles vervangen geen inhoudelijke evaluatie.
+- Test de eindflow ook zichtbaar in Ruimte Dev via ruimte-context computer, zoals de gebruiker verzocht. Begin met ruimte-context help computer, apps en state app.ruimte.desktop.dev. Werk op de achtergrond; geen --front zonder toestemming. Stop bij pauze/overname. Gebruik de gewone app app.ruimte.desktop niet als dev-app en herstart de gewone machine niet.
+- Dev gebruikt poort 4211 en normaal ~/.ruimte-dev; de gewone installatie 4210 en ~/.ruimte. Controleer bestaande processen vóór starten. Verander geen persoonlijke instellingen voor een blinde test.
+- macOS 26.4 is de ondergrens; getest is Apple silicon met macOS 27.2, Swift 6.4 en SDK 27. Claim geen verificatie op 26.4 zonder die uit te voeren.
+
+Werk het HTML-rapport en het verificatiebestand bij met de volledige meetreeks, resterende beperkingen en een nieuwe overdracht. Houd rapporten vrij van verwijzingen naar andere lokale referentieprojecten. Stop niet bij één toevallige geslaagde modelrun.

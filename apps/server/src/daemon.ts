@@ -240,7 +240,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
     /* The other reader: what a chat has to show a person in its thread, which is never taken from the model. */
     const unshownFor = async (chatId: string): Promise<string[]> => (await notices.show(chatId)).map(noticeNote);
-    const providers = new ProviderRegistry();
+    const providers = new ProviderRegistry({ appleEnabled: () => identity.appleFoundationEnabled });
     // Before the managers, which start every CLI under the account its node or chat names.
     const providerAccounts = new ProviderAccountsService({
         ruimteHome: config.home,
@@ -659,6 +659,18 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 devices.closeAll();
             }
         },
+        appleFoundationChanged: async (on) => {
+            providers.invalidate('apple');
+            if (!on) {
+                await Promise.all(
+                    chats
+                        .list()
+                        .filter((chat) => chat.provider === 'apple')
+                        .map((chat) => chats.stop(chat.chatId, 'Apple Foundation Models was turned off in Settings.'))
+                );
+            }
+            await providerAccounts.refresh();
+        },
         resumeChanged: (on) => {
             chats.resumeSettingChanged();
             // A chat nobody loaded owes a resume only on disk, so turning the switch off drops those there.
@@ -808,6 +820,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         refuseStatements: identity.refuseStatements,
         streamingAllowed: identity.streamingAllowed,
         resumeAtReset: identity.resumeAtReset,
+        appleFoundationEnabled: identity.appleFoundationEnabled,
         platform: process.platform,
         version: VERSION,
         protocol: PROTOCOL_VERSION,

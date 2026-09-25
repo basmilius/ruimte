@@ -78,3 +78,13 @@ jobs:
       - uses: actions/checkout@v5
       - run: swift build
       - run: swift test
+
+  foundation-models:
+    runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: apps/foundation-models
+    steps:
+      - uses: actions/checkout@v5
+      - run: swift build
+      - run: swift test

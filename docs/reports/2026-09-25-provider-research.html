@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Provideronderzoek</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Naar het advies</a>
+<header>
+<p class="eyebrow">Ruimte / Provideronderzoek / 25 september 2026</p>
+<h1>Meer providers,<br>dezelfde Ruimte-chat</h1>
+<p class="intro">Copilot, Grok en Google's agents kunnen aansluiten op de bestaande chatbackend. Apple Foundation Models kan lokaal tools aanroepen, maar vraagt een eigen native helper en een kleinere taakopzet.</p>
+<p class="status">Onderzoeksrapport · vier onderzoekswerkstromen · implementatievoorstel</p>
+<p class="caption">Codebasis Ruimte <code>a42db32a4120</code><br>Officiële documentatie en broncode onderzocht. Geen provider geïnstalleerd, account aangemeld of model uitgevoerd.</p>
+<nav aria-label="Inhoud"><a href="#advies">Advies</a><a href="#huidig">Huidige code</a><a href="#copilot">Copilot</a><a href="#google">Google</a><a href="#grok">Grok</a><a href="#apple">Apple lokaal</a><a href="#integratie">Integratiekeuzes</a><a href="#plan">Uitvoering</a><a href="#controle">Onderbouwing</a></nav>
+</header>
+<main>
+<section id="advies" class="recommendation">
+<h2>Begin bij de agentruntime</h2>
+<p>Mijn advies is om de bestaande coding agents te integreren via hun officiële SDK of ACP. ACP, het Agent Client Protocol, laat een eigen interface met een agentproces praten over prompts, antwoorden, tools en toestemmingen. Ruimte heeft al een geschikte backendgrens. Alleen bij de lokale Apple-provider moeten we zelf een beperkte set uitvoerbare tools maken.</p>
+<div class="table" role="region" aria-label="Aanbevolen integratieroutes" tabindex="0"><table class="wide"><caption>Voorgestelde routes. Haalbaarheid is onderbouwd; werking in Ruimte moet nog worden beproefd.</caption><thead><tr><th scope="col">Provider</th><th scope="col">Nu in Ruimte</th><th scope="col">Aanbevolen route</th><th scope="col">Belangrijkste werk</th></tr></thead><tbody>
+<tr><th scope="row"><a href="#copilot">GitHub Copilot</a></th><td>Alleen terminal</td><td>Officiële TypeScript SDK; ACP als alternatief</td><td>Eventvertaling, permissions, accounts en Bun-verpakking</td></tr>
+<tr><th scope="row"><a href="#google">Gemini CLI</a></th><td>Alleen terminal</td><td><code>gemini --acp</code></td><td>ACP-backend en correcte account-root</td></tr>
+<tr><th scope="row"><a href="#google-antigravity">Google Antigravity</a></th><td>Ontbreekt</td><td>Officiële standalone ACP-runtime</td><td>Runtimebeheer, eigen login, Google-extensies</td></tr>
+<tr><th scope="row"><a href="#grok">SpaceXAI Grok Build</a></th><td>Ontbreekt</td><td><code>grok agent stdio</code></td><td>Nieuwe provider, ACP en Grok-extensies</td></tr>
+<tr><th scope="row"><a href="#apple">Apple Foundation Models</a></th><td>Ontbreekt</td><td>Eigen Swift-helper met native <code>Tool</code></td><td>Lokale tools, contextbudget, beschikbaarheid en distributie</td></tr>
+</tbody></table></div>
+<p>Start Copilot en de ACP-basis als twee onafhankelijke werkpakketten. Gebruik Gemini CLI als eerste eenvoudige ACP-aansluiting en Grok om te toetsen welke onderdelen echt gedeeld kunnen worden. Antigravity kan dezelfde basis gebruiken, maar heeft extra installatie- en accountwerk. Onderzoek Apple tegelijk met een kleine lokale proef; maak brede autonome codebewerking geen voorwaarde voor een eerste bruikbare versie.</p>
+<p class="caption">De providerhoofdstukken bevatten de bronnen voor deze vergelijking. De volgorde is een engineeringadvies, geen gemeten planning.</p>
+</section>
+<section id="huidig">
+<h2>Wat er al ligt</h2>
+<p>Gemini en Copilot zijn geen volledig ontbrekende providers. Ze staan in het contract en de registry, maar hebben <code>chat: false</code>, geen modelcatalogus en geen chatbackend. Grok, Antigravity en Apple ontbreken in de lijst met agentsoorten. <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/packages/contracts/src/agent.ts#L6"><code>agent.ts:6</code></a> · <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/providers/registry.ts#L13"><code>registry.ts:13</code></a> · <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/providers/terminal-providers.ts#L7"><code>terminal-providers.ts:7</code></a></p>
+<div class="table" role="region" aria-label="Bestaande integratiepunten" tabindex="0"><table><thead><tr><th scope="col">Bestaand onderdeel</th><th scope="col">Betekenis voor dit werk</th></tr></thead><tbody>
+<tr><th scope="row">Provider en backend</th><td><code>ChatProvider.createBackend</code> kiest de implementatie. <code>ChatBackend</code> kent starten, prompt, interrupt, approvalantwoord en afsluiten. De threadprojectie kan behouden blijven. <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/providers/provider.ts#L22"><code>provider.ts:22</code></a> · <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/chat/backend.ts#L152"><code>backend.ts:152</code></a></td></tr>
+<tr><th scope="row">Events en mogelijkheden</th><td><code>BackendEvent</code> ondersteunt tekst, tools, diffs, vragen, approvals en beurtstatus. Zet capabilities pas aan na een werkende mapping per provider. <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/chat/backend.ts#L64"><code>backend.ts:64</code></a> · <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/packages/contracts/src/model.ts#L54"><code>model.ts:54</code></a></td></tr>
+<tr><th scope="row">Accounts</th><td>Accounts zijn nu vooral CLI-configmappen. Alleen Claude en Codex hebben een echte loginprobe. Zonder <code>home</code> wordt een gevonden runtime meteen <code>ready</code>. Installatie zegt daardoor bij Gemini/Copilot nog niets over toegang. <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/providers/accounts/status.ts#L92"><code>status.ts:92</code></a> · <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/providers/accounts/service.ts#L545"><code>service.ts:545</code></a></td></tr>
+<tr><th scope="row">Kosten en modelkeuze</th><td>De catalogus is statisch en historische usage kent slechts Claude/Codex. Nieuwe providers vragen accountbewuste modellen en een expliciete toestand voor onbekende kosten. Het verplichte <code>costUsd</code>-veld mag geen fictieve nulprijs opleveren. <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/providers/catalog.ts#L23"><code>catalog.ts:23</code></a> · <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/packages/contracts/src/usage.ts#L5"><code>usage.ts:5</code></a> · <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/chat/backend.ts#L133"><code>backend.ts:133</code></a></td></tr>
+</tbody></table></div>
+<p>Werk runtimebeschikbaarheid, identiteit en modeltoegang afzonderlijk uit. Apple heeft bijvoorbeeld geen CLI-login, terwijl een geïnstalleerde Google-runtime nog geen toegankelijke modellen garandeert. Dat verschil hoort in providerstatus, niet in verspreide uitzonderingen in de interface.</p>
+</section>
+<section id="copilot">
+<h2>GitHub Copilot</h2>
+<p><span class="badge confirmed">Officiële SDK</span> De Copilot SDK biedt een TypeScript-client rond de Copilot-runtime. De huidige repository noemt de SDK algemeen beschikbaar. De CLI-runtime wordt bij de Node-SDK meegeleverd; daarnaast bestaat een expliciete CLI-verbinding. De runtime verzorgt de agentloop en ingebouwde tools. <a href="https://github.com/github/copilot-sdk">SDK-overzicht</a></p>
+<p>Maak een <code>CopilotBackend</code> met sessieaanmaak, hervatten, streaming, abort en callbackafhandeling voor tools en permissions. Vertaal de gebeurtenissen naar Ruimtes bestaande events. Zet eigen toolhandlers en MCP-configuratie opnieuw klaar bij het herstellen van een sessie. <a href="https://github.com/github/copilot-sdk/blob/main/nodejs/README.md">TypeScript-interface</a> · <a href="https://github.com/github/copilot-sdk/blob/main/docs/features/session-persistence.md">Sessiepersistentie</a> · <a href="https://docs.github.com/en/copilot/how-tos/copilot-sdk/features/mcp">MCP</a></p>
+<h3>SDK of ACP</h3>
+<p><code>copilot --acp --stdio</code> is ook officieel, maar GitHub duidt deze route als public preview. ACP kan code delen met Google en Grok. Mijn voorkeur blijft de SDK, tenzij een korte vergelijking aantoont dat ACP dezelfde noodzakelijke permissions, vragen en sessiefuncties levert en duidelijk eenvoudiger te verpakken is. <a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/acp-server">Copilot ACP</a></p>
+<h3>Accounts en verpakking bepalen de proef</h3>
+<p>Hergebruik de lokale Copilot-login voor de eerste versie. CLI-toegang hangt ook van het Copilot-plan en organisatiebeleid af. Expliciete tokens kunnen opgeslagen login overschrijven. <code>COPILOT_HOME</code> verplaatsen is nog geen bewijs van volledig gescheiden macOS-keychainidentiteiten. Test twee accounts en geërfde tokenvariabelen voordat de interface accountisolatie belooft. Ruimtes Pulsar-login bij GitHub is een andere login; het token wordt daar bewust weggegooid na identificatie. <a href="https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/authenticate-copilot-cli">CLI-authenticatie</a> · <a href="https://docs.github.com/en/copilot/how-tos/copilot-sdk/auth/authenticate">SDK-authenticatie</a> · <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/pulsar-worker/src/providers.ts#L77"><code>providers.ts:77</code></a></p>
+<p>De SDK documenteert Node, maar dat bewijst geen werking in Ruimtes gecompileerde Bun-daemon. Beproef zowel ontwikkeling als een release-executable, inclusief de runtimebestanden. Een extern gedetecteerde CLI is een mogelijke eerste distributiekeuze. <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/scripts/compile.ts#L44"><code>compile.ts:44</code></a></p>
+<p class="note">Concrete bestaande fout: Copilot krijgt voor de eerste terminalprompt <code>-p</code>, dat eenmalig draait en afsluit. Het contract verwacht een interactieve sessie die blijft bestaan; daarvoor documenteert GitHub <code>-i</code>. Neem dit mee als kleine, afzonderlijke correctie. <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/providers/terminal-providers.ts#L54"><code>terminal-providers.ts:54</code></a> · <a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference">CLI-vlaggen</a></p>
+<p><strong>Vrijgavecriterium.</strong> Twee beurten, toolstreaming, daadwerkelijk weigeren van een schrijfopdracht, stoppen tijdens een open approval en herstel na daemonherstart werken ook in de verpakte app. Een ontbrekend abonnement of beleidsverbod krijgt een eigen melding.</p>
+</section>
+<section id="google">
+<h2>Google: twee afzonderlijke agents</h2>
+<p>Gemini CLI en Antigravity hebben elk een runtime, sessies en authenticatie. Voeg ze als afzonderlijke providers toe als we beide willen ondersteunen. Een Gemini-modelnaam maakt hun accounts, quota en sessies niet uitwisselbaar.</p>
+<h3>Gemini CLI via ACP</h3>
+<p><code>gemini --acp</code> biedt JSON-RPC over stdin/stdout, met authenticatie, sessieaanmaak, laden, prompts en annuleren. De gedocumenteerde modelsetter heet nog <code>unstable_setSessionModel</code>. Pin daarom een geteste CLI-versie en houd modelwisseling buiten de generieke protocolkern. <a href="https://geminicli.com/docs/cli/acp-mode/">Gemini ACP</a></p>
+<p>Gebruik ACP-updates voor tekst, toolstatus en diffs. Bewaar de native permission-optie-ID's en antwoord met een werkelijk aangeboden optie. Stoppen moet ook wachtende permissionrequests afhandelen. Een <code>stream-json</code>-uitvoer van een headless prompt heeft op zichzelf geen gedocumenteerd interactief retourkanaal voor Ruimtes approvals. <a href="https://agentclientprotocol.com/protocol/v1/tool-calls">ACP-tools en permissions</a> · <a href="https://geminicli.com/docs/cli/headless/">Headless-uitvoer</a></p>
+<p>Google-login, Gemini API-key en Vertex AI zijn verschillende toegangswegen. Toon welke route actief is. Let bij extra accounts op <code>GEMINI_CLI_HOME</code>: deze wijst naar een root waaronder de CLI zelf <code>.gemini</code> maakt. Ruimtes huidige <code>ProviderHome</code> veronderstelt de configuratiemap zelf. Pas root, transcriptpad en loginprobe samen aan. <a href="https://geminicli.com/docs/get-started/authentication/">Authenticatie</a> · <a href="https://geminicli.com/docs/reference/configuration/">Configuratie</a></p>
+<h3 id="google-antigravity">Antigravity via de standalone ACP-runtime</h3>
+<p><span class="badge confirmed">Officiële ACP-distributie</span> Google publiceert een afzonderlijke Antigravity ACP-runtime. De onderzochte registryrevisie bevat versie <code>1.1.1</code> van Google LLC met downloads vanaf <code>dl.google.com</code>. Dit is een concrete integratieroute naast de IDE, CLI en Python SDK. <a href="https://github.com/agentclientprotocol/registry/blob/81bf71b55e15f630c4fb8a86d20d3088071d2071/antigravity-acp/agent.json">Gepinde ACP Registry</a></p>
+<p>Dit verandert het oorspronkelijke advies uit alleen de CLI-documentatie. De headless <code>agy</code>-route kan benodigde interactieve approvals weigeren en accepteert geen <code>control_request</code>/<code>control_response</code>. Die beperking geldt niet als bewijs tegen de afzonderlijke ACP-route. Geef ACP nu de voorkeur voor de Ruimte-proef; de Python SDK met policycallbacks blijft een alternatief. <a href="https://www.antigravity.google/docs/cli/headless/">Headless-contract</a> · <a href="https://www.antigravity.google/docs/sdk/policies/">SDK-policycallbacks</a></p>
+<p>Neem runtime-installatie en eigen aanmelding als echt werkpakket op. Ons voorstel is om accountprofielen te scheiden en geërfde Google-credentials te verwijderen voordat de gekozen authenticatie wordt ingesteld. Onderzoek hoe de runtime credentials opslaat en verbind dit bewust met Ruimtes secretbeheer. Een aanmelding bij de IDE of gewone CLI is geen bewezen aanmelding bij deze ACP-runtime. Google documenteert afzonderlijke ACP-authenticatiemethoden. <a href="https://www.antigravity.google/docs/ide/extensions/zed">Google's ACP-integratie en loginmethoden</a></p>
+<p><strong>Vrijgavecriterium.</strong> De standalone runtime toont accounttoegang en modellen, vraagt een schrijfapproval in Ruimte en hervat dezelfde sessie met hetzelfde model. Test lokale én remote login. Sessieterugdraaien, planmodus en subagentbediening blijven uit zolang hun specifieke contract niet wordt ondersteund.</p>
+</section>
+<section id="grok">
+<h2>SpaceXAI Grok Build</h2>
+<p><span class="badge confirmed">Officiële agentruntime</span> Grok Build levert inmiddels zelf een coding agent, terminalinterface en ACP. Een community-CLI of zelfgebouwde API-agentloop is voor deze integratie niet nodig. De chatroute is <code>grok agent stdio</code>. <a href="https://docs.x.ai/build/overview">Grok Build</a> · <a href="https://docs.x.ai/build/cli/headless-scripting">ACP en headless</a></p>
+<p>Voeg <code>grok</code> toe aan contracts, registry, providerkeuze, launchflags en accountondersteuning. Laat de Grok-backend de ingebouwde tools alleen observeren en hun lifecycle vertalen; voer een door Grok uitgevoerde tool niet zelf opnieuw uit. De officiële testclient gebruikt sessies laden, model- en modewisseling en cancellation. Vragen en MCP-elicitation hebben aanvullende xAI-methoden, die buiten de gedeelde ACP-kern horen. <a href="https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-test-support/src/acp_agent_connection.rs">Officiële ACP-testclient</a> · <a href="https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-test-support/README.md">Interactiecontract</a></p>
+<p><code>GROK_HOME</code> verplaatst de configuratie. Browserlogin, device-login en <code>XAI_API_KEY</code> zijn gedocumenteerd. Consumentenlogin en API-billing zijn verschillende routes; toon de gebruikte route en laat het actuele account bepalen wat beschikbaar is. Verifieer dat credentials, sessies en instellingen allemaal de geselecteerde home volgen. <a href="https://docs.x.ai/build/settings">Instellingen</a> · <a href="https://docs.x.ai/build/cli/reference">CLI-reference</a> · <a href="https://docs.x.ai/grok/faq">Consumententoegang</a> · <a href="https://docs.x.ai/console/billing">API-billing</a></p>
+<p>De officiële npm-distributie noemt macOS ARM64, Linux x64/ARM64 en Windows x64. Beloof geen Intel-Mac-ondersteuning zonder een passende runtime. Leg de ondersteunde binaryversie vast in de proef; dit onderzoek stelt daarvoor nog geen harde ondergrens vast. <a href="https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/npm/grok/README.md">Officiële distributie</a></p>
+<h3>Permissionmodus is geen sandbox</h3>
+<p>Grok kan instellingen uit <code>.claude</code> overnemen, waaronder regels die edits of alle acties toestaan. Test daarom zowel een schone omgeving als een bestaande ontwikkelmachine. De sandbox is een aparte instelling; volgens de documentatie is netwerkblokkering van subprocessen in de macOS read-only/strict-modus niet afgedwongen. Ruimtes moduslabels moeten de werkelijke rechten weerspiegelen. <a href="https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-workspace/src/permission/resolution.rs">Permission-resolver</a> · <a href="https://docs.x.ai/build/features/permissions">Permissions</a> · <a href="https://docs.x.ai/build/features/sandbox">Sandbox</a></p>
+<p><strong>Vrijgavecriterium.</strong> Een geweigerde edit verandert geen bestand, annuleren sluit ook open vragen, en hervatten dupliceert geen berichten of tools. Test modeldiscovery zonder loginbrowser of sessie met hooks te starten. Neem ook de onderstaande <a href="#integratie">integratiecriteria</a> mee.</p>
+<p class="caption">Een directe Grok API blijft mogelijk. Dan worden de agentloop, lokale tools, context en approvals ons eigen productwerk. De API-route voor remote MCP ondersteunt volgens de documentatie geen <code>require_approval</code>; die is geen vervanger voor lokale goedkeuring. <a href="https://docs.x.ai/developers/tools/function-calling">Function calling</a> · <a href="https://docs.x.ai/developers/tools/remote-mcp">Remote MCP</a></p>
+</section>
+<section id="apple">
+<h2>Apple Foundation Models: ja, ook met tools</h2>
+<p><span class="badge confirmed">Native toolcalls</span> Het lokale framework ondersteunt <code>LanguageModelSession</code> en het Swift-protocol <code>Tool</code>. Het model kiest een tool, genereert argumenten en verwerkt het resultaat. De async-methode <code>call(arguments:)</code> kan op onze daemon wachten. Het framework verzorgt de generatielus; Ruimte levert de tools en uitvoeringsregels. <a href="https://developer.apple.com/documentation/foundationmodels/expanding-generation-with-tool-calling">Apple toolcalling</a></p>
+<h3>Voorgestelde implementatie</h3>
+<ol>
+<li>Voeg een aparte Foundation Models-helper toe aan de native build. Gebruik Swift voor de modelverbinding en een bidirectioneel lokaal protocol met request-ID's.</li>
+<li>Maak een <code>AppleFoundationBackend</code> achter <code>ChatBackend</code>. De helper stuurt tekst, toolaanvragen en status; de daemon koppelt die aan Ruimtes thread.</li>
+<li>Laat de daemon argumenten controleren, noodzakelijke approvals vragen en toegestane tools uitvoeren. Stuur een begrensd resultaat terug naar de wachtende Swift-tool.</li>
+<li>Registreer eerst enkele gerichte tools, bijvoorbeeld projecttekst zoeken, een geselecteerd bestand lezen en een concrete Ruimte-actie. Annuleren, weigeren en gelijktijdige toolcalls krijgen elk een afgehandeld antwoord.</li>
+</ol>
+<p>Dit is een ontwerpvoorstel, nog geen gebouwde koppeling. Ruimte verpakt al native helpers en vereist op macOS al versie 26.0. Gebruik een afzonderlijke helper voor inferentie; die hoeft niet dezelfde rechten als de computer-use-helper te krijgen. <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/computer-use/Package.swift#L6"><code>Package.swift:6</code></a> · <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/desktop/electron-builder.yml#L32"><code>electron-builder.yml:32</code></a> · <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/chat/backend.ts#L152"><code>backend.ts:152</code></a></p>
+<div class="split"><div class="panel"><h3>Beschikbaarheid op de host</h3><p>Controleer hardwaregeschiktheid, ingeschakelde Apple Intelligence en of het model gereed is. De provider draait op de Mac van de daemon. Een Mac-client maakt een Linux-daemon niet geschikt voor Foundation Models. Routering naar een andere Mac is apart werk. <a href="https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel">SystemLanguageModel</a></p></div><div class="panel"><h3>Een klein contextbudget</h3><p>Apple documenteert 4.096 tokens inclusief instructies, tooldefinities, resultaten en antwoorden. Lees de actuele limiet via <code>contextSize</code> waar ondersteund. Geef alleen relevante codefragmenten en enkele tools mee. Een hele repository of deze chat past daar niet in. <a href="https://developer.apple.com/documentation/foundationmodels/managing-the-context-window">Contextbeheer</a></p></div></div>
+<h3>Beperkingen die de interface moet laten zien</h3>
+<p>Start als lokale assistent voor afgebakende taken: zoeken, samenvatten, velden extraheren en kleine acties. Brede autonome codebewerking vraagt eerst eigen kwaliteitsevaluaties. Apple adviseert voor het kleine lokale model korte, specifieke prompts en het opsplitsen van complexe taken. <a href="https://developer.apple.com/documentation/foundationmodels/prompting-an-on-device-foundation-model">Prompting van het lokale model</a></p>
+<p>Apple streamt snapshots van gedeeltelijke uitvoer. Ruimtes <code>text.delta</code> verwacht toevoegingen: een adapter moet het nieuwe tekstdeel bepalen of snapshots apart verwerken. Sla daarnaast het native transcript op en test herstel met dezelfde tools. Een volle context vraagt selectie of samenvatting in een nieuwe sessie. <a href="https://developer.apple.com/documentation/foundationmodels/languagemodelsession/responsestream">ResponseStream</a> · <a href="https://developer.apple.com/documentation/foundationmodels/transcript">Transcript</a></p>
+<p>De lokale modelroute heeft geen afzonderlijke API-key of kosten per modelaanroep. Offline inferentie betekent alleen een volledig offline taak wanneer ook de gebruikte tools lokaal blijven. Laat de lokale provider niet ongemerkt overschakelen op cloudinferentie. <a href="https://developer.apple.com/videos/play/wwdc2025/286/">Apple frameworkintroductie</a></p>
+<p>Apple heeft ook een officiële Python SDK met tools. Die is bruikbaar voor evaluaties, maar Swift sluit beter aan op Ruimtes bestaande distributie. De 2026-documentatie voegt onder meer Dynamic Profiles, een algemene modelinterface en Private Cloud Compute toe. Behandel die apart van de macOS 26-basis. PCC is serverinferentie en valt buiten de lokale modelbelofte. <a href="https://github.com/apple/python-apple-fm-sdk">Officiële Python SDK</a> · <a href="https://apple.github.io/python-apple-fm-sdk/tools.html">Python tools</a> · <a href="https://developer.apple.com/wwdc26/guides/macos/">Nieuwe mogelijkheden in macOS 27</a></p>
+<p><strong>Beslissende proef.</strong> Eén leestool en één wijzigingstool werken, een weigering voert niets uit en stoppen verbreekt een wachtende call. Controleer twee gelijktijdige aanvragen, snapshotstreaming, Nederlandse taken, contextoverschrijding en een gesigneerde build op een Mac zonder ontwikkeltoolchain. Meet reactietijd en taaksucces voordat we dit als codingprovider positioneren.</p>
+</section>
+<section id="integratie">
+<h2>Gedeelde integratiekeuzes</h2>
+<p>De onderstaande keuzes zijn voorstellen voor Ruimte. De protocolproeven moeten vaststellen welke functies iedere runtime daadwerkelijk ondersteunt en welke vertaling daarvoor nodig is.</p>
+<div class="table" role="region" aria-label="Ontwerpvoorstellen en acceptatiecriteria" tabindex="0"><table class="wide"><thead><tr><th scope="col">Onderdeel</th><th scope="col">Voorstel</th><th scope="col">Acceptatiecriterium</th></tr></thead><tbody>
+<tr><th scope="row">ACP-kern met providerextensies</th><td>Deel procesverbinding, requests en sessielifecycle. Houd leverancierspecifieke vragen, completion en modelmetadata in de betreffende backend.</td><td>Een providerafwijking vereist geen wijzigingen in de threadprojectie of andere providers.</td></tr>
+<tr><th scope="row">Stoppen en completion</th><td>Annuleer native werk, handel open vragen af en verwerk resterende events voordat de beurt definitief sluit. Begrens het wachten op een proces dat niet reageert.</td><td>Dubbele, late of ontbrekende completionberichten beëindigen geen volgende beurt. Late toolupdates heropenen geen afgebroken beurt.</td></tr>
+<tr><th scope="row">Statusprobes</th><td>Gebruik versiecontrole en beschikbare metadata voor achtergrondcontrole. Houd interactieve authenticatie en sessieaanmaak bij expliciete setup.</td><td>Een statuscheck start geen OAuth-browser, workspace-hook of MCP-server.</td></tr>
+<tr><th scope="row">Approvals en vragen</th><td>Bewaar native optie-ID's en onderscheid keuzevragen van uitvoeringsrechten. Implementeer alleen aangeboden antwoordmogelijkheden.</td><td>Een antwoord bereikt het juiste verzoek. Weigeren blokkeert de actie en stoppen handelt de aanvraag af.</td></tr>
+<tr><th scope="row">Filesystem en shell</th><td>Adverteer uitsluitend clientfuncties die Ruimte implementeert. Als een runtime client-filesystemfuncties nodig heeft, controleer paden en toestemming daar expliciet.</td><td>Tools worden precies eenmaal uitgevoerd, door de runtime of door Ruimte volgens het afgesproken contract.</td></tr>
+<tr><th scope="row">Accounts en runtimebeheer</th><td>Scheid accountprofielen van gedeelde executables. Installeer versies naast elkaar en vervang geen executable van een lopende sessie. Koppel remote OAuth-callbacks aan de oorspronkelijke loginflow.</td><td>Twee accounts blijven geïsoleerd; een update onderbreekt geen bestaande sessie en een callback kan geen andere loginflow afronden.</td></tr>
+</tbody></table></div>
+<p>Begin voor Antigravity eventueel met een handmatig gekozen runtimepad en voeg beheerde installatie daarna toe. Google documenteert persoonlijke OAuth voor Free/Pro/Ultra via ACP; modeltoegang blijft accountgebonden. Controleer bij productisering ook de distributievoorwaarden van de proprietary runtime. <a href="https://www.antigravity.google/docs/ide/extensions/zed">Google's ACP-integratie</a> · <a href="https://github.com/agentclientprotocol/registry/blob/81bf71b55e15f630c4fb8a86d20d3088071d2071/antigravity-acp/agent.json">Distributiemetadata</a></p>
+<p class="note">Gebruik voor identiteit en quota eerst gedocumenteerde CLI- of ACP-metadata. Ruimte vraagt momenteel de CLI naar identiteit zonder credentials te openen. Houd naam, plan en quota onbekend als het ondersteunde contract ze niet geeft. Credentialparsing en private endpoints vragen een afzonderlijke onderhoudskeuze. <a href="https://github.com/basmilius/ruimte/blob/a42db32a4120001b7687379b2d595e53457481a0/apps/server/src/providers/accounts/status.ts#L8"><code>status.ts:8</code></a></p>
+<p>Behandel het herstellen van een git-checkpoint en het terugdraaien van een gesprek als afzonderlijke functies. Bied gespreksterugdraaiing pas aan na een bewezen providercontract. Leg ook planexit, timeouts en eventuele lokaal onthouden toestemmingen expliciet vast.</p>
+</section>
+<section id="plan">
+<h2>Van onderzoek naar uitvoerbare werkpakketten</h2>
+<p>Alle onderstaande stappen zijn voorstellen. De huidige opdracht levert het onderzoek op; de providers zijn hiermee nog niet geïmplementeerd.</p>
+<ol class="steps">
+<li class="step"><div><h3>Leg de kleinste werkende contracten vast</h3><p>Maak een Copilot SDK-proef en een ACP-proef met Gemini, Grok en de standalone Antigravity-runtime. Bewaar versies, platform, handshake en geschoonde protocolfixtures. Test meteen een tool met toestemming, weigering, stop en resume. Bepaal bij Copilot op basis hiervan SDK versus ACP.</p><p class="caption">Gereed wanneer iedere gekozen route een volledige gecontroleerde beurt en herstel na procesherstart kan demonstreren.</p></div></li>
+<li class="step"><div><h3>Bouw adapters op de bestaande backendgrens</h3><p>Voeg providerwaarden en backends toe. Deel alleen aantoonbaar gelijk ACP-gedrag. Behoud native sessie- en tool-ID's en scherm replay af van nieuwe berichten. Onderscheid een voltooide beurt van een afgesloten proces. Neem Ruimte-context en MCP per sessie mee.</p><p class="caption">Gereed wanneer twee parallelle chats geen approvals, toolresultaten, accountstatus of completionevents kunnen verwisselen.</p></div></li>
+<li class="step"><div><h3>Maak toegang en distributie betrouwbaar</h3><p>Werk statusprobes, accountroots en loginflows bij. Scheid installeren, aanmelden en modeltoegang. Controleer launchflags, modellen, nieuwe agentsoorten en capabilityweergave in web/desktop, iOS en de context-CLI. Laat ontbrekende kosten als onbekend zien. Voeg SDK-bestanden en native helpers bewust toe aan releaseverpakking.</p><p class="caption">Gereed wanneer een schone ondersteunde machine én een omgeving met bestaande credentials correct werken, zonder een onverwacht ander account te kiezen.</p></div></li>
+<li class="step"><div><h3>Beproef Apple met een kleine toolset</h3><p>Bouw de native helper onafhankelijk van ACP. Evalueer Nederlandse taken, snelheid, foutafhandeling en contextgebruik. Begin met tekst en enkele gerichte acties. Laat extra bestandsvormen, algemene shelltoegang en routing naar een andere Mac volgen uit concrete behoefte.</p><p class="caption">Gereed wanneer de proef correct toestemming afwacht, offline werkt met lokale tools en zichtbaar uitlegt waarom het model op een ongeschikte host niet beschikbaar is.</p></div></li>
+</ol>
+<div class="table" role="region" aria-label="Globale omvang en onzekerheid" tabindex="0"><table><caption>Relatieve omvang, eigen engineeringinschatting. Geen dagraming zonder protocolproef.</caption><thead><tr><th scope="col">Werkpakket</th><th scope="col">Omvang</th><th scope="col">Wat de onzekerheid bepaalt</th></tr></thead><tbody>
+<tr><th scope="row">Copilot-chat</th><td>Middelgroot</td><td>Bun/releaseverpakking, accountisolatie, callbacklifecycle</td></tr>
+<tr><th scope="row">ACP-basis + Gemini</th><td>Middelgroot</td><td>Volledige bidirectionele interactie, auth en replay</td></tr>
+<tr><th scope="row">Grok bovenop ACP</th><td>Middelgroot</td><td>Completionextensies, stoppen/steering, effectieve permissions</td></tr>
+<tr><th scope="row">Antigravity bovenop ACP</th><td>Middelgroot tot groot</td><td>Runtimebeheer, eigen OAuth, filesystemcallbacks en achtergrondwerk</td></tr>
+<tr><th scope="row">Apple lokale assistent</th><td>Middelgroot voor beperkte versie</td><td>Native distributie, kwaliteit en klein contextbudget</td></tr>
+<tr><th scope="row">Zelf een algemene API-agent bouwen</th><td>Groot</td><td>Tooluitvoering, approvals, context, sessies en onderhoud worden eigen werk</td></tr>
+</tbody></table></div>
+<h3>Gezamenlijke acceptatietests</h3>
+<ul>
+<li>Tekst en tools verschijnen eenmaal, ook na resume, dubbele completion en late events.</li>
+<li>Weigeren verhindert de actie; stoppen sluit open aanvragen en voorkomt nieuwe uitvoer van de afgebroken beurt.</li>
+<li>Een accountwissel gebruikt de juiste identiteit, transcriptopslag en modelrechten, ook bij gelijktijdige chats.</li>
+<li>Crashes, netwerkfouten, verlopen login en quota beëindigen de beurt herkenbaar; een nieuwe poging kan herstellen.</li>
+<li>Een statuscheck veroorzaakt geen login, hooks of toolprocessen. Een expliciete setupflow mag dat wel.</li>
+<li>De verpakte versie werkt op de ondersteunde host; onbeschikbare functies worden niet als beschikbare UI-acties getoond.</li>
+</ul>
+</section>
+<section id="controle">
+<h2>Onderbouwing en resterende onzekerheid</h2>
+<p><span class="badge confirmed">Bevestigd in bronnen</span> De officiële SDK/ACP-routes, Apple's native toolinterface en de huidige Ruimte-integratiepunten. Bronlinks staan bij de bijbehorende uitspraken. Codeverwijzingen zijn vastgezet op de onderzochte Ruimte-commit.</p>
+<p><span class="badge info">Voorgesteld ontwerp</span> De keuze voor Copilot SDK, een beperkte gedeelde ACP-laag, een aparte Apple-helper en de volgorde van uitvoering. Dit zijn afwegingen op basis van de onderzochte code.</p>
+<p><span class="badge warning">Nog te bewijzen</span> Werkelijke protocoldekking per uitgebrachte binary, accountisolatie, releaseverpakking, permissions bij geërfde configuratie en de bruikbaarheid van het Apple-model voor onze taken. Geen live providerproeven, latencybenchmarks of kwaliteitstests uitgevoerd.</p>
+<p>Het onderzoek bestond uit afzonderlijke werkstromen voor Copilot, Google, Grok en Apple. De standalone Antigravity ACP-route is opgenomen in het eindadvies. De beperking uit headless-documentatie geldt alleen voor dat transport.</p>
+<p class="caption">Webdocumentatie is geraadpleegd op 25 september 2026. De Apple-documentatie bevat zowel macOS 26-functies als nieuwere API's en beta-aanduidingen. De implementatie moet beschikbaarheid per API controleren. Getallen voor runtimebestandsgrootten horen bij de gepinde Antigravity-versie, niet bij alle toekomstige releases.</p>
+</section>
+</main>
+<footer><p>Gemaakt met de html-report-skill, met de paarse accentkleur uit het bestaande Ruimte-rapport. Zelfstandig HTML-bestand, zonder externe fonts, scripts of runtimeafhankelijkheden.</p><p id="verification">Gecontroleerd in headless Chromium op 1280 px en 390 px, in lichte en donkere weergave en met print-CSS. Geen pagina-overloop, kapotte interne ankers of externe assets. Tekstcontrast van hoofdtekst, bijschriften en links is minimaal 4,88:1 op de gebruikte pagina-, sectie- en accentachtergronden. Toetsenbordfocus is zichtbaar. Fysieke printpaginering is niet beoordeeld.</p></footer>
+</body></html>

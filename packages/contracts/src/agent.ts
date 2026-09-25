@@ -3,7 +3,7 @@ import { SessionIdSchema } from './ids.ts';
 
 // The agent CLIs Ruimte knows. Whether one has a chat backend or a hook normalizer is a capability
 // on its provider, not a second list: a CLI without hooks still opens as a terminal agent.
-export const AgentKindSchema = z.enum(['claude', 'codex', 'gemini', 'copilot']);
+export const AgentKindSchema = z.enum(['claude', 'codex', 'gemini', 'copilot', 'apple']);
 export type AgentKind = z.infer<typeof AgentKindSchema>;
 
 // `exited` is the daemon's own reading, not a hook's: the CLI went down with its shell without

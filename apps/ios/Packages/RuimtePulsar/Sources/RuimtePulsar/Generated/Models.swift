@@ -2979,6 +2979,7 @@ public enum AgentKind: String, CaseIterable, Codable, Sendable, Equatable {
     case `codex` = "codex"
     case `gemini` = "gemini"
     case `copilot` = "copilot"
+    case `apple` = "apple"
 }
 
 public enum AgentStatus: String, CaseIterable, Codable, Sendable, Equatable {
@@ -3124,6 +3125,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `refuseStatements`: Bool?
     public let `streamingAllowed`: Bool?
     public let `resumeAtReset`: Bool?
+    public let `appleFoundationEnabled`: Bool?
     public let `platform`: String
     public let `version`: String
     public let `protocol`: Int64?
@@ -3134,7 +3136,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `broker`: PairResultEndpointBroker?
     public let `brokerFixed`: Bool?
 
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<PairResultEndpointIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<PairResultEndpointIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
@@ -3143,6 +3145,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         self.`refuseStatements` = `refuseStatements`
         self.`streamingAllowed` = `streamingAllowed`
         self.`resumeAtReset` = `resumeAtReset`
+        self.`appleFoundationEnabled` = `appleFoundationEnabled`
         self.`platform` = `platform`
         self.`version` = `version`
         self.`protocol` = `protocol`
@@ -3164,6 +3167,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `refuseStatements` = try container.decodeIfPresent(Bool.self, forKey: .`refuseStatements`)
         `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
         `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
+        `appleFoundationEnabled` = try container.decodeIfPresent(Bool.self, forKey: .`appleFoundationEnabled`)
         `platform` = try container.decode(String.self, forKey: .`platform`)
         `version` = try container.decode(String.self, forKey: .`version`)
         `protocol` = try container.decodeIfPresent(Int64.self, forKey: .`protocol`)
@@ -3189,6 +3193,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`refuseStatements`, forKey: .`refuseStatements`)
         try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
         try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
+        try container.encodeIfPresent(`appleFoundationEnabled`, forKey: .`appleFoundationEnabled`)
         try container.encode(`platform`, forKey: .`platform`)
         try container.encode(`version`, forKey: .`version`)
         try container.encodeIfPresent(`protocol`, forKey: .`protocol`)
@@ -3213,6 +3218,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case `refuseStatements` = "refuseStatements"
         case `streamingAllowed` = "streamingAllowed"
         case `resumeAtReset` = "resumeAtReset"
+        case `appleFoundationEnabled` = "appleFoundationEnabled"
         case `platform` = "platform"
         case `version` = "version"
         case `protocol` = "protocol"

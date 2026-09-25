@@ -20,6 +20,7 @@
         "pack": "bun run build:main && electron-builder --publish never",
         "pack:dir": "bun run build:main && electron-builder --dir --publish never",
         "build:speech": "bun scripts/build-speech.ts",
+        "build:foundation-models": "bun ../foundation-models/scripts/build.ts",
         "build:computer-use": "bun ../computer-use/scripts/build.ts"
     },
     "dependencies": {

@@ -1,0 +1,370 @@
+{
+  "date": "2026-09-25",
+  "reference": {
+    "project": "FoundationModelsAgent",
+    "revision": "4bc5676bb25b78d691cbcca4b8c2f98d430eaba7"
+  },
+  "environment": {
+    "tested": "Apple silicon, macOS 27.2, Swift 6.4, macOS 27 SDK",
+    "deploymentTarget": "macOS 26.4; not run on that OS"
+  },
+  "checks": {
+    "workspace": "typecheck, lint and generated contracts passed",
+    "backendAndTools": {
+      "passed": 115,
+      "failed": 0,
+      "assertions": 342
+    },
+    "nativeSummaryAndRestore": "Passed targeted test, including violet and Thursday recall; not a guarantee across runs",
+    "nativeSchemaHeavyCompaction": {
+      "passed": true,
+      "serializedSourceTokens": 7522,
+      "contentSourceTokens": 632,
+      "originalExchangesPreserved": 24
+    },
+    "swiftDeterministic": {
+      "passed": 20,
+      "nativeTestsSkipped": 2
+    }
+  },
+  "workflow": [
+    {
+      "scenario": "question",
+      "actions": [
+        "AskUserQuestion"
+      ],
+      "questions": 1,
+      "read": [],
+      "text": "Donderdag",
+      "result": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "scenario": "question_cancel",
+      "actions": [
+        "AskUserQuestion"
+      ],
+      "questions": 1,
+      "read": [],
+      "text": "",
+      "result": {
+        "type": "turn.done",
+        "state": "aborted",
+        "costUsd": 0
+      }
+    },
+    {
+      "scenario": "denied_read",
+      "actions": [
+        "Read"
+      ],
+      "questions": 0,
+      "read": [],
+      "text": "",
+      "result": {
+        "type": "turn.done",
+        "state": "aborted",
+        "costUsd": 0,
+        "error": "Denied by the person: Do not read this file."
+      }
+    },
+    {
+      "scenario": "workday",
+      "actions": [
+        "AskUserQuestion"
+      ],
+      "questions": 1,
+      "read": [],
+      "text": "",
+      "result": {
+        "type": "turn.done",
+        "state": "aborted",
+        "costUsd": 0
+      },
+      "failure": "Asked for clarification before reading the supplied files."
+    }
+  ],
+  "longRunBeforeCompactionRendererFix": [
+    {
+      "mode": "identity",
+      "tools": [],
+      "milliseconds": 3480,
+      "finalText": "Ik ben Apple Foundation Models, een taalmodel die op Ruimte draait.",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "remember",
+      "tools": [],
+      "milliseconds": 2385,
+      "finalText": "Saved.",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "recall",
+      "tools": [],
+      "milliseconds": 2371,
+      "finalText": "LANTERN-73",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "list",
+      "tools": [
+        "ListFiles"
+      ],
+      "milliseconds": 4642,
+      "finalText": "Project root files: notes.txt, paged.txt, README.md.",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "read",
+      "tools": [
+        "Read"
+      ],
+      "milliseconds": 5132,
+      "finalText": "The deployment color specified is violet.",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "read_slice",
+      "tools": [
+        "Read"
+      ],
+      "milliseconds": 5441,
+      "finalText": "The launch day specified is Thursday.",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "read_full",
+      "tools": [
+        "Read"
+      ],
+      "milliseconds": 7332,
+      "finalText": "The README.md contains documentation lines and a final section: COPPER-77.",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "read_paginated",
+      "tools": [
+        "Read",
+        "Read"
+      ],
+      "milliseconds": 10463,
+      "finalText": "The paged.txt contains documentation lines and a final section: MAPLE-125.",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "deny",
+      "tools": [
+        "Read"
+      ],
+      "milliseconds": 4973,
+      "finalText": "",
+      "completion": {
+        "type": "turn.done",
+        "state": "aborted",
+        "costUsd": 0,
+        "error": "Denied by the person: Smoke test refusal"
+      }
+    },
+    {
+      "mode": "search",
+      "tools": [
+        "Grep"
+      ],
+      "milliseconds": 13124,
+      "finalText": "The matching file is notes.txt.",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "edit",
+      "tools": [
+        "Edit"
+      ],
+      "milliseconds": 14444,
+      "finalText": "The deployment color in notes.txt has been updated to green.",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "write",
+      "tools": [
+        "Write"
+      ],
+      "milliseconds": 14979,
+      "finalText": "greeting.txt has been created with the text 'hello world'.",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "command",
+      "tools": [
+        "Bash"
+      ],
+      "milliseconds": 15644,
+      "finalText": "The output of the command is 'command-ok\n'.",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "ask",
+      "tools": [],
+      "milliseconds": 338,
+      "finalText": "",
+      "completion": {
+        "type": "turn.done",
+        "state": "error",
+        "costUsd": 0,
+        "error": "The history is too large to summarize locally. The saved history is intact; start a new chat with a focused handoff."
+      }
+    }
+  ],
+  "latestLongRun": [
+    {
+      "mode": "identity",
+      "tools": [],
+      "milliseconds": 4588,
+      "finalText": "Ik ben Apple Foundation Models, een taalmodel die draait op Ruimte, wat is de naam van je huidige applicatie?",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "remember",
+      "tools": [],
+      "milliseconds": 2938,
+      "finalText": "Ik heb de instructies gevolgd, maar er is niets te doen. Kun je me vertellen wat de volgende stap is?",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    },
+    {
+      "mode": "recall",
+      "tools": [],
+      "milliseconds": 2966,
+      "finalText": "Ik heb de instructies gevolgd. Kun je me vertellen of dit klopt?",
+      "completion": {
+        "type": "turn.done",
+        "state": "done",
+        "costUsd": 0
+      }
+    }
+  ],
+  "userFixtureInspection": {
+    "planningChanged": false,
+    "replyCreated": true,
+    "meetingProposal": "10:00 conflicts with availability from 11:00",
+    "claim": "Reply claims planning was changed, but planning.md retained the old schedule",
+    "fixtureModifiedByReview": false,
+    "historicalBeforeReset": true
+  },
+  "conclusion": "Runtime controls and focused native context checks pass. Full workday and long-run model-quality evaluations do not pass consistently.",
+  "visibleAppVerification": {
+    "app": "Ruimte Dev",
+    "method": "ruimte-context computer, background control",
+    "project": "/private/tmp/afm-werkdag-or6_jbrv",
+    "fullTaskRuns": [
+      {
+        "result": "incomplete",
+        "observed": "Read all four files, rejected Edit, re-read planning, falsely claimed completion. Added unresolved-edit completion guard afterwards."
+      },
+      {
+        "result": "failed",
+        "observed": "Asked for priorities before reading, read planning only, native Edit arguments lacked path. No file changes."
+      }
+    ],
+    "targetedRecovery": {
+      "result": "passed",
+      "sequence": [
+        "Edit with nonexistent AFM_TEST_ONTBREEKT rejected",
+        "Read planning.md",
+        "Edit unique real text succeeded"
+      ],
+      "diskVerification": "Only the Bas priority line changed to contact form first, logo after first delivery; source files unchanged. No concept created in this narrower test."
+    },
+    "remainingLimitations": [
+      "Full workday task remains unreliable",
+      "Premature clarification",
+      "Malformed native tool arguments are not retried"
+    ],
+    "backup": "/private/tmp/afm-before-visible-test-b3hawgfj"
+  },
+  "handoff": {
+    "state": "Experimental opt-in implementation; next phase is repeatable task-quality evaluation",
+    "baseline": "a42db32a",
+    "branch": "main",
+    "fixture": "docs/reports/fixtures/apple-workday",
+    "startPrompt": "docs/reports/2026-09-25-apple-foundation-startprompt.txt",
+    "modelTestsRunDuringDocumentationUpdate": false,
+    "proposedNotImplemented": [
+      "Fixed repeated everyday-task evaluation",
+      "Smaller tool schema experiments",
+      "Relevant tool selection experiments",
+      "General task completion verification"
+    ]
+  },
+  "commitValidation": {
+    "branch": "main",
+    "workspaceCheck": "passed",
+    "formatCheck": "passed",
+    "bunTests": {
+      "passed": 5640,
+      "failed": 0,
+      "assertions": 46472,
+      "files": 550,
+      "gitFixtureSigning": "Disabled only in test subprocess environment; persistent Git configuration unchanged."
+    },
+    "newModelRun": false
+  }
+}

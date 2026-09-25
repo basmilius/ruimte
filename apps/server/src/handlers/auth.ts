@@ -19,6 +19,7 @@ interface EndpointHost {
     streamingChanged(allowed: boolean): void;
     // Chats take up a limited turn on a clock only while this is on; turning it off drops what was owed.
     resumeChanged?(on: boolean): void;
+    appleFoundationChanged?(on: boolean): Promise<void>;
 }
 
 export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, host: EndpointHost): void => {
@@ -34,6 +35,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         refuseStatements: identity.refuseStatements,
         streamingAllowed: identity.streamingAllowed,
         resumeAtReset: identity.resumeAtReset,
+        appleFoundationEnabled: identity.appleFoundationEnabled,
         platform: process.platform,
         version: host.version,
         protocol: PROTOCOL_VERSION,
@@ -56,6 +58,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
             refuseStatements: payload.refuseStatements,
             streamingAllowed: payload.streamingAllowed,
             resumeAtReset: payload.resumeAtReset,
+            appleFoundationEnabled: payload.appleFoundationEnabled,
             broker: payload.broker
         });
         if (payload.streamingAllowed !== undefined) {
@@ -63,6 +66,9 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         }
         if (payload.resumeAtReset !== undefined) {
             host.resumeChanged?.(identity.resumeAtReset);
+        }
+        if (payload.appleFoundationEnabled !== undefined) {
+            await host.appleFoundationChanged?.(identity.appleFoundationEnabled);
         }
         return info(client.access);
     });

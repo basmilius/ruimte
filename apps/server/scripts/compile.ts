@@ -68,6 +68,19 @@ if (values.os === 'mac') {
         process.exit(sign.exitCode);
     }
 
+    if (values.arch === 'arm64') {
+        const foundationRoot = resolve(root, '../foundation-models');
+        const foundationBuild = Bun.spawnSync(['bun', join(foundationRoot, 'scripts/build.ts')], { cwd: root, stdio: ['ignore', 'inherit', 'inherit'] });
+        if (foundationBuild.exitCode !== 0) {
+            process.exit(foundationBuild.exitCode);
+        }
+        await mkdir(join(outDir, 'native'), { recursive: true });
+        const helper = join(outDir, 'native', 'ruimte-foundation-models');
+        await copyFile(join(foundationRoot, 'dist', 'ruimte-foundation-models'), helper);
+        await copyFile(join(foundationRoot, 'dist', 'ruimte-foundation-models.NOTICES'), `${helper}.NOTICES`);
+        await chmod(helper, 0o755);
+    }
+
     const middleware = Bun.resolveSync('serve-sim/middleware', root);
     const nativeDir = join(outDir, 'native');
     await mkdir(nativeDir, { recursive: true });

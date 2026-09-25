@@ -2,6 +2,7 @@ import type { EndpointNameSource } from '@ruimte/contracts';
 import { noteDaemonIdentity } from '@/endpoint/identity';
 import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
+import { useProvidersStore } from '@/state/providers';
 import { pool, transportFor } from '@/transport';
 import { watchOpenMachines } from './open-machines';
 
@@ -28,11 +29,16 @@ const load = (endpointId: string): void => {
                 refuseStatements: info.refuseStatements === true,
                 streamingAllowed: info.streamingAllowed ?? null,
                 resumeAtReset: info.resumeAtReset === true,
+                appleFoundationEnabled: info.appleFoundationEnabled ?? null,
                 broker: info.broker ?? null,
                 brokerFixed: info.brokerFixed === true,
                 reachability: info.reachability,
                 publicKey: info.publicKey ?? null
             });
+            void link
+                .request('provider.list', {})
+                .then(({ providers }) => useProvidersStore.getState().setProviders(settled, providers))
+                .catch(() => undefined);
             adoptMachineName(settled, info.label, info.nameSource ?? null);
             const hello = await link.request('server.hello', {});
             useServers.getState().setInfo(settled, { platform: hello.platform, home: hello.home, version: hello.version, model: hello.model ?? null });

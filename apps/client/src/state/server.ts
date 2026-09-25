@@ -26,6 +26,7 @@ export interface ServerInfo {
     streamingAllowed: boolean | null;
     /* Whether a chat that stopped on a limit may be taken up again on a clock; false for a daemon without the setting. */
     resumeAtReset: boolean;
+    appleFoundationEnabled: boolean | null;
     /* The broker a person picked for this machine; null for a daemon that predates the setting. */
     broker: BrokerSetting | null;
     /* Whether a flag or the environment on the machine decides the broker, which leaves the setting without effect. */
@@ -48,6 +49,7 @@ const UNKNOWN: ServerInfo = {
     refuseStatements: false,
     streamingAllowed: null,
     resumeAtReset: false,
+    appleFoundationEnabled: null,
     broker: null,
     brokerFixed: false,
     reachability: null,
@@ -68,6 +70,7 @@ interface ServersStore {
             | 'refuseStatements'
             | 'streamingAllowed'
             | 'resumeAtReset'
+            | 'appleFoundationEnabled'
             | 'broker'
             | 'brokerFixed'
             | 'reachability'
@@ -78,7 +81,7 @@ interface ServersStore {
     setIdentity(
         endpointId: string,
         info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView'> &
-            Partial<Pick<ServerInfo, 'refuseStatements' | 'streamingAllowed' | 'resumeAtReset' | 'broker' | 'brokerFixed'>>
+            Partial<Pick<ServerInfo, 'refuseStatements' | 'streamingAllowed' | 'resumeAtReset' | 'appleFoundationEnabled' | 'broker' | 'brokerFixed'>>
     ): void;
     /* A machine that is forgotten takes what it said about itself with it. */
     forget(endpointId: string): void;

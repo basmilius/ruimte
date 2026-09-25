@@ -526,3 +526,4 @@ export type EventMap = {
 export const isRequestType = (type: string): type is RequestType => Object.hasOwn(REQUEST_SCHEMAS, type);
 
 export const isEventType = (event: string): event is EventType => Object.hasOwn(EVENT_SCHEMAS, event);
+export * from './apple-foundation.ts';

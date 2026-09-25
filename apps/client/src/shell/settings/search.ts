@@ -112,6 +112,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         label: 'settings:agents.chats.showViews.label',
         description: 'settings:agents.chats.showViews.description'
     },
+    { id: 'providers.apple', section: 'providers', label: 'settings:providers.apple.label', description: 'settings:providers.apple.description' },
     { id: 'agents.resumeAtReset', section: 'agents', label: 'settings:agents.resumeAtReset.label', description: 'settings:agents.resumeAtReset.description' },
     { id: 'agents.deleteAnyView', section: 'agents', label: 'settings:agents.deleteAnyView.label', description: 'settings:agents.deleteAnyView.description' },
     {

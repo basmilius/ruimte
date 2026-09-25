@@ -483,6 +483,19 @@
             "create": "Add account",
             "linkButton": "Link folder",
             "failed": "Could not add the account"
+        },
+        "apple": {
+            "label": "Enable Apple Foundation Models",
+            "description": "Use the model on this Mac for chats and tools. Requires Apple silicon, macOS 26.4 or later, and Apple Intelligence.",
+            "toggleDescription": "Turning this off stops active Apple chats and pending tool approvals on this machine.",
+            "tools": "Model inference stays on this Mac. Web searches, page requests and MCP tools can send data to their configured services after approval.",
+            "status": "Availability",
+            "disabled": "Turned off on this machine.",
+            "ready": "The local model is ready.",
+            "unavailable": "The local model is not available.",
+            "updateRequired": "Update Ruimte on this machine to configure Apple Foundation Models.",
+            "saveFailed": "Could not change Apple Foundation Models",
+            "requiresMac": "Requires a Mac with Apple silicon."
         }
     },
     "agents": {
