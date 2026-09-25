@@ -37,6 +37,7 @@ export class SessionClient {
     private readonly outputHandlers = new HandlerTable<string>();
     private readonly exitHandlers = new HandlerTable<number>();
     private readonly screenHandlers = new HandlerTable<Pick<SessionAttachResult, 'screen'>>();
+    private readonly sizeHandlers = new HandlerTable<Pick<SessionAttachResult, 'cols' | 'rows'>>();
     private readonly unsubscribe: Array<() => void> = [];
 
     constructor(transport: Transport, sink: SessionSink) {
@@ -46,6 +47,8 @@ export class SessionClient {
             transport.on('session.output', ({ sessionId, data }) => this.outputHandlers.fanOut(sessionId, data)),
             // The daemon dropped output for a slow socket and sent the screen it owns instead; repaint from it.
             transport.on('session.resync', ({ sessionId, screen }) => this.screenHandlers.fanOut(sessionId, { screen })),
+            // The client at work elsewhere moved the PTY to its own grid.
+            transport.on('session.size', ({ sessionId, cols, rows }) => this.sizeHandlers.fanOut(sessionId, { cols, rows })),
             transport.on('session.exit', ({ sessionId, exitCode }) => {
                 this.sink.setExited(sessionId, exitCode);
                 this.exitHandlers.fanOut(sessionId, exitCode);
@@ -180,6 +183,10 @@ export class SessionClient {
         return this.screenHandlers.listen(nodeId, handler);
     }
 
+    onSize(nodeId: string, handler: (size: Pick<SessionAttachResult, 'cols' | 'rows'>) => void): () => void {
+        return this.sizeHandlers.listen(nodeId, handler);
+    }
+
     isMounted(nodeId: string): boolean {
         return this.mounted.has(nodeId);
     }
@@ -222,7 +229,9 @@ export class SessionClient {
         if (!this.mounted.has(nodeId)) {
             return;
         }
-        this.screenHandlers.fanOut(nodeId, await this.attachWith(nodeId, entry.cols, entry.rows, sessions));
+        const result = await this.attachWith(nodeId, entry.cols, entry.rows, sessions);
+        this.sizeHandlers.fanOut(nodeId, { cols: result.cols, rows: result.rows });
+        this.screenHandlers.fanOut(nodeId, result);
     }
 
     private async attachWith(nodeId: string, cols: number, rows: number, sessions: () => Promise<SessionInfo[] | null>): Promise<SessionAttachResult> {

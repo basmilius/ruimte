@@ -86,7 +86,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const hostRef = useRef<HTMLDivElement>(null);
     const dictationRoot = useRef<HTMLDivElement>(null);
     const termRef = useRef<Terminal | null>(null);
-    const fitRef = useRef<FitAddon | null>(null);
+    const refitRef = useRef<(() => void) | null>(null);
     /* Bumped by a retry after a failure; a restart through the actions counts in the sessions store. */
     const [generation, setGeneration] = useState(0);
     // Either one rebuilds the whole terminal around a fresh session, and both only ever go up.
@@ -116,17 +116,31 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         term.open(host);
         fitToHost(term, fit);
         termRef.current = term;
-        fitRef.current = fit;
 
-        // A node resize and the renderer swaps of the WebGL budget both land here: WebGL and the
-        // DOM measure a glyph differently, so a swap can change how many cells fit.
-        const refit = (): void => {
-            const { cols, rows } = term;
-            fitToHost(term, fit);
-            if (term.cols !== cols || term.rows !== rows) {
-                sessionClient.resize(id, term.cols, term.rows);
+        /*
+         * The grid this node fits and asks the PTY for, and the grid the PTY has. They part while a client
+         * elsewhere types into the same terminal; this one then draws that grid, clipped or with room to
+         * spare, until a key or a resize here makes it the active one again.
+         */
+        let claimed = { cols: term.cols, rows: term.rows };
+        let shared = claimed;
+        const drawShared = (): void => {
+            if (term.cols !== shared.cols || term.rows !== shared.rows) {
+                term.resize(shared.cols, shared.rows);
             }
         };
+        // A node resize, a font change and the renderer swaps of the WebGL budget all land here: WebGL and
+        // the DOM measure a glyph differently, so a swap can change how many cells fit.
+        const refit = (): void => {
+            fitToHost(term, fit);
+            if (term.cols !== claimed.cols || term.rows !== claimed.rows) {
+                claimed = { cols: term.cols, rows: term.rows };
+                shared = claimed;
+                sessionClient.resize(id, claimed.cols, claimed.rows);
+            }
+            drawShared();
+        };
+        refitRef.current = refit;
         const releaseWebgl = webglBudget.register(id, term, refit);
 
         term.attachCustomKeyEventHandler((e) => {
@@ -180,6 +194,10 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             // A terminal that is being written to outranks an idle one when contexts are scarce.
             webglBudget.touch(id);
         });
+        const offSize = sessionClient.onSize(id, (size) => {
+            shared = size;
+            drawShared();
+        });
         const offScreen = sessionClient.onScreen(id, ({ screen }) => {
             // A reset through the parser (RIS), since `term.reset()` runs at once and output still queued would land on the fresh screen.
             term.write(`\x1bc${screen}`);
@@ -194,6 +212,8 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             .open(id, { cwd, command: spec?.command, agent }, term.cols, term.rows)
             .then((result) => {
                 if (!cancelled && result) {
+                    shared = { cols: result.cols, rows: result.rows };
+                    drawShared();
                     term.write(result.screen);
                 }
             })
@@ -234,13 +254,14 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             observer.disconnect();
             host.removeEventListener('pointerup', copySelection);
             offOutput();
+            offSize();
             offScreen();
             unregister();
             releaseWebgl();
             void sessionClient.detach(id);
             term.dispose();
             termRef.current = null;
-            fitRef.current = null;
+            refitRef.current = null;
         };
     }, [endpointId, id, builds]);
 
@@ -267,13 +288,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         term.options.fontFamily = readTerminalFont();
         term.options.fontSize = useSettings.getState().fontSize;
         // A new glyph size changes how many cells fit; the observer only fires on a host resize.
-        const { cols, rows } = term;
-        if (fitRef.current) {
-            fitToHost(term, fitRef.current);
-        }
-        if (term.cols !== cols || term.rows !== rows) {
-            sessionClient.resize(id, term.cols, term.rows);
-        }
+        refitRef.current?.();
     }, [id, resolvedTheme, settingsVersion, builds]);
 
     const rebuild = (): void => {

@@ -172,6 +172,51 @@ describe('SessionManager', () => {
         expect(harness.manager.list()[0]).toMatchObject({ cols: 120, rows: 40 });
     });
 
+    test('two clients on one terminal: the one at work sizes it, and every client hears the grid', async () => {
+        const desk = new Recorder();
+        const laptop = new Recorder();
+        harness.manager.subscribe('desk', desk.sink());
+        harness.manager.subscribe('laptop', laptop.sink());
+        await create('s3');
+        const pty = harness.adapter.forSession('s3');
+        const sizes = (recorder: Recorder) =>
+            recorder.events.flatMap((event) => (event.event === 'session.size' ? [[event.payload.cols, event.payload.rows]] : []));
+
+        await harness.manager.attach('s3', 'desk', 160, 50);
+        await harness.manager.attach('s3', 'laptop', 100, 30);
+        expect(pty.resizes.at(-1)).toEqual({ cols: 100, rows: 30 });
+        expect(sizes(desk)).toEqual([[100, 30]]);
+
+        // A refit to the grid it already claimed is not the desk at work.
+        harness.manager.resize('s3', 160, 50, 'desk');
+        expect(pty.resizes.at(-1)).toEqual({ cols: 100, rows: 30 });
+
+        // What the desk's emulator answers by itself is not either; a keystroke is.
+        harness.manager.write('s3', '\x1b[?1;2c', 'desk');
+        expect(pty.resizes.at(-1)).toEqual({ cols: 100, rows: 30 });
+        harness.manager.write('s3', 'l', 'desk');
+        expect(pty.resizes.at(-1)).toEqual({ cols: 160, rows: 50 });
+        expect(sizes(laptop)).toEqual([[160, 50]]);
+        expect(sizes(desk)).toEqual([
+            [100, 30],
+            [160, 50]
+        ]);
+
+        // A node the laptop resizes hands it the terminal back.
+        harness.manager.resize('s3', 110, 32, 'laptop');
+        expect(pty.resizes.at(-1)).toEqual({ cols: 110, rows: 32 });
+        expect(sizes(desk).at(-1)).toEqual([110, 32]);
+    });
+
+    test('a follower attaches without a grid and takes nothing with its keys', async () => {
+        await create('s3');
+        const pty = harness.adapter.forSession('s3');
+        await harness.manager.attach('s3', 'desk', 160, 50);
+        await harness.manager.attach('s3', 'phone');
+        harness.manager.write('s3', 'ls\r', 'phone');
+        expect(pty.resizes).toEqual([{ cols: 160, rows: 50 }]);
+    });
+
     test('a shell that has ended is not resized any more', async () => {
         await create('s3');
         const pty = harness.adapter.forSession('s3');

@@ -117,3 +117,11 @@ export const SessionResyncEventSchema = z.object({
     screen: z.string()
 });
 export type SessionResyncEvent = z.infer<typeof SessionResyncEventSchema>;
+
+// The grid the PTY moved to, for every client attached: one that fits another grid draws this one until it is active again.
+export const SessionSizeEventSchema = z.object({
+    sessionId: SessionIdSchema,
+    cols,
+    rows
+});
+export type SessionSizeEvent = z.infer<typeof SessionSizeEventSchema>;

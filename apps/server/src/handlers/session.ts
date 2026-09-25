@@ -18,16 +18,16 @@ export const registerSessionHandlers = (dispatcher: Dispatcher, manager: Session
         })
     );
 
-    dispatcher.register('session.write', (payload) =>
+    dispatcher.register('session.write', (payload, client) =>
         translate(() => {
-            manager.write(payload.sessionId, payload.data);
+            manager.write(payload.sessionId, payload.data, client.id);
             return {};
         })
     );
 
-    dispatcher.register('session.resize', (payload) =>
+    dispatcher.register('session.resize', (payload, client) =>
         translate(() => {
-            manager.resize(payload.sessionId, payload.cols, payload.rows);
+            manager.resize(payload.sessionId, payload.cols, payload.rows, client.id);
             return {};
         })
     );

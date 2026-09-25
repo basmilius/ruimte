@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
 import { modeOfHook, normalizeHook, settleWaiting } from '../agents/hooks.ts';
+import { isTerminalReply } from './terminal-replies.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { narrowerMode } from '../canvas/mode.ts';
 import { contextHint, verbsNote } from '../context/context-note.ts';
@@ -42,6 +43,8 @@ export class SessionError extends CodedError<SessionErrorCode> {}
 export type SessionEvent = { [E in EventType]: { event: E; payload: EventMap[E] } }[EventType];
 
 export type SessionSink = (event: SessionEvent) => void;
+
+const sizeOf = (session: Session): { cols: number; rows: number } => ({ cols: session.cols, rows: session.rows });
 
 interface CreateSessionOptions {
     sessionId: string;
@@ -392,7 +395,11 @@ export class SessionManager {
 
     async attach(sessionId: string, clientId: string, cols?: number, rows?: number): Promise<{ screen: string; cols: number; rows: number; exited: boolean }> {
         const session = this.require(sessionId);
-        const screen = await session.attach(clientId, cols, rows);
+        const before = sizeOf(session);
+        const attached = session.attach(clientId, cols, rows);
+        // The attaching client reads the grid from its reply.
+        this.sized(session, before, clientId);
+        const screen = await attached;
         this.broadcastListChanged();
         return { screen, cols: session.cols, rows: session.rows, exited: session.exited };
     }
@@ -419,20 +426,41 @@ export class SessionManager {
         }
     }
 
-    write(sessionId: string, data: string): void {
+    /* Input from a client; a keystroke, unlike what its emulator answers by itself, sizes the PTY to that client's node. */
+    write(sessionId: string, data: string, clientId?: string): void {
         const session = this.require(sessionId);
         if (session.exited) {
             throw new SessionError('session-exited', `Session ${sessionId} has ended`);
         }
+        if (clientId !== undefined && !isTerminalReply(data)) {
+            const before = sizeOf(session);
+            session.activate(clientId);
+            this.sized(session, before);
+        }
         session.write(data);
     }
 
-    resize(sessionId: string, cols: number, rows: number): void {
+    /* A client's own fit is a claim beside the others; without a client the grid is set outright. */
+    resize(sessionId: string, cols: number, rows: number, clientId?: string): void {
         const session = this.require(sessionId);
-        if (session.cols !== cols || session.rows !== rows) {
+        const before = sizeOf(session);
+        if (clientId === undefined) {
             session.resize(cols, rows);
-            this.broadcastListChanged();
+        } else {
+            session.claim(clientId, cols, rows);
         }
+        this.sized(session, before);
+    }
+
+    /* Tells every attached client the grid the PTY moved to, so one that fits another draws this one instead. */
+    private sized(session: Session, before: { cols: number; rows: number }, except?: string): void {
+        if (session.cols === before.cols && session.rows === before.rows) {
+            return;
+        }
+        for (const clientId of session.attachedClients().filter((id) => id !== except)) {
+            this.emit(clientId, { event: 'session.size', payload: { sessionId: session.id, cols: session.cols, rows: session.rows } });
+        }
+        this.broadcastListChanged();
     }
 
     // Every attached client repaints from the screen the daemon owns, the same way it does after a resync.

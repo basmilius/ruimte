@@ -163,6 +163,7 @@ public enum WireEvent: String, CaseIterable, Sendable {
     case `pushAttention` = "push.attention"
     case `sessionOutput` = "session.output"
     case `sessionResync` = "session.resync"
+    case `sessionSize` = "session.size"
     case `sessionExit` = "session.exit"
     case `sessionStatus` = "session.status"
     case `sessionApprovals` = "session.approvals"

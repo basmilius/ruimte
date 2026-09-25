@@ -88,6 +88,8 @@ export class Session {
     private readonly deliver: (clientId: string, data: string) => void;
     private readonly onExit: (exitCode: number) => void;
     private readonly clients = new Map<string, ClientStream>();
+    // The grid each client last fitted its node to; the PTY takes the one of the client active last.
+    private readonly claims = new Map<string, { cols: number; rows: number }>();
     // A disposed terminal never calls back, so `dispose` runs whatever still waits on the parser itself.
     private readonly parsedWaiters = new Set<() => void>();
     // Whether the screen moved since the snapshot file last took it; a new session has never been taken.
@@ -224,6 +226,7 @@ export class Session {
 
     attach(clientId: string, cols?: number, rows?: number): Promise<string> {
         if (cols !== undefined && rows !== undefined) {
+            this.claims.set(clientId, { cols, rows });
             this.resize(cols, rows);
         }
         return new Promise((resolve) => this.snapshotFor(clientId, resolve));
@@ -235,6 +238,7 @@ export class Session {
             return;
         }
         this.clients.delete(clientId);
+        this.claims.delete(clientId);
         // Output held for a snapshot belongs after a screen this client is no longer streamed from.
         if (stream.snapshot === null && stream.buffered !== '') {
             this.deliver(clientId, stream.buffered);
@@ -283,6 +287,23 @@ export class Session {
                 }
             });
         });
+    }
+
+    /* A client's fit. A new grid is that client at work and sizes the PTY; a refit to the grid it had is not. */
+    claim(clientId: string, cols: number, rows: number): void {
+        const previous = this.claims.get(clientId);
+        this.claims.set(clientId, { cols, rows });
+        if (previous?.cols !== cols || previous.rows !== rows) {
+            this.resize(cols, rows);
+        }
+    }
+
+    /* A keystroke hands the PTY to the client it came from, at the grid that client fits; a follower claims none. */
+    activate(clientId: string): void {
+        const claim = this.claims.get(clientId);
+        if (claim) {
+            this.resize(claim.cols, claim.rows);
+        }
     }
 
     resize(cols: number, rows: number): void {

@@ -33563,6 +33563,31 @@
       "screen"
     ]
   },
+  "event.session.size": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "cols": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "rows": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "sessionId",
+      "cols",
+      "rows"
+    ]
+  },
   "event.session.exit": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

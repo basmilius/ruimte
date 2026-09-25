@@ -223,6 +223,7 @@ import {
     SessionOutputEventSchema,
     SessionResizePayloadSchema,
     SessionResyncEventSchema,
+    SessionSizeEventSchema,
     SessionTargetPayloadSchema,
     SessionWritePayloadSchema
 } from './session.ts';
@@ -458,6 +459,7 @@ export const EVENT_SCHEMAS = {
     'push.attention': PushAttentionEntrySchema,
     'session.output': SessionOutputEventSchema,
     'session.resync': SessionResyncEventSchema,
+    'session.size': SessionSizeEventSchema,
     'session.exit': SessionExitEventSchema,
     'session.status': SessionStatusEventSchema,
     'session.approvals': SessionApprovalsEventSchema,

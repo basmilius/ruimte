@@ -251,6 +251,7 @@
     "push.attention",
     "session.output",
     "session.resync",
+    "session.size",
     "session.exit",
     "session.status",
     "session.approvals",
