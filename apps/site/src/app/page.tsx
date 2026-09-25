@@ -8,8 +8,6 @@ import { MachinesVignette } from '@/components/features/MachinesVignette.tsx';
 import { SessionsVignette } from '@/components/features/SessionsVignette.tsx';
 import { Film } from '@/components/film/Film.tsx';
 import { HeroVisual } from '@/components/hero/HeroVisual.tsx';
-import { HeroVisualMenu } from '@/components/hero/HeroVisualMenu.tsx';
-import { HeroVisualProvider } from '@/components/hero/HeroVisualProvider.tsx';
 import { ContextVignette } from '@/components/features/ContextVignette.tsx';
 import { PlanVignette } from '@/components/features/PlanVignette.tsx';
 import { TeamVignette } from '@/components/features/TeamVignette.tsx';
@@ -28,7 +26,7 @@ const LINUX_BUILDS: readonly (readonly [Platform, Platform])[] = [
 
 export default function Home() {
     return (
-        <HeroVisualProvider>
+        <>
             <a href="#content" className="fixed top-3 left-3 z-50 -translate-y-24 rounded-lg bg-text px-4 py-3 text-bg focus:translate-y-0">
                 Skip to content
             </a>
@@ -48,7 +46,6 @@ export default function Home() {
                         <a href={REPOSITORY_URL} className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text md:inline-flex">
                             GitHub
                         </a>
-                        <HeroVisualMenu />
                         <a
                             href="#download"
                             className="inline-flex min-h-10 items-center rounded-full border border-border-strong px-3.5 py-1.5 font-medium transition-colors hover:bg-surface-hover"
@@ -213,7 +210,7 @@ export default function Home() {
                     </span>
                 </div>
             </footer>
-        </HeroVisualProvider>
+        </>
     );
 }
 

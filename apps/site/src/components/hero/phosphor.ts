@@ -1,4 +1,5 @@
-import type { Pointer } from './space.ts';
+/** The pointer over the hero, -1..1 across its container, with `active` easing in while it is there. */
+export type Pointer = { x: number; y: number; active: number };
 
 /* An oscilloscope in vector mode: one beam traces Lissajous figures, the mark and the word "ruimte", and the
    phosphor fades behind it. It draws in a 560 x 500 box; HeroVisual places that box over its container. */
