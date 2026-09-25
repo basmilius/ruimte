@@ -29930,6 +29930,13 @@
       },
       "timeZone": {
         "type": "string"
+      },
+      "accounts": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        }
       }
     },
     "required": [
@@ -29976,6 +29983,10 @@
             },
             "model": {
               "type": "string"
+            },
+            "account": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
             },
             "totals": {
               "type": "object",
@@ -30066,6 +30077,10 @@
             },
             "model": {
               "type": "string"
+            },
+            "account": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
             },
             "totals": {
               "type": "object",
@@ -30394,6 +30409,36 @@
             "message"
           ]
         }
+      },
+      "accounts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "claude",
+                "codex"
+              ]
+            },
+            "label": {
+              "type": "string"
+            },
+            "color": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "label"
+          ]
+        }
       }
     },
     "required": [
@@ -30450,6 +30495,25 @@
               "enum": [
                 "claude",
                 "codex"
+              ]
+            },
+            "account": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "label"
               ]
             },
             "plan": {
@@ -30615,6 +30679,25 @@
               "enum": [
                 "claude",
                 "codex"
+              ]
+            },
+            "account": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "label"
               ]
             },
             "plan": {
@@ -41970,6 +42053,25 @@
               "enum": [
                 "claude",
                 "codex"
+              ]
+            },
+            "account": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "label"
               ]
             },
             "plan": {

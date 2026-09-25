@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ProviderAccountIdSchema } from './provider-accounts.ts';
 
 /* The CLIs whose transcripts the daemon reads. A subset of `AgentKindSchema`: it grows with the readers. */
 export const UsageProviderSchema = z.enum(['claude', 'codex']);
@@ -37,11 +38,23 @@ export const addTotals = (first: UsageTotals, second: UsageTotals): UsageTotals 
     reasoning: first.reasoning + second.reasoning
 });
 
+/* An account a record can belong to, for the page to filter by and color with. The default account of a CLI has its kind as its id. */
+export const UsageAccountSchema = z.object({
+    id: ProviderAccountIdSchema,
+    kind: UsageProviderSchema,
+    label: z.string(),
+    // One of the note colors; absent on an account nobody gave one.
+    color: z.string().optional()
+});
+export type UsageAccount = z.infer<typeof UsageAccountSchema>;
+
 export const UsageBucketSchema = z.object({
     /* `YYYY-MM-DD` for a day, an ISO hour start for an hour, both in the time zone of the request. */
     slot: z.string(),
     provider: UsageProviderSchema,
     model: z.string(),
+    // Only on a summary asked for with `accounts`, which splits every bucket per account.
+    account: ProviderAccountIdSchema.optional(),
     totals: UsageTotalsSchema,
     /* Null when no price is known for the model, which is not the same as free. */
     costUsd: z.number().nullable(),
@@ -57,6 +70,8 @@ export type UsagePriceBasis = z.infer<typeof UsagePriceBasisSchema>;
 export const UsageModelSchema = z.object({
     provider: UsageProviderSchema,
     model: z.string(),
+    // Only on a summary asked for with `accounts`, which splits every model per account.
+    account: ProviderAccountIdSchema.optional(),
     totals: UsageTotalsSchema,
     costUsd: z.number().nullable(),
     priceBasis: UsagePriceBasisSchema,
@@ -83,7 +98,9 @@ export const UsageSummaryPayloadSchema = z.object({
     to: z.string(),
     resolution: UsageResolutionSchema,
     /* IANA name. The daemon may stand on another machine, so the viewer's days travel with the request. */
-    timeZone: z.string()
+    timeZone: z.string(),
+    /* Only the usage of these accounts, with buckets and models apart per account. Absent is every account, folded as before accounts. */
+    accounts: z.array(ProviderAccountIdSchema).optional()
 });
 export type UsageSummaryPayload = z.infer<typeof UsageSummaryPayloadSchema>;
 
@@ -136,7 +153,9 @@ export const UsageSummaryResultSchema = z.object({
     pricing: UsagePricingSchema,
     /* Null while no rate has been fetched, which is how the page knows to stay in dollars. */
     rate: UsageRateSchema.nullable(),
-    roots: z.array(UsageRootSchema)
+    roots: z.array(UsageRootSchema),
+    // Every account of the machine, and any a record still names after it was removed.
+    accounts: z.array(UsageAccountSchema).optional()
 });
 export type UsageSummaryResult = z.infer<typeof UsageSummaryResultSchema>;
 
@@ -159,6 +178,8 @@ export type UsageWindow = z.infer<typeof UsageWindowSchema>;
 
 export const UsageLimitsProviderSchema = z.object({
     kind: UsageProviderSchema,
+    /* The account these numbers are of. The default account of a kind comes first, in the shape an entry had before accounts. */
+    account: UsageAccountSchema.omit({ kind: true }).optional(),
     /* As the provider names it: `max`, `pro`, `ChatGPT Pro`. */
     plan: z.string().nullable(),
     checkedAt: z.number().int(),
