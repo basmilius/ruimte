@@ -567,6 +567,53 @@ struct ChatScreen: View {
         return slug.isEmpty ? "Model" : ModelName.of(slug, in: model.models)
     }
 
+    /// The account the chat runs under and the ones it may pick, only while its CLI has two accounts that are on:
+    /// with one there is nothing to choose or tell apart.
+    private var accountChoice: ChatAccountChoice? {
+        let kind = model.info.text("provider")
+        guard let accounts = model.accounts, !kind.isEmpty, accounts.hasChoice(kind) else { return nil }
+        let provider = model.providers.first { $0["kind"] == model.info["provider"] }?.text("name") ?? ""
+        return ChatAccountChoice(
+            kind: kind, provider: provider.isEmpty ? usageProviderName(kind) : provider,
+            currentID: model.info["account"]?.stringValue ?? kind, accounts: accounts,
+            started: ProviderAccountList.chatStarted(model.info))
+    }
+
+    @ViewBuilder private func accountMenu(_ choice: ChatAccountChoice) -> some View {
+        Menu {
+            ForEach(choice.offered) { account in
+                let locked = choice.locked(account)
+                Button {
+                    configureAccount(account.id)
+                } label: {
+                    Label {
+                        Text(account.name(provider: choice.provider))
+                        if account.id == choice.currentID {
+                            Text("In use")
+                        } else if locked {
+                            Text("This conversation is kept in another folder. Fork the chat to go on under it.")
+                        }
+                    } icon: {
+                        AccountDot.menuImage(account.color)
+                    }
+                }
+                .disabled(locked)
+            }
+        } label: {
+            Label {
+                Text("Account")
+                Text(choice.currentName)
+            } icon: {
+                AccountDot.menuImage(choice.current?.color)
+            }
+        }
+    }
+
+    private func configureAccount(_ id: String) {
+        guard id != model.info["account"]?.stringValue ?? model.info.text("provider") else { return }
+        Task { await model.perform("chat.configure", ["account": .string(id)]) }
+    }
+
     private var modelMenu: some View {
         Menu {
             Section("Model") {
@@ -593,6 +640,7 @@ struct ChatScreen: View {
                     }
                 }
             }
+            if let choice = accountChoice { accountMenu(choice) }
             Section("Permissions") {
                 ForEach(["supervised", "auto-accept-edits", "auto", "full-access"], id: \.self) { mode in
                     Button(mode.replacingOccurrences(of: "-", with: " ").capitalized) {
@@ -606,7 +654,13 @@ struct ChatScreen: View {
             }
         } label: {
             HStack(spacing: 4) {
-                Text(modelLabel).lineLimit(1)
+                // The name gives way before the model does; the dot says which account on its own.
+                if let choice = accountChoice {
+                    AccountDot(color: choice.current?.color, size: 7)
+                    Text(choice.currentName).lineLimit(1)
+                    Text("·")
+                }
+                Text(modelLabel).lineLimit(1).layoutPriority(1)
                 Image(lucide: "chevron-down", size: 12)
             }.font(.caption.weight(.medium)).foregroundStyle(MobileStyle.muted).frame(minHeight: 44)
                 .accessibilityValue(model.info["runtimeMode"]?.stringValue ?? "Permissions")
@@ -639,6 +693,25 @@ struct ChatScreen: View {
         }
     }
 
+}
+
+/// The accounts of a chat's CLI as its run settings offer them.
+private struct ChatAccountChoice {
+    let kind: String
+    let provider: String
+    let currentID: String
+    let accounts: ProviderAccountList
+    /// Once the chat spoke, only an account that reads its conversation can take it over.
+    let started: Bool
+
+    var offered: [ProviderAccountEntry] { accounts.offered(kind, current: currentID) }
+    /// Nil for an account the machine no longer has.
+    var current: ProviderAccountEntry? { accounts.accounts(of: kind).first { $0.id == currentID } }
+    var currentName: String { current?.name(provider: provider) ?? currentID }
+
+    func locked(_ account: ProviderAccountEntry) -> Bool {
+        started && !accounts.canContinue(kind, from: currentID, to: account.id)
+    }
 }
 
 struct SessionErrorBanner: View {

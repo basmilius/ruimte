@@ -42,7 +42,11 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 - Small and medium Home Screen widgets with the usage limits and today's cost of one chosen machine.
   A widget never connects itself: the app writes what a connected machine reports into the app group,
   and a background refresh asks again at most every half hour. Offline the widget shows the last numbers
-  and the time they came in.
+  and the time they came in. A widget shows the default account of each CLI unless its Account setting picks
+  another; a CLI with several accounts names the account in its rows, and one CLI's widget then shows that
+  account's cost of today.
+- The usage page has a limits section per account, titled with the account once a CLI has several. An account
+  that is signed out or not read yet says so instead of drawing empty bars.
 
 ## AI conversations
 
@@ -65,6 +69,9 @@ one level. Swipe or long-press an active entry to stop a task (after a confirmat
 what ends) or mark a sub-agent of the CLI's own as stopped. Long-press the composer's Stop for
 Stop with sub-agents. Task marks appear on the nodes a task opened, wake turns say how many
 tasks woke them, and a failed task or a wake the machine gave up on leaves an unseen mark.
+Once a chat's CLI has two accounts that are on, the composer names the chat's account with its dot beside the
+model, and the model menu has an Account submenu. Before the first turn any account can be picked; after it only
+an account that writes its conversations to the same folder, and the others say to fork.
 Model and permission picks are remembered and sent to every connected machine for the chats it
 starts on its own. Older machines keep working: requests they do not know are ignored.
 

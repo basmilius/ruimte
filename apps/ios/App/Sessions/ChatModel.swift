@@ -23,6 +23,8 @@ final class ChatModel {
     var mentions: [String] = []
     var skills: [String] = []
     var providers: [JSONValue] = []
+    /// Nil from a machine before accounts.
+    var accounts: ProviderAccountList?
     var suggestions: [String] = []
     var suggestionKind = ""
     var error: String?
@@ -79,6 +81,10 @@ final class ChatModel {
                 if !self.loading { self.receive(event) }
             })
         unsubscribe.append(
+            client.subscribe(WireEvent.providersChanged.rawValue) { [weak self] payload in
+                self?.accounts = ProviderAccountList(payload)
+            })
+        unsubscribe.append(
             client.subscribeRejected("chat.event") { [weak self] payload in
                 guard let self, payload["chatId"]?.stringValue == self.chatID, !self.loading,
                     !self.reattachedOverRejectedEvent
@@ -124,6 +130,7 @@ final class ChatModel {
             do {
                 guard let attachment else { throw CancellationError() }
                 async let providerResult = loadProviders()
+                async let accountResult = loadAccounts()
                 _ = try await attachment.snapshot(payload: target(["historyLimit": .number(60)])) {
                     [weak self] snapshot in
                     guard let self, self.generation == current else { return }
@@ -135,6 +142,7 @@ final class ChatModel {
                 let result = try await providerResult
                 guard !Task.isCancelled, generation == current else { return }
                 providers = result["providers"]?.arrayValue ?? []
+                accounts = await accountResult.map(ProviderAccountList.init)
                 await refreshForks()
             } catch is CancellationError {} catch {
                 guard generation == current else { return }
@@ -146,6 +154,11 @@ final class ChatModel {
 
     private func loadProviders() async throws -> JSONValue {
         try await client.request("provider.list", payload: .object([:]))
+    }
+
+    /// Nil from a machine before accounts, which does not know the request.
+    private func loadAccounts() async -> JSONValue? {
+        try? await client.request(WireRequest.providersList.rawValue, payload: .object([:]))
     }
 
     func replace(_ snapshot: JSONValue) {
