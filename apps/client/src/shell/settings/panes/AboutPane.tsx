@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import i18next from 'i18next';
 import { ArrowDown, ArrowRight, ArrowUpRight, CircleAlert, CircleCheck, Copy, LoaderCircle, RefreshCw, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -7,10 +7,11 @@ import { formatDayWithYear } from '@/format/datetime';
 import { useFormatLocale } from '@/format/locale';
 import { SettingsRow, TopIcon } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@/shell/settings/controls';
+import { Segmented, Toggle } from '@/shell/settings/controls';
 import { useServers, type ServerInfo } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, useReleaseNotes } from '@/state/release-notes';
+import { previewUpdate, type UpdatePreview } from '@/state/update-preview';
 import { describeUpdate, hasUpdate, setAutoDownload, useUpdates } from '@/state/updates';
 import { useFocusedMachine } from '@/transport/connections';
 import { Button } from '@/ui/Button';
@@ -118,6 +119,7 @@ export function AboutPane() {
 
     return (
         <>
+            {import.meta.env.DEV && <UpdatePreviewBar />}
             <header className="flex min-w-0 flex-wrap items-center gap-4.5 rounded-xl border border-border bg-surface bg-clip-padding p-5.5">
                 <BrandSymbol size={64} className="rounded-2xl" />
                 <div className="min-w-0 grow">
@@ -275,5 +277,37 @@ export function UpdateAction() {
         <Button variant="secondary" disabled={status === 'checking' || status === 'downloading'} onClick={() => void check()}>
             {status === 'checking' ? t('about.updates.checking') : t('about.updates.check')}
         </Button>
+    );
+}
+
+const PREVIEWS: readonly { id: UpdatePreview; label: string }[] = [
+    { id: 'off', label: 'Off' },
+    { id: 'current', label: 'Up to date' },
+    { id: 'available', label: 'Available' },
+    { id: 'downloading', label: 'Downloading' },
+    { id: 'ready', label: 'Ready' },
+    { id: 'error', label: 'Failed' }
+];
+
+/* Dev only, and in English only: steps About through the update states a checkout never reaches. */
+function UpdatePreviewBar() {
+    const [preview, setPreview] = useState<UpdatePreview>('off');
+
+    // The preview names the newest release, so the notes have to be in before the first pick.
+    useEffect(() => {
+        if (canShowReleaseNotes()) {
+            ensureReleaseNotes();
+        }
+    }, []);
+
+    const choose = (next: UpdatePreview): void => {
+        setPreview(next);
+        previewUpdate(next);
+    };
+    return (
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border-strong px-4 py-2.5">
+            <span className="text-xs text-text-muted">Preview update state (dev only)</span>
+            <Segmented value={preview} options={PREVIEWS} onChange={choose} label="Preview update state" />
+        </div>
     );
 }
