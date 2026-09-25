@@ -14,7 +14,7 @@ import { isRealMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
 import { PlanSync } from '@/state/plans';
 import { watchPushAttention } from '@/state/push-attention';
-import { watchProviderAccounts } from '@/state/provider-accounts';
+import { knownAccounts, providerAccountsOf, useProviderAccountsStore, watchProviderAccounts } from '@/state/provider-accounts';
 import { providerSinkFor } from '@/state/providers';
 import { sessionSinkFor, useSessions } from '@/state/sessions';
 import { defaultWorkspaceStores } from '@/state/workspace';
@@ -101,7 +101,7 @@ const buildMachine = (endpoint: Endpoint): Machine => {
     const chats = new ChatClient(transport, chatSinkFor(endpoint.id), providerSinkFor(endpoint.id));
     const browsers = new BrowserClient(endpoint.id, transport);
     const devices = new DeviceClient(endpoint.id, transport);
-    chats.setPreferences(chatPreferencesPayload(useChatPreferences.getState(), endpoint.id));
+    chats.setPreferences(chatPreferencesPayload(useChatPreferences.getState(), endpoint.id, knownAccounts(providerAccountsOf(endpoint.id))));
     return {
         endpointId: endpoint.id,
         transport,
@@ -396,15 +396,27 @@ export const startConnections = (): (() => void) => {
             activeMachine();
         }
     });
+    const tellPreferences = (machine: Machine): void => {
+        machine.chats.setPreferences(
+            chatPreferencesPayload(useChatPreferences.getState(), machine.endpointId, knownAccounts(providerAccountsOf(machine.endpointId)))
+        );
+    };
     const offChatPreferences = useChatPreferences.subscribe((state, before) => {
         if (state.changedAt !== before.changedAt) {
-            for (const machine of machines.values()) {
-                machine.chats.setPreferences(chatPreferencesPayload(state, machine.endpointId));
+            machines.forEach(tellPreferences);
+        }
+    });
+    // An account for new agents that a machine turned off or removed is left out of what that machine is told.
+    const offAccounts = useProviderAccountsStore.subscribe((state, before) => {
+        for (const machine of machines.values()) {
+            if (state.byEndpoint[machine.endpointId] !== before.byEndpoint[machine.endpointId]) {
+                tellPreferences(machine);
             }
         }
     });
     return () => {
         offEndpoints();
         offChatPreferences();
+        offAccounts();
     };
 };

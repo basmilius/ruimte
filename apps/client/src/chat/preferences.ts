@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AgentKind, ChatPreferencesPayload, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { AgentKind, ChatPreferencesPayload, ModelSelection, ProviderAccounts, RuntimeMode } from '@ruimte/contracts';
 import { persistedJson } from '@/chat/persisted-json';
 
 const STORAGE_KEY = 'ruimte.chat.preferences';
@@ -70,9 +70,19 @@ export const withSelection = (preferences: ChatPreferences, provider: AgentKind,
     lastProvider: provider
 });
 
-/* The account a new agent of this CLI starts under on this machine; null is the CLI's default account. */
-export const accountFor = (preferences: ChatPreferences, endpointId: string, provider: AgentKind): string | null =>
-    preferences.accountByMachine[endpointId]?.[provider] ?? null;
+/*
+ * The account a new agent of this CLI starts under on this machine; null is the CLI's default account.
+ * Given the machine's accounts, a pick it turned off or removed is the default account again, so a new
+ * chat is never refused over it; `undefined` is a machine that did not say yet, where the pick stands.
+ */
+export const accountFor = (preferences: ChatPreferences, endpointId: string, provider: AgentKind, accounts?: ProviderAccounts | null): string | null => {
+    const picked = preferences.accountByMachine[endpointId]?.[provider] ?? null;
+    if (picked === null || accounts === undefined) {
+        return picked;
+    }
+    const account = accounts?.accounts[picked];
+    return account?.kind === provider && account.enabled !== false ? picked : null;
+};
 
 /* The default account is what an absent pick means, so picking it takes the pick away. */
 export const withAccount = (preferences: ChatPreferences, endpointId: string, provider: AgentKind, account: string | null): ChatPreferences => {
@@ -82,14 +92,17 @@ export const withAccount = (preferences: ChatPreferences, endpointId: string, pr
     return { ...preferences, accountByMachine: Object.keys(picks).length === 0 ? machines : { ...machines, [endpointId]: picks } };
 };
 
-/* What a machine starts a chat with when it starts one with no client mounting it. */
-export const chatPreferencesPayload = (preferences: ChatPreferences, endpointId: string): ChatPreferencesPayload => {
-    const accounts = preferences.accountByMachine[endpointId];
+/* What a machine starts a chat with when it starts one with no client mounting it; `accounts` as `accountFor` takes them. */
+export const chatPreferencesPayload = (preferences: ChatPreferences, endpointId: string, accounts?: ProviderAccounts | null): ChatPreferencesPayload => {
+    const picks = Object.keys(preferences.accountByMachine[endpointId] ?? {}).flatMap((provider) => {
+        const account = accountFor(preferences, endpointId, provider as AgentKind, accounts);
+        return account === null ? [] : [[provider, account] as const];
+    });
     return {
         runtimeMode: preferences.runtimeMode,
         terminalRuntimeMode: preferences.terminalRuntimeMode,
         selections: preferences.selectionByProvider,
-        ...(accounts === undefined ? {} : { accounts }),
+        ...(picks.length === 0 ? {} : { accounts: Object.fromEntries(picks) }),
         changedAt: preferences.changedAt
     };
 };

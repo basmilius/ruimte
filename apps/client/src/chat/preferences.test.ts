@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ModelSelection } from '@ruimte/contracts';
+import type { ModelSelection, ProviderAccounts } from '@ruimte/contracts';
 import {
     accountFor,
     chatPreferencesPayload,
@@ -107,6 +107,20 @@ describe('what a machine is told', () => {
         const remembered = preferences({ accountByMachine: { local: { claude: 'claude_work' }, studio: { codex: 'codex_client' } } });
         expect(chatPreferencesPayload(remembered, 'local').accounts).toEqual({ claude: 'claude_work' });
         expect(chatPreferencesPayload(remembered, 'elsewhere').accounts).toBeUndefined();
+    });
+
+    test('an account the machine turned off or removed is left to the default one, while one it did not list yet stands', () => {
+        const remembered = preferences({ accountByMachine: { local: { claude: 'claude_work', codex: 'codex_gone' } } });
+        const accounts: ProviderAccounts = {
+            accounts: { claude: { kind: 'claude' }, claude_work: { kind: 'claude', enabled: false }, codex: { kind: 'codex' } },
+            statuses: []
+        };
+        expect(chatPreferencesPayload(remembered, 'local', accounts).accounts).toBeUndefined();
+        expect(chatPreferencesPayload(remembered, 'local', null).accounts).toBeUndefined();
+        expect(chatPreferencesPayload(remembered, 'local').accounts).toEqual({ claude: 'claude_work', codex: 'codex_gone' });
+        const on = { ...accounts, accounts: { ...accounts.accounts, claude_work: { kind: 'claude' } } };
+        expect(accountFor(remembered, 'local', 'claude', on)).toBe('claude_work');
+        expect(accountFor(remembered, 'local', 'codex', on)).toBeNull();
     });
 });
 

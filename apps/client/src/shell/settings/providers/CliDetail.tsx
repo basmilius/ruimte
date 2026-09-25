@@ -9,6 +9,7 @@ import { providerAbilities } from '@/shell/settings/provider-abilities';
 import { CliTile, DetailHeader } from '@/shell/settings/providers/parts';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { useProviderAccountsStore } from '@/state/provider-accounts';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
@@ -87,7 +88,8 @@ export function CliDetail({ endpointId, provider, entries, canAddAccount, onAddA
     const preferences = useChatPreferences();
     const selection = selectionFor(preferences, provider.kind);
     const model = provider.models.find((entry) => entry.slug === selection?.model);
-    const picked = accountFor(preferences, endpointId, provider.kind) ?? provider.kind;
+    const machineAccounts = useProviderAccountsStore((s) => (s.byEndpoint[endpointId]?.loaded ? s.byEndpoint[endpointId].accounts : undefined));
+    const picked = accountFor(preferences, endpointId, provider.kind, machineAccounts) ?? provider.kind;
     // An account that is off is out of every picker, unless it is the one picked already.
     const choosable = (entries ?? []).filter((entry) => entry.account.enabled !== false || entry.id === picked);
     const canLogIn = canAddAccount;

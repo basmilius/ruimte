@@ -38,6 +38,9 @@ export const useProviderAccounts = <T>(select: (row: ProviderAccountsRow) => T):
 
 export const providerAccountsOf = (endpointId: string): ProviderAccountsRow => useProviderAccountsStore.getState().byEndpoint[endpointId] ?? NONE;
 
+/* The accounts as `accountFor` takes them: undefined until the machine answered, null for one that keeps none. */
+export const knownAccounts = (row: ProviderAccountsRow): ProviderAccounts | null | undefined => (row.loaded ? row.accounts : undefined);
+
 /*
  * Keeps one machine's accounts in the store: the whole list on every fresh socket, then every change
  * the machine announces. Answers the function that stops it.
