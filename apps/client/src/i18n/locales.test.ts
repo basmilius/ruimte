@@ -30,6 +30,31 @@ const strings = (value: unknown, prefix = ''): Array<[string, string]> => {
     return Object.entries(value).flatMap(([key, child]) => strings(child, prefix === '' ? key : `${prefix}.${key}`));
 };
 
+/*
+ * The keys an object in the file names twice. A parser keeps the last and drops the first without a
+ * word, so a block of words disappears while the file still reads as valid.
+ */
+const repeatedKeys = (text: string): string[] => {
+    const open: Array<Set<string>> = [];
+    const repeated: string[] = [];
+    // A whole string is one match, so a brace inside a value ("{{count}}") never opens an object.
+    for (const match of text.matchAll(/"((?:[^"\\]|\\.)*)"(\s*:)?|[{}]/g)) {
+        if (match[0] === '{') {
+            open.push(new Set());
+        } else if (match[0] === '}') {
+            open.pop();
+        } else if (match[2] !== undefined) {
+            const keys = open.at(-1);
+            const key = match[1]!;
+            if (keys?.has(key)) {
+                repeated.push(key);
+            }
+            keys?.add(key);
+        }
+    }
+    return repeated;
+};
+
 const namespacesOn = (language: string): string[] =>
     readdirSync(localeDir(language))
         .filter((name) => name.endsWith('.json'))
@@ -65,6 +90,15 @@ describe('the translation files', () => {
                     continue;
                 }
                 expect({ namespace, language, keys: keysOf(await read(language, namespace)).sort() }).toEqual({ namespace, language, keys: english });
+            }
+        }
+    });
+
+    test('name every key once per object', async () => {
+        for (const language of APP_LANGUAGES) {
+            for (const namespace of namespacesOn(language)) {
+                const text = await Bun.file(join(localeDir(language), `${namespace}.json`)).text();
+                expect({ namespace, language, repeated: repeatedKeys(text) }).toEqual({ namespace, language, repeated: [] });
             }
         }
     });

@@ -18,11 +18,6 @@
         "person": "Jij",
         "interrupted": "Onderbroken"
     },
-    "activity": {
-        "idle": "stil",
-        "listening": "luistert",
-        "speaking": "spreekt"
-    },
     "empty": {
         "listening": "Luistert…",
         "title": "Praat met je werkruimte",
@@ -96,6 +91,9 @@
         }
     },
     "activity": {
+        "idle": "stil",
+        "listening": "luistert",
+        "speaking": "spreekt",
         "closedProject": "Project gesloten",
         "placedView": "Weergave geplaatst",
         "cancelled": "Geannuleerd",
