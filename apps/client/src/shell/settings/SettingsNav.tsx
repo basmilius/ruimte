@@ -9,7 +9,8 @@ import { refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { AccountAvatar } from '@/shell/settings/AccountAvatar';
 import { Skeleton } from '@/shell/settings/controls';
 import { mergeMachines } from '@/shell/settings/machine-list';
-import { searchSettings, type SearchResult } from '@/shell/settings/search';
+import { keyboardGroups } from '@/shell/settings/keyboard-groups';
+import { searchSettings, shortcutSearchRows, type SearchResult } from '@/shell/settings/search';
 import { ABOUT_SECTION, ACCOUNT_SECTION, SETTINGS_GROUPS, groupLabel, sectionLabel, type SettingsSectionMeta } from '@/shell/settings/sections';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useEndpoints } from '@/state/endpoints';
@@ -17,6 +18,12 @@ import { hasLocalMachine } from '@/state/local-machine';
 import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
 import { formatShortcut } from '@/ui/shortcut';
+
+/* The index plus the shortcuts, whose words and keys are only known once the lists are built. */
+const findSettings = (query: string): SearchResult[] => {
+    const apple = isApplePlatform();
+    return searchSettings(query, query.trim() === '' ? [] : shortcutSearchRows(keyboardGroups(apple), apple));
+};
 
 const NAV_ITEM =
     'flex h-8 min-w-0 shrink-0 items-center gap-2.5 rounded-md px-2.5 text-sm text-text-muted hover:bg-surface-hover hover:text-text data-active:bg-surface-active data-active:text-text';
@@ -134,7 +141,7 @@ export function SettingsSearch({ query, onQuery, onPick }: SettingsSearchProps) 
                         onQuery('');
                     }
                     if (event.key === 'Enter') {
-                        const first = searchSettings(query)[0];
+                        const first = findSettings(query)[0];
                         if (first) {
                             onPick(first);
                         }
@@ -164,7 +171,7 @@ export function SettingsSearchResults({ query, onPick }: { query: string; onPick
     const { t, i18n } = useTranslation('settings');
     // The language is a dependency the linter cannot see; every result reads its words off i18next.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-    const results = useMemo(() => searchSettings(query), [query, i18n.language]);
+    const results = useMemo(() => findSettings(query), [query, i18n.language]);
 
     if (results.length === 0) {
         return <p className="px-2.5 py-1 text-xs break-words text-text-muted">{t('search.none', { query: query.trim() })}</p>;

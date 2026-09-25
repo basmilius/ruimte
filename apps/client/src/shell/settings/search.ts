@@ -1,7 +1,9 @@
 import i18next from 'i18next';
 import { canKeepAwake, canSwipeBetweenPages } from '@/desktop/bridge';
 import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell/settings/sections';
+import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import type { SettingsSectionId } from '@/state/ui';
+import { formatShortcut } from '@/ui/shortcut';
 
 interface SearchEntry {
     /* The `searchId` of the row it leads to. */
@@ -194,8 +196,25 @@ const matches = (terms: readonly string[], ...texts: string[]): boolean => {
     return terms.every((term) => haystack.includes(term));
 };
 
-/* Every pane and row whose words hold each word of the query, panes first, in the order of the navigation. */
-export const searchSettings = (query: string): SearchResult[] => {
+/* One result per shortcut, found by its label, its category and its keys as this platform prints them. */
+export const shortcutSearchRows = (groups: readonly ShortcutGroup[], apple: boolean): SearchResult[] =>
+    groups.flatMap((group) =>
+        group.shortcuts.map((row, index) => ({
+            section: 'keyboard' as const,
+            id: shortcutRowId(group.id, index),
+            label: row.label,
+            description: i18next.t('settings:keyboard.result', {
+                category: group.title,
+                keys: [formatShortcut(row.keys, apple), ...(row.then ? [row.then] : [])].join(' ')
+            })
+        }))
+    );
+
+/*
+ * Every pane and row whose words hold each word of the query, panes first, in the order of the
+ * navigation. `built` holds the rows whose words exist only at run time, like the shortcuts.
+ */
+export const searchSettings = (query: string, built: readonly SearchResult[] = []): SearchResult[] => {
     const terms = fold(query).split(/\s+/).filter(Boolean);
     if (terms.length === 0) {
         return [];
@@ -207,8 +226,13 @@ export const searchSettings = (query: string): SearchResult[] => {
         description: sectionDescription(meta.id)
     })).filter((result) => matches(terms, result.label, result.description));
     const order = ALL_SETTINGS_SECTIONS.map((meta) => meta.id);
-    const rows = SETTINGS_INDEX.filter((entry) => entry.available?.() ?? true)
-        .map((entry) => ({ section: entry.section, id: entry.id, label: words(entry.label), description: entry.description ? words(entry.description) : '' }))
+    const indexed = SETTINGS_INDEX.filter((entry) => entry.available?.() ?? true).map((entry) => ({
+        section: entry.section,
+        id: entry.id,
+        label: words(entry.label),
+        description: entry.description ? words(entry.description) : ''
+    }));
+    const rows = [...indexed, ...built]
         .filter((result) => matches(terms, result.label, result.description))
         .sort((a, b) => order.indexOf(a.section) - order.indexOf(b.section));
     return [...panes, ...rows];

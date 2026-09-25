@@ -14,6 +14,8 @@ export interface ShortcutRow {
 }
 
 export interface ShortcutGroup {
+    /* Stable across languages, for a search result that has to find its row again. */
+    id: string;
     title: string;
     shortcuts: ShortcutRow[];
 }
@@ -29,6 +31,7 @@ const say = (key: string): string => i18next.t(`settings:shortcuts.${key}`);
  */
 export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
     {
+        id: 'canvas',
         title: say('canvas.title'),
         shortcuts: [
             { keys: APP_SHORTCUTS.palette, label: say('canvas.palette') },
@@ -42,6 +45,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         ]
     },
     {
+        id: 'selection',
         title: say('selection.title'),
         shortcuts: [
             { keys: CANVAS_SHORTCUTS.selectAll, label: say('selection.selectAll') },
@@ -51,6 +55,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         ]
     },
     {
+        id: 'views',
         title: say('views.title'),
         shortcuts: [
             { keys: viewShortcut(0)!, label: say('views.goTo') },
@@ -61,6 +66,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         ]
     },
     {
+        id: 'split',
         title: say('split.title'),
         shortcuts: [
             { keys: CANVAS_SHORTCUTS.splitRight, label: say('split.right') },
@@ -76,6 +82,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
          * it, and the tools are the letters every sketching app uses. They never fire while a text
          * is being edited or a dialog is up.
          */
+        id: 'drawing',
         title: say('drawing.title'),
         shortcuts: [
             { keys: shortcut('V'), label: say('drawing.select') },
@@ -99,6 +106,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         ]
     },
     {
+        id: 'panels',
         title: say('panels.title'),
         shortcuts: [
             { keys: CANVAS_SHORTCUTS.togglePanel, label: say('panels.toggle') },
@@ -106,6 +114,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         ]
     },
     {
+        id: 'prompts',
         title: say('prompts.title'),
         shortcuts: [
             { keys: CANVAS_SHORTCUTS.focusPrompts, label: say('prompts.answerFront') },
@@ -116,6 +125,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         ]
     },
     {
+        id: 'chat',
         title: say('chat.title'),
         shortcuts: [
             { keys: CANVAS_SHORTCUTS.dictation, label: say('chat.dictation') },
@@ -124,6 +134,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         ]
     },
     {
+        id: 'browser',
         title: say('browser.title'),
         shortcuts: [
             { keys: CANVAS_SHORTCUTS.browserBack, label: say('browser.back') },
@@ -131,6 +142,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         ]
     },
     {
+        id: 'nodes',
         title: say('nodes.title'),
         shortcuts: [
             { keys: shortcut('Tab'), label: say('nodes.nextNode') },
@@ -146,6 +158,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
          * shortcut here is the palette's everywhere else on macOS. The line motions are what macOS gives
          * every native terminal, so only macOS lists them.
          */
+        id: 'terminal',
         title: say('terminal.title'),
         shortcuts: [
             { keys: platformShortcut(CLEAR_SHORTCUT, apple), label: say('terminal.clear') },
@@ -164,9 +177,16 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
 
 /* Commands that carry a shortcut become the first group. */
 export const commandShortcuts = (commands: ReadonlyArray<{ label: string; shortcut?: Shortcut }>): ShortcutGroup => ({
+    id: 'commands',
     title: say('commands.title'),
     shortcuts: commands.flatMap((command) => (command.shortcut ? [{ keys: command.shortcut, label: command.label }] : []))
 });
+
+/* The `searchId` of one row of the Keyboard pane, which the settings search leads to. */
+export const shortcutRowId = (groupId: string, index: number): string => `keyboard.${groupId}.${index}`;
+
+/* The category a row id of `shortcutRowId` sits in, or null for an id of another pane. */
+export const shortcutGroupOf = (rowId: string): string | null => /^keyboard\.(\w+)\.\d+$/.exec(rowId)?.[1] ?? null;
 
 /* What a search can match on: the keys as printed together (`⌘z`) and as written out (`ctrl+z`). */
 const searchableKeys = (row: ShortcutRow, apple: boolean): string[] => {
@@ -183,7 +203,7 @@ export const filterShortcuts = (groups: readonly ShortcutGroup[], query: string,
     const keysNeedle = needle.replace(/ /g, '');
     return groups
         .map((group) => ({
-            title: group.title,
+            ...group,
             shortcuts: group.shortcuts.filter(
                 (row) => row.label.toLowerCase().includes(needle) || searchableKeys(row, apple).some((keys) => keys.includes(keysNeedle))
             )

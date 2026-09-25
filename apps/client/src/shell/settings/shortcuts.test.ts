@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { shortcut } from '@/ui/shortcut';
-import { commandShortcuts, filterShortcuts, shortcutGroups } from './shortcuts.ts';
+import { commandShortcuts, filterShortcuts, shortcutGroupOf, shortcutGroups, shortcutRowId } from './shortcuts.ts';
 
 describe('commandShortcuts', () => {
     test('keeps only commands with a shortcut', () => {
@@ -23,6 +23,13 @@ describe('shortcutGroups', () => {
         expect(labels(true)).toContain('Move back one word');
         expect(labels(false)).not.toContain('Move back one word');
         expect(labels(false)).toContain('Clear the screen and the scrollback');
+    });
+});
+
+describe('shortcutRowId', () => {
+    test('names the category a search result has to open', () => {
+        expect(shortcutGroupOf(shortcutRowId('drawing', 3))).toBe('drawing');
+        expect(shortcutGroupOf('appearance.theme')).toBeNull();
     });
 });
 

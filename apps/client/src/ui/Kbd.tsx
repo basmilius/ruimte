@@ -5,7 +5,8 @@ import { TOOLTIP_KBD } from '@/ui/classes';
 import { formatShortcut, shortcutParts, type Shortcut } from '@/ui/shortcut';
 
 /* One key, drawn as a cap. Settings prints a shortcut key by key, so a gesture can stand beside it. */
-const KEY_CAP = 'rounded-md border border-border bg-surface-sunken px-1.5 py-0.5 font-sans text-xs text-text-muted';
+const KEY_CAP =
+    'inline-grid h-6 min-w-6 place-items-center rounded-md border border-b-2 border-border-strong bg-surface-hover bg-clip-padding px-1.5 font-sans text-xs text-text';
 
 interface KbdProps {
     shortcut: Shortcut;

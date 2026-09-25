@@ -302,7 +302,9 @@
         "search": "Search shortcuts",
         "clearSearch": "Clear search",
         "noMatch": "Nothing matches \"{{query}}\".",
-        "browserNote": "In a browser tab, {{newView}} and {{closeCell}} belong to the browser."
+        "browserNote": "In a browser tab, {{newView}} and {{closeCell}} belong to the browser.",
+        "categories": "Shortcut categories",
+        "result": "{{category}} · {{keys}}"
     },
     "backgroundService": {
         "title": "When Ruimte quits",

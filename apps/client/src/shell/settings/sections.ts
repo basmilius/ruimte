@@ -25,7 +25,7 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
         label: null,
         sections: [
             { id: 'appearance', icon: Palette },
-            { id: 'keyboard', icon: Keyboard }
+            { id: 'keyboard', icon: Keyboard, split: true }
         ]
     },
     {

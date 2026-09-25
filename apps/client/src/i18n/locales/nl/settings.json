@@ -302,7 +302,9 @@
         "search": "Sneltoetsen zoeken",
         "clearSearch": "Zoekopdracht wissen",
         "noMatch": "Niets komt overeen met \"{{query}}\".",
-        "browserNote": "In een browsertabblad horen {{newView}} en {{closeCell}} bij de browser."
+        "browserNote": "In een browsertabblad horen {{newView}} en {{closeCell}} bij de browser.",
+        "categories": "Categorieën van sneltoetsen",
+        "result": "{{category}} · {{keys}}"
     },
     "backgroundService": {
         "title": "Als Ruimte afsluit",

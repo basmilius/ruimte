@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import i18next from 'i18next';
-import { SETTINGS_INDEX, searchSettings } from './search';
+import { SETTINGS_INDEX, searchSettings, shortcutSearchRows } from './search';
+import { shortcutGroups } from './shortcuts';
 
 describe('searching the settings', () => {
     test('every row in the index names words that exist, and leads to one row', () => {
@@ -35,6 +36,13 @@ describe('searching the settings', () => {
     test('an interpolation the index cannot fill in is not matched as braces', () => {
         expect(searchSettings('{{')).toEqual([]);
         expect(searchSettings('dates numbers read')).toMatchObject([{ id: 'appearance.region', description: 'Dates and numbers read as .' }]);
+    });
+
+    test('a shortcut is found by its label, its category and its keys, and leads to its row', () => {
+        const rows = shortcutSearchRows(shortcutGroups(true), true);
+        expect(searchSettings('zoom out', rows).map((result) => result.id)).toEqual(['keyboard.canvas.5']);
+        expect(searchSettings('selection ⌘a', rows)).toMatchObject([{ section: 'keyboard', label: 'Select everything', description: 'Selection · ⌘A' }]);
+        expect(searchSettings('zoom out')).toEqual([]);
     });
 
     test('an empty query finds nothing rather than everything', () => {
