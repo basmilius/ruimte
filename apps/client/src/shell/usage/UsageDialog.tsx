@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { ChartNoAxesColumn, LoaderCircle, RefreshCw, TriangleAlert, Unplug } from 'lucide-react';
+import { USAGE_PROVIDERS, type UsageAccount } from '@ruimte/contracts';
+import { AccountDot } from '@/agents/AccountDot';
 import { Segmented, Skeleton } from '@/shell/settings/controls';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { useEndpoints } from '@/state/endpoints';
@@ -12,7 +14,7 @@ import { useEndpointId } from '@/state/keys';
 import { useProvidersStore } from '@/state/providers';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
-import { askedKey, UsageEndpointContext, USAGE_PERIODS, useUsage, useUsageStore, windowFor, type UsageMetric, type UsagePeriod } from '@/state/usage';
+import { askedKey, summaryPayload, UsageEndpointContext, USAGE_PERIODS, useUsage, useUsageStore, type UsageMetric, type UsagePeriod } from '@/state/usage';
 import { machineTransport } from '@/transport';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import type { Transport } from '@/transport/transport';
@@ -25,7 +27,7 @@ import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { CloseButton } from '@/ui/CloseButton';
 import { Icon } from '@/ui/Icon';
-import { formatClock, formatCount, formatDate, formatTokens } from '@/shell/usage/format';
+import { formatClock, formatCount, formatDate, formatTokens, PROVIDER_LABELS } from '@/shell/usage/format';
 import { useMoney } from '@/shell/usage/money';
 import { deriveUsage, labelEveryFor } from '@/shell/usage/summary';
 import { UsageBreakdown } from '@/shell/usage/UsageBreakdown';
@@ -35,6 +37,9 @@ import { UsageSummary } from '@/shell/usage/UsageSummary';
 import { UsageTiles } from '@/shell/usage/UsageTiles';
 
 const METRICS: readonly UsageMetric[] = ['cost', 'tokens'];
+
+/* The picker's value for every account, which no account id can be: an id starts with a letter. */
+const ALL_ACCOUNTS = '*';
 
 /* Over the whole popup rather than the body under the header, so an empty state stands in the middle of the dialog. */
 const DIALOG_CENTER = 'pointer-events-none absolute inset-0';
@@ -68,7 +73,7 @@ function MachineAgents({ endpointId }: { endpointId: string }) {
  * to the period before this one never lands, because the key it carries is no longer the one being
  * shown.
  */
-const useSummary = (endpointId: string, transport: Transport | null, period: UsagePeriod): (() => void) => {
+const useSummary = (endpointId: string, transport: Transport | null, period: UsagePeriod, account: string | null): (() => void) => {
     useEffect(() => {
         if (transport === null) {
             return;
@@ -93,14 +98,14 @@ const useSummary = (endpointId: string, transport: Transport | null, period: Usa
         if (transport === null) {
             return;
         }
-        const payload = windowFor(period);
+        const payload = summaryPayload(period, account);
         const asked = askedKey(payload);
         useUsageStore.getState().setLoading(endpointId, true);
         transport
             .request('usage.summary', payload)
             .then((summary) => useUsageStore.getState().receive(endpointId, asked, summary))
             .catch(() => useUsageStore.getState().fail(endpointId));
-    }, [transport, endpointId, period]);
+    }, [transport, endpointId, period, account]);
 
     useEffect(() => {
         if (transport === null) {
@@ -209,6 +214,34 @@ function MachineNote({ endpointId, stale }: { endpointId: string; stale: boolean
     );
 }
 
+/*
+ * Every account of the machine, once a CLI has more than one: picking one narrows the page to what that
+ * account spent. The chart keeps its split per CLI, since an account's color is a dot and not a series.
+ */
+function AccountPicker({ accounts, value, onChange }: { accounts: readonly UsageAccount[]; value: string | null; onChange(account: string | null): void }) {
+    const { t } = useTranslation('usage');
+    if (!USAGE_PROVIDERS.some((kind) => accounts.filter((account) => account.kind === kind).length > 1)) {
+        return null;
+    }
+    return (
+        <Select
+            value={value ?? ALL_ACCOUNTS}
+            items={[
+                { value: ALL_ACCOUNTS, label: t('dialog.accounts.all') },
+                ...accounts.map((account) => ({
+                    value: account.id,
+                    label: account.label,
+                    icon: <AccountDot color={account.color} />,
+                    description: account.label === PROVIDER_LABELS[account.kind] ? undefined : PROVIDER_LABELS[account.kind]
+                }))
+            ]}
+            onValueChange={(id) => onChange(id === ALL_ACCOUNTS ? null : id)}
+            label={t('dialog.accounts.label')}
+            align="end"
+        />
+    );
+}
+
 /* One entry per machine this client knows, in the order of the list; with one machine there is nothing to pick. */
 function MachinePicker({ endpointId }: { endpointId: string }) {
     const { t } = useTranslation('usage');
@@ -244,15 +277,17 @@ function Page({ endpointId }: { endpointId: string }) {
     const summary = useUsage((s) => s.summary);
     const asked = useUsage((s) => s.asked);
     const loading = useUsage((s) => s.loading);
+    // Per machine, since account ids are a machine's own; the page remounts on a switch.
+    const [account, setAccount] = useState<string | null>(null);
     const endpoint = useEndpoints((s) => s.endpoints.find((entry) => entry.id === endpointId) ?? null);
     // Held while the dialog shows this machine, like its dialog in the Machines pane. Asking for its numbers is an explicit action.
     useMachineHold(endpoint);
     const transport = useMemo(() => machineTransport(endpointId), [endpointId]);
-    const reload = useSummary(endpointId, transport, period);
+    const reload = useSummary(endpointId, transport, period, account);
     const money = useMoney();
     const answering = useEndpointConnection(endpointId).status === 'open';
 
-    const shown = summary !== null && asked === askedKey(windowFor(period)) ? summary : null;
+    const shown = summary !== null && asked === askedKey(summaryPayload(period, account)) ? summary : null;
     const derived = shown === null ? null : deriveUsage(shown, metric);
     const value = metric === 'cost' ? money : formatTokens;
     const noRoots = shown !== null && shown.roots.every((root) => root.status === 'missing');
@@ -263,6 +298,7 @@ function Page({ endpointId }: { endpointId: string }) {
                 <Dialog.Title className="text-base font-semibold text-text">{t('dialog.title')}</Dialog.Title>
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                     <MachinePicker endpointId={endpointId} />
+                    <AccountPicker accounts={summary?.accounts ?? []} value={account} onChange={setAccount} />
                     <Segmented
                         value={period}
                         options={USAGE_PERIODS.map((entry) => ({ id: entry.id, label: t(`dialog.periods.${entry.id}`) }))}

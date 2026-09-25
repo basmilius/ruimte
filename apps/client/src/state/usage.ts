@@ -71,8 +71,13 @@ export const windowFor = (period: UsagePeriod, now = new Date()): UsageSummaryPa
     };
 };
 
+/* A period, and only the usage of one account when one is picked; null is every account. */
+export const summaryPayload = (period: UsagePeriod, account: string | null, now = new Date()): UsageSummaryPayload =>
+    account === null ? windowFor(period, now) : { ...windowFor(period, now), accounts: [account] };
+
 /* What was asked, so an answer to the question before this one is never drawn over a newer one. */
-export const askedKey = (payload: UsageSummaryPayload): string => `${payload.from}\0${payload.to}\0${payload.resolution}\0${payload.timeZone}`;
+export const askedKey = (payload: UsageSummaryPayload): string =>
+    `${payload.from}\0${payload.to}\0${payload.resolution}\0${payload.timeZone}\0${payload.accounts?.join(',') ?? ''}`;
 
 /* The numbers of one machine: its transcripts, priced by its daemon. */
 interface UsageRow {
