@@ -17,6 +17,7 @@ import { useTheme } from '@/state/theme';
 import { isApplePlatform } from '@/desktop/bridge';
 import { sessionClient } from '@/terminal';
 import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, macMotionSequence } from '@/terminal/keymap';
+import { osc52Text } from '@/terminal/osc52';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { webglBudget } from '@/terminal/webgl-budget';
@@ -114,6 +115,14 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         term.loadAddon(fit);
         term.loadAddon(new WebLinksAddon());
         term.open(host);
+        // Every client attached to a session sees the sequence; only the node a person works in writes this machine's clipboard.
+        term.parser.registerOscHandler(52, (data) => {
+            const text = osc52Text(data);
+            if (text !== null && document.hasFocus() && host.contains(document.activeElement)) {
+                copyText(text);
+            }
+            return true;
+        });
         fitToHost(term, fit);
         termRef.current = term;
 
