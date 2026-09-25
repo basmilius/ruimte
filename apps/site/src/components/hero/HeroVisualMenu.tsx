@@ -90,7 +90,9 @@ export function HeroVisualMenu() {
                                 <span className="min-w-0 flex-1">
                                     <span className="flex items-center gap-2 text-[13px] font-medium text-text">
                                         {visual.name}
-                                        {i >= 6 && <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] font-normal text-text-muted">New</span>}
+                                        {visual.id === 'phosphor' && (
+                                            <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] font-normal text-text-muted">New</span>
+                                        )}
                                     </span>
                                     <span className="mt-0.5 block text-[11px] leading-snug text-text-muted">{visual.description}</span>
                                 </span>
@@ -108,9 +110,16 @@ export function HeroVisualMenu() {
     );
 }
 
+// A 3:2 Lissajous figure, the first thing the beam draws.
+const LISSAJOUS = `M${Array.from({ length: 97 }, (_, i) => {
+    const angle = (i / 96) * Math.PI * 2;
+    return `${(24 + 19 * Math.sin(3 * angle + 0.4)).toFixed(1)} ${(18 - 14 * Math.sin(2 * angle)).toFixed(1)}`;
+}).join('L')}`;
+
 function VisualGlyph({ id }: { readonly id: VisualId }) {
     return (
         <svg viewBox="0 0 48 36" className="h-9 w-12" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true">
+            {id === 'phosphor' && <path d={LISSAJOUS} strokeWidth="1.5" />}
             {id === 'gravity' && (
                 <>
                     <ellipse cx="24" cy="25" rx="20" ry="6" />

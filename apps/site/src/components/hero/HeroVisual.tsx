@@ -5,12 +5,18 @@ import { useReducedAnimations } from '../motion-preferences.ts';
 import { VISUALS, type VisualId } from './catalog.ts';
 import { garden, gravity, warp } from './fields.ts';
 import { assembly, aurora, swarm } from './matter.ts';
+import { createPhosphor, PHOSPHOR_POSTER, PHOSPHOR_WIDTH } from './phosphor.ts';
 import { Space, type Pointer, type Scene } from './space.ts';
 import { createSculptureRenderer } from './sculpture-renderer.ts';
 import { isSculpture, paintSculptureFallback, SCULPTURES, type SculptureId } from './sculptures.ts';
 import { useHeroVisual } from './visual-state.ts';
 
-const SCENES: Record<Exclude<VisualId, SculptureId>, Scene> = { gravity, garden, warp, swarm, aurora, assembly };
+const SCENES: Record<Exclude<VisualId, SculptureId | 'phosphor'>, Scene> = { gravity, garden, warp, swarm, aurora, assembly };
+
+// The canvas is 150% of the container, moved up and left; this is where the container sits in its 800 units.
+const BOX_LEFT = (0.25 / 1.5) * 800;
+const BOX_TOP = (0.2 / 1.12 / 1.5) * 800;
+const BOX_WIDTH = 800 / 1.5;
 
 export function HeroVisual() {
     const { selected } = useHeroVisual();
@@ -39,6 +45,9 @@ export function HeroVisual() {
             }
         }
         const ctx = renderer ? null : element.getContext('2d');
+        const phosphor = selected === 'phosphor' ? createPhosphor() : null;
+        const jetbrains = getComputedStyle(element).getPropertyValue('--font-jetbrains').trim();
+        const mono = `${jetbrains ? `${jetbrains}, ` : ''}ui-monospace, monospace`;
         if (!renderer && !ctx) {
             return;
         }
@@ -66,10 +75,18 @@ export function HeroVisual() {
             ctx.clearRect(0, 0, 800, 800);
             ctx.save();
             ctx.globalAlpha = opacity;
+            if (phosphor) {
+                ctx.translate(BOX_LEFT, BOX_TOP);
+                ctx.scale(BOX_WIDTH / PHOSPHOR_WIDTH, BOX_WIDTH / PHOSPHOR_WIDTH);
+                // The figures start over from the first Lissajous, since the other visuals' clock starts at 6.
+                phosphor.draw(ctx, reduced ? PHOSPHOR_POSTER : time - 6, mono);
+                ctx.restore();
+                return;
+            }
             const space = new Space(ctx, current, blue, selected === 'swarm' ? 1.3 : selected === 'garden' ? 1.1 : 1);
             if (isSculpture(selected)) {
                 paintSculptureFallback(space, SCULPTURES[selected](time, current));
-            } else {
+            } else if (selected !== 'phosphor') {
                 SCENES[selected](space, time, current);
             }
             space.finish();
@@ -84,6 +101,7 @@ export function HeroVisual() {
             current.x += (pointer.current.x - current.x) * ease;
             current.y += (pointer.current.y - current.y) * ease;
             current.active += (pointer.current.active - current.active) * ease;
+            phosphor?.update(time - 6, delta, current);
             draw();
             frame = requestAnimationFrame(tick);
         };
@@ -152,7 +170,7 @@ export function HeroVisual() {
                 className="pointer-events-none absolute -top-[20%] -left-[25%] aspect-square w-[150%]"
             />
             <p className="sr-only">
-                {visual.name}: {visual.description}. A three-dimensional animated illustration.
+                {visual.name}: {visual.description}. An animated illustration.
             </p>
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 text-[11px] text-text-faint opacity-0 transition-opacity duration-300 group-hover:opacity-100 motion-reduce:hidden [@media(hover:none)]:hidden">
                 <span className="h-1 w-1 rounded-full bg-accent" />

@@ -1,4 +1,5 @@
 export const VISUALS = [
+    { id: 'phosphor', name: 'Phosphor', description: 'One signal draws the mark and the word', hint: 'Move to turn the frequency knobs' },
     { id: 'gravity', name: 'Gravity well', description: 'An intelligence that bends space', hint: 'Move to bend the field' },
     { id: 'garden', name: 'Signal garden', description: 'Ideas growing into a living network', hint: 'Move to turn the network' },
     { id: 'warp', name: 'Deep field', description: 'A flight through layers of context', hint: 'Move to steer through space' },

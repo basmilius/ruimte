@@ -5,12 +5,12 @@ import { isVisualId, type VisualId } from './catalog.ts';
 import { VisualContext } from './visual-state.ts';
 
 export function HeroVisualProvider({ children }: { readonly children: ReactNode }) {
-    const [selected, setSelected] = useState<VisualId>('gravity');
+    const [selected, setSelected] = useState<VisualId>('phosphor');
 
     useEffect(() => {
         const read = () => {
             const value = new URLSearchParams(window.location.search).get('visual');
-            setSelected(isVisualId(value) ? value : 'gravity');
+            setSelected(isVisualId(value) ? value : 'phosphor');
         };
         read();
         window.addEventListener('popstate', read);
