@@ -49,6 +49,12 @@ export const flyoutSubagents = (order: readonly string[], structure: Readonly<Re
 export const summaryWordOf = (words: readonly StatusWord[]): StatusWord =>
     (['running', 'paused', 'failed', 'cancelled'] as const).find((word) => words.includes(word)) ?? 'done';
 
+/* The number on the badge: the ones still at work, a paused one included, and all of them once none is. */
+export const badgeCountOf = (words: readonly StatusWord[]): number => {
+    const active = words.filter((word) => word === 'running' || word === 'paused').length;
+    return active > 0 ? active : words.length;
+};
+
 /* The time on the right of an entry: how long it has run so far, or how long it took once it settled. */
 export const entryTimeOf = (item: ChatSubagentItem, task: Task | null, now: number): string => {
     // A task's own record says when it was given and settled; the row copies those, but may lag behind it.

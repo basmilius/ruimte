@@ -1,6 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
-import { composerStopLabel, composerStopOf, entryTimeOf, flyoutSubagents, statusWordOf, stopOf, subagentTitle, summaryWordOf, taskIdOf } from './subagent-list';
+import {
+    badgeCountOf,
+    composerStopLabel,
+    composerStopOf,
+    entryTimeOf,
+    flyoutSubagents,
+    statusWordOf,
+    stopOf,
+    subagentTitle,
+    summaryWordOf,
+    taskIdOf
+} from './subagent-list';
 import { formatMoment } from '@/format/datetime';
 
 const subagent = (id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem => ({
@@ -86,6 +97,13 @@ describe('subagent list', () => {
         expect(summaryWordOf(['done', 'cancelled', 'failed'])).toBe('failed');
         expect(summaryWordOf(['done', 'cancelled'])).toBe('cancelled');
         expect(summaryWordOf(['done', 'done'])).toBe('done');
+    });
+
+    test('the badge counts the ones still at work, and all of them once none is', () => {
+        expect(badgeCountOf(['done', 'running', 'done'])).toBe(1);
+        expect(badgeCountOf(['running', 'paused', 'failed'])).toBe(2);
+        expect(badgeCountOf(['done', 'failed', 'cancelled'])).toBe(3);
+        expect(badgeCountOf([])).toBe(0);
     });
 
     test('a cancelled task says so, where the row itself only knows it failed', () => {

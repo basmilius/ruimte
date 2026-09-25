@@ -6,7 +6,7 @@ import { Activity, Square, SquareTerminal } from 'lucide-react';
 import type { ChatBackgroundTask, ChatSubagentItem } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import { backgroundCounts } from '@/chat/activity';
-import { entryTimeOf, flyoutSubagents, statusWordOf, subagentTitle, summaryWordOf, taskIdOf } from '@/chat/subagent-list';
+import { badgeCountOf, entryTimeOf, flyoutSubagents, statusWordOf, subagentTitle, summaryWordOf, taskIdOf } from '@/chat/subagent-list';
 import { useSubagentSupport } from '@/chat/subagent-support';
 import { canOpenSubagent, crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { SubagentStopButton } from '@/chat/ui/SubagentStopButton';
@@ -37,14 +37,12 @@ export function ChatActivity({ chatId }: { chatId: string }) {
     const subagents = useMemo(() => (structure === undefined ? [] : flyoutSubagents(order, structure)), [order, structure]);
     const endpointId = useEndpointId();
     const tasks = useTasks((s) => s.byEndpoint[endpointId]);
-    const summary = useMemo(
+    const words = useMemo(
         () =>
-            summaryWordOf(
-                subagents.map((item) => {
-                    const taskId = taskIdOf(item);
-                    return statusWordOf(item, taskId === null ? null : (tasks?.[taskId] ?? null));
-                })
-            ),
+            subagents.map((item) => {
+                const taskId = taskIdOf(item);
+                return statusWordOf(item, taskId === null ? null : (tasks?.[taskId] ?? null));
+            }),
         [subagents, tasks]
     );
     const background = useChatRow(chatId, (row) => row?.info.background) ?? NO_TASKS;
@@ -55,7 +53,11 @@ export function ChatActivity({ chatId }: { chatId: string }) {
     return (
         <div className="mb-3 flex flex-wrap items-center gap-2">
             {subagents.length > 0 && (
-                <Flyout icon={<StatusIcon word={summary} />} label={t('activity.subagents', { count: subagents.length })}>
+                <Flyout
+                    icon={<StatusIcon word={summaryWordOf(words)} />}
+                    label={t('activity.subagents', { count: badgeCountOf(words) })}
+                    heading={t('activity.subagents', { count: subagents.length })}
+                >
                     <SubagentRows chatId={chatId} items={subagents} />
                 </Flyout>
             )}
@@ -78,8 +80,8 @@ function StatusIcon({ word }: { word: StatusWord }) {
     return <Icon icon={look.icon} size={14} className={clsx('shrink-0', look.tone, look.spins && 'animate-spin')} />;
 }
 
-/* A chip that opens a list over it, headed by what the chip already says. */
-function Flyout({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
+/* A chip that opens a list over it, headed by what the chip says unless the list counts more than the chip does. */
+function Flyout({ icon, label, heading = label, children }: { icon: ReactNode; label: string; heading?: string; children: ReactNode }) {
     return (
         <Popover.Root>
             <Popover.Trigger className={CHIP}>
@@ -89,7 +91,7 @@ function Flyout({ icon, label, children }: { icon: ReactNode; label: string; chi
             <Popover.Portal>
                 <Popover.Positioner side="top" sideOffset={8} align="start" className="z-(--z-popup)">
                     <Popover.Popup className="menu-popup w-80">
-                        <div className="px-2.5 pt-1.5 pb-1 text-xs text-text-faint">{label}</div>
+                        <div className="px-2.5 pt-1.5 pb-1 text-xs text-text-faint">{heading}</div>
                         {children}
                     </Popover.Popup>
                 </Popover.Positioner>
