@@ -119,7 +119,9 @@ unmeasured, and so are nine cells of the grid at once. Backpressure is handled p
 dropped over the high-water mark, repaired with `session.resync` on drain); what is not there is a
 per-session cap, so one very loud shell can still be the reason a client is dropped. An agent's
 `view delete` leaves the drawing or diagram file behind: `ProjectStore.mutate` updates the ids
-without asking the stores, so orphans only go when a person saves the project. A turn's diff is of
+without asking the stores, so orphans only go when a person saves the project. A `codex` typed by hand in a
+terminal joins Codex's shared background server, whose hooks carry the token of the terminal that
+started it, so its status can land on another node or nowhere. A turn's diff is of
 the chat's own folder (or its worktree), so an edit the person made there during the turn lands in
 its card too.
 

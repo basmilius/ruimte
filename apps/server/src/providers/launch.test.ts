@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { CLAUDE_ALLOW_CONTEXT } from './claude.ts';
-import { freshCommand, resumeCommand, resumeOrFreshCommand, takesNoteOnLine, terminalCommand } from './launch.ts';
+import { freshCommand, probeCodexNoDaemon, resumeCommand, resumeOrFreshCommand, takesNoteOnLine, terminalCommand } from './launch.ts';
 
 // How the launch line quotes the flag that lets ruimte-context through.
 const ALLOW = `'${CLAUDE_ALLOW_CONTEXT}'`;
@@ -55,6 +55,20 @@ describe('terminalCommand', () => {
         expect(resumeOrFreshCommand({ kind: 'codex', runtimeMode: 'supervised' }, 'abc-123', 'note')).toBe(
             `codex resume --ask-for-approval on-request --sandbox workspace-write 'abc-123' || codex --ask-for-approval on-request --sandbox workspace-write -c 'developer_instructions="note"'`
         );
+    });
+
+    test('keeps Codex out of its shared background server once the installed Codex offers the flag', async () => {
+        await probeCodexNoDaemon(async () => '  --no-daemon  Run without the shared background server');
+        try {
+            expect(terminalCommand({ kind: 'codex', runtimeMode: 'auto' })).toBe('codex --no-daemon --ask-for-approval on-request --sandbox workspace-write');
+            expect(resumeCommand({ kind: 'codex', runtimeMode: 'auto' }, 'abc-123')).toBe(
+                "codex resume --no-daemon --ask-for-approval on-request --sandbox workspace-write 'abc-123'"
+            );
+            expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe(`claude ${ALLOW}`);
+        } finally {
+            await probeCodexNoDaemon(async () => '');
+        }
+        expect(terminalCommand({ kind: 'codex', runtimeMode: 'auto' })).toBe('codex --ask-for-approval on-request --sandbox workspace-write');
     });
 
     test('says which kinds carry the note, so their start hook leaves it out', () => {

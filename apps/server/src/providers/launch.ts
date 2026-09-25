@@ -60,9 +60,29 @@ export const launchedMode = (launch: AgentLaunch | null): RuntimeMode => {
 
 const quote = (value: string): string => `'${value.replaceAll("'", `'\\''`)}'`;
 
+/*
+ * Codex 0.157 runs a session in a shared background server unless told not to, and that server runs
+ * the hooks with the environment of whichever terminal started it: another node's token, or one a
+ * restarted daemon no longer knows. An older Codex refuses the flag, so it rides only once `--help` names it.
+ */
+let codexNoDaemon = false;
+
+const codexHelp = async (): Promise<string> => {
+    const proc = Bun.spawn(['codex', '--help'], { stdout: 'pipe', stderr: 'ignore' });
+    return await new Response(proc.stdout).text();
+};
+
+/* Asks the installed Codex once whether it takes `--no-daemon`; a Codex that is not there takes nothing. */
+export const probeCodexNoDaemon = async (help: () => Promise<string> = codexHelp): Promise<void> => {
+    codexNoDaemon = (await help().catch(() => '')).includes('--no-daemon');
+};
+
 // What a CLI gets on every line, fresh or resumed, whatever the mode.
-const ALWAYS_FLAGS: Partial<Record<AgentKind, string[]>> = {
-    claude: [quote(CLAUDE_ALLOW_CONTEXT)]
+const alwaysFlags = (kind: AgentKind): string[] => {
+    if (kind === 'claude') {
+        return [quote(CLAUDE_ALLOW_CONTEXT)];
+    }
+    return kind === 'codex' && codexNoDaemon ? ['--no-daemon'] : [];
 };
 
 /*
@@ -85,7 +105,7 @@ export const takesNoteOnLine = (kind: AgentKind): boolean => NOTE_FLAGS[kind] !=
  * otherwise be handed full access.
  */
 const launchFlags = (launch: AgentLaunch, runtimeMode: RuntimeMode | undefined): string[] => {
-    const flags = [...(ALWAYS_FLAGS[launch.kind] ?? []), ...(runtimeMode === undefined ? [] : RUNTIME_FLAGS[launch.kind][runtimeMode])];
+    const flags = [...alwaysFlags(launch.kind), ...(runtimeMode === undefined ? [] : RUNTIME_FLAGS[launch.kind][runtimeMode])];
     const modelFlag = MODEL_FLAG[launch.kind];
     if (launch.model && modelFlag) {
         flags.push(modelFlag, quote(launch.model));

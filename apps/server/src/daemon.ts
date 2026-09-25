@@ -115,7 +115,7 @@ import { DiagramStore } from './projects/diagram-store.ts';
 import { DrawingStore } from './projects/drawing-store.ts';
 import { isTrackedPath } from './git/ignore.ts';
 import { ProjectStore } from './projects/project-store.ts';
-import { takesNoteOnLine } from './providers/launch.ts';
+import { probeCodexNoDaemon, takesNoteOnLine } from './providers/launch.ts';
 import { ProviderRegistry } from './providers/registry.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
 import { SessionError, SessionManager } from './sessions/manager.ts';
@@ -269,6 +269,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     });
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
     const providers = new ProviderRegistry();
+    void probeCodexNoDaemon();
     // A bearer token speaks for a terminal session or a chat, for reading context and for canvas verbs alike.
     const targetForToken = (token: string): string | null => manager.sessionIdForToken(token) ?? chats.chatIdForToken(token);
     const context: ContextStore = new ContextStore({
