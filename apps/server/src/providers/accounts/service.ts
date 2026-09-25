@@ -488,8 +488,8 @@ export class ProviderAccountsService implements AccountLaunches {
         state: ProviderAccountStatus['state'],
         fields: Partial<Omit<ProviderAccountStatus, 'id' | 'kind' | 'state'>> = {}
     ): ProviderAccountStatus {
-        const known = isKnownKind(account.kind);
-        const folder = known ? accountFolder(id, account, this.providers.get(account.kind), this.env) : '';
+        const provider = isKnownKind(account.kind) ? this.providers.get(account.kind) : null;
+        const folder = provider === null ? '' : accountFolder(id, account, provider, this.env);
         return {
             id,
             kind: account.kind,
@@ -498,7 +498,7 @@ export class ProviderAccountsService implements AccountLaunches {
             plan: null,
             organization: null,
             home: folder,
-            ...(known ? { transcripts: transcriptFolder(id, account, this.providers.get(account.kind), this.env) } : {}),
+            ...(provider === null ? {} : { transcripts: transcriptFolder(id, account, provider, this.env) }),
             message: null,
             checkedAt: this.now(),
             ...fields
