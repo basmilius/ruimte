@@ -51,6 +51,21 @@ private func exchange(_ name: String) -> [Transcript.Entry] {
     }
 }
 
+#if compiler(>=6.4)
+@available(macOS 27, *)
+@Test func reasoningPreservesExchangeValidation() throws {
+    let reasoning = Transcript.Entry.reasoning(.init(segments: [.text(.init(content: "Consider the answer."))]))
+    let conversation = exchange("question")
+    try ContextCompaction.validate([conversation[0], reasoning, conversation[1]])
+    #expect(throws: (any Error).self) { try ContextCompaction.validate([conversation[0], reasoning]) }
+
+    let call = Transcript.ToolCall(id: "read", toolName: "Read", arguments: GeneratedContent(properties: ["path": "README.md"]))
+    #expect(throws: (any Error).self) {
+        try ContextCompaction.validate([conversation[0], .toolCalls(.init([call])), reasoning, conversation[1]])
+    }
+}
+#endif
+
 @Test func manifestOrderDoesNotChangeCompatibilityButDefinitionsDo() throws {
     let bridge = ToolBridge(send: { _ in })
     let read = ReadFile(bridge: bridge)

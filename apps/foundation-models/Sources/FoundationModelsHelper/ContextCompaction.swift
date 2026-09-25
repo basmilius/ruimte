@@ -64,7 +64,10 @@ struct ContextCompaction {
         var started = false
         var complete = true
         for entry in history {
+            // Xcode 26's SDK has no reasoning entry, even behind a runtime availability check.
+            #if compiler(>=6.4)
             if #available(macOS 27, *), case .reasoning = entry { continue }
+            #endif
             switch entry {
             case .instructions: continue
             case .prompt:
