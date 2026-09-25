@@ -9,6 +9,7 @@ import type { FakeCli } from '../chat/fake-cli.ts';
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from './test-daemon.ts';
+import { WAITING_GRACE_MS } from './waiting-child.ts';
 
 type Daemon = TestDaemon;
 
@@ -374,8 +375,11 @@ describe('a task wakes the chat that gave it', () => {
         }));
         await daemon.until(() => daemon.tasks.get(child.taskId)?.status === 'cancelled');
         await daemon.chats.kill(child.childId);
+        // The note its question owed is due after the node went, and says nothing about a request that no longer waits.
+        clock.advance(WAITING_GRACE_MS);
         await daemon.worker.settled();
         await daemon.until(() => leadItems(daemon).some((item) => item.kind === 'note' && item.level === 'warning'));
+        expect(leadItems(daemon).filter((item) => item.id.startsWith('waiting-'))).toEqual([]);
 
         expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'cancelled', wake: 'none' });
         expect(leadItems(daemon).find((item) => item.kind === 'subagent')).toMatchObject({ status: 'failed', childId: child.childId });
@@ -761,13 +765,71 @@ describe('resume at reset', () => {
 describe('a child that waits on input', () => {
     const waitingNotes = (daemon: Daemon): ChatItem[] => leadItems(daemon).filter((item) => item.kind === 'note' && item.id.startsWith('waiting-'));
 
-    /* A child with a task that asks, and the lead's note about it in place. */
-    const asking = async (daemon: Daemon, prompt: string): Promise<{ childId: string; taskId: string }> => {
-        const child = await delegate(daemon, 'Lexer', prompt);
-        await daemon.until(() => waitingNotes(daemon).length === 1);
+    const owesNote = (daemon: Daemon, childId: string) => (): boolean =>
+        daemon.enqueued.some((work) => work.kind === 'deliver-waiting' && work.payload.childId === childId);
+
+    /* A child with a task that asks, and the lead's note about it in place once the request waited out the grace. */
+    const asking = async (daemon: Daemon, prompt: string, title = 'Lexer'): Promise<{ childId: string; taskId: string }> => {
+        const notes = waitingNotes(daemon).length;
+        const child = await delegate(daemon, title, prompt);
+        await daemon.until(owesNote(daemon, child.childId));
+        clock.advance(WAITING_GRACE_MS);
+        await daemon.until(() => waitingNotes(daemon).length === notes + 1);
         await daemon.worker.settled();
         return child;
     };
+
+    test('an approval that waits for a person leaves the lead one note, and only once the grace is over', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const child = await delegate(daemon, 'Lexer', 'tool: date');
+        await daemon.until(owesNote(daemon, child.childId));
+
+        clock.advance(WAITING_GRACE_MS - 1);
+        await daemon.worker.settled();
+        expect(waitingNotes(daemon)).toEqual([]);
+
+        clock.advance(1);
+        await daemon.until(() => waitingNotes(daemon).length === 1);
+        await daemon.worker.settled();
+        clock.advance(WAITING_GRACE_MS);
+        await daemon.worker.settled();
+        expect(waitingNotes(daemon).map((item) => item.id)).toEqual([`waiting-${child.childId}-req-1`]);
+        expect(wakeTurns(daemon)).toEqual([]);
+    });
+
+    test('an approval allowed before the grace is over leaves no note, and the child finishing still wakes the lead once', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const child = await delegate(daemon, 'Lexer', 'tool: date');
+        await daemon.until(owesNote(daemon, child.childId));
+
+        // Whatever settles it (the mode, a rule, a person at the child), the request no longer waits when the entry is due.
+        daemon.chats.approve(child.childId, 'req-1', 'allow');
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        clock.advance(WAITING_GRACE_MS);
+        await daemon.worker.settled();
+
+        expect(waitingNotes(daemon)).toEqual([]);
+        expect(daemon.chats.get('chat-lead')?.preambles.join('\n') ?? '').not.toContain('waits for a person');
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'done', wake: 'sent' });
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[child.taskId]]);
+        expect(daemon.outbox.list()).toEqual([]);
+    });
+
+    test('a question nobody answered within the grace leaves exactly one note', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const child = await asking(daemon, 'ask: which color');
+        clock.advance(WAITING_GRACE_MS);
+        await daemon.worker.settled();
+
+        expect(waitingNotes(daemon).map((item) => item.id)).toEqual([`waiting-${child.childId}-req-q`]);
+        expect(daemon.chats.get(child.childId)?.thread.get('question-req-q')).toMatchObject({ state: 'pending' });
+    });
 
     test('an approval leaves the lead one note that a restart does not bring back, and the child finishing wakes it once', async () => {
         const first = await boot();
@@ -858,8 +920,7 @@ describe('a child that waits on input', () => {
         expect(again).toBe('refused\tnot-pending\treq-q no longer waits: it was answered');
         await daemon.until(() => daemon.tasks.get(asker.taskId)?.status === 'done');
 
-        const approver = await delegate(daemon, 'Runner', 'tool: date');
-        await daemon.until(() => waitingNotes(daemon).length === 2);
+        const approver = await asking(daemon, 'tool: date', 'Runner');
         const approval = await verb(daemon, 'chat-lead', 'answer', [approver.childId, 'req-1', '--answer', 'allow']);
         expect(approval[0]).toStartWith('refused\tnot-a-question\treq-1 asks a person to approve Bash;');
         expect(approval.slice(1)).toEqual([`approval\t${approver.childId}\treq-1\tBash\ta person's alone`]);

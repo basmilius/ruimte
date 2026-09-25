@@ -54,8 +54,8 @@ export class OutboxLink {
         this.worker = worker;
     }
 
-    async enqueue(projectId: string, target: string, work: OutboxWork): Promise<void> {
-        await this.require().enqueue(projectId, target, work);
+    async enqueue(projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void> {
+        await this.require().enqueue(projectId, target, work, notBefore);
         this.onEnqueued?.(work);
     }
 
@@ -154,7 +154,8 @@ export interface OutboxWiring {
  */
 export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
     const { link, outbox, projects, lineage, prompts, notices, tasks, chats, sessions } = deps;
-    const enqueue = (projectId: string, target: string, work: OutboxWork): Promise<void> => link.enqueue(projectId, target, work);
+    const enqueue = (projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void> =>
+        link.enqueue(projectId, target, work, notBefore);
     const placed = (nodeId: string): boolean => projects.index.locate(nodeId) !== null;
     const now = deps.now ?? Date.now;
     const failed = (what: string, error: unknown): void => {

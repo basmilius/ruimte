@@ -21,7 +21,8 @@ export interface TaskWiringDeps {
     owedTurn(taskId: string): boolean;
     titleFor(nodeId: string): string | null;
     madeBy(nodeId: string): string | null;
-    enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
+    /* `notBefore` is when the work is due; now without it. */
+    enqueue(projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void>;
     /* Raises attention on a node through the push service, which is also what a client reads marks from. */
     alert(target: 'chat' | 'terminal', nodeId: string, title: string, body: string): void;
     /* Tells the outbox a chat may be free now. */
@@ -86,7 +87,7 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
     });
 
     const requests = chatRequests(deps.chats);
-    const waiting = new WaitingObserver({ openTask: (childId) => deps.tasks.openFor(childId), enqueue: deps.enqueue });
+    const waiting = new WaitingObserver({ openTask: (childId) => deps.tasks.openFor(childId), enqueue: deps.enqueue, now });
 
     deps.chats.observe((event) => {
         coordinator.chatEvent(event);

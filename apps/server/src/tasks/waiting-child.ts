@@ -34,16 +34,25 @@ export const chatRequests = (chats: Pick<ChatManager, 'get' | 'answer'>): ChatRe
 /* The id of the note one request of one child leaves in its parent, so delivering it twice leaves one. */
 export const waitingNoteId = (childId: string, requestId: string): string => `waiting-${childId}-${requestId}`;
 
+/*
+ * How long a request may wait before its parent hears of it. A person watching the child settles one
+ * within seconds (1.5 to 7 seconds in a run of Claude Code 2.1.282), and a note about that is stale
+ * before the parent reads it.
+ */
+export const WAITING_GRACE_MS = 15_000;
+
 export interface WaitingObserverDeps {
     openTask(childId: string): Task | undefined;
-    enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
+    enqueue(projectId: string, target: string, work: OutboxWork, notBefore: number): Promise<void>;
+    now(): number;
     log?(message: string): void;
 }
 
 /*
- * Notes that a child with an open task asked something, and owes its parent one note in the outbox.
- * It never writes the note itself, since it runs inside the broadcast of the child it heard, and it
- * never wakes the parent: a finished task and a message are the only things that wake a chat.
+ * Notes that a child with an open task asked something, and owes its parent one note in the outbox,
+ * due once the request waited out `WAITING_GRACE_MS`. It never writes the note itself, since it runs
+ * inside the broadcast of the child it heard, and it never wakes the parent: a finished task and a
+ * message are the only things that wake a chat.
  */
 export class WaitingObserver {
     private readonly deps: WaitingObserverDeps;
@@ -75,7 +84,12 @@ export class WaitingObserver {
         }
         this.owed.add(key);
         void this.deps
-            .enqueue(task.projectId, task.parentId, { kind: 'deliver-waiting', payload: { childId: chatId, requestId: chatEvent.item.requestId } })
+            .enqueue(
+                task.projectId,
+                task.parentId,
+                { kind: 'deliver-waiting', payload: { childId: chatId, requestId: chatEvent.item.requestId } },
+                this.deps.now() + WAITING_GRACE_MS
+            )
             .catch((e: unknown) => (this.deps.log ?? console.error)(`Owing a note about ${chatId} failed: ${errorText(e)}`));
     }
 }
@@ -147,8 +161,8 @@ export interface DeliverWaitingDeps {
 }
 
 /*
- * Leaves the note in the parent, once. A request that no longer waits (answered, or cancelled by a
- * restart) is news about nothing, so it says nothing.
+ * Leaves the note in the parent, once. A request that no longer waits (answered, allowed, taken back
+ * by its CLI, or cancelled by a restart) is news about nothing, so it says nothing.
  */
 export const deliverWaitingHandler =
     (deps: DeliverWaitingDeps) =>

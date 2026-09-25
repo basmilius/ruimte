@@ -120,8 +120,8 @@ export const lanesOf = (entry: OutboxEntry): string[] => (entry.kind === 'end-ch
  * Work the daemon still owes, one file per entry under `$RUIMTE_HOME/outbox`, removed once it is
  * done. On disk because the owing outlives the process. A node written a moment before a restart
  * still has its agent started after it. Only a verb or a restart puts something here, never a clock;
- * the exceptions are a `resume-limit`, only where a person turned it on, and a `background-limit`,
- * both due at a time.
+ * the exceptions are a `resume-limit`, only where a person turned it on, a `background-limit` and
+ * the grace of a `deliver-waiting`, each due at a time.
  */
 export class OutboxStore {
     readonly dir: string;
