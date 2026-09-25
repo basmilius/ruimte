@@ -52,4 +52,12 @@ describe('CodexTitleReader', () => {
         expect(await reader.forThread('t-1')).toBeNull();
         expect(await reader.forThread('t-9')).toBe('New');
     });
+
+    test('keeps the index of every home apart', async () => {
+        const reader = new CodexTitleReader(index);
+        const other = join(root, 'other_index.jsonl');
+        await writeFile(other, line('t-1', 'Named in another home'));
+        expect(await reader.forThread('t-1', other)).toBe('Named in another home');
+        expect(await reader.forThread('t-1')).toBe('Fix the build');
+    });
 });

@@ -13,6 +13,8 @@ export interface AccountLaunches {
     envFor(kind: AgentKind, account: string | undefined, baseEnv: Env): Env;
     /* The config folder the CLI writes this account's conversations in; null for an account this machine does not have. */
     transcriptFolder(kind: AgentKind, account: string | undefined): string | null;
+    /* The config folder the CLI of this account starts with, a Codex shadow home included; null for an account this machine does not have. */
+    homeFolder(kind: AgentKind, account: string | undefined): string | null;
     /* Whether a conversation of one account can go on under the other: the same CLI, reading the same transcripts. */
     canContinue(kind: AgentKind, from: string | undefined, to: string | undefined): boolean;
     /* What a person calls the account. */

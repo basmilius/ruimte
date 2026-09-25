@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
+import { codexIndexIn } from '../agents/codex-title.ts';
 import { modeOfHook, normalizeHook, settleWaiting } from '../agents/hooks.ts';
 import { isTerminalReply } from './terminal-replies.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
@@ -85,8 +86,8 @@ export interface SessionManagerOptions {
     now?: () => number;
     // Where Claude Code's own name for a session is read from the transcript its hooks point at.
     claudeTitles?: { forTranscript(path: string): Promise<string | null> };
-    // Where the Codex TUI's own name for a thread is read, by the thread id its hooks carry.
-    codexTitles?: { forThread(threadId: string): Promise<string | null> };
+    // Where the Codex TUI's own name for a thread is read, by the thread id its hooks carry, in the index of the home it runs under.
+    codexTitles?: { forThread(threadId: string, index?: string): Promise<string | null> };
     // Lets a test shorten the wait before a session without a name looks again.
     titleRetryMs?: number;
     // Which commands a person on this machine let a shell type. Without it every command is typed.
@@ -672,16 +673,22 @@ export class SessionManager {
     }
 
     /* How the CLI of this agent is asked for its own name, or null for a CLI that writes none down. */
-    private titleReader(agent: AgentInfo): (() => Promise<string | null>) | null {
+    private titleReader(session: Session, agent: AgentInfo): (() => Promise<string | null>) | null {
         const claude = this.claudeTitles;
         const codex = this.codexTitles;
         const path = agent.transcriptPath;
         const threadId = agent.agentSessionId;
+        // The hooks name the transcript, which already sits in the folder of the account the CLI runs under.
         if (agent.kind === 'claude' && claude && path !== null) {
             return () => claude.forTranscript(path);
         }
         if (agent.kind === 'codex' && codex && threadId !== null) {
-            return () => codex.forThread(threadId);
+            if (this.accounts === null) {
+                return () => codex.forThread(threadId);
+            }
+            // A Codex started by hand in a shell opened for another CLI runs under the default account.
+            const home = this.accounts.homeFolder('codex', session.launch?.kind === 'codex' ? session.launch.account : undefined);
+            return home === null ? null : () => codex.forThread(threadId, codexIndexIn(home));
         }
         return null;
     }
@@ -693,7 +700,7 @@ export class SessionManager {
      * nothing tries again a few times, since the name may land after the last hook of a short turn.
      */
     private refreshTitle(session: Session, agent: AgentInfo, retry = false): void {
-        const read = this.titleReader(agent);
+        const read = this.titleReader(session, agent);
         if (read === null) {
             return;
         }

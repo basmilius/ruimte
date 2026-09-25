@@ -10,9 +10,12 @@ let harness: Harness;
 let preferred: string | undefined;
 let accounts: ProviderAccountsService;
 let env: Record<string, string>;
+// The index every Codex title read looked in.
+let codexIndexes: Array<string | undefined>;
 
 beforeEach(async () => {
     preferred = undefined;
+    codexIndexes = [];
     const home = await mkdtemp(join(tmpdir(), 'ruimte-account-'));
     env = { PATH: '/usr/bin:/bin', HOME: home, ANTHROPIC_API_KEY: 'sk-inherited' };
     accounts = await testAccounts({
@@ -20,11 +23,18 @@ beforeEach(async () => {
         env,
         accounts: {
             claude_personal: { kind: 'claude', label: 'Personal', home: '~/.claude_personal' },
-            claude_gone: { kind: 'claude', label: 'Gone', home: '~/.claude_gone' }
+            claude_gone: { kind: 'claude', label: 'Gone', home: '~/.claude_gone' },
+            codex_work: { kind: 'codex', label: 'Work', home: '~/.codex', shadowHome: '~/.codex_work' }
         },
-        folders: new Set([join(home, '.claude_personal')])
+        folders: new Set([join(home, '.claude_personal'), join(home, '.codex'), join(home, '.codex_work')])
     });
-    harness = await makeHarness({ env, accounts, preferredAccount: () => preferred }, home);
+    const codexTitles = {
+        forThread: async (_threadId: string, index?: string) => {
+            codexIndexes.push(index);
+            return 'Named';
+        }
+    };
+    harness = await makeHarness({ env, accounts, preferredAccount: () => preferred, codexTitles }, home);
 });
 
 afterEach(async () => {
@@ -94,5 +104,17 @@ describe('a terminal agent that names no account', () => {
         await restarted.manager.create({ sessionId: 'terminal-a', cols: 80, rows: 24, cwd: home, agent: { kind: 'claude' } });
         expect(restarted.adapter.forSession('terminal-a').options.env.CLAUDE_CONFIG_DIR).toBe(join(home, '.claude_personal'));
         restarted.manager.killAll();
+    });
+});
+
+describe('the name of a Codex terminal agent', () => {
+    test('is read from the index in the home its TUI runs under', async () => {
+        await harness.manager.create({ sessionId: 'codex-work', cols: 80, rows: 24, cwd: harness.home, agent: { kind: 'codex', account: 'codex_work' } });
+        await harness.manager.create({ sessionId: 'codex-default', cols: 80, rows: 24, cwd: harness.home, agent: { kind: 'codex' } });
+        for (const sessionId of ['codex-work', 'codex-default']) {
+            await harness.manager.applyHook('codex', harness.manager.get(sessionId)!.hookToken, { session_id: `thread-${sessionId}`, hook_event_name: 'Stop' });
+        }
+        await harness.agents.settled();
+        expect(codexIndexes).toEqual([join(harness.home, '.codex_work', 'session_index.jsonl'), join(harness.home, '.codex', 'session_index.jsonl')]);
     });
 });

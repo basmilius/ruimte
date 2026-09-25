@@ -219,6 +219,15 @@ export class ProviderAccountsService implements AccountLaunches {
         return transcriptFolder(key, account, this.providers.get(kind), this.env);
     }
 
+    homeFolder(kind: AgentKind, id: string | undefined): string | null {
+        const key = id ?? kind;
+        const account = this.accounts[key];
+        if (account === undefined || account.kind !== kind) {
+            return null;
+        }
+        return accountFolder(key, account, this.providers.get(kind), this.env);
+    }
+
     canContinue(kind: AgentKind, from: string | undefined, to: string | undefined): boolean {
         const fromId = from ?? kind;
         const toId = to ?? kind;
