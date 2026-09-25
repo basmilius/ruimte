@@ -339,6 +339,66 @@ describe('renderTranscript', () => {
     });
 });
 
+describe('a request in a thread', () => {
+    const question = (state: 'pending' | 'answered', answers: Record<string, string> | null): ChatItem => ({
+        id: 'question-req-1',
+        kind: 'question',
+        createdAt: 1,
+        turnId: 't',
+        requestId: 'req-1',
+        questions: [
+            {
+                id: 'color',
+                header: 'Color',
+                question: 'Welke kleur?',
+                choices: [
+                    { label: 'Rood', description: '' },
+                    { label: 'Blauw', description: 'the calm one' }
+                ],
+                multiSelect: false
+            },
+            { id: 'name', header: 'Name', question: 'Which name?', choices: [], multiSelect: false }
+        ],
+        answers,
+        state
+    });
+
+    const approval = (decision: 'pending' | 'allow'): ChatItem => ({
+        id: 'approval-req-2',
+        kind: 'approval',
+        createdAt: 2,
+        turnId: 't',
+        requestId: 'req-2',
+        toolUseId: 'toolu_9',
+        toolName: 'Write',
+        input: { file_path: 'a.ts' },
+        description: 'Write a.ts',
+        canAllowAlways: false,
+        decision
+    });
+
+    test('a waiting question shows its request id, and the question ids and choices answer takes', () => {
+        expect(renderTranscript([question('pending', null)])).toBe(
+            [
+                '> Question (waits for an answer, request req-1): Welke kleur? / Which name?',
+                '- question color: choices Rood | Blauw, or your own words',
+                '- question name: answer in your own words'
+            ].join('\n')
+        );
+    });
+
+    test('an answered question keeps its id and says it was answered, with nothing left to pick', () => {
+        expect(renderTranscript([question('answered', { color: 'Blauw', name: 'Kees' })])).toBe(
+            '> Question (answered, request req-1): Welke kleur? / Which name? -> Blauw, Kees'
+        );
+    });
+
+    test('an approval shows its request id and who it waits for, and what came of it', () => {
+        expect(renderTranscript([approval('pending')])).toBe('> Approval (waits for a person, request req-2): Write: Write a.ts');
+        expect(renderTranscript([approval('allow')])).toBe('> Approval (allowed, request req-2): Write: Write a.ts');
+    });
+});
+
 describe('a subagent of a linked chat', () => {
     const subagentStore = new ContextStore({
         sources: () => [

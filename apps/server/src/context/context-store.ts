@@ -1,4 +1,15 @@
-import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
+import type {
+    ChatApprovalDecision,
+    ChatItem,
+    ChatQuestion,
+    ChatQuestionItem,
+    ContextSource,
+    DeviceInfo,
+    DiagramDocument,
+    DrawingElement,
+    Plan,
+    ProjectCanvasView
+} from '@ruimte/contracts';
 import { renderPlanText } from '@ruimte/plan';
 import { contextChangeNote } from './context-note.ts';
 import { CodedError } from '../coded-error.ts';
@@ -67,6 +78,31 @@ const firstLine = (text: string | null): string =>
         .find((line) => line.trim() !== '')
         ?.trim() ?? '';
 
+/* The request id stays on a request that no longer waits, so the state beside it is what tells a parent not to answer it. */
+const QUESTION_STATES: Record<ChatQuestionItem['state'], string> = {
+    pending: 'waits for an answer',
+    answered: 'answered',
+    cancelled: 'cancelled',
+    dismissed: 'dismissed'
+};
+
+const APPROVAL_STATES: Record<ChatApprovalDecision, string> = {
+    pending: 'waits for a person',
+    allow: 'allowed',
+    'allow-always': 'allowed always',
+    deny: 'denied',
+    cancelled: 'cancelled'
+};
+
+/* What `ruimte-context answer` needs of one waiting question besides the request: its id and what it may pick. */
+const pendingQuestionLine = (question: ChatQuestion): string => {
+    const how =
+        question.choices.length === 0
+            ? 'answer in your own words'
+            : `choices ${question.choices.map((choice) => choice.label).join(' | ')}${question.multiSelect ? ', one or more' : ''}, or your own words`;
+    return `- question ${question.id}: ${how}`;
+};
+
 /*
  * A chat thread as an agent should read it: who said what, and what tools ran. A subagent is one line:
  * the work it did inside its row is its own, and printed between the parent's lines it would read as
@@ -100,9 +136,20 @@ export const renderTranscript = (items: ChatItem[]): string => {
                 }
                 break;
             }
-            case 'question':
+            case 'question': {
+                const answers = item.answers ? ` -> ${Object.values(item.answers).join(', ')}` : '';
                 lines.push(
-                    `> Question: ${item.questions.map((question) => question.question).join(' / ')}${item.answers ? ` -> ${Object.values(item.answers).join(', ')}` : ''}`,
+                    `> Question (${QUESTION_STATES[item.state]}, request ${item.requestId}): ${item.questions.map((question) => question.question).join(' / ')}${answers}`
+                );
+                if (item.state === 'pending') {
+                    lines.push(...item.questions.map(pendingQuestionLine));
+                }
+                lines.push('');
+                break;
+            }
+            case 'approval':
+                lines.push(
+                    `> Approval (${APPROVAL_STATES[item.decision]}, request ${item.requestId}): ${item.toolName}${item.description ? `: ${item.description}` : ''}`,
                     ''
                 );
                 break;

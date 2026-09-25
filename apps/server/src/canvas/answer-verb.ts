@@ -34,7 +34,8 @@ export const answerVerb = defineStandaloneActionVerb({
     detail: [
         'prints\tanswered\tid\trequest\tthe agent and the request that no longer wait',
         'who\tOnly an agent you opened yourself, which the machine wrote down outside the project; a line into a node is not enough',
-        'when\tAn agent with a task of yours that asks something leaves you a note naming the request; it does not wake you, and you read it at the start of your next turn',
+        'find\tThe request id stands in the > Question line ruimte-context read <id> prints, with its question ids and choices under it while it waits, so you can answer in the turn you read it',
+        'when\tAn agent with a task of yours that asks something also leaves you a note naming the request; it does not wake you, and you read it at the start of your next turn',
         "what\tOnly a question that still waits. An approval, a login and any other card are a person's alone, and a question a person answered first is refused",
         "same\tYour answer reaches the agent the way a person's does from that node, and the node shows it as answered",
         'refusals\tnot-yours\tself-answer\tunknown-request\tnot-a-question\tnot-pending\tanswer-twice\tanswers-needed\tunknown-question\tempty-answer\tbad-answers-json\tthe whole set this verb refuses with',

@@ -1548,7 +1548,7 @@ export const ACTION_DEFINITIONS = {
         actors: AGENT,
         input: z.object({
             nodeId: nodeId.describe('The agent that asked, by id; only one you opened yourself'),
-            requestId: z.string().min(1).describe('The request the question came with, as the note about it names it'),
+            requestId: z.string().min(1).describe('The request the question came with, as the > Question line of a read or the note about it names it'),
             answer: z
                 .string()
                 .nullable()
