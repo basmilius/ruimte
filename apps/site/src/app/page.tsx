@@ -7,9 +7,13 @@ import { DrawingVignette } from '@/components/features/DrawingVignette.tsx';
 import { MachinesVignette } from '@/components/features/MachinesVignette.tsx';
 import { SessionsVignette } from '@/components/features/SessionsVignette.tsx';
 import { Film } from '@/components/film/Film.tsx';
-import { NeuralField } from '@/components/NeuralField.tsx';
+import { HeroVisual } from '@/components/hero/HeroVisual.tsx';
+import { HeroVisualMenu } from '@/components/hero/HeroVisualMenu.tsx';
+import { HeroVisualProvider } from '@/components/hero/HeroVisualProvider.tsx';
 import { ContextVignette } from '@/components/features/ContextVignette.tsx';
 import { PlanVignette } from '@/components/features/PlanVignette.tsx';
+import { TeamVignette } from '@/components/features/TeamVignette.tsx';
+import { QuestionVignette } from '@/components/features/QuestionVignette.tsx';
 import { ArrowUpRight } from 'lucide-react';
 import { SiteHeader } from '@/components/SiteHeader.tsx';
 import { PLATFORMS, type Platform, REPOSITORY_URL } from '@/lib/release.ts';
@@ -24,7 +28,7 @@ const LINUX_BUILDS: readonly (readonly [Platform, Platform])[] = [
 
 export default function Home() {
     return (
-        <>
+        <HeroVisualProvider>
             <a href="#content" className="fixed top-3 left-3 z-50 -translate-y-24 rounded-lg bg-text px-4 py-3 text-bg focus:translate-y-0">
                 Skip to content
             </a>
@@ -41,12 +45,10 @@ export default function Home() {
                         <a href={STATION_URL} className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text sm:inline-flex">
                             Web app
                         </a>
-                        <a
-                            href={REPOSITORY_URL}
-                            className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text min-[400px]:inline-flex"
-                        >
+                        <a href={REPOSITORY_URL} className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text md:inline-flex">
                             GitHub
                         </a>
+                        <HeroVisualMenu />
                         <a
                             href="#download"
                             className="inline-flex min-h-10 items-center rounded-full border border-border-strong px-3.5 py-1.5 font-medium transition-colors hover:bg-surface-hover"
@@ -75,10 +77,10 @@ export default function Home() {
                                         className="text-text-muted transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none"
                                     />
                                 </a>
-                                <h1 className="font-display text-[clamp(42px,7vw,76px)] leading-[1.04] font-medium tracking-[-0.045em]">
+                                <h1 className="font-display text-[clamp(42px,7vw,76px)] leading-[1.04] font-semibold tracking-[-0.045em]">
                                     Space for
                                     <br />
-                                    <span className="text-accent">AI Engineering.</span>
+                                    <span className="font-bold text-text">AI Engineering.</span>
                                 </h1>
                                 <p className="mt-6 max-w-[43ch] text-[17px] leading-relaxed text-text-muted sm:text-[19px]">
                                     Your agents, terminals and browsers. One workspace. Connect their context, follow the work, and pick up where you left off.
@@ -87,7 +89,7 @@ export default function Home() {
                                     <DownloadButton />
                                 </div>
                             </div>
-                            <NeuralField />
+                            <HeroVisual />
                         </div>
                         <div id="preview" className="relative z-10 mt-6 lg:mt-12">
                             <Film />
@@ -119,6 +121,14 @@ export default function Home() {
                 </section>
 
                 <div className="mx-auto max-w-[1240px] space-y-24 border-t border-border px-5 py-24 sm:space-y-32 sm:px-8 sm:py-32">
+                    <Feature title="Give the task to a team" eyebrow="Agent teams" picture={<TeamVignette />}>
+                        Ask an agent to investigate a slow checkout. It can send request tracing and query analysis to other agents, then read their results and
+                        bring you one answer.
+                    </Feature>
+                    <Feature title="Keep the decisions that matter" eyebrow="Questions and answers" picture={<QuestionVignette />} flip>
+                        Your agent can build saved carts, but how long should they last? Answer its question right on the canvas, or write your own answer. It
+                        continues with your choice.
+                    </Feature>
                     <Feature title="Close the window, keep the work" eyebrow="Persistent sessions" picture={<SessionsVignette />}>
                         Terminals and agents run on your machine, not in the window. Quit Ruimte halfway through a test run, open it tomorrow, and the terminal
                         is where you left it, scrollback included.
@@ -203,7 +213,7 @@ export default function Home() {
                     </span>
                 </div>
             </footer>
-        </>
+        </HeroVisualProvider>
     );
 }
 

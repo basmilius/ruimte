@@ -72,15 +72,9 @@ export function PhantomCursor({
                 />
                 {mode === 'think' &&
                     [9.3, 12.5, 15.7].map((cx, i) => (
-                        <motion.circle
-                            key={cx}
-                            cx={cx}
-                            cy={12.5}
-                            r={1.1}
-                            fill="#ffffff"
-                            animate={{ cy: [12.5, 11.3, 12.5] }}
-                            transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
-                        />
+                        <motion.g key={cx} animate={{ y: [0, -1.2, 0] }} transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}>
+                            <circle cx={cx} cy={12.5} r={1.1} fill="#ffffff" />
+                        </motion.g>
                     ))}
                 {mode === 'paused' && (
                     <>
