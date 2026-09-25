@@ -82,6 +82,14 @@ describe('the same session in the other kind of view', () => {
         expect(opened).toMatchObject({ kind: 'chat', node: { provider: 'codex', resume: 'sess-2', providerFixed: true } });
     });
 
+    test('the account the session ran under goes along, since another account does not hold it', async () => {
+        useDocument.getState().load(withChat, { activeViewId: 'shell', views: {} });
+        const id = await openSessionInKind('shell', 'chat', { provider: 'codex', resume: 'sess-2', account: 'codex_work' });
+
+        const opened = useDocument.getState().views.find((view) => view.id === id);
+        expect(opened).toMatchObject({ kind: 'chat', node: { provider: 'codex', resume: 'sess-2', account: 'codex_work' } });
+    });
+
     test('a view that is gone opens nothing', async () => {
         useDocument.getState().load(withChat, { activeViewId: 'talk', views: {} });
         expect(await openSessionInKind('nowhere', 'terminal', { provider: 'claude', resume: 'sess-3' })).toBeNull();

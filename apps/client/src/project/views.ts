@@ -161,6 +161,8 @@ export interface SessionHandoff {
     provider: AgentKind;
     resume: string;
     cwd?: string;
+    // Another account's folder does not hold the conversation.
+    account?: string;
 }
 
 /*

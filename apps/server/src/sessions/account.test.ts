@@ -77,11 +77,15 @@ describe('a terminal agent under an account', () => {
 describe('a terminal agent that names no account', () => {
     test('starts under the account a person picked for new agents', async () => {
         preferred = 'claude_personal';
-        await create('terminal-picked');
+        const picked = await create('terminal-picked');
         expect(harness.adapter.forSession('terminal-picked').options.env.CLAUDE_CONFIG_DIR).toBe(join(harness.home, '.claude_personal'));
         expect(harness.manager.get('terminal-picked')!.launch).toMatchObject({ account: 'claude_personal' });
-        await create('terminal-named', 'claude');
+        // The node names none, so the session is where a client learns which one it got.
+        expect(picked.account).toBe('claude_personal');
+        expect(harness.manager.list().find((info) => info.sessionId === 'terminal-picked')?.account).toBe('claude_personal');
+        const named = await create('terminal-named', 'claude');
         expect(harness.adapter.forSession('terminal-named').options.env.CLAUDE_CONFIG_DIR).toBeUndefined();
+        expect(named.account).toBeUndefined();
     });
 
     test('is refused when the account it picked went, and never falls back on the default one', async () => {

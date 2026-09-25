@@ -495,15 +495,18 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                     : {})
             };
         },
-        'view.create': ({ kind, name, url, command, path, provider, device, resume, cwd }) => {
+        'view.create': ({ kind, name, url, command, path, provider, account, device, resume, cwd }) => {
             refuseResumeWithout(resume, provider);
             const agent = agentFor(providers(), kind, provider, command);
+            if (account != null && agent === null) {
+                throw new ActionRefusal('missing-provider', 'An account belongs to an agent CLI. Name the provider as well.');
+            }
             const state = document.getState();
             const title = kind === 'separator' ? VIEW_BASE_NAMES.separator : (name ?? agent?.info.name ?? derivedViewName(state, kind, { url, path, device }));
             const viewId =
                 agent === null
                     ? addViewOf(state, kind, title, { url, command, path, device: device ?? null, cwd: cwd ?? null })
-                    : addAgentView(agent.target, agent.info, title, sessionOf(resume, cwd));
+                    : addAgentView(agent.target, agent.info, title, { ...sessionOf(resume, cwd), ...(account == null ? {} : { account }) });
             if (!viewId) {
                 throw new ActionRefusal('view-create-failed', `Ruimte could not create the ${kind} view.`);
             }
@@ -1441,6 +1444,7 @@ export const createViewAction = async (kind: CreatableViewKind, options: CreateV
         command: null,
         path: options.path ?? null,
         provider: options.provider ?? null,
+        account: options.account ?? null,
         device: options.device ?? null,
         resume: options.resume ?? null,
         cwd: options.cwd ?? null

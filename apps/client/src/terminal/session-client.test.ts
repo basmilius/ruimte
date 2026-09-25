@@ -13,6 +13,7 @@ class FakeTransport implements Transport {
     readonly exited = new Map<string, number>();
     readonly agents = new Map<string, AgentInfo>();
     readonly held = new Map<string, string>();
+    readonly accounts = new Map<string, string>();
     screen = 'screen';
     // While set, a list request waits for it, the way a second round trip does on a slow link.
     listHeld: Promise<void> | null = null;
@@ -40,7 +41,8 @@ class FakeTransport implements Transport {
                     createdAt: 0,
                     attached: 0,
                     exited: false,
-                    ...(this.held.has(id) ? { heldCommand: this.held.get(id) } : {})
+                    ...(this.held.has(id) ? { heldCommand: this.held.get(id) } : {}),
+                    ...(this.accounts.has(id) ? { account: this.accounts.get(id) } : {})
                 } as RequestMap[T]['result']);
             case 'session.runHeld':
                 this.held.delete(id);
@@ -67,7 +69,8 @@ class FakeTransport implements Transport {
             exited: this.exited.has(sessionId),
             exitCode: this.exited.get(sessionId),
             agent: this.agents.get(sessionId) ?? null,
-            ...(this.held.has(sessionId) ? { heldCommand: this.held.get(sessionId) } : {})
+            ...(this.held.has(sessionId) ? { heldCommand: this.held.get(sessionId) } : {}),
+            ...(this.accounts.has(sessionId) ? { account: this.accounts.get(sessionId) } : {})
         }));
     }
 
@@ -113,6 +116,7 @@ class FakeSink implements SessionSink {
     readonly exited = new Map<string, number | undefined>();
     readonly agents = new Map<string, AgentInfo | null>();
     readonly held = new Map<string, string | undefined>();
+    readonly accounts = new Map<string, string | undefined>();
     readonly forgotten: string[] = [];
 
     setAttached(nodeId: string, attached: boolean): void {
@@ -129,6 +133,10 @@ class FakeSink implements SessionSink {
 
     setHeldCommand(nodeId: string, command: string | undefined): void {
         this.held.set(nodeId, command);
+    }
+
+    setAccount(nodeId: string, account: string | undefined): void {
+        this.accounts.set(nodeId, account);
     }
 
     forget(nodeId: string): void {
@@ -180,6 +188,15 @@ describe('SessionClient', () => {
         transport.emit('session.list-changed', {});
         await flush();
         expect(sink.held.get('b')).toBeUndefined();
+    });
+
+    test('keeps the account the daemon started the CLI under, which the node may not name', async () => {
+        const { transport, sink, client } = setup();
+        transport.accounts.set('a', 'claude_work');
+        await client.open('a', { agent: { kind: 'claude' } }, 80, 24);
+        await client.open('b', { agent: { kind: 'claude' } }, 80, 24);
+        expect(sink.accounts.get('a')).toBe('claude_work');
+        expect(sink.accounts.get('b')).toBeUndefined();
     });
 
     test('open creates, attaches and reports the screen', async () => {

@@ -13,6 +13,8 @@ export interface SessionState {
     agent?: AgentInfo | null;
     /* A command from the project file the shell started without, until a person on this machine says yes to it. */
     heldCommand?: string;
+    /* The account the daemon started this shell's CLI under, also when the node names none; absent is the CLI's default account. */
+    account?: string;
 }
 
 /* Rows keyed with `endpointKey`, so a session says which daemon it runs on. */
@@ -24,6 +26,7 @@ export interface SessionSink {
     setExited(nodeId: string, exitCode: number | undefined): void;
     setAgent(nodeId: string, agent: AgentInfo | null): void;
     setHeldCommand(nodeId: string, command: string | undefined): void;
+    setAccount(nodeId: string, account: string | undefined): void;
     forget(nodeId: string): void;
 }
 
@@ -35,6 +38,7 @@ interface SessionsStore {
     setExited(key: string, exitCode: number | undefined): void;
     setAgent(key: string, agent: AgentInfo | null): void;
     setHeldCommand(key: string, command: string | undefined): void;
+    setAccount(key: string, account: string | undefined): void;
     forget(key: string): void;
     restart(key: string): void;
     /* Drops one machine's rows. Its sessions keep running; this client is done looking at them. */
@@ -69,6 +73,15 @@ export const useSessions = create<SessionsStore>((set) => ({
             return { byKey: { ...s.byKey, [key]: { ...current, attached: current?.attached ?? false, heldCommand } } };
         });
     },
+    setAccount(key, account) {
+        set((s) => {
+            const current = s.byKey[key];
+            if (current?.account === account || (!current && account === undefined)) {
+                return {};
+            }
+            return { byKey: { ...s.byKey, [key]: { ...current, attached: current?.attached ?? false, account } } };
+        });
+    },
     forget(key) {
         set((s) => {
             const next = { ...s.byKey };
@@ -90,6 +103,7 @@ export const sessionSinkFor = (endpointId: string): SessionSink => ({
     setExited: (nodeId, exitCode) => useSessions.getState().setExited(endpointKey(endpointId, nodeId), exitCode),
     setAgent: (nodeId, agent) => useSessions.getState().setAgent(endpointKey(endpointId, nodeId), agent),
     setHeldCommand: (nodeId, command) => useSessions.getState().setHeldCommand(endpointKey(endpointId, nodeId), command),
+    setAccount: (nodeId, account) => useSessions.getState().setAccount(endpointKey(endpointId, nodeId), account),
     forget: (nodeId) => useSessions.getState().forget(endpointKey(endpointId, nodeId))
 });
 

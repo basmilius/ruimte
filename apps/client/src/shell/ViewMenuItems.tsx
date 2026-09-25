@@ -75,11 +75,12 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     /* What the daemon knows about the session, which is newer than what the view was opened with. */
     const chat = useChatRow(viewId, (row) => row?.info);
     const agent = useSessionRow(viewId, (row) => row?.agent);
+    const sessionAccount = useSessionRow(viewId, (row) => row?.account);
     const providers = useProviders((state) => state.providers);
     const offersFork = useOffersFork(viewId);
     const transport = useTransport();
 
-    const { asChat, asTerminal } = sessionHandoffs(kind, view, chat, agent, providers);
+    const { asChat, asTerminal } = sessionHandoffs(kind, view, chat, { agent, account: sessionAccount }, providers);
     // The node of a session view works somewhere; without a folder of its own that is the project's.
     const workingFolder = view?.kind === 'chat' || view?.kind === 'terminal' ? (view.node.cwd ?? chat?.cwd ?? folder) : null;
     // What a file view holds is stored against the project folder; the menu acts on the daemon's path.

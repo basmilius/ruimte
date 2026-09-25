@@ -62,13 +62,26 @@ export const viewOffers = (input: ViewOffersInput): ViewOffers => {
 export const sessionHandoffs = (
     kind: ProjectView['kind'],
     view: ProjectView | undefined,
-    chat: { agentSessionId?: string | null; provider: SessionHandoff['provider']; cwd?: string } | undefined,
-    agent: { kind: SessionHandoff['provider']; agentSessionId: string } | null | undefined,
+    chat: { agentSessionId?: string | null; provider: SessionHandoff['provider']; cwd?: string; account?: string } | undefined,
+    session: { agent?: { kind: SessionHandoff['provider']; agentSessionId: string } | null; account?: string } | undefined,
     providers: readonly ProviderInfo[]
-): { asChat: SessionHandoff | null; asTerminal: SessionHandoff | null } => ({
-    asChat:
-        kind === 'terminal' && agent && providers.some((entry) => entry.kind === agent.kind && entry.capabilities.chat)
-            ? { provider: agent.kind, resume: agent.agentSessionId, cwd: view?.kind === 'terminal' ? view.node.cwd : undefined }
-            : null,
-    asTerminal: kind === 'chat' && chat?.agentSessionId ? { provider: chat.provider, resume: chat.agentSessionId, cwd: chat.cwd } : null
-});
+): { asChat: SessionHandoff | null; asTerminal: SessionHandoff | null } => {
+    const agent = session?.agent;
+    // The session's account is the one of the CLI the terminal was opened for, not of one started in it by hand.
+    const account = agent && view?.kind === 'terminal' && view.node.provider === agent.kind ? (session.account ?? view.node.account) : undefined;
+    return {
+        asChat:
+            kind === 'terminal' && agent && providers.some((entry) => entry.kind === agent.kind && entry.capabilities.chat)
+                ? {
+                      provider: agent.kind,
+                      resume: agent.agentSessionId,
+                      cwd: view?.kind === 'terminal' ? view.node.cwd : undefined,
+                      ...(account === undefined ? {} : { account })
+                  }
+                : null,
+        asTerminal:
+            kind === 'chat' && chat?.agentSessionId
+                ? { provider: chat.provider, resume: chat.agentSessionId, cwd: chat.cwd, ...(chat.account === undefined ? {} : { account: chat.account }) }
+                : null
+    };
+};

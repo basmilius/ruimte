@@ -5242,6 +5242,10 @@
       },
       "heldCommand": {
         "type": "string"
+      },
+      "account": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
       }
     },
     "required": [
@@ -5751,6 +5755,10 @@
             },
             "heldCommand": {
               "type": "string"
+            },
+            "account": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
             }
           },
           "required": [

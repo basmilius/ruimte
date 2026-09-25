@@ -41,10 +41,10 @@ export const activeViewFacts = (): ActiveViewFacts | null => {
     }
     const endpointId = currentEndpointId();
     const chatRow = useChats.getState().byKey[endpointKey(endpointId, view.id)];
-    const agent = useSessions.getState().byKey[endpointKey(endpointId, view.id)]?.agent;
+    const session = useSessions.getState().byKey[endpointKey(endpointId, view.id)];
     const folder = useProject.getState().current?.folder ?? null;
     const shared = documentState.shared.includes(view.id);
-    const { asChat, asTerminal } = sessionHandoffs(view.kind, view, chatRow?.info, agent, providersOf(endpointId).providers);
+    const { asChat, asTerminal } = sessionHandoffs(view.kind, view, chatRow?.info, session, providersOf(endpointId).providers);
     const workingFolder = view.kind === 'chat' || view.kind === 'terminal' ? (view.node.cwd ?? chatRow?.info.cwd ?? folder) : null;
     const settled = chatRow ? lastSettledTurn(chatRow.structure, chatRow.order) : null;
     const forkTurn = settled !== null && forkRefusal(chatRow?.info ?? null, chatRow?.structure[settled]) === null ? settled : null;

@@ -9,10 +9,11 @@ export type AgentTarget = 'chat' | 'terminal';
 
 export const agentTargetLabel = (target: AgentTarget): string => i18next.t(`agents:target.${target}`);
 
-/* Where an agent picks up: a CLI session handed on from another chat or terminal, and the folder it works in. */
+/* Where an agent picks up: a CLI session handed on from another chat or terminal, the folder it works in and the account it ran under. */
 export interface AgentSession {
     resume?: string;
     cwd?: string;
+    account?: string;
 }
 
 /*
@@ -25,6 +26,7 @@ export const agentNodeOptions = (target: AgentTarget, provider: ProviderInfo, se
     provider: provider.kind,
     ...(session.resume === undefined ? {} : { resume: session.resume }),
     ...(session.cwd === undefined ? {} : { cwd: session.cwd }),
+    ...(session.account === undefined ? {} : { account: session.account }),
     // A resume goes on in the mode its session has: the daemon puts no mode on a line nobody chose one for.
     ...(target === 'terminal' ? (session.resume === undefined ? { runtimeMode: readChatPreferences().terminalRuntimeMode } : {}) : { providerFixed: true })
 });

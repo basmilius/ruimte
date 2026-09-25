@@ -78,6 +78,7 @@ export class SessionClient {
             });
             this.sink.setExited(nodeId, undefined);
             this.sink.setAgent(nodeId, info.agent ?? null);
+            this.sink.setAccount(nodeId, info.account);
             this.setHeld(nodeId, info.heldCommand);
         } catch (e) {
             // The shell of a previous mount (or a previous tab) is still running; that is the whole point.
@@ -262,6 +263,9 @@ export class SessionClient {
         }
         this.sink.setAgent(nodeId, info?.agent ?? null);
         this.setHeld(nodeId, info?.heldCommand);
+        if (info !== null) {
+            this.sink.setAccount(nodeId, info.account);
+        }
         if (info?.agent && !info.agent.live && !result.exited && !this.resumed.has(nodeId)) {
             // The daemon came back with a record of the agent that ran here; pick it up where it left off.
             this.resumed.add(nodeId);

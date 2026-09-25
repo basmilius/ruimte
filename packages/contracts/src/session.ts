@@ -39,7 +39,9 @@ export const SessionInfoSchema = z.object({
     approvals: z.array(ApprovalRequestSchema).optional(),
     // A command from a project file that no person on this machine approved yet: the shell started
     // without it, and `session.runHeld` types it. A client that does not know the field shows a bare shell.
-    heldCommand: z.string().optional()
+    heldCommand: z.string().optional(),
+    // The account the CLI this shell was opened for runs under, however the daemon settled it; absent is its default account.
+    account: ProviderAccountIdSchema.optional()
 });
 export type SessionInfo = z.infer<typeof SessionInfoSchema>;
 

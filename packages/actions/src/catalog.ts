@@ -638,6 +638,7 @@ export const ACTION_DEFINITIONS = {
             command: z.string().trim().min(1).nullable(),
             path: z.string().trim().min(1).nullable().describe('The file the view shows, relative to the project folder or absolute'),
             provider: AgentKindSchema.nullable(),
+            account: forActors(PERSON, ProviderAccountIdSchema).describe("The account of the provider's CLI on this machine"),
             after: agentField(viewId).describe('Puts the row right under this view; without it the row goes last'),
             device: forActors(PERSON, DeviceReferenceSchema).describe('The simulator or device a device view shows'),
             resume: resumedSession,

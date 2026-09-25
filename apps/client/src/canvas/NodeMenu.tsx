@@ -62,6 +62,7 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
     const canvasStore = useCanvasStore();
     const node = useCanvas((s) => s.nodes[id]);
     const agent = useSessionRow(id, (row) => row?.agent);
+    const sessionAccount = useSessionRow(id, (row) => row?.account);
     const chatSession = useChatRow(id, (row) => row?.info.agentSessionId);
     const chatCwd = useChatRow(id, (row) => row?.info.cwd);
     const chatProvider = useChatRow(id, (row) => row?.info.provider);
@@ -98,13 +99,14 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
     const openInChat = (): void => {
         if (agent) {
             // The account travels with the session, since another account's folder does not hold its conversation.
+            const account = agent.kind === node.provider ? (sessionAccount ?? node.account) : undefined;
             void createNodeAction('chat', {
                 viewId,
                 title: node.title,
                 cwd: node.cwd,
                 resume: agent.agentSessionId,
                 provider: agent.kind,
-                ...(agent.kind === node.provider && node.account !== undefined ? { account: node.account } : {}),
+                ...(account === undefined ? {} : { account }),
                 at: beside
             });
         }

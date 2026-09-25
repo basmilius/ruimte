@@ -8,7 +8,7 @@ import { modeOfHook, normalizeHook, settleWaiting } from '../agents/hooks.ts';
 import { isTerminalReply } from './terminal-replies.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { narrowerMode } from '../canvas/mode.ts';
-import { launchEnv, type AccountLaunches } from '../providers/accounts/launch.ts';
+import { launchEnv, storedAccount, type AccountLaunches } from '../providers/accounts/launch.ts';
 import { contextHint, verbsNote } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
@@ -789,8 +789,15 @@ export class SessionManager {
             exited: session.exited,
             ...(session.exitCode !== null ? { exitCode: session.exitCode } : {}),
             agent: session.agent,
-            ...(session.heldCommand !== null ? { heldCommand: session.heldCommand } : {})
+            ...(session.heldCommand !== null ? { heldCommand: session.heldCommand } : {}),
+            ...this.accountOf(session)
         };
+    }
+
+    private accountOf(session: Session): { account?: string } {
+        const launch = session.launch;
+        const account = launch === null ? undefined : storedAccount(launch.kind, launch.account);
+        return account === undefined ? {} : { account };
     }
 
     private emit(clientId: string, event: SessionEvent): void {
