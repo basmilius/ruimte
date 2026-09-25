@@ -31,13 +31,14 @@ final class TerminalModel {
     func start() {
         guard unsubscribe.isEmpty else { return }
         attachment = client.acquireAttachment("session", id: sessionID)
-        for eventName in ["session.output", "session.resync", "session.exit"] {
+        for eventName in ["session.output", "session.resync", "session.size", "session.exit"] {
             unsubscribe.append(
                 client.subscribe(eventName) { [weak self] payload in
                     guard let self, payload["sessionId"]?.stringValue == sessionID else { return }
                     switch eventName {
                     case "session.output": deliver(payload["data"]?.stringValue ?? "", reset: false)
                     case "session.resync": deliver(payload["screen"]?.stringValue ?? "", reset: true)
+                    case "session.size": follow(payload)
                     default: exited = true
                     }
                 })
@@ -122,6 +123,14 @@ final class TerminalModel {
                 resizeDisplay?(cols, rows)
             }
         } catch { self.error = error.localizedDescription }
+    }
+
+    // A machine from before `session.size` still reports a new grid through the list.
+    func follow(_ size: JSONValue) {
+        guard let cols = size["cols"]?.numberValue, let rows = size["rows"]?.numberValue else { return }
+        self.cols = Int(cols)
+        self.rows = Int(rows)
+        resizeDisplay?(self.cols, self.rows)
     }
 
     func deliver(_ text: String, reset: Bool) {

@@ -101,6 +101,12 @@ final class SessionScreenTests: XCTestCase {
         client.emit("session.resync", .object(["sessionId": .string("terminal"), "screen": .string("replacement")]))
         XCTAssertEqual(displayed.map(\.0), ["snapshot", "live", "replacement"])
         XCTAssertEqual(displayed.map(\.1), [true, false, true])
+        var resized: [Int] = []
+        model.resizeDisplay = { cols, rows in resized += [cols, rows] }
+        client.emit("session.size", .object(["sessionId": .string("other"), "cols": .number(90), "rows": .number(20)]))
+        client.emit("session.size", .object(["sessionId": .string("terminal"), "cols": .number(100), "rows": .number(30)]))
+        XCTAssertEqual(resized, [100, 30])
+        XCTAssertEqual(model.cols, 100)
         model.stop()
         XCTAssertTrue(client.handlers.values.allSatisfy(\.isEmpty))
     }
