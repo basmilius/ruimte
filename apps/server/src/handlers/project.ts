@@ -1,5 +1,4 @@
-import { RequestError, translate, type Dispatcher } from '../dispatcher.ts';
-import { readProjectSettings, sharedPathOf, updateProjectSettings } from '../projects/project-settings.ts';
+import { translate, type Dispatcher } from '../dispatcher.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 
 export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectStore): void => {
@@ -37,18 +36,6 @@ export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectSt
         translate(() => {
             store.letGo(client.id, payload.projectId);
             return {};
-        })
-    );
-
-    dispatcher.register('project.settings', (payload) => translate(() => readProjectSettings(payload.folder)));
-
-    dispatcher.register('project.settings-update', (payload) =>
-        translate(() => {
-            const bad = (payload.settings.worktrees?.share ?? []).filter((path) => sharedPathOf(path) === null);
-            if (bad.length > 0) {
-                throw new RequestError('bad-share-path', `A shared path is relative to the project folder and stays inside it: ${bad.join(', ')}`);
-            }
-            return updateProjectSettings(payload.folder, payload.settings);
         })
     );
 

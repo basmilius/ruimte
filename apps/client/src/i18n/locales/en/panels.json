@@ -554,15 +554,6 @@
       "title": "Worktrees",
       "view": "View"
     },
-    "share": {
-      "description": "Each path is linked from the project folder into every worktree made from now on, such as node_modules. Git has to ignore it; a worktree that exists keeps what it has.",
-      "field": "Paths, separated by commas",
-      "none": "Share paths with new worktrees…",
-      "saveFailed": "Saving the shared paths failed",
-      "some": "Shares {{paths}}",
-      "title": "Share paths with new worktrees",
-      "tooltip": "Paths of the project folder linked into every new worktree"
-    },
     "work": {
       "ahead_one": "{{count}} commit that {{target}} lacks",
       "ahead_other": "{{count}} commits that {{target}} lacks",

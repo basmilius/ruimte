@@ -178,7 +178,6 @@ describe('client actions', () => {
         expect(personal).toContain('diagram.export');
         expect(personal).toContain('project.create');
         expect(personal).toContain('project.delete');
-        expect(personal).toContain('project.updateSettings');
         expect(personal).toContain('process.signal');
         expect(clientActions.catalog(VOICE_ACTION_CALL).map((entry) => entry.name)).toEqual([
             'agents.inspect',
@@ -187,7 +186,6 @@ describe('client actions', () => {
             'project.switch',
             'project.close',
             'project.setAppearance',
-            'project.readSettings',
             'workspace.inspect',
             'target.resolve',
             'view.focus',

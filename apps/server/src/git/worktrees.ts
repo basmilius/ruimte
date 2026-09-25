@@ -1,15 +1,13 @@
 import { createHash } from 'node:crypto';
-import { lstat, mkdir, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { mkdir, realpath, rm, stat } from 'node:fs/promises';
+import { basename, isAbsolute, join, resolve } from 'node:path';
 import type { Worktree, WorktreeWork } from '@ruimte/contracts';
 import type { SessionSink } from '../sessions/manager.ts';
-import { readProjectSettings, sharedPathOf } from '../projects/project-settings.ts';
 import { checkpointIndexFile } from './checkpoints.ts';
 import { resolveBase } from './status.ts';
 import { GitError, git, gitOrThrow as run, runGit, toplevel } from './run.ts';
 import { WorktreeRegister, type WorktreeRecord } from './worktree-register.ts';
 import { ClientSinks } from '../client-sinks.ts';
-import { errorText } from '../error-text.ts';
 
 // Branch names carry slashes; the folder name must not.
 const safeName = (branch: string): string => branch.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'branch';
@@ -64,16 +62,6 @@ export interface Listed {
     locked: boolean;
     prunable: boolean;
 }
-
-// Written once above the lines the daemon adds, so a person reading the file knows where they came from.
-const EXCLUDE_HEADER = '# Ruimte: shared paths linked into worktrees';
-
-/* Whether anything is at a path, a symlink whose target is gone included. */
-const linkExists = (path: string): Promise<boolean> =>
-    lstat(path).then(
-        () => true,
-        () => false
-    );
 
 const exists = (path: string): Promise<boolean> =>
     stat(path).then(
@@ -158,16 +146,14 @@ export class Worktrees {
     readonly root: string;
     private readonly checkpointsRoot: string;
     private readonly now: () => number;
-    private readonly log: (line: string) => void;
     private readonly sinks = new ClientSinks();
     // One removal at a time per repository, so two clients never inspect the same worktree against each other's half-done work.
     private readonly locks = new Map<string, Promise<unknown>>();
 
-    constructor(home: string, now: () => number = Date.now, log: (line: string) => void = console.error) {
+    constructor(home: string, now: () => number = Date.now) {
         this.root = join(home, 'worktrees');
         this.checkpointsRoot = join(home, 'checkpoints');
         this.now = now;
-        this.log = log;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -280,7 +266,6 @@ export class Worktrees {
         if (record) {
             await register.put(path, record);
         }
-        await this.linkShared(repo, path).catch((e: unknown) => this.log(`Linking the shared paths into ${path} failed: ${errorText(e)}`));
         this.announce(main);
         return { path, branch, ...(record ? recordFields(record) : {}) };
     }
@@ -394,71 +379,6 @@ export class Worktrees {
         const merged = await runGit(['merge-tree', '--write-tree', `refs/heads/${target}`, `refs/heads/${branch}`], main);
         const tree = (await git(['rev-parse', `refs/heads/${target}^{tree}`], main))?.trim();
         return merged.code === 0 && tree !== undefined && merged.stdout.split('\n')[0]?.trim() === tree;
-    }
-
-    /*
-     * Share only untracked, ignored paths; otherwise the symlink would appear as a worktree change.
-     * Add the link itself to `info/exclude` because directory-only ignore patterns do not match it.
-     */
-    private async linkShared(folder: string, worktree: string): Promise<void> {
-        const share = (await readProjectSettings(folder)).worktrees?.share ?? [];
-        if (share.length === 0) {
-            return;
-        }
-        const top = await toplevel(folder);
-        const prefix = ((await git(['rev-parse', '--show-prefix'], folder)) ?? '').trim();
-        const excluded: string[] = [];
-        for (const wanted of share) {
-            const path = sharedPathOf(wanted);
-            if (path === null) {
-                this.log(`Not sharing ${wanted} with ${worktree}: a shared path stays inside the project folder.`);
-                continue;
-            }
-            const source = join(folder, path);
-            if (!(await linkExists(source))) {
-                continue;
-            }
-            const inRepository = `${prefix}${path}`;
-            if (((await git(['ls-files', '-z', '--', `:(literal)${inRepository}`], top)) ?? '') !== '') {
-                this.log(`Not sharing ${path} with ${worktree}: git tracks it, so a link would show as a change there.`);
-                continue;
-            }
-            if ((await runGit(['check-ignore', '-q', '--', inRepository], top)).code !== 0) {
-                this.log(`Not sharing ${path} with ${worktree}: git does not ignore it, so a link would count as a new file there. Add it to .gitignore.`);
-                continue;
-            }
-            const target = join(worktree, prefix, path);
-            if (await linkExists(target)) {
-                continue;
-            }
-            await mkdir(dirname(target), { recursive: true });
-            await symlink(source, target);
-            excluded.push(`/${inRepository}`);
-        }
-        if (excluded.length > 0) {
-            await this.exclude(top, excluded);
-        }
-    }
-
-    /* Adds lines to the repository's own `info/exclude`, the ignore file every worktree reads and no commit carries. */
-    private async exclude(top: string, lines: readonly string[]): Promise<void> {
-        const common = (await git(['rev-parse', '--git-common-dir'], top))?.trim();
-        if (!common) {
-            return;
-        }
-        const file = join(isAbsolute(common) ? common : join(top, common), 'info', 'exclude');
-        await this.serialize(file, async () => {
-            const current = await readFile(file, 'utf8').catch(() => '');
-            const present = new Set(current.split('\n').map((line) => line.trim()));
-            const missing = lines.filter((line) => !present.has(line));
-            if (missing.length === 0) {
-                return;
-            }
-            const header = present.has(EXCLUDE_HEADER) ? [] : [EXCLUDE_HEADER];
-            const separator = current === '' || current.endsWith('\n') ? '' : '\n';
-            await mkdir(dirname(file), { recursive: true });
-            await writeFile(file, `${current}${separator}${[...header, ...missing].join('\n')}\n`);
-        });
     }
 
     /* The main checkout of the repository a path is in, and every other worktree git lists. */

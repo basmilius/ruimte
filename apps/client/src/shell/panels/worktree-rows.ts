@@ -183,16 +183,6 @@ export const originLabel = (worktree: Worktree): string | null => {
     return branch === undefined ? null : i18next.t('panels:worktree.origin.from', { branch });
 };
 
-/* The shared paths a person typed, split on commas and new lines, without empty entries or repeats. */
-export const sharePathsOf = (value: string): string[] => [
-    ...new Set(
-        value
-            .split(/[,\n]/)
-            .map((path) => path.trim())
-            .filter((path) => path !== '')
-    )
-];
-
 /*
  * The worktrees nodes that are going work in, leaving out every one a node that stays works in too:
  * removing that one would pull the folder out from under it.

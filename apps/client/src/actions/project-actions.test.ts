@@ -4,7 +4,6 @@ import type { ProjectClosingResult, ProjectSummary } from '@ruimte/contracts';
 import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import { projectActions, type ListedProject, type ProjectMachine } from './project-actions';
 import { useDocument } from '@/state/document';
-import type { Transport } from '@/transport/transport';
 
 const summary = (projectId: string, name: string, closedAt: number | null = null): ProjectSummary => ({
     projectId,
@@ -190,31 +189,5 @@ describe('project actions', () => {
             await registry.confirm(asked.confirmationToken, true, PERSON_ACTION_CALL);
         }
         expect(calls.removed).toEqual(['atlas']);
-    });
-
-    test('settings are read by Voice and written only by a person', async () => {
-        const requests: { type: string; payload: unknown }[] = [];
-        const transport = {
-            request: async (type: string, payload: unknown) => {
-                requests.push({ type, payload });
-                return { worktrees: { share: ['node_modules'] } };
-            }
-        } as unknown as Transport;
-        const { useProject } = await import('@/state/project');
-        useProject.setState({ current: summary('atlas', 'Atlas') });
-        try {
-            const { registry } = fake([listed('atlas', 'Atlas')], { transport: () => transport });
-            expect(await registry.execute('project.readSettings', {}, VOICE_ACTION_CALL)).toMatchObject({ output: { worktrees: { share: ['node_modules'] } } });
-            expect(await registry.execute('project.updateSettings', { settings: { worktrees: { share: [] } } }, VOICE_ACTION_CALL)).toMatchObject({
-                error: { code: 'forbidden-action' }
-            });
-            await registry.execute('project.updateSettings', { settings: { worktrees: { share: ['.env'] } } }, PERSON_ACTION_CALL);
-            expect(requests).toEqual([
-                { type: 'project.settings', payload: { folder: '/work/atlas' } },
-                { type: 'project.settings-update', payload: { folder: '/work/atlas', settings: { worktrees: { share: ['.env'] } } } }
-            ]);
-        } finally {
-            useProject.setState({ current: null });
-        }
     });
 });

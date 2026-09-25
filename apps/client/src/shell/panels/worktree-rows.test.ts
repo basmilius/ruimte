@@ -8,7 +8,6 @@ import {
     originLabel,
     removedToast,
     removeQuestion,
-    sharePathsOf,
     workBadges,
     workBadgesLabel,
     worktreeDiffTab,
@@ -149,10 +148,5 @@ describe('what deleting a node says about its worktree', () => {
             'Works in worktree lexer, which holds 2 new files. It stays; merge or remove it from the git panel.'
         );
         expect(leftBehindLine({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0 } })).toBe('Works in worktree lexer, which holds no work.');
-    });
-
-    test('reads shared paths typed with commas or on lines of their own', () => {
-        expect(sharePathsOf('node_modules, .env\nnode_modules,, ')).toEqual(['node_modules', '.env']);
-        expect(sharePathsOf('')).toEqual([]);
     });
 });

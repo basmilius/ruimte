@@ -1,12 +1,5 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
-import {
-    isRecentProject,
-    PROJECT_ICON_NAMES,
-    type ProjectClosingResult,
-    type ProjectIconChoice,
-    type ProjectSettings,
-    type ProjectSummary
-} from '@ruimte/contracts';
+import { isRecentProject, PROJECT_ICON_NAMES, type ProjectClosingResult, type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { asksFirst, asRefusal } from '@/actions/developer-actions';
 import type { SwitchOutcome } from '@/project/project-switch';
@@ -17,10 +10,6 @@ import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { windowWorkspace } from '@/state/window';
-import type { Transport } from '@/transport/transport';
-
-type Requester = Pick<Transport, 'request'>;
-
 export interface ListedProject {
     endpointId: string;
     projectId: string;
@@ -48,8 +37,6 @@ export interface ProjectMachine {
     chooseIcon(project: ListedProject, icon: ProjectIconChoice): Promise<void>;
     uploadIcon(project: ListedProject, mime: string, base64: string): Promise<void>;
     useFolderIcon(project: ListedProject): Promise<void>;
-    /* The machine of the project in this window, which is where its settings file is read. */
-    transport(): Requester | null;
 }
 
 /* Every project of the union this window knows, with the name of its machine. */
@@ -107,8 +94,7 @@ const LIVE_MACHINE: ProjectMachine = {
             return;
         }
         await (await import('@/project/settings')).setProjectFolderIcon(project.endpointId, project.projectId);
-    },
-    transport: () => windowWorkspace()?.connection.transport ?? null
+    }
 };
 
 const plural = (count: number, noun: string): string => `${count} ${count === 1 ? noun : `${noun}s`}`;
@@ -144,15 +130,6 @@ export function projectActions(document: StoreApi<DocumentState>, overrides: Par
             throw new ActionRefusal('unknown-project', 'That project is not in the list of this window. Read project.list for the ids.');
         }
         return project;
-    };
-
-    const settingsTransport = (): { transport: Requester; folder: string } => {
-        const transport = machine.transport();
-        const folder = useProject.getState().current?.folder ?? null;
-        if (transport === null || folder === null) {
-            throw new ActionRefusal('no-project', 'No project is open in this window.');
-        }
-        return { transport, folder };
     };
 
     const switched = (outcome: SwitchOutcome, what: string): void => {
@@ -243,23 +220,6 @@ export function projectActions(document: StoreApi<DocumentState>, overrides: Par
             }
             const now = listed(endpointId, projectId);
             return { output: { ...projectOutput(now), project: name ?? now.name, icon: image != null ? 'image' : (icon ?? now.summary.icon.kind) } };
-        },
-        'project.readSettings': async () => {
-            const { transport, folder } = settingsTransport();
-            try {
-                return { output: await transport.request('project.settings', { folder }) };
-            } catch (error: unknown) {
-                throw asRefusal(error);
-            }
-        },
-        'project.updateSettings': async ({ settings }) => {
-            const { transport, folder } = settingsTransport();
-            try {
-                const saved: ProjectSettings = await transport.request('project.settings-update', { folder, settings });
-                return { output: saved };
-            } catch (error: unknown) {
-                throw asRefusal(error);
-            }
         }
     };
 }

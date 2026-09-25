@@ -47,7 +47,6 @@ import {
     ProcessAlertKindSchema,
     ProcessGroupKindSchema,
     ProcessSignalSchema,
-    ProjectSettingsSchema,
     RuntimeModeSchema,
     TaskSchema,
     UNKNOWN_KIND,
@@ -520,24 +519,6 @@ export const ACTION_DEFINITIONS = {
             )
         }),
         output: z.object({ project: z.string(), endpointId: z.string(), projectId: z.string(), icon: z.string() })
-    },
-    'project.readSettings': {
-        title: 'Read project settings',
-        description: 'Reads the settings file of the project in this window: which paths every new worktree links in.',
-        effect: 'read',
-        domain: 'projects',
-        actors: PERSON_AND_VOICE,
-        input: z.object({}),
-        output: ProjectSettingsSchema
-    },
-    'project.updateSettings': {
-        title: 'Change project settings',
-        description: 'Writes the settings it names into the settings file of the project in this window and keeps every other key.',
-        effect: 'shared',
-        domain: 'projects',
-        actors: PERSON,
-        input: z.object({ settings: ProjectSettingsSchema }),
-        output: ProjectSettingsSchema
     },
     'workspace.inspect': {
         title: 'Inspect workspace',

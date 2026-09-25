@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
@@ -6,18 +6,14 @@ import { Menu } from '@base-ui-components/react/menu';
 import { ArrowDown, ArrowUp, CircleAlert, Eye, FilePen, FilePlus, FolderX, GitBranch, GitMerge, LocateFixed, Lock, MoreHorizontal, Trash } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Worktree } from '@ruimte/contracts';
-import { performAsPerson } from '@/actions/client-actions';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { PromptDialog } from '@/ui/PromptDialog';
-import { nodesInWorktree, originLabel, sharePathsOf, workBadges, workBadgesLabel, type WorkBadgeKind } from '@/shell/panels/worktree-rows';
+import { nodesInWorktree, originLabel, workBadges, workBadgesLabel, type WorkBadgeKind } from '@/shell/panels/worktree-rows';
 import { nodeWorking } from '@/state/agent-work';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useChats } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { worktreeLists, type WorktreeNode } from '@/state/worktrees';
-import { useToasts } from '@/state/toasts';
-import { useTransport } from '@/transport/context';
 import { FLAT_ROW, MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -59,41 +55,6 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
     const chats = useChats((s) => s.byKey);
     const sectionRef = useRef<HTMLElement>(null);
     const shown = worktrees.length > 0;
-    const transport = useTransport();
-    const [share, setShare] = useState<{ folder: string; paths: readonly string[] } | null>(null);
-    const [sharing, setSharing] = useState(false);
-    const shared = share?.folder === folder ? share.paths : [];
-
-    useEffect(() => {
-        if (!shown) {
-            return;
-        }
-        let cancelled = false;
-        performAsPerson('project.readSettings', {})
-            .then((settings) => {
-                if (!cancelled) {
-                    setShare({ folder, paths: settings.worktrees?.share ?? [] });
-                }
-            })
-            // A machine from before project settings has none to share.
-            .catch(() => undefined);
-        return () => {
-            cancelled = true;
-        };
-    }, [transport, shown, folder]);
-
-    const saveShare = (value: string): void => {
-        const paths = sharePathsOf(value);
-        performAsPerson('project.updateSettings', { settings: { worktrees: { share: paths } } })
-            .then((settings) => {
-                setShare({ folder, paths: settings.worktrees?.share ?? [] });
-                setSharing(false);
-            })
-            .catch((error: unknown) => {
-                const message = error instanceof Error ? error.message : t('error.generic');
-                useToasts.getState().show({ title: t('worktree.share.saveFailed'), description: message, kind: 'error', output: message });
-            });
-    };
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -119,23 +80,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
             <div className="flex h-8 shrink-0 items-center gap-2 px-3">
                 <span className={SECTION_LABEL}>{t('worktree.section.title')}</span>
                 <span className="text-xs text-text-faint tabular-nums">{worktrees.length}</span>
-                <span className="grow" />
-                <Tooltip label={t('worktree.share.tooltip')}>
-                    <button className="min-w-0 truncate text-xs text-text-faint hover:text-text" onClick={() => setSharing(true)}>
-                        {shared.length === 0 ? t('worktree.share.none') : t('worktree.share.some', { paths: shared.join(', ') })}
-                    </button>
-                </Tooltip>
             </div>
-            <PromptDialog
-                open={sharing}
-                title={t('worktree.share.title')}
-                description={t('worktree.share.description')}
-                field={{ mono: true, label: t('worktree.share.field'), initial: shared.join(', '), placeholder: 'node_modules, .env' }}
-                allowEmpty
-                confirmLabel={t('common:action.save')}
-                onConfirm={saveShare}
-                onClose={() => setSharing(false)}
-            />
             <ul className="min-h-0 overflow-y-auto pb-1">
                 {worktrees.map((worktree) => {
                     const working = nodesInWorktree(nodes, worktree);

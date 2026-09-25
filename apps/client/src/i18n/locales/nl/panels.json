@@ -554,15 +554,6 @@
       "title": "Worktrees",
       "view": "Bekijken"
     },
-    "share": {
-      "description": "Elk pad wordt vanuit de projectmap in elke worktree gelinkt die vanaf nu gemaakt wordt, zoals node_modules. Git moet het negeren; een worktree die er al staat houdt wat hij heeft.",
-      "field": "Paden, gescheiden door komma's",
-      "none": "Paden delen met nieuwe worktrees…",
-      "saveFailed": "Gedeelde paden opslaan mislukt",
-      "some": "Deelt {{paths}}",
-      "title": "Paden delen met nieuwe worktrees",
-      "tooltip": "Paden van de projectmap die in elke nieuwe worktree gelinkt worden"
-    },
     "work": {
       "ahead_one": "{{count}} commit die {{target}} mist",
       "ahead_other": "{{count}} commits die {{target}} mist",
