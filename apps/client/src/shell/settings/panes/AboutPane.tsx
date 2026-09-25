@@ -165,6 +165,20 @@ export function AboutPane() {
                 ))}
             </SettingsSection>
             <SettingsSection title={t('about.links.title')}>
+                {canShowReleaseNotes() && (
+                    <SettingsRow
+                        searchId="about.links.releaseNotes"
+                        label={t('about.links.releaseNotes.label')}
+                        description={t('about.links.releaseNotes.description')}
+                        control={
+                            <Tooltip label={t('common:action.open')} name>
+                                <button type="button" className="icon-btn" onClick={() => openReleaseNotes(null)}>
+                                    <Icon icon={ArrowRight} size={16} />
+                                </button>
+                            </Tooltip>
+                        }
+                    />
+                )}
                 {LINKS.map((link) => (
                     <SettingsRow
                         key={link.href}

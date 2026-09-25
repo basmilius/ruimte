@@ -145,7 +145,13 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         label: 'settings:computer.grant.screenRecording.label',
         description: 'settings:computer.grant.screenRecording.description'
     },
-    { id: 'about.updates.auto', section: 'about', label: 'settings:about.updates.auto.label', description: 'settings:about.updates.auto.description' }
+    { id: 'about.updates.auto', section: 'about', label: 'settings:about.updates.auto.label', description: 'settings:about.updates.auto.description' },
+    {
+        id: 'about.links.releaseNotes',
+        section: 'about',
+        label: 'settings:about.links.releaseNotes.label',
+        description: 'settings:about.links.releaseNotes.description'
+    }
 ];
 
 export interface SearchResult {
