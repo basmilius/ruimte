@@ -1,7 +1,6 @@
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { mkdir } from 'node:fs/promises';
 import type { AgentKind } from '@ruimte/contracts';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import { HOOK_EVENTS } from './hooks.ts';
@@ -110,7 +109,9 @@ export const mergeHooks = (config: unknown, kind: AgentKind): { config: Record<s
 type InstallResult = 'unchanged' | 'written';
 
 /* Idempotent: the second run on the same file is a no-op. A file that is not JSON is left alone (throws). */
-export const installHooks = async (path: string, kind: AgentKind): Promise<InstallResult> => {
+export const installHooks = async (link: string, kind: AgentKind): Promise<InstallResult> => {
+    // Written where a symlink points, since a rename over the link itself would cut a dotfiles checkout loose.
+    const path = await realpath(link).catch(() => link);
     let existing: unknown = {};
     try {
         existing = JSON.parse(await readFile(path, 'utf8'));
@@ -123,8 +124,12 @@ export const installHooks = async (path: string, kind: AgentKind): Promise<Insta
     if (!changed) {
         return 'unchanged';
     }
+    const mode = await stat(path).then(
+        (stats) => stats.mode & 0o777,
+        () => 0o644
+    );
     await mkdir(dirname(path), { recursive: true });
-    await writeAtomic(path, `${JSON.stringify(config, null, 2)}\n`, 0o644);
+    await writeAtomic(path, `${JSON.stringify(config, null, 2)}\n`, mode);
     return 'written';
 };
 

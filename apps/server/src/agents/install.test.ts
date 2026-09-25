@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { HOOK_EVENTS } from './hooks.ts';
@@ -102,6 +102,22 @@ describe('installHooks', () => {
         await writeFile(path, '{ not json');
         await expect(installHooks(path, 'claude')).rejects.toThrow('Cannot read');
         expect(await readFile(path, 'utf8')).toBe('{ not json');
+    });
+
+    test('writes through a symlink and keeps the link and the mode', async () => {
+        await mkdir(join(dir, 'dotfiles'));
+        const target = join(dir, 'dotfiles', 'settings.json');
+        await writeFile(target, '{ "model": "opus" }\n');
+        await chmod(target, 0o600);
+        const link = join(dir, 'settings.json');
+        await symlink(join('dotfiles', 'settings.json'), link);
+
+        expect(await installHooks(link, 'claude')).toBe('written');
+        expect((await lstat(link)).isSymbolicLink()).toBe(true);
+        expect((await stat(target)).mode & 0o777).toBe(0o600);
+        const written = JSON.parse(await readFile(target, 'utf8'));
+        expect(written.model).toBe('opus');
+        expect(JSON.stringify(written.hooks)).toContain(HOOK_MARKER);
     });
 });
 
