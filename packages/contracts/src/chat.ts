@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { AgentKindSchema, AgentStatusSchema, SuggestedTitleSchema } from './agent.ts';
 import { WorktreeSchema } from './git.ts';
 import { ModelSelectionSchema, RuntimeModeSchema } from './model.ts';
+import { ProviderAccountIdSchema } from './provider-accounts.ts';
 
 // The client picks the id (its node id), like a terminal session.
 export const ChatIdSchema = z.string().min(1);
@@ -134,6 +135,8 @@ export type ChatTurnLimit = z.infer<typeof ChatTurnLimitSchema>;
 export const ChatInfoSchema = z.object({
     chatId: ChatIdSchema,
     provider: AgentKindSchema,
+    // The account of the provider the CLI runs under; absent is the provider's default account.
+    account: ProviderAccountIdSchema.optional(),
     cwd: z.string(),
     // Set once the CLI announced itself; what a terminal node needs for `--resume`.
     agentSessionId: z.string().nullable(),
@@ -513,6 +516,7 @@ export type ChatEventEnvelope = z.infer<typeof ChatEventEnvelopeSchema>;
 export const ChatCreatePayloadSchema = z.object({
     chatId: ChatIdSchema,
     provider: AgentKindSchema.optional(),
+    account: ProviderAccountIdSchema.optional(),
     cwd: z.string().optional(),
     // A CLI session to continue, for a chat opened from a terminal that ran the agent.
     resume: z.string().optional(),
@@ -523,6 +527,8 @@ export type ChatCreatePayload = z.infer<typeof ChatCreatePayloadSchema>;
 
 export const ChatConfigurePayloadSchema = z.object({
     chatId: ChatIdSchema,
+    // Only an account that can continue this chat's conversation: the same provider and the same transcript folder.
+    account: ProviderAccountIdSchema.optional(),
     selection: ModelSelectionSchema.optional(),
     runtimeMode: RuntimeModeSchema.optional(),
     resumeAtReset: z.boolean().optional()
@@ -540,6 +546,8 @@ export const ChatPreferencesPayloadSchema = z.object({
     terminalRuntimeMode: RuntimeModeSchema.optional(),
     // Per provider, because a model slug only means something in its own CLI's catalog.
     selections: z.partialRecord(AgentKindSchema, ModelSelectionSchema).optional(),
+    // The account last picked per provider.
+    accounts: z.partialRecord(AgentKindSchema, ProviderAccountIdSchema).optional(),
     // When the person last changed it, in milliseconds since the epoch; absent is older than any pick.
     changedAt: z.number().nonnegative().optional()
 });
@@ -764,7 +772,9 @@ export const ChatForkPayloadSchema = z.object({
     // Another CLI to go on with, which gets the conversation as text; absent is the original's CLI.
     provider: AgentKindSchema.optional(),
     // The model of that CLI; absent is the newest composer pick for it.
-    selection: ModelSelectionSchema.optional()
+    selection: ModelSelectionSchema.optional(),
+    // The account to go on under; absent is the original's account when the fork stays with its CLI.
+    account: ProviderAccountIdSchema.optional()
 });
 export type ChatForkPayload = z.infer<typeof ChatForkPayloadSchema>;
 

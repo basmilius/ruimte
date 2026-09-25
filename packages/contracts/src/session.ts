@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { AgentInfoSchema, AgentKindSchema, ApprovalRequestSchema } from './agent.ts';
 import { SessionIdSchema } from './ids.ts';
 import { RuntimeModeSchema } from './model.ts';
+import { ProviderAccountIdSchema } from './provider-accounts.ts';
 
 // An agent CLI to start in a fresh shell. The daemon owns the command line, so every client
 // launches a CLI the same way and a new flag never has to travel over the wire.
@@ -11,7 +12,9 @@ export const AgentLaunchSchema = z.object({
     runtimeMode: RuntimeModeSchema.optional(),
     model: z.string().min(1).optional(),
     // The CLI's own session id, to continue that conversation instead of starting one.
-    resume: z.string().min(1).optional()
+    resume: z.string().min(1).optional(),
+    // The account of the CLI to start under; absent is the CLI's default account.
+    account: ProviderAccountIdSchema.optional()
 });
 export type AgentLaunch = z.infer<typeof AgentLaunchSchema>;
 

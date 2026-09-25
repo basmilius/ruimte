@@ -25,8 +25,9 @@ import {
  * Those wait in the overlay of the private file and are laid back over the node on the way in.
  */
 
-/* The fields of a node that belong to one person, whatever canvas the node is on. */
-const OVERLAY_FIELDS = ['resume', 'runtimeMode', 'worktree'] as const;
+/* The fields of a node that belong to one person, whatever canvas the node is on. An account id
+   names a config folder on this machine and means nothing on another. */
+const OVERLAY_FIELDS = ['resume', 'account', 'runtimeMode', 'worktree'] as const;
 
 /* And the ones that belong to one machine only when they name a place outside the project folder. */
 const PATH_FIELDS = ['cwd', 'path'] as const;

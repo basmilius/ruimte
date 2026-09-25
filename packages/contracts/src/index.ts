@@ -177,6 +177,7 @@ import {
     DiagramTargetPayloadSchema
 } from './diagram.ts';
 import { ProviderListResultSchema } from './model.ts';
+import { ProviderAccountsSavePayloadSchema, ProviderAccountsSchema } from './provider-accounts.ts';
 import {
     PlanApplyPayloadSchema,
     PlanApplyResultSchema,
@@ -273,6 +274,7 @@ export * from './project-sidebar.ts';
 export * from './project-migrate.ts';
 export * from './project-split.ts';
 export * from './protocol.ts';
+export * from './provider-accounts.ts';
 export * from './project-views.ts';
 export * from './server.ts';
 export * from './session.ts';
@@ -355,6 +357,10 @@ export const REQUEST_SCHEMAS = {
     'chat.removeBookmark': { payload: ChatRemoveBookmarkPayloadSchema, result: ChatBookmarksResultSchema },
     'skills.list': { payload: SkillsListPayloadSchema, result: SkillsListResultSchema },
     'provider.list': { payload: EmptySchema, result: ProviderListResultSchema },
+    'providers.list': { payload: EmptySchema, result: ProviderAccountsSchema },
+    'providers.save': { payload: ProviderAccountsSavePayloadSchema, result: ProviderAccountsSchema },
+    // Asks every CLI again and answers once they all did.
+    'providers.refresh': { payload: EmptySchema, result: ProviderAccountsSchema },
     'project.sidebar': { payload: EmptySchema, result: ProjectSidebarResultSchema },
     'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
     'project.open': { payload: ProjectOpenPayloadSchema, result: ProjectOpenResultSchema },
@@ -487,6 +493,7 @@ export const EVENT_SCHEMAS = {
     'git.worktrees': GitWorktreesEventSchema,
     'usage.changed': UsageChangedEventSchema,
     'usage.limitsChanged': UsageLimitsSnapshotSchema,
+    'providers.changed': ProviderAccountsSchema,
     'processes.sample': ProcessesSampleEventSchema,
     'processes.alerts': ProcessesAlertsSchema,
     'computer.status': ComputerUseStatusSchema,

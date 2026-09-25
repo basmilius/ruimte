@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 import { GitDiffScopeSchema } from './git.ts';
 import { RuntimeModeSchema } from './model.ts';
+import { ProviderAccountIdSchema } from './provider-accounts.ts';
 import { DeviceReferenceSchema } from './device.ts';
 import { DrawingFontSchema } from './font.ts';
 
@@ -93,6 +94,8 @@ export const ProjectNodeSchema = z.object({
     resume: z.string().optional(),
     // Terminal and chat: which agent CLI this node hosts; absent on a chat means Claude Code.
     provider: AgentKindSchema.optional(),
+    // Terminal and chat: the account of that CLI on this machine; absent is its default account.
+    account: ProviderAccountIdSchema.optional(),
     // Chat only: the CLI was chosen when the node was made, so the composer offers no other one.
     providerFixed: z.boolean().optional(),
     // Terminal only: the permission mode its agent was started in, so a reload starts it the same way.
@@ -346,6 +349,7 @@ export const StandaloneNodeSchema = ProjectNodeSchema.pick({
     command: true,
     resume: true,
     provider: true,
+    account: true,
     providerFixed: true,
     runtimeMode: true,
     accent: true
@@ -574,6 +578,7 @@ export type ProjectSharedFile = z.infer<typeof ProjectSharedFileSchema>;
 export const ProjectNodeOverlaySchema = ProjectNodeSchema.pick({
     cwd: true,
     resume: true,
+    account: true,
     runtimeMode: true,
     worktree: true,
     path: true

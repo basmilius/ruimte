@@ -36,12 +36,22 @@ describe('splitContent', () => {
         expect(split.shared.version).toBe(PROJECT_VERSION);
     });
 
-    test('the session, the mode and the worktree of a shared node wait in the overlay', () => {
-        const held = node('n1', { resume: 'sess-1', runtimeMode: 'auto-accept-edits', worktree: { path: '/home/bas/wt', branch: 'feat' } });
+    test('the session, the account, the mode and the worktree of a shared node wait in the overlay', () => {
+        const held = node('n1', {
+            resume: 'sess-1',
+            account: 'claude_work',
+            runtimeMode: 'auto-accept-edits',
+            worktree: { path: '/home/bas/wt', branch: 'feat' }
+        });
         const split = splitContent(content([canvas('main', [held, node('n2')])]), ['main'], 1);
         const shared = split.shared.views[0] as ProjectCanvasView;
         expect(shared.nodes[0]).toEqual(node('n1'));
-        expect(split.private.overlay.n1).toEqual({ resume: 'sess-1', runtimeMode: 'auto-accept-edits', worktree: { path: '/home/bas/wt', branch: 'feat' } });
+        expect(split.private.overlay.n1).toEqual({
+            resume: 'sess-1',
+            account: 'claude_work',
+            runtimeMode: 'auto-accept-edits',
+            worktree: { path: '/home/bas/wt', branch: 'feat' }
+        });
         // A node with nothing of its own leaves nothing behind.
         expect(split.private.overlay.n2).toBeUndefined();
     });
@@ -163,6 +173,7 @@ describe('mergeFiles', () => {
     test('a shared file never hands on what only the overlay may carry', () => {
         const pushed = {
             resume: 'theirs',
+            account: 'claude_theirs',
             runtimeMode: 'full-access',
             worktree: { path: '/tmp/wt', branch: 'x' },
             cwd: '/',
