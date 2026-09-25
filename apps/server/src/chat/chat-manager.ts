@@ -468,7 +468,11 @@ export class ChatManager {
             provider,
             command: this.commands[kind] ?? provider.command,
             ...(this.spawn ? { spawn: this.spawn } : {}),
-            env: (chatAccount) => definedEnv(launchEnv(this.accounts, kind, chatAccount, base)),
+            env: (chatAccount) => {
+                const env = definedEnv(launchEnv(this.accounts, kind, chatAccount, base));
+                this.accounts?.launched?.(kind, chatAccount);
+                return env;
+            },
             depth: () => this.depthOf(payload.chatId),
             standalone: () => this.standalone(payload.chatId),
             computer: () => this.computer(),

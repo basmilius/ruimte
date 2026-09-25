@@ -10,6 +10,8 @@ export interface ProviderReading {
 /* What a running turn reports in passing: a few windows, sometimes without their reset or duration. */
 export interface LimitsUpdate {
     kind: UsageProvider;
+    // The account of the chat whose turn reported it; absent is the default account.
+    account?: string;
     plan?: string | null;
     windows: Partial<UsageWindow>[];
 }

@@ -2,8 +2,10 @@ import type { UsageProvider } from '@ruimte/contracts';
 import type { UsageRecord } from './record.ts';
 import type { CodexParserState } from './readers/codex.ts';
 
-/* A different version is thrown away rather than migrated: rebuilding costs one cold scan. */
-const INDEX_VERSION = 1;
+/* Another version is thrown away rather than migrated, since rebuilding costs one cold scan; version 1 is read as it is. */
+const INDEX_VERSION = 2;
+/* Before accounts: every record was the default account's, so it reads as that without a scan. */
+const ACCOUNTLESS_VERSION = 1;
 
 export interface IndexedFile {
     provider: UsageProvider;
@@ -22,11 +24,12 @@ export interface IndexedFile {
 export type UsageIndex = Map<string, IndexedFile>;
 
 /*
- * The index is a few hundred thousand records of seven numbers each, and the same model, session
- * and directory strings over and over. Interning those three and writing a record as a tuple is
- * what keeps the file at a few megabytes instead of tens of them.
+ * The index is a few hundred thousand records of seven numbers each, and the same model, session,
+ * directory and account strings over and over. Interning those and writing a record as a tuple is
+ * what keeps the file at a few megabytes instead of tens of them. The account is one past its place
+ * in its table, and 0 for the default account, which is also what a version 1 row without it means.
  */
-type RecordRow = [number, number, number, number, number, number, number, number, number, number, number, string | 0];
+type RecordRow = [number, number, number, number, number, number, number, number, number, number, number, string | 0, number?];
 
 interface FileRow {
     p: UsageProvider;
@@ -43,6 +46,7 @@ interface IndexFile {
     models: string[];
     sessions: string[];
     folders: string[];
+    accounts?: string[];
     files: Record<string, FileRow>;
 }
 
@@ -66,6 +70,7 @@ export const encodeIndex = (index: UsageIndex): string => {
     const models = new Interner();
     const sessions = new Interner();
     const folders = new Interner();
+    const accounts = new Interner();
     const files: Record<string, FileRow> = {};
     const row = (record: UsageRecord): RecordRow => [
         record.timestampMs,
@@ -79,17 +84,29 @@ export const encodeIndex = (index: UsageIndex): string => {
         record.totals.cacheWrite1h,
         record.totals.output,
         record.totals.reasoning,
-        record.dedupeKey ?? 0
+        record.dedupeKey ?? 0,
+        record.account === undefined ? 0 : accounts.index(record.account) + 1
     ];
     for (const [path, file] of index) {
         files[path] = { p: file.provider, s: file.size, m: file.mtimeMs, o: file.offset, c: file.codex, r: file.records.map(row), t: file.tail.map(row) };
     }
-    const document: IndexFile = { version: INDEX_VERSION, models: models.values, sessions: sessions.values, folders: folders.values, files };
+    const document: IndexFile = {
+        version: INDEX_VERSION,
+        models: models.values,
+        sessions: sessions.values,
+        folders: folders.values,
+        accounts: accounts.values,
+        files
+    };
     return JSON.stringify(document);
 };
 
-const isRow = (row: unknown): row is RecordRow =>
-    Array.isArray(row) && row.length === 12 && row.slice(0, 11).every((value) => typeof value === 'number') && (typeof row[11] === 'string' || row[11] === 0);
+const isRow = (row: unknown, version: number): row is RecordRow =>
+    Array.isArray(row) &&
+    row.length === (version === ACCOUNTLESS_VERSION ? 12 : 13) &&
+    row.slice(0, 11).every((value) => typeof value === 'number') &&
+    (typeof row[11] === 'string' || row[11] === 0) &&
+    (version === ACCOUNTLESS_VERSION || typeof row[12] === 'number');
 
 /*
  * A row that does not read back costs a cold parse of the file it belonged to, never a wrong total,
@@ -103,9 +120,16 @@ export const decodeIndex = (text: string): UsageIndex => {
     } catch {
         return index;
     }
-    if (document?.version !== INDEX_VERSION || !Array.isArray(document.models) || !Array.isArray(document.sessions) || !Array.isArray(document.folders)) {
+    const version = document?.version;
+    if (
+        (version !== INDEX_VERSION && version !== ACCOUNTLESS_VERSION) ||
+        !Array.isArray(document.models) ||
+        !Array.isArray(document.sessions) ||
+        !Array.isArray(document.folders)
+    ) {
         return index;
     }
+    const accounts = Array.isArray(document.accounts) ? document.accounts : [];
     const name = (table: string[], at: number): string | null => (typeof table[at] === 'string' ? table[at] : null);
     for (const [path, file] of Object.entries(document.files ?? {})) {
         if (file.p !== 'claude' && file.p !== 'codex') {
@@ -118,10 +142,13 @@ export const decodeIndex = (text: string): UsageIndex => {
         const decode = (rows: RecordRow[]): UsageRecord[] => {
             const records: UsageRecord[] = [];
             for (const row of rows) {
-                const model = isRow(row) ? name(document.models, row[1]) : null;
-                const sessionId = isRow(row) ? name(document.sessions, row[2]) : null;
-                const cwd = isRow(row) ? name(document.folders, row[3]) : null;
-                if (!isRow(row) || model === null || sessionId === null || cwd === null) {
+                const valid = isRow(row, version);
+                const model = valid ? name(document.models, row[1]) : null;
+                const sessionId = valid ? name(document.sessions, row[2]) : null;
+                const cwd = valid ? name(document.folders, row[3]) : null;
+                const accountAt = valid ? (row[12] ?? 0) : 0;
+                const account = accountAt === 0 ? undefined : name(accounts, accountAt - 1);
+                if (!valid || model === null || sessionId === null || cwd === null || account === null) {
                     broken = true;
                     return records;
                 }
@@ -131,6 +158,7 @@ export const decodeIndex = (text: string): UsageIndex => {
                     model,
                     sessionId,
                     cwd,
+                    ...(account === undefined ? {} : { account }),
                     totals: { calls: row[4], input: row[5], cacheRead: row[6], cacheWrite: row[7], cacheWrite1h: row[8], output: row[9], reasoning: row[10] },
                     dedupeKey: row[11] === 0 ? null : row[11]
                 });

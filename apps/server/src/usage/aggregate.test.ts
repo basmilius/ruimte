@@ -81,4 +81,25 @@ describe('the aggregation', () => {
         expect(Object.keys(mine.byProvider).sort()).toEqual(['claude', 'codex']);
         expect(projects.find((project) => project.folder === '/work/other')!.projectId).toBeNull();
     });
+
+    test('without a filter folds every account together, and with one splits buckets and models per account', async () => {
+        const records = [
+            record({ at: '2026-09-10T09:00:00.000Z' }),
+            record({ at: '2026-09-10T09:00:00.000Z', account: 'claude_work' }),
+            record({ at: '2026-09-10T09:00:00.000Z', account: 'claude_gone' })
+        ];
+        const folded = await aggregate(records, week, prices, []);
+        expect(folded.buckets).toHaveLength(1);
+        expect(folded.buckets[0]!.account).toBeUndefined();
+        expect(folded.models).toHaveLength(1);
+
+        const split = await aggregate(records, { ...week, accounts: ['claude', 'claude_work'] }, prices, []);
+        expect(split.buckets.map((bucket) => [bucket.account, bucket.totals.calls])).toEqual([
+            ['claude', 1],
+            ['claude_work', 1]
+        ]);
+        expect(split.models.map((model) => model.account).sort()).toEqual(['claude', 'claude_work']);
+        expect(split.projects[0]!.totals.calls).toBe(2);
+        expect(split.sessions).toBe(1);
+    });
 });

@@ -19,11 +19,12 @@ const timeoutOf = <T>(work: Promise<T>, ms: number, what: string): Promise<T> =>
  * `claude -p` on the stream-json protocol answers `get_usage` before any prompt, but only once it
  * has been initialized: without that first control request the process waits and says nothing.
  */
-export const probeClaude = async (command: readonly string[]): Promise<ProbeResult> => {
+export const probeClaude = async (command: readonly string[], env: Record<string, string>): Promise<ProbeResult> => {
     const child = Bun.spawn([...command, '-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose'], {
         stdin: 'pipe',
         stdout: 'pipe',
-        stderr: 'ignore'
+        stderr: 'ignore',
+        env
     });
     const write = (frame: unknown): void => {
         child.stdin.write(`${JSON.stringify(frame)}\n`);
@@ -77,13 +78,13 @@ export const probeClaude = async (command: readonly string[]): Promise<ProbeResu
 };
 
 /* The same question to Codex: the app-server answers it over JSON-RPC right after the handshake. */
-export const probeCodex = async (command: readonly string[]): Promise<ProbeResult> => {
+export const probeCodex = async (command: readonly string[], env: Record<string, string>): Promise<ProbeResult> => {
     let transport: CodexTransport | null = null;
     try {
         transport = new CodexTransport({
             command: [...command],
             cwd: process.cwd(),
-            env: process.env as Record<string, string>,
+            env,
             onFrame: () => undefined,
             onExit: () => undefined
         });

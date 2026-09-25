@@ -1,10 +1,11 @@
-import type { UsageSummaryPayload, UsageSummaryResult } from '@ruimte/contracts';
+import type { UsageAccount, UsageSummaryPayload, UsageSummaryResult } from '@ruimte/contracts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
-import { aggregate } from './aggregate.ts';
+import { accountOfRecord, aggregate } from './aggregate.ts';
 import { ExchangeRates } from './exchange.ts';
 import { PriceBook } from './pricing.ts';
 import type { KnownProject } from './projects.ts';
-import { UsageScanner, type ScanReport } from './scanner.ts';
+import type { UsageRecord } from './record.ts';
+import { UsageScanner, type ScanReport, type UsageScannerOptions } from './scanner.ts';
 import type { UsageRootPath } from './roots.ts';
 import { errorText } from '../error-text.ts';
 import { ClientSinks } from '../client-sinks.ts';
@@ -18,8 +19,26 @@ export interface UsageServiceOptions {
     allowPriceFetch?: boolean;
     /* The projects the daemon knows, so a folder can wear the name it has in the app. */
     knownProjects(): Promise<KnownProject[]>;
-    roots?: UsageRootPath[];
+    /* Where the transcripts are, asked again on every scan when a function. */
+    roots?: UsageRootPath[] | (() => UsageRootPath[]);
+    sessionAccounts?: UsageScannerOptions['sessionAccounts'];
+    /* The accounts of the machine, for the page to filter by; absent names none. */
+    accounts?: () => UsageAccount[];
 }
+
+/* The accounts of the machine, and after them any a record names that the machine no longer has, under its id. */
+const withRecordAccounts = (accounts: UsageAccount[], records: readonly UsageRecord[]): UsageAccount[] => {
+    const listed = new Set(accounts.map((account) => account.id));
+    const gone: UsageAccount[] = [];
+    for (const record of records) {
+        const id = accountOfRecord(record);
+        if (!listed.has(id)) {
+            listed.add(id);
+            gone.push({ id, kind: record.provider, label: id });
+        }
+    }
+    return [...accounts, ...gone];
+};
 
 const EMPTY_SCAN: ScanReport = { at: 0, files: 0, changedFiles: 0, durationMs: 0, roots: [] };
 
@@ -34,6 +53,7 @@ export class UsageService {
     private readonly prices: PriceBook;
     private readonly rates: ExchangeRates;
     private readonly knownProjects: UsageServiceOptions['knownProjects'];
+    private readonly accounts: (() => UsageAccount[]) | null;
     private readonly sinks = new ClientSinks((clientId) => this.unfollow(clientId));
     private readonly followers = new Set<string>();
     private report: ScanReport = EMPTY_SCAN;
@@ -42,7 +62,8 @@ export class UsageService {
     private timer: ReturnType<typeof setInterval> | null = null;
 
     constructor(options: UsageServiceOptions) {
-        this.scanner = new UsageScanner(options.home, options.roots);
+        this.scanner = new UsageScanner(options.home, options.roots, options.sessionAccounts ? { sessionAccounts: options.sessionAccounts } : {});
+        this.accounts = options.accounts ?? null;
         this.prices = new PriceBook(options.home, options.allowPriceFetch ?? true);
         this.rates = new ExchangeRates(options.home, options.allowPriceFetch ?? true);
         this.knownProjects = options.knownProjects;
@@ -72,7 +93,8 @@ export class UsageService {
         if (Date.now() - this.report.at > SCAN_TTL_MS) {
             await this.rescan();
         }
-        const { buckets, models, projects, sessions } = await aggregate(this.scanner.records(), payload, this.prices, await this.knownProjects());
+        const records = this.scanner.records();
+        const { buckets, models, projects, sessions } = await aggregate(records, payload, this.prices, await this.knownProjects());
         return {
             from: payload.from,
             to: payload.to,
@@ -92,7 +114,8 @@ export class UsageService {
             },
             pricing: this.prices.pricing,
             rate: this.rates.current,
-            roots: this.report.roots
+            roots: this.report.roots,
+            ...(this.accounts === null ? {} : { accounts: withRecordAccounts(this.accounts(), records) })
         };
     }
 

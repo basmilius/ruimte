@@ -6,7 +6,9 @@ import { join } from 'node:path';
 import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
+import type { ProviderAccountsService } from '../providers/accounts/service.ts';
 import { testAccounts } from '../providers/accounts/test-accounts.ts';
+import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 import { ChatStore } from './chat-store.ts';
 import { claudeProjectSlug } from './claude-transcript.ts';
@@ -38,6 +40,8 @@ let folders: Set<string>;
 let store: ProjectStore;
 let projectId: string;
 let daemon: TestDaemon;
+let accounts: ProviderAccountsService;
+let limitUpdates: LimitsUpdate[];
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-chat-account-'));
@@ -52,7 +56,8 @@ beforeEach(async () => {
     store.release(projectId);
     const env = { PATH: process.env.PATH, HOME: home, ANTHROPIC_API_KEY: 'sk-inherited' };
     folders = new Set([personal, join(home, '.codex'), join(root, 'codex_work')]);
-    const accounts = await testAccounts({
+    limitUpdates = [];
+    accounts = await testAccounts({
         ruimteHome: home,
         env,
         accounts: {
@@ -62,7 +67,15 @@ beforeEach(async () => {
         },
         folders
     });
-    daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), installed: ['claude', 'codex'], accounts, env });
+    daemon = await bootTestDaemon({
+        home,
+        store,
+        clock: new ManualClock(),
+        installed: ['claude', 'codex'],
+        accounts,
+        env,
+        onLimits: (update) => limitUpdates.push(update)
+    });
     daemon.worker.start();
 });
 
@@ -98,6 +111,14 @@ describe('a chat under an account', () => {
         daemon.chats.persistAllSync();
         expect((await new ChatStore(home).read('chat-lead'))!.info.account).toBe('claude_personal');
         expect(daemon.chats.claudeProjectsDirOf({ account: 'claude_personal' })).toBe(join(personal, 'projects'));
+    });
+
+    test('reports what a turn says about the plan on its account, which keeps that account read', async () => {
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude_personal' });
+        expect(accounts.lastLaunchAt('claude_personal')).toBeNull();
+        await say('chat-lead', 'limit:1789000000');
+        expect(limitUpdates.at(-1)).toMatchObject({ kind: 'claude', account: 'claude_personal', windows: [{ id: 'five_hour', used: 1 }] });
+        expect(accounts.lastLaunchAt('claude_personal')).not.toBeNull();
     });
 
     test('refuses a new chat on an account that cannot start, and fails the turn of one whose folder went', async () => {

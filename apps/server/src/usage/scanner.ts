@@ -85,20 +85,55 @@ const parseChunk = (text: string, provider: 'claude' | 'codex', from: number, st
     return { records: counted, tail: records, offset: from + (end === -1 ? 0 : Buffer.byteLength(whole, 'utf8') + 1), codex: committed };
 };
 
+export interface UsageScannerOptions {
+    /* The account of every session the daemon knows ran, by `<provider>\0<sessionId>`, the default one under its kind. */
+    sessionAccounts?: () => ReadonlyMap<string, string>;
+}
+
+type AccountOf = (record: UsageRecord) => string | undefined;
+
+/*
+ * The account a record of a root belongs to, as a record keeps it (absent for the default account):
+ * the one account that writes there, else the one the daemon knows ran the session, else the
+ * default account of the CLI, which is the only one a session nobody started through Ruimte ran under.
+ */
+export const accountResolver = (root: UsageRootPath, sessionAccounts: () => ReadonlyMap<string, string>): AccountOf => {
+    const accounts = root.accounts ?? [root.provider];
+    const stored = (id: string): string | undefined => (id === root.provider ? undefined : id);
+    if (accounts.length === 1) {
+        const only = stored(accounts[0]!);
+        return () => only;
+    }
+    const fallback = accounts.includes(root.provider) ? root.provider : accounts[0]!;
+    return (record) => {
+        const ran = sessionAccounts().get(`${root.provider}\0${record.sessionId}`);
+        return stored(ran !== undefined && accounts.includes(ran) ? ran : fallback);
+    };
+};
+
+const withAccount = (records: UsageRecord[], accountOf: AccountOf): UsageRecord[] =>
+    records.map((record) => {
+        const account = accountOf(record);
+        return account === undefined ? record : { ...record, account };
+    });
+
 /*
  * Read appended transcript bytes incrementally, but restart after rewrites or truncation. Preserve
  * totals for deleted transcripts because their usage still happened.
  */
 export class UsageScanner {
     private readonly home: string;
-    private readonly roots: UsageRootPath[];
+    private readonly roots: () => UsageRootPath[];
+    private readonly sessionAccounts: () => ReadonlyMap<string, string>;
     private index: UsageIndex = new Map();
     private loaded = false;
     private dirty = false;
 
-    constructor(home: string, roots: UsageRootPath[] = usageRoots()) {
+    /* `roots` as a function is asked again on every scan, so an account added since is walked too. */
+    constructor(home: string, roots: UsageRootPath[] | (() => UsageRootPath[]) = usageRoots(), options: UsageScannerOptions = {}) {
         this.home = home;
-        this.roots = roots;
+        this.roots = typeof roots === 'function' ? roots : () => roots;
+        this.sessionAccounts = options.sessionAccounts ?? (() => new Map());
     }
 
     private get file(): string {
@@ -125,8 +160,13 @@ export class UsageScanner {
         const roots: UsageRoot[] = [];
         let files = 0;
         let changedFiles = 0;
+        let sessions: ReadonlyMap<string, string> | null = null;
+        const sessionAccounts = (): ReadonlyMap<string, string> => {
+            sessions ??= this.sessionAccounts();
+            return sessions;
+        };
 
-        for (const root of this.roots) {
+        for (const root of this.roots()) {
             try {
                 const info = await stat(root.path);
                 if (!info.isDirectory()) {
@@ -144,10 +184,11 @@ export class UsageScanner {
                 continue;
             }
             let failure: string | null = null;
+            const accountOf = accountResolver(root, sessionAccounts);
             for (const path of await listJsonl(root.path)) {
                 files += 1;
                 try {
-                    if (await this.readFileInto(path, root.provider)) {
+                    if (await this.readFileInto(path, root.provider, accountOf)) {
                         changedFiles += 1;
                     }
                 } catch (e) {
@@ -175,7 +216,7 @@ export class UsageScanner {
         return foldByKey(all);
     }
 
-    private async readFileInto(path: string, provider: 'claude' | 'codex'): Promise<boolean> {
+    private async readFileInto(path: string, provider: 'claude' | 'codex', accountOf: AccountOf): Promise<boolean> {
         const info = await stat(path);
         const known = this.index.get(path);
         if (known !== undefined && known.provider === provider && known.size === info.size && known.mtimeMs === info.mtimeMs) {
@@ -192,8 +233,8 @@ export class UsageScanner {
             mtimeMs: info.mtimeMs,
             offset: parsed.offset,
             // Folding here keeps the streaming copies of one message out of the index entirely.
-            records: foldByKey([...before, ...parsed.records]),
-            tail: parsed.tail,
+            records: foldByKey([...before, ...withAccount(parsed.records, accountOf)]),
+            tail: withAccount(parsed.tail, accountOf),
             codex: parsed.codex
         };
         this.index.set(path, entry);

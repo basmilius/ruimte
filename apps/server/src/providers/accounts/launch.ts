@@ -17,6 +17,8 @@ export interface AccountLaunches {
     canContinue(kind: AgentKind, from: string | undefined, to: string | undefined): boolean;
     /* What a person calls the account. */
     labelOf(account: string): string;
+    /* A CLI started under this account a moment ago, which is what keeps its plan read. */
+    launched?(kind: AgentKind, account: string | undefined): void;
 }
 
 export const isDefaultAccountOf = (kind: AgentKind, account: string | undefined): boolean => account === undefined || account === kind;

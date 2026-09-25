@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { UsageProvider } from '@ruimte/contracts';
 import { ProviderRegistry } from '../../providers/registry.ts';
-import { UsageMonitor } from './monitor.ts';
+import { UsageMonitor, type LimitAccount, type LimitAccounts } from './monitor.ts';
 import type { ProbeResult } from './probe.ts';
 
 const registry = (installed: readonly UsageProvider[]): ProviderRegistry =>
@@ -76,5 +76,86 @@ describe('the usage monitor', () => {
         await Promise.all([monitor.refresh(true), monitor.refresh(true)]);
         expect(passes).toBe(1);
         monitor.stop();
+    });
+
+    describe('per account', () => {
+        const HOUR = 60 * 60_000;
+        let now = 100 * HOUR;
+        const used = new Map<string, number>();
+        const accounts = (list: LimitAccount[]): LimitAccounts => ({
+            list: () => list,
+            envFor: (_kind, id) => ({ ACCOUNT: id }),
+            lastUsedAt: (id) => used.get(id) ?? null
+        });
+        const claudeAccounts: LimitAccount[] = [
+            { id: 'claude_work', kind: 'claude', label: 'Work', color: 'blue', isDefault: false },
+            { id: 'claude', kind: 'claude', label: 'Claude Code', isDefault: true }
+        ];
+        const probed: string[] = [];
+        const monitorOf = (list: LimitAccount[]): UsageMonitor =>
+            new UsageMonitor({
+                providers: registry(['claude']),
+                accounts: accounts(list),
+                now: () => now,
+                probe: (_kind, _command, env) => {
+                    probed.push(env.ACCOUNT!);
+                    return Promise.resolve(reading(env.ACCOUNT === 'claude' ? 0.1 : 0.7));
+                }
+            });
+
+        test('lists the default account of a CLI first, and reads another only while it was used in the last day or when asked', async () => {
+            probed.length = 0;
+            used.clear();
+            const monitor = monitorOf(claudeAccounts);
+            await monitor.refresh(false);
+            expect(probed).toEqual(['claude']);
+            expect(monitor.snapshot().providers.map((provider) => [provider.kind, provider.account?.id, provider.checkedAt > 0])).toEqual([
+                ['claude', 'claude', true],
+                ['claude', 'claude_work', false]
+            ]);
+
+            used.set('claude_work', now - 2 * HOUR);
+            now += 6 * 60_000;
+            await monitor.refresh(false);
+            expect(probed).toEqual(['claude', 'claude', 'claude_work']);
+            expect(monitor.snapshot().providers[1]).toMatchObject({ account: { id: 'claude_work', label: 'Work', color: 'blue' }, windows: [{ used: 0.7 }] });
+
+            used.set('claude_work', now - 25 * HOUR);
+            now += 6 * 60_000;
+            await monitor.refresh(false);
+            expect(probed.slice(3)).toEqual(['claude']);
+            await monitor.refresh(true);
+            expect(probed.slice(4)).toEqual(['claude', 'claude_work']);
+            monitor.stop();
+        });
+
+        test('a turn moves the bar of the account it ran under', async () => {
+            const monitor = monitorOf(claudeAccounts);
+            await monitor.refresh(true);
+            monitor.applyLive({ kind: 'claude', account: 'claude_work', windows: [{ id: 'five_hour', used: 0.9 }] });
+            const [own, work] = monitor.snapshot().providers;
+            expect(own).toMatchObject({ source: 'probe', windows: [{ used: 0.1 }] });
+            expect(work).toMatchObject({ source: 'event', windows: [{ used: 0.9, resetsAt: 1_000 }] });
+            monitor.stop();
+        });
+
+        test('says why an account could not be read', async () => {
+            const monitor = new UsageMonitor({
+                providers: registry(['claude']),
+                accounts: {
+                    ...accounts(claudeAccounts),
+                    envFor: (_kind, id) => {
+                        if (id === 'claude_work') {
+                            throw new Error('its folder is missing');
+                        }
+                        return {};
+                    }
+                },
+                probe: () => Promise.resolve(reading(0.2))
+            });
+            await monitor.refresh(true);
+            expect(monitor.snapshot().providers[1]).toMatchObject({ unavailable: { reason: 'failed', message: 'its folder is missing' } });
+            monitor.stop();
+        });
     });
 });

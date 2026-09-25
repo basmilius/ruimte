@@ -242,6 +242,9 @@ export class SessionManager {
         const launch = this.startingLaunch(options.sessionId, options.agent, restoredAgent !== undefined, ranUnder);
         // On the shell and not on the typed line, so a resume and whatever a person types there run under the same account.
         const env = launch ? launchEnv(this.accounts, launch.kind, launch.account, this.env) : this.env;
+        if (launch) {
+            this.accounts?.launched?.(launch.kind, launch.account);
+        }
 
         let restoredScreen: string | undefined;
         if (existing) {

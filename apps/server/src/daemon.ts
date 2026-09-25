@@ -125,6 +125,7 @@ import { SessionError, SessionManager } from './sessions/manager.ts';
 import { CommandApprovals, commandsSet } from './sessions/command-approvals.ts';
 import { startCwdGuard } from './canvas/project-paths.ts';
 import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
+import { limitAccountsOf, sessionAccountsOf, usageAccountsOf, usageRootsOf } from './usage/accounts.ts';
 import { UsageMonitor } from './usage/limits/monitor.ts';
 import { UsageService } from './usage/usage-service.ts';
 import { errorText } from './error-text.ts';
@@ -444,8 +445,21 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const deviceControl = new DeviceControl();
     const deviceDriver = new DeviceDriver({ home: config.home, manager: devices, gate: deviceControl });
     const statuses = new GitStatusWatcher();
-    const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
-    const limits = new UsageMonitor({ providers });
+    const nameOfCli = (kind: AgentKind): string => providers.get(kind).name;
+    const usage = new UsageService({
+        home: config.home,
+        allowPriceFetch: config.priceFetch,
+        knownProjects: () => projects.known(),
+        roots: () => usageRootsOf(providerAccounts),
+        sessionAccounts: () =>
+            sessionAccountsOf(
+                chats.list(),
+                manager.list().map(({ sessionId }) => ({ agent: manager.get(sessionId)?.agent ?? null, launch: manager.get(sessionId)?.launch ?? null }))
+            ),
+        accounts: () => usageAccountsOf(providerAccounts, nameOfCli)
+    });
+    const limits = new UsageMonitor({ providers, accounts: limitAccountsOf(providerAccounts, nameOfCli, process.env) });
+    providerAccounts.listen(() => limits.accountsChanged());
     const sampler = await createSampler(process.platform, config.home);
     const processes = new ProcessMonitor({
         sampler,

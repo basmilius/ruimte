@@ -8,6 +8,8 @@ export interface UsageRecord {
     sessionId: string;
     /* The directory the call was made in, which is what a per-project breakdown folds. */
     cwd: string;
+    /* The account the call was made under; absent is the default account of the CLI. */
+    account?: string;
     totals: UsageTotals;
     /* What identifies the message this line reports on, or null when nothing does. */
     dedupeKey: string | null;

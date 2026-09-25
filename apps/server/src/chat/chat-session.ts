@@ -112,6 +112,8 @@ export class ChatSession {
     private restartPending = false;
     // The selection the running CLI was started on; a window it reports is that one's, not a newer pick's.
     private launchedSelection: ModelSelection | null = null;
+    // The account the running CLI was started under, which what it reports about a plan belongs to.
+    private launchedAccount: string | undefined = undefined;
     // The links at the previous turn; null until the first turn, whose backend hears about them at launch.
     private lastSources: ContextSource[] | null = null;
     // The checkpoint of the turn in flight; everything queued for that turn waits for it.
@@ -1048,6 +1050,7 @@ export class ChatSession {
         let env: Record<string, string>;
         try {
             env = this.options.env(this.thread.info.account);
+            this.launchedAccount = this.thread.info.account;
         } catch (error) {
             return Promise.reject(error instanceof Error ? error : new Error(String(error)));
         }
@@ -1115,7 +1118,7 @@ export class ChatSession {
             return;
         }
         if (event.type === 'limits') {
-            this.options.onLimits?.(event.update);
+            this.options.onLimits?.(this.launchedAccount === undefined ? event.update : { ...event.update, account: this.launchedAccount });
             return;
         }
         if (event.type === 'title') {

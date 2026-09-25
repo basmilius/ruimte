@@ -52,6 +52,7 @@ interface BucketAccumulator {
     slot: string;
     provider: UsageProvider;
     model: string;
+    account: string | null;
     totals: UsageTotals;
     costUsd: number;
     priced: boolean;
@@ -62,6 +63,7 @@ interface BucketAccumulator {
 interface ModelAccumulator {
     provider: UsageProvider;
     model: string;
+    account: string | null;
     totals: UsageTotals;
     costUsd: number;
     priced: boolean;
@@ -75,6 +77,9 @@ interface ProjectAccumulator {
     totals: UsageTotals;
     costUsd: number;
 }
+
+/* The account a record was made under, the default one under its CLI's kind. */
+export const accountOfRecord = (record: UsageRecord): string => record.account ?? record.provider;
 
 /*
  * Every record of the period folded three ways at once: per slot for the chart, per model for the
@@ -96,8 +101,14 @@ export const aggregate = async (
     const sessions = new Set<string>();
     const resolver = new ProjectResolver(known);
     const folders = new Map<string, string>();
+    // A filter splits buckets and models per account; without one they fold the way they did before accounts.
+    const only = payload.accounts === undefined ? null : new Set(payload.accounts);
 
     for (const record of records) {
+        const account = only === null ? null : accountOfRecord(record);
+        if (only !== null && !only.has(account!)) {
+            continue;
+        }
         const slot = slotOf(format, record.timestampMs, payload.resolution);
         const day = slot.slice(0, 10);
         if (day < payload.from || day > payload.to) {
@@ -106,13 +117,14 @@ export const aggregate = async (
         const { price, basis, pricedAs } = prices.look(record.model);
         const cost = price === null ? 0 : costOf(record.totals, price);
 
-        const bucketKey = `${slot}\0${record.provider}\0${record.model}`;
+        const bucketKey = `${slot}\0${record.provider}\0${record.model}\0${account ?? ''}`;
         let bucket = buckets.get(bucketKey);
         if (bucket === undefined) {
             bucket = {
                 slot,
                 provider: record.provider,
                 model: record.model,
+                account,
                 totals: emptyTotals(),
                 costUsd: 0,
                 priced: false,
@@ -130,10 +142,10 @@ export const aggregate = async (
             sessions.add(`${record.provider}\0${record.sessionId}`);
         }
 
-        const modelKey = `${record.provider}\0${record.model}`;
+        const modelKey = `${record.provider}\0${record.model}\0${account ?? ''}`;
         let model = models.get(modelKey);
         if (model === undefined) {
-            model = { provider: record.provider, model: record.model, totals: emptyTotals(), costUsd: 0, priced: false };
+            model = { provider: record.provider, model: record.model, account, totals: emptyTotals(), costUsd: 0, priced: false };
             models.set(modelKey, model);
             modelBasis.set(modelKey, { basis, pricedAs });
         }
@@ -165,16 +177,24 @@ export const aggregate = async (
                 slot: bucket.slot,
                 provider: bucket.provider,
                 model: bucket.model,
+                ...(bucket.account === null ? {} : { account: bucket.account }),
                 totals: bucket.totals,
                 costUsd: bucket.priced ? bucket.costUsd : null,
                 cacheSavingsUsd: bucket.cacheSavingsUsd,
                 sessions: bucket.sessions.size
             }))
-            .sort((a, b) => a.slot.localeCompare(b.slot) || a.provider.localeCompare(b.provider) || a.model.localeCompare(b.model)),
+            .sort(
+                (a, b) =>
+                    a.slot.localeCompare(b.slot) ||
+                    a.provider.localeCompare(b.provider) ||
+                    a.model.localeCompare(b.model) ||
+                    (a.account ?? '').localeCompare(b.account ?? '')
+            ),
         models: [...models.entries()]
             .map(([key, model]) => ({
                 provider: model.provider,
                 model: model.model,
+                ...(model.account === null ? {} : { account: model.account }),
                 totals: model.totals,
                 costUsd: model.priced ? model.costUsd : null,
                 priceBasis: modelBasis.get(key)?.basis ?? 'unknown',

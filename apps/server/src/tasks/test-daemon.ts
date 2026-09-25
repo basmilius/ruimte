@@ -35,6 +35,7 @@ import { nodeAccount, nodeMode, startAgentWork } from '../outbox/start-agent.ts'
 import { OutboxLink, wireOutbox } from '../outbox/wiring.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { AccountLaunches } from '../providers/accounts/launch.ts';
+import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
@@ -90,6 +91,8 @@ export interface TestDaemonOptions {
     accounts?: AccountLaunches;
     /* The environment every CLI starts from. */
     env?: Record<string, string | undefined>;
+    /* What a running turn says about the plan of its account. */
+    onLimits?: (update: LimitsUpdate) => void;
 }
 
 export const bootTestDaemon = async ({
@@ -102,7 +105,8 @@ export const bootTestDaemon = async ({
     claudeCli = fakeClaude,
     machine = { resumeAtReset: false },
     accounts,
-    env = { PATH: process.env.PATH, HOME: home }
+    env = { PATH: process.env.PATH, HOME: home },
+    onLimits
 }: TestDaemonOptions): Promise<TestDaemon> => {
     const prompts = new PendingPromptStore(home);
     await prompts.load();
@@ -151,6 +155,7 @@ export const bootTestDaemon = async ({
         },
         env,
         ...(accounts ? { accounts } : {}),
+        ...(onLimits ? { onLimits } : {}),
         firstPrompt: (id) => prompts.take(id),
         onInterruptedRun: outboxLink.onInterruptedRun,
         messages: (chatId) => notices.take(chatId).map(renderNotice),

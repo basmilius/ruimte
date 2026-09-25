@@ -115,6 +115,9 @@ export class ProviderAccountsService implements AccountLaunches {
     private readonly watches = new Map<string, LoginWatch>();
     private writes: Promise<unknown> = Promise.resolve();
     private readonly sinks = new ClientSinks();
+    private readonly listeners = new Set<() => void>();
+    // When a CLI last started under each account, by id; kept in memory, so a restart forgets it.
+    private readonly launches = new Map<string, number>();
     private readonly states = new Map<string, AccountState>();
     private stored: StoredAccounts = {};
     private accounts: ProviderAccountMap = wireAccounts({});
@@ -232,6 +235,23 @@ export class ProviderAccountsService implements AccountLaunches {
 
     labelOf(id: string): string {
         return this.accounts[id]?.label ?? id;
+    }
+
+    launched(kind: AgentKind, id: string | undefined): void {
+        this.launches.set(id ?? kind, this.now());
+    }
+
+    /* When a CLI last started under this account; null when none did since the daemon started. */
+    lastLaunchAt(id: string): number | null {
+        return this.launches.get(id) ?? null;
+    }
+
+    /* Told whenever the accounts or what their CLIs said changed, after the clients were. */
+    listen(listener: () => void): () => void {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
     }
 
     /* Checks every account once at once, and the ones due on the clock after that. */
@@ -582,5 +602,8 @@ export class ProviderAccountsService implements AccountLaunches {
 
     private emit(): void {
         this.sinks.emit({ event: 'providers.changed', payload: this.snapshot() });
+        for (const listener of this.listeners) {
+            listener();
+        }
     }
 }

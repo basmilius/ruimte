@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { UsageScanner } from './scanner.ts';
@@ -151,5 +151,70 @@ describe('the usage scanner', () => {
         await writeFile(path, partial + assistant('msg_2', 5, 60) + assistant('msg_3', 9, 20));
         await scanner.scan();
         expect(scanner.records()).toHaveLength(3);
+    });
+
+    const codexSession = (threadId: string, input: number): string =>
+        [
+            JSON.stringify({ type: 'session_meta', timestamp: '2026-09-10T09:00:00.000Z', payload: { id: threadId, cwd: '/work/repo' } }),
+            JSON.stringify({ type: 'turn_context', timestamp: '2026-09-10T09:00:01.000Z', payload: { model: 'gpt-5.6-sol' } }),
+            JSON.stringify({
+                type: 'event_msg',
+                timestamp: '2026-09-10T09:00:02.000Z',
+                payload: { type: 'token_count', info: { total_token_usage: { input_tokens: input, cached_input_tokens: 0, output_tokens: 30 } } }
+            }),
+            ''
+        ].join('\n');
+
+    test('gives a record the one account of its folder, and in a folder accounts share the account that ran its session', async () => {
+        const { home, claude, codex } = await workspace();
+        const work = join(home, 'claude_work', 'projects');
+        await mkdir(work, { recursive: true });
+        await writeFile(join(claude, 'a.jsonl'), assistant('msg_1', 0, 40));
+        await writeFile(join(work, 'b.jsonl'), assistant('msg_2', 0, 40));
+        await writeFile(join(codex, 'ran.jsonl'), codexSession('t-work', 500));
+        await writeFile(join(codex, 'unknown.jsonl'), codexSession('t-elsewhere', 700));
+        const roots: UsageRootPath[] = [
+            { provider: 'claude', path: claude, accounts: ['claude'] },
+            { provider: 'claude', path: work, accounts: ['claude_work'] },
+            { provider: 'codex', path: codex, accounts: ['codex', 'codex_work'] }
+        ];
+        const scanner = new UsageScanner(home, roots, { sessionAccounts: () => new Map([['codex\0t-work', 'codex_work']]) });
+        await scanner.scan();
+        const accountOf = (sessionOrMessage: string): string | undefined =>
+            scanner.records().find((record) => record.sessionId === sessionOrMessage || record.dedupeKey?.includes(sessionOrMessage))?.account;
+        expect(accountOf('msg_1')).toBeUndefined();
+        expect(accountOf('msg_2')).toBe('claude_work');
+        expect(accountOf('t-work')).toBe('codex_work');
+        expect(accountOf('t-elsewhere')).toBeUndefined();
+
+        // Kept in the index, so a fresh scanner knows it without asking again.
+        const warm = new UsageScanner(home, roots);
+        await warm.scan();
+        expect(
+            warm
+                .records()
+                .map((record) => record.account ?? null)
+                .sort()
+        ).toEqual(['claude_work', 'codex_work', null, null]);
+    });
+
+    test('reads an index from before accounts as the default account, without reading a transcript again', async () => {
+        const { home, claude, roots } = await workspace();
+        await writeFile(join(claude, 'a.jsonl'), assistant('msg_1', 0, 40) + assistant('msg_2', 5, 60));
+        await new UsageScanner(home, roots).scan();
+        const file = join(home, 'usage', 'index.json');
+        const index = JSON.parse(await readFile(file, 'utf8')) as { version: number; accounts?: string[]; files: Record<string, { r: unknown[][] }> };
+        index.version = 1;
+        delete index.accounts;
+        for (const entry of Object.values(index.files)) {
+            entry.r = entry.r.map((row) => row.slice(0, 12));
+        }
+        await writeFile(file, JSON.stringify(index));
+
+        const scanner = new UsageScanner(home, roots);
+        const report = await scanner.scan();
+        expect(report.changedFiles).toBe(0);
+        expect(scanner.records()).toHaveLength(2);
+        expect(scanner.records().every((record) => record.account === undefined)).toBe(true);
     });
 });
