@@ -97,6 +97,8 @@ export interface SessionManagerOptions {
     checkCwd?: (sessionId: string, cwd: string) => Promise<void>;
     // The accounts a launch may name; without them only a CLI's default account starts.
     accounts?: AccountLaunches;
+    // The account a person picked for new agents of a CLI, for a first launch that names none.
+    preferredAccount?: (kind: AgentKind) => string | undefined;
 }
 
 export interface CommandGate {
@@ -153,6 +155,7 @@ export class SessionManager {
     private readonly modeCeiling: (sessionId: string) => RuntimeMode | null;
     private readonly checkCwd: (sessionId: string, cwd: string) => Promise<void>;
     private readonly accounts: AccountLaunches | null;
+    private readonly preferredAccount: (kind: AgentKind) => string | undefined;
     // Told when the process tree of a session is about to change or just did: the end of a turn, an exit, a kill.
     onProcessChange: ((sessionId: string, phase: ProcessChangePhase) => void) | null = null;
     // Whether the process monitor found the agent of a session gone while its status still says it runs.
@@ -181,6 +184,7 @@ export class SessionManager {
         this.modeCeiling = options.modeCeiling ?? (() => null);
         this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
         this.accounts = options.accounts ?? null;
+        this.preferredAccount = options.preferredAccount ?? (() => undefined);
     }
 
     /* The session a hook or context token belongs to. */
@@ -230,20 +234,22 @@ export class SessionManager {
         }
         const cwd = options.cwd ?? this.env.HOME ?? homedir();
         await this.checkCwd(options.sessionId, cwd);
-        const launch = this.withinCeiling(options.sessionId, options.agent);
+        const restored = existing
+            ? { agent: existing.agent ?? undefined, account: existing.launch?.kind === options.agent?.kind ? existing.launch?.account : undefined }
+            : await this.agents?.readRecord(options.sessionId);
+        const restoredAgent: AgentInfo | undefined = restored?.agent;
+        const ranUnder = restoredAgent?.kind === options.agent?.kind ? restored?.account : undefined;
+        const launch = this.startingLaunch(options.sessionId, options.agent, restoredAgent !== undefined, ranUnder);
         // On the shell and not on the typed line, so a resume and whatever a person types there run under the same account.
         const env = launch ? launchEnv(this.accounts, launch.kind, launch.account, this.env) : this.env;
 
         let restoredScreen: string | undefined;
-        let restoredAgent: AgentInfo | undefined;
         if (existing) {
             // The previous shell of this id ended on its own; its last screen is worth as much as a disk snapshot.
             restoredScreen = await existing.serializeScreen();
-            restoredAgent = existing.agent ?? undefined;
             this.remove(existing);
         } else {
             restoredScreen = (await this.snapshots?.read(options.sessionId)) ?? undefined;
-            restoredAgent = (await this.agents?.read(options.sessionId)) ?? undefined;
         }
 
         const held = options.command && this.commands?.approved(options.sessionId, options.command) === false ? options.command : null;
@@ -266,6 +272,20 @@ export class SessionManager {
         this.tokens.set(session.hookToken, session.id);
         this.broadcastListChanged();
         return this.info(session);
+    }
+
+    /*
+     * The launch a node asked for, with the account it runs under settled. One that names none keeps the
+     * account its CLI ran under here before, so a resume finds its transcript; only a first start takes
+     * the person's pick for new agents of this CLI, and else the CLI's default account.
+     */
+    private startingLaunch(sessionId: string, requested: AgentLaunch | undefined, ranBefore: boolean, ranUnder: string | undefined): AgentLaunch | undefined {
+        const launch = this.withinCeiling(sessionId, requested);
+        if (launch === undefined || launch.account !== undefined) {
+            return launch;
+        }
+        const account = ranBefore ? ranUnder : launch.resume === undefined ? this.preferredAccount(launch.kind) : undefined;
+        return account === undefined ? launch : { ...launch, account };
     }
 
     /* The launch with its mode narrowed to what the node may have, which a project file cannot widen. */
@@ -639,7 +659,7 @@ export class SessionManager {
         this.broadcast({ event: 'session.status', payload: { sessionId: session.id, agent } });
         try {
             if (agent) {
-                await this.agents?.write(session.id, agent);
+                await this.agents?.write(session.id, agent, session.launch?.kind === agent.kind ? session.launch.account : undefined);
             } else {
                 await this.agents?.delete(session.id);
             }

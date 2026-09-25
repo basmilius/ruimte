@@ -285,7 +285,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         checkCwd: startCwd,
         claudeTitles,
         codexTitles: new CodexTitleReader(),
-        accounts: providerAccounts
+        accounts: providerAccounts,
+        preferredAccount: (kind) => chats.composerPreferences.for(kind).account
     });
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
     void probeCodexNoDaemon();

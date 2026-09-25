@@ -19,6 +19,13 @@ describe('ComposerPreferences', () => {
         expect(preferences.for('codex')).toEqual({ runtimeMode: 'supervised' });
     });
 
+    test('the account picked for a CLI goes with that CLI only', () => {
+        const preferences = new ComposerPreferences();
+        preferences.set('mac', { accounts: { claude: 'claude_personal' }, changedAt: 10 });
+        expect(preferences.for('claude')).toEqual({ account: 'claude_personal' });
+        expect(preferences.for('codex')).toEqual({});
+    });
+
     test('the newest pick wins, however late its client told it', () => {
         const preferences = new ComposerPreferences();
         preferences.set('ipad', { runtimeMode: 'auto', selections: { claude: sonnet, codex: gpt }, changedAt: 20 });

@@ -209,3 +209,49 @@ describe('a child an agent opens', () => {
         expect(canvas.nodes.find((node) => node.id === codexChild)?.account).toBeUndefined();
     });
 });
+
+describe('the account a person picked for new agents', () => {
+    const pick = (accounts: Partial<Record<'claude' | 'codex', string>>): void => {
+        daemon.chats.composerPreferences.set('client-1', { accounts, changedAt: 1 });
+    };
+
+    test('starts a new chat that names none, and not one that names the default account', async () => {
+        pick({ claude: 'claude_personal' });
+        await daemon.chats.create({ chatId: 'chat-picked', provider: 'claude', cwd: folder });
+        await daemon.chats.create({ chatId: 'chat-default', provider: 'claude', cwd: folder, account: 'claude' });
+        await daemon.chats.create({ chatId: 'chat-codex', provider: 'codex', cwd: folder });
+        expect(daemon.chats.get('chat-picked')!.info.account).toBe('claude_personal');
+        expect(daemon.chats.get('chat-default')!.info.account).toBeUndefined();
+        expect(daemon.chats.get('chat-codex')!.info.account).toBeUndefined();
+    });
+
+    test('is refused and not replaced when that account went', async () => {
+        pick({ claude: 'claude_gone' });
+        const refused = await daemon.request('chat.create', { chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        expect(refused).toMatchObject({ ok: false, error: { code: 'account-unavailable' } });
+        expect(daemon.chats.get('chat-lead')).toBeUndefined();
+    });
+
+    test('never outranks the account a child inherits, and starts a child of another CLI', async () => {
+        pick({ claude: 'claude_personal', codex: 'codex_work' });
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude' });
+        await say('chat-lead', 'plan');
+        const open = async (argv: string[]): Promise<string> => {
+            const [line] = await runVerb(daemon, 'chat-lead', 'agent', argv);
+            return line!.split('\t')[0]!;
+        };
+
+        const chatChild = await open(['claude', '--prompt', 'look around']);
+        const terminalChild = await open(['claude', '--terminal', '--prompt', 'look around']);
+        const codexChild = await open(['codex', '--prompt', 'look around']);
+        await daemon.until(
+            () => daemon.chats.get(chatChild) !== undefined && daemon.sessions.get(terminalChild) !== undefined && daemon.chats.get(codexChild) !== undefined
+        );
+
+        expect(daemon.chats.get(chatChild)!.info.account).toBeUndefined();
+        expect(daemon.adapter.forSession(terminalChild).options.env.CLAUDE_CONFIG_DIR).toBeUndefined();
+        expect(daemon.chats.get(codexChild)!.info.account).toBe('codex_work');
+        const canvas = (await store.read(projectId)).views[0] as ProjectCanvasView;
+        expect(canvas.nodes.find((node) => node.id === terminalChild)?.account).toBe('claude');
+    });
+});

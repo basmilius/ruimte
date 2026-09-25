@@ -45,12 +45,13 @@ export const agentNode = (spec: AgentNodeSpec): ProjectNode => ({
 });
 
 /*
- * The account a child starts under: its opener's when it runs the same CLI, else that CLI's default
- * one. Never one the agent picks, since an account is someone's costs.
+ * The account a child starts under: its opener's when it runs the same CLI, named even when that is
+ * the default one so the person's pick for new agents does not replace it; else none, which starts
+ * it under that pick. Never one the agent picks, since an account is someone's costs.
  */
 export const inheritedAccount = (call: VerbCall, kind: AgentKind): string | undefined => {
     const opener = call.host.accountOf?.(call.caller) ?? null;
-    return opener !== null && opener.kind === kind ? opener.account : undefined;
+    return opener !== null && opener.kind === kind ? (opener.account ?? kind) : undefined;
 };
 
 /* The mode a terminal agent is written down with: the one asked for, else the person's default narrowed to the caller's. */

@@ -428,7 +428,8 @@ export class ChatManager {
         const cwd = stored?.info.cwd ?? payload.cwd ?? this.env.HOME ?? homedir();
         await this.checkCwd(payload.chatId, cwd);
         // A thread on disk keeps its account too. One it lost still opens, and says why on its next turn.
-        const account = stored ? stored.info.account : storedAccount(kind, payload.account);
+        // A new one without an account takes the person's pick for this CLI, which is refused rather than replaced when it went.
+        const account = stored ? stored.info.account : storedAccount(kind, payload.account ?? this.composerPreferences.for(kind).account);
         if (!stored) {
             this.requireAccount(kind, account);
         }

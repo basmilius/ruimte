@@ -118,7 +118,13 @@ export const bootTestDaemon = async ({
     const adapter = new FakePtyAdapter();
     const claude = inProcess(claudeCli);
     const codex = inProcess(fakeCodex);
-    const sessions = new SessionManager({ adapter, env, firstPrompt: (id) => prompts.take(id), ...(accounts ? { accounts } : {}) });
+    const sessions = new SessionManager({
+        adapter,
+        env,
+        firstPrompt: (id) => prompts.take(id),
+        ...(accounts ? { accounts } : {}),
+        preferredAccount: (kind) => chats.composerPreferences.for(kind).account
+    });
     const attachments = new AttachmentStore(home);
     const drops: Promise<void>[] = [];
     const enqueued: OutboxWork[] = [];

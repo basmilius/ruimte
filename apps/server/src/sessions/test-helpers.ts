@@ -72,8 +72,8 @@ export class Recorder {
 export class TrackedAgentStore extends AgentStore {
     private readonly pending = new Set<Promise<void>>();
 
-    override write(sessionId: string, info: AgentInfo): Promise<void> {
-        return this.track(super.write(sessionId, info));
+    override write(sessionId: string, info: AgentInfo, account?: string): Promise<void> {
+        return this.track(super.write(sessionId, info, account));
     }
 
     override delete(sessionId: string): Promise<void> {
