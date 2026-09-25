@@ -1,0 +1,277 @@
+@import "tailwindcss";
+
+/* The dark theme of `apps/client/src/styles.css`, token for token, so what the page draws of the app
+   looks like the app. The site has no light theme. */
+:root {
+    color-scheme: dark;
+    --bg: #0d0d10;
+    --canvas-bg: #0d0d10;
+    --canvas-dot: #202024;
+    --surface: #131316;
+    --surface-raised: #18181c;
+    --surface-sunken: #08080a;
+    --surface-hover: #202024;
+    --surface-active: #28282e;
+    --border: rgb(255 255 255 / 0.07);
+    --border-strong: rgb(255 255 255 / 0.13);
+    --border-soft: rgb(255 255 255 / 0.03);
+    --text: #ececf1;
+    --text-muted: #9a9aa6;
+    --text-faint: #5f5f6b;
+    --accent: #155dfc;
+    --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--surface));
+    --edge-line: color-mix(in srgb, var(--text) 13%, var(--canvas-bg));
+    --edge-context: color-mix(in srgb, var(--accent) 55%, var(--canvas-bg));
+    --status-running: #60a5fa;
+    --status-needs-you: #fbbf24;
+    --status-idle: #4ade80;
+    --status-error: #ef4444;
+    --node-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 4px rgb(0 0 0 / 0.2), 0 4px 8px rgb(0 0 0 / 0.12);
+    --float-shadow: 0 1px 2px -1px rgb(0 0 0 / 0.3), 0 2px 4px rgb(0 0 0 / 0.24), 0 4px 8px rgb(0 0 0 / 0.18), 0 6px 12px rgb(0 0 0 / 0.1);
+    --term-bg: #08080a;
+    --term-fg: #d6d6de;
+    --term-dim: #6b6b76;
+    --ansi-red: #f87171;
+    --ansi-green: #4ade80;
+    --ansi-yellow: #fbbf24;
+    --ansi-blue: #60a5fa;
+    --ansi-magenta: #c084fc;
+    --ansi-cyan: #67e8f9;
+    --note-yellow: #3b3416;
+    --skill: #c084fc;
+}
+
+@theme inline {
+    --color-*: initial;
+    --color-bg: var(--bg);
+    --color-canvas-bg: var(--canvas-bg);
+    --color-surface: var(--surface);
+    --color-surface-raised: var(--surface-raised);
+    --color-surface-sunken: var(--surface-sunken);
+    --color-surface-hover: var(--surface-hover);
+    --color-surface-active: var(--surface-active);
+    --color-border: var(--border);
+    --color-border-strong: var(--border-strong);
+    --color-border-soft: var(--border-soft);
+    --color-text: var(--text);
+    --color-text-muted: var(--text-muted);
+    --color-text-faint: var(--text-faint);
+    --color-accent: var(--accent);
+    --color-accent-soft: var(--accent-soft);
+    --color-status-running: var(--status-running);
+    --color-status-needs-you: var(--status-needs-you);
+    --color-status-idle: var(--status-idle);
+    --color-status-error: var(--status-error);
+    --color-term-bg: var(--term-bg);
+    --color-term-fg: var(--term-fg);
+    --color-term-dim: var(--term-dim);
+    --color-ansi-red: var(--ansi-red);
+    --color-ansi-green: var(--ansi-green);
+    --color-ansi-yellow: var(--ansi-yellow);
+    --color-ansi-blue: var(--ansi-blue);
+    --color-ansi-magenta: var(--ansi-magenta);
+    --color-ansi-cyan: var(--ansi-cyan);
+    --color-note-yellow: var(--note-yellow);
+    --color-skill: var(--skill);
+    --color-white: #ffffff;
+    --color-black: #000000;
+    --color-transparent: transparent;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+    --font-display: var(--font-geist), -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-brand: var(--font-geist), -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: ui-monospace, var(--font-jetbrains), "SF Mono", Menlo, monospace;
+    --font-hand: var(--font-kalam), "Comic Sans MS", cursive;
+    --shadow-node: var(--node-shadow);
+    --shadow-float: var(--float-shadow);
+    /* The app's radii at its 15px root. */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 11px;
+    --radius-2xl: 15px;
+}
+
+@layer base {
+    * {
+        background-clip: padding-box;
+    }
+
+    html {
+        background: var(--bg);
+        color: var(--text);
+        scroll-behavior: smooth;
+        scroll-padding-top: 88px;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+        font-family: var(--font-sans);
+    }
+
+    ::selection {
+        background: rgb(21 93 252 / 0.6);
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-radius: 6px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        html {
+            scroll-behavior: auto;
+        }
+    }
+}
+
+/* The canvas ground: a 1px dot on a 24px pitch, as `Canvas.tsx` draws it at zoom 1. */
+.canvas-dots {
+    background-color: var(--canvas-bg);
+    background-image: radial-gradient(circle, var(--canvas-dot) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+@keyframes status-pulse {
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.status-pulse {
+    animation: status-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes caret {
+    50% {
+        opacity: 0;
+    }
+}
+
+.caret {
+    animation: caret 1s steps(1) infinite;
+}
+
+@keyframes shine {
+    from {
+        background-position: 200% 0;
+    }
+    to {
+        background-position: -200% 0;
+    }
+}
+
+/* The "working" words of a chat and the phantom label: the text shines from right to left. */
+.shine {
+    background: linear-gradient(90deg, var(--text-muted) 40%, var(--text) 50%, var(--text-muted) 60%) 0 0 / 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shine 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .status-pulse,
+    .caret,
+    .shine {
+        animation: none;
+    }
+}
+
+@keyframes progress-sweep {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(400%);
+    }
+}
+
+.progress-sweep {
+    animation: progress-sweep 1.1s ease-in-out infinite;
+}
+
+/* The hero's background: two washes of light that drift slowly. */
+@keyframes drift-a {
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+    50% {
+        transform: translate(120px, 60px) scale(1.12);
+    }
+}
+
+@keyframes drift-b {
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+    50% {
+        transform: translate(-140px, 80px) scale(0.92);
+    }
+}
+
+
+.drift-a {
+    animation: drift-a 38s ease-in-out infinite;
+}
+
+.drift-b {
+    animation: drift-b 46s ease-in-out infinite;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+    .drift-a,
+    .drift-b,
+    .progress-sweep {
+        animation: none;
+    }
+}
+
+@keyframes orbit {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes twinkle {
+    0%,
+    100% {
+        opacity: 0.15;
+    }
+    50% {
+        opacity: 0.9;
+    }
+}
+
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.orbit {
+    animation: orbit 20s linear infinite;
+}
+
+.twinkle {
+    animation: twinkle 5s ease-in-out infinite;
+}
+
+.float {
+    animation: float 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .orbit,
+    .twinkle,
+    .float {
+        animation: none;
+    }
+}

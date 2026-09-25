@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "ES2023"],
+    "jsx": "preserve",
+    "allowJs": false,
+    "incremental": false,
+    "plugins": [{ "name": "next" }],
+    "types": ["bun"],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["next-env.d.ts", "src", "next.config.ts", "open-next.config.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", ".next", ".open-next"]
+}

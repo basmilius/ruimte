@@ -9,5 +9,14 @@
     "react/only-export-components": ["warn", { "allowConstantExport": true }],
     // Only says the React Compiler skipped a component, and the client does not build with it.
     "react/preserve-manual-memoization": "off"
-  }
+  },
+  "overrides": [
+    {
+      // Next.js reads these exports from a layout or page, beside the component.
+      "files": ["apps/site/src/app/**"],
+      "rules": {
+        "react/only-export-components": ["warn", { "allowConstantExport": true, "allowExportNames": ["metadata", "viewport", "dynamic"] }]
+      }
+    }
+  ]
 }

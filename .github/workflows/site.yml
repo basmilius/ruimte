@@ -1,27 +1,38 @@
 name: Site
 
-# Publishes `site/` to GitHub Pages; the repository's Pages source must be set to "GitHub Actions".
 on:
   push:
     branches: [main]
-    paths: ['site/**']
+    paths:
+      - 'apps/site/**'
+      - 'bun.lock'
+      - '.github/workflows/site.yml'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+# One deploy at a time, so an older build never lands after a newer one.
+concurrency:
+  group: site
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      # The token the station deploys with; the Custom Domains `ruimte.app` and `www.ruimte.app` sit on the same zone.
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 5e565cf9fa55b0eae1f8131903da2ca9
+    defaults:
+      run:
+        working-directory: apps/site
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: oven-sh/setup-bun@v2
         with:
-          path: site
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+        working-directory: .
+      - run: bun run typecheck
+      - run: bun test
+      - run: bun run deploy
+      # A download has to land on a build of the latest release, or the button on the page leads nowhere.
+      - run: curl --fail --silent --show-error --max-time 20 --head https://ruimte.app/download/mac | grep -i '^location: https://github.com/basmilius/ruimte/releases/'
