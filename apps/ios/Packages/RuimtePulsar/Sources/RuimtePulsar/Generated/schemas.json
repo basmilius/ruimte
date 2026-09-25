@@ -18357,6 +18357,32 @@
             "shadowHome": {
               "type": "string",
               "minLength": 1
+            },
+            "env": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "sensitive": {
+                    "type": "boolean"
+                  },
+                  "valueRedacted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value",
+                  "sensitive"
+                ]
+              }
             }
           },
           "required": [
@@ -18432,6 +18458,24 @@
             "checkedAt"
           ]
         }
+      },
+      "secretsAvailable": {
+        "type": "boolean"
+      },
+      "loginCommands": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot"
+          ]
+        },
+        "additionalProperties": {
+          "type": "string"
+        }
       }
     },
     "required": [
@@ -18472,6 +18516,32 @@
             "shadowHome": {
               "type": "string",
               "minLength": 1
+            },
+            "env": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "sensitive": {
+                    "type": "boolean"
+                  },
+                  "valueRedacted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value",
+                  "sensitive"
+                ]
+              }
             }
           },
           "required": [
@@ -18517,6 +18587,32 @@
             "shadowHome": {
               "type": "string",
               "minLength": 1
+            },
+            "env": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "sensitive": {
+                    "type": "boolean"
+                  },
+                  "valueRedacted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value",
+                  "sensitive"
+                ]
+              }
             }
           },
           "required": [
@@ -18591,6 +18687,24 @@
             "message",
             "checkedAt"
           ]
+        }
+      },
+      "secretsAvailable": {
+        "type": "boolean"
+      },
+      "loginCommands": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot"
+          ]
+        },
+        "additionalProperties": {
+          "type": "string"
         }
       }
     },
@@ -18637,6 +18751,32 @@
             "shadowHome": {
               "type": "string",
               "minLength": 1
+            },
+            "env": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "sensitive": {
+                    "type": "boolean"
+                  },
+                  "valueRedacted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value",
+                  "sensitive"
+                ]
+              }
             }
           },
           "required": [
@@ -18712,12 +18852,239 @@
             "checkedAt"
           ]
         }
+      },
+      "secretsAvailable": {
+        "type": "boolean"
+      },
+      "loginCommands": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot"
+          ]
+        },
+        "additionalProperties": {
+          "type": "string"
+        }
       }
     },
     "required": [
       "accounts",
       "statuses"
     ]
+  },
+  "request.providers.create.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string",
+        "x-open-enum": [
+          "claude",
+          "codex",
+          "gemini",
+          "copilot"
+        ]
+      },
+      "label": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80
+      },
+      "color": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "kind",
+      "label"
+    ]
+  },
+  "request.providers.create.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "accounts": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string"
+            },
+            "color": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "home": {
+              "type": "string",
+              "minLength": 1
+            },
+            "shadowHome": {
+              "type": "string",
+              "minLength": 1
+            },
+            "env": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "sensitive": {
+                    "type": "boolean"
+                  },
+                  "valueRedacted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value",
+                  "sensitive"
+                ]
+              }
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        }
+      },
+      "statuses": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "checking",
+                "disabled",
+                "not-found",
+                "signed-out",
+                "ready",
+                "folder-missing",
+                "unavailable",
+                "failed"
+              ]
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "plan": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "organization": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "home": {
+              "type": "string"
+            },
+            "message": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "checkedAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "state",
+            "email",
+            "plan",
+            "organization",
+            "home",
+            "message",
+            "checkedAt"
+          ]
+        }
+      },
+      "secretsAvailable": {
+        "type": "boolean"
+      },
+      "loginCommands": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot"
+          ]
+        },
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+      }
+    },
+    "required": [
+      "accounts",
+      "statuses",
+      "id"
+    ]
+  },
+  "request.providers.watchLogin.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "request.providers.watchLogin.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
   },
   "request.project.sidebar.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -41782,6 +42149,32 @@
             "shadowHome": {
               "type": "string",
               "minLength": 1
+            },
+            "env": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "sensitive": {
+                    "type": "boolean"
+                  },
+                  "valueRedacted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value",
+                  "sensitive"
+                ]
+              }
             }
           },
           "required": [
@@ -41856,6 +42249,24 @@
             "message",
             "checkedAt"
           ]
+        }
+      },
+      "secretsAvailable": {
+        "type": "boolean"
+      },
+      "loginCommands": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot"
+          ]
+        },
+        "additionalProperties": {
+          "type": "string"
         }
       }
     },

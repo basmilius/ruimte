@@ -69,6 +69,8 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `providersList` = "providers.list"
     case `providersSave` = "providers.save"
     case `providersRefresh` = "providers.refresh"
+    case `providersCreate` = "providers.create"
+    case `providersWatchLogin` = "providers.watchLogin"
     case `projectSidebar` = "project.sidebar"
     case `projectList` = "project.list"
     case `projectOpen` = "project.open"

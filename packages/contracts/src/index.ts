@@ -177,7 +177,13 @@ import {
     DiagramTargetPayloadSchema
 } from './diagram.ts';
 import { ProviderListResultSchema } from './model.ts';
-import { ProviderAccountsSavePayloadSchema, ProviderAccountsSchema } from './provider-accounts.ts';
+import {
+    ProviderAccountCreatePayloadSchema,
+    ProviderAccountCreateResultSchema,
+    ProviderAccountsSavePayloadSchema,
+    ProviderAccountsSchema,
+    ProviderAccountWatchLoginPayloadSchema
+} from './provider-accounts.ts';
 import {
     PlanApplyPayloadSchema,
     PlanApplyResultSchema,
@@ -361,6 +367,9 @@ export const REQUEST_SCHEMAS = {
     'providers.save': { payload: ProviderAccountsSavePayloadSchema, result: ProviderAccountsSchema },
     // Asks every CLI again and answers once they all did.
     'providers.refresh': { payload: EmptySchema, result: ProviderAccountsSchema },
+    'providers.create': { payload: ProviderAccountCreatePayloadSchema, result: ProviderAccountCreateResultSchema },
+    // Answers at once; what the CLI says arrives as `providers.changed`.
+    'providers.watchLogin': { payload: ProviderAccountWatchLoginPayloadSchema, result: EmptySchema },
     'project.sidebar': { payload: EmptySchema, result: ProjectSidebarResultSchema },
     'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
     'project.open': { payload: ProjectOpenPayloadSchema, result: ProjectOpenResultSchema },

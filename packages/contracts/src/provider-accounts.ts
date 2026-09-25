@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AgentKindSchema } from './agent.ts';
 
 /*
  * An account of an agent CLI is one config folder of that CLI, handed to it through the variable it
@@ -9,6 +10,19 @@ import { z } from 'zod';
 /* A slug, never a path. The default account of a CLI has the CLI's kind as its id. */
 export const ProviderAccountIdSchema = z.string().regex(/^[a-z][a-z0-9_-]{0,63}$/);
 export type ProviderAccountId = z.infer<typeof ProviderAccountIdSchema>;
+
+/*
+ * A variable the CLI of an account is started with. A sensitive value lives in the keychain of the
+ * machine and never on the wire: the daemon sends it as an empty `value` with `valueRedacted`, and a
+ * save that sends that back keeps what the keychain holds.
+ */
+export const ProviderAccountVariableSchema = z.object({
+    name: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]{0,127}$/),
+    value: z.string(),
+    sensitive: z.boolean(),
+    valueRedacted: z.boolean().optional()
+});
+export type ProviderAccountVariable = z.infer<typeof ProviderAccountVariableSchema>;
 
 export const ProviderAccountSchema = z.object({
     // An agent kind. A kind this version does not know still parses, so the entry is written back unchanged.
@@ -21,7 +35,9 @@ export const ProviderAccountSchema = z.object({
     // The CLI's config folder, `~` allowed. Absent on the default account, which uses the CLI's own folder.
     home: z.string().min(1).optional(),
     // Codex only: a folder of its own for the login, sharing everything else with `home`.
-    shadowHome: z.string().min(1).optional()
+    shadowHome: z.string().min(1).optional(),
+    // Set on the CLI's environment after the login variables are taken off, so a key here is one a person chose.
+    env: z.array(ProviderAccountVariableSchema).optional()
 });
 export type ProviderAccount = z.infer<typeof ProviderAccountSchema>;
 
@@ -61,7 +77,11 @@ export type ProviderAccountMap = z.infer<typeof ProviderAccountMapSchema>;
 
 export const ProviderAccountsSchema = z.object({
     accounts: ProviderAccountMapSchema,
-    statuses: z.array(ProviderAccountStatusSchema)
+    statuses: z.array(ProviderAccountStatusSchema),
+    // Whether this machine can keep a sensitive variable; false off macOS, where no keychain is used.
+    secretsAvailable: z.boolean().optional(),
+    // Per agent kind, what a terminal types to sign that CLI in under an account, which the account's environment points at.
+    loginCommands: z.partialRecord(AgentKindSchema, z.string()).optional()
 });
 export type ProviderAccounts = z.infer<typeof ProviderAccountsSchema>;
 
@@ -70,3 +90,23 @@ export const ProviderAccountsSavePayloadSchema = z.object({
     accounts: ProviderAccountMapSchema
 });
 export type ProviderAccountsSavePayload = z.infer<typeof ProviderAccountsSavePayloadSchema>;
+
+/* An account in a folder the daemon makes for it under `$RUIMTE_HOME/accounts`; a Codex one is a shadow home over the CLI's own folder. */
+export const ProviderAccountCreatePayloadSchema = z.object({
+    kind: AgentKindSchema,
+    label: z.string().trim().min(1).max(80),
+    color: z.string().optional()
+});
+export type ProviderAccountCreatePayload = z.infer<typeof ProviderAccountCreatePayloadSchema>;
+
+export const ProviderAccountCreateResultSchema = ProviderAccountsSchema.extend({
+    // The id the daemon minted from the label.
+    id: ProviderAccountIdSchema
+});
+export type ProviderAccountCreateResult = z.infer<typeof ProviderAccountCreateResultSchema>;
+
+/* Asks the CLI of one account again every few seconds until it is signed in, for a login running in a terminal. */
+export const ProviderAccountWatchLoginPayloadSchema = z.object({
+    id: ProviderAccountIdSchema
+});
+export type ProviderAccountWatchLoginPayload = z.infer<typeof ProviderAccountWatchLoginPayloadSchema>;
