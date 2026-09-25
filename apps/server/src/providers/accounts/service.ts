@@ -130,7 +130,7 @@ export class ProviderAccountsService implements AccountLaunches {
         this.prepareShadow = options.prepareShadow ?? prepareShadowHome;
         this.folderExists = options.folderExists ?? isFolder;
         this.install = options.install;
-        this.secrets = options.secrets === undefined ? platformSecrets() : options.secrets;
+        this.secrets = options.secrets === undefined ? platformSecrets(options.ruimteHome) : options.secrets;
         this.now = options.now ?? Date.now;
         this.sleep = options.sleep ?? sleep;
     }

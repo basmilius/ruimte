@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { resolve } from 'node:path';
 import type { ProviderAccountVariable } from '@ruimte/contracts';
 import { CodedError } from '../../coded-error.ts';
 
@@ -54,7 +56,9 @@ export const variablesProblem = (variables: readonly ProviderAccountVariable[], 
 export const redactVariables = (variables: readonly ProviderAccountVariable[]): ProviderAccountVariable[] =>
     variables.map((variable) => (variable.sensitive ? { name: variable.name, value: '', sensitive: true, valueRedacted: true } : variable));
 
-const SERVICE = 'ruimte-provider-env';
+/* A daemon of its own per `$RUIMTE_HOME` (a development one beside an installed one) keeps its values apart from the other's. */
+export const keychainService = (ruimteHome: string): string =>
+    `ruimte-provider-env-${createHash('sha256').update(resolve(ruimteHome)).digest('hex').slice(0, 12)}`;
 // `security` exits with this when no item matches.
 const NOT_FOUND = 44;
 
@@ -73,9 +77,9 @@ const run = async (args: string[], stdin?: string): Promise<{ code: number; stdo
  * hex in its interactive mode: on the command line any process could read it, and the password
  * prompt cuts it at 128 characters.
  */
-export const keychainSecrets = (): SecretStore => ({
+export const keychainSecrets = (service: string): SecretStore => ({
     read: async (key) => {
-        const { code, stdout, stderr } = await run(['find-generic-password', '-s', SERVICE, '-a', key, '-w']);
+        const { code, stdout, stderr } = await run(['find-generic-password', '-s', service, '-a', key, '-w']);
         if (code === NOT_FOUND) {
             return null;
         }
@@ -87,13 +91,13 @@ export const keychainSecrets = (): SecretStore => ({
     write: async (key, value) => {
         const hex = Buffer.from(value, 'utf8').toString('hex');
         const quoted = `"${key.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
-        const { code, stderr } = await run(['-i'], `add-generic-password -U -s ${SERVICE} -a ${quoted} -X ${hex}\n`);
+        const { code, stderr } = await run(['-i'], `add-generic-password -U -s ${service} -a ${quoted} -X ${hex}\n`);
         if (code !== 0) {
             throw new Error(`The keychain did not take ${key}: ${stderr.trim()}`);
         }
     },
     remove: async (key) => {
-        const { code, stderr } = await run(['delete-generic-password', '-s', SERVICE, '-a', key]);
+        const { code, stderr } = await run(['delete-generic-password', '-s', service, '-a', key]);
         if (code !== 0 && code !== NOT_FOUND) {
             throw new Error(`The keychain did not remove ${key}: ${stderr.trim()}`);
         }
@@ -101,4 +105,5 @@ export const keychainSecrets = (): SecretStore => ({
 });
 
 /* The keychain on macOS; elsewhere none, so a sensitive variable is refused. */
-export const platformSecrets = (): SecretStore | null => (process.platform === 'darwin' ? keychainSecrets() : null);
+export const platformSecrets = (ruimteHome: string): SecretStore | null =>
+    process.platform === 'darwin' ? keychainSecrets(keychainService(ruimteHome)) : null;
