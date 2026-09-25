@@ -97,7 +97,6 @@ import { registerProcessHandlers } from './handlers/processes.ts';
 import { registerUsageHandlers } from './handlers/usage.ts';
 import { registerComputerHandlers } from './handlers/computer.ts';
 import { ComputerUse } from './computer/computer-use.ts';
-import { OperatedRuimte, type WireRequest } from './computer/operated-ruimte.ts';
 import { ComputerHelper, locateHelperApp } from './computer/helper.ts';
 import { ComputerUseStore } from './computer/store.ts';
 import { Checkpoints } from './git/checkpoints.ts';
@@ -369,15 +368,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         await (kind === 'terminal' ? manager.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
     };
     projects.attachSessionEnder(endSession);
-    const operated = new OperatedRuimte({
-        operating: () => computer.confirmOperatingRuimte(),
-        context: () => ({ holder: computer.holder, modeOf: nodeMode(modes), saveBase: (projectId) => projects.saveBase(projectId) })
-    });
     projects.attachSaveListener(async (folder, before, after) => {
         for (const { nodeId, command } of commandsSet(before, after)) {
-            if (operated.refusedCommand(nodeId, command)) {
-                continue;
-            }
             try {
                 await commandApprovals.approve(folder, nodeId, command);
             } catch (e) {
@@ -595,7 +587,6 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.offlineApprovals = () => push.hasOfflineApprovals();
 
     const dispatcher = new Dispatcher();
-    dispatcher.setGuard((type, payload, client) => operated.check({ type, payload } as WireRequest, client));
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager, endChildren.owe);

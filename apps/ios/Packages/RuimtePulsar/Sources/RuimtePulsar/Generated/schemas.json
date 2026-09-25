@@ -30715,9 +30715,6 @@
                   "string",
                   "null"
                 ]
-              },
-              "operatingRuimte": {
-                "type": "boolean"
               }
             },
             "required": [
@@ -30808,9 +30805,6 @@
                   "string",
                   "null"
                 ]
-              },
-              "operatingRuimte": {
-                "type": "boolean"
               }
             },
             "required": [
@@ -31016,9 +31010,6 @@
                   "string",
                   "null"
                 ]
-              },
-              "operatingRuimte": {
-                "type": "boolean"
               }
             },
             "required": [
@@ -31109,9 +31100,6 @@
                   "string",
                   "null"
                 ]
-              },
-              "operatingRuimte": {
-                "type": "boolean"
               }
             },
             "required": [
@@ -31201,9 +31189,6 @@
                   "string",
                   "null"
                 ]
-              },
-              "operatingRuimte": {
-                "type": "boolean"
               }
             },
             "required": [
@@ -41793,9 +41778,6 @@
                   "string",
                   "null"
                 ]
-              },
-              "operatingRuimte": {
-                "type": "boolean"
               }
             },
             "required": [

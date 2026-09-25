@@ -52,6 +52,7 @@
     "bodyNoProject": "{{node}} wil {{app}} op deze machine zien en bedienen.",
     "unnamed": "Een agent",
     "scope": "Deze keer geldt tot de turn van de agent klaar is. Altijd laat elke agent op deze machine {{app}} gebruiken.",
+    "ruimte": "In Ruimte kan een agent alles wat jij kunt, op eigen risico.",
     "once": "Deze keer toestaan",
     "always": "Altijd toestaan",
     "deny": "Weigeren"

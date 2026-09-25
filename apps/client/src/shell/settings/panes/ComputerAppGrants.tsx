@@ -8,17 +8,14 @@ import { Tooltip } from '@/ui/Tooltip';
 
 interface ComputerAppGrantsProps {
     readonly grants: Grants;
-    /* An agent operates Ruimte, and the machine refuses this window a person's decisions until they take over. */
-    readonly held: boolean;
     readonly busy: boolean;
     onRevoke(revoke: ComputerRevokePayload): void;
 }
 
 /* What a person allowed on one machine, each with the button that takes it back. */
-export function ComputerAppGrants({ grants, held, busy, onRevoke }: ComputerAppGrantsProps) {
-    const { t } = useTranslation(['settings', 'common']);
+export function ComputerAppGrants({ grants, busy, onRevoke }: ComputerAppGrantsProps) {
+    const { t } = useTranslation('settings');
     useFormatLocale();
-    const disabled = held || busy;
     return (
         <div className="flex min-w-0 flex-col gap-3">
             <GrantGroup title={t('computer.apps.always')} empty={grants.always.length === 0 ? t('computer.apps.alwaysEmpty') : null}>
@@ -26,7 +23,7 @@ export function ComputerAppGrants({ grants, held, busy, onRevoke }: ComputerAppG
                     <GrantRow key={entry.bundleId} entry={entry} detail={t('computer.apps.allowed', { date: formatDayWithYear(entry.at) })}>
                         <Button
                             size="sm"
-                            disabled={disabled}
+                            disabled={busy}
                             aria-label={t('computer.apps.removeLabel', { app: entry.name })}
                             onClick={() => onRevoke({ bundleId: entry.bundleId, kind: 'always' })}
                         >
@@ -41,7 +38,7 @@ export function ComputerAppGrants({ grants, held, busy, onRevoke }: ComputerAppG
                         <Tooltip label={t('computer.apps.notTerminalHint')}>
                             <Button
                                 size="sm"
-                                disabled={disabled}
+                                disabled={busy}
                                 aria-label={t('computer.apps.notTerminalLabel', { app: entry.name })}
                                 onClick={() => onRevoke({ bundleId: entry.bundleId, kind: 'terminal' })}
                             >
@@ -61,7 +58,7 @@ export function ComputerAppGrants({ grants, held, busy, onRevoke }: ComputerAppG
                         >
                             <Button
                                 size="sm"
-                                disabled={disabled}
+                                disabled={busy}
                                 aria-label={t('computer.apps.removeLabel', { app: entry.name })}
                                 onClick={() => onRevoke({ bundleId: entry.bundleId, kind: 'thisTime', nodeId: entry.nodeId })}
                             >
@@ -71,7 +68,6 @@ export function ComputerAppGrants({ grants, held, busy, onRevoke }: ComputerAppG
                     ))}
                 </GrantGroup>
             )}
-            {held && <p className="text-xs text-text-muted">{t('common:state.agentOperating')}</p>}
         </div>
     );
 }

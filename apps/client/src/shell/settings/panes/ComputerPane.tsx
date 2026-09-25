@@ -3,7 +3,6 @@ import clsx from 'clsx';
 import { CircleCheck, CircleDashed, LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ComputerGrant, ComputerRevokePayload, ComputerUseStatus } from '@ruimte/contracts';
-import { operatedHere } from '@/computer/operated';
 import {
     canSwitch,
     COMPUTER_GRANTS,
@@ -84,7 +83,6 @@ function ComputerMachineRow({ endpoint }: { endpoint: Endpoint }) {
     const icon = useServers((s) => s.byEndpoint[endpoint.id]?.icon ?? null);
     const status = useComputer((s) => s.statuses[endpoint.id] ?? null);
     const grants = useComputer((s) => s.grants[endpoint.id] ?? null);
-    const held = useComputer((s) => operatedHere(endpoint.id, s.statuses[endpoint.id]));
     const setup = computerSetupOf(status, platform);
     const bridge = desktop();
     const local = opensSystemSettings(endpoint.id, platform, bridge?.openSystemSettings !== undefined);
@@ -172,7 +170,7 @@ function ComputerMachineRow({ endpoint }: { endpoint: Endpoint }) {
                 />
             )}
             {connected && status?.enabled === true && grants !== null && (
-                <ComputerAppGrants grants={grants} held={held} busy={busy} onRevoke={(payload) => void revoke(payload)} />
+                <ComputerAppGrants grants={grants} busy={busy} onRevoke={(payload) => void revoke(payload)} />
             )}
             {(error ?? status?.problem) && (
                 <p role="alert" className={FORM_ERROR}>

@@ -589,15 +589,6 @@ export class ProjectStore {
     }
 
     /* The rev of the document on disk, which a caller that decided on it names again with its write. */
-    /* What the next save of an open project is measured against: the views the machine holds and the ids in the team's file. Null when it is not open. */
-    saveBase(projectId: string): { views: readonly ProjectView[]; shared: readonly string[] } | null {
-        const state = this.open.get(projectId);
-        if (!state) {
-            return null;
-        }
-        return { views: this.index.viewsOf(projectId) ?? [], shared: state.shared };
-    }
-
     revision(projectId: string): Promise<number> {
         return this.locked(async () => (await this.readCurrent(projectId)).rev);
     }

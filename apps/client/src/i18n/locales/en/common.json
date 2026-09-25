@@ -23,7 +23,6 @@
         "undo": "Undo"
     },
     "state": {
-        "agentOperating": "An agent is operating Ruimte. Take over to decide yourself.",
         "loading": "Loading",
         "empty": "Nothing here yet",
         "error": "Something went wrong",

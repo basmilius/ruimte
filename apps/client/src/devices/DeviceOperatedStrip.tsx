@@ -3,7 +3,6 @@ import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { DeviceControlMode, DeviceInfo } from '@ruimte/contracts';
-import { useOperatedHere } from '@/computer/operated';
 import { operatedOf, stripLook, tapPoint, useDeviceOperated, useOperatedDevice } from '@/devices/operated';
 import { useResolvedDevice } from '@/devices/state';
 import { useNodeHost } from '@/nodes/node-host';
@@ -46,16 +45,14 @@ function press(endpointId: string, device: Pick<DeviceInfo, 'backendId' | 'devic
  * that pause it or take the device over, which any client of the person may press.
  */
 export function DeviceOperatedStrip({ id }: { id: string }) {
-    const { t } = useTranslation(['machines', 'common']);
+    const { t } = useTranslation('machines');
     const endpointId = useEndpointId();
-    const operatedHere = useOperatedHere();
     const device = useResolvedDevice(endpointId, useNodeHost(id)?.device);
     const operated = useOperatedDevice(endpointId, device);
     if (!device || !operated) {
         return null;
     }
     const look = stripLook(operated, device.platform);
-    const words = <span className="min-w-0 grow truncate font-mono text-text-muted">{operatedHere ? t('common:state.agentOperating') : look.words}</span>;
     return (
         // One row with the header's own height and insets, so the two read as one toolbar.
         <div
@@ -69,10 +66,10 @@ export function DeviceOperatedStrip({ id }: { id: string }) {
                     <FingerMark />
                 </span>
             </Tooltip>
-            {operatedHere ? <Tooltip label={t('common:state.agentOperating')}>{words}</Tooltip> : words}
+            <span className="min-w-0 grow truncate font-mono text-text-muted">{look.words}</span>
             <div className="flex shrink-0 items-center gap-1">
                 {look.actions.map((mode) => (
-                    <Button key={mode} size="sm" variant="secondary" disabled={operatedHere} onClick={() => press(endpointId, device, mode)}>
+                    <Button key={mode} size="sm" variant="secondary" onClick={() => press(endpointId, device, mode)}>
                         {t(`device.operated.${mode}`)}
                     </Button>
                 ))}

@@ -8,9 +8,9 @@ import { ComputerAppGrants } from './ComputerAppGrants';
 
 const EMPTY: Grants = { always: [], terminals: [], thisTime: [] };
 
-const render = (grants: Grants, held = false): string =>
+const render = (grants: Grants): string =>
     renderToStaticMarkup(
-        createElement(I18nextProvider, { i18n: i18next }, createElement(ComputerAppGrants, { grants, held, busy: false, onRevoke: () => undefined }))
+        createElement(I18nextProvider, { i18n: i18next }, createElement(ComputerAppGrants, { grants, busy: false, onRevoke: () => undefined }))
     );
 
 describe('the grants of a machine in settings', () => {
@@ -37,11 +37,5 @@ describe('the grants of a machine in settings', () => {
         expect(markup).toContain('aria-label="Remove Notes"');
         expect(markup).not.toContain('No apps');
         expect(markup).not.toContain('disabled=""');
-    });
-
-    test('a window an agent operates shows the list but takes nothing back', () => {
-        const markup = render({ ...EMPTY, always: [{ name: 'TextEdit', bundleId: 'com.example.textedit', at: 1 }] }, true);
-        expect(markup).toContain('disabled=""');
-        expect(markup).toContain('An agent is operating Ruimte');
     });
 });
