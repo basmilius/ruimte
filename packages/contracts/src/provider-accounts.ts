@@ -28,7 +28,7 @@ export const ProviderAccountSchema = z.object({
     // An agent kind. A kind this version does not know still parses, so the entry is written back unchanged.
     kind: z.string().min(1),
     label: z.string().optional(),
-    // One of the note colors (`NOTE_COLOR_NAMES`).
+    // A node accent name (`NODE_ACCENT_NAMES`), kept a plain string so an older name is written back; the client paints any other with its accent.
     color: z.string().optional(),
     // Absent is on. An account that is off is left out of every picker.
     enabled: z.boolean().optional(),

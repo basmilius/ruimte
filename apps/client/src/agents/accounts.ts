@@ -1,23 +1,12 @@
 import i18next from 'i18next';
-import type { AgentKind, ProviderAccount, ProviderAccounts, ProviderAccountStatus } from '@ruimte/contracts';
+import { NODE_ACCENT_NAMES, type AgentKind, type ProviderAccount, type ProviderAccounts, type ProviderAccountStatus } from '@ruimte/contracts';
+import { accentColor, FEATURED_ACCENTS, type AccentId } from '@/canvas/accents';
 
-/* The swatches an account can wear, which are the drawing colors, so a dot reads the same in both themes. */
-export const ACCOUNT_COLORS = ['blue', 'purple', 'green', 'orange', 'pink'] as const;
-export type AccountColor = (typeof ACCOUNT_COLORS)[number];
-
-// Written out whole, since Tailwind only generates a class it finds as a literal.
-const DOT_CLASSES: Record<string, string> = {
-    blue: 'bg-draw-blue',
-    purple: 'bg-draw-purple',
-    green: 'bg-draw-green',
-    orange: 'bg-draw-orange',
-    pink: 'bg-draw-pink',
-    // The note colors an account written by hand may name.
-    yellow: 'bg-draw-yellow',
-    gray: 'bg-draw-muted'
-};
-
-export const accountDotClass = (color: string | undefined): string => DOT_CLASSES[color ?? ''] ?? 'bg-draw-muted';
+/*
+ * An account wears one of the node accents, so the app paints from one palette. A color that is none
+ * of them (an older name, or one written by hand) reads as undefined, and the dot takes the accent.
+ */
+export const accountColor = (color: string | undefined): string | undefined => accentColor(color);
 
 /*
  * The variable each CLI reads its config folder from, as the daemon's providers name them. Only for
@@ -105,8 +94,12 @@ export const mintAccountId = (kind: AgentKind, label: string, taken: ReadonlySet
     return id;
 };
 
-/* The first swatch no account of the CLI wears yet, so a new one stands apart from the others. */
-export const freeAccountColor = (entries: readonly AccountEntry[]): AccountColor => {
-    const worn = new Set(entries.map((entry) => entry.account.color));
-    return ACCOUNT_COLORS.find((color) => !worn.has(color)) ?? ACCOUNT_COLORS[entries.length % ACCOUNT_COLORS.length]!;
+/*
+ * The first featured accent no account of the CLI wears yet, then any other, so a new one stands apart.
+ * An account without a color of its own wears `fallback`, the accent the app is painted in.
+ */
+export const freeAccountColor = (entries: readonly AccountEntry[], fallback: AccentId): AccentId => {
+    const worn = new Set(entries.map((entry) => (accountColor(entry.account.color) === undefined ? fallback : entry.account.color)));
+    const choices = [...FEATURED_ACCENTS, ...NODE_ACCENT_NAMES.filter((id) => !FEATURED_ACCENTS.includes(id))];
+    return choices.find((id) => !worn.has(id)) ?? FEATURED_ACCENTS[entries.length % FEATURED_ACCENTS.length]!;
 };

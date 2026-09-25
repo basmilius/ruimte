@@ -5,10 +5,12 @@ import { ChevronRight } from 'lucide-react';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { freeAccountColor, mintAccountId, type AccountEntry } from '@/agents/accounts';
 import { createAccount, linkAccount } from '@/shell/settings/providers/account-actions';
-import { CliTile, ColorSwatches, DetailHeader } from '@/shell/settings/providers/parts';
+import { AccentSwatches } from '@/shell/settings/AccentSwatches';
+import { CliTile, DetailHeader } from '@/shell/settings/providers/parts';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { providerAccountsOf } from '@/state/provider-accounts';
+import { useSettings } from '@/state/settings';
 import { Button } from '@/ui/Button';
 import { FORM_ERROR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -29,7 +31,7 @@ interface AddAccountFormProps {
 export function AddAccountForm({ endpointId, provider, entries, onCancel, onAdded }: AddAccountFormProps) {
     const { t } = useTranslation('settings');
     const [name, setName] = useState('');
-    const [color, setColor] = useState<string>(() => freeAccountColor(entries));
+    const [color, setColor] = useState<string>(() => freeAccountColor(entries, useSettings.getState().accent));
     const [advanced, setAdvanced] = useState(false);
     const [folder, setFolder] = useState('');
     const [busy, setBusy] = useState(false);
@@ -81,7 +83,7 @@ export function AddAccountForm({ endpointId, provider, entries, onCancel, onAdde
                         />
                     }
                 />
-                <SettingsRow label={t('providers.add.color')} control={<ColorSwatches value={color} label={t('providers.add.color')} onChange={setColor} />} />
+                <SettingsRow label={t('providers.add.color')} control={<AccentSwatches value={color} label={t('providers.add.color')} onChange={setColor} />} />
             </SettingsSection>
             <div className="flex min-w-0 flex-col gap-2.5">
                 <button

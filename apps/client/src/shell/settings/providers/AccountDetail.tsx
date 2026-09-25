@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { LogIn } from 'lucide-react';
 import type { ProviderInfo } from '@ruimte/contracts';
+import { AccountDot } from '@/agents/AccountDot';
 import { accountName, FOLDER_VARIABLES, type AccountEntry } from '@/agents/accounts';
 import { ConfirmDialog } from '@/shell/settings/ConfirmDialog';
 import { openLogin, removeAccount, saveAccount } from '@/shell/settings/providers/account-actions';
 import { AccountVariables } from '@/shell/settings/providers/AccountVariables';
-import { AccountDot, CliMark, ColorSwatches, DetailHeader, REMOVE_BUTTON } from '@/shell/settings/providers/parts';
+import { AccentSwatches } from '@/shell/settings/AccentSwatches';
+import { CliMark, DetailHeader, REMOVE_BUTTON } from '@/shell/settings/providers/parts';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useToasts } from '@/state/toasts';
@@ -124,7 +126,7 @@ export function AccountDetail({ endpointId, provider, entry, canLogIn, loginBloc
                 <SettingsRow
                     label={t('providers.account.color')}
                     control={
-                        <ColorSwatches
+                        <AccentSwatches
                             value={account.color}
                             label={t('providers.account.color')}
                             onChange={(color) => void saveAccount(endpointId, id, { ...account, color })}

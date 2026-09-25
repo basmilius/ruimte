@@ -412,13 +412,6 @@
             "folderCopied": "Pad van de map gekopieerd",
             "name": "Naam",
             "color": "Kleur",
-            "colors": {
-                "blue": "Blauw",
-                "purple": "Paars",
-                "green": "Groen",
-                "orange": "Oranje",
-                "pink": "Roze"
-            },
             "login": {
                 "title": "Login",
                 "signedInAs": "Ingelogd als {{email}}",

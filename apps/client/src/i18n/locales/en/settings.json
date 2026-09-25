@@ -412,13 +412,6 @@
             "folderCopied": "Folder path copied",
             "name": "Name",
             "color": "Color",
-            "colors": {
-                "blue": "Blue",
-                "purple": "Purple",
-                "green": "Green",
-                "orange": "Orange",
-                "pink": "Pink"
-            },
             "login": {
                 "title": "Login",
                 "signedInAs": "Logged in as {{email}}",

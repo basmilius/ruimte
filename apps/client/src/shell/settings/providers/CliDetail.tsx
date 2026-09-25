@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, Plus } from 'lucide-react';
 import type { AgentKind, ModelInfo, ProviderInfo } from '@ruimte/contracts';
+import { AccountDot } from '@/agents/AccountDot';
 import { ACCOUNT_TONE_CLASSES, accountName, accountStatusLine, type AccountEntry } from '@/agents/accounts';
 import { accountFor, forgetChatSelection, rememberChatAccount, rememberChatSelection, selectionFor, useChatPreferences } from '@/chat/preferences';
 import { Segmented, Toggle } from '@/shell/settings/controls';
 import { providerAbilities } from '@/shell/settings/provider-abilities';
-import { AccountDot, CliTile, DetailHeader } from '@/shell/settings/providers/parts';
+import { CliTile, DetailHeader } from '@/shell/settings/providers/parts';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Button } from '@/ui/Button';

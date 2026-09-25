@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Plus, Terminal } from 'lucide-react';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
+import { AccountDot } from '@/agents/AccountDot';
 import { ACCOUNT_TONE_CLASSES, accountName, accountsOfKind, accountStatusLine, type AccountEntry } from '@/agents/accounts';
 import { Skeleton, Toggle } from '@/shell/settings/controls';
 import { MasterDetail } from '@/shell/settings/MasterDetail';
@@ -10,7 +11,7 @@ import { openLogin, saveAccount } from '@/shell/settings/providers/account-actio
 import { AccountDetail } from '@/shell/settings/providers/AccountDetail';
 import { AddAccountForm } from '@/shell/settings/providers/AddAccountForm';
 import { CliDetail } from '@/shell/settings/providers/CliDetail';
-import { AccountDot, CliMark } from '@/shell/settings/providers/parts';
+import { CliMark } from '@/shell/settings/providers/parts';
 import { useEndpointId } from '@/state/keys';
 import { useProviderAccounts } from '@/state/provider-accounts';
 import { useProviders } from '@/state/providers';

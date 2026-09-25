@@ -43,7 +43,7 @@ export const UsageAccountSchema = z.object({
     id: ProviderAccountIdSchema,
     kind: UsageProviderSchema,
     label: z.string(),
-    // One of the note colors; absent on an account nobody gave one.
+    // A node accent name, as the account has it; absent on an account nobody gave one.
     color: z.string().optional()
 });
 export type UsageAccount = z.infer<typeof UsageAccountSchema>;

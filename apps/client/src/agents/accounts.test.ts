@@ -61,7 +61,13 @@ describe('a new account', () => {
         expect(mintAccountId('claude', '!!!', new Set())).toBe('claude_account');
     });
 
-    test('wears a color the others do not', () => {
-        expect(freeAccountColor(accountsOfKind(accounts, 'claude'))).toBe('purple');
+    test('wears a featured accent the others do not, counting one without a color as the app accent', () => {
+        expect(freeAccountColor(accountsOfKind(accounts, 'claude'), 'orange')).toBe('lime');
+        expect(freeAccountColor(accountsOfKind(accounts, 'codex'), 'blue')).toBe('orange');
+    });
+
+    test('an old color name that is no accent counts as the app accent', () => {
+        const old: ProviderAccounts = { accounts: { claude: { kind: 'claude', color: 'gray' } }, statuses: [] };
+        expect(freeAccountColor(accountsOfKind(old, 'claude'), 'blue')).toBe('orange');
     });
 });

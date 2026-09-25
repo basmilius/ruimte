@@ -1,26 +1,20 @@
 import clsx from 'clsx';
-import { Menu } from '@base-ui-components/react/menu';
-import { Check, Ellipsis } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { accentColor, accentLabel, FEATURED_ACCENTS, isFeatured, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
+import { accentColor } from '@/canvas/accents';
 import { formatDayClock } from '@/format/datetime';
 import { useFormatLocale } from '@/format/locale';
 import { formatMoney } from '@/format/number';
 import { FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@/format/regions';
 import { chooseLanguage, chooseRegion } from '@/i18n';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
+import { AccentSwatches } from '@/shell/settings/AccentSwatches';
 import { CodeSection } from '@/shell/settings/panes/CodeSection';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Stepper, Toggle } from '@/shell/settings/controls';
 import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
-import { ACCENT_SWATCH } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
-import { Tooltip } from '@/ui/Tooltip';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { MenuPopup } from '@/ui/MenuPopup';
 
 /* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */
 const EXAMPLE_MOMENT = new Date(2026, 8, 19, 14, 30);
@@ -85,62 +79,14 @@ function ThemePicker() {
     );
 }
 
-/*
- * The accent, five colors at a time. Every Tailwind hue is on offer, which is more than a settings
- * row can carry, so the list behind them holds all of them in the order of the wheel, the five
- * included; the trigger wears the chosen color itself whenever that color is not one of the five.
- */
-function AccentSwatches() {
+/* The accent of the whole app, from the same swatches an agent account picks its color from. */
+function AccentRow() {
     const { t } = useTranslation('settings');
     const accent = useSettings((s) => s.accent);
     const update = useSettings((s) => s.update);
-    const ring = 'ring-2 ring-accent ring-offset-2 ring-offset-surface';
-    const featured = NODE_ACCENTS.filter((entry) => isFeatured(entry.id)).sort((a, b) => FEATURED_ACCENTS.indexOf(a.id) - FEATURED_ACCENTS.indexOf(b.id));
-    const hidden = isFeatured(accent) ? null : accent;
-    const pick = (id: AccentId): void => update({ accent: id });
-    return (
-        <div className="flex items-center gap-2" role="radiogroup" aria-label={t('appearance.accent.label')}>
-            {featured.map((entry) => (
-                <Tooltip key={entry.id} label={accentLabel(entry.id)}>
-                    <button
-                        role="radio"
-                        aria-checked={accent === entry.id}
-                        aria-label={accentLabel(entry.id)}
-                        className={clsx(ACCENT_SWATCH, accent === entry.id && ring)}
-                        style={{ background: entry.color }}
-                        onClick={() => pick(entry.id)}
-                    >
-                        {accent === entry.id && <Icon icon={Check} size={12} />}
-                    </button>
-                </Tooltip>
-            ))}
-            <Menu.Root>
-                <Tooltip label={t('appearance.accent.more')}>
-                    <Menu.Trigger
-                        aria-label={t('appearance.accent.more')}
-                        className={clsx(ACCENT_SWATCH, hidden ? ring : 'border border-border-strong text-text-muted')}
-                        style={hidden ? { background: accentColor(hidden) } : undefined}
-                    >
-                        <Icon icon={hidden ? Check : Ellipsis} size={12} />
-                    </Menu.Trigger>
-                </Tooltip>
-                <MenuPopup align="end" className="max-h-96 overflow-y-auto">
-                    <Menu.RadioGroup value={accent} onValueChange={(value: AccentId) => pick(value)}>
-                        {NODE_ACCENTS.map((entry) => (
-                            <Menu.RadioItem key={entry.id} value={entry.id} className="menu-item">
-                                <MenuCheck kind="radio" />
-                                <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: entry.color }} aria-hidden />
-                                <span className="grow">{accentLabel(entry.id)}</span>
-                            </Menu.RadioItem>
-                        ))}
-                    </Menu.RadioGroup>
-                </MenuPopup>
-            </Menu.Root>
-        </div>
-    );
+    return <AccentSwatches value={accent} label={t('appearance.accent.label')} onChange={(id) => update({ accent: id })} />;
 }
 
-/* A prompt and its answer in the terminal's own font, size and colors, so a change reads before a terminal is opened. */
 function TerminalPreview({ fontSize }: { fontSize: number }) {
     return (
         <div
@@ -241,7 +187,7 @@ export function AppearancePane() {
                     searchId="appearance.accent"
                     label={t('appearance.accent.label')}
                     description={t('appearance.accent.description')}
-                    control={<AccentSwatches />}
+                    control={<AccentRow />}
                 />
             </SettingsSection>
             <SettingsSection title={t('appearance.interface.title')}>
