@@ -3,6 +3,15 @@ import type { BackendHost, BackendLaunch, ChatBackend } from '../chat/backend.ts
 import type { ModelCatalog } from './catalog.ts';
 import type { CliDetection } from './detect.ts';
 
+export interface ProviderHome {
+    // The variable the CLI reads its config folder from.
+    readonly env: string;
+    // The folder it uses without that variable, under the person's home.
+    readonly fallback: string;
+    // Variables that sign the CLI in on their own, over whatever login the folder holds.
+    readonly loginEnv: readonly string[];
+}
+
 /*
  * One agent CLI as the daemon knows it. Everything a provider does differently is either data on
  * this value or behind the backend it makes, so a new CLI is a value plus a backend and nothing
@@ -17,6 +26,9 @@ export interface ChatProvider {
     readonly command: string[];
     // What a terminal runs to continue one of this CLI's sessions; `{id}` stands for the session id.
     readonly resumeCommand: string;
+    /* Where this CLI keeps its login, settings and transcripts, which is what an account is. Absent on a
+       CLI with no variable to move that folder, which then only has its default account. */
+    readonly home?: ProviderHome;
     /* The arguments for one prompt in and one answer out, no session and no chat, which is how the
        daemon asks for a commit message. Absent on a CLI that only runs interactively. */
     oneShotArgs?(prompt: string): string[];

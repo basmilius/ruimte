@@ -12,6 +12,8 @@ export const codexProvider: ChatProvider = {
     capabilities: CODEX_CAPABILITIES,
     command: ['codex', ...CODEX_CHAT_ARGS],
     resumeCommand: CODEX_RESUME_COMMAND,
+    // The auth variables Codex 0.157 names in its own "no Codex credentials were found" advice.
+    home: { env: 'CODEX_HOME', fallback: '.codex', loginEnv: ['OPENAI_API_KEY', 'CODEX_API_KEY', 'CODEX_ACCESS_TOKEN'] },
     detect: detectCli,
     // Read-only and without an approval to wait for: the run only has to read what it is handed. A chat's
     // title is asked in a folder that need not be a repository, and ephemeral keeps the run out of Codex's thread list.
