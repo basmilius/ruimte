@@ -2,13 +2,15 @@
 
 import { useEffect, useRef } from 'react';
 import { useReducedAnimations } from '../motion-preferences.ts';
-import { createPhosphor, PHOSPHOR_POSTER, PHOSPHOR_WIDTH, type Pointer } from './phosphor.ts';
+import { createDelegation, DELEGATION_POSTER, DELEGATION_WIDTH, type Pointer } from './delegation.ts';
 
-// The canvas is 150% of the container, moved up and left, so the glow may spill past it; in its 800 units the
-// container starts here.
+// The canvas is 150% of the container, moved up and left, so shadows and the faded edges may spill past it; in
+// its 800 units the container starts here.
 const BOX_LEFT = (0.25 / 1.5) * 800;
 const BOX_TOP = (0.2 / 1.12 / 1.5) * 800;
 const BOX_WIDTH = 800 / 1.5;
+// The site's `--font-sans`, which is system faces only, so it is written here rather than read from the page.
+const SANS = '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif';
 
 export function HeroVisual() {
     const reduced = useReducedAnimations();
@@ -23,10 +25,9 @@ export function HeroVisual() {
         if (!element || !container || !ctx) {
             return;
         }
-        const phosphor = createPhosphor();
         const jetbrains = getComputedStyle(element).getPropertyValue('--font-jetbrains').trim();
         const mono = `${jetbrains ? `${jetbrains}, ` : ''}ui-monospace, monospace`;
-        const current: Pointer = { x: 0, y: 0, active: 0 };
+        const delegation = createDelegation(ctx, { sans: SANS, mono });
         let frame = 0;
         let visible = true;
         let time = 0;
@@ -35,21 +36,25 @@ export function HeroVisual() {
         const draw = () => {
             ctx.clearRect(0, 0, 800, 800);
             ctx.save();
-            ctx.globalAlpha = reduced ? 1 : Math.min(1, time / 0.45);
             ctx.translate(BOX_LEFT, BOX_TOP);
-            ctx.scale(BOX_WIDTH / PHOSPHOR_WIDTH, BOX_WIDTH / PHOSPHOR_WIDTH);
-            phosphor.draw(ctx, reduced ? PHOSPHOR_POSTER : time, mono);
+            ctx.scale(BOX_WIDTH / DELEGATION_WIDTH, BOX_WIDTH / DELEGATION_WIDTH);
+            delegation.draw(reduced ? DELEGATION_POSTER : time);
             ctx.restore();
+            const opacity = reduced ? 1 : Math.min(1, time / 0.45);
+            if (opacity < 1) {
+                // The take sets its own alpha all the way through, so the fade in is laid over the finished frame.
+                ctx.save();
+                ctx.globalCompositeOperation = 'destination-in';
+                ctx.fillStyle = `rgba(0,0,0,${opacity})`;
+                ctx.fillRect(0, 0, 800, 800);
+                ctx.restore();
+            }
         };
         const tick = (now: number) => {
             const delta = previous ? Math.min((now - previous) / 1000, 0.05) : 0;
             previous = now;
             time += delta;
-            const ease = 1 - Math.exp(-delta * 6);
-            current.x += (pointer.current.x - current.x) * ease;
-            current.y += (pointer.current.y - current.y) * ease;
-            current.active += (pointer.current.active - current.active) * ease;
-            phosphor.update(time, delta, current);
+            delegation.update(time, delta, pointer.current);
             draw();
             frame = requestAnimationFrame(tick);
         };
@@ -105,7 +110,8 @@ export function HeroVisual() {
                 };
             }}
             onPointerLeave={() => {
-                pointer.current = { x: 0, y: 0, active: 0 };
+                // The take eases the pointer back to the middle from where it left.
+                pointer.current = { ...pointer.current, active: 0 };
             }}
         >
             <canvas
@@ -114,10 +120,13 @@ export function HeroVisual() {
                 aria-hidden="true"
                 className="pointer-events-none absolute -top-[20%] -left-[25%] aspect-square w-[150%]"
             />
-            <p className="sr-only">An oscilloscope beam draws waves, the Ruimte mark and the word ruimte.</p>
+            <p className="sr-only">
+                Give the task to a team, get one answer back: a lead agent starts three agents on a slow checkout, their results come back to it as they finish,
+                and it writes one answer.
+            </p>
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 text-[11px] text-text-faint opacity-0 transition-opacity duration-300 group-hover:opacity-100 motion-reduce:hidden [@media(hover:none)]:hidden">
                 <span className="h-1 w-1 rounded-full bg-accent" />
-                Move to turn the frequency knobs
+                Point at an agent to bring it forward
             </div>
         </div>
     );
