@@ -136,7 +136,9 @@ export function ProvidersPane() {
                                 />
                             }
                         >
-                            <AccountDot color={entry.account.color} className="size-2.25" />
+                            <span className="grid w-3.5 shrink-0 place-items-center">
+                                <AccountDot color={entry.account.color} className="size-2.25" />
+                            </span>
                             <span className="flex min-w-0 grow flex-col">
                                 <span className="flex min-w-0 items-center gap-2 text-sm text-text">
                                     <span className="truncate">{name}</span>
