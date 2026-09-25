@@ -372,7 +372,7 @@ export class SessionManager {
         // The line goes to whatever holds the terminal: a vim or an ssh started after the agent left would take it.
         if ((await this.holdsForeground(session.pid)) === false) {
             this.resuming.delete(sessionId);
-            throw new SessionError('shell-busy', `Another program runs in front of the shell of ${sessionId}; quit it and resume again`);
+            throw new SessionError('shell-busy', 'Another program runs in front of the shell; quit it and resume again');
         }
         if (session.exited) {
             this.resuming.delete(sessionId);
