@@ -26,7 +26,7 @@ struct MachineUsagePage: View {
         .navigationTitle("Usage")
         .task(id: days) {
             await RemotePageLifecycle.run(
-                client: client, events: ["usage.changed", "usage.limitsChanged", "providers.changed"],
+                client: client, events: ["usage.changed", "usage.limitsChanged", "accounts.changed"],
                 subscription: {
                     client.acquireSubscription(
                         start: "usage.subscribe", stop: "usage.unsubscribe", payload: .object([:]),
@@ -163,7 +163,7 @@ struct MachineUsagePage: View {
                 ]))
             limits = try await client.request("usage.limits")
             // A machine from before accounts does not know the request, and its limits read as they always did.
-            accounts = (try? await client.request(WireRequest.providersList.rawValue)).map(ProviderAccountList.init)
+            accounts = (try? await client.request(WireRequest.accountsList.rawValue)).map(ProviderAccountList.init)
             return result
         }
     }

@@ -65,7 +65,7 @@ describe('ProviderAccountsService', () => {
         });
         await service.load();
         service.subscribe('client', (event: SessionEvent) => {
-            if (event.event === 'providers.changed') {
+            if (event.event === 'accounts.changed') {
                 events.push(event.payload);
             }
         });

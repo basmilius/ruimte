@@ -60,7 +60,7 @@ export const variablesProblem = (drafts: readonly VariableDraft[]): string | nul
     return null;
 };
 
-/* The variables as `providers.save` takes them; a kept value goes back empty and redacted, so the machine keeps what it has. */
+/* The variables as `accounts.save` takes them; a kept value goes back empty and redacted, so the machine keeps what it has. */
 export const variablesOf = (drafts: readonly VariableDraft[]): ProviderAccountVariable[] =>
     drafts.map((draft) => {
         const name = draft.name.trim();

@@ -1,6 +1,6 @@
 import Foundation
 
-/// One account of an agent CLI on a machine, as `providers.list` describes it. The default account of a CLI has the
+/// One account of an agent CLI on a machine, as `accounts.list` describes it. The default account of a CLI has the
 /// CLI's kind as its id.
 public struct ProviderAccountEntry: Sendable, Equatable, Identifiable {
     public let id: String
@@ -43,7 +43,7 @@ public struct ProviderAccountList: Sendable, Equatable {
         self.entries = entries
     }
 
-    /// Reads a `providers.list` result or a `providers.changed` payload. The account map arrives as an object, which
+    /// Reads a `accounts.list` result or a `accounts.changed` payload. The account map arrives as an object, which
     /// keeps no order, so the order is the machine's list of statuses, and an account without one comes last by id.
     public init(_ value: JSONValue) {
         let statuses = value["statuses"]?.arrayValue ?? []

@@ -97,7 +97,7 @@ import { readMachineModel } from './machine-model.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
 import { registerProcessHandlers } from './handlers/processes.ts';
 import { registerUsageHandlers } from './handlers/usage.ts';
-import { registerProviderAccountHandlers } from './handlers/providers.ts';
+import { registerProviderAccountHandlers } from './handlers/accounts.ts';
 import { registerComputerHandlers } from './handlers/computer.ts';
 import { ComputerUse } from './computer/computer-use.ts';
 import { ComputerHelper, locateHelperApp } from './computer/helper.ts';

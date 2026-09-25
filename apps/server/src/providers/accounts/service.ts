@@ -276,7 +276,7 @@ export class ProviderAccountsService implements AccountLaunches {
         }
     }
 
-    /* Answers at once; an account that changed reads `checking` until its CLI answered, which arrives as `providers.changed`. */
+    /* Answers at once; an account that changed reads `checking` until its CLI answered, which arrives as `accounts.changed`. */
     save(accounts: ProviderAccountMap): Promise<ProviderAccounts> {
         return this.serial(() => this.commit(accounts, this.folderExists));
     }
@@ -612,7 +612,7 @@ export class ProviderAccountsService implements AccountLaunches {
     }
 
     private emit(): void {
-        this.sinks.emit({ event: 'providers.changed', payload: this.snapshot() });
+        this.sinks.emit({ event: 'accounts.changed', payload: this.snapshot() });
         for (const listener of this.listeners) {
             listener();
         }

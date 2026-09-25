@@ -366,13 +366,13 @@ export const REQUEST_SCHEMAS = {
     'chat.removeBookmark': { payload: ChatRemoveBookmarkPayloadSchema, result: ChatBookmarksResultSchema },
     'skills.list': { payload: SkillsListPayloadSchema, result: SkillsListResultSchema },
     'provider.list': { payload: EmptySchema, result: ProviderListResultSchema },
-    'providers.list': { payload: EmptySchema, result: ProviderAccountsSchema },
-    'providers.save': { payload: ProviderAccountsSavePayloadSchema, result: ProviderAccountsSchema },
+    'accounts.list': { payload: EmptySchema, result: ProviderAccountsSchema },
+    'accounts.save': { payload: ProviderAccountsSavePayloadSchema, result: ProviderAccountsSchema },
     // Asks every CLI again and answers once they all did.
-    'providers.refresh': { payload: EmptySchema, result: ProviderAccountsSchema },
-    'providers.create': { payload: ProviderAccountCreatePayloadSchema, result: ProviderAccountCreateResultSchema },
-    // Answers at once; what the CLI says arrives as `providers.changed`.
-    'providers.watchLogin': { payload: ProviderAccountWatchLoginPayloadSchema, result: EmptySchema },
+    'accounts.refresh': { payload: EmptySchema, result: ProviderAccountsSchema },
+    'accounts.create': { payload: ProviderAccountCreatePayloadSchema, result: ProviderAccountCreateResultSchema },
+    // Answers at once; what the CLI says arrives as `accounts.changed`.
+    'accounts.watchLogin': { payload: ProviderAccountWatchLoginPayloadSchema, result: EmptySchema },
     'project.sidebar': { payload: EmptySchema, result: ProjectSidebarResultSchema },
     'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
     'project.open': { payload: ProjectOpenPayloadSchema, result: ProjectOpenResultSchema },
@@ -505,7 +505,7 @@ export const EVENT_SCHEMAS = {
     'git.worktrees': GitWorktreesEventSchema,
     'usage.changed': UsageChangedEventSchema,
     'usage.limitsChanged': UsageLimitsSnapshotSchema,
-    'providers.changed': ProviderAccountsSchema,
+    'accounts.changed': ProviderAccountsSchema,
     'processes.sample': ProcessesSampleEventSchema,
     'processes.alerts': ProcessesAlertsSchema,
     'computer.status': ComputerUseStatusSchema,

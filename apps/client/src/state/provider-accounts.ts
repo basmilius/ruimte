@@ -52,7 +52,7 @@ export const watchProviderAccounts = (endpointId: string, transport: Transport):
     const load = (): void => {
         const asked = changes;
         transport
-            .request('providers.list', {})
+            .request('accounts.list', {})
             .then((accounts) => {
                 if (changes === asked) {
                     store.set(endpointId, accounts);
@@ -66,7 +66,7 @@ export const watchProviderAccounts = (endpointId: string, transport: Transport):
             });
     };
     const off = [
-        transport.on('providers.changed', (accounts) => {
+        transport.on('accounts.changed', (accounts) => {
             changes += 1;
             store.set(endpointId, accounts);
         }),

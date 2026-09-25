@@ -19,10 +19,10 @@ const linkTo = (endpointId: string) => {
     return link;
 };
 
-/* The whole map, as `providers.save` takes it. Answers false when the machine refused, which a toast then says. */
+/* The whole map, as `accounts.save` takes it. Answers false when the machine refused, which a toast then says. */
 export const saveAccounts = async (endpointId: string, accounts: ProviderAccountMap): Promise<boolean> => {
     try {
-        useProviderAccountsStore.getState().set(endpointId, await linkTo(endpointId).request('providers.save', { accounts }));
+        useProviderAccountsStore.getState().set(endpointId, await linkTo(endpointId).request('accounts.save', { accounts }));
         return true;
     } catch (e) {
         useToasts.getState().show({ id: `providers-save-${endpointId}`, kind: 'error', title: words('account.saveFailed'), description: reason(e) });
@@ -52,7 +52,7 @@ export const removeAccount = async (endpointId: string, id: string, kind: AgentK
 
 /* An account in a folder the machine makes for it; answers its id. Throws what the machine said, for the form to show. */
 export const createAccount = async (endpointId: string, kind: AgentKind, label: string, color: string): Promise<string> => {
-    const created = await linkTo(endpointId).request('providers.create', { kind, label, color });
+    const created = await linkTo(endpointId).request('accounts.create', { kind, label, color });
     const { id, ...accounts } = created;
     useProviderAccountsStore.getState().set(endpointId, accounts);
     return id;
@@ -61,7 +61,7 @@ export const createAccount = async (endpointId: string, kind: AgentKind, label: 
 /* An account in a folder that is already on the machine. Throws what the machine said, for the form to show. */
 export const linkAccount = async (endpointId: string, id: string, account: ProviderAccount): Promise<void> => {
     const current = providerAccountsOf(endpointId).accounts?.accounts ?? {};
-    useProviderAccountsStore.getState().set(endpointId, await linkTo(endpointId).request('providers.save', { accounts: { ...current, [id]: account } }));
+    useProviderAccountsStore.getState().set(endpointId, await linkTo(endpointId).request('accounts.save', { accounts: { ...current, [id]: account } }));
 };
 
 /*
@@ -83,6 +83,6 @@ export const openLogin = async (endpointId: string, kind: AgentKind, id: string,
     useUi.getState().setUsageOpen(false);
     // Watching is a courtesy: the status still arrives on the machine's own clock.
     void transportFor(endpointId)
-        ?.request('providers.watchLogin', { id })
+        ?.request('accounts.watchLogin', { id })
         .catch(() => undefined);
 };

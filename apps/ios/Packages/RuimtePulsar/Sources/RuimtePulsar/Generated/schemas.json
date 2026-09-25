@@ -18847,12 +18847,12 @@
       "providers"
     ]
   },
-  "request.providers.list.payload": {
+  "request.accounts.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
   },
-  "request.providers.list.result": {
+  "request.accounts.list.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -19014,7 +19014,7 @@
       "statuses"
     ]
   },
-  "request.providers.save.payload": {
+  "request.accounts.save.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -19085,7 +19085,7 @@
       "accounts"
     ]
   },
-  "request.providers.save.result": {
+  "request.accounts.save.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -19247,12 +19247,12 @@
       "statuses"
     ]
   },
-  "request.providers.refresh.payload": {
+  "request.accounts.refresh.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
   },
-  "request.providers.refresh.result": {
+  "request.accounts.refresh.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -19414,7 +19414,7 @@
       "statuses"
     ]
   },
-  "request.providers.create.payload": {
+  "request.accounts.create.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -19441,7 +19441,7 @@
       "label"
     ]
   },
-  "request.providers.create.result": {
+  "request.accounts.create.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -19608,7 +19608,7 @@
       "id"
     ]
   },
-  "request.providers.watchLogin.payload": {
+  "request.accounts.watchLogin.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -19621,7 +19621,7 @@
       "id"
     ]
   },
-  "request.providers.watchLogin.result": {
+  "request.accounts.watchLogin.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
@@ -42758,7 +42758,7 @@
       "providers"
     ]
   },
-  "event.providers.changed": {
+  "event.accounts.changed": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {

@@ -81,7 +81,7 @@ final class ChatModel {
                 if !self.loading { self.receive(event) }
             })
         unsubscribe.append(
-            client.subscribe(WireEvent.providersChanged.rawValue) { [weak self] payload in
+            client.subscribe(WireEvent.accountsChanged.rawValue) { [weak self] payload in
                 self?.accounts = ProviderAccountList(payload)
             })
         unsubscribe.append(
@@ -158,7 +158,7 @@ final class ChatModel {
 
     /// Nil from a machine before accounts, which does not know the request.
     private func loadAccounts() async -> JSONValue? {
-        try? await client.request(WireRequest.providersList.rawValue, payload: .object([:]))
+        try? await client.request(WireRequest.accountsList.rawValue, payload: .object([:]))
     }
 
     func replace(_ snapshot: JSONValue) {

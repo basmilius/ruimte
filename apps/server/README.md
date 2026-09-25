@@ -78,7 +78,7 @@ $RUIMTE_HOME/
   endpoint.json                    the daemon's own id and key pair, minted on first start, plus the name, icon and agent policy it was given
   auth.json                        the clients paired with this daemon, by public key
   projects.json                    every canvas the daemon knows: id, name, color, folder, and when it was last closed
-  providers.json                   the accounts of each agent CLI on this machine (`providers.save`): per id a kind, a label, a color and the CLI's config folder, never a credential
+  providers.json                   the accounts of each agent CLI on this machine (`accounts.save`): per id a kind, a label, a color and the CLI's config folder, never a credential
   projects/
     <projectId>.local.json         camera, focus, grid and panels of a project, where a client that never saw it starts
   sessions/                        mode 0700
