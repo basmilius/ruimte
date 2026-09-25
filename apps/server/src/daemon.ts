@@ -28,6 +28,7 @@ import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutboxStore } from './outbox/outbox.ts';
 import { nodeMode, startAgentWork } from './outbox/start-agent.ts';
 import { OutboxLink, wireOutbox } from './outbox/wiring.ts';
+import { restartBackgroundLimits } from './tasks/background-limit.ts';
 import { TaskStore } from './tasks/task-store.ts';
 import { registerTaskHandlers } from './handlers/tasks.ts';
 import { registerPlanHandlers } from './handlers/plan.ts';
@@ -185,6 +186,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // And for the agents a verb made that the daemon still has to start.
     const outbox = new OutboxStore(config.home);
     await outbox.load();
+    await restartBackgroundLimits(outbox, Date.now());
     // And for the tasks a chat gave, whose results still have to wake it.
     const tasks = new TaskStore(config.home);
     await tasks.load();

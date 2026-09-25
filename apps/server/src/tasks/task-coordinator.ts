@@ -56,8 +56,12 @@ const lastNote = (items: readonly ChatItem[], turnId: string, levels: readonly s
     return null;
 };
 
+const commandList = (commands: readonly string[]): string => commands.map((command) => `\`${command}\``).join(', ');
+
 const outlastedNote = (commands: readonly string[]): string =>
-    `The task settled after ${BACKGROUND_COMMAND_LIMIT_MS / 60_000} minutes while this still ran in the background: ${commands.map((command) => `\`${command}\``).join(', ')}.`;
+    `The task settled after ${BACKGROUND_COMMAND_LIMIT_MS / 60_000} minutes while this still ran in the background: ${commandList(commands)}.`;
+
+const restartedNote = (commands: readonly string[]): string => `The machine restarted while this still ran in the background: ${commandList(commands)}.`;
 
 /* What a settled turn of a child makes of its task. */
 export const resultOfTurn = (turn: ChatTurnItem, items: readonly ChatItem[], at: number): { status: 'done' | 'failed'; result: TaskResult } => {
@@ -155,8 +159,12 @@ export class TaskCoordinator {
         return this.settleNow(task, 'done', { text, source: 'done', at: this.deps.now() });
     }
 
-    /* The limit on the commands a child ran in the background passed: its task settles on its last turn, saying what still ran. */
-    async outlasted(childId: string, commands: readonly string[]): Promise<Task | null> {
+    /*
+     * The limit on the commands a child ran in the background passed, or a restart took them down with
+     * its CLI: its task settles on its last turn, saying what still ran, and fails after a restart as it
+     * does when the CLI goes within one run.
+     */
+    async outlasted(childId: string, commands: readonly string[], cause: 'limit' | 'restart' = 'limit'): Promise<Task | null> {
         const task = this.deps.tasks.openFor(childId);
         const items = this.deps.chatItems(childId);
         if (this.stopped || !task || items === null || this.delegating(childId)) {
@@ -167,6 +175,9 @@ export class TaskCoordinator {
             return null;
         }
         const { status, result } = resultOfTurn(last, items, this.deps.now());
+        if (cause === 'restart') {
+            return this.settleNow(task, 'failed', { ...result, text: `${result.text}\n\n${restartedNote(commands)}`, source: 'exit' });
+        }
         return this.settleNow(task, status, { ...result, text: `${result.text}\n\n${outlastedNote(commands)}` });
     }
 

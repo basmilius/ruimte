@@ -34,7 +34,8 @@ const ResumeLimitSchema = z.object({
 const BackgroundLimitSchema = z.object({
     kind: z.literal('background-limit'),
     // The target is the child; the task its background commands hold open, and what they were when the limit started, for a child whose process went since.
-    payload: z.object({ taskId: z.string().min(1), commands: z.array(z.string()) })
+    // `restarted` marks an entry an earlier run of the daemon owed, whose commands went down with it.
+    payload: z.object({ taskId: z.string().min(1), commands: z.array(z.string()), restarted: z.literal(true).optional() })
 });
 
 const WakeParentSchema = z.object({

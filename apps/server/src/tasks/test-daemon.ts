@@ -37,6 +37,7 @@ import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
+import { restartBackgroundLimits } from './background-limit.ts';
 import { TaskStore } from './task-store.ts';
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
@@ -100,6 +101,7 @@ export const bootTestDaemon = async ({
     await lineage.load();
     const outbox = new OutboxStore(home);
     await outbox.load();
+    await restartBackgroundLimits(outbox, clock.now());
     const tasks = new TaskStore(home);
     await tasks.load();
     const notices = new NoticeStore(home, () => clock.now());
