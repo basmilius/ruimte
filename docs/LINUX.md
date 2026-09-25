@@ -69,8 +69,9 @@ The `linux` job in `.github/workflows/release.yml` builds x64 on `ubuntu-22.04` 
    Whether to pass `--ozone-platform-hint=auto` is a choice, not a bug.
 4. **`site/index.html`** says Linux ships as AppImage and deb, and leaves the rpm out.
 
-Unverified: the deb (never built, and its default dependencies name `libgtk-3-0` and `libxss1`,
-both renamed or dropped in the t64 transition, so install it on trixie and noble); arm64; the
+Unverified: the deb (never built, and the `deb.depends` list in `apps/desktop/electron-builder.yml`
+names `libgtk-3-0` and `libxss1`, both renamed or dropped in the t64 transition, so install it on
+trixie and noble); arm64; the
 AppImage on Ubuntu 24.04, whose AppArmor policy takes away the unprivileged user namespaces
 Fedora allows; the frameless window under GNOME on X11 and under KDE, where resize borders and the
 compositor's own title bar menu are worth a look; and `bun test`, which spawns real shells and has
