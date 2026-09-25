@@ -1,9 +1,13 @@
 import type { ReactNode } from 'react';
+import { AppWindow, Clock, SquareTerminal, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ComputerAppEntry, ComputerAppGrants as Grants, ComputerRevokePayload } from '@ruimte/contracts';
 import { formatDayWithYear } from '@/format/datetime';
 import { useFormatLocale } from '@/format/locale';
+import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Button } from '@/ui/Button';
+import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
 interface ComputerAppGrantsProps {
@@ -17,12 +21,12 @@ export function ComputerAppGrants({ grants, busy, onRevoke }: ComputerAppGrantsP
     const { t } = useTranslation('settings');
     useFormatLocale();
     return (
-        <div className="flex min-w-0 flex-col gap-3">
-            <GrantGroup title={t('computer.apps.always')} empty={grants.always.length === 0 ? t('computer.apps.alwaysEmpty') : null}>
+        <>
+            <SettingsSection title={t('computer.apps.always')}>
+                {grants.always.length === 0 && <SettingsRow muted label={t('computer.apps.alwaysEmpty')} />}
                 {grants.always.map((entry) => (
-                    <GrantRow key={entry.bundleId} entry={entry} detail={t('computer.apps.allowed', { date: formatDayWithYear(entry.at) })}>
+                    <GrantRow key={entry.bundleId} entry={entry} icon={AppWindow} detail={t('computer.apps.allowed', { date: formatDayWithYear(entry.at) })}>
                         <Button
-                            size="sm"
                             disabled={busy}
                             aria-label={t('computer.apps.removeLabel', { app: entry.name })}
                             onClick={() => onRevoke({ bundleId: entry.bundleId, kind: 'always' })}
@@ -31,13 +35,13 @@ export function ComputerAppGrants({ grants, busy, onRevoke }: ComputerAppGrantsP
                         </Button>
                     </GrantRow>
                 ))}
-            </GrantGroup>
-            <GrantGroup title={t('computer.apps.terminals')} empty={grants.terminals.length === 0 ? t('computer.apps.terminalsEmpty') : null}>
+            </SettingsSection>
+            <SettingsSection title={t('computer.apps.terminals')}>
+                {grants.terminals.length === 0 && <SettingsRow muted label={t('computer.apps.terminalsEmpty')} />}
                 {grants.terminals.map((entry) => (
-                    <GrantRow key={entry.bundleId} entry={entry} detail={t('computer.apps.seen', { date: formatDayWithYear(entry.at) })}>
+                    <GrantRow key={entry.bundleId} entry={entry} icon={SquareTerminal} detail={t('computer.apps.seen', { date: formatDayWithYear(entry.at) })}>
                         <Tooltip label={t('computer.apps.notTerminalHint')}>
                             <Button
-                                size="sm"
                                 disabled={busy}
                                 aria-label={t('computer.apps.notTerminalLabel', { app: entry.name })}
                                 onClick={() => onRevoke({ bundleId: entry.bundleId, kind: 'terminal' })}
@@ -47,17 +51,17 @@ export function ComputerAppGrants({ grants, busy, onRevoke }: ComputerAppGrantsP
                         </Tooltip>
                     </GrantRow>
                 ))}
-            </GrantGroup>
+            </SettingsSection>
             {grants.thisTime.length > 0 && (
-                <GrantGroup title={t('computer.apps.thisTime')} empty={null}>
+                <SettingsSection title={t('computer.apps.thisTime')}>
                     {grants.thisTime.map((entry) => (
                         <GrantRow
                             key={`${entry.nodeId}\n${entry.bundleId}`}
                             entry={entry}
+                            icon={Clock}
                             detail={[entry.nodeTitle ?? t('computer.apps.untitled'), entry.projectName].filter(Boolean).join(' · ')}
                         >
                             <Button
-                                size="sm"
                                 disabled={busy}
                                 aria-label={t('computer.apps.removeLabel', { app: entry.name })}
                                 onClick={() => onRevoke({ bundleId: entry.bundleId, kind: 'thisTime', nodeId: entry.nodeId })}
@@ -66,31 +70,34 @@ export function ComputerAppGrants({ grants, busy, onRevoke }: ComputerAppGrantsP
                             </Button>
                         </GrantRow>
                     ))}
-                </GrantGroup>
+                </SettingsSection>
             )}
-        </div>
+        </>
     );
 }
 
-function GrantGroup({ title, empty, children }: { readonly title: string; readonly empty: string | null; readonly children: ReactNode }) {
-    return (
-        <section className="flex min-w-0 flex-col gap-1.5">
-            <h4 className="text-xs text-text-muted">{title}</h4>
-            {empty === null ? <ul className="flex min-w-0 flex-col gap-1">{children}</ul> : <p className="text-xs text-text-faint">{empty}</p>}
-        </section>
-    );
+interface GrantRowProps {
+    readonly entry: ComputerAppEntry;
+    readonly icon: LucideIcon;
+    readonly detail: string;
+    readonly children: ReactNode;
 }
 
-function GrantRow({ entry, detail, children }: { readonly entry: ComputerAppEntry; readonly detail: string; readonly children: ReactNode }) {
+function GrantRow({ entry, icon, detail, children }: GrantRowProps) {
     return (
-        <li className="flex min-w-0 items-center gap-3 rounded-lg bg-surface-raised py-1 pr-1 pl-3">
-            <div className="flex min-w-0 grow items-baseline gap-2">
+        <SettingsRow
+            leading={
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-surface-hover text-text-muted">
+                    <Icon icon={icon} size={16} />
+                </span>
+            }
+            label={
                 <Tooltip label={entry.bundleId}>
-                    <span className="max-w-full shrink-0 truncate text-sm text-text">{entry.name || entry.bundleId}</span>
+                    <span className="max-w-full truncate">{entry.name || entry.bundleId}</span>
                 </Tooltip>
-                <span className="min-w-0 truncate text-xs text-text-muted">{detail}</span>
-            </div>
-            {children}
-        </li>
+            }
+            description={detail}
+            control={children}
+        />
     );
 }

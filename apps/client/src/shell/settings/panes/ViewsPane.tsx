@@ -1,3 +1,4 @@
+import { Globe, PenTool } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
@@ -18,8 +19,9 @@ export function ViewsPane() {
 
     return (
         <>
-            <SettingsSection title={t('views.drawing.title')}>
+            <SettingsSection title={t('views.drawing.title')} icon={PenTool}>
                 <SettingsRow
+                    searchId="views.drawing.snap"
                     label={t('views.drawing.snap.label')}
                     description={t('views.drawing.snap.description')}
                     control={
@@ -31,8 +33,9 @@ export function ViewsPane() {
                 />
             </SettingsSection>
             {canSwipeBetweenPages() && (
-                <SettingsSection title={t('views.browser.title')}>
+                <SettingsSection title={t('views.browser.title')} icon={Globe}>
                     <SettingsRow
+                        searchId="views.browser.swipe"
                         label={t('views.browser.swipe.label')}
                         description={t('views.browser.swipe.description')}
                         control={

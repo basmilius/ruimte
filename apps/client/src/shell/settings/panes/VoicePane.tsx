@@ -114,7 +114,7 @@ export function VoicePane() {
                 <VoiceInputSection />
                 <DictationSection />
                 <SettingsSection title={t('voice.key.title')}>
-                    <SettingsRow muted label={t('voice.key.label')} description={t('voice.key.desktopOnly')} />
+                    <SettingsRow searchId="voice.key" muted label={t('voice.key.label')} description={t('voice.key.desktopOnly')} />
                 </SettingsSection>
             </>
         );
@@ -128,12 +128,13 @@ export function VoicePane() {
                 title={t('voice.key.title')}
                 description={t('voice.key.sectionDescription')}
                 action={
-                    <Button variant="secondary" size="sm" href="https://platform.openai.com/api-keys">
+                    <Button variant="secondary" href="https://platform.openai.com/api-keys">
                         {t('voice.key.create')}
                     </Button>
                 }
             >
                 <SettingsRow
+                    searchId="voice.key"
                     label={t('voice.key.label')}
                     description={displayStatus ? descriptionFor(displayStatus) : t('voice.key.checking')}
                     control={
@@ -176,6 +177,7 @@ export function VoicePane() {
                 </SettingsRow>
 
                 <SettingsRow
+                    searchId="voice.voice"
                     label={t('voice.conversation.voice.label')}
                     description={t('voice.conversation.voice.description')}
                     control={
@@ -198,6 +200,7 @@ export function VoicePane() {
                     }
                 />
                 <SettingsRow
+                    searchId="voice.confirm"
                     label={t('voice.conversation.confirm.label')}
                     description={t('voice.conversation.confirm.description')}
                     control={

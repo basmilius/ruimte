@@ -1,3 +1,4 @@
+import { Folder, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -16,8 +17,9 @@ export function FilesPane() {
 
     return (
         <>
-            <SettingsSection title={t('files.files.title')}>
+            <SettingsSection title={t('files.files.title')} icon={Folder}>
                 <SettingsRow
+                    searchId="files.files.openFiles"
                     label={t('files.files.openFiles.label')}
                     description={t('files.files.openFiles.description')}
                     control={
@@ -32,6 +34,7 @@ export function FilesPane() {
                     }
                 />
                 <SettingsRow
+                    searchId="files.files.hidden"
                     label={t('files.files.hidden.label')}
                     description={t('files.files.hidden.description')}
                     control={
@@ -39,23 +42,24 @@ export function FilesPane() {
                     }
                 />
                 <SettingsRow
+                    searchId="files.files.browseStart"
                     label={t('files.files.browseStart.label')}
                     description={t('files.files.browseStart.description')}
-                    control={
-                        <input
-                            className="field w-64 font-mono text-code"
-                            aria-label={t('files.files.browseStart.label')}
-                            placeholder="~/projects"
-                            value={browseStartFolder}
-                            spellCheck={false}
-                            onChange={(e) => update({ browseStartFolder: e.target.value })}
-                            onKeyDown={(e) => e.stopPropagation()}
-                        />
-                    }
-                />
+                >
+                    <input
+                        className="field bg-surface-sunken font-mono text-code"
+                        aria-label={t('files.files.browseStart.label')}
+                        placeholder="~/projects"
+                        value={browseStartFolder}
+                        spellCheck={false}
+                        onChange={(e) => update({ browseStartFolder: e.target.value })}
+                        onKeyDown={(e) => e.stopPropagation()}
+                    />
+                </SettingsRow>
             </SettingsSection>
-            <SettingsSection title={t('files.git.title')}>
+            <SettingsSection title={t('files.git.title')} icon={GitBranch}>
                 <SettingsRow
+                    searchId="files.git.layout"
                     label={t('files.git.layout.label')}
                     description={t('files.git.layout.description')}
                     control={
@@ -71,6 +75,7 @@ export function FilesPane() {
                     }
                 />
                 <SettingsRow
+                    searchId="files.git.whitespace"
                     label={t('files.git.whitespace.label')}
                     description={t('files.git.whitespace.description')}
                     control={

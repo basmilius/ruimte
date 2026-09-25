@@ -1,4 +1,3 @@
-import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { AgentKind, ModelInfo, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
 import {
@@ -11,7 +10,8 @@ import {
 } from '@/chat/preferences';
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@/chat/runtime-modes';
 import { canKeepAwake } from '@/desktop/bridge';
-import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
+import { MachineSwitchSections } from '@/shell/settings/MachineSwitchSection';
+import { providerAbilities } from '@/shell/settings/provider-abilities';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Skeleton, Toggle } from '@/shell/settings/controls';
@@ -26,13 +26,6 @@ const PROVIDER_DEFAULT = '';
    pane draws, so the words are the ones the interface is in right now. */
 const runtimeModeItems = (): SelectItem<RuntimeMode>[] =>
     RUNTIME_MODES.map((mode) => ({ value: mode, label: runtimeModeLabel(mode), description: runtimeModeHint(mode) }));
-
-/* What a provider offers, in one sentence, where it can be opened and whether its hooks report status. */
-const providerAbilities = (provider: ProviderInfo): string => {
-    const where = provider.capabilities.chat ? i18next.t('settings:agents.providers.chatAndTerminal') : i18next.t('settings:agents.providers.terminalOnly');
-    const status = provider.capabilities.hooks ? i18next.t('settings:agents.providers.reportsStatus') : i18next.t('settings:agents.providers.noStatus');
-    return `${where} ${status}`;
-};
 
 /* One row per knob the chosen model exposes; the composer's option picker shows the same descriptors. */
 function ModelOptionRows({ provider, model, options }: { provider: AgentKind; model: ModelInfo; options: Record<string, string | boolean> }) {
@@ -103,6 +96,14 @@ function ProviderModelRows({ provider, preferences }: { provider: ProviderInfo; 
     );
 }
 
+const KEEP_AWAKE_DESCRIPTIONS = {
+    off: null,
+    working: 'agents.keepAwake.mode.working.description',
+    always: 'agents.keepAwake.mode.always.description'
+} as const;
+
+const STREAMING_MODES = ['words', 'blocks', 'whole'] as const;
+
 export function AgentsPane() {
     const { t } = useTranslation('settings');
     const providers = useProviders((s) => s.providers);
@@ -117,6 +118,9 @@ export function AgentsPane() {
     const chatStreaming = useSettings((s) => s.chatStreaming);
     const update = useSettings((s) => s.update);
     const withModels = providers.filter((provider) => provider.models.length > 0);
+    // A browser cannot keep anything awake, so it is told nothing about a choice it has no way to honor.
+    const awake = canKeepAwake();
+    const keepAwakeDescription = KEEP_AWAKE_DESCRIPTIONS[keepAwake];
 
     return (
         <>
@@ -131,6 +135,7 @@ export function AgentsPane() {
                     <ProviderModelRows key={provider.kind} provider={provider} preferences={preferences} />
                 ))}
                 <SettingsRow
+                    searchId="agents.defaults.permissions"
                     label={t('agents.defaults.permissions')}
                     control={
                         <Select
@@ -143,6 +148,7 @@ export function AgentsPane() {
                     }
                 />
                 <SettingsRow
+                    searchId="agents.defaults.terminalMode"
                     label={t('agents.defaults.terminalMode')}
                     control={
                         <Select
@@ -155,23 +161,42 @@ export function AgentsPane() {
                     }
                 />
             </SettingsSection>
-            <SettingsSection title={t('agents.here.title')} description={t('agents.here.description')}>
+            <SettingsSection title={t('agents.chats.title')} scope="client">
                 <SettingsRow
-                    label={t('agents.here.showViews.label')}
-                    description={t('agents.here.showViews.description')}
+                    searchId="agents.chats.streaming"
+                    label={t('agents.chats.streaming.label')}
+                    description={t(`agents.chats.streaming.${chatStreaming}.description`)}
+                    control={
+                        <Select
+                            value={chatStreaming}
+                            label={t('agents.chats.streaming.label')}
+                            align="end"
+                            items={STREAMING_MODES.map((mode) => ({
+                                value: mode,
+                                label: t(`agents.chats.streaming.${mode}.label`),
+                                description: t(`agents.chats.streaming.${mode}.description`)
+                            }))}
+                            onValueChange={(value) => update({ chatStreaming: value })}
+                        />
+                    }
+                />
+                <SettingsRow
+                    searchId="agents.chats.showViews"
+                    label={t('agents.chats.showViews.label')}
+                    description={t('agents.chats.showViews.description')}
                     control={
                         <Toggle
                             checked={agentsShowViews}
                             onChange={(checked) => update({ agentsShowViews: checked })}
-                            label={t('agents.here.showViews.label')}
+                            label={t('agents.chats.showViews.label')}
                         />
                     }
                 />
             </SettingsSection>
-            <MachineSwitchSection setting="agentsDeleteAnyView" />
-            <MachineSwitchSection setting="resumeAtReset" />
-            <SettingsSection title={t('agents.working.title')} description={t('agents.working.description')}>
+            <MachineSwitchSections />
+            <SettingsSection title={t('agents.working.title')} description={awake ? t('agents.working.description') : undefined} scope="computer">
                 <SettingsRow
+                    searchId="agents.working.turnNotify"
                     label={t('agents.working.turnNotify.label')}
                     description={t('agents.working.turnNotify.description')}
                     control={
@@ -185,6 +210,7 @@ export function AgentsPane() {
                 {/* No longer hidden behind the switch above it. A question and a permission notify
                     whatever that one says, so this is the only answer to "may this make noise". */}
                 <SettingsRow
+                    searchId="agents.working.sound"
                     label={t('agents.working.sound.label')}
                     description={t('agents.working.sound.description')}
                     control={
@@ -195,12 +221,11 @@ export function AgentsPane() {
                         />
                     }
                 />
-            </SettingsSection>
-            {/* A browser cannot keep anything awake, so it is told nothing about a choice it has no way to honor. */}
-            {canKeepAwake() && (
-                <SettingsSection title={t('agents.keepAwake.title')} description={t('agents.keepAwake.description')}>
+                {awake && (
                     <SettingsRow
+                        searchId="agents.keepAwake.mode"
                         label={t('agents.keepAwake.mode.label')}
+                        description={keepAwakeDescription === null ? undefined : t(keepAwakeDescription)}
                         control={
                             <Select
                                 value={keepAwake}
@@ -223,55 +248,35 @@ export function AgentsPane() {
                             />
                         }
                     />
-                    {keepAwake !== 'off' && (
-                        <SettingsRow
-                            label={t('agents.keepAwake.battery.label')}
-                            description={t('agents.keepAwake.battery.description')}
-                            control={
-                                <Toggle
-                                    checked={keepAwakeOnBattery}
-                                    onChange={(checked) => update({ keepAwakeOnBattery: checked })}
-                                    label={t('agents.keepAwake.battery.label')}
-                                />
-                            }
-                        />
-                    )}
-                    {keepAwake === 'always' && (
-                        <SettingsRow
-                            label={t('agents.keepAwake.display.label')}
-                            description={t('agents.keepAwake.display.description')}
-                            control={
-                                <Toggle
-                                    checked={keepAwakeDisplay}
-                                    onChange={(checked) => update({ keepAwakeDisplay: checked })}
-                                    label={t('agents.keepAwake.display.label')}
-                                />
-                            }
-                        />
-                    )}
-                </SettingsSection>
-            )}
-            <SettingsSection title={t('agents.chats.title')}>
-                <SettingsRow
-                    label={t('agents.chats.streaming.label')}
-                    control={
-                        <Select
-                            value={chatStreaming}
-                            label={t('agents.chats.streaming.label')}
-                            align="end"
-                            items={[
-                                { value: 'words', label: t('agents.chats.streaming.words.label'), description: t('agents.chats.streaming.words.description') },
-                                {
-                                    value: 'blocks',
-                                    label: t('agents.chats.streaming.blocks.label'),
-                                    description: t('agents.chats.streaming.blocks.description')
-                                },
-                                { value: 'whole', label: t('agents.chats.streaming.whole.label'), description: t('agents.chats.streaming.whole.description') }
-                            ]}
-                            onValueChange={(value) => update({ chatStreaming: value })}
-                        />
-                    }
-                />
+                )}
+                {awake && keepAwake !== 'off' && (
+                    <SettingsRow
+                        indent
+                        label={t('agents.keepAwake.battery.label')}
+                        description={t('agents.keepAwake.battery.description')}
+                        control={
+                            <Toggle
+                                checked={keepAwakeOnBattery}
+                                onChange={(checked) => update({ keepAwakeOnBattery: checked })}
+                                label={t('agents.keepAwake.battery.label')}
+                            />
+                        }
+                    />
+                )}
+                {awake && keepAwake === 'always' && (
+                    <SettingsRow
+                        indent
+                        label={t('agents.keepAwake.display.label')}
+                        description={t('agents.keepAwake.display.description')}
+                        control={
+                            <Toggle
+                                checked={keepAwakeDisplay}
+                                onChange={(checked) => update({ keepAwakeDisplay: checked })}
+                                label={t('agents.keepAwake.display.label')}
+                            />
+                        }
+                    />
+                )}
             </SettingsSection>
             <SettingsSection title={t('agents.providers.title')} description={t('agents.providers.description')}>
                 {providers.length === 0 &&

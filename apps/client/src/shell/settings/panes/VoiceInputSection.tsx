@@ -65,6 +65,7 @@ export function VoiceInputSection() {
     return (
         <SettingsSection title={t('voice.input.title')} description={t('voice.input.description')}>
             <SettingsRow
+                searchId="voice.microphone"
                 label={t('voice.conversation.microphone.label')}
                 description={microphonesAvailable ? t('voice.conversation.microphone.description') : t('voice.conversation.microphone.unavailableDescription')}
                 control={
@@ -79,6 +80,7 @@ export function VoiceInputSection() {
                 }
             />
             <SettingsRow
+                searchId="voice.language"
                 label={t('voice.conversation.language.label')}
                 description={t('voice.conversation.language.description')}
                 control={

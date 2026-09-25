@@ -8,7 +8,7 @@ import { Toggle } from '@/shell/settings/controls';
 import { Button } from '@/ui/Button';
 import { FORM_ERROR } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { formatNumber } from '@/format/number';
+import { formatBytes, formatNumber } from '@/format/number';
 
 export function DictationSection() {
     const { t } = useTranslation('voice');
@@ -36,8 +36,9 @@ function Section() {
         }
     };
     return (
-        <SettingsSection title={t('dictation.title')} description={t('dictation.description')}>
+        <SettingsSection title={t('dictation.title')} description={t('dictation.description')} scope="computer">
             <SettingsRow
+                searchId="voice.dictation"
                 label={t('dictation.enable')}
                 description={
                     !bridge?.state ? t('dictation.desktopOnly') : model?.phase === 'unavailable' ? t('dictation.unavailable') : t('dictation.downloadHint')
@@ -116,24 +117,28 @@ function Section() {
                         {t('dictation.retry')}
                     </Button>
                 )}
-                {model && !busy && model.downloadedBytes > 0 && (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        className="self-start"
-                        disabled={removing}
-                        onClick={() => {
-                            if (bridge) {
-                                cancelDictation();
-                                setRemoving(true);
-                                void run(() => bridge.removeModel()).finally(() => setRemoving(false));
-                            }
-                        }}
-                    >
-                        {t('dictation.remove')}
-                    </Button>
-                )}
             </SettingsRow>
+            {model && !busy && model.downloadedBytes > 0 && (
+                <SettingsRow
+                    label={t('dictation.model.label')}
+                    description={t('dictation.model.description', { size: formatBytes(model.downloadedBytes) })}
+                    control={
+                        <Button
+                            variant="secondary"
+                            disabled={removing}
+                            onClick={() => {
+                                if (bridge) {
+                                    cancelDictation();
+                                    setRemoving(true);
+                                    void run(() => bridge.removeModel()).finally(() => setRemoving(false));
+                                }
+                            }}
+                        >
+                            {t('dictation.remove')}
+                        </Button>
+                    }
+                />
+            )}
         </SettingsSection>
     );
 }

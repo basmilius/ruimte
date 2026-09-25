@@ -5,6 +5,7 @@ import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@/shell/settings/controls';
 import { codeThemesOf, useSettings } from '@/state/settings';
+import { useTheme } from '@/state/theme';
 import { Select } from '@/ui/Select';
 
 const PREVIEW_CODE = [
@@ -65,14 +66,23 @@ export function CodeSection() {
     const codeThemeDark = useSettings((s) => s.codeThemeDark);
     const codeWrap = useSettings((s) => s.codeWrap);
     const update = useSettings((s) => s.update);
+    const side = useTheme((s) => s.resolved);
     const lightThemes = codeThemesOf('light').map((info) => ({ value: info.id, label: info.displayName }));
     const darkThemes = codeThemesOf('dark').map((info) => ({ value: info.id, label: info.displayName }));
-    const previewLabel = (themes: { value: string; label: string }[], id: string): string =>
-        t('appearance.code.preview', { theme: themes.find((theme) => theme.value === id)?.label ?? id });
+    // One preview, under the theme of the side the app is on now; switching the app's theme shows the other.
+    const [themes, shown] = side === 'light' ? [lightThemes, codeThemeLight] : [darkThemes, codeThemeDark];
+    const preview = (
+        <CodeThemePreview
+            theme={shown}
+            mode={side}
+            label={t('appearance.code.preview', { theme: themes.find((theme) => theme.value === shown)?.label ?? shown })}
+        />
+    );
 
     return (
         <SettingsSection title={t('appearance.code.title')}>
             <SettingsRow
+                searchId="appearance.code.light"
                 label={t('appearance.code.light.label')}
                 description={t('appearance.code.light.description')}
                 control={
@@ -85,9 +95,10 @@ export function CodeSection() {
                     />
                 }
             >
-                <CodeThemePreview theme={codeThemeLight} mode="light" label={previewLabel(lightThemes, codeThemeLight)} />
+                {side === 'light' && preview}
             </SettingsRow>
             <SettingsRow
+                searchId="appearance.code.dark"
                 label={t('appearance.code.dark.label')}
                 description={t('appearance.code.dark.description')}
                 control={
@@ -100,9 +111,10 @@ export function CodeSection() {
                     />
                 }
             >
-                <CodeThemePreview theme={codeThemeDark} mode="dark" label={previewLabel(darkThemes, codeThemeDark)} />
+                {side === 'dark' && preview}
             </SettingsRow>
             <SettingsRow
+                searchId="appearance.code.wrap"
                 label={t('appearance.code.wrap.label')}
                 description={t('appearance.code.wrap.description')}
                 control={<Toggle checked={codeWrap} onChange={(checked) => update({ codeWrap: checked })} label={t('appearance.code.wrap.label')} />}

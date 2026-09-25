@@ -144,8 +144,7 @@
             "label": "Usage page",
             "description": "Cost, tokens and plan limits, per account.",
             "open": "Open usage"
-        },
-        "title": "Usage"
+        }
     },
     "gesture": {
         "drag": "drag",
@@ -363,17 +362,13 @@
             "label": "Agents may delete any view or node",
             "rowLabel": "Agents on {{machine}} may delete any view or node",
             "description": "Off, an agent only deletes views and nodes it created. On, it can delete any view or node in any project there, including yours.",
-            "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open.",
-            "title": "What an agent may delete",
-            "sectionDescription": "Saved per machine. Applies to every client connected to it."
+            "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open."
         },
         "resumeAtReset": {
             "label": "Chats resume after a limit",
             "rowLabel": "Chats on {{machine}} resume after a limit",
             "description": "On, a chat that stopped on a usage limit goes on by itself once the limit resets, and a turn that failed because the model was overloaded is tried again after 1, 5 and 15 minutes.",
-            "notConnected": "Not connected. Change this while a project on the machine is open.",
-            "title": "Resume after a limit",
-            "sectionDescription": "Saved per machine. Each chat can still turn it off for itself."
+            "notConnected": "Not connected. Change this while a project on the machine is open."
         },
         "machine": {
             "title": "On {{machine}}",
@@ -392,7 +387,7 @@
         },
         "working": {
             "title": "While an agent works",
-            "description": "These settings apply to this computer only.",
+            "description": "Sleep pauses every agent.",
             "turnNotify": {
                 "label": "Tell me when a turn ends",
                 "description": "Sends a notification when an agent finishes while this window is in the background."
@@ -422,9 +417,7 @@
             "display": {
                 "label": "Keep the display on",
                 "description": "Off, the display can still turn off while the computer stays awake."
-            },
-            "title": "Keep this computer awake",
-            "description": "Sleep pauses every agent. These settings apply to this computer only."
+            }
         },
         "chats": {
             "title": "Chats",
@@ -459,14 +452,6 @@
             "noStatus": "Does not report agent status.",
             "installed": "Installed",
             "missing": "Missing"
-        },
-        "here": {
-            "title": "What an agent may do here",
-            "description": "These settings apply to this client only.",
-            "showViews": {
-                "label": "Let an agent show you a view",
-                "description": "On, a view an agent opens replaces the one you are working in, and a banner takes you back. Off, the banner offers a button to go there."
-            }
         }
     },
     "about": {
@@ -638,8 +623,7 @@
             "notTerminal": "Not a terminal",
             "notTerminalLabel": "{{app}} is not a terminal",
             "notTerminalHint": "An agent asks for it again. If it runs a shell, it counts as a terminal again."
-        },
-        "title": "Computer use"
+        }
     },
     "identity": {
         "name": "Name",

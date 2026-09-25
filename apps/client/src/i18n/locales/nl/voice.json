@@ -68,6 +68,10 @@
         "cancelDownload": "Download annuleren",
         "retry": "Download opnieuw proberen",
         "remove": "Model verwijderen",
+        "model": {
+            "label": "Model",
+            "description": "{{size}} op deze computer."
+        },
         "start": "Dicteren starten",
         "stop": "Dicteren stoppen",
         "cancel": "Dictatie weggooien",

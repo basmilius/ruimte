@@ -68,6 +68,10 @@
         "cancelDownload": "Cancel download",
         "retry": "Retry download",
         "remove": "Remove model",
+        "model": {
+            "label": "Model",
+            "description": "{{size}} on this computer."
+        },
         "start": "Start dictation",
         "stop": "Stop dictation",
         "cancel": "Discard dictation",

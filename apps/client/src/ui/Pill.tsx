@@ -7,6 +7,7 @@ const TONES = {
     /* Lifted off a sunken header, for a label that should stand out as a control. */
     raised: 'bg-surface-active text-text-muted',
     idle: 'bg-status-idle/15 text-status-idle',
+    needsYou: 'bg-status-needs-you/15 text-status-needs-you',
     accent: 'bg-accent-soft text-accent'
 };
 

@@ -71,7 +71,7 @@ interface StepperProps {
     onChange(value: number): void;
 }
 
-/* A number with minus and plus; the buttons form one group so they read as a single control. */
+/* A number between minus and plus, in one sunken group so the three read as a single control. */
 export function Stepper({ value, min, max, step, unit, label, onChange }: StepperProps) {
     const { t } = useTranslation('settings');
     const nudge = (direction: -1 | 1): void => {
@@ -79,33 +79,31 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
         onChange(Math.min(max, Math.max(min, next)));
     };
     return (
-        <div className="flex items-center gap-2" role="group" aria-label={label}>
-            <span className="min-w-12 text-right text-xs tabular-nums text-text" aria-live="polite">
+        <div className={`${BTN_GROUP} shrink-0 rounded-lg bg-surface-sunken p-0.5`} role="group" aria-label={label}>
+            <Tooltip label={t('controls.stepper.smaller')}>
+                <button
+                    className="icon-btn icon-btn-sm"
+                    aria-label={t('controls.stepper.smallerFor', { label })}
+                    disabled={value <= min}
+                    onClick={() => nudge(-1)}
+                >
+                    <Icon icon={Minus} size={14} />
+                </button>
+            </Tooltip>
+            <span className="min-w-10 px-1 text-center text-xs text-text tabular-nums" aria-live="polite">
                 {value}
                 {unit}
             </span>
-            <div className={`${BTN_GROUP} rounded-lg bg-surface-sunken p-0.5`}>
-                <Tooltip label={t('controls.stepper.smaller')}>
-                    <button
-                        className="icon-btn icon-btn-sm"
-                        aria-label={t('controls.stepper.smallerFor', { label })}
-                        disabled={value <= min}
-                        onClick={() => nudge(-1)}
-                    >
-                        <Icon icon={Minus} size={14} />
-                    </button>
-                </Tooltip>
-                <Tooltip label={t('controls.stepper.larger')}>
-                    <button
-                        className="icon-btn icon-btn-sm"
-                        aria-label={t('controls.stepper.largerFor', { label })}
-                        disabled={value >= max}
-                        onClick={() => nudge(1)}
-                    >
-                        <Icon icon={Plus} size={14} />
-                    </button>
-                </Tooltip>
-            </div>
+            <Tooltip label={t('controls.stepper.larger')}>
+                <button
+                    className="icon-btn icon-btn-sm"
+                    aria-label={t('controls.stepper.largerFor', { label })}
+                    disabled={value >= max}
+                    onClick={() => nudge(1)}
+                >
+                    <Icon icon={Plus} size={14} />
+                </button>
+            </Tooltip>
         </div>
     );
 }

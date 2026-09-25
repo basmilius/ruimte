@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import i18next from 'i18next';
-import { Copy, ExternalLink } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUpRight, CircleAlert, CircleCheck, Copy, LoaderCircle, RefreshCw, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { desktop, isDesktop } from '@/desktop/bridge';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { desktop, isDesktop, type Release, type UpdateState } from '@/desktop/bridge';
+import { formatDayWithYear } from '@/format/datetime';
+import { useFormatLocale } from '@/format/locale';
+import { SettingsRow, TopIcon } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@/shell/settings/controls';
 import { useServers, type ServerInfo } from '@/state/server';
@@ -15,6 +17,8 @@ import { Button } from '@/ui/Button';
 import { BrandSymbol } from '@/ui/Brand';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
+import { Pill } from '@/ui/Pill';
+import { Tooltip } from '@/ui/Tooltip';
 
 /* The three links, each with its words under `about.links.<id>`. */
 const LINKS = [
@@ -61,6 +65,25 @@ const detailsOf = (server: ServerInfo | undefined): Detail[] => {
     return rows;
 };
 
+/* Where the update stands, as an icon in the color of what it asks of you. */
+const STATUS_ICONS: Record<UpdateState['status'], { icon: LucideIcon; className: string }> = {
+    unsupported: { icon: CircleCheck, className: 'text-text-faint' },
+    idle: { icon: CircleCheck, className: 'text-status-idle' },
+    current: { icon: CircleCheck, className: 'text-status-idle' },
+    checking: { icon: LoaderCircle, className: 'animate-spin text-text-muted' },
+    available: { icon: ArrowDown, className: 'text-accent' },
+    downloading: { icon: ArrowDown, className: 'text-accent' },
+    ready: { icon: RefreshCw, className: 'text-accent' },
+    error: { icon: CircleAlert, className: 'text-status-error' }
+};
+
+/* The release date of the version on offer, once the shell's copy of the notes knows it. */
+const releasedOn = (releases: readonly Release[] | undefined, version: string | undefined): string | null => {
+    const published = releases?.find((release) => release.version === version)?.publishedAt;
+    const at = published ? new Date(published) : null;
+    return at === null || Number.isNaN(at.getTime()) ? null : formatDayWithYear(at);
+};
+
 /* Who Ruimte is, which versions this window runs, and the one update button there is. */
 export function AboutPane() {
     const { t } = useTranslation('settings');
@@ -70,14 +93,13 @@ export function AboutPane() {
     const autoDownload = useSettings((s) => s.updatesAutoDownload);
     const update = useSettings((s) => s.update);
     const details = detailsOf(server);
-    const { headline, detail } = describeUpdate(updates);
     // A browser has no app version of its own. It runs the client the machine serves.
     const version = isDesktop() && updates.currentVersion ? updates.currentVersion : server?.version;
     const releases = useReleaseNotes((s) => s.notes?.releases);
     const previousSeen = useReleaseNotes((s) => s.previousSeen);
     const withNotes = updates.supported && canShowReleaseNotes();
     const notesLink = withNotes ? notesView(releases ?? [], updates.currentVersion, updates, previousSeen).link : null;
-    const updateOffered = hasUpdate(updates);
+    const offered = hasUpdate(updates);
 
     useEffect(() => {
         if (withNotes) {
@@ -97,23 +119,32 @@ export function AboutPane() {
 
     return (
         <>
-            <header className="flex flex-col items-center gap-1 pt-2 pb-1 text-center">
-                <BrandSymbol size={64} />
-                <h3 className="mt-2 text-lg font-semibold text-text">Ruimte</h3>
-                <p className="text-sm text-text-muted">{t('about.tagline')}</p>
-                <p className="mt-2 text-sm text-text">
-                    {t('about.version', { version: version ?? t('about.unknownVersion') })}
-                    {updates.supported && <span className="text-text-muted"> · {headline}</span>}
-                </p>
-                {updates.supported && detail && <p className="max-w-96 text-xs text-text-muted">{detail}</p>}
-                {notesLink && !updateOffered && <WhatsNewLink label={notesLink.label} version={notesLink.version} />}
-                {updates.supported && (
-                    <div className="mt-2 flex items-center gap-3">
-                        <UpdateAction />
-                        {notesLink && updateOffered && <WhatsNewLink label={notesLink.label} version={notesLink.version} />}
-                    </div>
-                )}
+            <header className="flex min-w-0 flex-wrap items-center gap-4.5 rounded-xl border border-border bg-surface bg-clip-padding p-5.5">
+                <BrandSymbol size={64} className="rounded-2xl" />
+                <div className="min-w-0 grow">
+                    <h3 className="text-lg font-semibold text-text">Ruimte</h3>
+                    <p className="mt-0.5 text-xs text-text-muted">{t('about.tagline')}</p>
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                    <span className="text-xs text-text-muted tabular-nums">{t('about.version', { version: version ?? t('about.unknownVersion') })}</span>
+                    {offered && (
+                        <Pill shape="tag" tone="accent">
+                            {t(`about.status.${updates.status}`)}
+                        </Pill>
+                    )}
+                </div>
             </header>
+            {updates.supported && (
+                <SettingsSection title={t('about.updates.title')} description={t('about.updates.description')}>
+                    <UpdateStatusRow releases={releases} notesVersion={notesLink?.version ?? null} />
+                    <SettingsRow
+                        searchId="about.updates.auto"
+                        label={t('about.updates.auto.label')}
+                        description={t('about.updates.auto.description')}
+                        control={<Toggle checked={autoDownload} onChange={setAuto} label={t('about.updates.auto.label')} />}
+                    />
+                </SettingsSection>
+            )}
             <SettingsSection
                 title={t('about.details.title')}
                 action={
@@ -128,20 +159,11 @@ export function AboutPane() {
                         label={row.label}
                         description={row.description}
                         control={
-                            <span className={row.mono ? 'max-w-72 truncate font-mono text-code text-text-muted' : 'text-sm text-text-muted'}>{row.value}</span>
+                            <span className={row.mono ? 'max-w-72 truncate font-mono text-code text-text-muted' : 'text-xs text-text-muted'}>{row.value}</span>
                         }
                     />
                 ))}
             </SettingsSection>
-            {updates.supported && (
-                <SettingsSection title={t('about.updates.title')} description={t('about.updates.description')}>
-                    <SettingsRow
-                        label={t('about.updates.auto.label')}
-                        description={t('about.updates.auto.description')}
-                        control={<Toggle checked={autoDownload} onChange={setAuto} label={t('about.updates.auto.label')} />}
-                    />
-                </SettingsSection>
-            )}
             <SettingsSection title={t('about.links.title')}>
                 {LINKS.map((link) => (
                     <SettingsRow
@@ -149,9 +171,11 @@ export function AboutPane() {
                         label={t(`about.links.${link.id}.label`)}
                         description={t(`about.links.${link.id}.description`)}
                         control={
-                            <Button variant="secondary" href={link.href}>
-                                {t('common:action.open')} <Icon icon={ExternalLink} size={12} />
-                            </Button>
+                            <Tooltip label={t('common:action.open')} name>
+                                <a className="icon-btn" href={link.href} target="_blank" rel="noreferrer">
+                                    <Icon icon={ArrowUpRight} size={16} />
+                                </a>
+                            </Tooltip>
                         }
                     />
                 ))}
@@ -161,11 +185,58 @@ export function AboutPane() {
     );
 }
 
-function WhatsNewLink({ label, version }: { label: string; version: string }) {
+interface UpdateStatusRowProps {
+    releases: readonly Release[] | undefined;
+    /* The version the notes open on, or null where there are none to open. They never show here. */
+    notesVersion: string | null;
+}
+
+/* The first row of Updates: where the update stands, a link to what is new in it, and what to do next. */
+function UpdateStatusRow({ releases, notesVersion }: UpdateStatusRowProps) {
+    const { t } = useTranslation('settings');
+    const updates = useUpdates();
+    useFormatLocale();
+    const { headline, detail } = describeUpdate(updates);
+    const status = STATUS_ICONS[updates.status];
+    const percent = Math.min(100, Math.max(0, updates.percent ?? 0));
+    const released = updates.status === 'available' ? releasedOn(releases, updates.version) : null;
+    const line = released === null ? detail : t('about.updates.released', { date: released });
+
     return (
-        <button type="button" className="text-xs text-accent hover:underline" onClick={() => openReleaseNotes(version)}>
-            {label}
-        </button>
+        <div className="flex min-w-0 flex-col gap-3 px-4.5 py-3.5">
+            <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2">
+                <div className="flex min-w-0 grow basis-60 items-start gap-3">
+                    <TopIcon icon={status.icon} size={20} className={status.className} />
+                    <div className="min-w-0 grow">
+                        <div className="text-sm text-text">{headline}</div>
+                        {line && <div className="mt-0.5 text-xs text-text-muted tabular-nums">{line}</div>}
+                        {notesVersion !== null && (
+                            <button
+                                type="button"
+                                className="mt-1.5 inline-flex items-center gap-1 text-xs text-accent hover:underline"
+                                onClick={() => openReleaseNotes(notesVersion)}
+                            >
+                                {t('about.updates.whatsNew', { version: notesVersion })}
+                                <Icon icon={ArrowRight} size={12} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+                <UpdateAction />
+            </div>
+            {updates.status === 'downloading' && (
+                <div
+                    role="progressbar"
+                    aria-label={headline}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(percent)}
+                    className="ml-8 h-1 overflow-hidden rounded-full bg-surface-sunken"
+                >
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${percent}%` }} />
+                </div>
+            )}
+        </div>
     );
 }
 

@@ -144,8 +144,7 @@
             "label": "Verbruikspagina",
             "description": "Kosten, tokens en planlimieten, per account.",
             "open": "Verbruik openen"
-        },
-        "title": "Verbruik"
+        }
     },
     "gesture": {
         "drag": "slepen",
@@ -363,17 +362,13 @@
             "label": "Agents mogen elke weergave of node verwijderen",
             "rowLabel": "Agents op {{machine}} mogen elke weergave of node verwijderen",
             "description": "Uit verwijdert een agent alleen weergaven en nodes die hij zelf maakte. Aan mag hij elke weergave en node in elk project daar verwijderen, ook die van jou.",
-            "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat.",
-            "title": "Wat een agent mag verwijderen",
-            "sectionDescription": "Per machine opgeslagen. Geldt voor elke client die ermee verbonden is."
+            "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat."
         },
         "resumeAtReset": {
             "label": "Chats gaan verder na een limiet",
             "rowLabel": "Chats op {{machine}} gaan verder na een limiet",
             "description": "Aan gaat een chat die op een verbruikslimiet stopte vanzelf verder zodra de limiet reset, en wordt een turn die mislukte omdat het model overbelast was na 1, 5 en 15 minuten opnieuw geprobeerd.",
-            "notConnected": "Niet verbonden. Pas dit aan terwijl er een project op de machine open staat.",
-            "title": "Verder na een limiet",
-            "sectionDescription": "Per machine opgeslagen. Elke chat kan het voor zichzelf nog uitzetten."
+            "notConnected": "Niet verbonden. Pas dit aan terwijl er een project op de machine open staat."
         },
         "machine": {
             "title": "Op {{machine}}",
@@ -392,7 +387,7 @@
         },
         "working": {
             "title": "Terwijl een agent werkt",
-            "description": "Deze instellingen gelden alleen voor deze computer.",
+            "description": "Slaap pauzeert elke agent.",
             "turnNotify": {
                 "label": "Laat het weten als een turn eindigt",
                 "description": "Stuurt een notificatie als een agent klaar is terwijl dit venster op de achtergrond staat."
@@ -422,9 +417,7 @@
             "display": {
                 "label": "Het scherm aan laten",
                 "description": "Uit mag het scherm nog uitgaan terwijl de computer wakker blijft."
-            },
-            "title": "Deze computer wakker houden",
-            "description": "Slaap pauzeert elke agent. Deze instellingen gelden alleen voor deze computer."
+            }
         },
         "chats": {
             "title": "Chats",
@@ -459,14 +452,6 @@
             "noStatus": "Meldt de status van de agent niet.",
             "installed": "Geïnstalleerd",
             "missing": "Ontbreekt"
-        },
-        "here": {
-            "title": "Wat een agent hier mag",
-            "description": "Deze instellingen gelden alleen voor deze client.",
-            "showViews": {
-                "label": "Een agent een weergave laten tonen",
-                "description": "Aan vervangt de weergave waarin je werkt door de weergave die een agent opent, en een banner brengt je terug. Uit biedt de banner een knop om ernaartoe te gaan."
-            }
         }
     },
     "about": {
@@ -638,8 +623,7 @@
             "notTerminal": "Geen terminal",
             "notTerminalLabel": "{{app}} is geen terminal",
             "notTerminalHint": "Een agent vraagt er weer om. Draait de app een shell, dan telt die weer als terminal."
-        },
-        "title": "Computer use"
+        }
     },
     "identity": {
         "name": "Naam",

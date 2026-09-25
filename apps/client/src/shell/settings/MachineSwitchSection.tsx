@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@/shell/settings/controls';
@@ -22,15 +21,13 @@ export type MachineSwitch = 'agentsDeleteAnyView' | 'resumeAtReset';
 const WORDS: Record<MachineSwitch, string> = { agentsDeleteAnyView: 'deleteAnyView', resumeAtReset: 'resumeAtReset' };
 
 /* The wire takes name, icon and the switch together, so the row sends back the name and icon the machine already carries. */
-function MachineSwitchRow({ endpoint, setting }: { endpoint: Endpoint; setting: MachineSwitch }) {
+function MachineSwitchRow({ endpoint, setting, searchId }: { endpoint: Endpoint; setting: MachineSwitch; searchId?: string }) {
     const { t } = useTranslation('settings');
     const info = useServers((s) => s.byEndpoint[endpoint.id]);
     const connection = useEndpointConnection(endpoint.id);
     const connected = connection.status === 'open';
     const [busy, setBusy] = useState(false);
     const words = `agents.${WORDS[setting]}`;
-    // The row is one of several machines, so the switch says which one it speaks for.
-    const label = t(`${words}.rowLabel`, { machine: endpoint.label });
 
     const set = async (checked: boolean): Promise<void> => {
         const link = transportFor(endpoint.id);
@@ -67,23 +64,27 @@ function MachineSwitchRow({ endpoint, setting }: { endpoint: Endpoint; setting: 
 
     return (
         <SettingsRow
-            label={
-                <span className="flex items-center gap-2">
-                    <MachineGlyph icon={info?.icon ?? null} className="shrink-0 text-text-muted" />
-                    <span className="truncate">{endpoint.label}</span>
-                </span>
-            }
+            searchId={searchId}
+            label={t(`${words}.label`)}
             description={connected ? t(`${words}.description`) : connection.noLink === true ? t(`${words}.notConnected`) : t('machine.notAnswering')}
-            control={<Toggle checked={info?.[setting] === true} onChange={(checked) => void set(checked)} label={label} disabled={busy || !connected} />}
+            control={
+                <Toggle
+                    checked={info?.[setting] === true}
+                    onChange={(checked) => void set(checked)}
+                    // The section names the machine, a screen reader reading the switch alone does not.
+                    label={t(`${words}.rowLabel`, { machine: endpoint.label })}
+                    disabled={busy || !connected}
+                />
+            }
         />
     );
 }
 
 /*
- * One switch per machine, under the settings about what an agent may do rather than in the Machines
- * pane. The pane is about pairing a machine and whether it answers; this is about an agent.
+ * One section per machine for what its agents may do, under the settings about agents rather than in
+ * the Account pane. That pane is about pairing a machine and whether it answers; this is about an agent.
  */
-export function MachineSwitchSection({ setting }: { setting: MachineSwitch }) {
+export function MachineSwitchSections() {
     const { t } = useTranslation('settings');
     const stored = useEndpoints((s) => s.endpoints);
     const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
@@ -96,10 +97,18 @@ export function MachineSwitchSection({ setting }: { setting: MachineSwitch }) {
     ];
 
     return (
-        <SettingsSection title={t(`agents.${WORDS[setting]}.title`)} description={t(`agents.${WORDS[setting]}.sectionDescription`)}>
-            {ordered.map((endpoint) => (
-                <MachineSwitchRow key={endpoint.id} endpoint={endpoint} setting={setting} />
+        <>
+            {ordered.map((endpoint, index) => (
+                <SettingsSection
+                    key={endpoint.id}
+                    title={t('agents.machine.title', { machine: endpoint.label })}
+                    description={t('agents.machine.description')}
+                    scope="machine"
+                >
+                    <MachineSwitchRow endpoint={endpoint} setting="resumeAtReset" searchId={index === 0 ? 'agents.resumeAtReset' : undefined} />
+                    <MachineSwitchRow endpoint={endpoint} setting="agentsDeleteAnyView" searchId={index === 0 ? 'agents.deleteAnyView' : undefined} />
+                </SettingsSection>
             ))}
-        </SettingsSection>
+        </>
     );
 }

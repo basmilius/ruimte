@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
-import { CircleCheck, CircleDashed, LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ComputerGrant, ComputerRevokePayload, ComputerUseStatus } from '@ruimte/contracts';
 import {
@@ -16,7 +15,6 @@ import {
     type GrantState
 } from '@/computer/setup';
 import { desktop } from '@/desktop/bridge';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { activeLanguage } from '@/i18n/active';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -32,13 +30,10 @@ import type { Transport } from '@/transport/transport';
 import { Button } from '@/ui/Button';
 import { FORM_ERROR } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
 
 /* Accessibility shows up in a running helper, so while one is missing the row asks again this often. */
 const POLL_MS = 2_000;
-
-const GRANT_ICONS = { granted: CircleCheck, missing: CircleDashed, unknown: LoaderCircle } as const;
 
 /* Asks quietly: a failed recheck changes nothing on screen, and the next one or the person's own press tries again. */
 const recheckOn = (endpointId: string, how: 'restart' | 'status'): void => {
@@ -57,9 +52,8 @@ export function ComputerPane() {
     );
 }
 
-/* One row per machine, like every setting an agent is held to: the machine enforces it, so each keeps its own. */
+/* A block per machine, like every setting an agent is held to: the machine enforces it, so each keeps its own. */
 function ComputerSection() {
-    const { t } = useTranslation('settings');
     const stored = useEndpoints((s) => s.endpoints);
     const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
     const ordered = [
@@ -67,20 +61,41 @@ function ComputerSection() {
         ...endpoints.filter((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID)
     ];
     return (
-        <SettingsSection title={t('computer.title')} description={t('computer.description')}>
-            {ordered.map((endpoint) => (
-                <ComputerMachineRow key={endpoint.id} endpoint={endpoint} />
+        <>
+            {ordered.map((endpoint, index) => (
+                <ComputerMachine key={endpoint.id} endpoint={endpoint} first={index === 0} />
             ))}
-        </SettingsSection>
+        </>
     );
 }
 
-function ComputerMachineRow({ endpoint }: { endpoint: Endpoint }) {
+const PHASE_DOTS: Record<ComputerSetup['phase'], string> = {
+    unknown: 'bg-text-faint',
+    unsupported: 'bg-text-faint',
+    unavailable: 'bg-text-faint',
+    off: 'bg-text-faint',
+    starting: 'bg-status-needs-you',
+    grants: 'bg-status-needs-you',
+    ready: 'bg-status-idle'
+};
+
+/* Where the machine stands, behind a dot in the color of what it asks of you. */
+function SetupLine({ setup }: { setup: ComputerSetup }) {
+    return (
+        <span className="flex items-start gap-2">
+            <span className="flex h-5 shrink-0 items-center">
+                <span className={clsx('h-2 w-2 rounded-full', PHASE_DOTS[setup.phase])} />
+            </span>
+            {setupLine(setup)}
+        </span>
+    );
+}
+
+function ComputerMachine({ endpoint, first }: { endpoint: Endpoint; first: boolean }) {
     const { t } = useTranslation('settings');
     const connection = useEndpointConnection(endpoint.id);
     const connected = connection.status === 'open';
     const platform = useServers((s) => s.byEndpoint[endpoint.id]?.platform ?? null);
-    const icon = useServers((s) => s.byEndpoint[endpoint.id]?.icon ?? null);
     const status = useComputer((s) => s.statuses[endpoint.id] ?? null);
     const grants = useComputer((s) => s.grants[endpoint.id] ?? null);
     const setup = computerSetupOf(status, platform);
@@ -142,29 +157,35 @@ function ComputerMachineRow({ endpoint }: { endpoint: Endpoint }) {
     }
 
     return (
-        <SettingsRow
-            label={
-                <span className="flex items-center gap-2">
-                    <MachineGlyph icon={icon} className="shrink-0 text-text-muted" />
-                    <span className="truncate">{endpoint.label}</span>
-                </span>
-            }
-            description={connected ? setupLine(setup) : t('computer.machine.notConnected')}
-            control={
-                <Toggle
-                    checked={status?.enabled === true}
+        <>
+            <SettingsSection>
+                <SettingsRow
+                    searchId={first ? 'computer.enable' : undefined}
                     label={t('computer.enable', { machine: endpoint.label })}
-                    disabled={!connected || busy || !canSwitch(setup)}
-                    onChange={(enabled) => void run((link) => link.request('computer.setEnabled', { enabled, language: activeLanguage() }))}
-                />
-            }
-        >
+                    description={connected ? <SetupLine setup={setup} /> : t('computer.machine.notConnected')}
+                    control={
+                        <Toggle
+                            checked={status?.enabled === true}
+                            label={t('computer.enable', { machine: endpoint.label })}
+                            disabled={!connected || busy || !canSwitch(setup)}
+                            onChange={(enabled) => void run((link) => link.request('computer.setEnabled', { enabled, language: activeLanguage() }))}
+                        />
+                    }
+                >
+                    {(error ?? status?.problem) && (
+                        <p role="alert" className={FORM_ERROR}>
+                            {error ?? status?.problem}
+                        </p>
+                    )}
+                </SettingsRow>
+            </SettingsSection>
             {connected && showsGrants(setup) && (
-                <GrantList
+                <GrantSection
                     setup={setup}
                     local={local}
                     busy={busy}
                     machine={endpoint.label}
+                    first={first}
                     onOpen={(grant) => void openGrant(grant)}
                     onCheck={() => void run((link) => link.request('computer.restart', {}))}
                 />
@@ -172,65 +193,62 @@ function ComputerMachineRow({ endpoint }: { endpoint: Endpoint }) {
             {connected && status?.enabled === true && grants !== null && (
                 <ComputerAppGrants grants={grants} busy={busy} onRevoke={(payload) => void revoke(payload)} />
             )}
-            {(error ?? status?.problem) && (
-                <p role="alert" className={FORM_ERROR}>
-                    {error ?? status?.problem}
-                </p>
-            )}
-        </SettingsRow>
+        </>
     );
 }
 
-interface GrantListProps {
+const GRANT_TONES = { granted: 'idle', missing: 'needsYou', unknown: 'muted' } as const;
+
+interface GrantSectionProps {
     setup: ComputerSetup;
     // This Mac, whose System Settings the shell can open.
     local: boolean;
     busy: boolean;
     machine: string;
+    first: boolean;
     onOpen(grant: ComputerGrant): void;
     onCheck(): void;
 }
 
-function GrantList({ setup, local, busy, machine, onOpen, onCheck }: GrantListProps) {
+function GrantSection({ setup, local, busy, machine, first, onOpen, onCheck }: GrantSectionProps) {
     const { t } = useTranslation('settings');
-    const stateOf = (grant: ComputerGrant): GrantState => setup[grant];
+    const restart = setup.screenRecording === 'missing';
+    const footer = !local && setup.phase !== 'ready' ? t('computer.remote', { machine }) : local && restart ? t('computer.restartNote') : undefined;
     return (
-        <div className="flex min-w-0 flex-col gap-2">
-            <ul className="flex min-w-0 flex-col gap-2">
-                {COMPUTER_GRANTS.map((grant) => {
-                    const state = stateOf(grant);
-                    return (
-                        <li key={grant} className="flex min-w-0 flex-wrap items-center gap-3 rounded-lg bg-surface-raised px-3 py-2.5">
-                            <Icon
-                                icon={GRANT_ICONS[state]}
-                                size={16}
-                                className={clsx('shrink-0', state === 'granted' ? 'text-accent' : 'text-text-muted', state === 'unknown' && 'animate-spin')}
-                            />
-                            <div className="min-w-0 grow basis-40">
-                                <div className="text-sm text-text">{t(`computer.grant.${grant}.label`)}</div>
-                                <div className="text-xs text-text-muted">{t(`computer.grant.${grant}.description`)}</div>
-                            </div>
-                            <Pill shape="tag" tone={state === 'granted' ? 'accent' : 'muted'}>
-                                {t(`computer.state.${state}`)}
-                            </Pill>
-                            {local && state === 'missing' && (
-                                <Button variant="secondary" size="sm" disabled={busy} onClick={() => onOpen(grant)}>
-                                    {t('computer.open')}
-                                </Button>
-                            )}
-                        </li>
-                    );
-                })}
-            </ul>
-            {!local && setup.phase !== 'ready' && <p className="text-xs text-text-muted">{t('computer.remote', { machine })}</p>}
-            {setup.screenRecording === 'missing' && (
-                <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
-                    {local && <p className="min-w-0 grow basis-60 text-xs text-text-muted">{t('computer.restartNote')}</p>}
-                    <Button variant="secondary" size="sm" disabled={busy} onClick={onCheck}>
+        <SettingsSection
+            title={t('computer.permissions')}
+            footer={footer}
+            action={
+                restart && (
+                    <Button disabled={busy} onClick={onCheck}>
                         {t('computer.checkAgain')}
                     </Button>
-                </div>
-            )}
-        </div>
+                )
+            }
+        >
+            {COMPUTER_GRANTS.map((grant) => {
+                const state: GrantState = setup[grant];
+                return (
+                    <SettingsRow
+                        key={grant}
+                        searchId={first ? `computer.grant.${grant}` : undefined}
+                        label={t(`computer.grant.${grant}.label`)}
+                        description={t(`computer.grant.${grant}.description`)}
+                        control={
+                            <>
+                                <Pill shape="tag" tone={GRANT_TONES[state]}>
+                                    {t(`computer.state.${state}`)}
+                                </Pill>
+                                {local && state === 'missing' && (
+                                    <Button variant="secondary" disabled={busy} onClick={() => onOpen(grant)}>
+                                        {t('computer.open')}
+                                    </Button>
+                                )}
+                            </>
+                        }
+                    />
+                );
+            })}
+        </SettingsSection>
     );
 }
