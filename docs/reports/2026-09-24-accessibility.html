@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Toegankelijkheid van de client</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+th, td { padding: 11px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+.finding { border-top: 1px solid var(--line); padding-top: 22px; margin-top: 22px; }
+.finding:first-of-type { border-top: 0; padding-top: 0; margin-top: 8px; }
+.finding h3 { margin: 0 0 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+.finding h3 .num { color: var(--accent); font-variant-numeric: tabular-nums; }
+.finding ul { margin: 8px 0 12px; }
+.finding li { margin-bottom: 6px; }
+.accept { font-size: 14px; padding: 10px 14px; background: var(--panel); border-radius: 8px; margin: 0; }
+.accept strong { color: var(--accent); }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  tr, .finding { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .recommendation, .badge, .accept { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#summary">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">Ruimte / toegankelijkheid / 24 september 2026</p>
+  <h1>Toegankelijkheid van de desktop- en webclient</h1>
+  <p class="intro">De gedeelde stukken zijn grotendeels in orde. Icoonknoppen hebben bijna allemaal een naam, de Base UI-dialogen en -menu's regelen rollen en focus zelf, en het commandopalet is een echte combobox. Het canvas is het zwakke punt. Een node heeft voor een schermlezer geen naam en geen grens, terminals en drawings bestaan alleen als pixels, en veel canvasacties werken alleen met een muis. Daarnaast zijn er een paar goedkope fouten die het hele toetsenbord raken: Spatie drukt geen knop meer in, en een node met focus toont geen ring.</p>
+  <p class="status">30 bevindingen, niets gefixt</p>
+  <p class="caption">Scope: <code>apps/client/src</code>, plus de toegankelijkheidshaken in <code>apps/desktop/src</code>. Bron: <code>main</code> op <code>644ddc3b</code>, regelnummers bijgewerkt op 25 september. Methode: code-audit in drie delen, contrast berekend uit de tokens in <code>styles.css</code>, en één dump van de echte accessibility tree van Ruimte Dev met <code>cu state</code>. De iOS-app valt erbuiten.</p>
+  <nav aria-label="Inhoud">
+    <a href="#summary">Samenvatting</a>
+    <a href="#hidden">Onzichtbare inhoud</a>
+    <a href="#semantics">Namen en meldingen</a>
+    <a href="#keyboard">Toetsenbord en focus</a>
+    <a href="#contrast">Contrast en kleur</a>
+    <a href="#good">Wat klopt</a>
+    <a href="#next">Aanpak</a>
+  </nav>
+</header>
+<main>
+  <section id="summary" class="recommendation">
+    <h2>Samenvatting</h2>
+    <div class="stats">
+      <div><strong>30</strong><span>bevindingen</span></div>
+      <div><strong>11</strong><span>hoog: blokkeert een schermlezer- of toetsenbordgebruiker</span></div>
+      <div><strong>14</strong><span>middel</span></div>
+      <div><strong>5</strong><span>laag</span></div>
+    </div>
+    <p>De live tree bevestigt het beeld uit de code. Op een canvas met chats en een bestandsboom telde de tree ongeveer 266 elementen. Elke knop had een naam en de chatberichten kwamen door als tekst met koppen. Een node was echter geen groep of regio: de titel stond als losse tekst tussen de rest, dus niets zegt waar een node begint of eindigt. De composer was een <code>TextArea</code> zonder naam.</p>
+    <p>Veel van het werk zit in een handvol componenten. <code>NodeFrame</code>, <code>Tooltip</code>, <code>Toasts</code>, <code>SlidingColumn</code> en twee tokens in <code>styles.css</code> dekken samen ongeveer een derde van de bevindingen.</p>
+    <div class="table">
+      <table class="wide">
+        <thead><tr><th scope="col">#</th><th scope="col">Onderwerp</th><th scope="col">Ernst</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><a href="#f1">Terminaltekst is onzichtbaar</a></td><td><span class="badge danger">hoog</span></td></tr>
+          <tr><td>2</td><td><a href="#f2">Een node heeft geen naam en geen grens</a></td><td><span class="badge danger">hoog</span></td></tr>
+          <tr><td>3</td><td><a href="#f3">Drawings zijn een lege canvas</a></td><td><span class="badge danger">hoog</span></td></tr>
+          <tr><td>4</td><td><a href="#f4">Diagrammen verbergen hun labels</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>5</td><td><a href="#f5">Browsernodes</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>6</td><td><a href="#f6">Statustekens met alleen een tooltip</a></td><td><span class="badge danger">hoog</span></td></tr>
+          <tr><td>7</td><td><a href="#f7">Geen melding waar het ertoe doet</a></td><td><span class="badge danger">hoog</span></td></tr>
+          <tr><td>8</td><td><a href="#f8">Composer en zelfgebouwde lijsten</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>9</td><td><a href="#f9">Aan/uit alleen via <code>data-active</code></a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>10</td><td><a href="#f10">Velden zonder label</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>11</td><td><a href="#f11">Rijlabels die inhoud verbergen</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>12</td><td><a href="#f12">Landmarks en koppen</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>13</td><td><a href="#f13">De <code>Tooltip</code>-primitive</a></td><td><span class="badge">laag</span></td></tr>
+          <tr><td>14</td><td><a href="#f14">Losse plekken</a></td><td><span class="badge">laag</span></td></tr>
+          <tr><td>15</td><td><a href="#f15">Spatie is overal geblokkeerd</a></td><td><span class="badge danger">hoog</span></td></tr>
+          <tr><td>16</td><td><a href="#f16">Een node met focus toont geen ring</a></td><td><span class="badge danger">hoog</span></td></tr>
+          <tr><td>17</td><td><a href="#f17">Toetsenbordvallen</a></td><td><span class="badge danger">hoog</span></td></tr>
+          <tr><td>18</td><td><a href="#f18">Canvasacties die een muis vragen</a></td><td><span class="badge danger">hoog</span></td></tr>
+          <tr><td>19</td><td><a href="#f19">Escape gooit de focus naar <code>&lt;body&gt;</code></a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>20</td><td><a href="#f20">Canvassneltoetsen lekken door dialogen</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>21</td><td><a href="#f21">Tabvolgorde op het canvas</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>22</td><td><a href="#f22">Tonen vanuit de sidebar verplaatst de focus niet</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>23</td><td><a href="#f23">Sneltoetsconflicten</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>24</td><td><a href="#f24">Pijltjestoetsen, focusranden en beweging</a></td><td><span class="badge">laag</span></td></tr>
+          <tr><td>25</td><td><a href="#f25">Accent in het donkere thema</a></td><td><span class="badge danger">hoog</span></td></tr>
+          <tr><td>26</td><td><a href="#f26"><code>--text-faint</code> als leestekst</a></td><td><span class="badge danger">hoog</span></td></tr>
+          <tr><td>27</td><td><a href="#f27">Witte tekst op een eigen accentkleur</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>28</td><td><a href="#f28">Status alleen in kleur</a></td><td><span class="badge warning">middel</span></td></tr>
+          <tr><td>29</td><td><a href="#f29">Randen en gedempte tekst</a></td><td><span class="badge">laag</span></td></tr>
+          <tr><td>30</td><td><a href="#f30">Codetekst schaalt niet mee</a></td><td><span class="badge">laag</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="hidden">
+    <h2>Onzichtbare inhoud</h2>
+
+    <article class="finding" id="f1">
+      <h3><span class="num">1</span> Terminaltekst is onzichtbaar <span class="badge danger">hoog</span></h3>
+      <p>xterm tekent met WebGL en <code>screenReaderMode</code> staat nergens aan (<code>nodes/TerminalBody.tsx:35-43</code>). Hulptechnologie ziet alleen de invoer-textarea van xterm. De placeholder van een terminal buiten beeld is <code>aria-hidden</code> (<code>TerminalBody.tsx:78</code>). De desktopshell doet vandaag niets met toegankelijkheid: <code>app.accessibilitySupportEnabled</code> en <code>accessibility-support-changed</code> komen in <code>apps/desktop/src</code> niet voor.</p>
+      <p>Met <code>screenReaderMode</code> houdt xterm een DOM-kopie van de zichtbare rijen bij en spreekt nieuwe uitvoer uit via een live region. Voor één terminal is dat goedkoop. Voor tientallen agent-TUI's met draaiende spinners wordt het veel DOM-werk en veel spraak.</p>
+      <p class="accept"><strong>Klaar als</strong> de shell <code>accessibilitySupportEnabled</code> via de preload doorgeeft en alleen de terminal met focus <code>screenReaderMode</code> krijgt zolang een hulpapp actief is.</p>
+    </article>
+
+    <article class="finding" id="f2">
+      <h3><span class="num">2</span> Een node heeft geen naam en geen grens <span class="badge danger">hoog</span></h3>
+      <p><code>canvas/NodeFrame.tsx:245-267</code> is een <code>div</code> met <code>tabIndex={0}</code>, zonder rol, naam of selectiestaat. Tab landt op iets dat als niets wordt voorgelezen. In de live tree stond de titel van een node als losse <code>StaticText</code>. Alle nodes blijven in de DOM, ook buiten beeld: <code>culling.ts</code> vervangt alleen na 10 seconden de body. Er is geen <code>aria-hidden</code>, <code>inert</code> of <code>content-visibility</code>, dus de tree groeit met elke node in het project. Nodes in een ingeklapte groep laat <code>Canvas.tsx:132</code> wel correct weg.</p>
+      <p class="accept"><strong>Klaar als</strong> een node <code>role="group"</code> heeft met de titel als naam, <code>aria-roledescription</code> "node" en een selectiestaat, en een body die een placeholder is geworden uit de tree valt.</p>
+    </article>
+
+    <article class="finding" id="f3">
+      <h3><span class="num">3</span> Drawings zijn een lege canvas <span class="badge danger">hoog</span></h3>
+      <p><code>drawing/DrawingView.tsx:532-533</code> en <code>canvas/nodes/DrawingNode.tsx:89</code> zijn kale <code>&lt;canvas&gt;</code>-elementen zonder naam, rol of fallback. Tekst die iemand in een drawing schrijft, bereikt een schermlezer niet.</p>
+      <p class="accept"><strong>Klaar als</strong> een drawing <code>role="img"</code> heeft met een naam die de teksten en het aantal vormen noemt, of een visueel verborgen lijst daarvan.</p>
+    </article>
+
+    <article class="finding" id="f4">
+      <h3><span class="num">4</span> Diagrammen verbergen hun eigen labels <span class="badge warning">middel</span></h3>
+      <p>De labels zijn echte SVG-<code>&lt;text&gt;</code> (<code>diagram/DiagramScene.tsx:42,63,88</code>). <code>diagram/DiagramView.tsx:334-335</code> en <code>canvas/nodes/DiagramNode.tsx:57-58</code> zetten echter <code>role="img"</code> op de SVG, en dan telt alles erin als presentatie. Alleen de titel wordt voorgelezen.</p>
+      <p class="accept"><strong>Klaar als</strong> de labels in de tree staan, via <code>role="group"</code> of <code>graphics-document</code>, of via een samenvatting van nodes en verbindingen met <code>aria-describedby</code>.</p>
+    </article>
+
+    <article class="finding" id="f5">
+      <h3><span class="num">5</span> Browsernodes <span class="badge warning">middel</span></h3>
+      <ul>
+        <li>Een <code>&lt;webview&gt;</code> (<code>browser/registry.ts:204</code>) krijgt geen <code>title</code> of naam. Zijn tree staat in de parkeerlaag bij de root en niet in zijn node. <code>page-clip.ts</code> knipt gaten met alleen <code>clip-path</code>, dus delen onder andere nodes worden nog voorgelezen.</li>
+        <li><code>BrowserStream.tsx:179-182</code> is een benoemde canvas die focus kan krijgen, maar zonder inhoud. Een schermlezer hoort "page" en verder niets.</li>
+        <li>Geparkeerde pagina's zijn correct verborgen met <code>visibility:hidden</code> (<code>WebviewParking.tsx:216,223</code>).</li>
+      </ul>
+      <p class="accept"><strong>Klaar als</strong> een webview de paginatitel als naam heeft en bij zijn node hoort (<code>aria-owns</code> of een label dat de node noemt), en de stream zegt dat de tekst niet beschikbaar is of de paginatekst van de daemon krijgt.</p>
+    </article>
+  </section>
+
+  <section id="semantics">
+    <h2>Namen, rollen en meldingen</h2>
+
+    <article class="finding" id="f6">
+      <h3><span class="num">6</span> Statustekens met alleen een tooltip <span class="badge danger">hoog</span></h3>
+      <p>Ongeveer 15 tekens zijn een <code>&lt;span&gt;</code> met een <code>aria-hidden</code>-icoon of een lege stip. Het tooltiplabel wordt nooit hun naam, en in een rijknop vallen ze ook uit de naam van de knop. Voorbeelden: <code>Sidebar.tsx:198</code> (proceswaarschuwing), <code>:285</code> en <code>:581</code> (onverzonden concept), <code>:586</code> (niet opgeslagen), <code>:598</code> (gedeeld), <code>Snooze.tsx:108</code>, <code>UnseenMark.tsx:11</code>, <code>TaskMark.tsx:18</code>, <code>NodeFrame.tsx:364</code>, <code>WorktreeSection.tsx:166</code>, <code>PlanList.tsx:223,453</code> en <code>ImageView.tsx:155</code>. <code>StatusDot</code> en <code>FileTabs.tsx:143</code> doen het wel goed.</p>
+      <p class="accept"><strong>Klaar als</strong> er een gedeelde <code>Mark</code>-primitive is (icoon plus label, <code>role="img"</code>) of <code>Tooltip</code> zelf <code>role="img"</code> zet op een trigger die niet interactief is, en de plekken hierboven die gebruiken.</p>
+    </article>
+
+    <article class="finding" id="f7">
+      <h3><span class="num">7</span> Geen melding waar het ertoe doet <span class="badge danger">hoog</span></h3>
+      <ul>
+        <li>De chat heeft geen live region voor "agent klaar" of een binnenkomend antwoord. <code>ChatActivity.tsx:168</code> heeft tekst voor schermlezers, maar geen <code>role="status"</code>.</li>
+        <li>De promptstapel (<code>PromptStack.tsx:141</code>), waar een agent om toestemming vraagt, heeft geen regiolabel en meldt niets als er een prompt binnenkomt.</li>
+        <li><code>Toasts.tsx</code> rendert de <code>role="status"</code>-container pas als er een toast is, dus de eerste toast wordt vaak niet voorgelezen. Fouten zijn ook alleen "polite". <code>Banner.tsx:24</code> lijkt hetzelfde te doen; dat heb ik niet nagelezen.</li>
+      </ul>
+      <p class="accept"><strong>Klaar als</strong> de live regions van toasts, banner en promptstapel altijd gemount zijn, fouttoasts <code>role="alert"</code> hebben, en een nieuwe prompt en een klaar zijnde agent worden gemeld.</p>
+    </article>
+
+    <article class="finding" id="f8">
+      <h3><span class="num">8</span> Composer en zelfgebouwde lijsten <span class="badge warning">middel</span></h3>
+      <p>De composer heeft geen naam: <code>ComposerInput.tsx:130</code> geeft CodeMirror alleen <code>spellcheck</code> en <code>tabindex</code> mee. De slash- en mention-lijst (<code>Composer.tsx:954-1030</code>) en de modelkiezer (<code>Pickers.tsx:121-170</code>) houden de actieve rij alleen bij met <code>data-active</code>. Er is geen combobox, geen <code>aria-activedescendant</code> en geen benoemde listbox. Het zoekveld van de modelkiezer heeft alleen een placeholder, en er staat een gewone <code>&lt;button&gt;</code> direct in de <code>role="listbox"</code>.</p>
+      <p class="accept"><strong>Klaar als</strong> de composer een vertaalde <code>aria-label</code> heeft en het combobox-patroon van het palet een gedeelde primitive is die deze twee lijsten gebruiken.</p>
+    </article>
+
+    <article class="finding" id="f9">
+      <h3><span class="num">9</span> Aan/uit alleen via <code>data-active</code> <span class="badge warning">middel</span></h3>
+      <p>De paneelknoppen (<code>PanelControls.tsx:18</code>), de tekentools (<code>DrawingDock.tsx:124</code>), de knop die een tool vasthoudt (<code>:130</code>) en de kleurstalen (<code>:313</code>, alleen een ring) zeggen niet of ze aan staan.</p>
+      <p class="accept"><strong>Klaar als</strong> deze knoppen <code>aria-pressed</code> hebben (paneelknoppen <code>aria-expanded</code> met <code>aria-controls</code>) of, bij de kleurstalen, een radiogroep zijn.</p>
+    </article>
+
+    <article class="finding" id="f10">
+      <h3><span class="num">10</span> Velden zonder label <span class="badge warning">middel</span></h3>
+      <ul>
+        <li>Alleen een placeholder: <code>CommitBox.tsx:89</code>, <code>BranchMenu.tsx:289</code>, <code>GitDialogs.tsx:58</code>, <code>Pickers.tsx:121</code>, <code>NoteNode.tsx:60</code>, en zes velden in <code>DeviceToolsPanel.tsx</code>.</li>
+        <li>Helemaal geen label (hernoemen en inline bewerken): <code>NodeFrame.tsx:143</code>, <code>Sidebar.tsx:173</code>, <code>EdgeLayer.tsx:35</code>, <code>DrawingOverlay.tsx:140</code>.</li>
+        <li>Een fout hangt nooit aan zijn veld: in de hele client staat één <code>aria-describedby</code>, en <code>aria-invalid</code> komt niet voor.</li>
+      </ul>
+      <p class="accept"><strong>Klaar als</strong> elk veld een naam heeft en een veldfout via <code>aria-describedby</code> en <code>aria-invalid</code> aan het veld hangt.</p>
+    </article>
+
+    <article class="finding" id="f11">
+      <h3><span class="num">11</span> Rijlabels die inhoud verbergen <span class="badge warning">middel</span></h3>
+      <p>Het label op de projectrij (<code>Sidebar.tsx:628</code>) overschrijft de inhoud, dus het aantal wachtende agents (<code>:662</code>) valt weg. De <code>aria-label</code> op de gewone spans op <code>:657</code> en <code>:662</code> wordt sowieso genegeerd. In de bestandsboom van <code>@pierre/trees</code> is het label van een rij alleen de bestandsnaam, dus in het git-paneel verdwijnt <code>+N −N M</code> (<code>GitFileList.tsx:271-289</code>). De boom zelf heeft geen label, en de live tree splitste een bestandsnaam in twee tekstdelen ("ski" en "lls").</p>
+      <p class="accept"><strong>Klaar als</strong> het wachtende aantal in het rijlabel staat en een rij in het git-paneel zijn status noemt, als de bibliotheek dat toelaat.</p>
+    </article>
+
+    <article class="finding" id="f12">
+      <h3><span class="num">12</span> Landmarks en koppen <span class="badge warning">middel</span></h3>
+      <p><code>WorkspaceShell.tsx:63</code> heeft een <code>&lt;main&gt;</code>, maar de zijpanelen staan erin. <code>Sidebar.tsx:916</code> en <code>SlidingColumn.tsx:62</code> zijn <code>&lt;aside&gt;</code>-elementen zonder naam. De paneeltitel is een <code>&lt;span&gt;</code> (<code>Panel.tsx:61</code>) in plaats van een kop. Het startscherm heeft geen <code>&lt;main&gt;</code>. <code>DockShell.tsx:62</code> is geen toolbar en <code>BTN_GROUP</code> is alleen een klasse, nooit <code>role="group"</code>.</p>
+      <p class="accept"><strong>Klaar als</strong> <code>SlidingColumn</code>, <code>Panel</code> en <code>DockShell</code> een benoemde landmark, een kop en een toolbar geven, en het startscherm een <code>&lt;main&gt;</code> heeft.</p>
+    </article>
+
+    <article class="finding" id="f13">
+      <h3><span class="num">13</span> De <code>Tooltip</code>-primitive <span class="badge">laag</span></h3>
+      <p><code>Tooltip.tsx:47</code> zet de naam alleen met <code>name</code> en een string als label; een ReactNode-label valt stil weg. <code>name</code> staat standaard uit, dus elke aanroeper moet het onthouden: 126 van de 215 gebruiken doen dat, en 103 hebben een eigen <code>aria-label</code>. Een tooltip wordt nooit <code>aria-describedby</code>, dus hints als "Shift skips the cache" en de sneltoets gaan verloren.</p>
+      <p class="accept"><strong>Klaar als</strong> <code>kbd</code> <code>aria-keyshortcuts</code> zet en <code>Tooltip</code> een beschrijvende modus heeft. Die ene wijziging dekt alle 215 plekken.</p>
+    </article>
+
+    <article class="finding" id="f14">
+      <h3><span class="num">14</span> Losse plekken <span class="badge">laag</span></h3>
+      <ul>
+        <li><code>Composer.tsx:1137-1138</code>: de knop die een bijlage weghaalt heeft geen naam. Dat is de enige icoonknop zonder naam.</li>
+        <li><code>Dock.tsx:182</code>: een <code>span role="button"</code> in een <code>Menu.Item</code>, genest interactief en niet met het toetsenbord bereikbaar.</li>
+        <li><code>CommandPalette.tsx:824</code>: de dialoog heeft geen titel of naam.</li>
+        <li><code>FileTabs.tsx:110</code>: bestandstabs zijn knoppen met <code>aria-current</code> en geen tablist, en vastgezet zijn wordt niet gemeld.</li>
+        <li><code>shell/panels/VideoFile.tsx:55</code>: de video heeft geen naam.</li>
+        <li><code>@pierre/trees</code> heeft "Rename …" en "Options" hard in het Engels staan, buiten i18n.</li>
+      </ul>
+    </article>
+  </section>
+
+  <section id="keyboard">
+    <h2>Toetsenbord en focus</h2>
+
+    <article class="finding" id="f15">
+      <h3><span class="num">15</span> Spatie is overal geblokkeerd <span class="badge danger">hoog</span></h3>
+      <p><code>canvas/canvas-shortcuts.ts:153-157</code> roept <code>preventDefault()</code> aan op Spatie voor elk doel dat geen tekstveld is. Als de keydown geblokkeerd is, vuurt Chromium bij het loslaten geen klik af. Spatie drukt dus geen knop, <code>Switch</code>, menutrigger of dialoogknop meer in en scrolt geen lijst. De zwevende laag is niet uitgezonderd, dus dialogen hebben er ook last van.</p>
+      <p class="accept"><strong>Klaar als</strong> Spatie alleen voor pannen wordt afgevangen wanneer het doel het canvas of een nodeframe is.</p>
+    </article>
+
+    <article class="finding" id="f16">
+      <h3><span class="num">16</span> Een node met focus toont geen ring <span class="badge danger">hoog</span></h3>
+      <p><code>NodeFrame.tsx:250</code> zet <code>focus-visible:outline-none</code>. Die utility wint van de regels in de componentenlaag (<code>styles.css:699-700</code>). Daarmee verdwijnt de focusring van een node, en ook de <code>.node-selected</code>-ring zolang het frame toetsenbordfocus heeft.</p>
+      <p class="accept"><strong>Klaar als</strong> de utility weg is en een node met toetsenbordfocus zijn ring toont.</p>
+    </article>
+
+    <article class="finding" id="f17">
+      <h3><span class="num">17</span> Toetsenbordvallen <span class="badge danger">hoog</span></h3>
+      <ul>
+        <li><code>BrowserStream.tsx:183,240-257</code> (webclient) heeft <code>tabIndex=0</code> en blokkeert elke toets met <code>preventDefault</code> en <code>stopPropagation</code>. Tab, Escape en alle app-sneltoetsen gaan naar de pagina op afstand.</li>
+        <li>De preload van een <code>&lt;webview&gt;</code> geeft alleen terug en vooruit door (<code>apps/desktop/src/guest.ts:89-97</code>). Menu-accelerators bestaan alleen op macOS (<code>main.ts:1233</code>). Buiten macOS slokt een pagina met focus elke app-toets op. Op macOS komen de view- en celsneltoetsen via het menu naar buiten, maar er is geen menu-item dat een node verlaat.</li>
+        <li>Buiten macOS verlaat <code>Ctrl+Shift+Escape</code> een terminal (<code>terminal/keymap.ts:17</code>). Windows reserveert die toets voor Taakbeheer. xterm houdt Tab vast, en Tab komt ook in de invoer van een terminal die niet actief is.</li>
+      </ul>
+      <p class="accept"><strong>Klaar als</strong> er één "node verlaten"-toets is die de OS niet reserveert (bijvoorbeeld F6), die terminal, guest-preload en stream doorlaten en die ook in het menu staat.</p>
+    </article>
+
+    <article class="finding" id="f18">
+      <h3><span class="num">18</span> Canvasacties die een muis vragen <span class="badge danger">hoog</span></h3>
+      <p>Zoomen, passend maken en "zoom naar" werken met het toetsenbord. Voor de rest is een muis nodig:</p>
+      <ul>
+        <li>Een node verplaatsen of van maat veranderen (<code>NodeFrame.tsx:420-422</code>) en pannen (Spatie plus slepen).</li>
+        <li>Verbinden: "Connect" wacht op een klik op het doel (<code>NodeMenu.tsx:143-145</code>). Een verbinding selecteren, benoemen of weghalen kan alleen met de muis (<code>EdgeLayer.tsx:143-185</code>).</li>
+        <li>Het contextmenu van het canvas: de trigger kan geen focus krijgen (<code>Canvas.tsx:562</code>). Op macOS is er geen menutoets, en hernoemen, dupliceren, kleur, verbinden en "open as view" staan alleen in dat menu.</li>
+        <li>Elke resizer: <code>SplitGrid.tsx:88-97</code>, <code>SlidingColumn.tsx:82</code>, <code>GitPanel.tsx:562</code>.</li>
+        <li>Views in de sidebar herschikken (alleen slepen, <code>Sidebar.tsx:364</code> en verder) en een bewaarde layout weghalen (<code>Dock.tsx:182-190</code>).</li>
+      </ul>
+      <p class="accept"><strong>Klaar als</strong> pijltjes (met Shift) de selectie verplaatsen en Alt+pijltjes de maat veranderen, de nodekop een zichtbare menuknop heeft, "Verbinden met…" een kiezer is, en resizers een <code>role="separator"</code> met waarde en pijltjestoetsen zijn.</p>
+    </article>
+
+    <article class="finding" id="f19">
+      <h3><span class="num">19</span> Escape gooit de focus naar <code>&lt;body&gt;</code> <span class="badge warning">middel</span></h3>
+      <p><code>canvas-shortcuts.ts:158-178</code> roept <code>blur()</code> aan bij elke Escape buiten een popup, ook in een veld van het git-paneel of op een toolbarknop. De volgende Tab begint dan bovenaan het document.</p>
+      <p class="accept"><strong>Klaar als</strong> Escape de focus op het nodeframe zet dat de body had, of op het canvas, en alleen reageert als het doel op het canvas staat.</p>
+    </article>
+
+    <article class="finding" id="f20">
+      <h3><span class="num">20</span> Canvassneltoetsen lekken door dialogen <span class="badge warning">middel</span></h3>
+      <p>De guard op <code>canvas-shortcuts.ts:338</code> kijkt alleen naar <code>settings.open</code> en niet naar <code>isInFloatingLayer</code>. Backspace, Alt+T, Mod+A, Mod+G en +/- werken op het canvas achter elke andere open dialoog.</p>
+      <p class="accept"><strong>Klaar als</strong> <code>isInFloatingLayer(e.target)</code> in die guard staat.</p>
+    </article>
+
+    <article class="finding" id="f21">
+      <h3><span class="num">21</span> Tabvolgorde op het canvas <span class="badge warning">middel</span></h3>
+      <p>Frames staan in gesorteerde id-volgorde in de DOM (<code>Canvas.tsx:113</code>), dus Tab volgt noch de layout noch de volgorde waarin nodes zijn gemaakt. Elke node blijft in de tabvolgorde, ook buiten beeld, met zijn kopknoppen en body. Focus op een frame buiten beeld laat Chromium de <code>overflow-hidden</code>-root scrollen: het canvas verschuift zonder dat de camera meebeweegt.</p>
+      <p class="accept"><strong>Klaar als</strong> het canvas één tabstop is met een roving <code>tabIndex</code>, pijltjes naar de dichtstbijzijnde node in die richting gaan, focus <code>goToNode</code> aanroept en de scroll van de root op nul blijft.</p>
+    </article>
+
+    <article class="finding" id="f22">
+      <h3><span class="num">22</span> Tonen vanuit de sidebar verplaatst de focus niet <span class="badge warning">middel</span></h3>
+      <p><code>project/views.ts:52</code> en <code>state/canvas.ts:362</code> selecteren de node en centreren hem, maar de focus blijft in de sidebar.</p>
+      <p class="accept"><strong>Klaar als</strong> de focus daarna op het frame van de node staat.</p>
+    </article>
+
+    <article class="finding" id="f23">
+      <h3><span class="num">23</span> Sneltoetsconflicten <span class="badge warning">middel</span></h3>
+      <ul>
+        <li><code>Mod+Alt+pijltje</code> (<code>canvas/shortcuts.ts:47-52</code>) is buiten macOS Ctrl+Alt+pijltje. NVDA en JAWS gebruiken die combinatie voor tabelnavigatie, en sommige videodrivers draaien er het scherm mee.</li>
+        <li><code>Alt+↑/↓</code> (<code>shortcuts.ts:35-36</code>) is ook bezet tijdens typen in de composer. Op macOS verplaatsen die toetsen per alinea.</li>
+        <li>In Firefox op Windows opent <code>Alt+letter</code> voor een nieuwe node de menubalk.</li>
+        <li>Geen sneltoets gebruikt Control+Option, dus VoiceOver zit niemand in de weg.</li>
+      </ul>
+      <p>Spatie, +, -, Shift+1, Shift+2 en Backspace werken zonder modifier. De productregel zegt dat elke sneltoets een modifier heeft, met alleen de tools in een drawing als uitzondering. Of de regel of de toetsen moeten veranderen, is een keuze voor Bas.</p>
+      <p class="accept"><strong>Klaar als</strong> geen sneltoets buiten macOS op Ctrl+Alt+pijltje zit en de productregel en de toetsen hetzelfde zeggen.</p>
+    </article>
+
+    <article class="finding" id="f24">
+      <h3><span class="num">24</span> Pijltjestoetsen, focusranden en beweging <span class="badge">laag</span></h3>
+      <ul>
+        <li>Radiogroepen waarin elke optie een eigen tabstop is en pijltjes niets doen: <code>settings/controls.tsx:30</code>, <code>AppearancePane.tsx:44</code>. Een <code>role="toolbar"</code> zonder pijltjes: <code>TextToolbar.tsx:84</code>, <code>MessageActions.tsx:63</code>.</li>
+        <li>Het adresveld (<code>BrowserBody.tsx:106-114</code>) toont een ring als de node actief is, niet als het veld focus heeft. De streamcanvassen hebben <code>outline-none</code> (<code>BrowserStream.tsx:181</code>, <code>DeviceStream.tsx:406</code>). Het gekozen kleurstaal gebruikt dezelfde ring als focus.</li>
+        <li>Reduced motion dekt de CSS (<code>styles.css:1029-1031</code>) en de camera animeert nooit. Het vloeiend scrollen in <code>chat/timeline-scroll.ts:60,72</code> en de tekstonthulling in <code>chat/ui/reveal.ts:98-126</code> negeren de instelling. Toasts sluiten op een timer (<code>state/toasts.ts:79</code>) en pauzeren niet bij focus of hover.</li>
+      </ul>
+    </article>
+  </section>
+
+  <section id="contrast">
+    <h2>Contrast en kleur</h2>
+    <p>Alle verhoudingen zijn WCAG-contrast, berekend uit de hexwaarden in <code>styles.css</code>. De grens is 4,5:1 voor gewone tekst en 3:1 voor grote tekst, randen van bediening en focusringen.</p>
+
+    <article class="finding" id="f25">
+      <h3><span class="num">25</span> Accent in het donkere thema <span class="badge danger">hoog</span></h3>
+      <p><code>--accent</code> is <code>#155dfc</code> (<code>styles.css:56</code>), en het donkere thema (<code>:196</code>) overschrijft hem niet. Op donker is dat 3,70 op <code>bg</code>, 3,54 op <code>surface</code> en 3,37 op <code>raised</code>. Dat is te weinig voor de 42 plekken met <code>text-accent</code> (links, proza). Als focusring op <code>accent-soft</code> haalt hij 3,11. In het lichte thema is wit op accent 5,25, en dat is in orde.</p>
+      <p class="accept"><strong>Klaar als</strong> het donkere thema een lichtere accentkleur heeft die op <code>surface</code> boven 4,5 komt. <code>#6b9bff</code> haalt 6,85.</p>
+    </article>
+
+    <article class="finding" id="f26">
+      <h3><span class="num">26</span> <code>--text-faint</code> als leestekst <span class="badge danger">hoog</span></h3>
+      <p><code>--text-faint</code> komt 205 keer voor: placeholders, sectielabels (<code>ui/classes.ts:15,18</code>), hints in menu's, uitgeschakelde knoppen en de assen van grafieken. Voor uitgeschakelde bediening geldt geen eis, voor placeholders en sectielabels wel.</p>
+      <div class="table">
+        <table>
+          <thead><tr><th scope="col"><code>--text-faint</code> op</th><th scope="col">Licht (<code>#a1a1aa</code>)</th><th scope="col">Donker (<code>#5f5f6b</code>)</th></tr></thead>
+          <tbody>
+            <tr><td><code>surface</code></td><td>2,56</td><td>2,95</td></tr>
+            <tr><td><code>bg</code></td><td>2,33</td><td>3,08</td></tr>
+            <tr><td><code>sunken</code></td><td>2,17</td><td>3,18</td></tr>
+            <tr><td><code>raised</code></td><td>-</td><td>2,81</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Een aparte, donkerdere "faint" voor leestekst valt in het lichte thema bijna samen met <code>--text-muted</code> (<code>#6f6f78</code>, 4,98 op wit): <code>#7c7c85</code> haalt maar 4,13. Het simpelst is leestekst naar <code>--text-muted</code> te verplaatsen en <code>--text-faint</code> alleen voor uitgeschakelde bediening te houden.</p>
+      <p class="accept"><strong>Klaar als</strong> placeholders, sectielabels en hints minstens 4,5:1 halen in beide thema's en <code>--text-faint</code> alleen op uitgeschakelde bediening staat.</p>
+    </article>
+
+    <article class="finding" id="f27">
+      <h3><span class="num">27</span> Witte tekst op een eigen accentkleur <span class="badge warning">middel</span></h3>
+      <p>In <code>settings.ts:289-293</code> kan iemand elke accentkleur kiezen, maar <code>--accent-text</code> blijft <code>#fff</code>. Wit op geel is 2,94, op limoen 3,06, op amber 3,20, op groen 3,22, op oranje 3,60 en op smaragd, teal en cyaan rond 3,6. Op donker haalt indigo 2,87 en violet 3,15.</p>
+      <p class="accept"><strong>Klaar als</strong> elke accentkleur zijn eigen <code>--accent-text</code> heeft (donkere tekst op de lichte tinten) en elke combinatie 4,5:1 haalt.</p>
+    </article>
+
+    <article class="finding" id="f28">
+      <h3><span class="num">28</span> Status alleen in kleur <span class="badge warning">middel</span></h3>
+      <p><code>StatusDot</code> (<code>NodeFrame.tsx:119-127</code>) heeft voor elke staat dezelfde vorm; alleen "running" pulseert. Groen voor idle haalt 3,30 en amber voor "wacht op jou" 3,19 op <code>surface</code>. Dat voldoet aan 3:1, maar bij kleurenblindheid zijn groen, amber en rood niet uit elkaar te houden. Het git-paneel doet het goed: kleur plus letter plus aantallen.</p>
+      <p class="accept"><strong>Klaar als</strong> elke staat een eigen vorm of glyph heeft. De iconen in <code>ui/status-look.ts</code> doen dat al voor taken.</p>
+    </article>
+
+    <article class="finding" id="f29">
+      <h3><span class="num">29</span> Randen en gedempte tekst <span class="badge">laag</span></h3>
+      <ul>
+        <li><code>--text-muted</code> in het lichte thema: 4,53 op <code>bg</code>, 4,22 op <code>sunken</code>, 4,30 op het canvas en 3,64 op <code>active</code>.</li>
+        <li>Gedimde terminaltekst haalt 3,14 licht en 3,80 donker. ANSI-wit (2,48) en fel wit (1,23) in het lichte thema volgen de terminalconventie.</li>
+        <li>Randen zijn 1,28 licht en 1,19 donker, en de rand van een node op het canvas is 1,11. Nodes vallen op door hun schaduw. <code>prefers-contrast</code> en <code>forced-colors</code> worden nergens gebruikt.</li>
+      </ul>
+      <p class="accept"><strong>Klaar als</strong> <code>prefers-contrast: more</code> de randen naar 3:1 brengt en <code>--text-muted</code> op <code>sunken</code> en het canvas 4,5 haalt.</p>
+    </article>
+
+    <article class="finding" id="f30">
+      <h3><span class="num">30</span> Codetekst schaalt niet mee <span class="badge">laag</span></h3>
+      <p>De tekstmaat-instelling (14 tot 24 px op <code>&lt;html&gt;</code>, <code>state/settings.ts:70,287</code>) vervangt de zoom van Electron, die bewust uit het menu is gehaald omdat Cmd+/- bij het canvas horen. De hele typeschaal is in rem en schaalt mee. <code>--text-code</code> staat echter vast op 13px (<code>styles.css:337</code>). De terminal heeft een eigen instelling. De tekstgrootte van macOS bereikt Chromium niet.</p>
+      <p class="accept"><strong>Klaar als</strong> <code>--text-code</code> in rem staat en meeschaalt met de tekstmaat.</p>
+    </article>
+  </section>
+
+  <section id="good">
+    <h2>Wat al klopt</h2>
+    <ul>
+      <li>Elke knop in de live tree had een naam. <code>Icon</code> is altijd <code>aria-hidden</code>, <code>CloseButton</code> geeft altijd een naam door en <code>Select</code> vereist een label.</li>
+      <li>De dialogen, menu's, contextmenu's, tabs en de <code>Switch</code> van Base UI hebben de juiste rollen en staten. Ze zetten de focus erin, houden hem vast, geven hem bij sluiten terug en sluiten op Escape. 17 van de 18 dialogen hebben een titel.</li>
+      <li>Het commandopalet is een echte combobox. De sidebar heeft een roving <code>tabIndex</code>, ↑/↓, ←/→ om in en uit te klappen en F2 om te hernoemen. Vraagkaarten hebben ook een roving <code>tabIndex</code>.</li>
+      <li>De segmentkeuze in de settings is een echte radiogroep, en de stepper noemt zijn waarde.</li>
+      <li>Focusringen volgen het invoerapparaat (<code>ui/modality.ts</code>) via gedeelde <code>.focus-ring</code>-klassen. Gesloten panelen zijn <code>inert</code>.</li>
+      <li><code>StatusDot</code> heeft een vertaald label, 37 fouten zijn <code>role="alert"</code>, de verbindingsstatus is <code>role="status"</code>, en chatberichten hebben koppen alleen voor schermlezers.</li>
+      <li>De modelgrafiek (<code>ModelsChart.tsx</code>) heeft een groepslabel, een samenvatting en punten die met het toetsenbord te bereiken zijn. Afbeeldingen hebben alt-tekst, en decoratieve afbeeldingen <code>alt=""</code>.</li>
+      <li>Toegankelijke namen lopen overal via <code>t()</code>. Alleen de voorbeeldplaceholders en de strings van <code>@pierre/trees</code> zijn hard Engels.</li>
+      <li>Sneltoetsen staan in een eigen settingspagina en als hint naast de bediening.</li>
+    </ul>
+  </section>
+
+  <section id="next">
+    <h2>Aanpak</h2>
+    <p>Gerangschikt op wat het meest oplevert per wijziging. De eerste drie stappen zijn klein en raken iedereen die het toetsenbord of het donkere thema gebruikt.</p>
+    <ol class="steps">
+      <li class="step"><div><h3>Vier kleine toetsenbordfixes</h3><p>Spatie alleen op het canvas afvangen, <code>focus-visible:outline-none</code> uit <code>NodeFrame</code> halen, <code>isInFloatingLayer</code> in de guard zetten en Escape de focus op het frame laten zetten. Een paar regels in twee bestanden. Lost <a href="#f15">15</a>, <a href="#f16">16</a>, <a href="#f19">19</a> en <a href="#f20">20</a> op.</p></div></li>
+      <li class="step"><div><h3>Contrasttokens</h3><p>Een lichtere accentkleur in het donkere thema, leestekst van <code>--text-faint</code> naar <code>--text-muted</code>, en een <code>--accent-text</code> per accentkleur. Dekt <a href="#f25">25</a> tot en met <a href="#f27">27</a>.</p></div></li>
+      <li class="step"><div><h3>Nodes met een naam</h3><p><code>NodeFrame</code> als benoemde groep met een selectiestaat, en bodies die uit de tree vallen zodra ze een placeholder zijn. Eén component, en elke node krijgt een grens. Dekt <a href="#f2">2</a>.</p></div></li>
+      <li class="step"><div><h3>Meldingen en tekens</h3><p>Live regions die altijd gemount zijn in <code>Toasts</code>, <code>Banner</code> en <code>PromptStack</code>, een melding als een agent klaar is, een <code>Mark</code>-primitive, en de beschrijvende modus in <code>Tooltip</code>. Dekt <a href="#f6">6</a>, <a href="#f7">7</a> en <a href="#f13">13</a>.</p></div></li>
+      <li class="step"><div><h3>Toegankelijkheidsmodus in de shell</h3><p>Geef <code>accessibilitySupportEnabled</code> door aan de pagina en zet daarmee <code>screenReaderMode</code> aan op de terminal met focus. Voeg één "node verlaten"-toets toe die terminal, webview en stream doorlaten. Dekt <a href="#f1">1</a> en <a href="#f17">17</a>.</p></div></li>
+      <li class="step"><div><h3>Een focusmodel voor het canvas</h3><p>Eén tabstop met pijltjes tussen nodes, verplaatsen en van maat veranderen met toetsen, een menuknop in de nodekop, "Verbinden met…" als kiezer, en resizers als separator. Het grootste stuk werk, en het vraagt eerst een ontwerp. Dekt <a href="#f18">18</a>, <a href="#f21">21</a> en <a href="#f22">22</a>.</p></div></li>
+      <li class="step"><div><h3>Tekstalternatieven</h3><p>Een naam en tekstlijst voor drawings, labels die in diagrammen zichtbaar blijven, en webviews die bij hun node horen. Dekt <a href="#f3">3</a> tot en met <a href="#f5">5</a>.</p></div></li>
+      <li class="step"><div><h3>De rest</h3><p>Velden, rijlabels, landmarks, de losse plekken, pijltjespatronen en de randen onder <code>prefers-contrast</code>. Dekt <a href="#f8">8</a> tot en met <a href="#f12">12</a>, <a href="#f14">14</a>, <a href="#f24">24</a> en <a href="#f28">28</a> tot en met <a href="#f30">30</a>.</p></div></li>
+    </ol>
+    <p>Bevinding <a href="#f23">23</a> vraagt eerst een keuze over de productregel voor sneltoetsen.</p>
+  </section>
+</main>
+<footer>
+  <p>Werkwijze: drie code-audits (namen en rollen, toetsenbord en focus, onzichtbare inhoud en contrast) met gerichte zoekopdrachten over <code>apps/client/src</code> en <code>apps/desktop/src</code>. Bevindingen 1, 7 (toasts), 15, 16, 19, 20, 25 en 26 zijn in de bron nagelezen of herberekend. De overige regelnummers komen uit de audits en zijn niet allemaal opnieuw gelezen. De live tree komt uit één <code>cu state</code> op Ruimte Dev, op een canvas zonder terminal. Er is niets gerenderd met een echte schermlezer (VoiceOver), dus hoe de tree klinkt valt buiten dit rapport. Aantallen gelden voor <code>644ddc3b</code>.</p>
+</footer>
+</body>
+</html>
