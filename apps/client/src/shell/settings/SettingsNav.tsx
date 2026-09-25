@@ -55,7 +55,7 @@ function AccountTab() {
     return (
         <Tabs.Tab
             value={ACCOUNT_SECTION.id}
-            className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-surface-hover data-active:bg-surface-active"
+            className="flex w-full min-w-0 shrink-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-surface-hover data-active:bg-surface-active"
         >
             <AccountAvatar account={signedIn ? account : null} />
             <span className="flex min-w-0 flex-col">
