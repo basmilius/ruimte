@@ -70,7 +70,11 @@
       "retries": "Tries again by itself at {{time}}."
     },
     "toggle": "Resume at reset",
-    "machineOff": "Turned off for this machine. Turn it on in Settings, Agents."
+    "machineOff": "Turned off for this machine. Turn it on in Settings, Agents.",
+    "continueOn": "Continue on",
+    "continueOnAria": "Continue on {{account}}",
+    "continueOnTip": "Goes on under {{account}}, which has the most room left. The interrupted turn is sent again.",
+    "continueFailed": "Could not continue on {{account}}"
   },
   "contextMeter": {
     "aria": "{{percent}}% of the context used",
@@ -364,6 +368,12 @@
     },
     "mode": {
       "label": "Permissions"
+    },
+    "account": {
+      "label": "Account",
+      "manage": "Manage accounts…",
+      "resets": "resets {{time}}",
+      "forkToSwitch": "This conversation is kept in another folder than {{account}} reads. Fork the chat to go on under {{account}}."
     }
   },
   "scrubber": {
@@ -389,5 +399,8 @@
     "zoomOut": "Zoom out",
     "reset": "Reset",
     "gone": "That file is no longer there"
+  },
+  "account": {
+    "pill": "{{provider}} account {{account}}"
   }
 }

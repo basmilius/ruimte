@@ -103,3 +103,27 @@ export const freeAccountColor = (entries: readonly AccountEntry[], fallback: Acc
     const choices = [...FEATURED_ACCENTS, ...NODE_ACCENT_NAMES.filter((id) => !FEATURED_ACCENTS.includes(id))];
     return choices.find((id) => !worn.has(id)) ?? FEATURED_ACCENTS[entries.length % FEATURED_ACCENTS.length]!;
 };
+
+/* The accounts of a CLI a picker offers: every one that is on, and the one in use even while it is off. */
+export const offeredAccounts = (entries: readonly AccountEntry[], current: string | undefined): AccountEntry[] =>
+    entries.filter((entry) => entry.account.enabled !== false || entry.id === current);
+
+/* Whether a person has a choice of account for this CLI at all, which is when a chat shows its account. */
+export const hasAccountChoice = (entries: readonly AccountEntry[]): boolean => entries.filter((entry) => entry.account.enabled !== false).length >= 2;
+
+/*
+ * Whether a chat of one account can go on under another, the way the machine decides it: the same
+ * account, or two of the chat's CLI that write their conversations to one folder. A machine that does
+ * not say where an account writes them answers no, so the person forks instead of being refused.
+ */
+export const canContinueOn = (accounts: ProviderAccounts | null, kind: AgentKind, from: string | undefined, to: string | undefined): boolean => {
+    const fromId = from ?? kind;
+    const toId = to ?? kind;
+    if (fromId === toId) {
+        return true;
+    }
+    const folderOf = (id: string): string | undefined =>
+        accounts?.accounts[id]?.kind === kind ? accounts.statuses.find((status) => status.id === id)?.transcripts : undefined;
+    const folder = folderOf(fromId);
+    return folder !== undefined && folder !== '' && folder === folderOf(toId);
+};

@@ -1,13 +1,33 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
-import { Activity, ChevronDown, ChevronRight, ChevronUp, FilePen, Gauge, Hand, Shield, ShieldAlert, SlidersHorizontal, type LucideIcon } from 'lucide-react';
+import {
+    Activity,
+    ChevronDown,
+    ChevronRight,
+    ChevronUp,
+    FilePen,
+    Gauge,
+    Hand,
+    Settings,
+    Shield,
+    ShieldAlert,
+    SlidersHorizontal,
+    type LucideIcon
+} from 'lucide-react';
 import type { AgentKind, ChatUsage, ModelInfo, ModelOptionDescriptor, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
+import { AccountDot } from '@/agents/AccountDot';
+import { limitsOfAccount, sessionWindow } from '@/agents/account-limits';
+import { canContinueOn } from '@/agents/accounts';
 import { AgentIcon } from '@/agents/AgentIcon';
+import type { AccountChoice } from '@/chat/account-choice';
 import { modelName, shortModelName } from '@/agents/model-name';
 import { CONTEXT_OPTION, contextFraction, contextSegments, orderOptions, type ContextPart } from '@/chat/logic/context-usage';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
+import { formatClock, formatWeekdayClock, isSameDay } from '@/format/datetime';
 import { formatPercent, formatTokens } from '@/format/number';
+import { useMinute, useUsageLimits } from '@/shell/usage/limits';
+import { useUi } from '@/state/ui';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { MenuCheck } from '@/ui/MenuCheck';
@@ -52,6 +72,15 @@ interface RunSettingsProps {
     /* While a turn runs, or without a machine, compacting has to wait. */
     compactDisabled: boolean;
     onCompact(): void;
+    /* Null while the chat's CLI has fewer than two accounts that are on. */
+    account: AccountPick | null;
+}
+
+interface AccountPick {
+    choice: AccountChoice;
+    /* Once the chat spoke, only an account that reads its conversation can take it over. */
+    started: boolean;
+    onPick(id: string): void;
 }
 
 const optionSummary = (option: ModelOptionDescriptor, selection: ModelSelection): string | null => {
@@ -87,7 +116,8 @@ export function RunSettings({
     onMode,
     usage,
     compactDisabled,
-    onCompact
+    onCompact,
+    account
 }: RunSettingsProps) {
     const { t } = useTranslation('chat');
     const owner = providers.find((entry) => entry.kind === provider);
@@ -151,6 +181,16 @@ export function RunSettings({
                     <span className="flex min-w-0 items-center gap-2 overflow-hidden @max-xl/composer:gap-1.5">
                         <span className="truncate font-medium text-text @max-xl/composer:hidden">{current}</span>
                         <span className="hidden truncate font-medium text-text @max-xl/composer:inline">{short}</span>
+                        {account !== null && (
+                            <span className="flex min-w-0 items-center gap-2 @max-xl/composer:gap-1.5">
+                                <span className="shrink-0 text-text-faint">·</span>
+                                <AccountDot color={account.choice.current?.account.color} />
+                                {/* The name goes before anything else does; the dot says which account on its own. */}
+                                <span className="truncate @max-xl/composer:hidden">
+                                    {account.choice.current === null ? account.choice.currentId : account.choice.nameOf(account.choice.current)}
+                                </span>
+                            </span>
+                        )}
                         {summary.map((entry) => (
                             <span
                                 key={entry.id}
@@ -198,6 +238,7 @@ export function RunSettings({
                             </Menu.SubmenuRoot>
                         )}
                         <Menu.Separator className={MENU_SEPARATOR} />
+                        {account !== null && <AccountSubmenu provider={provider} account={account} />}
                         <Menu.SubmenuRoot>
                             <Menu.SubmenuTrigger className="menu-item text-text-muted">
                                 <Icon
@@ -248,6 +289,105 @@ export function RunSettings({
                 </Menu.Positioner>
             </Menu.Portal>
         </Menu.Root>
+    );
+}
+
+/* Red where a window is nearly spent, amber where it is worth knowing, as the usage bars have it. */
+const sessionTone = (used: number): { bar: string; text: string } =>
+    used >= 0.9
+        ? { bar: 'bg-status-error', text: 'text-status-error' }
+        : used >= 0.7
+          ? { bar: 'bg-status-needs-you', text: 'text-status-needs-you' }
+          : { bar: 'bg-text-muted', text: 'text-text-muted' };
+
+/*
+ * The account the next turn runs under, for the chat's own CLI. Before the first turn any of them;
+ * after it one that reads the conversation, since the others would start it over, and a fork is how
+ * the conversation goes along to those. A switch applies from the next turn.
+ */
+function AccountSubmenu({ provider, account }: { provider: AgentKind; account: AccountPick }) {
+    const { t } = useTranslation('chat');
+    const { choice, started, onPick } = account;
+    return (
+        <Menu.SubmenuRoot>
+            <Menu.SubmenuTrigger className="menu-item text-text-muted">
+                <span className="grid w-3.5 shrink-0 place-items-center">
+                    <AccountDot color={choice.current?.account.color} />
+                </span>
+                <span className="min-w-0 grow truncate">{t('pickers.account.label')}</span>
+                <span className={`${MENU_HINT} truncate`}>{choice.current === null ? choice.currentId : choice.nameOf(choice.current)}</span>
+                <Icon icon={ChevronRight} size={14} className="shrink-0 text-text-faint" />
+            </Menu.SubmenuTrigger>
+            <Menu.Portal>
+                <Menu.Positioner className="z-(--z-popup)" {...SUBMENU_POSITIONER}>
+                    <Menu.Popup className="menu-popup min-w-64">
+                        <Menu.Group>
+                            <Menu.GroupLabel className={`${MENU_LABEL} flex items-center gap-1.5`}>
+                                <AgentIcon kind={provider} size={12} />
+                                {choice.providerName}
+                            </Menu.GroupLabel>
+                            <Menu.RadioGroup value={choice.currentId} onValueChange={(id: string) => onPick(id)}>
+                                <AccountRows choice={choice} locked={(id) => started && !canContinueOn(choice.accounts, provider, choice.currentId, id)} />
+                            </Menu.RadioGroup>
+                        </Menu.Group>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.Item className="menu-item text-text-muted" onClick={() => useUi.getState().setSettings({ open: true, section: 'providers' })}>
+                            <Icon icon={Settings} size={14} className="shrink-0 text-text-faint" />
+                            {t('pickers.account.manage')}
+                        </Menu.Item>
+                    </Menu.Popup>
+                </Menu.Positioner>
+            </Menu.Portal>
+        </Menu.SubmenuRoot>
+    );
+}
+
+/* Mounted only while the submenu is open, since asking for the plan windows starts a CLI per account. */
+function AccountRows({ choice, locked }: { choice: AccountChoice; locked(id: string): boolean }) {
+    const { t } = useTranslation('chat');
+    const limits = useUsageLimits();
+    const now = useMinute();
+    return choice.offered.map((entry) => {
+        const session = sessionWindow(limitsOfAccount(limits, entry.id));
+        const disabled = locked(entry.id);
+        const row = (
+            <Menu.RadioItem key={entry.id} value={entry.id} disabled={disabled} closeOnClick className="menu-item items-start data-disabled:opacity-50">
+                <MenuCheck kind="radio" />
+                <span className="flex min-w-0 grow flex-col">
+                    <span className="flex min-w-0 items-center gap-2">
+                        <AccountDot color={entry.account.color} />
+                        <span className="truncate">{choice.nameOf(entry)}</span>
+                    </span>
+                    {session !== null && <SessionLine used={session.used} resetsAt={session.resetsAt} now={now} />}
+                </span>
+            </Menu.RadioItem>
+        );
+        return disabled ? (
+            <Tooltip key={entry.id} label={t('pickers.account.forkToSwitch', { account: choice.nameOf(entry) })} side="right" sideOffset={12}>
+                {row}
+            </Tooltip>
+        ) : (
+            row
+        );
+    });
+}
+
+function SessionLine({ used, resetsAt, now }: { used: number; resetsAt: number | null; now: number }) {
+    const { t } = useTranslation('chat');
+    const percent = Math.round(used * 100);
+    const tone = sessionTone(used);
+    return (
+        <span className="flex items-center gap-2 text-xs text-text-faint tabular-nums">
+            <span aria-hidden className="relative h-1 w-14 shrink-0 overflow-hidden rounded-full bg-surface-sunken">
+                <span className={clsx('absolute inset-y-0 left-0 rounded-full', tone.bar)} style={{ width: `${Math.min(100, percent)}%` }} />
+            </span>
+            <span className={tone.text}>{formatPercent(percent)}</span>
+            {resetsAt !== null && (
+                <span className="whitespace-nowrap">
+                    · {t('pickers.account.resets', { time: isSameDay(resetsAt, now) ? formatClock(resetsAt) : formatWeekdayClock(resetsAt) })}
+                </span>
+            )}
+        </span>
     );
 }
 

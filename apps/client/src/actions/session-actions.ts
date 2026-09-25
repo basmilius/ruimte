@@ -379,7 +379,7 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
             await ask('chat.compact', { chatId });
             return { output: { chatId, chat } };
         },
-        'chat.configure': async ({ chatId, model, option, runtimeMode, resumeAtReset, selection }, call) => {
+        'chat.configure': async ({ chatId, model, option, runtimeMode, resumeAtReset, selection, account }, call) => {
             const chat = chatNamed(chatId, call);
             const { info } = rowOf(chatId, chat);
             let chosen: ModelSelection | undefined = selection ?? undefined;
@@ -420,14 +420,15 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
                 }
                 chosen = { model: slug, options };
             }
-            if (chosen === undefined && runtimeMode == null && resumeAtReset == null) {
+            if (chosen === undefined && runtimeMode == null && resumeAtReset == null && account == null) {
                 throw new ActionRefusal('nothing-to-change', 'Name a model or an option to change.');
             }
             const updated = await ask('chat.configure', {
                 chatId,
                 ...(chosen ? { selection: chosen } : {}),
                 ...(runtimeMode == null ? {} : { runtimeMode }),
-                ...(resumeAtReset == null ? {} : { resumeAtReset })
+                ...(resumeAtReset == null ? {} : { resumeAtReset }),
+                ...(account == null ? {} : { account })
             });
             machine.applyInfo(chatId, updated);
             return {

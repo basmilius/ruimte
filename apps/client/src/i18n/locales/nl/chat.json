@@ -70,7 +70,11 @@
       "retries": "Probeert het om {{time}} vanzelf opnieuw."
     },
     "toggle": "Verder na reset",
-    "machineOff": "Uitgezet voor deze machine. Zet het aan in Instellingen, Agents."
+    "machineOff": "Uitgezet voor deze machine. Zet het aan in Instellingen, Agents.",
+    "continueOn": "Verder op",
+    "continueOnAria": "Verder op {{account}}",
+    "continueOnTip": "Gaat verder onder {{account}}, dat de meeste ruimte over heeft. De onderbroken turn wordt opnieuw verstuurd.",
+    "continueFailed": "Kon niet verder op {{account}}"
   },
   "contextMeter": {
     "aria": "{{percent}}% van de context gebruikt",
@@ -364,6 +368,12 @@
     },
     "mode": {
       "label": "Rechten"
+    },
+    "account": {
+      "label": "Account",
+      "manage": "Accounts beheren…",
+      "resets": "reset om {{time}}",
+      "forkToSwitch": "Dit gesprek staat in een andere map dan {{account}} leest. Fork de chat om verder te gaan onder {{account}}."
     }
   },
   "scrubber": {
@@ -389,5 +399,8 @@
     "zoomOut": "Uitzoomen",
     "reset": "Herstellen",
     "gone": "Dat bestand staat er niet meer"
+  },
+  "account": {
+    "pill": "{{provider}}-account {{account}}"
   }
 }

@@ -53,6 +53,7 @@ import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canva
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { ForkPill } from '@/chat/ui/ForkPill';
+import { AccountPill } from '@/chat/ui/AccountPill';
 import { LimitPill } from '@/chat/ui/LimitState';
 import { PlanPill } from '@/plan/PlanPill';
 import { SubagentBreadcrumb, SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
@@ -318,6 +319,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     {node.kind === 'chat' && !renaming && <SubagentBreadcrumb chatId={id} className="grow" />}
                     {!renaming && <FlagMarkOf id={id} />}
                     {collapsed && <Pill className="tabular-nums">{t('group.inside', { count: node.memberIds?.length ?? 0 })}</Pill>}
+                    {node.kind === 'chat' && !renaming && <AccountPill chatId={id} />}
                     {node.kind === 'chat' && !renaming && <ForkPill chatId={id} />}
                     {node.kind === 'chat' && !renaming && <PlanPill chatId={id} />}
                     {node.kind === 'chat' && !renaming && <LimitPill chatId={id} />}

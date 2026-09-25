@@ -23,6 +23,7 @@ import type {
 } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import { askBeforeStoppingSubagents } from '@/agents/end-children';
+import { useAccountChoice } from '@/chat/account-choice';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, readStoredAttachments, uploadBytes } from '@/chat/attachments';
 import { chatSuggestions } from '@/chat/chat-references';
@@ -44,7 +45,7 @@ import { dismissResumeCompaction, useResumeCompactionDismissal } from '@/chat/re
 import { composerStopLabel, composerStopOf } from '@/chat/subagent-list';
 import { PROMPT_MAX_CHARS, pasteBecomesAttachment, pastedTextName, promptGuard, usableSlashCommands } from '@/chat/guards';
 import { withQuote } from '@/chat/quote';
-import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
+import { rememberChatAccount, rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
 import { ChatActivity } from '@/chat/ui/ChatActivity';
@@ -213,6 +214,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
      * the new one on the restart the next send does anyway. With one provider in the list the
      * picker drops its group headers on its own, so it reads as that CLI's own catalog.
      */
+    const accountChoice = useAccountChoice(info.provider, info.account);
     const pickable =
         started || providerFixed
             ? providers.filter((entry) => entry.kind === info.provider)
@@ -383,6 +385,13 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             selection: patch.selection ?? null,
             runtimeMode: patch.runtimeMode ?? null
         }).catch(() => undefined);
+    };
+
+    /* From the next turn on, and the default for new agents of this CLI on this machine, as a model pick is. */
+    const chooseAccount = (account: string): void => {
+        void performAsPerson('chat.configure', { chatId, model: null, option: null, account })
+            .then(() => rememberChatAccount(endpointId, info.provider, account))
+            .catch((e: unknown) => setNotice(e instanceof Error ? e.message : String(e)));
     };
 
     /* A model of another CLI re-points the whole chat; one of this CLI's own is a configure. */
@@ -1226,6 +1235,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                             usage={info.usage}
                             compactDisabled={busy || disabled}
                             onCompact={compact}
+                            account={accountChoice === null ? null : { choice: accountChoice, started, onPick: chooseAccount }}
                         />
                         <StashPicker onRestore={restoreStashed} />
                         <span className="grow" />

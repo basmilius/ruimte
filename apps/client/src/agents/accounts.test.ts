@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProviderAccounts, ProviderAccountStatus } from '@ruimte/contracts';
-import { accountName, accountStatusLine, accountsOfKind, freeAccountColor, mintAccountId } from './accounts';
+import { accountName, accountStatusLine, accountsOfKind, canContinueOn, freeAccountColor, hasAccountChoice, mintAccountId, offeredAccounts } from './accounts';
 
 const status = (id: string, patch: Partial<ProviderAccountStatus> = {}): ProviderAccountStatus => ({
     id,
@@ -69,5 +69,43 @@ describe('a new account', () => {
     test('an old color name that is no accent counts as the app accent', () => {
         const old: ProviderAccounts = { accounts: { claude: { kind: 'claude', color: 'gray' } }, statuses: [] };
         expect(freeAccountColor(accountsOfKind(old, 'claude'), 'blue')).toBe('orange');
+    });
+});
+
+describe('a choice of account in a chat', () => {
+    const three: ProviderAccounts = {
+        accounts: {
+            codex: { kind: 'codex' },
+            codex_work: { kind: 'codex', home: '~/.codex', shadowHome: '~/.codex_work' },
+            codex_off: { kind: 'codex', home: '~/.codex_off', enabled: false },
+            claude: { kind: 'claude' }
+        },
+        statuses: [
+            status('codex', { transcripts: '/home/codex' }),
+            status('codex_work', { transcripts: '/home/codex' }),
+            status('codex_off', { transcripts: '/home/codex_off' })
+        ]
+    };
+
+    test('exists with two accounts that are on, and offers the one in use even while it is off', () => {
+        const entries = accountsOfKind(three, 'codex');
+        expect(hasAccountChoice(entries)).toBe(true);
+        expect(hasAccountChoice(accountsOfKind(three, 'claude'))).toBe(false);
+        expect(offeredAccounts(entries, 'codex').map((entry) => entry.id)).toEqual(['codex', 'codex_work']);
+        expect(offeredAccounts(entries, 'codex_off').map((entry) => entry.id)).toEqual(['codex', 'codex_work', 'codex_off']);
+    });
+
+    test('goes on under an account that writes its conversations to the same folder, and under no other', () => {
+        expect(canContinueOn(three, 'codex', undefined, 'codex_work')).toBe(true);
+        expect(canContinueOn(three, 'codex', 'codex_work', 'codex')).toBe(true);
+        expect(canContinueOn(three, 'codex', undefined, 'codex_off')).toBe(false);
+        expect(canContinueOn(three, 'codex', undefined, undefined)).toBe(true);
+        expect(canContinueOn(three, 'codex', undefined, 'codex_gone')).toBe(false);
+    });
+
+    test('a machine that does not say where an account writes answers no', () => {
+        const quiet = { ...three, statuses: [status('codex'), status('codex_work')] };
+        expect(canContinueOn(quiet, 'codex', undefined, 'codex_work')).toBe(false);
+        expect(canContinueOn(null, 'codex', undefined, 'codex_work')).toBe(false);
     });
 });

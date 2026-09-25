@@ -1166,7 +1166,11 @@ export const ACTION_DEFINITIONS = {
             runtimeMode: forActors(PERSON, RuntimeModeSchema).describe('The permission mode'),
             // Letting the machine take a chat up again on a clock is a person's call alone.
             resumeAtReset: forActors(PERSON, z.boolean()).describe('Whether the chat goes on by itself once a limit it stopped on lifts'),
-            selection: modelSelection
+            selection: modelSelection,
+            // An account is someone's costs, so only a person picks one.
+            account: forActors(PERSON, ProviderAccountIdSchema).describe(
+                'The account of the chat’s CLI on this machine that the next turn runs under. After the first turn only one that reads the same conversation'
+            )
         }),
         output: chatNamed.extend({ provider: AgentKindSchema, model: z.string(), options: modelOptions, runtimeMode: RuntimeModeSchema })
     },

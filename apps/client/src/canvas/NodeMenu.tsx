@@ -65,6 +65,7 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
     const chatSession = useChatRow(id, (row) => row?.info.agentSessionId);
     const chatCwd = useChatRow(id, (row) => row?.info.cwd);
     const chatProvider = useChatRow(id, (row) => row?.info.provider);
+    const chatAccount = useChatRow(id, (row) => row?.info.account);
     const platform = useServer((s) => s.platform);
     const providers = useProviders((s) => s.providers);
     const projectFolder = useProject((s) => s.current?.folder ?? null);
@@ -96,13 +97,30 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
     const viewId = canvasStore.getState().viewId;
     const openInChat = (): void => {
         if (agent) {
-            void createNodeAction('chat', { viewId, title: node.title, cwd: node.cwd, resume: agent.agentSessionId, provider: agent.kind, at: beside });
+            // The account travels with the session, since another account's folder does not hold its conversation.
+            void createNodeAction('chat', {
+                viewId,
+                title: node.title,
+                cwd: node.cwd,
+                resume: agent.agentSessionId,
+                provider: agent.kind,
+                ...(agent.kind === node.provider && node.account !== undefined ? { account: node.account } : {}),
+                at: beside
+            });
         }
     };
     const openInTerminal = (): void => {
         // The daemon owns the resume line: the node only says which CLI and which session.
         if (chatSession && chatProvider) {
-            void createNodeAction('terminal', { viewId, title: node.title, cwd: chatCwd, provider: chatProvider, resume: chatSession, at: beside });
+            void createNodeAction('terminal', {
+                viewId,
+                title: node.title,
+                cwd: chatCwd,
+                provider: chatProvider,
+                resume: chatSession,
+                ...(chatAccount === undefined ? {} : { account: chatAccount }),
+                at: beside
+            });
         }
     };
     /*
