@@ -77,7 +77,9 @@ export class AgentLineageStore {
         return this.opened.get(nodeId)?.endedAt ?? null;
     }
 
-    async markEnded(nodeIds: readonly string[], at: number): Promise<void> {
+    /* On the wall clock, like `createdAt`: a chat holds the mark against the time its turn started. */
+    async markEnded(nodeIds: readonly string[]): Promise<void> {
+        const at = Date.now();
         for (const nodeId of nodeIds) {
             const entry = this.opened.get(nodeId);
             if (entry && entry.endedAt === undefined) {

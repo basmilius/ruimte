@@ -338,6 +338,32 @@ describe("stopping a chat's turn together with its sub-agents", () => {
         expect(after.lineage.endedAt(terminal)).not.toBeNull();
         expect(after.outbox.list()).toEqual([]);
     });
+
+    test('a child the end reached before the restart loaded it is not resumed once it loads', async () => {
+        const before = await boot();
+        before.worker.start();
+        await leadWorking(before);
+        const { chat } = await twoRunningChildren(before);
+        const childSession = before.chats.get(chat)!.info.agentSessionId!;
+        before.worker.stop();
+
+        expect(await before.request('chat.cancel', { chatId: 'chat-lead', subagents: true })).toMatchObject({ ok: true });
+        await before.stop();
+        running = running.filter((daemon) => daemon !== before);
+
+        // The order a slow disk gives a start: the owed end runs out before the interrupted turns are read.
+        const after = await boot();
+        after.worker.start();
+        await after.worker.settled();
+        expect(after.chats.get(chat)).toBeUndefined();
+        await after.chats.recoverInterrupted();
+        await after.worker.settled();
+
+        expect(after.chats.get(chat)?.running).toBe(false);
+        expect(turnsOf(after, chat).map((turn) => turn.state)).toEqual(['aborted']);
+        expect(after.claude.started.filter((fake) => fake.argv.includes(childSession))).toEqual([]);
+        expect(after.outbox.list()).toEqual([]);
+    });
 });
 
 describe('stopping one task from the list of the chat that gave it', () => {

@@ -111,7 +111,7 @@ export const wireEndChildren = ({
     const deps: EndChildrenDeps = {
         descendants: (nodeId) => lineage.descendants(nodeId),
         projectOf: (nodeId) => lineage.projectOf(nodeId),
-        markEnded: (nodeIds) => lineage.markEnded(nodeIds, now()),
+        markEnded: (nodeIds) => lineage.markEnded(nodeIds),
         entries: () => outbox.list(),
         enqueue,
         remove: (entryId) => outbox.remove(entryId),
