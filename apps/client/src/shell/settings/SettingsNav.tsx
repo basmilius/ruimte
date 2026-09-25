@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Tabs } from '@base-ui-components/react/tabs';
-import { Search, User, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
 import { usePulsarAccount } from '@/pulsar/account';
 import { accountName } from '@/pulsar/account-name';
 import { refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
+import { AccountAvatar } from '@/shell/settings/AccountAvatar';
 import { Skeleton } from '@/shell/settings/controls';
 import { mergeMachines } from '@/shell/settings/machine-list';
 import { searchSettings, type SearchResult } from '@/shell/settings/search';
@@ -56,15 +57,7 @@ function AccountTab() {
             value={ACCOUNT_SECTION.id}
             className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-surface-hover data-active:bg-surface-active"
         >
-            {name === null ? (
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-hover text-text-muted">
-                    <Icon icon={User} size={16} />
-                </span>
-            ) : (
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent" aria-hidden>
-                    {name.slice(0, 1).toUpperCase()}
-                </span>
-            )}
+            <AccountAvatar account={signedIn ? account : null} />
             <span className="flex min-w-0 flex-col">
                 {status === 'loading' ? (
                     <Skeleton className="my-0.5 w-28" />
