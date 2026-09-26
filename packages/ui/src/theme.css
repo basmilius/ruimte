@@ -49,6 +49,12 @@
     --status-error: #dc2626;
     --positive: #15803d;
     --positive-text: #ffffff;
+    /* A control drawn over a picture rather than over the interface, the handle of a wipe, so it
+       stays the same in both themes. */
+    --media-handle: #ffffff;
+    --media-handle-text: #18181b;
+    --media-handle-edge: 0 0 0 1px rgb(0 0 0 / 0.3);
+    --media-handle-shadow: 0 2px 12px rgb(0 0 0 / 0.35);
     /* The file type palette of the `@pierre/trees` icon set, its own values. A file icon is the one
        thing in the interface that is not tinted by the theme: TypeScript is blue and Vue is green
        wherever the file shows up, which is what makes a row readable before the name is. The tree
@@ -191,7 +197,11 @@
     --color-status-error: var(--status-error);
     --color-positive: var(--positive);
     --color-positive-text: var(--positive-text);
+    --color-media-handle: var(--media-handle);
+    --color-media-handle-text: var(--media-handle-text);
     --shadow-float: var(--float-shadow);
+    --shadow-media-handle-edge: var(--media-handle-edge);
+    --shadow-media-handle: var(--media-handle-shadow);
 }
 
 @layer base {

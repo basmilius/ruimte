@@ -26,11 +26,14 @@ interface PillProps {
     mono?: boolean;
     /* With a handler the pill is a button; without one it is a label. */
     onClick?: () => void;
+    /* Makes the button a toggle, for a switch of what a surface shows. */
+    pressed?: boolean;
+    disabled?: boolean;
     className?: string;
 }
 
 /* The small rounded label in a node header, a sidebar row or a settings line: a count, a branch, a status. */
-export function Pill({ icon, children, tone = 'muted', shape = 'pill', mono = false, onClick, className }: PillProps) {
+export function Pill({ icon, children, tone = 'muted', shape = 'pill', mono = false, onClick, pressed, disabled, className }: PillProps) {
     const shared = clsx('inline-flex shrink-0 items-center gap-1 text-xs', SHAPES[shape], TONES[tone], mono && 'font-mono', className);
     if (!onClick) {
         return (
@@ -41,7 +44,13 @@ export function Pill({ icon, children, tone = 'muted', shape = 'pill', mono = fa
         );
     }
     return (
-        <button type="button" className={clsx(shared, 'hover:text-text')} onClick={onClick}>
+        <button
+            type="button"
+            aria-pressed={pressed}
+            disabled={disabled}
+            className={clsx(shared, 'enabled:hover:text-text disabled:opacity-50 aria-pressed:bg-surface-active aria-pressed:text-text')}
+            onClick={onClick}
+        >
             {icon}
             {children}
         </button>

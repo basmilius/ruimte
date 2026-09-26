@@ -24,6 +24,7 @@
     "./TextMenu": "./src/TextMenu.tsx",
     "./Tile": "./src/Tile.tsx",
     "./Tooltip": "./src/Tooltip.tsx",
+    "./Wipe": "./src/Wipe.tsx",
     "./classes": "./src/classes.ts",
     "./clipboard": "./src/clipboard.ts",
     "./controls": "./src/controls.tsx",
@@ -53,8 +54,10 @@
     "./shortcut-hints": "./src/shortcut-hints.ts",
     "./shortcut": "./src/shortcut.ts",
     "./useAsyncAction": "./src/useAsyncAction.ts",
+    "./useContentSize": "./src/useContentSize.ts",
     "./useMeasuredWidth": "./src/useMeasuredWidth.ts",
     "./useNow": "./src/useNow.ts",
+    "./wipe": "./src/wipe.ts",
     "./theme.css": "./src/theme.css",
     "./locales/*.json": "./src/locales/*.json"
   },
