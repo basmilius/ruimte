@@ -7,7 +7,7 @@ import { freeAccountColor, mintAccountId, type AccountEntry } from '@/agents/acc
 import { createAccount, linkAccount } from '@/shell/settings/providers/account-actions';
 import { AccentSwatches } from '@/shell/settings/AccentSwatches';
 import { CliTile, DetailHeader } from '@/shell/settings/providers/parts';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { providerAccountsOf } from '@/state/provider-accounts';
 import { useSettings } from '@/state/settings';

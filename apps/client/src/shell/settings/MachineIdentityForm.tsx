@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type ProjectIconChoice } from '@ruimte/contracts';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';

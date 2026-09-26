@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { describeConnection, describeLastSeen, describePing, reachabilityLabel } from '@/shell/connection-info';
-import { MasterItem } from '@/shell/settings/MasterDetail';
+import { MasterItem } from '@ruimte/ui/settings/MasterDetail';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';
 import { useMinute } from '@/shell/usage/limits';

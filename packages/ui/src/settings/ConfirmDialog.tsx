@@ -1,4 +1,4 @@
-import { PromptDialog } from '@ruimte/ui/PromptDialog';
+import { PromptDialog } from '../PromptDialog.tsx';
 
 interface ConfirmDialogProps {
     open: boolean;

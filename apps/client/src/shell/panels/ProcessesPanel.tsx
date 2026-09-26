@@ -35,7 +35,7 @@ import {
 import { performAsPerson, performConfirmedAsPerson, runAsPerson } from '@/actions/client-actions';
 import { messageOf } from '@ruimte/ui/error-message';
 import { projectNodes, revealNode } from '@/project/views';
-import { Segmented } from '@/shell/settings/controls';
+import { Segmented } from '@ruimte/ui/controls';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { ProcessChart } from '@/shell/panels/ProcessChart';
 import { niceScale } from '@/shell/usage/summary';

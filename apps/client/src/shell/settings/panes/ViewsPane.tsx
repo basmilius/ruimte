@@ -1,9 +1,9 @@
 import { Globe, PenTool } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@/shell/settings/controls';
+import { Toggle } from '@ruimte/ui/controls';
 import { Keys } from '@ruimte/ui/Kbd';
 import { useSettings } from '@/state/settings';
 import { shortcut } from '@ruimte/ui/shortcut';

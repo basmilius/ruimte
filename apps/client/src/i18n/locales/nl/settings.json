@@ -75,7 +75,6 @@
         }
     },
     "sections": {
-        "title": "Onderdelen van de instellingen",
         "appearance": {
             "label": "Uiterlijk",
             "description": "Thema, accentkleur, het lettertype van de terminal en de regio waarin getallen en datums worden geschreven."
@@ -119,14 +118,6 @@
         "about": {
             "label": "Over",
             "description": "Versie, gegevens van de machine en links."
-        }
-    },
-    "controls": {
-        "stepper": {
-            "smaller": "Kleiner",
-            "larger": "Groter",
-            "smallerFor": "{{label}}: kleiner",
-            "largerFor": "{{label}}: groter"
         }
     },
     "usage": {
@@ -937,13 +928,6 @@
             "machines_one": "Account · {{count}} machine",
             "machines_other": "Account · {{count}} machines"
         }
-    },
-    "search": {
-        "placeholder": "Instellingen zoeken",
-        "clear": "Zoekopdracht wissen",
-        "none": "Niets komt overeen met \"{{query}}\".",
-        "results": "Zoekresultaten",
-        "pane": "Onderdeel"
     },
     "scope": {
         "client": "Deze client",

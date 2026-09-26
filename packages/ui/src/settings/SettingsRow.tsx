@@ -1,8 +1,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import clsx from 'clsx';
 import type { LucideIcon } from 'lucide-react';
-import { useUi } from '@/state/ui';
-import { Icon } from '@ruimte/ui/Icon';
+import { Icon } from '../Icon.tsx';
+import { useSettingsTarget } from './target.ts';
 
 /* How long a row a search result jumped to stays lit. */
 const TARGET_MS = 1600;
@@ -20,7 +20,7 @@ interface SettingsRowProps {
     leading?: ReactNode;
     /* A row that only makes sense under the one above it steps in. */
     indent?: boolean;
-    /* The entry in `search.ts` that leads here. */
+    /* The id a search result names to lead here. */
     searchId?: string;
 }
 
@@ -39,16 +39,17 @@ export function TopIcon({ icon, size = 16, className }: { icon: LucideIcon; size
  */
 export function SettingsRow({ label, description, control, children, muted = false, leading, indent = false, searchId }: SettingsRowProps) {
     const ref = useRef<HTMLDivElement>(null);
-    const targeted = useUi((s) => searchId !== undefined && s.settings.target === searchId);
+    const { target, shown } = useSettingsTarget();
+    const targeted = searchId !== undefined && target === searchId;
 
     useEffect(() => {
         if (!targeted) {
             return;
         }
         ref.current?.scrollIntoView({ block: 'center' });
-        const timer = window.setTimeout(() => useUi.getState().setSettings({ target: null }), TARGET_MS);
+        const timer = window.setTimeout(shown, TARGET_MS);
         return () => window.clearTimeout(timer);
-    }, [targeted]);
+    }, [targeted, shown]);
 
     return (
         <div

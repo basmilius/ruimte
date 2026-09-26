@@ -2,9 +2,9 @@ import clsx from 'clsx';
 import { Switch } from '@base-ui-components/react/switch';
 import { useTranslation } from 'react-i18next';
 import { Minus, Plus } from 'lucide-react';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { Icon } from '@ruimte/ui/Icon';
+import { BTN_GROUP } from './classes.ts';
+import { Tooltip } from './Tooltip.tsx';
+import { Icon } from './Icon.tsx';
 
 /* The shared controls of the settings panes; each one is small enough to read at a glance. */
 
@@ -73,7 +73,7 @@ interface StepperProps {
 
 /* A number between minus and plus, in one sunken group so the three read as a single control. */
 export function Stepper({ value, min, max, step, unit, label, onChange }: StepperProps) {
-    const { t } = useTranslation('settings');
+    const { t } = useTranslation('ui');
     const nudge = (direction: -1 | 1): void => {
         const next = Math.round((value + direction * step) * 100) / 100;
         onChange(Math.min(max, Math.max(min, next)));

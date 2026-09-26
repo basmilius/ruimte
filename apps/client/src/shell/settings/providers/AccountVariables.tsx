@@ -5,7 +5,7 @@ import { Lock, LockOpen, Plus, X } from 'lucide-react';
 import type { ProviderAccount } from '@ruimte/contracts';
 import { saveAccount } from '@/shell/settings/providers/account-actions';
 import { draftsOf, emptyDraft, variablesChanged, variablesOf, variablesProblem, type VariableDraft } from '@/shell/settings/providers/variables';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Button } from '@ruimte/ui/Button';
 import { FORM_ERROR } from '@ruimte/ui/classes';

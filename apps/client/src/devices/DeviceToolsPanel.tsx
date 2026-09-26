@@ -15,7 +15,7 @@ import {
 } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
-import { Segmented, Toggle } from '@/shell/settings/controls';
+import { Segmented, Toggle } from '@ruimte/ui/controls';
 import { Button } from '@ruimte/ui/Button';
 import { FORM_ERROR, PANEL_HEADER, SECTION_LABEL } from '@ruimte/ui/classes';
 import { CloseButton } from '@ruimte/ui/CloseButton';

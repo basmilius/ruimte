@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { highlightCode } from '@/shell/panels/highlight';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@/shell/settings/controls';
+import { Toggle } from '@ruimte/ui/controls';
 import { codeThemesOf, useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { Select } from '@ruimte/ui/Select';

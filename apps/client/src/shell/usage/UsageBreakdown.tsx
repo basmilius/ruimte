@@ -4,7 +4,7 @@ import { CircleHelp, Folder, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { UsageModel, UsageProject, UsageProvider, UsageSummaryResult } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
-import { Segmented } from '@/shell/settings/controls';
+import { Segmented } from '@ruimte/ui/controls';
 import { useUsageEndpointId } from '@/state/usage';
 import { useProjectList } from '@/state/project-list';
 import type { UsageMetric } from '@/state/usage';

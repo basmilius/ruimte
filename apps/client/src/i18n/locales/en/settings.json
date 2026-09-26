@@ -75,7 +75,6 @@
         }
     },
     "sections": {
-        "title": "Settings sections",
         "appearance": {
             "label": "Appearance",
             "description": "Theme, accent, the terminal font and the region numbers and dates are written in."
@@ -119,14 +118,6 @@
         "about": {
             "label": "About",
             "description": "Version, machine details and links."
-        }
-    },
-    "controls": {
-        "stepper": {
-            "smaller": "Smaller",
-            "larger": "Larger",
-            "smallerFor": "{{label}}: smaller",
-            "largerFor": "{{label}}: larger"
         }
     },
     "usage": {
@@ -937,13 +928,6 @@
             "machines_one": "Account · {{count}} machine",
             "machines_other": "Account · {{count}} machines"
         }
-    },
-    "search": {
-        "placeholder": "Search settings",
-        "clear": "Clear search",
-        "none": "Nothing matches \"{{query}}\".",
-        "results": "Search results",
-        "pane": "Section"
     },
     "scope": {
         "client": "This client",

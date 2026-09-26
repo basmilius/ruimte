@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@/shell/settings/controls';
+import { Toggle } from '@ruimte/ui/controls';
 import { useServers } from '@/state/server';
 import { useProvidersStore } from '@/state/providers';
 import { useToasts } from '@/state/toasts';

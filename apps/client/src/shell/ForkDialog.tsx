@@ -22,7 +22,7 @@ import {
 import { accountFor, readChatPreferences, selectionFor } from '@/chat/preferences';
 import { ModelPicker } from '@/chat/ui/Pickers';
 import { useProviders } from '@/state/providers';
-import { Toggle } from '@/shell/settings/controls';
+import { Toggle } from '@ruimte/ui/controls';
 import { canvasOfNode } from '@/state/canvas';
 import { useChatRow } from '@/state/chats';
 import { useDocument } from '@/state/document';

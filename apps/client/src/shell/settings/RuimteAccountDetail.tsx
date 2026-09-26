@@ -8,8 +8,8 @@ import { cancelPulsarSignIn, linkPulsarProvider, refreshPulsarIdentities, signOu
 import { PROVIDER_ORDER, identityDetail, signedInLabel, takeoverWarning } from '@/pulsar/account-name';
 import { dismissAccountConfirmation, useAccountConfirmation } from '@/pulsar/confirmation';
 import { PAIRING_PLACEHOLDER, usePairMachine } from '@/shell/settings/pair-machine';
-import { Skeleton } from '@/shell/settings/controls';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { Skeleton } from '@ruimte/ui/controls';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { ProviderButton, SignInButtons } from '@/shell/SignInButtons';
 import { Button } from '@ruimte/ui/Button';

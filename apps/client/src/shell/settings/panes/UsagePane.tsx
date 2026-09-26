@@ -1,8 +1,8 @@
 import { ChartNoAxesColumn } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Segmented } from '@/shell/settings/controls';
+import { Segmented } from '@ruimte/ui/controls';
 import { useUi } from '@/state/ui';
 import { useUsage, useUsageStore } from '@/state/usage';
 import type { UsageCurrency } from '@/shell/usage/format';

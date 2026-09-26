@@ -7,5 +7,27 @@
     "retry": "Try again",
     "select": "Select",
     "selectAll": "Select all"
+  },
+  "settings": {
+    "title": "Settings",
+    "section": "Settings section",
+    "sections": "Settings sections",
+    "close": "Close settings",
+    "failed": "This settings page failed to render",
+    "search": {
+      "placeholder": "Search settings",
+      "clear": "Clear search",
+      "none": "Nothing matches \"{{query}}\".",
+      "results": "Search results",
+      "pane": "Section"
+    }
+  },
+  "controls": {
+    "stepper": {
+      "smaller": "Smaller",
+      "larger": "Larger",
+      "smallerFor": "{{label}}: smaller",
+      "largerFor": "{{label}}: larger"
+    }
   }
 }

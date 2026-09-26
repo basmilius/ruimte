@@ -16,9 +16,9 @@ import {
 } from '@/computer/setup';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@/shell/settings/controls';
+import { Toggle } from '@ruimte/ui/controls';
 import { ComputerAppGrants } from '@/shell/settings/panes/ComputerAppGrants';
 import { useComputer } from '@/state/computer';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { VOICE_LANGUAGES } from '@ruimte/contracts';
 import { DEFAULT_MICROPHONE_ID, listMicrophones, type MicrophoneDevice } from '@/audio/microphone';
 import { useSettings } from '@/state/settings';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Select } from '@ruimte/ui/Select';
 

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { LogIn } from 'lucide-react';
 import type { UsageProvider } from '@ruimte/contracts';
 import { AccountDot } from '@/agents/AccountDot';
-import { Segmented } from '@/shell/settings/controls';
+import { Segmented } from '@ruimte/ui/controls';
 import { openLogin } from '@/shell/settings/providers/account-actions';
 import { PROVIDER_COLORS, PROVIDER_LABELS } from '@/shell/usage/format';
 import { accountNote, checkedLabel, hasSeveralAccounts, isSignedOut, type LimitAccount } from '@/shell/usage/limit-groups';

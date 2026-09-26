@@ -7,5 +7,27 @@
     "retry": "Opnieuw proberen",
     "select": "Selecteren",
     "selectAll": "Alles selecteren"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "section": "Onderdeel van de instellingen",
+    "sections": "Onderdelen van de instellingen",
+    "close": "Instellingen sluiten",
+    "failed": "Deze instellingenpagina kon niet worden getekend",
+    "search": {
+      "placeholder": "Instellingen zoeken",
+      "clear": "Zoekopdracht wissen",
+      "none": "Niets komt overeen met \"{{query}}\".",
+      "results": "Zoekresultaten",
+      "pane": "Onderdeel"
+    }
+  },
+  "controls": {
+    "stepper": {
+      "smaller": "Kleiner",
+      "larger": "Groter",
+      "smallerFor": "{{label}}: kleiner",
+      "largerFor": "{{label}}: groter"
+    }
   }
 }

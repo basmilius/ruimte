@@ -23,7 +23,7 @@ import {
     type MergeRun
 } from '@/shell/panels/worktree-merge';
 import { nodesInWorktree } from '@/shell/panels/worktree-rows';
-import { Segmented, Toggle } from '@/shell/settings/controls';
+import { Segmented, Toggle } from '@ruimte/ui/controls';
 import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@/state/chats';
 import { useEndpointId, endpointKey } from '@/state/keys';

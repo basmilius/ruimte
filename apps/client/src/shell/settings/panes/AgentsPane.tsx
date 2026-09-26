@@ -4,9 +4,9 @@ import { rememberChatPreferences, useChatPreferences } from '@/chat/preferences'
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@/chat/runtime-modes';
 import { canKeepAwake } from '@/desktop/bridge';
 import { MachineSwitchSections } from '@/shell/settings/MachineSwitchSection';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@/shell/settings/controls';
+import { Toggle } from '@ruimte/ui/controls';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { Select, type SelectItem } from '@ruimte/ui/Select';

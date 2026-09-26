@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { performAsPerson } from '@/actions/client-actions';
 import { endsAgentsWarning, stopsSubagentsWarning, stopsTaskWarning, useEndingAgents, type PendingEnd } from '@/agents/end-children';
 import { hasWork, leftBehindLine, removedToast } from '@/shell/panels/worktree-rows';
-import { Toggle } from '@/shell/settings/controls';
+import { Toggle } from '@ruimte/ui/controls';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { worktreeLists } from '@/state/worktrees';

@@ -10,7 +10,7 @@ import { publicAddressBook } from '@/pulsar/account';
 import { chartModels, modelMarks, type CostScale } from '@/shell/models/chart';
 import { ModelsChart } from '@/shell/models/ModelsChart';
 import { ModelsLegend } from '@/shell/models/ModelsLegend';
-import { Segmented, Skeleton } from '@/shell/settings/controls';
+import { Segmented, Skeleton } from '@ruimte/ui/controls';
 import { useUi } from '@/state/ui';
 import { Button } from '@ruimte/ui/Button';
 import { EmptyState } from '@ruimte/ui/EmptyState';

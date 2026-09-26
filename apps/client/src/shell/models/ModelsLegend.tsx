@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { UsageProvider } from '@ruimte/contracts';
-import { Toggle } from '@/shell/settings/controls';
+import { Toggle } from '@ruimte/ui/controls';
 import { markPath, type ChartModel, type ModelMark } from '@/shell/models/chart';
 import { PROVIDER_LABELS } from '@/shell/usage/format';
 import { ProviderLogo } from '@/ui/ProviderLogo';

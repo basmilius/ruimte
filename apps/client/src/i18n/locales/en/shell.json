@@ -180,10 +180,7 @@
         "updateOnTheWay": "An update is on the way"
     },
     "settingsDialog": {
-        "title": "Settings",
-        "section": "Settings section",
-        "close": "Close settings",
-        "failed": "This settings page failed to render"
+        "title": "Settings"
     },
     "worktreeDialog": {
         "title": "Bind to a worktree",

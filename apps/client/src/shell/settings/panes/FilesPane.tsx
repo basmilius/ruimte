@@ -1,8 +1,8 @@
 import { Folder, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Segmented, Stepper, Toggle } from '@/shell/settings/controls';
+import { Segmented, Stepper, Toggle } from '@ruimte/ui/controls';
 import { FILES_TAB_LIMIT_RANGE, useSettings } from '@/state/settings';
 
 /* The two panels beside the canvas, what the Files panel shows and keeps open, and how the Git panel lists what changed. */

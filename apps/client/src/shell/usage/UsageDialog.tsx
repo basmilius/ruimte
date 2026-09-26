@@ -6,7 +6,7 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import { ChartNoAxesColumn, LoaderCircle, RefreshCw, TriangleAlert, Unplug } from 'lucide-react';
 import { USAGE_PROVIDERS, type UsageAccount } from '@ruimte/contracts';
 import { AccountDot } from '@/agents/AccountDot';
-import { Segmented, Skeleton } from '@/shell/settings/controls';
+import { Segmented, Skeleton } from '@ruimte/ui/controls';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { useEndpoints } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';

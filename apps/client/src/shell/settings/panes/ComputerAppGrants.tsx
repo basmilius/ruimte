@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { ComputerAppEntry, ComputerAppGrants as Grants, ComputerRevokePayload } from '@ruimte/contracts';
 import { formatDayWithYear } from '@ruimte/ui/format/datetime';
 import { useFormatLocale } from '@ruimte/ui/format/locale';
-import { SettingsRow, TopIcon } from '@/shell/settings/SettingsRow';
+import { SettingsRow, TopIcon } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Button } from '@ruimte/ui/Button';
 import { Tooltip } from '@ruimte/ui/Tooltip';

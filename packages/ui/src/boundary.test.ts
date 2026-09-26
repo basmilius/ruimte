@@ -12,4 +12,11 @@ describe('the boundary of @ruimte/ui', () => {
         );
         expect(reaching).toEqual([]);
     });
+
+    test('every source file is exported under its own path', () => {
+        const manifest = JSON.parse(readFileSync(join(HERE, '../package.json'), 'utf8')) as { exports: Record<string, string> };
+        const exported = new Set(Object.values(manifest.exports));
+        const missing = [...new Glob('**/*.{ts,tsx}').scanSync(HERE)].filter((path) => !path.endsWith('.test.ts') && !exported.has(`./src/${path}`));
+        expect(missing).toEqual([]);
+    });
 });

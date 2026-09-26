@@ -180,10 +180,7 @@
         "updateOnTheWay": "Er is een update onderweg"
     },
     "settingsDialog": {
-        "title": "Instellingen",
-        "section": "Onderdeel van de instellingen",
-        "close": "Instellingen sluiten",
-        "failed": "Deze instellingenpagina kon niet worden getekend"
+        "title": "Instellingen"
     },
     "worktreeDialog": {
         "title": "Aan een worktree koppelen",

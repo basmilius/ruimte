@@ -331,22 +331,6 @@
     }
     @keyframes progress-sweep { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
 
-    /* A strip that scrolls sideways fades out at the edge that still hides something, and only there,
-       so a strip that fits keeps its first and last item sharp. The edges are set by whoever scrolls. */
-    .scroll-fade-x {
-        --fade-start: 0px;
-        --fade-end: 0px;
-        mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
-    }
-    .scroll-fade-x[data-fade-start] { --fade-start: 24px; }
-    .scroll-fade-x[data-fade-end] { --fade-end: 24px; }
-    /* The same for a column under a fixed header: its top fades once something has scrolled under it. */
-    .scroll-fade-top {
-        --fade-start: 0px;
-        mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-start));
-    }
-    .scroll-fade-top[data-fade-start] { --fade-start: 24px; }
-
     /* In the desktop app the top band drags the window. Electron 44 lets children inherit
        the region, so they go back to `initial` (an explicit `none` counts as no-drag and breaks the
        drag), and the controls inside opt out on purpose. */

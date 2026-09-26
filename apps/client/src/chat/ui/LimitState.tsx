@@ -8,7 +8,7 @@ import { continueTarget, hasUnreadAccount } from '@/agents/account-limits';
 import { useAccountChoice, type AccountChoice } from '@/chat/account-choice';
 import { limitView } from '@/chat/logic/limit';
 import { useFormatLocale } from '@ruimte/ui/format/locale';
-import { Toggle } from '@/shell/settings/controls';
+import { Toggle } from '@ruimte/ui/controls';
 import { useUsageLimits } from '@/shell/usage/limits';
 import { useChats } from '@/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
