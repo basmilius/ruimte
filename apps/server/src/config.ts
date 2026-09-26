@@ -2,6 +2,7 @@ import { homedir, hostname } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { DEFAULT_STUN_SERVER, brokerUrlProblem, type BrokerOverride } from '@ruimte/pulsar';
+import { RUIMTE_SESSION_VARIABLES } from '@ruimte/agents/host/environment';
 
 export interface ServerConfig {
     host: string;
@@ -40,7 +41,7 @@ export interface ServerConfig {
  * What a session hands its shell. A daemon started from inside another daemon's terminal inherits
  * them, and its own sessions and usage probes would then report into that other daemon's node.
  */
-export const SESSION_VARIABLES = ['RUIMTE_HOOK_URL', 'RUIMTE_HOOK_TOKEN', 'RUIMTE_CONTEXT_URL', 'RUIMTE_CONTEXT_TOKEN', 'RUIMTE_SESSION_ID'] as const;
+export const SESSION_VARIABLES = RUIMTE_SESSION_VARIABLES;
 
 /** Removes the variables of a session this process was started from; a daemon never belongs to one. */
 export const forgetInheritedSession = (env: Record<string, string | undefined>): void => {

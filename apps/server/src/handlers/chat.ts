@@ -7,10 +7,12 @@ import type {
     ChatForkResult,
     ChatSummarizeResult
 } from '@ruimte/contracts';
+import { chatHandlers } from '@ruimte/agents/host/handlers';
 import { translate, type Dispatcher } from '../dispatcher.ts';
 import { ChatError } from '../chat/errors.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
+import { registerAgentHandlers } from './agent.ts';
 import type { BeforeKill } from './session.ts';
 
 export interface ChatForkHandlers {
@@ -28,25 +30,19 @@ export const registerChatHandlers = (
     stopNode?: (nodeId: string, reason: string) => Promise<void>,
     forks?: ChatForkHandlers
 ): void => {
-    dispatcher.register('provider.list', async () => ({ providers: await providers.list() }));
-
-    dispatcher.register('chat.create', (payload) => translate(() => manager.create(payload)));
-
-    dispatcher.register('chat.configure', (payload) => translate(() => manager.configure(payload)));
-
-    // What a chat the daemon starts on its own is made with, while this socket is connected.
-    dispatcher.register('chat.setPreferences', (payload, client) => {
-        manager.composerPreferences.set(client.id, payload);
-        return {};
-    });
-
-    dispatcher.register('chat.attach', (payload, client) =>
-        translate(() => manager.attachWithBookmarks(payload.chatId, client.id, payload.historyLimit, payload.since))
-    );
-
-    dispatcher.register('chat.history', (payload) => translate(() => manager.history(payload.chatId, payload.cursor, payload.limit)));
-
-    dispatcher.register('chat.subagent', (payload, client) => translate(() => manager.subagent(client.id, payload)));
+    // What the daemon answers differently from a host of chats alone: a task's row stops its node, a stop or a
+    // removal first owes the end of the agents a chat opened, and a fork lands on the canvas.
+    const {
+        'chat.stopSubagent': _stopSubagent,
+        'chat.cancel': _cancel,
+        'chat.kill': _kill,
+        'chat.fork': _fork,
+        'chat.forkInfo': _forkInfo,
+        'chat.summarize': _summarize,
+        'chat.continueOn': _continueOn,
+        ...shared
+    } = chatHandlers(manager, providers);
+    registerAgentHandlers(dispatcher, shared);
 
     dispatcher.register('chat.stopSubagent', (payload) =>
         translate(async () => {
@@ -54,53 +50,6 @@ export const registerChatHandlers = (
             return {};
         })
     );
-
-    dispatcher.register('chat.stopTask', (payload) =>
-        translate(async () => {
-            await manager.stopTask(payload.chatId, payload.taskId);
-            return {};
-        })
-    );
-
-    dispatcher.register('chat.detach', (payload, client) =>
-        translate(() => {
-            manager.detach(payload.chatId, client.id);
-            return {};
-        })
-    );
-
-    dispatcher.register('chat.send', (payload) =>
-        translate(() =>
-            manager.send(payload.chatId, payload.text, { mentions: payload.mentions, skills: payload.skills, chats: payload.chats }, payload.attachments)
-        )
-    );
-
-    dispatcher.register('chat.unqueue', (payload) => translate(() => ({ message: manager.unqueue(payload.chatId, payload.messageId) })));
-
-    dispatcher.register('chat.sendNow', (payload) =>
-        translate(() => {
-            manager.sendNow(payload.chatId, payload.messageId);
-            return {};
-        })
-    );
-
-    dispatcher.register('skills.list', (payload) => translate(async () => ({ skills: await manager.skills(payload.chatId) })));
-
-    dispatcher.register('chat.compact', (payload) =>
-        translate(() => {
-            manager.compact(payload.chatId);
-            return {};
-        })
-    );
-
-    dispatcher.register('chat.clear', (payload) =>
-        translate(async () => {
-            await manager.clear(payload.chatId, payload.force === true);
-            return {};
-        })
-    );
-
-    dispatcher.register('chat.turnDiff', (payload) => translate(async () => ({ diff: await manager.turnDiff(payload.chatId, payload.turnId) })));
 
     const forking = (): ChatForkHandlers => {
         if (!forks) {
@@ -128,39 +77,6 @@ export const registerChatHandlers = (
         })
     );
 
-    dispatcher.register('chat.approve', (payload) =>
-        translate(() => {
-            manager.approve(payload.chatId, payload.requestId, payload.decision, payload.message);
-            return {};
-        })
-    );
-
-    dispatcher.register('chat.answer', (payload) =>
-        translate(() => {
-            manager.answer(payload.chatId, payload.requestId, payload.answers);
-            return {};
-        })
-    );
-
-    dispatcher.register('chat.dismiss', (payload) =>
-        translate(() => {
-            manager.dismiss(payload.chatId, payload.itemId);
-            return {};
-        })
-    );
-
-    dispatcher.register('chat.addBookmark', (payload) =>
-        translate(async () => ({ bookmarks: await manager.addBookmark(payload.chatId, payload.itemId, payload.name) }))
-    );
-
-    dispatcher.register('chat.renameBookmark', (payload) =>
-        translate(async () => ({ bookmarks: await manager.renameBookmark(payload.chatId, payload.itemId, payload.name) }))
-    );
-
-    dispatcher.register('chat.removeBookmark', (payload) =>
-        translate(async () => ({ bookmarks: await manager.removeBookmark(payload.chatId, payload.itemId) }))
-    );
-
     dispatcher.register('chat.kill', (payload) =>
         translate(async () => {
             await beforeKill?.(payload.chatId);
@@ -168,6 +84,4 @@ export const registerChatHandlers = (
             return {};
         })
     );
-
-    dispatcher.register('chat.list', () => ({ chats: manager.list() }));
 };

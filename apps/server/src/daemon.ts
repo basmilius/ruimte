@@ -21,7 +21,7 @@ import {
     type RuntimeMode
 } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
-import { ClaudeTitleReader } from './agents/claude-title.ts';
+import { ClaudeTitleReader } from '@ruimte/agents/chat/claude-title';
 import { CodexTitleReader } from './agents/codex-title.ts';
 import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';

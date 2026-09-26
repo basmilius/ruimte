@@ -67,14 +67,19 @@ export const parseTitle = (output: string): string | null => {
  * its one-shot print mode. Null when no CLI here answers a single prompt, when it fails or when it
  * takes too long: the name the client derived from the prompt then stays.
  */
-export const suggestChatTitle = async (registry: ProviderRegistry, preferred: AgentKind, input: ChatTitleInput): Promise<string | null> => {
+export const suggestChatTitle = async (
+    registry: ProviderRegistry,
+    preferred: AgentKind,
+    input: ChatTitleInput,
+    env?: Record<string, string>
+): Promise<string | null> => {
     const provider = await registry.oneShotProvider(preferred);
     const args = provider?.oneShotArgs?.(buildTitlePrompt(input.prompt, input.answer)) ?? null;
     if (provider === null || args === null) {
         return null;
     }
     try {
-        const result = await runProcess([provider.command[0]!, ...args], { cwd: input.cwd, timeoutMs: TIMEOUT_MS });
+        const result = await runProcess([provider.command[0]!, ...args], { cwd: input.cwd, timeoutMs: TIMEOUT_MS, ...(env === undefined ? {} : { env }) });
         return result.exitCode === 0 ? parseTitle(result.stdout) : null;
     } catch {
         return null;
