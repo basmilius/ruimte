@@ -1,0 +1,7 @@
+{
+  "transport": {
+    "notConnected": "The agents are not reachable",
+    "closedBeforeAnswer": "The connection to the agents closed before they answered",
+    "badReply": "The answer to {{type}} does not match its contract"
+  }
+}

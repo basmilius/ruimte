@@ -8,12 +8,25 @@ const HERE = new URL('.', import.meta.url).pathname;
 
 /* The components the client draws with, held to the same rules; their files read as `@ruimte/ui/<file>`. */
 const UI_PREFIX = '@ruimte/ui/';
-const UI_SOURCE = join(HERE, '../../../packages/ui/src');
 
-const fileOf = (path: string): string => (path.startsWith(UI_PREFIX) ? join(UI_SOURCE, path.slice(UI_PREFIX.length)) : join(HERE, path));
+/* The chat, its providers and its usage, which the client draws as its own; their files read as `@ruimte/agents-react/<file>`. */
+const AGENTS_PREFIX = '@ruimte/agents-react/';
+
+const PACKAGES: ReadonlyArray<{ prefix: string; source: string }> = [
+    { prefix: UI_PREFIX, source: join(HERE, '../../../packages/ui/src') },
+    { prefix: AGENTS_PREFIX, source: join(HERE, '../../../packages/agents-react/src') }
+];
+
+const fileOf = (path: string): string => {
+    const owner = PACKAGES.find(({ prefix }) => path.startsWith(prefix));
+    return owner === undefined ? join(HERE, path) : join(owner.source, path.slice(owner.prefix.length));
+};
 
 const sources = (): { path: string; text: string }[] =>
-    [...new Glob('**/*.{ts,tsx}').scanSync(HERE), ...[...new Glob('**/*.{ts,tsx}').scanSync(UI_SOURCE)].map((path) => `${UI_PREFIX}${path}`)]
+    [
+        ...new Glob('**/*.{ts,tsx}').scanSync(HERE),
+        ...PACKAGES.flatMap(({ prefix, source }) => [...new Glob('**/*.{ts,tsx}').scanSync(source)].map((path) => `${prefix}${path}`))
+    ]
         .filter((path) => !path.endsWith('.test.ts'))
         .sort()
         .map((path) => ({ path, text: readFileSync(fileOf(path), 'utf8') }));
@@ -148,10 +161,11 @@ const moduleOf = (program: Program, component: string): string | null => {
         return null;
     };
     const source = sourceOf();
-    if (typeof source !== 'string' || !source.startsWith('@/')) {
+    if (typeof source !== 'string') {
         return null;
     }
-    return [`${source.slice(2)}.tsx`, `${source.slice(2)}.ts`].find((path) => existsSync(join(HERE, path))) ?? null;
+    const path = source.startsWith('@/') ? source.slice(2) : source.startsWith(AGENTS_PREFIX) ? source : null;
+    return path === null ? null : ([`${path}.tsx`, `${path}.ts`].find((candidate) => existsSync(fileOf(candidate))) ?? null);
 };
 
 const drawsBoundary = (path: string): boolean => {

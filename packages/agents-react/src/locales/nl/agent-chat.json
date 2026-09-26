@@ -1,0 +1,7 @@
+{
+  "transport": {
+    "notConnected": "De agents zijn niet bereikbaar",
+    "closedBeforeAnswer": "De verbinding met de agents sloot voordat ze antwoordden",
+    "badReply": "Het antwoord op {{type}} past niet bij het contract"
+  }
+}
