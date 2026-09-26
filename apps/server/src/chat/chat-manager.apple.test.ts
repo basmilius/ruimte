@@ -9,7 +9,7 @@ import { AppleBackend } from './apple-backend.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, RecordingStore } from './chat-test-helpers.ts';
-import { inProcess } from './fake-cli.ts';
+import { inProcess } from '@ruimte/agents/chat/fake-cli';
 
 test('Apple chat projects approved directory and file tools across turns into its saved thread', async () => {
     const home = await mkdtemp(join(tmpdir(), 'ruimte-apple-chat-'));

@@ -3,8 +3,8 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { AppleFoundationEventSchema } from '@ruimte/contracts';
 import { AppleBackend } from '../chat/apple-backend.ts';
-import { ModelCatalog } from './catalog.ts';
-import type { ChatProvider } from './provider.ts';
+import { ModelCatalog } from '@ruimte/agents/providers/catalog';
+import type { ChatProvider } from '@ruimte/agents/providers/provider';
 
 const helperCommand = (): string => {
     if (process.env.RUIMTE_APPLE_FOUNDATION_HELPER) {
@@ -69,6 +69,7 @@ export const createAppleProvider = (enabled: () => boolean = () => false): ChatP
             return { installed: false, version: 'Apple Foundation Models helper is missing or could not start' };
         }
     },
+    enabled,
     firstPromptArgs: () => {
         throw new Error('Apple Foundation Models is only available as a chat.');
     },

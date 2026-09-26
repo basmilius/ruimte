@@ -1,26 +1,11 @@
-import { ClaudeBackend } from '../chat/claude-backend.ts';
-import { ModelCatalog } from './catalog.ts';
-import { CLAUDE_CAPABILITIES, CLAUDE_RESUME_COMMAND } from './claude.ts';
-import { detectCli } from './detect.ts';
-import type { ChatProvider } from './provider.ts';
+import { createClaudeProvider } from '@ruimte/agents/providers/claude-provider';
 
-export const claudeProvider: ChatProvider = {
-    kind: 'claude',
-    name: 'Claude Code',
-    catalog: new ModelCatalog(),
-    capabilities: CLAUDE_CAPABILITIES,
-    command: ['claude'],
-    resumeCommand: CLAUDE_RESUME_COMMAND,
-    // Read from the strings of Claude Code 2.1.282; never HOME, which moves the keychain lookup along with it.
-    home: {
-        env: 'CLAUDE_CONFIG_DIR',
-        fallback: '.claude',
-        loginEnv: ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN'],
-        loginCommand: 'claude auth login'
-    },
-    detect: detectCli,
-    oneShotArgs: (prompt) => ['-p', prompt, '--output-format', 'text'],
-    // `claude [options] [prompt]`: the prompt is the positional, and without -p the session stays.
-    firstPromptArgs: (prompt) => [prompt],
-    createBackend: (launch, host) => new ClaudeBackend(launch, host)
-};
+/*
+ * Every `ruimte-context` call goes through without a prompt, in every mode: the daemon already enforces each
+ * verb (mode ceiling, depth, cwd), so a prompt adds no protection.
+ */
+export const RUIMTE_CONTEXT_TOOL = 'Bash(ruimte-context *)';
+
+export const CLAUDE_ALLOW_CONTEXT = `--allowedTools=${RUIMTE_CONTEXT_TOOL}`;
+
+export const claudeProvider = createClaudeProvider({ allowedTools: [RUIMTE_CONTEXT_TOOL] });

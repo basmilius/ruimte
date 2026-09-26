@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { CLAUDE_ALLOW_CONTEXT } from '../providers/claude.ts';
+import { CLAUDE_ALLOW_CONTEXT } from '../providers/claude-provider.ts';
 import { START_LINE_ENV } from './session.ts';
 import { makeHarness, type Harness } from './test-helpers.ts';
 

@@ -28,21 +28,22 @@ import type {
     Task
 } from '@ruimte/contracts';
 import { narrowerMode } from '../canvas/mode.ts';
+import { chatPrompt, contextPrompt } from '../context/context-note.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import { AccountError, definedEnv, isDefaultAccountOf, launchEnv, storedAccount, type AccountLaunches } from '../providers/accounts/launch.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { SkillIndex } from '../skills/skills.ts';
-import type { LimitsUpdate } from '../usage/limits/normalize.ts';
+import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
 import type { AttachmentStore } from './attachment-store.ts';
 import type { BookmarkStore } from './bookmark-store.ts';
-import type { SpawnChatProcess } from './chat-process.ts';
+import type { SpawnChatProcess } from '@ruimte/agents/chat/chat-process';
 import { ChatSession, PLAN_RESUME_PREAMBLE, type ChatSendExtras, type LimitResumeHooks, type ResumeDecision } from './chat-session.ts';
 import { ChatLog, COMPACT_ABOVE_BYTES } from './chat-log.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import type { ChatRecord, ChatStore } from './chat-store.ts';
 import { ComposerPreferences } from './composer-preferences.ts';
-import { DeltaCoalescer } from './delta-coalescer.ts';
+import { DeltaCoalescer } from '@ruimte/agents/chat/delta-coalescer';
 import { ChatError } from './errors.ts';
 import { continueOnWake, continuedInForkNote, limitedTurn } from './limit-resume.ts';
 import type { CodexProcessSpec } from './codex-thread.ts';
@@ -475,9 +476,14 @@ export class ChatManager {
                 this.accounts?.launched?.(kind, chatAccount);
                 return env;
             },
-            depth: () => this.depthOf(payload.chatId),
-            standalone: () => this.standalone(payload.chatId),
-            computer: () => this.computer(),
+            instructions: () =>
+                chatPrompt({
+                    sources: this.contextSources(payload.chatId),
+                    depth: this.depthOf(payload.chatId),
+                    standalone: this.standalone(payload.chatId),
+                    computer: this.computer()
+                }),
+            resumeNote: () => contextPrompt(this.contextSources(payload.chatId)),
             contextSources: () => this.contextSources(payload.chatId),
             chatTitle: (id: string) => this.chatTitle(payload.chatId, id),
             messages: () => this.messages(payload.chatId),

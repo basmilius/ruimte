@@ -8,7 +8,7 @@ import { isPlanFileName } from '../plans/plan-store.ts';
 import { isBookmarkFileName } from './bookmark-store.ts';
 import { migrateInlineAttachments, type AttachmentStore } from './attachment-store.ts';
 import { parseLog, type ChatLogLine } from './chat-log.ts';
-import { ChatThread } from './thread.ts';
+import { ChatThread } from '@ruimte/agents/chat/thread';
 import { recordFileName } from '../record-directory.ts';
 
 // zod strips what it does not know, so a file written by an older build (with `interactionMode`,

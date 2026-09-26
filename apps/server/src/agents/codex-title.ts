@@ -1,7 +1,7 @@
 import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { usageRoots } from '../usage/roots.ts';
-import { cleanTitle, readLines } from './title-file.ts';
+import { cleanTitle, readLines } from '@ruimte/agents/title-file';
 
 // Every line of the index is about a name; one without this key is not worth parsing.
 const MARKER = '"thread_name"';

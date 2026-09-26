@@ -8,7 +8,7 @@ import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import type { ProviderAccountsService } from '../providers/accounts/service.ts';
 import { testAccounts } from '../providers/accounts/test-accounts.ts';
-import type { LimitsUpdate } from '../usage/limits/normalize.ts';
+import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 import { ChatStore } from './chat-store.ts';
 import { claudeProjectSlug } from './claude-transcript.ts';

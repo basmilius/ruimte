@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { AgentKindSchema, ProviderAccountSchema, type AgentKind, type ProviderAccount, type ProviderAccountMap } from '@ruimte/contracts';
-import type { ChatProvider } from '../provider.ts';
+import type { ChatProvider } from '@ruimte/agents/providers/provider';
 import { variablesProblem } from './variables.ts';
 
 export type Env = Record<string, string | undefined>;

@@ -15,8 +15,8 @@ import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
 import { verbsNote } from '../context/context-note.ts';
 import { claudeProjectSlug } from './claude-transcript.ts';
-import { inProcess } from './fake-cli.ts';
-import { fakeCodex, fakeCodexForks } from './fake-codex.ts';
+import { inProcess } from '@ruimte/agents/chat/fake-cli';
+import { fakeCodex, fakeCodexForks } from '@ruimte/agents/chat/fake-codex';
 import { chatForkDeps, forkChat, itemsThrough, type ChatForkDeps } from './fork.ts';
 
 const content = (): ProjectContent => ({

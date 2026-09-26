@@ -1,0 +1,749 @@
+import type { ChatFileChange, ChatQuestion, ChatTurnLimit, UsageWindow } from '@ruimte/agent-contracts';
+import { readCodexLimits } from '../usage/limits/normalize.ts';
+import type { ApprovalDecision, BackendEvent } from './backend.ts';
+import type { CodexFrame } from './codex-transport.ts';
+import { cleanTitle } from '../title-file.ts';
+
+type CodexRpcId = number | string;
+
+/* How an answer reaches the app-server, as the reply to its request or as a steer into the turn. */
+type CodexAnswer = { kind: 'respond'; rpcId: CodexRpcId; result: unknown } | { kind: 'steer'; text: string };
+
+type Frame = Record<string, unknown>;
+
+const isRecord = (value: unknown): value is Frame => typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
+
+const num = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
+
+// Codex wraps every command in a login shell; the person wants to read the command, not the wrapper.
+const SHELL_WRAPPER = /^(?:\/bin\/|\/usr\/bin\/)?(?:zsh|bash|sh) -lc (.*)$/s;
+
+export const unwrapCommand = (command: string): string => {
+    const match = SHELL_WRAPPER.exec(command);
+    if (!match) {
+        return command;
+    }
+    const inner = match[1]!;
+    const quoted = /^(["'])([\s\S]*)\1$/.exec(inner);
+    return quoted ? quoted[2]! : inner;
+};
+
+const textOf = (content: unknown): string => {
+    if (typeof content === 'string') {
+        return content;
+    }
+    if (!Array.isArray(content)) {
+        return '';
+    }
+    return content
+        .map((block) => (isRecord(block) ? (str(block.text) ?? null) : null))
+        .filter((text): text is string => text !== null)
+        .join('\n');
+};
+
+// What `agentsStates` says of an agent that stopped working; the call that reports it may have completed long before.
+const ENDED_AGENT_STATES = new Set(['completed', 'errored', 'interrupted', 'shutdown', 'notFound']);
+
+/* What became of every agent a collab call touched, one line each; empty while the call still runs. */
+const collabAgentOutput = (states: unknown): string => {
+    if (!isRecord(states)) {
+        return '';
+    }
+    return Object.entries(states)
+        .map(([thread, state]) => {
+            const status = isRecord(state) ? (str(state.status) ?? 'unknown') : 'unknown';
+            const message = isRecord(state) ? str(state.message) : null;
+            return message ? `${thread}: ${status}, ${message}` : `${thread}: ${status}`;
+        })
+        .join('\n');
+};
+
+/* A blocking `request_user_input` question, as far as the person needs to see it. */
+const parseBlockingQuestions = (questions: unknown): ChatQuestion[] => {
+    if (!Array.isArray(questions)) {
+        return [];
+    }
+    return questions.filter(isRecord).map((question, index) => ({
+        id: str(question.id) ?? String(index),
+        header: str(question.header) ?? '',
+        question: str(question.question) ?? '',
+        choices: Array.isArray(question.options)
+            ? question.options.filter(isRecord).map((option) => ({ label: str(option.label) ?? '', description: str(option.description) ?? '' }))
+            : [],
+        multiSelect: false
+    }));
+};
+
+/* The questions an agent message carries when Codex asks without blocking the turn. */
+const parseAsyncQuestions = (questions: unknown): ChatQuestion[] => {
+    if (!Array.isArray(questions)) {
+        return [];
+    }
+    return questions.filter(isRecord).map((question, index) => ({
+        id: String(index),
+        header: '',
+        question: str(question.title) ?? '',
+        choices: Array.isArray(question.options)
+            ? question.options.filter((option): option is string => typeof option === 'string').map((option) => ({ label: option, description: '' }))
+            : [],
+        multiSelect: false
+    }));
+};
+
+const toLines = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((line): line is string => typeof line === 'string' && line.trim() !== '') : [];
+
+const CHANGE_KINDS = new Set<ChatFileChange['kind']>(['add', 'update', 'delete']);
+
+/* The files a `fileChange` item touches, with the unified diff Codex reports per file. */
+const parseChanges = (value: unknown): ChatFileChange[] => {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    return value.filter(isRecord).map((change) => {
+        const kind = isRecord(change.kind) ? str(change.kind.type) : str(change.kind);
+        return {
+            path: str(change.path) ?? '',
+            kind: kind !== null && CHANGE_KINDS.has(kind as ChatFileChange['kind']) ? (kind as ChatFileChange['kind']) : 'update',
+            diff: str(change.diff) ?? ''
+        };
+    });
+};
+
+// Partial command output arrives as text or as the raw bytes of it, depending on the build.
+const outputChunk = (params: Frame): string | null => {
+    const text = str(params.delta) ?? str(params.chunk);
+    if (text !== null) {
+        return text;
+    }
+    const bytes = params.chunk ?? params.delta;
+    if (!Array.isArray(bytes)) {
+        return null;
+    }
+    return new TextDecoder().decode(Uint8Array.from(bytes.filter((byte): byte is number => typeof byte === 'number')));
+};
+
+type Pending =
+    | { type: 'approval'; rpcId: CodexRpcId; kind: 'command' | 'fileChange'; amendment: string[] | null; decisions: string[] }
+    | { type: 'question'; rpcId: CodexRpcId | null; questionIds: string[] }
+    | { type: 'elicitation'; rpcId: CodexRpcId; persist: ElicitationPersist | null };
+
+type ElicitationPersist = 'always' | 'session';
+
+/* A form that asks for no fields is a yes or no, which is all an approval card can answer. */
+const isConfirmation = (params: Frame): boolean =>
+    params.mode === 'form' &&
+    isRecord(params.requestedSchema) &&
+    Object.keys(isRecord(params.requestedSchema.properties) ? params.requestedSchema.properties : {}).length === 0;
+
+/* The widest remembering the MCP server offers, which the one "always" button of a card stands for. */
+const elicitationPersist = (meta: Frame): ElicitationPersist | null => {
+    const offered = Array.isArray(meta.persist) ? meta.persist : [];
+    return offered.includes('always') ? 'always' : offered.includes('session') ? 'session' : null;
+};
+
+/* The arguments as the MCP server shows them to a person, keyed by name, so the card sums up the call. */
+const elicitationInput = (meta: Frame): Frame => {
+    const input: Frame = {};
+    for (const param of Array.isArray(meta.tool_params_display) ? meta.tool_params_display : []) {
+        if (isRecord(param) && typeof param.name === 'string') {
+            input[param.name] = param.value;
+        }
+    }
+    return input;
+};
+
+/* The latest reset among the windows a rate limit update shows spent, since the request waits for all of them. */
+const spentUntil = (windows: readonly UsageWindow[]): number | null => {
+    const resets = windows.flatMap((window) => (window.used >= 1 && window.resetsAt !== null ? [window.resetsAt] : []));
+    return resets.length === 0 ? null : Math.max(...resets);
+};
+
+/*
+ * The `codex app-server` protocol, in and out. Notifications and the server's own requests become
+ * backend events, and an answer becomes the reply or the steer that settles one. One instance belongs
+ * to one process; request ids start at 0 in every process, so they carry the generation.
+ */
+export class CodexProtocol {
+    private readonly generation: number;
+    private readonly pending = new Map<string, Pending>();
+    // The input the thread shows for an item, so an approval about it can repeat what it is for.
+    private readonly toolInputs = new Map<string, { input: unknown; changes: ChatFileChange[] }>();
+    private codexTurnId: string | null = null;
+    // Command items with a terminal session of their own, by item id, to the process id that ending one names.
+    private readonly openTerminals = new Map<string, string>();
+    private readonly backgroundTerminals = new Map<string, string>();
+    // When the plan's spent window lifts, from its last rate limit update; null while no window is spent.
+    private spentUntil: number | null = null;
+    // The chat's own thread. A spawned agent's thread streams over the same connection, and none of it is the chat's.
+    private ownThreadId: string | null = null;
+    // Per agent thread, the ref of the row that stands for it and whether that row has settled.
+    private readonly agentRows = new Map<string, { ref: string; settled: boolean }>();
+
+    constructor(generation: number) {
+        this.generation = generation;
+    }
+
+    /* The turn Codex is running, what `turn/interrupt` needs. */
+    get turnId(): string | null {
+        return this.codexTurnId;
+    }
+
+    /* The result of `thread/start` or `thread/resume`. The thread id is what a terminal resumes. */
+    threadReady(result: unknown): BackendEvent[] {
+        const thread = isRecord(result) && isRecord(result.thread) ? result.thread : {};
+        this.ownThreadId = str(thread.id) ?? this.ownThreadId;
+        return [
+            {
+                type: 'session',
+                agentSessionId: str(thread.id),
+                model: (isRecord(result) ? str(result.model) : null) ?? str(thread.model),
+                title: cleanTitle(thread.name)
+            }
+        ];
+    }
+
+    handle(frame: CodexFrame): BackendEvent[] {
+        const events: BackendEvent[] = [];
+        if (typeof frame.method !== 'string') {
+            return events;
+        }
+        const params = isRecord(frame.params) ? frame.params : {};
+        if (frame.id !== undefined) {
+            this.handleServerRequest(frame.method, frame.id as CodexRpcId, params, events);
+            return events;
+        }
+        // Codex 0.156.1 streams a spawned agent's turns, items and usage here too, under that agent's thread id.
+        const threadId = frame.method === 'thread/started' ? (isRecord(params.thread) ? str(params.thread.id) : null) : str(params.threadId);
+        if (threadId !== null && this.ownThreadId !== null && threadId !== this.ownThreadId) {
+            return events;
+        }
+        switch (frame.method) {
+            case 'thread/started':
+                this.ownThreadId = threadId ?? this.ownThreadId;
+                events.push({ type: 'session', agentSessionId: threadId, model: null });
+                break;
+            case 'thread/name/updated': {
+                const title = cleanTitle(params.threadName);
+                if (title !== null) {
+                    events.push({ type: 'title', title });
+                }
+                break;
+            }
+            case 'turn/started':
+                this.codexTurnId = isRecord(params.turn) ? str(params.turn.id) : null;
+                break;
+            case 'turn/completed':
+                this.handleTurnCompleted(params, events);
+                break;
+            case 'item/started':
+            case 'item/completed':
+                this.handleItem(params, frame.method === 'item/completed', events);
+                break;
+            case 'item/agentMessage/delta': {
+                const ref = str(params.itemId);
+                const text = str(params.delta);
+                if (ref && text) {
+                    events.push({ type: 'text.delta', ref, text });
+                }
+                break;
+            }
+            case 'item/reasoning/summaryTextDelta':
+            case 'item/reasoning/textDelta': {
+                const ref = str(params.itemId);
+                const text = str(params.delta);
+                if (ref && text) {
+                    events.push({ type: 'thinking.delta', ref, text });
+                }
+                break;
+            }
+            case 'item/reasoning/summaryPartAdded': {
+                // A new part of the same summary; without a break the parts run into each other.
+                const ref = str(params.itemId);
+                if (ref && num(params.summaryIndex) > 0) {
+                    events.push({ type: 'thinking.delta', ref, text: '\n\n' });
+                }
+                break;
+            }
+            case 'item/commandExecution/outputDelta': {
+                const ref = str(params.itemId);
+                const text = outputChunk(params);
+                if (ref && text) {
+                    events.push({ type: 'tool.output', ref, text });
+                }
+                break;
+            }
+            case 'thread/tokenUsage/updated': {
+                const usage = isRecord(params.tokenUsage) ? params.tokenUsage : {};
+                const last = isRecord(usage.last) ? usage.last : {};
+                const contextWindow = num(usage.modelContextWindow);
+                events.push({
+                    type: 'usage',
+                    contextTokens: num(last.totalTokens),
+                    ...(contextWindow > 0 ? { contextWindow } : {})
+                });
+                break;
+            }
+            case 'serverRequest/resolved': {
+                const rpcId = params.requestId;
+                if (typeof rpcId === 'number' || typeof rpcId === 'string') {
+                    const requestId = this.requestId(rpcId);
+                    this.pending.delete(requestId);
+                    events.push({ type: 'request.withdrawn', requestId });
+                }
+                break;
+            }
+            case 'error': {
+                const error = isRecord(params.error) ? params.error : {};
+                events.push({ type: 'note', level: params.willRetry === true ? 'warning' : 'error', text: str(error.message) ?? 'Codex reported an error' });
+                break;
+            }
+            case 'account/rateLimits/updated': {
+                // The plan's own numbers, sent beside a token usage tick; the usage monitor keeps them.
+                const reading = readCodexLimits(isRecord(params.rateLimits) ? params.rateLimits : params);
+                if (reading !== null && reading.windows.length > 0) {
+                    this.spentUntil = spentUntil(reading.windows);
+                    events.push({ type: 'limits', update: { kind: 'codex', plan: reading.plan, windows: reading.windows } });
+                }
+                break;
+            }
+            case 'model/rerouted': {
+                const model = str(params.toModel);
+                if (model) {
+                    events.push({ type: 'model', model });
+                }
+                break;
+            }
+            default:
+                break;
+        }
+        return events;
+    }
+
+    /* The reply that settles an approval, or null when nothing waits under that id. */
+    approvalDecision(requestId: string, decision: ApprovalDecision): { rpcId: CodexRpcId; result: unknown } | null {
+        const pending = this.pending.get(requestId);
+        if (pending?.type === 'elicitation') {
+            this.pending.delete(requestId);
+            return { rpcId: pending.rpcId, result: elicitationAnswer(decision, pending.persist) };
+        }
+        if (pending?.type !== 'approval') {
+            return null;
+        }
+        this.pending.delete(requestId);
+        return { rpcId: pending.rpcId, result: { decision: codexDecision(decision, pending) } };
+    }
+
+    /* What answers a question, the reply to a blocking one or the text that steers a running turn. */
+    questionAnswer(requestId: string, answers: Record<string, string>): CodexAnswer | null {
+        const pending = this.pending.get(requestId);
+        if (pending?.type !== 'question') {
+            return null;
+        }
+        this.pending.delete(requestId);
+        const given = pending.questionIds.map((id) => answers[id]).filter((answer): answer is string => answer !== undefined);
+        if (pending.rpcId === null) {
+            // An async question is answered like a message from the person, into the running turn.
+            return { kind: 'steer', text: given.join('\n') };
+        }
+        const byId: Record<string, { answers: string[] }> = {};
+        for (const id of pending.questionIds) {
+            const answer = answers[id];
+            if (answer !== undefined) {
+                byId[id] = { answers: [answer] };
+            }
+        }
+        return { kind: 'respond', rpcId: pending.rpcId, result: { answers: byId } };
+    }
+
+    /* Drops an asynchronous question the person walked away from; a blocking one has to be answered. */
+    dismissQuestion(requestId: string): boolean {
+        const pending = this.pending.get(requestId);
+        if (pending?.type !== 'question' || pending.rpcId !== null) {
+            return false;
+        }
+        this.pending.delete(requestId);
+        return true;
+    }
+
+    forgetPending(): void {
+        this.pending.clear();
+    }
+
+    private requestId(rpcId: CodexRpcId): string {
+        return `${this.generation}-${rpcId}`;
+    }
+
+    private handleServerRequest(method: string, rpcId: CodexRpcId, params: Frame, events: BackendEvent[]): void {
+        const requestId = this.requestId(rpcId);
+        if (method === 'item/tool/requestUserInput') {
+            const questions = parseBlockingQuestions(params.questions);
+            if (questions.length === 0) {
+                return;
+            }
+            this.pending.set(requestId, { type: 'question', rpcId, questionIds: questions.map((question) => question.id) });
+            events.push({ type: 'question.requested', requestId, questions });
+            return;
+        }
+        if (method === 'mcpServer/elicitation/request') {
+            this.elicitation(requestId, rpcId, params, events);
+            return;
+        }
+        const kind = method === 'item/commandExecution/requestApproval' ? 'command' : method === 'item/fileChange/requestApproval' ? 'fileChange' : null;
+        if (!kind) {
+            return;
+        }
+        const itemId = str(params.itemId);
+        const known = itemId ? this.toolInputs.get(itemId) : undefined;
+        const decisions = Array.isArray(params.availableDecisions)
+            ? params.availableDecisions.map((decision) =>
+                  typeof decision === 'string' ? decision : (Object.keys(isRecord(decision) ? decision : {})[0] ?? '')
+              )
+            : [];
+        const amendment = Array.isArray(params.proposedExecpolicyAmendment)
+            ? params.proposedExecpolicyAmendment.filter((word): word is string => typeof word === 'string')
+            : null;
+        // The person must see what they are approving, so a file change repeats its diffs here.
+        const input =
+            kind === 'command'
+                ? { command: unwrapCommand(str(params.command) ?? ''), cwd: str(params.cwd) ?? undefined }
+                : { ...(isRecord(known?.input) ? known.input : { itemId }), changes: known?.changes ?? [] };
+        this.pending.set(requestId, { type: 'approval', rpcId, kind, amendment: amendment && amendment.length > 0 ? amendment : null, decisions });
+        events.push({
+            type: 'approval.requested',
+            requestId,
+            ref: itemId,
+            toolName: kind === 'command' ? 'Bash' : 'ApplyPatch',
+            input,
+            description: str(params.reason),
+            canAllowAlways: (amendment !== null && amendment.length > 0) || decisions.includes('acceptForSession'),
+            ...(amendment && amendment.length > 0
+                ? {
+                      allowAlways: {
+                          label: 'Allow this command prefix',
+                          description: `Allow future commands matching this prefix: ${JSON.stringify(amendment)}`
+                      }
+                  }
+                : decisions.includes('acceptForSession')
+                  ? { allowAlways: { label: 'Allow for this session', description: 'Allow this provider permission for the rest of the session.' } }
+                  : {})
+        });
+    }
+
+    /*
+     * An MCP server asking the person something, such as computer use asking before it touches an app.
+     * Only a yes or no becomes a card; a form with fields or a link stays unanswered, which Codex reads as a decline.
+     */
+    private elicitation(requestId: string, rpcId: CodexRpcId, params: Frame, events: BackendEvent[]): void {
+        if (!isConfirmation(params)) {
+            return;
+        }
+        const meta = isRecord(params._meta) ? params._meta : {};
+        const persist = elicitationPersist(meta);
+        this.pending.set(requestId, { type: 'elicitation', rpcId, persist });
+        events.push({
+            type: 'approval.requested',
+            requestId,
+            ref: str(meta.callId),
+            toolName: str(meta.connector_name) ?? str(params.serverName) ?? 'MCP',
+            input: elicitationInput(meta),
+            description: str(params.message),
+            canAllowAlways: persist !== null,
+            ...(persist === 'always'
+                ? { allowAlways: { label: 'Always allow', description: 'Codex remembers this approval, also in later chats.' } }
+                : persist === 'session'
+                  ? { allowAlways: { label: 'Allow for this session', description: 'Codex remembers this approval for the rest of the session.' } }
+                  : {})
+        });
+    }
+
+    private handleItem(params: Frame, completed: boolean, events: BackendEvent[]): void {
+        const item = isRecord(params.item) ? params.item : null;
+        const ref = item ? str(item.id) : null;
+        if (!item || !ref) {
+            return;
+        }
+        switch (item.type) {
+            case 'agentMessage': {
+                const questions = parseAsyncQuestions(item.questions);
+                if (questions.length > 0) {
+                    // Codex keeps polling for an answer to this one; the id it carries is the item's own.
+                    if (!completed || this.pending.has(ref)) {
+                        return;
+                    }
+                    this.pending.set(ref, { type: 'question', rpcId: null, questionIds: questions.map((question) => question.id) });
+                    events.push({ type: 'question.requested', requestId: ref, questions, async: true });
+                    return;
+                }
+                this.text(ref, str(item.text) ?? '', completed, events);
+                return;
+            }
+            case 'plan':
+                this.text(`plan-${ref}`, str(item.text) ?? '', completed, events);
+                return;
+            case 'reasoning': {
+                // The deltas already streamed this; the completed item is what a resumed thread replays.
+                const lines = [...toLines(item.summary), ...toLines(item.content)];
+                if (completed && lines.length > 0) {
+                    events.push({ type: 'thinking.done', ref, text: lines.join('\n\n') });
+                }
+                return;
+            }
+            case 'commandExecution': {
+                const output = str(item.aggregatedOutput) ?? '';
+                const succeeded = str(item.status) === 'completed';
+                // Its turn is long over, so only the row learns how it ended; a start again would open a turn nobody ends.
+                const backgroundId = this.backgroundTerminals.get(ref);
+                if (completed && backgroundId !== undefined) {
+                    this.backgroundTerminals.delete(ref);
+                    events.push({ type: 'tool.done', ref, output, state: succeeded ? 'done' : 'error' });
+                    events.push({ type: 'background.ended', taskId: backgroundId });
+                    return;
+                }
+                const processId = str(item.processId);
+                if (!completed && processId !== null) {
+                    this.openTerminals.set(ref, processId);
+                } else {
+                    this.openTerminals.delete(ref);
+                }
+                this.tool(
+                    ref,
+                    'Bash',
+                    { command: unwrapCommand(str(item.command) ?? ''), cwd: str(item.cwd) ?? undefined },
+                    completed,
+                    output,
+                    succeeded,
+                    events
+                );
+                return;
+            }
+            case 'fileChange': {
+                const changes = parseChanges(item.changes);
+                this.tool(
+                    ref,
+                    'ApplyPatch',
+                    { summary: changes.map((change) => change.path).join(', ') },
+                    completed,
+                    changes.map((change) => change.diff).join('\n'),
+                    str(item.status) === 'completed',
+                    events,
+                    changes
+                );
+                return;
+            }
+            case 'mcpToolCall': {
+                const result = isRecord(item.result) ? textOf(item.result.content) : '';
+                const error = isRecord(item.error) ? (str(item.error.message) ?? '') : '';
+                this.tool(
+                    ref,
+                    `${str(item.server) ?? 'mcp'}/${str(item.tool) ?? 'tool'}`,
+                    item.arguments ?? {},
+                    completed,
+                    error || result,
+                    str(item.status) === 'completed',
+                    events
+                );
+                return;
+            }
+            case 'dynamicToolCall':
+                this.tool(ref, str(item.tool) ?? 'tool', item.arguments ?? {}, completed, textOf(item.contentItems), item.success !== false, events);
+                return;
+            case 'webSearch': {
+                const action = isRecord(item.action) ? item.action : {};
+                this.tool(ref, 'WebSearch', { query: str(item.query) ?? str(action.query) ?? '' }, completed, '', true, events);
+                return;
+            }
+            case 'collabAgentToolCall': {
+                // Codex's own multi-agent calls; spawnAgent is the one handled as a delegation.
+                const tool = str(item.tool) ?? 'collabAgent';
+                const input = { tool, prompt: str(item.prompt) ?? undefined, model: str(item.model) ?? undefined, threads: item.receiverThreadIds ?? [] };
+                if (tool === 'spawnAgent') {
+                    this.spawnedAgent(ref, item, input, events);
+                    return;
+                }
+                this.tool(ref, tool, input, completed, collabAgentOutput(item.agentsStates), str(item.status) === 'completed', events);
+                this.settleEndedAgents(item.agentsStates, events);
+                return;
+            }
+            case 'subAgentActivity':
+                this.subAgentActivity(item, events);
+                return;
+            case 'contextCompaction':
+                if (completed) {
+                    events.push({ type: 'compaction', preTokens: null });
+                }
+                return;
+            default:
+                return;
+        }
+    }
+
+    private handleTurnCompleted(params: Frame, events: BackendEvent[]): void {
+        const turn = isRecord(params.turn) ? params.turn : {};
+        const status = str(turn.status);
+        const error = isRecord(turn.error) ? str(turn.error.message) : null;
+        const limit = status === 'failed' && isRecord(turn.error) ? this.limitOf(turn.error.codexErrorInfo) : null;
+        const turnId = str(turn.id) ?? this.codexTurnId;
+        this.codexTurnId = null;
+        // Forgotten here, so the thread may not keep waiting on any of it: nothing could answer it past the turn.
+        for (const requestId of this.pending.keys()) {
+            events.push({ type: 'request.withdrawn', requestId });
+        }
+        this.pending.clear();
+        // A terminal session still open as the turn ends is one Codex left running; it only completes once its process does.
+        for (const [ref, processId] of this.openTerminals) {
+            this.backgroundTerminals.set(ref, processId);
+            events.push({ type: 'background.started', taskId: processId, ref, monitor: false, description: null });
+        }
+        this.openTerminals.clear();
+        events.push({
+            type: 'turn.done',
+            state: status === 'interrupted' ? 'aborted' : status === 'failed' ? 'error' : 'done',
+            // Codex reports no cost; the turn keeps a zero so the fold label can still say how long it took.
+            costUsd: 0,
+            ...(status === 'failed' ? { error: error ?? 'The turn failed' } : {}),
+            ...(turnId === null ? {} : { native: { turnId } }),
+            ...(limit === null ? {} : { limit })
+        });
+    }
+
+    /*
+     * The `codexErrorInfo` of a failed turn, as Codex 0.156.1 names it: `usageLimitExceeded` is the plan's
+     * limit, with the reset of the window its last update showed spent, and `serverOverloaded` or
+     * `rateLimitExceeded` a model too busy to answer now.
+     */
+    private limitOf(info: unknown): ChatTurnLimit | null {
+        if (info === 'usageLimitExceeded') {
+            return { kind: 'usage', ...(this.spentUntil === null ? {} : { resetsAt: this.spentUntil }) };
+        }
+        if (info === 'serverOverloaded' || info === 'rateLimitExceeded') {
+            return { kind: 'overload' };
+        }
+        return null;
+    }
+
+    private text(ref: string, text: string, completed: boolean, events: BackendEvent[]): void {
+        events.push(completed ? { type: 'text.done', ref, text } : { type: 'text.delta', ref, text });
+    }
+
+    /*
+     * An agent Codex spawned, as a spawnAgent call reports it. It works in a thread of its own, so this row
+     * never grows children or a report. The call completes once the agent runs; only the state Codex keeps
+     * per agent says when it stopped. A spawn that failed opened no agent to wait for.
+     */
+    private spawnedAgent(ref: string, item: Frame, input: unknown, events: BackendEvent[]): void {
+        const summary = collabAgentOutput(item.agentsStates);
+        // One spawn opens one thread; Codex only knows its id once the call went through.
+        const threadId = Array.isArray(item.receiverThreadIds) ? str(item.receiverThreadIds[0]) : null;
+        events.push({ type: 'tool.started', ref, name: 'Agent', input, parentRef: null });
+        events.push({
+            type: 'task.started',
+            ref,
+            description: (str(item.prompt) ?? '').split('\n')[0] ?? '',
+            subagentType: null,
+            prompt: str(item.prompt),
+            // A spawned agent never blocks the turn that spawned it.
+            background: true,
+            ...(threadId ? { threadId } : {})
+        });
+        if (threadId === null) {
+            if (str(item.status) === 'failed') {
+                events.push({ type: 'task.done', ref, summary: summary || null, ok: false });
+            }
+            return;
+        }
+        if (!this.agentRows.has(threadId)) {
+            this.agentRows.set(threadId, { ref, settled: false });
+        }
+        if (!this.settleEndedAgents(item.agentsStates, events)) {
+            events.push({ type: 'task.progress', ref, summary: summary || null, lastTool: null, usage: null });
+        }
+    }
+
+    /* Settles the row of every agent a collab call reports stopped; true when one of them did just now. */
+    private settleEndedAgents(states: unknown, events: BackendEvent[]): boolean {
+        let settled = false;
+        for (const [threadId, state] of Object.entries(isRecord(states) ? states : {})) {
+            const status = isRecord(state) ? str(state.status) : null;
+            const row = this.agentRows.get(threadId);
+            if (row === undefined || row.settled || status === null || !ENDED_AGENT_STATES.has(status)) {
+                continue;
+            }
+            row.settled = true;
+            settled = true;
+            events.push({ type: 'task.done', ref: row.ref, summary: collabAgentOutput({ [threadId]: state }), ok: status === 'completed' });
+        }
+        return settled;
+    }
+
+    /*
+     * What Codex 0.156.1 reports of an agent it spawned instead of a spawnAgent call: `started` under the
+     * spawn's call id with the agent's thread, then `completed` or `interrupted` under an id of its own that
+     * only the thread ties back to the row. Each comes as item/started and again as item/completed.
+     */
+    private subAgentActivity(item: Frame, events: BackendEvent[]): void {
+        const ref = str(item.id);
+        const threadId = str(item.agentThreadId);
+        const kind = str(item.kind);
+        if (ref === null || threadId === null) {
+            return;
+        }
+        const row = this.agentRows.get(threadId);
+        if (kind === 'started' && row === undefined) {
+            this.agentRows.set(threadId, { ref, settled: false });
+            // The path ends in the name the parent gave the agent, which is all the stream says about its task.
+            const path = str(item.agentPath) ?? '';
+            events.push({ type: 'tool.started', ref, name: 'Agent', input: { agentPath: path }, parentRef: null });
+            events.push({ type: 'task.started', ref, description: path.split('/').at(-1) ?? '', subagentType: null, prompt: null, background: true, threadId });
+            return;
+        }
+        if ((kind === 'completed' || kind === 'interrupted') && row !== undefined && !row.settled) {
+            row.settled = true;
+            events.push({ type: 'task.done', ref: row.ref, summary: null, ok: kind === 'completed' });
+        }
+    }
+
+    private tool(
+        ref: string,
+        name: string,
+        input: unknown,
+        completed: boolean,
+        output: string,
+        succeeded: boolean,
+        events: BackendEvent[],
+        changes?: ChatFileChange[]
+    ): void {
+        this.toolInputs.set(ref, { input, changes: changes ?? [] });
+        events.push({ type: 'tool.started', ref, name, input, parentRef: null, ...(changes && changes.length > 0 ? { changes } : {}) });
+        if (completed) {
+            events.push({ type: 'tool.done', ref, output, state: succeeded ? 'done' : 'error', ...(changes && changes.length > 0 ? { changes } : {}) });
+        }
+    }
+}
+
+/*
+ * The decision the app-server takes for one of ours; "always" becomes its own policy amendment when it offered one.
+ * `decline` is accepted even when `availableDecisions` lists only accept, the amendment and cancel.
+ */
+const codexDecision = (decision: ApprovalDecision, pending: Extract<Pending, { type: 'approval' }>): unknown => {
+    if (decision === 'deny') {
+        return 'decline';
+    }
+    if (decision === 'allow') {
+        return 'accept';
+    }
+    if (pending.amendment) {
+        return { acceptWithExecpolicyAmendment: { execpolicy_amendment: pending.amendment } };
+    }
+    return pending.kind === 'fileChange' || pending.decisions.includes('acceptForSession') ? 'acceptForSession' : 'accept';
+};
+
+/* The MCP answer to a yes or no; how long it is remembered rides along in `_meta.persist`. */
+const elicitationAnswer = (decision: ApprovalDecision, persist: ElicitationPersist | null): unknown => {
+    if (decision === 'deny') {
+        return { action: 'decline' };
+    }
+    return decision === 'allow-always' && persist !== null ? { action: 'accept', content: {}, _meta: { persist } } : { action: 'accept', content: {} };
+};

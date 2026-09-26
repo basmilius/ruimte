@@ -1,5 +1,5 @@
 import type { AgentKind } from '@ruimte/contracts';
-import { cleanTitle } from '../agents/title-file.ts';
+import { cleanTitle } from '@ruimte/agents/title-file';
 import { streamCommand } from '../git/run.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 

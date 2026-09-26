@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { CLAUDE_ALLOW_CONTEXT } from './claude.ts';
+import { CLAUDE_ALLOW_CONTEXT } from './claude-provider.ts';
 import { freshCommand, probeCodexNoDaemon, resumeCommand, resumeOrFreshCommand, takesNoteOnLine, terminalCommand } from './launch.ts';
 
 // How the launch line quotes the flag that lets ruimte-context through.

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem } from '@ruimte/contracts';
-import { ChatThread } from './thread.ts';
+import { ChatThread } from '@ruimte/agents/chat/thread';
 
 const info = { chatId: 'history' } as ChatInfo;
 const message = (i: number, text = `Message ${i}`): ChatItem => ({ id: `m${i}`, kind: 'assistant', text, streaming: false }) as ChatItem;

@@ -1,9 +1,9 @@
 import type { ChatItem } from '@ruimte/contracts';
-import type { SpawnChatProcess } from './chat-process.ts';
-import { CodexProtocol } from './codex-protocol.ts';
-import { CodexTransport } from './codex-transport.ts';
+import type { SpawnChatProcess } from '@ruimte/agents/chat/chat-process';
+import { CodexProtocol } from '@ruimte/agents/chat/codex-protocol';
+import { CodexTransport } from '@ruimte/agents/chat/codex-transport';
 import { ChatError } from './errors.ts';
-import { readingThread, settledReading } from './subagent-projection.ts';
+import { readingThread, settledReading } from '@ruimte/agents/chat/subagent-projection';
 import { errorText } from '../error-text.ts';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);

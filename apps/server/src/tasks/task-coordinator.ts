@@ -1,6 +1,6 @@
 import type { ChatBackgroundTask, ChatItem, ChatTurnItem, Task, TaskResult } from '@ruimte/contracts';
 import { abortedByMachine } from '@ruimte/contracts';
-import { BACKGROUND_COMMAND_LIMIT_MS, commandLabel, isBackgroundWork, runningInBackground, runsInBackground } from '../chat/background-work.ts';
+import { BACKGROUND_COMMAND_LIMIT_MS, commandLabel, isBackgroundWork, runningInBackground, runsInBackground } from '@ruimte/agents/chat/background-work';
 import { errorText } from '../error-text.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import type { TaskStore } from './task-store.ts';

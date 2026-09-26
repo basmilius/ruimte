@@ -17,17 +17,17 @@ import { notResumedNote } from '@ruimte/contracts';
 import { chatReferenceNote, resolveChatReferences } from '../context/chat-references.ts';
 import { contextChangeNote } from '../context/context-note.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
-import type { ChatProvider } from '../providers/provider.ts';
-import type { LimitsUpdate } from '../usage/limits/normalize.ts';
-import type { BackendEvent, BackendLaunch, ChatBackend } from './backend.ts';
-import { runningInBackground } from './background-work.ts';
-import type { SpawnChatProcess } from './chat-process.ts';
+import type { ChatProvider } from '@ruimte/agents/providers/provider';
+import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
+import type { BackendEvent, BackendLaunch, ChatBackend } from '@ruimte/agents/chat/backend';
+import { runningInBackground } from '@ruimte/agents/chat/background-work';
+import type { SpawnChatProcess } from '@ruimte/agents/chat/chat-process';
 import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
 import { limitedTurn, limitResumeAt, limitResumeWake } from './limit-resume.ts';
-import { ThreadProjector } from './projector.ts';
+import { ThreadProjector } from '@ruimte/agents/chat/projector';
 import type { SubagentSettlement } from './subagent-settlement.ts';
-import { ChatThread } from './thread.ts';
+import { ChatThread } from '@ruimte/agents/chat/thread';
 import { errorText } from '../error-text.ts';
 
 interface ChatSessionOptions {
@@ -42,9 +42,9 @@ interface ChatSessionOptions {
     /* The environment of the CLI under the chat's account, asked at every start; throws for an account that cannot start. */
     env(account: string | undefined): Record<string, string>;
     spawn?: SpawnChatProcess;
-    depth?(): number;
-    standalone?(): boolean;
-    computer?(): boolean;
+    // What the agent is told at the start of every process, and what of it a resumed thread hears again; see `BackendLaunch`.
+    instructions?(): string | null;
+    resumeNote?(): string | null;
     // The links as they are now: named in the CLI's first prompt, and a change between two turns put in front of the next one.
     contextSources?(): ContextSource[];
     // The name of a chat of the same project a person attached to a message; null for any other id.
@@ -1090,10 +1090,8 @@ export class ChatSession {
             runtimeMode: info.runtimeMode,
             resume: info.agentSessionId,
             generation,
-            context: this.options.contextSources?.() ?? [],
-            depth: this.options.depth?.() ?? 0,
-            standalone: this.options.standalone?.() ?? false,
-            computer: this.options.computer?.() ?? false,
+            instructions: this.options.instructions?.() ?? null,
+            resumeNote: this.options.resumeNote?.() ?? null,
             ...(this.options.spawn ? { spawn: this.options.spawn } : {})
         };
         const made: { backend: ChatBackend | null } = { backend: null };

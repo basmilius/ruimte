@@ -16,7 +16,7 @@ import {
 import { ClientSinks } from '../../client-sinks.ts';
 import { errorText } from '../../error-text.ts';
 import type { SessionSink } from '../../sessions/manager.ts';
-import type { ChatProvider } from '../provider.ts';
+import type { ChatProvider } from '@ruimte/agents/providers/provider';
 import { accountEnv, accountFolder, canContinue, defaultFolder, expandHome, isDefaultAccount, isKnownKind, transcriptFolder, type Env } from './accounts.ts';
 import { AccountError, isDefaultAccountOf, type AccountLaunches } from './launch.ts';
 import { prepareShadowHome, type ShadowHomeReport } from './shadow-home.ts';

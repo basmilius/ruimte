@@ -12,8 +12,8 @@ import { BookmarkStore } from './bookmark-store.ts';
 import { chatReferenceNote } from '../context/chat-references.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, FakeCheckpoints, RecordingStore } from './chat-test-helpers.ts';
-import { fakeClaude } from './fake-claude.ts';
-import { inProcess, type InProcessCli } from './fake-cli.ts';
+import { fakeClaude } from '@ruimte/agents/chat/fake-claude';
+import { inProcess, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
 import { FakeWatch } from '../fs/watch-test-helpers.ts';
 
 let home: string;

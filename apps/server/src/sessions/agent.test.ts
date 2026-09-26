@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { AgentLaunch } from '@ruimte/contracts';
 import { verbsNote } from '../context/context-note.ts';
-import { CLAUDE_ALLOW_CONTEXT } from '../providers/claude.ts';
+import { CLAUDE_ALLOW_CONTEXT } from '../providers/claude-provider.ts';
 import { terminalCommand } from '../providers/launch.ts';
 import { SessionError, type SessionManagerOptions } from './manager.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';

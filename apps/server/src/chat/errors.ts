@@ -1,21 +1,11 @@
-import { CodedError } from '@ruimte/agents/coded-error';
+import { ChatError as AgentChatError, type ChatErrorCode } from '@ruimte/agents/chat/errors';
 
-type ChatErrorCode =
-    | 'history-expired'
-    | 'chat-not-found'
-    | 'chat-busy'
-    | 'request-not-found'
-    | 'chat-unsupported'
-    | 'invalid-attachments'
-    | 'subagent-not-found'
-    | 'task-not-found'
+type RuimteChatErrorCode =
+    | ChatErrorCode
     // What a fork is refused with.
     | 'turn-not-found'
     | 'turn-running'
     | 'provider-not-installed'
-    | 'transcript-missing'
-    | 'transcript-format'
-    | 'fork-failed'
     | 'not-on-a-canvas'
     | 'canvas-full'
     | 'not-a-repository'
@@ -25,12 +15,8 @@ type ChatErrorCode =
     // What a summary is refused with.
     | 'not-a-fork'
     | 'original-gone'
-    // What a bookmark is refused with.
-    | 'item-not-found'
-    | 'bookmark-not-found'
-    | 'too-many-bookmarks'
     // What going on under another account after a limit is refused with.
     | 'not-limited'
     | 'same-account';
 
-export class ChatError extends CodedError<ChatErrorCode> {}
+export class ChatError extends AgentChatError<RuimteChatErrorCode> {}

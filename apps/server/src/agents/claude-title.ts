@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { usageRoots } from '../usage/roots.ts';
-import { cleanTitle, readLines } from './title-file.ts';
+import { cleanTitle, readLines } from '@ruimte/agents/title-file';
 
 interface Progress {
     offset: number;

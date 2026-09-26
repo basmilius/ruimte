@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AppleBackend } from '../server/src/chat/apple-backend.ts';
-import type { BackendEvent } from '../server/src/chat/backend.ts';
+import type { BackendEvent } from '@ruimte/agents/chat/backend';
 
 const source = process.argv[2];
 if (!source) {

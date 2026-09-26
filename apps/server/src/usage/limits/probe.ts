@@ -1,7 +1,7 @@
 import { withTimeout } from '../../async.ts';
 import type { UsageLimitsProvider } from '@ruimte/contracts';
-import { CodexTransport } from '../../chat/codex-transport.ts';
-import { readClaudeUsage, readCodexLimits, type ProviderReading } from './normalize.ts';
+import { CodexTransport } from '@ruimte/agents/chat/codex-transport';
+import { readClaudeUsage, readCodexLimits, type ProviderReading } from '@ruimte/agents/usage/limits/normalize';
 import { errorText } from '../../error-text.ts';
 
 /* A CLI that has not answered by now is not going to; the next pass tries again. */

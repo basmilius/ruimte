@@ -1,6 +1,6 @@
 import type { AgentKind } from '@ruimte/contracts';
 import { withTimeout } from '../../async.ts';
-import { CodexTransport } from '../../chat/codex-transport.ts';
+import { CodexTransport } from '@ruimte/agents/chat/codex-transport';
 
 /* A CLI that has not said who is signed in by now is not going to; the next pass asks again. */
 const ASK_TIMEOUT_MS = 20_000;

@@ -9,9 +9,9 @@ import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
 import { COMPACT_ABOVE_BYTES } from './chat-log.ts';
 import { ChatRecorder, RecordingStore } from './chat-test-helpers.ts';
-import { fakeClaude } from './fake-claude.ts';
-import { inProcess, type InProcessCli } from './fake-cli.ts';
-import { ChatThread } from './thread.ts';
+import { fakeClaude } from '@ruimte/agents/chat/fake-claude';
+import { inProcess, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
+import { ChatThread } from '@ruimte/agents/chat/thread';
 
 let home: string;
 let attachments: AttachmentStore;

@@ -4,14 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/contracts';
 import type { ContextSource } from '@ruimte/contracts';
-import { chatPrompt, contextPrompt, verbsNote } from '../context/context-note.ts';
+import { CONTEXT_LEAD, chatPrompt, contextPrompt, verbsNote } from '../context/context-note.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
 import { ChatRecorder } from './chat-test-helpers.ts';
-import { inProcess, type InProcessCli } from './fake-cli.ts';
-import { FAKE_CHILD_STEPS, fakeCodex } from './fake-codex.ts';
+import { inProcess, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
+import { FAKE_CHILD_STEPS, fakeCodexWith } from '@ruimte/agents/chat/fake-codex';
 
 let home: string;
 let store: ChatStore;
@@ -48,7 +48,7 @@ beforeEach(async () => {
     requests = [];
     modelPage = null;
     codex = inProcess((io) => {
-        const program = fakeCodex(io);
+        const program = fakeCodexWith({ resumeLead: CONTEXT_LEAD })(io);
         return {
             onLine: (line) => {
                 const frame = JSON.parse(line);

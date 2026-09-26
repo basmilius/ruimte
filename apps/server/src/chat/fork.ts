@@ -33,10 +33,11 @@ import type { CanvasHost } from '../canvas/verb.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { AgentLineageStore } from '../agents/lineage.ts';
 import { AccountError, storedAccount } from '../providers/accounts/launch.ts';
-import { codexServiceTier, codexThreadOptions } from '../providers/codex.ts';
+import { codexServiceTier, codexThreadOptions } from '@ruimte/agents/providers/codex';
 import type { ChatManager } from './chat-manager.ts';
 import { forkClaudeTranscript, type TranscriptCutPoint } from './claude-fork.ts';
 import { forkThreadOnce } from './codex-thread.ts';
+import { ChatError as AgentChatError } from '@ruimte/agents/chat/errors';
 import { ChatError } from './errors.ts';
 import { handoffText } from './handoff.ts';
 import { errorText } from '../error-text.ts';
@@ -166,7 +167,9 @@ export const switchNote = (cut: Cut, original: { title: string }, files: ForkFil
     return `Forked from ${original.title} after ${where} and continued with ${handoff.to}.${place} The agent got ${read} as text and can read the rest of ${original.title} through ruimte-context.`;
 };
 
-const cliRefusal = (error: unknown): ChatError => (error instanceof ChatError ? error : new ChatError('fork-failed', errorText(error)));
+// What the CLI's own thread code refuses with is a chat error of the package's, whose code carries over as it is.
+const cliRefusal = (error: unknown): ChatError =>
+    error instanceof AgentChatError ? new ChatError(error.code, error.message) : new ChatError('fork-failed', errorText(error));
 
 /*
  * The tree of the files after a turn, the one taken when it settled, else the one the next turn

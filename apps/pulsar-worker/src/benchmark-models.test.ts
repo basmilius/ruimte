@@ -14,7 +14,7 @@ interface Manifest {
     models: { slug: string; name: string; profile: string; legacy?: boolean }[];
 }
 
-const PROVIDERS = join(import.meta.dir, '../../server/src/providers');
+const PROVIDERS = join(import.meta.dir, '../../../packages/agents/src/providers');
 
 // Asked for in the prompt itself, so Artificial Analysis has nothing that measures them.
 const PROMPT_ONLY = ['ultrathink', 'ultra'];

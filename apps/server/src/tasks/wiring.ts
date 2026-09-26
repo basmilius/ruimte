@@ -1,6 +1,6 @@
 import type { Task } from '@ruimte/contracts';
 import type { TaskHost } from '../canvas/verb.ts';
-import { reportsOnBackgroundWork } from '../chat/background-work.ts';
+import { reportsOnBackgroundWork } from '@ruimte/agents/chat/background-work';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { chatOpener } from '../chat/wake-chat.ts';
 import { errorText } from '../error-text.ts';

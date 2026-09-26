@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { ProviderAccountIdSchema, ProviderAccountSchema, type AgentKind, type ProviderAccount, type ProviderAccountMap } from '@ruimte/contracts';
 import { CodedError } from '@ruimte/agents/coded-error';
 import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
-import type { ChatProvider } from '../provider.ts';
+import type { ChatProvider } from '@ruimte/agents/providers/provider';
 import {
     accountFolder,
     accountProblem,

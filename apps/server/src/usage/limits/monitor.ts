@@ -2,7 +2,7 @@ import type { UsageLimitsProvider, UsageLimitsSnapshot, UsageProvider } from '@r
 import { definedEnv } from '../../providers/accounts/launch.ts';
 import type { ProviderRegistry } from '../../providers/registry.ts';
 import type { SessionEvent, SessionSink } from '../../sessions/manager.ts';
-import { mergeWindows, type LimitsUpdate } from './normalize.ts';
+import { mergeWindows, type LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
 import { probeClaude, probeCodex, type ProbeResult } from './probe.ts';
 import { ClientSinks } from '../../client-sinks.ts';
 import { errorText } from '../../error-text.ts';

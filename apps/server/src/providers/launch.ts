@@ -1,5 +1,5 @@
 import { resumeCommandFor, type AgentKind, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
-import { CLAUDE_ALLOW_CONTEXT } from './claude.ts';
+import { CLAUDE_ALLOW_CONTEXT } from './claude-provider.ts';
 import { providerFor } from './registry.ts';
 
 /*

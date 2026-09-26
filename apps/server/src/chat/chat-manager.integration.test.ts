@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { waitFor } from '../sessions/test-helpers.ts';
 import { AttachmentStore } from './attachment-store.ts';
@@ -13,8 +14,8 @@ import { ChatRecorder } from './chat-test-helpers.ts';
  * survive a pipe, split and joined on newlines, and that a crash comes back as the exit code.
  */
 
-const FAKE_CLAUDE = ['bun', join(import.meta.dir, 'fake-claude.ts')];
-const FAKE_CODEX = ['bun', join(import.meta.dir, 'fake-codex.ts')];
+const FAKE_CLAUDE = ['bun', fileURLToPath(import.meta.resolve('@ruimte/agents/chat/fake-claude'))];
+const FAKE_CODEX = ['bun', fileURLToPath(import.meta.resolve('@ruimte/agents/chat/fake-codex'))];
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 

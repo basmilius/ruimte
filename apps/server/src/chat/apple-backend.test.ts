@@ -2,8 +2,8 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import type { AppleFoundationRequest } from '@ruimte/contracts';
 import { AppleBackend, type AppleBackendOptions } from './apple-backend.ts';
 import type { executeAppleTool } from './apple-tools.ts';
-import type { BackendEvent, TurnInput } from './backend.ts';
-import { inProcess, type FakeIo } from './fake-cli.ts';
+import type { BackendEvent, TurnInput } from '@ruimte/agents/chat/backend';
+import { inProcess, type FakeIo } from '@ruimte/agents/chat/fake-cli';
 
 const turn: TurnInput = { text: 'List the project files.', preamble: null, attachments: [], mentions: [], skills: [] };
 const backends: AppleBackend[] = [];
@@ -42,8 +42,8 @@ const harness = (available = true, executeTool?: typeof executeAppleTool, throwT
             runtimeMode: 'full-access',
             resume: null,
             generation: 1,
-            context: [],
-            depth: 0,
+            instructions: null,
+            resumeNote: null,
             spawn: fake.spawn
         },
         {

@@ -1,5 +1,5 @@
 import type { GitCapabilitiesResult } from '@ruimte/contracts';
-import { detectCli } from '../providers/detect.ts';
+import { detectCli } from '@ruimte/agents/providers/detect';
 import type { ProviderRegistry } from '../providers/registry.ts';
 
 // An install shows up on the next check; a probe per menu open would cost a process every time.

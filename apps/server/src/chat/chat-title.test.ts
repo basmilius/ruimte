@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { SUGGESTED_TITLE_LIMIT } from '@ruimte/contracts';
-import { codexProvider } from '../providers/codex-provider.ts';
-import type { ChatProvider } from '../providers/provider.ts';
+import { codexProvider } from '@ruimte/agents/providers/codex-provider';
+import type { ChatProvider } from '@ruimte/agents/providers/provider';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { buildTitlePrompt, parseTitle, suggestChatTitle } from './chat-title.ts';
 

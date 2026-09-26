@@ -2,9 +2,9 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { BackendEvent } from '../server/src/chat/backend.ts';
+import type { BackendEvent } from '@ruimte/agents/chat/backend';
 import { AppleBackend } from '../server/src/chat/apple-backend.ts';
-import { spawnChatProcess } from '../server/src/chat/chat-process.ts';
+import { spawnChatProcess } from '@ruimte/agents/chat/chat-process';
 
 const home = await mkdtemp(join(tmpdir(), 'ruimte-apple-stream-'));
 let finish: ((event: BackendEvent) => void) | undefined;
