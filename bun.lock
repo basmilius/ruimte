@@ -386,6 +386,7 @@
         "@pierre/trees": "1.0.0-beta.6",
         "clsx": "^2.1.1",
         "lucide-react": "^1.47.0",
+        "zustand": "^5.0.15",
       },
       "devDependencies": {
         "@types/bun": "^1.4.2",

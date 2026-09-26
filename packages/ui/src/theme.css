@@ -453,4 +453,14 @@
         mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-start));
     }
     .scroll-fade-top[data-fade-start] { --fade-start: 24px; }
+
+    /* A toast's countdown ring; `TimerRing` sets duration and delay from the toast's own timer. */
+    .toast-timer-arc { animation: toast-timer linear forwards; }
+    @keyframes toast-timer {
+        from { stroke-dashoffset: 0; }
+        to { stroke-dashoffset: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .toast-timer-arc { animation: none; }
+    }
 }

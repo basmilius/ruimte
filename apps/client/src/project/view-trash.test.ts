@@ -4,9 +4,10 @@ import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } fro
 import { undoLatestDeletion } from '@/project/view-trash';
 import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
-import { UNDO_MS, useToasts } from '@/state/toasts';
+import { useToasts } from '@/state/toasts';
 import { watchNodes } from '@/terminal/lifecycle-watch';
 import type { ActionCall } from '@ruimte/actions';
+import { UNDO_MS } from '@ruimte/ui/toast-store';
 
 const board: ProjectCanvasView = {
     kind: 'canvas',

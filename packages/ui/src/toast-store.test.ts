@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import { elapsedOf, SUCCESS_MS, UNDO_MS, useToasts } from '@/state/toasts';
+import { createToastStore, elapsedOf, SUCCESS_MS, UNDO_MS, type Toast, type ToastStoreHook } from './toast-store.ts';
 
-describe('useToasts', () => {
+describe('createToastStore', () => {
+    let useToasts: ToastStoreHook;
+
     beforeEach(() => {
         jest.useFakeTimers();
+        useToasts = createToastStore();
     });
 
     afterEach(() => {
@@ -78,6 +81,22 @@ describe('useToasts', () => {
         useToasts.getState().show({ id: 'failed', title: 'Push failed', kind: 'error' });
         jest.advanceTimersByTime(SUCCESS_MS + 1);
         expect(ids()).toEqual(['failed']);
+    });
+
+    test('a field of the app rides along through an update', () => {
+        const withOutput = createToastStore<Toast & { output?: string }>();
+        withOutput.getState().show({ id: 'push', title: 'Pushing', kind: 'progress' });
+        withOutput.getState().update('push', { kind: 'error', output: 'rejected' });
+        expect(withOutput.getState().toasts[0]?.output).toBe('rejected');
+    });
+
+    test('two stores keep their own toasts and their own ids', () => {
+        const other = createToastStore();
+        const first = useToasts.getState().show({ title: 'One', kind: 'error' });
+        const second = other.getState().show({ title: 'Two', kind: 'error' });
+        expect(first).toBe(second);
+        other.getState().dismiss(second);
+        expect(ids()).toEqual([first]);
     });
 });
 

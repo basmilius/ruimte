@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import i18next from 'i18next';
 import { ActionRefusal, type ActionOutput } from '@ruimte/actions';
 import type { GitActionKind, GitActionPayload, GitActionResult } from '@ruimte/contracts';
+import type { ToastAction } from '@ruimte/ui/toast-store';
 import { cancelGitRunAction, performAsPerson } from '@/actions/client-actions';
 import { actionTitle, manySummary, manyTitle, nextActionId, phaseLabel } from '@/shell/panels/git-actions';
-import { useToasts, type ToastAction } from '@/state/toasts';
+import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
 
 type GitRun = ActionOutput<'git.publishBranch'>;

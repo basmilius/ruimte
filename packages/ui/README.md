@@ -31,6 +31,10 @@ An app using it does three things:
 
 `settings/SettingsDialog` is the dialog with sections on the left and one pane on the right, a search field over them and an optional account tab at the foot. The app hands it the sections (icon, label, description, a pane component, lazy or not), a `find` for the search, and where the dialog is (`section`, `target`) with `onNavigate`. Panes build on `SettingsSection`, `SettingsRow`, `MasterDetail`, `DetailHeader` and the controls in `controls` (`Toggle`, `Segmented`, `Stepper`). `AccentSwatches` picks one color of a palette the app hands it.
 
+## Toasts and choices
+
+`createToastStore()` from `toast-store` makes the store an app raises toasts through: `show` puts one up or moves the one with the same id along, from progress to its outcome, a success goes after four seconds, a deletion after eight and a failure waits to be dismissed. `Toasts` draws a store as a stack in the bottom right corner. An app that carries more on a toast extends `Toast`, hands its type to `createToastStore<T>()` and draws the extra through `footer`. `ChoiceCards` is a radio group of a few large cards, each a title, a line under it and an optional icon, for a choice a select would say too little about.
+
 ## Rules
 
 Nothing in `src` imports from an app. The client's `conventions.test.ts` holds these files to the same design rules as its own: four type sizes, a `Tooltip` instead of `title`, icons on the 12, 14, 16 and 20 steps, and no `Intl` formatter outside `format/`.

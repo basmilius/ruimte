@@ -6,6 +6,7 @@
   "exports": {
     "./AccentSwatches": "./src/AccentSwatches.tsx",
     "./Button": "./src/Button.tsx",
+    "./ChoiceCards": "./src/ChoiceCards.tsx",
     "./CloseButton": "./src/CloseButton.tsx",
     "./DisabledReason": "./src/DisabledReason.tsx",
     "./EmptyState": "./src/EmptyState.tsx",
@@ -23,6 +24,7 @@
     "./ShortcutHints": "./src/ShortcutHints.tsx",
     "./TextMenu": "./src/TextMenu.tsx",
     "./Tile": "./src/Tile.tsx",
+    "./Toasts": "./src/Toasts.tsx",
     "./Tooltip": "./src/Tooltip.tsx",
     "./Wipe": "./src/Wipe.tsx",
     "./classes": "./src/classes.ts",
@@ -53,6 +55,7 @@
     "./settings/target": "./src/settings/target.ts",
     "./shortcut-hints": "./src/shortcut-hints.ts",
     "./shortcut": "./src/shortcut.ts",
+    "./toast-store": "./src/toast-store.ts",
     "./useAsyncAction": "./src/useAsyncAction.ts",
     "./useContentSize": "./src/useContentSize.ts",
     "./useMeasuredWidth": "./src/useMeasuredWidth.ts",
@@ -68,7 +71,8 @@
     "@base-ui-components/react": "^1.0.0-rc.0",
     "@pierre/trees": "1.0.0-beta.6",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.47.0"
+    "lucide-react": "^1.47.0",
+    "zustand": "^5.0.15"
   },
   "peerDependencies": {
     "i18next": "^26.4.2",
