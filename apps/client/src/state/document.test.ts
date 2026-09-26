@@ -100,6 +100,19 @@ describe('switching views', () => {
         expect(focusedCanvas().getState().camera).toEqual({ x: 11, y: 12, zoom: 1 });
     });
 
+    test('the locks of a view come back after a switch and a reload', () => {
+        focusedCanvas().getState().toggleLock('move');
+        useDocument.getState().setActiveView('b');
+        expect(focusedCanvas().getState().locks.move).toBe(false);
+
+        useDocument.getState().setActiveView('a');
+        expect(focusedCanvas().getState().locks).toEqual({ pan: false, zoom: false, move: true, resize: false });
+
+        const local = useDocument.getState().exportLocal();
+        useDocument.getState().load(document([view('a'), view('b')]), local);
+        expect(focusedCanvas().getState().locks.move).toBe(true);
+    });
+
     test('a switch is no edit of the document, adding a view is', () => {
         const before = useDocument.getState().edits;
         useDocument.getState().setActiveView('b');

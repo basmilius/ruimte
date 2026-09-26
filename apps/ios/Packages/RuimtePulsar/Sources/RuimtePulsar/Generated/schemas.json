@@ -22266,6 +22266,29 @@
                     "string",
                     "null"
                   ]
+                },
+                "locks": {
+                  "type": "object",
+                  "properties": {
+                    "pan": {
+                      "type": "boolean"
+                    },
+                    "zoom": {
+                      "type": "boolean"
+                    },
+                    "move": {
+                      "type": "boolean"
+                    },
+                    "resize": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "pan",
+                    "zoom",
+                    "move",
+                    "resize"
+                  ]
                 }
               },
               "required": [
@@ -24306,6 +24329,29 @@
                   "type": [
                     "string",
                     "null"
+                  ]
+                },
+                "locks": {
+                  "type": "object",
+                  "properties": {
+                    "pan": {
+                      "type": "boolean"
+                    },
+                    "zoom": {
+                      "type": "boolean"
+                    },
+                    "move": {
+                      "type": "boolean"
+                    },
+                    "resize": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "pan",
+                    "zoom",
+                    "move",
+                    "resize"
                   ]
                 }
               },

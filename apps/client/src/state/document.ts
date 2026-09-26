@@ -310,7 +310,11 @@ const localOfView = (view: ProjectView | undefined, peers: DocumentPeers): Proje
         return { camera: peers.diagrams.peek(view.id)?.getState().viewCamera() ?? null, focusedNodeId: null };
     }
     const canvas = canvasOf(view?.id, peers);
-    return canvas === null ? { camera: null, focusedNodeId: null } : { camera: canvas.viewCamera(), focusedNodeId: canvas.bodyFocusId };
+    if (canvas === null) {
+        return { camera: null, focusedNodeId: null };
+    }
+    const locked = Object.values(canvas.locks).some(Boolean);
+    return { camera: canvas.viewCamera(), focusedNodeId: canvas.bodyFocusId, ...(locked ? { locks: canvas.locks } : {}) };
 };
 
 /*

@@ -20,7 +20,8 @@ import type {
     ProjectNode,
     ProjectText,
     ProjectViewLocal,
-    RuntimeMode
+    RuntimeMode,
+    ViewLocks
 } from '@ruimte/contracts';
 import { DEFAULT_TITLES, NODE_SIZE, groupFrame, isAgentKind, isUnknownNode } from '@ruimte/contracts';
 
@@ -86,13 +87,7 @@ interface LinkDraft {
 // The height of a node frame's header; a collapsed group is its header only.
 export const GROUP_HEADER_PX = 39;
 
-/* Which gestures the canvas refuses. Commands (dock buttons, shortcuts) always work. */
-export interface Locks {
-    pan: boolean;
-    zoom: boolean;
-    move: boolean;
-    resize: boolean;
-}
+export type Locks = ViewLocks;
 
 /* What undo and redo restore: the placement of everything, never the camera or the selection. */
 export interface Snapshot {
@@ -707,7 +702,9 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 resizing: null,
                 past: [],
                 future: [],
-                pendingCamera: null
+                pendingCamera: null,
+                // A reload in place hands over no locks and keeps the ones it has.
+                ...(local?.locks ? { locks: local.locks } : {})
             });
             const stored = local?.camera ?? null;
             const camera = stored === null ? null : cameraOfView(stored, get().viewport);

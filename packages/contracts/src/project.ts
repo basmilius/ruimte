@@ -716,10 +716,21 @@ export type ViewCamera = z.infer<typeof ViewCameraSchema>;
    from having its whole local file refused over one field. */
 const StoredViewCameraSchema = z.union([ViewCameraSchema, CameraSchema.transform((): null => null)]).nullable();
 
+/* Which gestures a canvas refuses. Commands (dock buttons, shortcuts) always work. */
+export const ViewLocksSchema = z.object({
+    pan: z.boolean(),
+    zoom: z.boolean(),
+    move: z.boolean(),
+    resize: z.boolean()
+});
+export type ViewLocks = z.infer<typeof ViewLocksSchema>;
+
 // Where one view stood when it was last on screen. Per client, like everything around it.
 export const ProjectViewLocalSchema = z.object({
     camera: StoredViewCameraSchema,
-    focusedNodeId: z.string().nullable()
+    focusedNodeId: z.string().nullable(),
+    /* Absent means nothing locked, which is every file written before a lock outlived a view switch. */
+    locks: ViewLocksSchema.optional()
 });
 export type ProjectViewLocal = z.infer<typeof ProjectViewLocalSchema>;
 
