@@ -94,7 +94,7 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
                 </div>
             )}
             {item.text !== '' && (
-                <div className="relative max-w-[80%] rounded-2xl bg-surface-active px-3.5 py-2.5 text-sm text-text select-text">
+                <div className="relative max-w-[80%] rounded-2xl bg-surface-active px-3.5 py-2.5 text-sm wrap-anywhere text-text select-text">
                     <div data-find-field="text" className={clsx(long && !open && FOLD)}>
                         <MessageMarkdown text={item.text} mentions={item.mentions} skills={item.skills} />
                     </div>
