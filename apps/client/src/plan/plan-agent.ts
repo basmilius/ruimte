@@ -1,5 +1,5 @@
 import { agentName } from '@/plan/plan-view';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 
 /* The provider of a chat as the project names it, for a chat this client has not attached yet. */

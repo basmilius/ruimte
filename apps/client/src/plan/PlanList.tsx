@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { effectiveChecks, planProgress } from '@ruimte/plan';
-import { Markdown } from '@/chat/ui/Markdown';
+import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
 import { formatMoment } from '@ruimte/ui/format/datetime';
 import {
     collapsedOf,
@@ -51,7 +51,7 @@ import {
     type PlanRow
 } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { MENU_LABEL, MENU_SEPARATOR, MULTILINE_FIELD } from '@ruimte/ui/classes';
 import { copyText } from '@ruimte/ui/clipboard';
 import { EmptyState } from '@ruimte/ui/EmptyState';

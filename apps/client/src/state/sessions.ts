@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import type { CanvasNode } from '@/state/canvas';
-import type { ChatStatuses } from '@/state/chats';
+import type { ChatStatuses } from '@ruimte/agents-react/state/chats';
 import { dropEndpoint, endpointKey, useEndpointId } from '@/state/keys';
 
 export interface SessionState {

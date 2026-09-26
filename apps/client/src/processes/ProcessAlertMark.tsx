@@ -3,10 +3,12 @@ import clsx from 'clsx';
 import { TriangleAlert } from 'lucide-react';
 import type { ProcessAlert } from '@ruimte/contracts';
 import { alertText } from '@/processes/format';
-import { useMinute } from '@/shell/usage/limits';
 import { useUi } from '@/state/ui';
 import { Icon } from '@ruimte/ui/Icon';
 import { Tooltip } from '@ruimte/ui/Tooltip';
+import { useNow } from '@ruimte/ui/useNow';
+
+const MINUTE_MS = 60_000;
 
 /*
  * The mark a node with a process warning wears. It opens the processes panel, where the warning
@@ -22,7 +24,7 @@ export function ProcessAlertMark({ alerts, className }: { alerts: readonly Proce
 
 /* Only a node with a warning keeps a clock, which moves the elapsed time in its label once a minute. */
 function AlertMark({ first, count, className }: { first: ProcessAlert; count: number; className?: string }) {
-    const now = useMinute();
+    const now = useNow(MINUTE_MS);
     const text = alertText(first, now);
     const label = count === 1 ? text : i18next.t('processes:alert.more', { count: count - 1, text });
     return (

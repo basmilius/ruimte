@@ -10,7 +10,7 @@ import { localTimeZone } from '@ruimte/ui/format/time-zone';
 import i18next from 'i18next';
 import { isCanvasView, isOpenableView } from '@ruimte/contracts';
 import { focusedCanvas } from '@/state/canvas';
-import { useChats } from '@/state/chats';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';

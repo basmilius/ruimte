@@ -1,0 +1,312 @@
+import { describe, expect, test } from 'bun:test';
+import type { AgentEventType, AgentRequestType, ChatBookmark, ChatEvent, ChatInfo, ChatItem, ProviderInfo } from '@ruimte/agent-contracts';
+import type { ChatSink } from '../state/chats';
+import { ChatTransportError, type ChatEventMap, type ChatRequestMap, type ChatTransport, type ChatTransportStatus } from '../transport';
+import { ChatClient } from './chat-client';
+
+type Call = { type: AgentRequestType; payload: unknown };
+
+const info = (chatId: string): ChatInfo => ({
+    chatId,
+    provider: 'claude',
+    cwd: '/',
+    agentSessionId: null,
+    model: null,
+    selection: { model: 'claude-sonnet-5', options: {} },
+    runtimeMode: 'full-access',
+    status: 'idle',
+    running: false,
+    activeTurnId: null,
+    slashCommands: [],
+    usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+    createdAt: 0
+});
+
+class FakeTransport implements ChatTransport {
+    status: ChatTransportStatus = 'open';
+    readonly calls: Call[] = [];
+    items: ChatItem[] = [];
+    // What `chat.list` answers: every chat the host has loaded, attached here or not.
+    chats: ChatInfo[] = [];
+    // What `chat.attach` answers when a test wants more than the thread, such as a seq or the events after `since`.
+    attachResult: ((payload: ChatRequestMap['chat.attach']['payload']) => Partial<ChatRequestMap['chat.attach']['result']>) | null = null;
+    private readonly statusHandlers = new Set<(status: ChatTransportStatus) => void>();
+    private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
+
+    request<T extends AgentRequestType>(type: T, payload: ChatRequestMap[T]['payload']): Promise<ChatRequestMap[T]['result']> {
+        this.calls.push({ type, payload });
+        if (this.status !== 'open') {
+            return Promise.reject(new ChatTransportError('not-connected', 'offline'));
+        }
+        const chatId = (payload as { chatId?: string }).chatId ?? '';
+        switch (type) {
+            case 'chat.create':
+                return Promise.resolve(info(chatId) as ChatRequestMap[T]['result']);
+            case 'chat.attach':
+                return Promise.resolve({
+                    info: info(chatId),
+                    items: this.items,
+                    ...this.attachResult?.(payload as ChatRequestMap['chat.attach']['payload'])
+                } as ChatRequestMap[T]['result']);
+            case 'chat.send':
+                return Promise.resolve({ queued: false, turnId: 'turn-test' } as ChatRequestMap[T]['result']);
+            case 'chat.list':
+                return Promise.resolve({ chats: this.chats } as ChatRequestMap[T]['result']);
+            case 'provider.list':
+                return Promise.resolve({
+                    providers: [{ kind: 'claude', name: 'Claude Code', installed: true, version: '1', models: [], defaultModel: null }]
+                } as ChatRequestMap[T]['result']);
+            default:
+                return Promise.resolve({} as ChatRequestMap[T]['result']);
+        }
+    }
+
+    on<E extends AgentEventType>(event: E, handler: (payload: ChatEventMap[E]) => void): () => void {
+        let handlers = this.eventHandlers.get(event);
+        if (!handlers) {
+            handlers = new Set();
+            this.eventHandlers.set(event, handlers);
+        }
+        handlers.add(handler as (payload: unknown) => void);
+        return () => {
+            handlers.delete(handler as (payload: unknown) => void);
+        };
+    }
+
+    subscribeStatus(handler: (status: ChatTransportStatus) => void): () => void {
+        this.statusHandlers.add(handler);
+        return () => {
+            this.statusHandlers.delete(handler);
+        };
+    }
+
+    emit<E extends AgentEventType>(event: E, payload: ChatEventMap[E]): void {
+        for (const handler of this.eventHandlers.get(event) ?? []) {
+            handler(payload);
+        }
+    }
+
+    setStatus(status: ChatTransportStatus): void {
+        this.status = status;
+        for (const handler of this.statusHandlers) {
+            handler(status);
+        }
+    }
+
+    of(type: AgentRequestType): Call[] {
+        return this.calls.filter((call) => call.type === type);
+    }
+}
+
+class FakeSink implements ChatSink {
+    readonly resets: Array<{ chatId: string; items: ChatItem[] }> = [];
+    readonly events: Array<{ chatId: string; event: ChatEvent }> = [];
+    readonly forgotten: string[] = [];
+    readonly statuses: Array<{ chatId: string; info: ChatInfo }> = [];
+    readonly bookmarked: Array<{ chatId: string; bookmarks: ChatBookmark[] }> = [];
+
+    reset(chatId: string, _info: ChatInfo, items: ChatItem[]): void {
+        this.resets.push({ chatId, items });
+    }
+
+    apply(chatId: string, event: ChatEvent): void {
+        this.events.push({ chatId, event });
+    }
+
+    status(chatId: string, info: ChatInfo): void {
+        this.statuses.push({ chatId, info });
+    }
+
+    bookmarks(chatId: string, bookmarks: ChatBookmark[]): void {
+        this.bookmarked.push({ chatId, bookmarks });
+    }
+
+    forget(chatId: string): void {
+        this.forgotten.push(chatId);
+    }
+}
+
+const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+const setup = () => {
+    const transport = new FakeTransport();
+    const sink = new FakeSink();
+    const providers: ProviderInfo[][] = [];
+    const client = new ChatClient(transport, sink, { setProviders: (list) => providers.push(list) });
+    return { transport, sink, client, providers };
+};
+
+describe('ChatClient', () => {
+    test('inspecting a hidden chat neither creates it nor keeps it attached', async () => {
+        const { client, transport } = setup();
+        const first = client.inspect('hidden');
+        const second = client.inspect('hidden');
+        const snapshot = await first;
+        await second;
+        expect(snapshot.info.chatId).toBe('hidden');
+        expect(transport.of('chat.create')).toHaveLength(0);
+        expect(transport.of('chat.attach')).toHaveLength(1);
+        expect(transport.of('chat.detach')).toHaveLength(1);
+    });
+
+    test('inspecting a mounted chat preserves its live attachment', async () => {
+        const { client, transport } = setup();
+        await client.open('visible', {});
+        await client.inspect('visible');
+        expect(transport.of('chat.detach')).toHaveLength(0);
+    });
+
+    test('open creates with cwd and resume, attaches and resets the store with the thread', async () => {
+        const { transport, sink, client } = setup();
+        transport.items = [{ id: 'u1', kind: 'user', createdAt: 1, turnId: null, text: 'hi' }];
+        expect(await client.open('c', { cwd: '/tmp', resume: 'abc', runtimeMode: 'auto' })).toBe(true);
+        expect(transport.of('chat.create')[0]?.payload).toEqual({
+            chatId: 'c',
+            provider: undefined,
+            cwd: '/tmp',
+            resume: 'abc',
+            selection: undefined,
+            runtimeMode: 'auto'
+        });
+        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'c' });
+        expect(sink.resets).toEqual([{ chatId: 'c', items: transport.items }]);
+    });
+
+    test('tells the host the composer preference once it has one, and says it again on a fresh socket', () => {
+        const { transport, client } = setup();
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        expect(transport.of('chat.setPreferences')).toEqual([]);
+
+        const preference = { runtimeMode: 'supervised' as const, selections: { claude: { model: 'claude-opus-5', options: {} } }, changedAt: 3 };
+        client.setPreferences(preference);
+        // A reconnect is a new client over there, so the pick has to travel again.
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        expect(transport.of('chat.setPreferences').map((call) => call.payload)).toEqual([preference, preference]);
+    });
+
+    test('the bookmarks come with the attach and after that with every change, and a host without them leaves none', async () => {
+        const { transport, sink, client } = setup();
+        const bookmark: ChatBookmark = { itemId: 'u1', excerpt: 'hi', createdAt: 1 };
+        transport.attachResult = (payload) => (payload.chatId === 'marked' ? { bookmarks: [bookmark] } : {});
+        await client.open('marked', {});
+        await client.open('plain', {});
+        transport.emit('chat.bookmarks', { chatId: 'marked', bookmarks: [] });
+        expect(sink.bookmarked).toEqual([
+            { chatId: 'marked', bookmarks: [bookmark] },
+            { chatId: 'plain', bookmarks: [] },
+            { chatId: 'marked', bookmarks: [] }
+        ]);
+    });
+
+    test('events reach the store, whatever chat they are for', () => {
+        const { transport, sink } = setup();
+        transport.emit('chat.event', { chatId: 'c', event: { type: 'delta', itemId: 'a1', text: 'x' } });
+        expect(sink.events).toEqual([{ chatId: 'c', event: { type: 'delta', itemId: 'a1', text: 'x' } }]);
+    });
+
+    test('a reconnect attaches every mounted chat again and hands the store the fresh thread', async () => {
+        const { transport, sink, client } = setup();
+        await client.open('a', {});
+        await client.open('b', {});
+        await client.detach('b');
+        expect(transport.of('chat.detach')).toHaveLength(1);
+
+        transport.setStatus('closed');
+        transport.calls.length = 0;
+        transport.setStatus('open');
+        await flush();
+        expect(transport.of('chat.attach').map((c) => c.payload)).toEqual([{ chatId: 'a' }]);
+        expect(sink.resets.map((r) => r.chatId)).toEqual(['a', 'b', 'a']);
+    });
+
+    test('a reconnect offers the last seq it holds and applies only the events that came after it', async () => {
+        const { transport, sink, client } = setup();
+        const later: ChatEvent = { type: 'delta', itemId: 'a1', text: 'more' };
+        transport.attachResult = (payload) => (payload.since === undefined ? { seq: 4 } : { items: [], seq: 6, events: [later] });
+        await client.open('a', {});
+        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'a' });
+        transport.emit('chat.event', { chatId: 'a', event: { type: 'delta', itemId: 'a1', text: 'x' }, seq: 5 });
+
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await flush();
+        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', since: 5 });
+        expect(sink.resets).toHaveLength(1);
+        expect(sink.events.at(-1)).toEqual({ chatId: 'a', event: later });
+
+        // The host no longer holds what came after the seq it was offered, so the whole thread comes instead.
+        transport.attachResult = () => ({ seq: 9 });
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await flush();
+        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', since: 6 });
+        expect(sink.resets).toHaveLength(2);
+    });
+
+    test('letting go of the machine detaches every chat and kills none', async () => {
+        const { transport, client } = setup();
+        await client.open('a', {});
+        transport.calls.length = 0;
+
+        client.dispose();
+        await flush();
+
+        expect(transport.of('chat.detach').map((call) => call.payload)).toEqual([{ chatId: 'a' }]);
+        expect(transport.of('chat.kill')).toHaveLength(0);
+        expect(client.isMounted('a')).toBe(false);
+    });
+
+    test('opening while offline waits for the transport', async () => {
+        const { transport, sink, client } = setup();
+        transport.setStatus('closed');
+        expect(await client.open('a', {})).toBe(false);
+        expect(client.isMounted('a')).toBe(true);
+        transport.setStatus('open');
+        await flush();
+        expect(sink.resets.map((r) => r.chatId)).toEqual(['a']);
+    });
+
+    test('send and kill map to their requests', async () => {
+        const { transport, sink, client } = setup();
+        await client.open('a', {});
+        await client.send('a', 'hello');
+        await client.kill('a');
+        expect(transport.of('chat.send')[0]?.payload).toEqual({ chatId: 'a', text: 'hello' });
+        expect(transport.of('chat.kill')).toHaveLength(1);
+        expect(sink.forgotten).toEqual(['a']);
+        expect(client.isMounted('a')).toBe(false);
+    });
+
+    test('a status event lands in the store for a chat this window never attached', async () => {
+        const { transport, sink } = setup();
+        transport.emit('chat.status', { chatId: 'elsewhere', info: { ...info('elsewhere'), status: 'needs-you' } });
+        expect(sink.statuses).toEqual([{ chatId: 'elsewhere', info: { ...info('elsewhere'), status: 'needs-you' } }]);
+    });
+
+    test('every chat on the machine is asked for on construction and again on every reconnect', async () => {
+        const transport = new FakeTransport();
+        transport.chats = [{ ...info('a'), status: 'running' }, info('b')];
+        const sink = new FakeSink();
+        new ChatClient(transport, sink);
+        await flush();
+        expect(sink.statuses.map((entry) => entry.chatId)).toEqual(['a', 'b']);
+
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await flush();
+        expect(sink.statuses.map((entry) => entry.chatId)).toEqual(['a', 'b', 'a', 'b']);
+    });
+
+    test('the provider list is loaded on construction and again on every reconnect', async () => {
+        const { transport, providers } = setup();
+        await flush();
+        expect(providers).toHaveLength(1);
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await flush();
+        expect(providers).toHaveLength(2);
+        expect(providers[1]?.[0]?.kind).toBe('claude');
+    });
+});

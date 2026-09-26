@@ -1,6 +1,6 @@
 import type { GitStatus, GitStatusEntry } from '@pierre/trees';
 import { absoluteOf, isAbsolutePath, relativeTo, resolveStoredPath, storedPathOf, type FsEntry, type GitFile } from '@ruimte/contracts';
-import { chipText } from '@/chat/mentions';
+import { chipText } from '@ruimte/agents-react/chat/mentions';
 
 /* A directory whose children have not arrived yet gets one child nobody sees, so the row keeps the
    chevron that lets a person expand it. The rule that hides the row lives in `TREE_CSS`. */

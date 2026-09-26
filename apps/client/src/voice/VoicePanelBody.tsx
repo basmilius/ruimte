@@ -17,7 +17,7 @@ import {
     Trash2,
     type LucideIcon
 } from 'lucide-react';
-import { FadingWords } from '@/chat/ui/FadingWords';
+import { FadingWords } from '@ruimte/agents-react/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { formatClockDuration } from '@ruimte/ui/format/duration';
 import { Button } from '@ruimte/ui/Button';

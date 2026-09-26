@@ -1,0 +1,186 @@
+/*
+ * The chat of @ruimte/agents-react, its providers and its usage: the tokens only they read and the
+ * rules they draw with. Imported right after `@ruimte/ui/theme.css`; the app scans the package with
+ * `@source` and loads `@tailwindcss/typography`, which the markdown of a thread builds on.
+ */
+:root, [data-theme="light"] {
+    /* Skills read as a second kind of token next to a file mention, so they get their own hue. */
+    --skill: #9333ea;
+    --skill-soft: #f7eeff;
+    /* One color per agent CLI, so a bar, a dot and a legend row all name the same provider. Apple's
+       system orange and teal; Gemini and Copilot are reserved for the day their transcripts are read. */
+    --chart-claude: #ff9500;
+    --chart-codex: #30b0c7;
+    --chart-gemini: #3b82f6;
+    --chart-copilot: #64748b;
+    /* What a chat's context holds, one color per part; the rest is the system's and stays gray. */
+    --chart-context-tools: #4d7ce6;
+    --chart-context-files: #9a63e0;
+    --chart-context-conversation: #2f9e5a;
+    --chart-context-system: var(--text-faint);
+}
+
+[data-theme="dark"] {
+    --skill: #c084fc;
+    --skill-soft: #2f2350;
+    --chart-claude: #ff9f0a;
+    --chart-codex: #40c8e0;
+    --chart-gemini: #60a5fa;
+    --chart-copilot: #94a3b8;
+    --chart-context-tools: #8aa7f5;
+    --chart-context-files: #b98af3;
+    --chart-context-conversation: #6dd08b;
+    --chart-context-system: var(--text-faint);
+}
+
+@theme inline {
+    --color-skill: var(--skill);
+    --color-skill-soft: var(--skill-soft);
+    --color-chart-claude: var(--chart-claude);
+    --color-chart-codex: var(--chart-codex);
+    --color-chart-gemini: var(--chart-gemini);
+    --color-chart-copilot: var(--chart-copilot);
+    --color-chart-context-tools: var(--chart-context-tools);
+    --color-chart-context-files: var(--chart-context-files);
+    --color-chart-context-conversation: var(--chart-context-conversation);
+    --color-chart-context-system: var(--chart-context-system);
+}
+
+@layer components {
+    /* ---------------------------------------------------------------- Chat */
+
+    /* Text in a chat is there to be read and copied, so the thread selects even though the app does
+       not. Its chrome stays out of it: a drag on a fold header or a chip would select the row.
+       The pretty wrap from `body` would be recomputed on the growing paragraph every frame a reply
+       streams, so the thread wraps the plain way.
+       The gaps are the air a thread needs to read as turns: the step from a question to its answer,
+       and the wider step from the end of one turn to the next question. A view of its own gets more
+       of both, the way its type does. The block gap is the step inside a turn, where a run of tool
+       lines meets prose or a card. */
+    .chat-thread { user-select: text; text-wrap-style: auto; --chat-answer-gap: 16px; --chat-turn-gap: 24px; --chat-block-gap: 12px; }
+    .chat-column .chat-thread { --chat-answer-gap: 20px; --chat-turn-gap: 32px; --chat-block-gap: 16px; }
+    .chat-thread button, .chat-thread kbd { user-select: none; }
+
+    /*
+     * A chat that is a view of its own reads in a column. The scroller keeps the full width of the
+     * main column, so its scrollbar sits at that column's right edge and nothing jumps when the
+     * thread grows past a screenful; only the rows and the composer inside it are centered.
+     */
+    .chat-column .chat-column-content { margin-inline: auto; max-width: 768px; }
+    /* Wider by the input's inset (`.composer-input .cm-content` padding plus the card's border), so what is typed lines up with the thread. */
+    .chat-column .chat-composer-content { margin-inline: auto; max-width: calc(768px + 2 * 21px); }
+
+    /* A diff inside a chat tool block; the library paints its own colors inside a shadow root and
+       takes the face it draws them in through these variables. */
+    .chat-diff { font-size: var(--text-code); --diffs-font-size: var(--text-code); --diffs-font-family: var(--font-mono); }
+    .chat-diff + .chat-diff { border-top: 1px solid var(--border); }
+
+    /* Live tool rows shine once across; a paused animation costs nothing. */
+    .chat-live-text {
+        background: linear-gradient(90deg, var(--text-muted) 0%, var(--text) 50%, var(--text-muted) 100%);
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: chat-shine 1.6s linear infinite;
+    }
+    @keyframes chat-shine { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+    /* A word of a reply that just arrived. The duration is REVEAL_FADE_MS in chat/ui/reveal.ts, which
+       keeps the spans until it is over; ease-in-out, because ease-out jumps up and then trails. */
+    .chat-fade { animation: chat-fade 300ms ease-in-out both; }
+    /* A whole reply that was written out of sight. */
+    .chat-fade-whole { animation: chat-fade 220ms ease-out both; }
+    /* A block of a reply streamed a block at a time, faded in when it is inserted and never when a
+       finished thread opens, which carries no `data-arriving`. */
+    .chat-markdown[data-arriving] > * {
+        transition: opacity 300ms ease-in-out;
+        @starting-style { opacity: 0; }
+    }
+    @keyframes chat-fade { from { opacity: 0; } to { opacity: 1; } }
+}
+
+/*
+ * Markdown, outside every layer on purpose. The typography plugin registers `.prose` as a utility,
+ * and a later layer beats an earlier one whatever the specificity, so a rule that has to outrank
+ * prose cannot live in `components`. Unlayered styles win over every layer, which is the one
+ * place the app's tokens and scale are sure to land on top of the plugin's.
+ */
+/*
+ * Markdown anywhere in the app: the chat timeline, a note node and the file preview all render
+ * the same `Markdown` component, which carries `prose prose-sm max-w-none text-sm` next to this
+ * class. Prose brings the rhythm; everything here is what the app decides instead of the plugin.
+ * The semantic tokens flip with the theme on their own, so the prose variables read from them
+ * and `prose-invert` is a second source of truth the app does not need. The size comes from the
+ * `text-sm` utility, which a node, a view and the file preview each move.
+ */
+.prose.chat-markdown {
+    --tw-prose-body: var(--text);
+    --tw-prose-headings: var(--text);
+    --tw-prose-lead: var(--text-muted);
+    --tw-prose-links: var(--accent);
+    --tw-prose-bold: var(--text);
+    --tw-prose-counters: var(--text-faint);
+    --tw-prose-bullets: var(--text-faint);
+    --tw-prose-hr: var(--border);
+    --tw-prose-quotes: var(--text);
+    --tw-prose-quote-borders: var(--border);
+    --tw-prose-captions: var(--text-muted);
+    --tw-prose-kbd: var(--text);
+    --tw-prose-code: var(--text);
+    --tw-prose-pre-code: var(--text);
+    --tw-prose-pre-bg: var(--surface-sunken);
+    --tw-prose-th-borders: var(--border);
+    --tw-prose-td-borders: var(--border);
+}
+/* Headings stay on the app's scale, which is flatter than the one prose brings. */
+.chat-markdown :is(h1, h2, h3, h4) { font-weight: 600; line-height: round(1.3em, 1px); }
+.chat-markdown h1 { font-size: var(--text-lg); }
+.chat-markdown h2 { font-size: var(--text-base); }
+.chat-markdown :is(h3, h4) { font-size: var(--text-sm); }
+.chat-markdown a { text-underline-offset: 2px; }
+/* Code is the app's own: `--text-code` at every depth, and none of the quotes prose puts around
+   inline code, since the chip the component draws already says what it is. */
+.chat-markdown code { font-size: var(--text-code); font-weight: 400; }
+.chat-markdown code::before, .chat-markdown code::after { content: none; }
+/* A checked box is the marker; prose would put a bullet next to it. */
+.chat-markdown li:has(> input[type="checkbox"]) { list-style: none; }
+.chat-markdown input[type="checkbox"] { margin-right: 6px; accent-color: var(--accent); }
+/* A wide table scrolls in its own wrapper instead of stretching the column it sits in. The
+   wrapper is a scroll container, so the air around the table has to sit on it, not inside it. */
+.chat-table { overflow-x: auto; margin-block: 2em; }
+.chat-markdown table { margin: 0; border-collapse: collapse; font-size: var(--text-xs); }
+.chat-markdown :is(th, td) { border: 1px solid var(--tw-prose-td-borders); padding: 4px 8px; text-align: left; }
+
+/* A code block is shiki's own `<pre>`, which brings a background of its own to override. */
+.chat-code { border-radius: 8px; border: 1px solid var(--border); background: var(--term-bg); overflow: auto; }
+.chat-code pre { margin: 0; padding: round(0.625rem, 1px) round(0.75rem, 1px); background: transparent !important; font-family: var(--font-mono); font-size: var(--text-code); line-height: var(--text-code--line-height); }
+.chat-code code { font-family: inherit; }
+
+/* The chat composer is a CodeMirror editor, whose base theme lands in an unlayered style tag at
+   mount. These rules stay unlayered too, and carry one class more than the theme's selectors. */
+.composer-input .cm-editor { max-height: 200px; }
+.composer-input .cm-editor.cm-focused { outline: none; }
+.composer-input .cm-editor .cm-scroller { overflow: auto; font-family: inherit; line-height: inherit; }
+.composer-input .cm-editor .cm-scroller .cm-content { padding: 18px 14px 6px 20px; caret-color: var(--text); }
+.composer-input .cm-scroller .cm-content .cm-line { padding: 0; }
+.composer-input .cm-scroller .cm-content .cm-placeholder { color: var(--text-faint); }
+.composer-hints, .composer-hints-extra { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+/* The joiner starts with its own comma, so it sits against the lead without the gap. */
+.composer-hints-extra { margin-left: -8px; }
+.composer-hints kbd { padding: 0 6px; border-radius: 5px; background: var(--surface-active); color: var(--text-muted); font-family: var(--font-mono); font-size: var(--text-code); line-height: var(--text-code--line-height); }
+/* The widths of Tailwind's `@md` container variant, which the rest of the composer narrows at. */
+@container composer (width < 28rem) {
+    .composer-input .cm-editor .cm-scroller .cm-content { padding: 14px 12px 4px 14px; }
+    .composer-hints-extra { display: none; }
+}
+/* Markdown stays source while you type: the markers stay put and dim, and what they wrap takes its look. */
+.composer-input .cm-md-mark { color: var(--text-faint); }
+.composer-input .cm-md-strong, .composer-input .cm-md-heading { font-weight: 600; }
+.composer-input .cm-md-emphasis { font-style: italic; }
+.composer-input .cm-md-strike { text-decoration: line-through; }
+.composer-input .cm-md-link { color: var(--accent); text-decoration: underline; }
+.composer-input .cm-md-code { padding: 1px 2px; border-radius: 4px; background: var(--surface-sunken); font-family: var(--font-mono); font-size: var(--text-code); }
+.composer-input .cm-content .cm-line.cm-md-fence { padding: 0 8px; background: var(--surface-sunken); font-family: var(--font-mono); font-size: var(--text-code); }
+.composer-input .cm-content .cm-line.cm-md-fence-start { padding-top: 4px; border-top-left-radius: 6px; border-top-right-radius: 6px; }
+.composer-input .cm-content .cm-line.cm-md-fence-end { padding-bottom: 4px; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }

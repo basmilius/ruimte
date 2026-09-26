@@ -15,7 +15,7 @@ import { suggestedTitleFor } from '@/chat/title';
 import { canvasOfNode, DEFAULT_TITLES, useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
-import { providersOf } from '@/state/providers';
+import { providersOf } from '@ruimte/agents-react/state/providers';
 
 /*
  * What a body needs to run, wherever it is drawn. A node on a canvas and a view of its own are the

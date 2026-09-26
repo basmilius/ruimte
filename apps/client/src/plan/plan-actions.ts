@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { isCanvasView, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { planToMarkdown } from '@ruimte/plan';
 import { focusNodeAction, performAsPerson } from '@/actions/client-actions';
-import { offerDraft } from '@/chat/drafts';
+import { offerDraft } from '@ruimte/agents-react/chat/drafts';
 import { foldableIds, resultsText, revealOptions, type PlanFilter } from '@/plan/plan-view';
 import { revealNode, showView } from '@/project/views';
 import { liveCanvas } from '@/state/canvas';

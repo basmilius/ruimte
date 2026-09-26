@@ -5,7 +5,7 @@ import { Menu } from '@base-ui-components/react/menu';
 import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send } from 'lucide-react';
 import type { Plan } from '@ruimte/contracts';
 import { allSteps, effectiveChecks } from '@ruimte/plan';
-import { forkOriginIn } from '@/chat/logic/fork';
+import { forkOriginIn } from '@/chat/fork-origin';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { ActiveStepButton } from '@/plan/ActiveStepButton';
 import {

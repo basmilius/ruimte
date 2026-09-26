@@ -7,7 +7,7 @@ import { revealPlanStep } from '@/plan/plan-actions';
 import { usePlanAgent } from '@/plan/plan-agent';
 import { activeSteps, activeStepsLabel, nextActiveTarget, sameActiveSteps } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { Icon } from '@ruimte/ui/Icon';
 import { Tooltip } from '@ruimte/ui/Tooltip';
 

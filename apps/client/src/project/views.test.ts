@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectDocument, ProviderInfo } from '@ruimte/contracts';
-import { useDrafts } from '../chat/drafts';
+import { useDrafts } from '@ruimte/agents-react/chat/drafts';
 import { focusedCanvas } from '../state/canvas';
 import { useDocument } from '../state/document';
 import { currentEndpointId } from '../state/keys';
-import { providerSinkFor } from '../state/providers';
+import { providerSinkFor } from '@ruimte/agents-react/state/providers';
 import { askAgentAboutDiagram, newFileViewsAfter, openSessionInKind } from './views';
 
 const installed = (kind: string, name: string) => ({ kind, name, installed: true, capabilities: { chat: true, terminal: true } }) as unknown as ProviderInfo;

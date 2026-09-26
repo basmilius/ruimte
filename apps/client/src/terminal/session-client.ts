@@ -1,7 +1,7 @@
 import type { AgentLaunch, SessionAttachResult, SessionInfo } from '@ruimte/contracts';
 import type { SessionSink } from '../state/sessions';
 import { HandlerTable } from '../transport/handler-table';
-import { MountedRegistry, type MountedEntry } from '../transport/mounted-registry';
+import { MountedRegistry, type MountedEntry } from '@ruimte/agents-react/mounted-registry';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
 type OutputHandler = (data: string) => void;

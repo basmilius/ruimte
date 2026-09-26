@@ -5,7 +5,7 @@ import { CircleCheck } from 'lucide-react';
 import { projectNodes, revealNode } from '@/project/views';
 import { groupAttention, useAttention } from '@/state/attention';
 import { useCanvas } from '@/state/canvas';
-import { useChats } from '@/state/chats';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useDocument } from '@/state/document';
 import { useSessions } from '@/state/sessions';

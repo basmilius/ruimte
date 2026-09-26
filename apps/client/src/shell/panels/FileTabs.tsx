@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { GitCommitHorizontal, GitCompare, Pin, X } from 'lucide-react';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
-import { MENTION_DRAG_TYPE } from '@/chat/mentions';
+import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { isCheckoutDiff, useFiles } from '@/state/files';

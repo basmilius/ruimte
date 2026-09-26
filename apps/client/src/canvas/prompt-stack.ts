@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { focusPromptStart } from '@/prompts/logic/focus';
+import { focusPromptStart } from '@ruimte/agents-react/prompts/logic/focus';
 import { useDocument } from '@/state/document';
 
 interface PromptFrontStore {

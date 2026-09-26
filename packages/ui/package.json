@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
+    "./AccentSwatches": "./src/AccentSwatches.tsx",
     "./Button": "./src/Button.tsx",
     "./CloseButton": "./src/CloseButton.tsx",
     "./DisabledReason": "./src/DisabledReason.tsx",
@@ -43,6 +44,7 @@
     "./platform": "./src/platform.ts",
     "./selection": "./src/selection.ts",
     "./settings/ConfirmDialog": "./src/settings/ConfirmDialog.tsx",
+    "./settings/DetailHeader": "./src/settings/DetailHeader.tsx",
     "./settings/MasterDetail": "./src/settings/MasterDetail.tsx",
     "./settings/SettingsDialog": "./src/settings/SettingsDialog.tsx",
     "./settings/SettingsRow": "./src/settings/SettingsRow.tsx",

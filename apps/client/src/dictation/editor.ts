@@ -1,7 +1,7 @@
 import { StateEffect, StateField } from '@codemirror/state';
 import { isolateHistory } from '@codemirror/commands';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
-import { externalChange } from '@/chat/ui/composer/editor';
+import { externalChange } from '@ruimte/agents-react/chat/ui/composer/editor';
 import type { DictationInsertion } from './controller';
 import { DictationError } from './engine';
 

@@ -9,7 +9,7 @@ import { closeCellAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { isFilesView, type CellView } from '@/shell/files-view';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
-import { SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
+import { SubagentTitleCrumb } from '@ruimte/agents-react/chat/ui/SubagentControls';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { ViewToolbar } from '@/shell/ViewToolbar';
 import { useHasViewToolbar, useShowsSubagents, useViewToolbarLeads } from '@/shell/view-toolbar';

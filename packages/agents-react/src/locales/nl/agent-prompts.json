@@ -1,0 +1,42 @@
+{
+  "card": {
+    "approval": "Verzoek om toestemming",
+    "question": "Vraag",
+    "waiting": "Wacht in de terminal"
+  },
+  "toolbar": "Acties",
+  "sending": "Versturen…",
+  "error": {
+    "notConnected": "Geen verbinding met de machine",
+    "noChoices": "Een chatverzoek heeft geen eigen keuzes"
+  },
+  "approval": {
+    "runCommand": "Commando uitvoeren",
+    "allow": "Toestaan",
+    "deny": "Weigeren",
+    "addReason": "Reden toevoegen",
+    "allChanges_one": "Toestaan geldt voor de {{count}} wijziging in dit verzoek.",
+    "allChanges_other": "Toestaan geldt voor alle {{count}} wijzigingen in dit verzoek.",
+    "loadingDiff": "Diff laden…",
+    "viewDiff": "Volledige diff tonen",
+    "collapseDiff": "Diff inklappen",
+    "details": "Details",
+    "reasonLabel": "Reden voor weigeren",
+    "reasonPlaceholder": "Reden voor weigeren, optioneel"
+  },
+  "question": {
+    "multiSelect": "Kies er een of meer",
+    "answerLabel": "Jouw antwoord",
+    "answerPlaceholder": "Jouw antwoord",
+    "somethingElse": "Iets anders…",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "answer": "Antwoorden"
+  },
+  "meta": {
+    "waiting_one": "{{count}} verzoek wacht",
+    "waiting_other": "{{count}} verzoeken wachten",
+    "question": "Vraag {{index}} van {{total}}",
+    "draftSaved": "Concept bewaard"
+  }
+}

@@ -19,11 +19,17 @@ import { FALLBACK_LANGUAGE } from './src/i18n/languages';
 const here = new URL('.', import.meta.url).pathname;
 const dir = join(here, 'src', 'i18n', 'locales', FALLBACK_LANGUAGE);
 
-const resources = Object.fromEntries(
-    readdirSync(dir)
-        .filter((name) => name.endsWith('.json'))
-        .map((name) => [name.slice(0, -'.json'.length), JSON.parse(readFileSync(join(dir, name), 'utf8')) as Record<string, unknown>])
-);
+const namespacesIn = (folder: string): Record<string, Record<string, unknown>> =>
+    Object.fromEntries(
+        readdirSync(folder)
+            .filter((name) => name.endsWith('.json'))
+            .map((name) => [name.slice(0, -'.json'.length), JSON.parse(readFileSync(join(folder, name), 'utf8')) as Record<string, unknown>])
+    );
+
+const resources = namespacesIn(dir);
+
+// The chat's namespaces are named after their files, one per surface, the way the client's are.
+const agentsWords = namespacesIn(join(here, '..', '..', 'packages', 'agents-react', 'src', 'locales', FALLBACK_LANGUAGE));
 
 // Awaited, so the first test already has the words: nothing here waits for a network or a file.
 await i18next.init({
@@ -31,7 +37,7 @@ await i18next.init({
     fallbackLng: FALLBACK_LANGUAGE,
     defaultNS: 'common',
     interpolation: { escapeValue: false },
-    resources: { [FALLBACK_LANGUAGE]: { ...resources, [UI_NAMESPACE]: uiWords } }
+    resources: { [FALLBACK_LANGUAGE]: { ...resources, ...agentsWords, [UI_NAMESPACE]: uiWords } }
 });
 
 // The formatters of @ruimte/ui read the client's settings, which the tests set.

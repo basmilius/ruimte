@@ -1,5 +1,6 @@
 import i18next from 'i18next';
-import { Bot, Brain, ChartNoAxesColumn, Folder, Info, Keyboard, LayoutGrid, Mic, MousePointer2, Palette, Server, type LucideIcon } from 'lucide-react';
+import { Bot, Folder, Info, Keyboard, LayoutGrid, Mic, MousePointer2, Palette, Server, type LucideIcon } from 'lucide-react';
+import { PROVIDERS_SECTION, USAGE_SECTION, type AgentsSettingsSection } from '@ruimte/agents-react/settings/sections';
 import type { SettingsSectionId } from '@/state/ui';
 
 export interface SettingsSectionMeta {
@@ -38,10 +39,10 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
     {
         label: 'ai',
         sections: [
-            { id: 'providers', icon: Brain, split: true },
+            { id: 'providers', icon: PROVIDERS_SECTION.icon, split: PROVIDERS_SECTION.split },
             { id: 'agents', icon: Bot },
             { id: 'computer', icon: MousePointer2 },
-            { id: 'usage', icon: ChartNoAxesColumn },
+            { id: 'usage', icon: USAGE_SECTION.icon },
             { id: 'voice', icon: Mic }
         ]
     }
@@ -53,10 +54,13 @@ export const ACCOUNT_SECTION: SettingsSectionMeta = { id: 'machines', icon: Serv
 
 export const ALL_SETTINGS_SECTIONS: readonly SettingsSectionMeta[] = [...SETTINGS_GROUPS.flatMap((group) => group.sections), ABOUT_SECTION, ACCOUNT_SECTION];
 
+/* The sections the chat's package brings, which carry their own words. */
+const AGENTS_SECTIONS: Partial<Record<SettingsSectionId, AgentsSettingsSection>> = { providers: PROVIDERS_SECTION, usage: USAGE_SECTION };
+
 /* Read when a section is drawn, never at module level. The translations are not in yet while this file loads. */
-export const sectionLabel = (id: SettingsSectionId): string => i18next.t(`settings:sections.${id}.label`);
+export const sectionLabel = (id: SettingsSectionId): string => AGENTS_SECTIONS[id]?.label() ?? i18next.t(`settings:sections.${id}.label`);
 
 /* One line under the pane title that says what the pane is about. */
-export const sectionDescription = (id: SettingsSectionId): string => i18next.t(`settings:sections.${id}.description`);
+export const sectionDescription = (id: SettingsSectionId): string => AGENTS_SECTIONS[id]?.description() ?? i18next.t(`settings:sections.${id}.description`);
 
 export const groupLabel = (label: NonNullable<SettingsNavGroup['label']>): string => i18next.t(`settings:nav.groups.${label}`);

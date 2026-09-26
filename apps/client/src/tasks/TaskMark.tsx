@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { Task } from '@ruimte/contracts';
 import { Icon } from '@ruimte/ui/Icon';
-import { statusLookOf, taskStatusWord } from '@/ui/status-look';
+import { statusLookOf, taskStatusWord } from '@ruimte/agents-react/agents/status-look';
 import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /*

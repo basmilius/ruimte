@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
-import { useChats, type ChatState } from '@/state/chats';
+import { useChats, type ChatState } from '@ruimte/agents-react/state/chats';
 import { useSessions, type SessionState } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import type { DesktopBridge, KeepAwakeRequest } from '@/desktop/bridge';

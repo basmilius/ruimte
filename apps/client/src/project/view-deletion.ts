@@ -2,7 +2,7 @@ import { isCanvasView, isFileView, isSessionView, resolveStoredPath, sessionNode
 import { agentsEndedBy } from '@/agents/end-children';
 import { nodeWorking } from '@/state/agent-work';
 import { liveCanvas } from '@/state/canvas';
-import { useChats } from '@/state/chats';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSessions, type StatusOf } from '@/state/sessions';

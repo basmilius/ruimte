@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import type { DeviceAction, DeviceDetail, DeviceFrame, DeviceInfo, DeviceInput, DeviceVideoFormat, LiveStreamFrame } from '@ruimte/contracts';
 import { useDevices } from '@/devices/state';
 import { HandlerTable } from '@/transport/handler-table';
-import { MountedRegistry, type MountedEntry } from '@/transport/mounted-registry';
+import { MountedRegistry, type MountedEntry } from '@ruimte/agents-react/mounted-registry';
 import { isConnectionError, type Transport, type TransportStatus } from '@/transport/transport';
 
 interface MountedDevice extends MountedEntry {

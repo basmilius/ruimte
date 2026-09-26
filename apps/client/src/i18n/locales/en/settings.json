@@ -12,8 +12,7 @@
         },
         "accent": {
             "label": "Accent",
-            "description": "Selection rings, focus and the terminal cursor.",
-            "more": "More colors"
+            "description": "Selection rings, focus and the terminal cursor."
         },
         "interface": {
             "title": "Interface",
@@ -91,17 +90,9 @@
             "label": "Files and Git",
             "description": "What the Files and Git panels show, and where browsing for a folder starts."
         },
-        "providers": {
-            "label": "Providers",
-            "description": "The agent CLIs on this machine and the accounts they sign in with."
-        },
         "agents": {
             "label": "Agents",
             "description": "Defaults, permissions and notifications for agents."
-        },
-        "usage": {
-            "label": "Usage",
-            "description": "The currency of the usage page."
         },
         "voice": {
             "label": "Voice",
@@ -118,23 +109,6 @@
         "about": {
             "label": "About",
             "description": "Version, machine details and links."
-        }
-    },
-    "usage": {
-        "currency": {
-            "label": "Currency",
-            "dollars": "Prices as published, in dollars.",
-            "noRate": "No exchange rate yet. The page shows dollars until there is one.",
-            "converted": "Converted at the ECB reference rate of {{date}}.",
-            "options": {
-                "USD": "Dollars",
-                "EUR": "Euros"
-            }
-        },
-        "page": {
-            "label": "Usage page",
-            "description": "Cost, tokens and plan limits, per account.",
-            "open": "Open usage"
         }
     },
     "gesture": {
@@ -349,145 +323,6 @@
         "paired": "Paired",
         "onAccount": "On your account",
         "openedThroughAccount": "Opened through your account"
-    },
-    "providers": {
-        "failed": "The provider settings failed to render",
-        "list": {
-            "label": "Agent CLIs and their accounts",
-            "default": "Default",
-            "addAccount": "Add a {{provider}} account",
-            "notInstalled": "Not installed",
-            "missing": "Missing",
-            "notInstalledNote": "To add one, install it and restart Ruimte on that machine.",
-            "none": "No agent CLIs found on this machine.",
-            "noAccounts": "This machine keeps no accounts yet. Update Ruimte there to add one."
-        },
-        "abilities": {
-            "version": "Version {{version}}.",
-            "chatAndTerminal": "Chat and terminal.",
-            "terminalOnly": "Terminal only.",
-            "reportsStatus": "Reports agent status.",
-            "noStatus": "Does not report agent status."
-        },
-        "status": {
-            "checking": "Checking",
-            "disabled": "Turned off",
-            "notFound": "CLI not found",
-            "signedOut": "Not logged in",
-            "ready": "Logged in",
-            "readyPlan": "Logged in · {{plan}}",
-            "available": "Ready",
-            "folderMissing": "Folder missing",
-            "unavailable": "Not available",
-            "failed": "Check failed"
-        },
-        "cli": {
-            "addAccount": "Add account",
-            "onlyDefault": "{{provider}} has no setting for its config folder, so it has only its default account.",
-            "defaults": {
-                "title": "Defaults for new chats",
-                "description": "Picking a model or account in a chat also changes its default here.",
-                "account": "Account",
-                "accountFor": "Default account for {{provider}}",
-                "model": "Model",
-                "modelFor": "Default model for {{provider}}",
-                "shared": "Shared by every {{provider}} account.",
-                "usesCliDefault": "Uses the CLI's own default model.",
-                "providerDefault": "Provider default",
-                "legacyModel": "{{name}} (legacy)"
-            },
-            "accounts": "Accounts"
-        },
-        "account": {
-            "kind": "{{provider}} account",
-            "enabled": {
-                "label": "Use this account",
-                "description": "Turned off, it is not offered for new chats and agents."
-            },
-            "showFolder": "Show folder",
-            "folderCopied": "Folder path copied",
-            "name": "Name",
-            "color": "Color",
-            "login": {
-                "title": "Login",
-                "signedInAs": "Logged in as {{email}}",
-                "signedIn": "Logged in",
-                "planDetail": "{{plan}} plan. Log in again opens a terminal node with the CLI's own login.",
-                "detail": "Log in again opens a terminal node with the CLI's own login.",
-                "signedOut": "Not logged in",
-                "signedOutDetail": "Opens a terminal node that runs the CLI's login with this folder.",
-                "logIn": "Log in",
-                "logInAgain": "Log in again",
-                "needsProject": "Open a project on this machine to log in. The login runs in a terminal node on its canvas.",
-                "needsCanvas": "Open a canvas to log in. The login runs in a terminal node on it.",
-                "failed": "Could not open the login",
-                "nodeTitle": "{{account}} login"
-            },
-            "folder": {
-                "label": "Folder",
-                "detail": "Given to the CLI as <code>{{variable}}</code>. The CLI keeps its own login, settings and history here.",
-                "detailPlain": "The CLI keeps its own login, settings and history here."
-            },
-            "variables": {
-                "title": "Variables",
-                "description": "Extra environment for this account only. Sensitive values stay in the keychain.",
-                "add": "Add variable",
-                "name": "Name of variable {{index}}",
-                "value": "Value of {{name}}",
-                "kept": "Kept in the keychain",
-                "lock": "Keep {{name}} in the keychain",
-                "unlock": "Store {{name}} as plain text",
-                "noKeychain": "This machine has no keychain, so a value cannot be kept secret.",
-                "remove": "Remove {{name}}",
-                "none": "No variables",
-                "discard": "Discard",
-                "problem": {
-                    "noName": "Every variable needs a name.",
-                    "invalidName": "{{name}} is not a variable name.",
-                    "duplicate": "{{name}} is set twice.",
-                    "noValue": "{{name}} needs a value."
-                }
-            },
-            "remove": {
-                "label": "Remove account",
-                "description": "Chats that use it ask for another account on their next turn. The folder stays on disk.",
-                "defaultNote": "The default account uses the CLI's own folder and cannot be removed. Turn it off above instead.",
-                "button": "Remove",
-                "confirmTitle": "Remove {{account}}?",
-                "confirmDescription": "Ruimte forgets this account. Its folder stays on disk at {{folder}}, with its login in it.",
-                "confirm": "Remove account"
-            },
-            "saveFailed": "Could not save the account"
-        },
-        "add": {
-            "title": "Add a {{provider}} account",
-            "description": "Ruimte makes a folder for it on the machine, then opens a terminal node where you log in.",
-            "name": "Name",
-            "namePlaceholder": "Work",
-            "color": "Color",
-            "advanced": "Advanced",
-            "link": {
-                "label": "Link an existing folder",
-                "description": "Use a config folder that is already on the machine instead of a new one. Ruimte never moves or deletes it.",
-                "placeholder": "Path on the machine"
-            },
-            "create": "Add account",
-            "linkButton": "Link folder",
-            "failed": "Could not add the account"
-        },
-        "apple": {
-            "label": "Enable Apple Foundation Models",
-            "description": "Use the model on this Mac for chats and tools. Requires Apple silicon, macOS 26.4 or later, and Apple Intelligence.",
-            "toggleDescription": "Turning this off stops active Apple chats and pending tool approvals on this machine.",
-            "tools": "Model inference stays on this Mac. Web searches, page requests and MCP tools can send data to their configured services after approval.",
-            "status": "Availability",
-            "disabled": "Turned off on this machine.",
-            "ready": "The local model is ready.",
-            "unavailable": "The local model is not available.",
-            "updateRequired": "Update Ruimte on this machine to configure Apple Foundation Models.",
-            "saveFailed": "Could not change Apple Foundation Models",
-            "requiresMac": "Requires a Mac with Apple silicon."
-        }
     },
     "agents": {
         "deleteAnyView": {
@@ -933,5 +768,28 @@
         "client": "This client",
         "computer": "This computer",
         "machine": "Machine"
+    },
+    "providers": {
+        "apple": {
+            "label": "Enable Apple Foundation Models",
+            "description": "Use the model on this Mac for chats and tools. Requires Apple silicon, macOS 26.4 or later, and Apple Intelligence.",
+            "toggleDescription": "Turning this off stops active Apple chats and pending tool approvals on this machine.",
+            "tools": "Model inference stays on this Mac. Web searches, page requests and MCP tools can send data to their configured services after approval.",
+            "status": "Availability",
+            "disabled": "Turned off on this machine.",
+            "ready": "The local model is ready.",
+            "unavailable": "The local model is not available.",
+            "updateRequired": "Update Ruimte on this machine to configure Apple Foundation Models.",
+            "saveFailed": "Could not change Apple Foundation Models",
+            "requiresMac": "Requires a Mac with Apple silicon."
+        },
+        "account": {
+            "login": {
+                "needsProject": "Open a project on this machine to log in. The login runs in a terminal node on its canvas.",
+                "needsCanvas": "Open a canvas to log in. The login runs in a terminal node on it.",
+                "failed": "Could not open the login",
+                "nodeTitle": "{{account}} login"
+            }
+        }
     }
 }

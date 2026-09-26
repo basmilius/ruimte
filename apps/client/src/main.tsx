@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { App } from '@/App';
+import { connectChatHost } from '@/chat/host';
 import { connectFormat } from '@/format/source';
 import { initI18n } from '@/i18n';
 import { startAgentNotifications } from '@/shell/notifications';
@@ -42,6 +43,7 @@ import '@/styles.css';
 
 // Before anything that writes a date or a number, so none of it is written in the default region first.
 connectFormat();
+connectChatHost();
 
 /* The desktop app carries its own chunks, so one failing there is no deploy, and a reload would only drop every page. */
 if (!desktop()) {

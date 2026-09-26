@@ -1,11 +1,11 @@
 import type { ProjectViewKind, RuntimeMode } from '@ruimte/contracts';
-import { RUNTIME_MODES } from '@/chat/runtime-modes';
-import { useSubagentTrail } from '@/chat/subagent-view';
+import { RUNTIME_MODES } from '@ruimte/agents-react/chat/runtime-modes';
+import { useSubagentTrail } from '@ruimte/agents-react/chat/subagent-view';
 import { useDictation } from '@/dictation/controller';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
 import { isFilesView, type CellView } from '@/shell/files-view';
 import { useCellView } from '@/shell/use-cell-view';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 import { useHasPlans } from '@/state/plans';
 

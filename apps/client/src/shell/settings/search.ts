@@ -89,14 +89,14 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     {
         id: 'providers.defaults.account',
         section: 'providers',
-        label: 'settings:providers.cli.defaults.account',
-        description: 'settings:providers.cli.defaults.description'
+        label: 'agent-providers:cli.defaults.account',
+        description: 'agent-providers:cli.defaults.description'
     },
     {
         id: 'providers.defaults.model',
         section: 'providers',
-        label: 'settings:providers.cli.defaults.model',
-        description: 'settings:providers.cli.defaults.usesCliDefault'
+        label: 'agent-providers:cli.defaults.model',
+        description: 'agent-providers:cli.defaults.usesCliDefault'
     },
     { id: 'agents.defaults.permissions', section: 'agents', label: 'settings:agents.defaults.permissions' },
     { id: 'agents.defaults.terminalMode', section: 'agents', label: 'settings:agents.defaults.terminalMode' },
@@ -123,8 +123,8 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         description: 'settings:agents.keepAwake.mode.working.description',
         available: canKeepAwake
     },
-    { id: 'usage.currency', section: 'usage', label: 'settings:usage.currency.label', description: 'settings:usage.currency.dollars' },
-    { id: 'usage.page', section: 'usage', label: 'settings:usage.page.label', description: 'settings:usage.page.description' },
+    { id: 'usage.currency', section: 'usage', label: 'agent-usage:settings.currency.label', description: 'agent-usage:settings.currency.dollars' },
+    { id: 'usage.page', section: 'usage', label: 'agent-usage:settings.page.label', description: 'agent-usage:settings.page.description' },
     {
         id: 'voice.microphone',
         section: 'voice',

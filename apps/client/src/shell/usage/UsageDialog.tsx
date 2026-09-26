@@ -1,183 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
-import { ChartNoAxesColumn, LoaderCircle, RefreshCw, TriangleAlert, Unplug } from 'lucide-react';
-import { USAGE_PROVIDERS, type UsageAccount } from '@ruimte/contracts';
-import { AccountDot } from '@/agents/AccountDot';
-import { Segmented, Skeleton } from '@ruimte/ui/controls';
+import { LoaderCircle, TriangleAlert, Unplug } from 'lucide-react';
+import { ChatScopeContext } from '@ruimte/agents-react/scope';
+import { useUsageStore } from '@ruimte/agents-react/state/usage';
+import { UsageDialog as Frame } from '@ruimte/agents-react/usage/UsageDialog';
+import { UsagePage } from '@ruimte/agents-react/usage/UsagePage';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { useEndpoints } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 import { useEndpointId } from '@/state/keys';
-import { useProvidersStore } from '@/state/providers';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
-import { askedKey, summaryPayload, UsageEndpointContext, USAGE_PERIODS, useUsage, useUsageStore, type UsageMetric, type UsagePeriod } from '@/state/usage';
-import { machineTransport } from '@/transport';
+import { chatScopeOf } from '@/transport/chat-scope';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
-import type { Transport } from '@/transport/transport';
 import { usageEndpointFor } from '@/shell/usage/picker';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR } from '@ruimte/ui/classes';
-import { EmptyState } from '@ruimte/ui/EmptyState';
 import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Select } from '@ruimte/ui/Select';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { CloseButton } from '@ruimte/ui/CloseButton';
 import { Icon } from '@ruimte/ui/Icon';
-import { formatClock, formatCount, formatDate, formatTokens, PROVIDER_LABELS } from '@/shell/usage/format';
-import { useMoney } from '@/shell/usage/money';
-import { deriveUsage, labelEveryFor } from '@/shell/usage/summary';
-import { UsageBreakdown } from '@/shell/usage/UsageBreakdown';
-import { UsageChart } from '@/shell/usage/UsageChart';
-import { UsageLimits } from '@/shell/usage/UsageLimits';
-import { UsageSummary } from '@/shell/usage/UsageSummary';
-import { UsageTiles } from '@/shell/usage/UsageTiles';
-import { useDialogLayer } from '@ruimte/ui/dialog-layer';
-
-const METRICS: readonly UsageMetric[] = ['cost', 'tokens'];
-
-/* The picker's value for every account, which no account id can be: an id starts with a letter. */
-const ALL_ACCOUNTS = '*';
-
-/* Over the whole popup rather than the body under the header, so an empty state stands in the middle of the dialog. */
-const DIALOG_CENTER = 'pointer-events-none absolute inset-0';
-
-/*
- * Which agent CLIs the machine has, under an empty usage page: no usage is what a machine without any
- * agent looks like too, and the way to fix that is the Agents settings.
- */
-function MachineAgents({ endpointId }: { endpointId: string }) {
-    const { t } = useTranslation('usage');
-    const row = useProvidersStore((s) => s.byEndpoint[endpointId]);
-    const installed = useMemo(() => (row?.providers ?? []).filter((provider) => provider.installed), [row]);
-    if (!row?.loaded) {
-        return null;
-    }
-    return (
-        <div className="flex flex-col items-center gap-2">
-            <p className="text-xs text-text-muted">
-                {installed.length === 0 ? t('agents.none') : t('agents.installed', { list: installed.map((provider) => provider.name).join(', ') })}
-            </p>
-            <Button size="sm" variant="secondary" onClick={() => useUi.getState().setSettings({ open: true, section: 'agents' })}>
-                {t('agents.settings')}
-            </Button>
-        </div>
-    );
-}
-
-/*
- * Asks the machine on screen for the period that is up, keeps the answer under the key of the
- * question it answers, and tells that daemon to keep scanning while the page is here. A late answer
- * to the period before this one never lands, because the key it carries is no longer the one being
- * shown.
- */
-const useSummary = (endpointId: string, transport: Transport | null, period: UsagePeriod, account: string | null): (() => void) => {
-    useEffect(() => {
-        if (transport === null) {
-            return;
-        }
-        const subscribe = (): void => void transport.request('usage.subscribe', {}).catch(() => undefined);
-        if (transport.status === 'open') {
-            subscribe();
-        }
-        // A daemon knows its followers per socket, so every connection has to be told again, on a reconnect and on a move to another machine.
-        const off = transport.subscribeStatus((status) => {
-            if (status === 'open') {
-                subscribe();
-            }
-        });
-        return () => {
-            off();
-            void transport.request('usage.unsubscribe', {}).catch(() => undefined);
-        };
-    }, [transport]);
-
-    const load = useCallback((): void => {
-        if (transport === null) {
-            return;
-        }
-        const payload = summaryPayload(period, account);
-        const asked = askedKey(payload);
-        useUsageStore.getState().setLoading(endpointId, true);
-        transport
-            .request('usage.summary', payload)
-            .then((summary) => useUsageStore.getState().receive(endpointId, asked, summary))
-            .catch(() => useUsageStore.getState().fail(endpointId));
-    }, [transport, endpointId, period, account]);
-
-    useEffect(() => {
-        if (transport === null) {
-            return;
-        }
-        if (transport.status === 'open') {
-            load();
-        }
-        // A scan that found something is the sign to ask again; nothing else changes the numbers.
-        const offChanged = transport.on('usage.changed', load);
-        // Until the other machine answers there is nothing to ask, and what is on screen is the machine that left.
-        const offStatus = transport.subscribeStatus((status) => {
-            if (status === 'open') {
-                load();
-            }
-        });
-        return () => {
-            offChanged();
-            offStatus();
-        };
-    }, [transport, load]);
-
-    return load;
-};
-
-function Provenance() {
-    const { t } = useTranslation('usage');
-    const summary = useUsage((s) => s.summary);
-    const currency = useUsage((s) => s.currency);
-    const failed = useUsage((s) => s.failed);
-    if (failed) {
-        return (
-            <p className={`${FORM_ERROR} mt-auto text-center`} role="alert">
-                {t('provenance.failed')}
-            </p>
-        );
-    }
-    if (summary === null) {
-        return null;
-    }
-    const prices =
-        summary.pricing.fetchedAt === null ? t('provenance.bundledPrices') : t('provenance.fetchedPrices', { date: formatDate(summary.pricing.fetchedAt) });
-    // The rate is named only when it is being used, so a page in dollars says nothing about euros.
-    const rate = currency === 'USD' || summary.rate === null ? null : t('provenance.rate', { currency: summary.rate.currency, date: summary.rate.date });
-    return (
-        <p className="mt-auto text-center text-xs text-text-muted">
-            {t('provenance.scanned', { count: summary.scan.files, time: formatClock(summary.scan.at), files: formatCount(summary.scan.files) })} · {prices}
-            {rate !== null && ` · ${rate}`}
-        </p>
-    );
-}
-
-function LoadingBody() {
-    return (
-        <div className="flex flex-col gap-6">
-            <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
-                <div className="flex flex-col gap-3">
-                    <Skeleton className="h-10 w-40" />
-                    <Skeleton className="w-56" />
-                    <Skeleton className="w-48" />
-                </div>
-                <Skeleton className="h-56 w-full" />
-            </div>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
-                {[0, 1, 2, 3, 4, 5].map((tile) => (
-                    <Skeleton key={tile} className="h-16 w-full rounded-xl" />
-                ))}
-            </div>
-        </div>
-    );
-}
+import { Select } from '@ruimte/ui/Select';
 
 /*
  * A machine that is not answering says so, rather than leaving the page on a skeleton that never
@@ -215,34 +56,6 @@ function MachineNote({ endpointId, stale }: { endpointId: string; stale: boolean
     );
 }
 
-/*
- * Every account of the machine, once a CLI has more than one: picking one narrows the page to what that
- * account spent. The chart keeps its split per CLI, since an account's color is a dot and not a series.
- */
-function AccountPicker({ accounts, value, onChange }: { accounts: readonly UsageAccount[]; value: string | null; onChange(account: string | null): void }) {
-    const { t } = useTranslation('usage');
-    if (!USAGE_PROVIDERS.some((kind) => accounts.filter((account) => account.kind === kind).length > 1)) {
-        return null;
-    }
-    return (
-        <Select
-            value={value ?? ALL_ACCOUNTS}
-            items={[
-                { value: ALL_ACCOUNTS, label: t('dialog.accounts.all') },
-                ...accounts.map((account) => ({
-                    value: account.id,
-                    label: account.label,
-                    icon: <AccountDot color={account.color} />,
-                    description: account.label === PROVIDER_LABELS[account.kind] ? undefined : PROVIDER_LABELS[account.kind]
-                }))
-            ]}
-            onValueChange={(id) => onChange(id === ALL_ACCOUNTS ? null : id)}
-            label={t('dialog.accounts.label')}
-            align="end"
-        />
-    );
-}
-
 /* One entry per machine this client knows, in the order of the list; with one machine there is nothing to pick. */
 function MachinePicker({ endpointId }: { endpointId: string }) {
     const { t } = useTranslation('usage');
@@ -267,101 +80,17 @@ function MachinePicker({ endpointId }: { endpointId: string }) {
     );
 }
 
-/*
- * What both CLIs cost and how much of the plan is left, over one whole machine. It is a dialog and not
- * a view: a view lives in the project file, and none of this belongs to a project.
- */
-function Page({ endpointId }: { endpointId: string }) {
-    const { t } = useTranslation('usage');
-    const period = useUsage((s) => s.period);
-    const metric = useUsage((s) => s.metric);
-    const summary = useUsage((s) => s.summary);
-    const asked = useUsage((s) => s.asked);
-    const loading = useUsage((s) => s.loading);
-    // Per machine, since account ids are a machine's own; the page remounts on a switch.
-    const [account, setAccount] = useState<string | null>(null);
+/* The page of one machine, held while the dialog shows it, like its dialog in the Machines pane. Asking for its numbers is an explicit action. */
+function MachinePage({ endpointId }: { endpointId: string }) {
     const endpoint = useEndpoints((s) => s.endpoints.find((entry) => entry.id === endpointId) ?? null);
-    // Held while the dialog shows this machine, like its dialog in the Machines pane. Asking for its numbers is an explicit action.
     useMachineHold(endpoint);
-    const transport = useMemo(() => machineTransport(endpointId), [endpointId]);
-    const reload = useSummary(endpointId, transport, period, account);
-    const money = useMoney();
-    const answering = useEndpointConnection(endpointId).status === 'open';
-
-    const shown = summary !== null && asked === askedKey(summaryPayload(period, account)) ? summary : null;
-    const derived = shown === null ? null : deriveUsage(shown, metric);
-    const value = metric === 'cost' ? money : formatTokens;
-    const noRoots = shown !== null && shown.roots.every((root) => root.status === 'missing');
-
-    return (
-        <div className="flex min-h-0 grow flex-col">
-            <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border py-3 pr-3 pl-6 max-[960px]:pl-4">
-                <Dialog.Title className="text-base font-semibold text-text">{t('dialog.title')}</Dialog.Title>
-                <div className="ml-auto flex flex-wrap items-center gap-2">
-                    <MachinePicker endpointId={endpointId} />
-                    <AccountPicker accounts={summary?.accounts ?? []} value={account} onChange={setAccount} />
-                    <Segmented
-                        value={period}
-                        options={USAGE_PERIODS.map((entry) => ({ id: entry.id, label: t(`dialog.periods.${entry.id}`) }))}
-                        onChange={(id) => useUsageStore.getState().setPeriod(id)}
-                        label={t('dialog.period')}
-                    />
-                    <Segmented
-                        value={metric}
-                        options={METRICS.map((id) => ({ id, label: t(`dialog.metrics.${id}`) }))}
-                        onChange={(id) => useUsageStore.getState().setMetric(id)}
-                        label={t('dialog.metric')}
-                    />
-                    <Tooltip label={t('dialog.rescan')} name>
-                        <button className="icon-btn" onClick={reload} disabled={loading || !answering}>
-                            <Icon icon={RefreshCw} size={16} className={clsx(loading && 'animate-spin')} />
-                        </button>
-                    </Tooltip>
-                    <CloseButton label={t('dialog.close')} dialog />
-                </div>
-            </header>
-            <div className="flex min-h-0 grow flex-col gap-6 overflow-y-auto px-6 pt-4 pb-6 max-[960px]:px-4">
-                <MachineNote endpointId={endpointId} stale={shown !== null} />
-                {noRoots && (
-                    <EmptyState className={DIALOG_CENTER} icon={ChartNoAxesColumn} action={<MachineAgents endpointId={endpointId} />}>
-                        {t('empty.noTranscripts')}
-                    </EmptyState>
-                )}
-                {/* The skeleton is the wait for an answer; without a socket there is no answer on the way. */}
-                {shown === null && answering && <LoadingBody />}
-                {shown === null && !answering && (
-                    <EmptyState className={DIALOG_CENTER} icon={ChartNoAxesColumn} action={<MachineAgents endpointId={endpointId} />}>
-                        {t('empty.noUsage')}
-                    </EmptyState>
-                )}
-                {shown !== null && derived !== null && !noRoots && (
-                    <>
-                        <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
-                            <UsageSummary
-                                metric={metric}
-                                costUsd={derived.costUsd}
-                                totals={derived.totals}
-                                sessions={shown.sessions}
-                                providers={derived.providers}
-                            />
-                            <UsageChart slots={derived.slots} providers={derived.active} format={value} labelEvery={labelEveryFor(derived.slots.length)} />
-                        </div>
-                        <UsageTiles totals={derived.totals} cacheSavingsUsd={derived.cacheSavingsUsd} />
-                        <UsageBreakdown summary={shown} metric={metric} providers={derived.active} />
-                        <UsageLimits />
-                    </>
-                )}
-                {/* Last in a column that fills the dialog, so it sits at the bottom even under a short page. */}
-                <Provenance />
-            </div>
-        </div>
-    );
+    return <UsagePage pickers={<MachinePicker endpointId={endpointId} />} notice={(stale) => <MachineNote endpointId={endpointId} stale={stale} />} />;
 }
 
 /*
  * One dialog with a machine picker rather than one per machine: the numbers are a person's spend and
- * a person works on several machines. Everything under it reads the picked machine through the
- * context, which is what keeps the limit bars in the sidebar on the machine the work is on.
+ * a person works on several machines. Everything under it reads the picked machine as its scope,
+ * which is what keeps the limit bars in the sidebar on the machine the work is on.
  */
 function Body() {
     const workspaceId = useEndpointId();
@@ -374,28 +103,21 @@ function Body() {
     );
 
     return (
-        <UsageEndpointContext.Provider value={endpointId}>
+        <ChatScopeContext.Provider value={chatScopeOf(endpointId)}>
             {/* Remounts on a switch, so no effect of the machine that left outlives it. */}
-            <Page key={endpointId} endpointId={endpointId} />
-        </UsageEndpointContext.Provider>
+            <MachinePage key={endpointId} endpointId={endpointId} />
+        </ChatScopeContext.Provider>
     );
 }
 
-/* Larger than the settings, since the chart and the breakdown need the width. The body mounts only while open, so nothing is scanned behind a closed dialog. */
+/* What both CLIs cost and how much of the plan is left, over one whole machine at a time. */
 export function UsageDialog() {
     const open = useUi((s) => s.usageOpen);
-    const stacked = useDialogLayer(open);
     return (
-        <Dialog.Root open={open} onOpenChange={(next) => useUi.getState().setUsageOpen(next)}>
-            <Dialog.Portal>
-                <Dialog.Backdrop className={clsx('dialog-backdrop', stacked && 'dialog-backdrop-nested')} forceRender={stacked} />
-                <Dialog.Popup className={clsx('dialog-popup flex h-[820px] w-[1080px] flex-col', stacked && 'dialog-popup-nested')}>
-                    <ErrorBoundary label={i18next.t('usage:dialog.failed')} className="grow">
-                        <Body />
-                    </ErrorBoundary>
-                    <Dialog.Description className="sr-only">{i18next.t('usage:dialog.description')}</Dialog.Description>
-                </Dialog.Popup>
-            </Dialog.Portal>
-        </Dialog.Root>
+        <Frame open={open} onOpenChange={(next) => useUi.getState().setUsageOpen(next)}>
+            <ErrorBoundary label={i18next.t('agent-usage:dialog.failed')} className="grow">
+                <Body />
+            </ErrorBoundary>
+        </Frame>
     );
 }

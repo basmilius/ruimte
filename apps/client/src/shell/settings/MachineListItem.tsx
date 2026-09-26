@@ -6,13 +6,15 @@ import { describeConnection, describeLastSeen, describePing, reachabilityLabel }
 import { MasterItem } from '@ruimte/ui/settings/MasterDetail';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';
-import { useMinute } from '@/shell/usage/limits';
 import { brokerRouteOf, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import type { TransportStatus } from '@/transport';
 import { useLatency } from '@/transport/ping';
 import { useEndpointConnection, useLastSeenAt } from '@/transport/status';
 import { Tooltip } from '@ruimte/ui/Tooltip';
+import { useNow } from '@ruimte/ui/useNow';
+
+const MINUTE_MS = 60_000;
 
 const DOT: Record<TransportStatus, string> = {
     open: 'bg-status-idle',
@@ -42,7 +44,7 @@ function ConnectedTile({ entry, endpoint }: { entry: MachineEntry; endpoint: End
     const latency = useLatency(endpoint.id);
     const lastSeenAt = useLastSeenAt(endpoint.id);
     const reachability = useServers((s) => s.byEndpoint[endpoint.id]?.reachability ?? endpoint.reachability);
-    const now = useMinute();
+    const now = useNow(MINUTE_MS);
     const lastSeen = connection.noLink === true ? describeLastSeen(lastSeenAt, now) : null;
 
     const tooltip = (

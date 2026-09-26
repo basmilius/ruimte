@@ -4,13 +4,12 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import { GitFork } from 'lucide-react';
 import { CHAT_FORK_TITLE_MAX, type ChatForkInfoResult } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
-import { AccountDot } from '@/agents/AccountDot';
-import { canContinueOn } from '@/agents/accounts';
-import { useAccountChoice } from '@/chat/account-choice';
+import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
+import { canContinueOn } from '@ruimte/agents-react/agents/accounts';
+import { useAccountChoice } from '@ruimte/agents-react/chat/account-choice';
 import {
     branchRefusal,
     FORKABLE_PROVIDERS,
-    forkOriginIn,
     forkPayload,
     forkPointLabel,
     forkPointOf,
@@ -18,16 +17,17 @@ import {
     forkShapes,
     type ForkCliChoice,
     type ForkShape
-} from '@/chat/logic/fork';
-import { accountFor, readChatPreferences, selectionFor } from '@/chat/preferences';
-import { ModelPicker } from '@/chat/ui/Pickers';
-import { useProviders } from '@/state/providers';
+} from '@ruimte/agents-react/chat/logic/fork';
+import { accountFor, readChatPreferences, selectionFor } from '@ruimte/agents-react/chat/preferences';
+import { forkOriginIn } from '@/chat/fork-origin';
+import { ModelPicker } from '@ruimte/agents-react/chat/ui/Pickers';
+import { useProviders } from '@ruimte/agents-react/state/providers';
 import { Toggle } from '@ruimte/ui/controls';
 import { canvasOfNode } from '@/state/canvas';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
-import { knownAccounts, providerAccountsOf } from '@/state/provider-accounts';
+import { knownAccounts, providerAccountsOf } from '@ruimte/agents-react/state/provider-accounts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
 import { Button } from '@ruimte/ui/Button';

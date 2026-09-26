@@ -27,7 +27,7 @@ An app using it does three things:
 
 ## Settings
 
-`settings/SettingsDialog` is the dialog with sections on the left and one pane on the right, a search field over them and an optional account tab at the foot. The app hands it the sections (icon, label, description, a pane component, lazy or not), a `find` for the search, and where the dialog is (`section`, `target`) with `onNavigate`. Panes build on `SettingsSection`, `SettingsRow`, `MasterDetail` and the controls in `controls` (`Toggle`, `Segmented`, `Stepper`).
+`settings/SettingsDialog` is the dialog with sections on the left and one pane on the right, a search field over them and an optional account tab at the foot. The app hands it the sections (icon, label, description, a pane component, lazy or not), a `find` for the search, and where the dialog is (`section`, `target`) with `onNavigate`. Panes build on `SettingsSection`, `SettingsRow`, `MasterDetail`, `DetailHeader` and the controls in `controls` (`Toggle`, `Segmented`, `Stepper`). `AccentSwatches` picks one color of a palette the app hands it.
 
 ## Rules
 

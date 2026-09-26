@@ -10,7 +10,7 @@ import { StatusDot } from '@/canvas/NodeFrame';
 import { nodesInWorktree, originLabel, workBadges, workBadgesLabel, type WorkBadgeKind } from '@/shell/panels/worktree-rows';
 import { nodeWorking } from '@/state/agent-work';
 import { hasActiveCanvas, useDocument } from '@/state/document';
-import { useChats } from '@/state/chats';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { worktreeLists, type WorktreeNode } from '@/state/worktrees';

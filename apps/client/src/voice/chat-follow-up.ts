@@ -1,5 +1,5 @@
 import type { ChatItem } from '@ruimte/contracts';
-import type { ChatState } from '@/state/chats';
+import type { ChatState } from '@ruimte/agents-react/state/chats';
 
 export interface VoiceChatFollowUp {
     key: string;

@@ -1,4 +1,4 @@
-import type { ChatState, ChatStatuses } from '@/state/chats';
+import type { ChatState, ChatStatuses } from '@ruimte/agents-react/state/chats';
 import { endpointKey } from '@/state/keys';
 import type { SessionState, SessionsByKey, StatusOf } from '@/state/sessions';
 

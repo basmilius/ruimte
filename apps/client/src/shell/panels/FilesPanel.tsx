@@ -32,7 +32,7 @@ import {
     Search
 } from 'lucide-react';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
-import { MENTION_DRAG_TYPE } from '@/chat/mentions';
+import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
 import { createViewAction } from '@/actions/client-actions';
 import { showFileOnCanvas } from '@/project/views';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';

@@ -38,7 +38,7 @@ import { projectNodes, revealNode } from '@/project/views';
 import { Segmented } from '@ruimte/ui/controls';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { ProcessChart } from '@/shell/panels/ProcessChart';
-import { niceScale } from '@/shell/usage/summary';
+import { niceScale } from '@ruimte/agents-react/usage/summary';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';

@@ -1,15 +1,6 @@
-import { createContext, useContext, useMemo } from 'react';
+import type { FileRef } from '@ruimte/agents-react/host';
 import { runAsPerson } from '@/actions/client-actions';
 import { absoluteOf, basenameOf, isAbsolutePath } from '@/shell/panels/files-tree';
-
-export interface FileRef {
-    /* As it was written: absolute, or relative to the folder the text is read in. */
-    path: string;
-    /* One-based, when the reference named a line. */
-    line?: number;
-    /* A trailing separator is the only thing that says a reference means a directory. */
-    directory: boolean;
-}
 
 /*
  * The extensions a bare file name has to carry to read as a file, so `useFiles.getState` and `v1.2`
@@ -168,22 +159,4 @@ export const openFileLink = async (cwd: string | null, ref: FileRef): Promise<vo
         return;
     }
     await runAsPerson('file.preview', { path, line: ref.line ?? null });
-};
-
-/*
- * The folder a relative reference in rendered text counts from: a chat's own cwd, which is a
- * worktree as often as it is the project, the folder of the file the preview is drawing, or the
- * project itself. Null where nobody said, and there only an absolute path is a link.
- */
-export const FileLinkContext = createContext<string | null>(null);
-
-export const useFileLinkCwd = (): string | null => useContext(FileLinkContext);
-
-/* The reference a piece of text names, only where this spot on screen could open it. */
-export const useFileLinkTarget = (text: string): FileRef | null => {
-    const cwd = useFileLinkCwd();
-    return useMemo(() => {
-        const ref = parseFileRef(text);
-        return ref === null || resolveFileRef(cwd, ref) === null ? null : ref;
-    }, [text, cwd]);
 };
