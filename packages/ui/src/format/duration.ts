@@ -1,3 +1,4 @@
+import { relativeFormatter } from './locale.ts';
 import { formatDecimal, formatNumber } from './number.ts';
 
 const SECOND = 1000;
@@ -63,17 +64,20 @@ export const formatClockDuration = (ms: number): string => {
     return hours > 0 ? `${formatNumber(hours)}:${clock}` : clock;
 };
 
-/* How long ago something was, short enough for the right edge of a row. */
+const AGO: Intl.RelativeTimeFormatOptions = { style: 'narrow', numeric: 'always' };
+const NOW: Intl.RelativeTimeFormatOptions = { style: 'narrow', numeric: 'auto' };
+
+/* How long ago something was, short enough for the right edge of a row: `3m ago`, `3 min. geleden`. */
 export const formatAgo = (ms: number): string => {
     const past = Math.max(0, ms);
     if (past < MINUTE) {
-        return 'just now';
+        return relativeFormatter(NOW).format(0, 'second');
     }
     if (past < HOUR) {
-        return `${formatNumber(Math.floor(past / MINUTE))}m ago`;
+        return relativeFormatter(AGO).format(-Math.floor(past / MINUTE), 'minute');
     }
     if (past < DAY) {
-        return `${formatNumber(Math.floor(past / HOUR))}h ago`;
+        return relativeFormatter(AGO).format(-Math.floor(past / HOUR), 'hour');
     }
-    return `${formatNumber(Math.floor(past / DAY))}d ago`;
+    return relativeFormatter(AGO).format(-Math.floor(past / DAY), 'day');
 };

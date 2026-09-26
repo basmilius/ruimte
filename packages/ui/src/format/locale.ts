@@ -117,6 +117,7 @@ const cacheFor = <O extends object, T>(store: WeakMap<O, Cached<T>>, options: O,
 const numbers = new WeakMap<Intl.NumberFormatOptions, Cached<Intl.NumberFormat>>();
 const dates = new WeakMap<Intl.DateTimeFormatOptions, Cached<Intl.DateTimeFormat>>();
 const words = new WeakMap<Intl.DateTimeFormatOptions, Cached<Intl.DateTimeFormat>>();
+const relatives = new WeakMap<Intl.RelativeTimeFormatOptions, Cached<Intl.RelativeTimeFormat>>();
 
 export const numberFormatter = (options: Intl.NumberFormatOptions): Intl.NumberFormat =>
     cacheFor(numbers, options, formatLocale(), (locale, spec) => new Intl.NumberFormat(locale, spec));
@@ -128,6 +129,10 @@ export const dateFormatter = (options: Intl.DateTimeFormatOptions): Intl.DateTim
    weekday, era and day period are lifted out of it. */
 export const wordFormatter = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat =>
     cacheFor(words, options, wordLocale(), (locale, spec) => new Intl.DateTimeFormat(locale, spec));
+
+/* `3 min. geleden` is words as much as a number, so the language writes it, the way it writes a month. */
+export const relativeFormatter = (options: Intl.RelativeTimeFormatOptions): Intl.RelativeTimeFormat =>
+    cacheFor(relatives, options, wordLocale(), (locale, spec) => new Intl.RelativeTimeFormat(locale, spec));
 
 const collators = new Map<string, Intl.Collator>();
 

@@ -24,6 +24,7 @@ const inRegion = (region: string): void => {
 };
 
 afterEach(() => {
+    source.set({ language: 'en' });
     inRegion(FORMAT_SYSTEM);
 });
 
@@ -88,13 +89,20 @@ describe('how long a window still has', () => {
 
 describe('how long ago something was', () => {
     test('says so in words under a minute and in units above it', () => {
-        expect(formatAgo(30_000)).toBe('just now');
+        expect(formatAgo(30_000)).toBe('now');
         expect(formatAgo(3 * MINUTE)).toBe('3m ago');
         expect(formatAgo(5 * HOUR)).toBe('5h ago');
         expect(formatAgo(9 * DAY)).toBe('9d ago');
     });
 
     test('reads a clock that runs ahead as now rather than as the future', () => {
-        expect(formatAgo(-5000)).toBe('just now');
+        expect(formatAgo(-5000)).toBe('now');
+    });
+
+    test('is written in the language of the interface', () => {
+        source.set({ language: 'nl' });
+        expect(formatAgo(30_000)).toBe('nu');
+        expect(formatAgo(3 * MINUTE)).toBe('3 min. geleden');
+        expect(formatAgo(5 * HOUR)).toBe('5 uur geleden');
     });
 });
