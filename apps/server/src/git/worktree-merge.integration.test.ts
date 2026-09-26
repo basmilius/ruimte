@@ -50,7 +50,8 @@ test('cancel ends a step a hook holds up, after the merge said it is still waiti
 
     const { promise: waiting, resolve } = Promise.withResolvers<string>();
     const merging = merges.merge({ repo, path: worktree.path, actionId: 'merge-1', strategy: 'merge', commitFirst: true }, (phase, line) => {
-        if (line === STILL_WAITING) {
+        // A slow runner can outlast the notice on `git add` too; only the hook's step is under test.
+        if (line === STILL_WAITING && phase === 'commit') {
             resolve(phase);
         }
     });
