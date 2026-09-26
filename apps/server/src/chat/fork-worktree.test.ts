@@ -10,7 +10,7 @@ import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { ChatStore } from './chat-store.ts';
-import { claudeProjectSlug } from './claude-transcript.ts';
+import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 
 const content = (): ProjectContent => ({
     name: 'repo',

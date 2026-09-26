@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { ProjectCanvasView, ProjectContent, ProjectDocument, ServerFrame } from '@ruimte/contracts';
 import { connectionOpener, type ClientChannel, type ConnectionServices, type OpenConnection } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { FakeWatch } from '../fs/watch-test-helpers.ts';
+import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
 import { ProjectStore } from '../projects/project-store.ts';
 import { registerProjectHandlers } from './project.ts';
 

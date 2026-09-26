@@ -9,10 +9,11 @@ export type ChatErrorCode =
     | 'invalid-attachments'
     | 'subagent-not-found'
     | 'task-not-found'
-    // What reading a CLI's own conversation is refused with.
+    // What reading or forking a CLI's own conversation is refused with.
     | 'transcript-missing'
     | 'transcript-format'
     | 'fork-failed'
+    | 'turn-not-found'
     // What a bookmark is refused with.
     | 'item-not-found'
     | 'bookmark-not-found'

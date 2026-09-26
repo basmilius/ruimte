@@ -1,12 +1,12 @@
 import { existsSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatHistoryResult, ChatItem } from '@ruimte/contracts';
-import { readLines } from '@ruimte/agents/title-file';
-import { ClaudeProtocol } from '@ruimte/agents/chat/claude-protocol';
-import { readingThread, settledReading } from '@ruimte/agents/chat/subagent-projection';
-import type { ChatThread } from '@ruimte/agents/chat/thread';
-import type { ThreadProjector } from '@ruimte/agents/chat/projector';
+import type { ChatHistoryResult, ChatItem } from '@ruimte/agent-contracts';
+import { readLines } from '../title-file.ts';
+import { ClaudeProtocol } from './claude-protocol.ts';
+import { readingThread, settledReading } from './subagent-projection.ts';
+import type { ChatThread } from './thread.ts';
+import type { ThreadProjector } from './projector.ts';
 
 const CHUNK_BYTES = 4 * 1024 * 1024;
 

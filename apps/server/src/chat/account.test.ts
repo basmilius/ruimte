@@ -11,7 +11,7 @@ import { testAccounts } from '../providers/accounts/test-accounts.ts';
 import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 import { ChatStore } from './chat-store.ts';
-import { claudeProjectSlug } from './claude-transcript.ts';
+import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 
 const content = (): ProjectContent => ({
     name: 'repo',

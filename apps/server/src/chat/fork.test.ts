@@ -14,7 +14,7 @@ import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
 import { verbsNote } from '../context/context-note.ts';
-import { claudeProjectSlug } from './claude-transcript.ts';
+import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 import { inProcess } from '@ruimte/agents/chat/fake-cli';
 import { fakeCodex, fakeCodexForks } from '@ruimte/agents/chat/fake-codex';
 import { chatForkDeps, forkChat, itemsThrough, type ChatForkDeps } from './fork.ts';

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { GITIGNORE_TEXT } from './project-files.ts';
 import { PROJECT_VERSION, ProjectOpenResultSchema, emptyCanvasView, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
-import { FakeWatch } from '../fs/watch-test-helpers.ts';
+import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';

@@ -1,5 +1,5 @@
 import { DRAWING_VERSION, EMPTY_DRAWING, type DrawingContent, type DrawingDocument, type DrawingElement } from '@ruimte/contracts';
-import type { WatchSeams } from '../fs/watch-seam.ts';
+import type { WatchSeams } from '@ruimte/agents/watch-seam';
 import { drawingsDirOf, privateDrawingsDirOf, readDrawing, viewFilePathIn, writeDrawing } from './project-files.ts';
 import type { ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';

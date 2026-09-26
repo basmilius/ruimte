@@ -6,7 +6,7 @@ import type { ChatItem, ChatNoteItem, ChatTurnItem, ProjectCanvasView, ProjectCo
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
-import { claudeProjectSlug } from './claude-transcript.ts';
+import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 import { SUMMARY_MAX_BYTES, summaryNoteId, summaryPrompt, summaryTexts } from './summary.ts';
 
 const content = (): ProjectContent => ({

@@ -31,6 +31,7 @@ import { narrowerMode } from '../canvas/mode.ts';
 import { chatPrompt, contextPrompt } from '../context/context-note.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import { AccountError, definedEnv, isDefaultAccountOf, launchEnv, storedAccount, type AccountLaunches } from '../providers/accounts/launch.ts';
+import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { SkillIndex } from '../skills/skills.ts';
@@ -46,9 +47,9 @@ import { ComposerPreferences } from './composer-preferences.ts';
 import { DeltaCoalescer } from '@ruimte/agents/chat/delta-coalescer';
 import { ChatError } from './errors.ts';
 import { continueOnWake, continuedInForkNote, limitedTurn } from './limit-resume.ts';
-import type { CodexProcessSpec } from './codex-thread.ts';
-import { claudeProjectSlug } from './claude-transcript.ts';
-import { SubagentReader, type SubagentReaderOptions } from './subagent-reader.ts';
+import type { CodexProcessSpec } from '@ruimte/agents/chat/codex-thread';
+import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
+import { SubagentReader, type SubagentReaderOptions } from '@ruimte/agents/chat/subagent-reader';
 import { errorText } from '../error-text.ts';
 import { usageRoots } from '../usage/roots.ts';
 import { ClientSinks } from '../client-sinks.ts';
@@ -300,6 +301,7 @@ export class ChatManager {
             command: this.commands.codex ?? this.providers.get('codex').command,
             cwd: info.cwd,
             env: definedEnv(launchEnv(this.accounts, 'codex', info.account, this.env)),
+            client: RUIMTE_CODEX_CLIENT,
             ...(this.spawn ? { spawn: this.spawn } : {})
         };
     }

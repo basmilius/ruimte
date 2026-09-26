@@ -3,7 +3,6 @@ import { ChatError as AgentChatError, type ChatErrorCode } from '@ruimte/agents/
 type RuimteChatErrorCode =
     | ChatErrorCode
     // What a fork is refused with.
-    | 'turn-not-found'
     | 'turn-running'
     | 'provider-not-installed'
     | 'not-on-a-canvas'

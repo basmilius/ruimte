@@ -8,7 +8,7 @@ import {
     type DiagramDocument,
     type ProjectView
 } from '@ruimte/contracts';
-import type { WatchSeams } from '../fs/watch-seam.ts';
+import type { WatchSeams } from '@ruimte/agents/watch-seam';
 import { diagramsDirOf, parseDiagram, privateDiagramsDirOf, readDiagram, tooNewMessage, viewFilePathIn, writeDiagram } from './project-files.ts';
 import { ProjectError, type ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';

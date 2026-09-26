@@ -1,6 +1,6 @@
 import { mkdir, readdir, rename, rm } from 'node:fs/promises';
 import { basename, dirname } from 'node:path';
-import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '../fs/watch-seam.ts';
+import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@ruimte/agents/watch-seam';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { tooNewMessage, viewFilePathIn, viewIdOfFile, type JsonDocumentRead, type JsonDocumentReadOptions } from './project-files.ts';
 import type { ProjectStore, ProjectViewFiles } from './project-store.ts';

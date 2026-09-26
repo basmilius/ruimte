@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { cutTranscript, forkClaudeTranscript } from './claude-fork.ts';
-import { claudeProjectSlug } from './claude-transcript.ts';
+import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 import { ChatError } from './errors.ts';
 
 const SESSION = 'ef133c61-7c0d-4182-9b8f-40f5214adbdf';

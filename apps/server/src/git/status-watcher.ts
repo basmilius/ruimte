@@ -1,6 +1,6 @@
 import { join, resolve, sep } from 'node:path';
 import type { GitStatus } from '@ruimte/contracts';
-import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '../fs/watch-seam.ts';
+import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@ruimte/agents/watch-seam';
 import type { SessionSink } from '../sessions/manager.ts';
 import { ignoredPaths } from './ignore.ts';
 import { git } from './run.ts';

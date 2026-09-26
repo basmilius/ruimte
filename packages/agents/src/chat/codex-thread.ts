@@ -1,9 +1,9 @@
-import type { ChatItem } from '@ruimte/contracts';
-import type { SpawnChatProcess } from '@ruimte/agents/chat/chat-process';
-import { CodexProtocol } from '@ruimte/agents/chat/codex-protocol';
-import { CodexTransport } from '@ruimte/agents/chat/codex-transport';
+import type { ChatItem } from '@ruimte/agent-contracts';
+import type { SpawnChatProcess } from './chat-process.ts';
+import { CodexProtocol } from './codex-protocol.ts';
+import { CodexTransport, DEFAULT_CODEX_CLIENT, type CodexClientInfo } from './codex-transport.ts';
 import { ChatError } from './errors.ts';
-import { readingThread, settledReading } from '@ruimte/agents/chat/subagent-projection';
+import { readingThread, settledReading } from './subagent-projection.ts';
 import { errorText } from '../error-text.ts';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -60,13 +60,12 @@ export const projectCodexItems = (entriesOldestFirst: Record<string, unknown>[],
     return thread.list().map(settledReading);
 };
 
-const CLIENT_INFO = { name: 'ruimte', title: 'Ruimte', version: '0.1.0' };
-
 export interface CodexProcessSpec {
     command: string[];
     cwd: string;
     env: Record<string, string>;
     spawn?: SpawnChatProcess;
+    client?: CodexClientInfo;
 }
 
 /* An app-server started for the questions `work` asks and ended after them, for a chat whose own process may not run. */
@@ -80,7 +79,10 @@ const withAppServer = async <T>(spec: CodexProcessSpec, work: (transport: CodexT
         onExit: () => undefined
     });
     try {
-        await transport.request('initialize', { clientInfo: CLIENT_INFO, capabilities: { experimentalApi: true, requestAttestation: false } });
+        await transport.request('initialize', {
+            clientInfo: spec.client ?? DEFAULT_CODEX_CLIENT,
+            capabilities: { experimentalApi: true, requestAttestation: false }
+        });
         transport.notify('initialized', {});
         return await work(transport);
     } finally {

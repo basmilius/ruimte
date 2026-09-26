@@ -1,7 +1,7 @@
 import { dirname, join, resolve, sep } from 'node:path';
 import type { SessionSink } from '../sessions/manager.ts';
 import { forgetSearchCache } from './search.ts';
-import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from './watch-seam.ts';
+import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@ruimte/agents/watch-seam';
 import { ClientSinks } from '../client-sinks.ts';
 
 // A save, a formatter and a build all touch the same folder in a burst; one event per burst is enough.

@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import type { FsChangedEvent } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { FolderWatcher } from './watch.ts';
-import { FakeWatch } from './watch-test-helpers.ts';
+import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
 
 // Nothing touches the disk: the fake watch reports whatever a test emits.
 const root = resolve('/work/repo');

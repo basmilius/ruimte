@@ -1,6 +1,6 @@
 import { dirname } from 'node:path';
-import { workflowAgentIdOf, type ChatInfo, type ChatItem, type ChatSubagentChangedEvent, type ChatSubagentResult } from '@ruimte/contracts';
-import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watch-seam.ts';
+import { workflowAgentIdOf, type ChatInfo, type ChatItem, type ChatSubagentChangedEvent, type ChatSubagentResult } from '@ruimte/agent-contracts';
+import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../watch-seam.ts';
 import { findSubagentsDir, findWorkflowAgent, readSubagentMetas, TranscriptProjection, type SubagentMeta } from './claude-transcript.ts';
 import { listThreadItemsOnce, parseThreadItemsPage, projectCodexItems, type CodexProcessSpec, type ThreadItemsParams } from './codex-thread.ts';
 import { ChatError } from './errors.ts';

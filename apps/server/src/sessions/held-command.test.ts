@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { emptyCanvasView, type ProjectContent, type ProjectView, type ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
-import { FakeWatch } from '../fs/watch-test-helpers.ts';
+import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
 import { ProjectStore } from '../projects/project-store.ts';
 import { CommandApprovals, commandsSet } from './command-approvals.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';

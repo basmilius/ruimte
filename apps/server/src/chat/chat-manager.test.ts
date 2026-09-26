@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { appendFile, cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { ChatBookmark, ChatCheckpointDiff, ChatInfo, ChatItem, ChatSubagentItem, ContextSource } from '@ruimte/contracts';
 import { chatPrompt, verbsNote } from '../context/context-note.ts';
 import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from '../context/notices.ts';
@@ -14,7 +15,10 @@ import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, FakeCheckpoints, RecordingStore } from './chat-test-helpers.ts';
 import { fakeClaude } from '@ruimte/agents/chat/fake-claude';
 import { inProcess, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
-import { FakeWatch } from '../fs/watch-test-helpers.ts';
+import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+
+// The transcripts the package's own subagent tests read.
+const FIXTURE = join(dirname(fileURLToPath(import.meta.resolve('@ruimte/agents/chat/subagent-reader'))), 'fixtures', 'claude-projects');
 
 let home: string;
 let store: RecordingStore;
@@ -1003,7 +1007,6 @@ describe('the first prompt of an agent node', () => {
 
 describe('the conversation of a Claude subagent', () => {
     const SESSION = '5f1c2a9e-0b7d-4c1e-9a53-3e2f8d6b7a10';
-    const FIXTURE = join(import.meta.dir, 'fixtures', 'claude-projects');
 
     test('is read beside the session with no CLI running, notes its agent on the row, and lets go with the socket', async () => {
         await retire(manager);
@@ -1054,7 +1057,6 @@ describe('the conversation of a Claude subagent', () => {
 
 describe('a background subagent whose CLI is gone', () => {
     const SESSION = '5f1c2a9e-0b7d-4c1e-9a53-3e2f8d6b7a10';
-    const FIXTURE = join(import.meta.dir, 'fixtures', 'claude-projects');
     const CALL = 'toolu_01ChildAgentCall';
 
     const runningRow = (toolUseId: string, id = `1:${toolUseId}`): ChatSubagentItem => ({

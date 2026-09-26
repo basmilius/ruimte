@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DrawingContent, DrawingElement, ProjectContent } from '@ruimte/contracts';
-import { FakeWatch } from '../fs/watch-test-helpers.ts';
+import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DrawingStore } from './drawing-store.ts';
 import { ProjectStore } from './project-store.ts';

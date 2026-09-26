@@ -26,7 +26,7 @@ import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
 import { limitedTurn, limitResumeAt, limitResumeWake } from './limit-resume.ts';
 import { ThreadProjector } from '@ruimte/agents/chat/projector';
-import type { SubagentSettlement } from './subagent-settlement.ts';
+import type { SubagentSettlement } from '@ruimte/agents/chat/subagent-settlement';
 import { ChatThread } from '@ruimte/agents/chat/thread';
 import { errorText } from '../error-text.ts';
 

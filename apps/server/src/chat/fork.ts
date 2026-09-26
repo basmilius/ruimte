@@ -36,7 +36,7 @@ import { AccountError, storedAccount } from '../providers/accounts/launch.ts';
 import { codexServiceTier, codexThreadOptions } from '@ruimte/agents/providers/codex';
 import type { ChatManager } from './chat-manager.ts';
 import { forkClaudeTranscript, type TranscriptCutPoint } from './claude-fork.ts';
-import { forkThreadOnce } from './codex-thread.ts';
+import { forkThreadOnce } from '@ruimte/agents/chat/codex-thread';
 import { ChatError as AgentChatError } from '@ruimte/agents/chat/errors';
 import { ChatError } from './errors.ts';
 import { handoffText } from './handoff.ts';

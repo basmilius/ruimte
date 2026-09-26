@@ -36,7 +36,7 @@ import {
 import { revisionConflictMessage } from '@ruimte/actions';
 import { z } from 'zod';
 import { fileExists, isNotFound, writeAtomic } from '@ruimte/agents/fs';
-import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watch-seam.ts';
+import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '@ruimte/agents/watch-seam';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import {
     diagramsDirOf,

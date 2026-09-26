@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { GitChangedEvent, GitStatusEvent } from '@ruimte/contracts';
-import { FakeWatch } from '../fs/watch-test-helpers.ts';
+import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
 import { GitStatusWatcher } from './status-watcher.ts';
 import { forgetBase } from './status.ts';
 import { gitIn } from './test-repo.ts';
