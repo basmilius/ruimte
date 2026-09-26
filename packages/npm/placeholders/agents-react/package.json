@@ -1,0 +1,13 @@
+{
+  "name": "@ruimte/agents-react",
+  "version": "0.0.0",
+  "description": "Placeholder for @ruimte/agents-react, published once so npm can trust the release workflow. The first release replaces it.",
+  "license": "FSL-1.1-MIT",
+  "author": "Bas Milius",
+  "homepage": "https://ruimte.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/basmilius/ruimte.git",
+    "directory": "packages/agents-react"
+  }
+}

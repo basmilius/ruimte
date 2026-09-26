@@ -2,11 +2,13 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { LIBRARIES } from '../src/libraries';
 import { planPublish, publishedFromView, type PackageToPublish } from '../src/publish-plan';
 import { LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
 
 /*
- * Publishes what `build.ts` laid out, platform packages first and `ruimte` last, skipping every
+ * Publishes what `build.ts` and `build-libraries.ts` laid out: the libraries in dependency order,
+ * then the platform packages, and `ruimte` last, skipping every
  * version the registry already has. Run by `.github/workflows/npm.yml`, where npm authenticates
  * through the workflow's OIDC token; there is no token to pass.
  *
@@ -27,7 +29,7 @@ if (!values.out) {
 }
 
 const out = resolve(values.out);
-const dirs = [...TARGETS.map(targetId), LAUNCHER_NAME];
+const dirs = [...LIBRARIES, ...TARGETS.map(targetId), LAUNCHER_NAME];
 const packages: PackageToPublish[] = [];
 let version: string | null = null;
 for (const dir of dirs) {

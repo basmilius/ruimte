@@ -1,7 +1,7 @@
 {
   "name": "@ruimte/agent-contracts",
-  "private": true,
   "version": "0.0.0",
+  "description": "The zod schemas a Ruimte chat host and its client share: agents, models, provider accounts, chats, usage and the frames between them.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

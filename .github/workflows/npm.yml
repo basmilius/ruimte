@@ -1,6 +1,7 @@
 name: npm
 
-# Publishes `ruimte` and its three `@ruimte/<os>-<cpu>` binary packages (Apple silicon only on macOS) with the version of a release.
+# Publishes `ruimte`, its three `@ruimte/<os>-<cpu>` binary packages (Apple silicon only on macOS) and the libraries
+# `@ruimte/agent-contracts`, `@ruimte/ui`, `@ruimte/agents` and `@ruimte/agents-react` with the version of a release.
 # npm trusts this workflow through OIDC (Trusted Publishing, configured per package on npmjs.com for
 # `npm.yml` and the `npm` environment), so there is no token anywhere. A version that is already on
 # the registry is skipped, so a run that failed halfway can simply run again.
@@ -91,5 +92,7 @@ jobs:
           path: binaries
       - name: Lay out the packages
         run: bun packages/npm/scripts/build.ts --version ${{ needs.version.outputs.version }} --binaries binaries --out npm-packages
-      - name: Publish, platform packages first
+      - name: Lay out the libraries
+        run: bun packages/npm/scripts/build-libraries.ts --version ${{ needs.version.outputs.version }} --out npm-packages
+      - name: Publish, libraries and platform packages first
         run: bun packages/npm/scripts/publish.ts --out npm-packages

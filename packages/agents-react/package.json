@@ -1,7 +1,7 @@
 {
   "name": "@ruimte/agents-react",
-  "private": true,
   "version": "0.0.0",
+  "description": "Ruimte's AI chat interface for React: the thread, composer and prompt cards, the providers pane and the usage page.",
   "type": "module",
   "exports": {
     "./agents/AccountDot": "./src/agents/AccountDot.tsx",

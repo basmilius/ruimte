@@ -1,7 +1,7 @@
 {
   "name": "@ruimte/agents",
-  "private": true,
   "version": "0.0.0",
+  "description": "Ruimte's AI chat host for Node: Claude Code and Codex behind one chat thread, provider accounts and usage, served over a port.",
   "type": "module",
   "exports": {
     "./*.json": "./src/*.json",

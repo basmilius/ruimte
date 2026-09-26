@@ -1,7 +1,7 @@
 {
   "name": "@ruimte/ui",
-  "private": true,
   "version": "0.0.0",
+  "description": "The React components, theme, formatters and settings dialog of Ruimte's interface, for apps built on the same stack.",
   "type": "module",
   "exports": {
     "./AccentSwatches": "./src/AccentSwatches.tsx",
