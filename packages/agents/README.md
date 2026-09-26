@@ -14,7 +14,7 @@ Import per file: `@ruimte/agents/<path under src>`, without the extension.
 - `chat/chat-core.ts`: every chat of a host. Records and logs (`chat/chat-store.ts`, `chat/chat-log.ts`), `chat.attach` with `since`, `chat.status` to every client, attachments, bookmarks and subagent conversations.
 - `providers/`: the CLIs a host offers (`registry.ts`), their model catalogs, and `accounts/`, the accounts a CLI runs under.
 - `usage/`: the usage scanner over the CLIs' transcripts, prices, and `limits/`, what is left of each plan.
-- `host/`: `AgentHost`, the request handlers, `cliEnvironment` and an in-memory port pair.
+- `host/`: `AgentHost`, `wireAgents` (the chats with the providers, accounts and usage around them, which `AgentHost` serves over a port), the request handlers, `cliEnvironment` and an in-memory port pair.
 - `context/`: the registry behind a context CLI such as `ruimte-context`, the verbs an agent runs to act on its app. `context/argv.ts` splits the words, `context/verb.ts` defines verbs and nouns and renders `help` from them, `context/refusal.ts` writes and reads a refusal.
 - `outbox/`: work a host owes that has to outlive the process, such as starting an agent a verb opened, and the worker that does it. `lineage.ts` keeps who opened whom and how deep, `modes.ts` the order of the runtime modes and the ceiling an opener hands down.
 - `tasks/`: what one chat asks of another, the coordinator that settles it from what the child does, and the wake, the limit on background commands and the note about a waiting child that the outbox owes for it.
@@ -23,13 +23,27 @@ Import per file: `@ruimte/agents/<path under src>`, without the extension.
 
 A chat core knows nothing a host adds. A host adds it by extending `ChatCore` and overriding its protected methods, each of which does nothing on its own: `instructionsFor` (the note an agent gets at the start of every process), `promptNotesFor` (what goes in front of the next prompt), `referencesFor`, `envFor`, `admit`, `runtimeModeFor`, `opened`, `recordExtras`, `cleared`, `removed`, `broadcasted`, `endedAt` and `resumeWords`. Options of the core do the rest: `onInterruptedRun` and `limitResume` let a host take up a turn after a restart or a usage limit, and `checkpoints` shows what a turn changed. Ruimte's `ChatManager` in `apps/server/src/chat` is the example.
 
-`AgentHost` is a plain core with the defaults. It answers every request in `AGENT_REQUEST_SCHEMAS` and sends the events in `AGENT_EVENT_SCHEMAS`, checking each frame with zod the way Ruimte's daemon checks a socket's. A request that needs a canvas (`chat.fork`, `chat.forkInfo`, `chat.summarize`, `chat.continueOn`) answers the code `chat-unsupported`. It takes:
+`AgentHost` answers every request in `AGENT_REQUEST_SCHEMAS` over a `FramePort` and sends the events in `AGENT_EVENT_SCHEMAS`, checking each frame with zod the way Ruimte's daemon checks a socket's. A request that needs a canvas (`chat.fork`, `chat.forkInfo`, `chat.summarize`, `chat.continueOn`) answers the code `chat-unsupported`. It takes:
 
 - `dataDir`: where the chats, their attachments and bookmarks, the accounts and the usage index are kept;
 - `env`: the environment the CLIs start in. `cliEnvironment(process.env)` drops the variables of a Ruimte terminal the app may have been started from, so its CLIs never post to that Ruimte;
-- `systemNote`: what every agent is told, optional.
+- `systemNote`: what every agent is told, optional;
+- `claude`: the options of the Claude backend, such as `allowedTools` for the app's own context CLI;
+- `core`: the app's own core. It gets the `ChatCoreOptions` a plain core would get, since the core needs the providers and accounts the host builds first, and adds its own to them. Without it the host runs a plain `ChatCore`, and `host.chats` has the type the factory returns.
+
+```ts
+class MotionChats extends ChatCore {
+    protected override instructionsFor(chatId: string): string | null {
+        return rolePromptOf(chatId);
+    }
+}
+
+const host = await AgentHost.open({ dataDir, core: (options) => new MotionChats({ ...options, ...motionOptions }) });
+```
 
 `close()` writes every thread and ends every CLI. On the next start a chat goes on through the CLI's own session id.
+
+An app that answers requests on a wire of its own, beside requests of its own, calls `wireAgents` (`host/wiring.ts`) instead. It takes the same options except `background` and builds the same pieces: `providers`, `accounts`, `limits`, `usage`, `chats` and the `handlers` of every agent request, which take a payload and a client id. `connect(clientId, send)` sends one client its events until the returned function lets it go, `start()` runs the clocks of the accounts and the limits, and `stop()` ends them and every CLI. The app reads the accounts with `accounts.load()` before the first request. `AgentHost` is this wiring behind a port.
 
 ## Verbs of its own
 
@@ -168,7 +182,7 @@ worker = new OutboxWorker({
 worker.start();
 ```
 
-`AgentHost` offers no tasks of its own. A task is given and reported through the verbs of a context CLI, and the host needs to know which chat ran a verb. A plain host has neither. An app that wants tasks extends `ChatCore` for its CLI, as it does for its verbs, and wires tasks as above. The core of an `AgentHost` (`host.chats`) works as `chats` too, which `tasks/wiring.test.ts` does.
+`AgentHost` offers no tasks of its own. A task is given and reported through the verbs of a context CLI, and the host needs to know which chat ran a verb. A plain host has neither. An app that wants tasks extends `ChatCore` for its CLI, as it does for its verbs, hands it to `AgentHost` or `wireAgents` as `core`, and wires tasks as above. The core of an `AgentHost` (`host.chats`) works as `chats` too, which `tasks/wiring.test.ts` does.
 
 ## Wiring it into an Electron app
 

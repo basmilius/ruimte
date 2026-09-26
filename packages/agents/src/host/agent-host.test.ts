@@ -3,6 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AGENT_EVENT_SCHEMAS, parseServerFrame, type ChatInfo, type ChatItem, type FramePort, type ReplyError, type ReplyOk } from '@ruimte/agent-contracts';
+import { ChatCore } from '../chat/chat-core.ts';
 import { fakeClaude } from '../chat/fake-claude.ts';
 import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
 import { AgentHost } from './agent-host.ts';
@@ -163,5 +164,35 @@ describe('AgentHost over a port', () => {
         await client.until(() => [...client.items.values()].some((item) => item.kind === 'assistant' && item.text === 'echo: again'));
         const argv = claude.started.at(-1)!.argv;
         expect(argv[argv.indexOf('--resume') + 1]).toBe(session!);
+    });
+
+    test('runs on a core of the app, whose overrides reach the CLI', async () => {
+        class BriefedCore extends ChatCore {
+            protected override instructionsFor(chatId: string): string | null {
+                return `You are the agent of ${chatId}.`;
+            }
+        }
+        await host.close();
+        const briefed = await AgentHost.open({
+            dataDir,
+            env: { HOME: dataDir, PATH: process.env.PATH },
+            systemNote: 'You work in the motion editor.',
+            background: false,
+            command: ['claude'],
+            spawn: claude.spawn,
+            core: (options) => new BriefedCore(options)
+        });
+        host = briefed;
+        expect(briefed.chats).toBeInstanceOf(BriefedCore);
+        const [renderer, utility] = memoryPortPair();
+        host.connect(utility);
+        client = new Client(renderer);
+
+        ok(await client.request('chat.create', { chatId: 'chat-4', provider: 'claude', cwd: dataDir }));
+        ok(await client.request('chat.attach', { chatId: 'chat-4' }));
+        ok(await client.request('chat.send', { chatId: 'chat-4', text: 'hello there' }));
+        await client.until(() => [...client.items.values()].some((item) => item.kind === 'assistant' && item.text === 'echo: hello there'));
+        const argv = claude.started.at(-1)!.argv;
+        expect(argv[argv.indexOf('--append-system-prompt') + 1]).toBe('You are the agent of chat-4.');
     });
 });
