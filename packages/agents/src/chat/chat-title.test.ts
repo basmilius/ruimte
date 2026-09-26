@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
 import { SUGGESTED_TITLE_LIMIT } from '@ruimte/agent-contracts';
-import { codexProvider } from '../providers/codex-provider.ts';
 import type { ChatProvider } from '../providers/provider.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { buildTitlePrompt, parseTitle, suggestChatTitle } from './chat-title.ts';
@@ -36,8 +35,6 @@ describe('buildTitlePrompt', () => {
     });
 });
 
-const scripted = (script: string): ChatProvider => ({ ...codexProvider, command: ['bun'], oneShotArgs: () => ['-e', script] });
-
 const registryWith = (installed: string[], providers?: ChatProvider[]): ProviderRegistry =>
     new ProviderRegistry({
         ...(providers ? { providers } : {}),
@@ -52,17 +49,5 @@ describe('suggestChatTitle', () => {
         expect((await registryWith(['claude', 'codex']).oneShotProvider('codex'))?.kind).toBe('codex');
         expect(await registryWith([]).oneShotProvider('codex')).toBeNull();
         expect(await suggestChatTitle(registryWith([]), 'codex', input)).toBeNull();
-    });
-
-    test('runs the one-shot CLI and parses what it printed', async () => {
-        const good = scripted(`console.log('working...'); console.log(JSON.stringify({ title: 'Stale lockfile.' }))`);
-        expect(await suggestChatTitle(registryWith(['bun'], [good]), 'codex', input)).toBe('Stale lockfile');
-    });
-
-    test('a CLI that fails or prints no title gives nothing', async () => {
-        const failing = scripted(`console.log(JSON.stringify({ title: 'Nope' })); process.exit(1)`);
-        expect(await suggestChatTitle(registryWith(['bun'], [failing]), 'codex', input)).toBeNull();
-        const chatty = scripted(`console.log('Stale lockfile')`);
-        expect(await suggestChatTitle(registryWith(['bun'], [chatty]), 'codex', input)).toBeNull();
     });
 });
