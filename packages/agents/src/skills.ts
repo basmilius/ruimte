@@ -2,8 +2,8 @@ import { existsSync, type Dirent } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, parse } from 'node:path';
-import type { AgentKind, ChatSkill, ChatSkillSource } from '@ruimte/contracts';
-import { isNotFound } from '@ruimte/agents/fs';
+import type { AgentKind, ChatSkill, ChatSkillSource } from '@ruimte/agent-contracts';
+import { isNotFound } from './fs.ts';
 
 // One folder full of skill folders, and what the CLI calls the skills it finds there.
 export interface SkillRoot {

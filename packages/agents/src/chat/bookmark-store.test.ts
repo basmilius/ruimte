@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatBookmark } from '@ruimte/contracts';
+import type { ChatBookmark } from '@ruimte/agent-contracts';
 import { BookmarkStore, bookmarkFileName } from './bookmark-store.ts';
 
 let home: string;

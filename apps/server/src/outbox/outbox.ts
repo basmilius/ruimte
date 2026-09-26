@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
-import { RecordDirectory } from '../record-directory.ts';
+import { RecordDirectory } from '@ruimte/agents/record-directory';
 import { AgentKindSchema, ModelSelectionSchema, ProviderAccountIdSchema, RuntimeModeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 

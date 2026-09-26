@@ -6,9 +6,9 @@ import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/contracts';
 import type { ContextSource } from '@ruimte/contracts';
 import { CONTEXT_LEAD, chatPrompt, contextPrompt, verbsNote } from '../context/context-note.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { AttachmentStore } from './attachment-store.ts';
+import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 import { ChatManager } from './chat-manager.ts';
-import { ChatStore } from './chat-store.ts';
+import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import { ChatRecorder } from './chat-test-helpers.ts';
 import { inProcess, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
 import { FAKE_CHILD_STEPS, fakeCodexWith } from '@ruimte/agents/chat/fake-codex';
@@ -44,7 +44,7 @@ const retire = async (target: ChatManager): Promise<void> => {
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-codex-'));
     attachments = new AttachmentStore(home);
-    store = new ChatStore(home, attachments);
+    store = new ChatStore(home, { attachments: attachments });
     requests = [];
     modelPage = null;
     codex = inProcess((io) => {

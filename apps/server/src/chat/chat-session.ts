@@ -24,7 +24,7 @@ import { runningInBackground } from '@ruimte/agents/chat/background-work';
 import type { SpawnChatProcess } from '@ruimte/agents/chat/chat-process';
 import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
-import { limitedTurn, limitResumeAt, limitResumeWake } from './limit-resume.ts';
+import { limitedTurn, limitResumeAt, limitResumeWake } from '@ruimte/agents/chat/limit-resume';
 import { ThreadProjector } from '@ruimte/agents/chat/projector';
 import type { SubagentSettlement } from '@ruimte/agents/chat/subagent-settlement';
 import { ChatThread } from '@ruimte/agents/chat/thread';

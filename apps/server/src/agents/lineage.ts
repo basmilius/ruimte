@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { RuntimeModeSchema, type RuntimeMode } from '@ruimte/contracts';
-import { RecordDirectory } from '../record-directory.ts';
+import { RecordDirectory } from '@ruimte/agents/record-directory';
 import { z } from 'zod';
 
 const LineageSchema = z.object({

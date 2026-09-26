@@ -1,9 +1,9 @@
 import { closeSync, fstatSync, mkdirSync, openSync, readSync, rmSync, writeSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { ChatEventSchema, type ChatEvent } from '@ruimte/contracts';
+import { ChatEventSchema, type ChatEvent } from '@ruimte/agent-contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
-import { writeAtomicSync } from '@ruimte/agents/fs';
+import { writeAtomicSync } from '../fs.ts';
 
 export interface ChatLogLine {
     seq: number;

@@ -6,7 +6,7 @@ import { AppleFoundationRequestSchema } from '@ruimte/contracts';
 import { appleProvider } from '../providers/apple-provider.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { AppleBackend } from './apple-backend.ts';
-import { AttachmentStore } from './attachment-store.ts';
+import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, RecordingStore } from './chat-test-helpers.ts';
 import { inProcess } from '@ruimte/agents/chat/fake-cli';
@@ -15,7 +15,7 @@ test('Apple chat projects approved directory and file tools across turns into it
     const home = await mkdtemp(join(tmpdir(), 'ruimte-apple-chat-'));
     await writeFile(join(home, 'project-notes.txt'), 'The project code is ORCHID.');
     const attachments = new AttachmentStore(home);
-    const store = new RecordingStore(home, attachments);
+    const store = new RecordingStore(home, { attachments });
     const recorder = new ChatRecorder();
     let nativeTurn = '';
     let nativeSession = '';

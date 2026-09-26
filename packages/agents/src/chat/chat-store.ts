@@ -1,27 +1,33 @@
 import { mkdirSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ChatInfoSchema, ChatItemSchema, type ChatInfo, type ChatItem } from '@ruimte/contracts';
+import { ChatInfoSchema, ChatItemSchema, type ChatInfo, type ChatItem } from '@ruimte/agent-contracts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic, writeAtomicSync } from '@ruimte/agents/fs';
-import { isPlanFileName } from '../plans/plan-store.ts';
+import { isNotFound, writeAtomic, writeAtomicSync } from '../fs.ts';
 import { isBookmarkFileName } from './bookmark-store.ts';
 import { migrateInlineAttachments, type AttachmentStore } from './attachment-store.ts';
 import { parseLog, type ChatLogLine } from './chat-log.ts';
-import { ChatThread } from '@ruimte/agents/chat/thread';
+import { ChatThread } from './thread.ts';
 import { recordFileName } from '../record-directory.ts';
 
-// zod strips what it does not know, so a file written by an older build (with `interactionMode`,
-// say) still parses and loses only the dropped field. A record without `seq` predates the log.
-const RecordSchema = z.object({
+// zod strips what it does not know inside the info and the items, so a file written by an older build
+// (with `interactionMode`, say) still parses and loses only the dropped field. A record without `seq`
+// predates the log. Keys beside these are the host's own, and come back to it as they were written.
+const RecordSchema = z.looseObject({
     info: ChatInfoSchema,
     items: z.array(ChatItemSchema),
     seq: z.number().int().nonnegative().optional(),
     resetSeq: z.number().int().nonnegative().optional(),
     // Never on the wire: what goes in front of the next real prompt, once (a fork's note for its agent).
-    preambles: z.array(z.string()).optional(),
-    clearedTaskIds: z.array(z.string()).optional()
+    preambles: z.array(z.string()).optional()
 });
+
+const OWN_KEYS = new Set(['info', 'items', 'seq', 'resetSeq', 'preambles']);
+
+/* What a host keeps in a chat's record beside the thread; it never reaches the wire. */
+export type ChatRecordExtras = Record<string, unknown>;
+
+const extrasOf = (record: Record<string, unknown>): ChatRecordExtras => Object.fromEntries(Object.entries(record).filter(([key]) => !OWN_KEYS.has(key)));
 
 /* A thread as it stood when the daemon last wrote down anything about it: the snapshot with the log played over it. */
 export interface ChatRecord {
@@ -30,7 +36,7 @@ export interface ChatRecord {
     seq: number;
     resetSeq: number;
     preambles: string[];
-    clearedTaskIds: string[];
+    extras: ChatRecordExtras;
     // The log as it is on disk, for the lines an attach with `since` may still be answered from.
     lines: ChatLogLine[];
 }
@@ -43,20 +49,30 @@ export interface ChatSeq {
 
 const logName = (chatId: string): string => `${encodeURIComponent(chatId)}.log`;
 
-const recordBody = (info: ChatInfo, items: ChatItem[], at: ChatSeq, preambles: readonly string[], clearedTaskIds: readonly string[]): string =>
-    JSON.stringify({ info, items, ...at, ...(preambles.length === 0 ? {} : { preambles }), ...(clearedTaskIds.length === 0 ? {} : { clearedTaskIds }) });
+const recordBody = (info: ChatInfo, items: ChatItem[], at: ChatSeq, preambles: readonly string[], extras: ChatRecordExtras): string =>
+    JSON.stringify({ info, items, ...at, ...(preambles.length === 0 ? {} : { preambles }), ...withoutOwnKeys(extras) });
+
+const withoutOwnKeys = (extras: ChatRecordExtras): ChatRecordExtras => Object.fromEntries(Object.entries(extras).filter(([key]) => !OWN_KEYS.has(key)));
+
+export interface ChatStoreOptions {
+    attachments?: AttachmentStore | null;
+    // Files a host keeps beside a record under names that also end in .json (a chat's plans), which are no chats.
+    isSidecar?(name: string): boolean;
+}
 
 /*
- * One JSON file per chat under `$RUIMTE_HOME/chats`, written while a turn runs and on shutdown, with
+ * One JSON file per chat under `<home>/chats`, written while a turn runs and on shutdown, with
  * the log of what happened since beside it (`ChatLog` appends to it; reading plays it back).
  */
 export class ChatStore {
     readonly dir: string;
     private readonly attachments: AttachmentStore | null;
+    private readonly isSidecar: (name: string) => boolean;
 
-    constructor(home: string, attachments: AttachmentStore | null = null) {
+    constructor(home: string, options: ChatStoreOptions = {}) {
         this.dir = join(home, 'chats');
-        this.attachments = attachments;
+        this.attachments = options.attachments ?? null;
+        this.isSidecar = options.isSidecar ?? (() => false);
     }
 
     logPath(chatId: string): string {
@@ -75,8 +91,8 @@ export class ChatStore {
             throw e;
         }
         const ids = names
-            // A chat's plans and bookmarks sit beside its record under names that also end in .json.
-            .filter((name) => (name.endsWith('.json') && !isPlanFileName(name) && !isBookmarkFileName(name)) || name.endsWith('.log'))
+            // A chat's bookmarks, and whatever a host keeps per chat, sit beside its record under names that also end in .json.
+            .filter((name) => (name.endsWith('.json') && !isBookmarkFileName(name) && !this.isSidecar(name)) || name.endsWith('.log'))
             .map((name) => decodeURIComponent(name.replace(/\.(json|log)$/, '')));
         return [...new Set(ids)];
     }
@@ -101,9 +117,9 @@ export class ChatStore {
         items: ChatItem[],
         at: ChatSeq = { seq: 0, resetSeq: 0 },
         preambles: readonly string[] = [],
-        clearedTaskIds: readonly string[] = []
+        extras: ChatRecordExtras = {}
     ): Promise<number> {
-        const body = recordBody(info, items, at, preambles, clearedTaskIds);
+        const body = recordBody(info, items, at, preambles, extras);
         await mkdir(this.dir, { recursive: true, mode: 0o700 });
         await writeAtomic(join(this.dir, recordFileName(chatId)), body);
         return body.length;
@@ -119,10 +135,10 @@ export class ChatStore {
         items: ChatItem[],
         at: ChatSeq = { seq: 0, resetSeq: 0 },
         preambles: readonly string[] = [],
-        clearedTaskIds: readonly string[] = []
+        extras: ChatRecordExtras = {}
     ): void {
         mkdirSync(this.dir, { recursive: true, mode: 0o700 });
-        writeAtomicSync(join(this.dir, recordFileName(chatId)), recordBody(info, items, at, preambles, clearedTaskIds));
+        writeAtomicSync(join(this.dir, recordFileName(chatId)), recordBody(info, items, at, preambles, extras));
     }
 
     async read(chatId: string): Promise<ChatRecord | null> {
@@ -144,7 +160,7 @@ export class ChatStore {
                 resetSeq = line.seq;
             }
         }
-        return { ...thread.snapshot(), seq, resetSeq, preambles: snapshot.preambles ?? [], clearedTaskIds: snapshot.clearedTaskIds ?? [], lines };
+        return { ...thread.snapshot(), seq, resetSeq, preambles: snapshot.preambles ?? [], extras: extrasOf(snapshot), lines };
     }
 
     private async readSnapshot(chatId: string): Promise<z.infer<typeof RecordSchema> | null> {
@@ -220,5 +236,5 @@ const fromLogAlone = (lines: ChatLogLine[]): ChatRecord | null => {
             resetSeq = line.seq;
         }
     }
-    return { ...thread.snapshot(), seq: 0, resetSeq, preambles: [], clearedTaskIds: [], lines };
+    return { ...thread.snapshot(), seq: 0, resetSeq, preambles: [], extras: {}, lines };
 };

@@ -10,9 +10,9 @@ import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
-import { AttachmentStore } from './attachment-store.ts';
+import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 import { ChatManager } from './chat-manager.ts';
-import { ChatStore } from './chat-store.ts';
+import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import { verbsNote } from '../context/context-note.ts';
 import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 import { inProcess } from '@ruimte/agents/chat/fake-cli';
@@ -495,7 +495,7 @@ describe('forking a Codex chat', () => {
         const attachments = new AttachmentStore(home);
         manager = new ChatManager({
             providers: new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) }),
-            store: new ChatStore(home, attachments),
+            store: new ChatStore(home, { attachments: attachments }),
             attachments,
             spawn: inProcess(fakeCodex).spawn,
             env: { PATH: process.env.PATH, HOME: home }

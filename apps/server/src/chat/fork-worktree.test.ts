@@ -9,7 +9,7 @@ import { Worktrees } from '../git/worktrees.ts';
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
-import { ChatStore } from './chat-store.ts';
+import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 
 const content = (): ProjectContent => ({

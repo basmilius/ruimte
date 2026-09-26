@@ -56,7 +56,7 @@ describe('AttachmentStore', () => {
 
 describe('migrateInlineAttachments', () => {
     test('an image written inline becomes a file, once, and the record keeps the metadata', async () => {
-        const chats = new ChatStore(home, store);
+        const chats = new ChatStore(home, { attachments: store });
         const record = {
             info: { chatId: 'old' },
             items: [

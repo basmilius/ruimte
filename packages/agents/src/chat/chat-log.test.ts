@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { appendFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatEvent } from '@ruimte/contracts';
+import type { ChatEvent } from '@ruimte/agent-contracts';
 import { ChatLog, parseLog } from './chat-log.ts';
 
 const delta = (text: string): ChatEvent => ({ type: 'delta', itemId: 'a1', text });

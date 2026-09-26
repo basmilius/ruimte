@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { ChatAttachment } from '@ruimte/contracts';
 import { AuthStore } from '../auth/auth-store.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './attachment-route.ts';
-import { AttachmentStore } from './attachment-store.ts';
+import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 
 // No handshake in these tests, so a credential is only ever a session token.
 // What the desktop app on this machine presents; a loopback address alone gets nothing.

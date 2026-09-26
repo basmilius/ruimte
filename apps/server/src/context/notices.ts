@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { RecordDirectory } from '../record-directory.ts';
+import { RecordDirectory } from '@ruimte/agents/record-directory';
 import { z } from 'zod';
 import type { AgentInfo } from '@ruimte/contracts';
 import { takesHookContext } from '../agents/hooks.ts';

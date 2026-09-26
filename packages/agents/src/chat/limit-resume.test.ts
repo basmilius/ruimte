@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ChatTurnItem } from '@ruimte/contracts';
+import type { ChatItem, ChatTurnItem } from '@ruimte/agent-contracts';
 import { limitedTurn, limitResumeAt } from './limit-resume.ts';
 
 const turn = (id: string, limit?: ChatTurnItem['limit']): ChatTurnItem => ({

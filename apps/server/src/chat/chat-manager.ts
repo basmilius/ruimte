@@ -34,19 +34,20 @@ import { AccountError, definedEnv, isDefaultAccountOf, launchEnv, storedAccount,
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
-import { SkillIndex } from '../skills/skills.ts';
+import { SkillIndex } from '@ruimte/agents/skills';
 import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
-import type { AttachmentStore } from './attachment-store.ts';
-import type { BookmarkStore } from './bookmark-store.ts';
+import type { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
+import type { BookmarkStore } from '@ruimte/agents/chat/bookmark-store';
 import type { SpawnChatProcess } from '@ruimte/agents/chat/chat-process';
 import { ChatSession, PLAN_RESUME_PREAMBLE, type ChatSendExtras, type LimitResumeHooks, type ResumeDecision } from './chat-session.ts';
-import { ChatLog, COMPACT_ABOVE_BYTES } from './chat-log.ts';
+import { ChatLog, COMPACT_ABOVE_BYTES } from '@ruimte/agents/chat/chat-log';
 import type { ChatTitleInput } from './chat-title.ts';
-import type { ChatRecord, ChatStore } from './chat-store.ts';
-import { ComposerPreferences } from './composer-preferences.ts';
+import type { ChatRecord, ChatRecordExtras, ChatStore } from '@ruimte/agents/chat/chat-store';
+import { ComposerPreferences } from '@ruimte/agents/chat/composer-preferences';
 import { DeltaCoalescer } from '@ruimte/agents/chat/delta-coalescer';
 import { ChatError } from './errors.ts';
-import { continueOnWake, continuedInForkNote, limitedTurn } from './limit-resume.ts';
+import { limitedTurn } from '@ruimte/agents/chat/limit-resume';
+import { continueOnWake, continuedInForkNote } from './continue-on.ts';
 import type { CodexProcessSpec } from '@ruimte/agents/chat/codex-thread';
 import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 import { SubagentReader, type SubagentReaderOptions } from '@ruimte/agents/chat/subagent-reader';
@@ -469,7 +470,7 @@ export class ChatManager {
             info,
             items: stored?.items ?? [],
             preambles: stored?.preambles ?? [],
-            clearedTaskIds: stored?.clearedTaskIds ?? [],
+            clearedTaskIds: clearedTaskIdsOf(stored?.extras ?? {}),
             provider,
             command: this.commands[kind] ?? provider.command,
             ...(this.spawn ? { spawn: this.spawn } : {}),
@@ -1202,7 +1203,14 @@ export class ChatManager {
             const log = this.logs.get(chatId);
             // Not folded here: an older write still in flight may land after this one, and the log is what covers for it.
             try {
-                this.store.writeSync(chatId, info, items, { seq: log?.seq ?? 0, resetSeq: log?.resetSeq ?? 0 }, session.preambles, session.clearedTaskIds);
+                this.store.writeSync(
+                    chatId,
+                    info,
+                    items,
+                    { seq: log?.seq ?? 0, resetSeq: log?.resetSeq ?? 0 },
+                    session.preambles,
+                    clearedExtras(session.clearedTaskIds)
+                );
             } catch (e) {
                 console.error(`Chat record for ${chatId} failed:`, errorText(e));
             }
@@ -1258,7 +1266,7 @@ export class ChatManager {
             }
             // A delta held back is already in the thread, so it gets its seq before the snapshot says where it ends.
             this.coalescers.get(chatId)?.flush();
-            const unlogged = JSON.stringify([session.preambles, session.clearedTaskIds]);
+            const unlogged = JSON.stringify([session.preambles, clearedExtras(session.clearedTaskIds)]);
             const folds = fold || log.size > COMPACT_ABOVE_BYTES || !log.onDisk;
             // The log already holds every change to the thread, so the whole record is rewritten only to fold
             // the log, on a chat's first write, or for what no event carries.
@@ -1267,7 +1275,7 @@ export class ChatManager {
             }
             const { info, items } = session.thread.snapshot();
             const at = { seq: log.seq, resetSeq: log.resetSeq };
-            this.sizes.set(chatId, await this.store.write(chatId, info, items, at, session.preambles, session.clearedTaskIds));
+            this.sizes.set(chatId, await this.store.write(chatId, info, items, at, session.preambles, clearedExtras(session.clearedTaskIds)));
             this.unlogged.set(chatId, unlogged);
             // A chat killed while the write was out has no log left to fold.
             if (this.logs.get(chatId) === log && folds) {
@@ -1412,3 +1420,9 @@ export const unspokenFork = (items: readonly ChatItem[], info: ChatInfo): boolea
     const turns = items.filter((item) => item.kind === 'turn');
     return turns.at(-1)?.id === forkOf.turnId;
 };
+
+/* The rows of tasks a clear hid, as the record keeps them beside the thread. */
+const clearedExtras = (ids: readonly string[]): ChatRecordExtras => (ids.length === 0 ? {} : { clearedTaskIds: ids });
+
+const clearedTaskIdsOf = (extras: ChatRecordExtras): string[] =>
+    Array.isArray(extras.clearedTaskIds) ? extras.clearedTaskIds.filter((id): id is string => typeof id === 'string') : [];

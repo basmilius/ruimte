@@ -1,4 +1,4 @@
-import type { AgentKind, ChatPreferencesPayload, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { AgentKind, ChatPreferencesPayload, ModelSelection, RuntimeMode } from '@ruimte/agent-contracts';
 
 export interface ComposerPreference {
     runtimeMode?: RuntimeMode;

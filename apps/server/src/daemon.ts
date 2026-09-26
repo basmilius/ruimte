@@ -32,7 +32,7 @@ import { restartBackgroundLimits } from './tasks/background-limit.ts';
 import { TaskStore } from './tasks/task-store.ts';
 import { registerTaskHandlers } from './handlers/tasks.ts';
 import { registerPlanHandlers } from './handlers/plan.ts';
-import { PlanStore } from './plans/plan-store.ts';
+import { isPlanFileName, PlanStore } from './plans/plan-store.ts';
 import type { AgentStart, WorktreeWant } from './canvas/verb.ts';
 import { addWanted } from './canvas/worktree.ts';
 import { SOCKET_BACKPRESSURE_LIMIT } from './backpressure.ts';
@@ -60,7 +60,7 @@ import { HOOKS_PATH, handleHookRequest } from './agents/hook-receiver.ts';
 import { HOOK_EVENTS } from './agents/hooks.ts';
 import { defaultCodexRulesPath, defaultHookPaths, installCodexRules, installHooks, installInFolder } from './agents/install.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './chat/attachment-route.ts';
-import { AttachmentStore } from './chat/attachment-store.ts';
+import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 import { CANVAS_PATH, CANVAS_REQUEST_TIMEOUT_S, handleCanvasRequest } from './canvas/canvas-route.ts';
 import { ChatManager } from './chat/chat-manager.ts';
 import { hookContext } from './context/context-note.ts';
@@ -68,8 +68,8 @@ import { handleContextRequest } from './context/context-route.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from './context/notices.ts';
 import { turnFromMessage } from './context/deliver-message.ts';
-import { ChatStore } from './chat/chat-store.ts';
-import { BookmarkStore } from './chat/bookmark-store.ts';
+import { ChatStore } from '@ruimte/agents/chat/chat-store';
+import { BookmarkStore } from '@ruimte/agents/chat/bookmark-store';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, type ClientAccess } from './dispatcher.ts';
 import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
@@ -330,7 +330,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const bookmarks = new BookmarkStore(config.home);
     const chats: ChatManager = new ChatManager({
         providers,
-        store: new ChatStore(config.home, attachments),
+        store: new ChatStore(config.home, { attachments, isSidecar: isPlanFileName }),
         attachments,
         checkpoints,
         contextUrl,

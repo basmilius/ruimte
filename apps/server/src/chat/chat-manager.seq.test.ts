@@ -4,10 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatAttachResult, ChatEvent, Task } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { AttachmentStore } from './attachment-store.ts';
+import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 import { ChatManager } from './chat-manager.ts';
-import { ChatStore } from './chat-store.ts';
-import { COMPACT_ABOVE_BYTES } from './chat-log.ts';
+import { ChatStore } from '@ruimte/agents/chat/chat-store';
+import { COMPACT_ABOVE_BYTES } from '@ruimte/agents/chat/chat-log';
 import { ChatRecorder, RecordingStore } from './chat-test-helpers.ts';
 import { fakeClaude } from '@ruimte/agents/chat/fake-claude';
 import { inProcess, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
@@ -24,7 +24,7 @@ const providers = new ProviderRegistry({ detect: async () => ({ installed: true,
 const boot = (extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {}) => {
     const manager = new ChatManager({
         providers,
-        store: new ChatStore(home, attachments),
+        store: new ChatStore(home, { attachments: attachments }),
         attachments,
         spawn: claude.spawn,
         env: { PATH: process.env.PATH, HOME: home },
@@ -135,7 +135,7 @@ describe('the stream of a chat', () => {
         tasks[0] = { ...tasks[0]!, status: 'done', settledAt: 2 };
         first.manager.syncTaskRow(tasks[0]!);
         expect(first.manager.attach('chat', 'watcher').items).toEqual([]);
-        expect((await new ChatStore(home).read('chat'))?.clearedTaskIds).toEqual(['old']);
+        expect((await new ChatStore(home).read('chat'))?.extras.clearedTaskIds).toEqual(['old']);
         first.manager.persistAllSync();
         await first.manager.shutdown();
 
@@ -219,7 +219,7 @@ describe('the stream of a chat', () => {
 
 describe('the record of a chat', () => {
     test('turns after its first write only go to the log, and a machine that went down without a word still reads every one', async () => {
-        const store = new RecordingStore(home, attachments);
+        const store = new RecordingStore(home, { attachments });
         const first = boot({ store });
         await first.manager.create({ chatId: 'chat', cwd: home });
         first.manager.attach('chat', 'watcher');
@@ -241,7 +241,7 @@ describe('the record of a chat', () => {
     });
 
     test('a log that passed its bound is folded into the record at the next write, which leaves the log short', async () => {
-        const store = new RecordingStore(home, attachments);
+        const store = new RecordingStore(home, { attachments });
         const { manager, recorder } = boot({ store });
         await manager.create({ chatId: 'chat', cwd: home });
         manager.attach('chat', 'watcher');

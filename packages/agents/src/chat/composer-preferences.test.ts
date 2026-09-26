@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ModelSelection } from '@ruimte/contracts';
+import type { ModelSelection } from '@ruimte/agent-contracts';
 import { ComposerPreferences } from './composer-preferences.ts';
 
 const opus: ModelSelection = { model: 'claude-opus-5', options: { effort: 'high' } };

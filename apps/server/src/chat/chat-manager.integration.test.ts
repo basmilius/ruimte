@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { waitFor } from '../sessions/test-helpers.ts';
-import { AttachmentStore } from './attachment-store.ts';
+import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder } from './chat-test-helpers.ts';
 

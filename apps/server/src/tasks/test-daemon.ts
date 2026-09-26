@@ -6,9 +6,9 @@ import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
 import type { AgentStart, CanvasHost } from '../canvas/verb.ts';
 import { addWanted } from '../canvas/worktree.ts';
-import { AttachmentStore } from '../chat/attachment-store.ts';
+import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 import { ChatManager } from '../chat/chat-manager.ts';
-import { ChatStore } from '../chat/chat-store.ts';
+import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import { continueOn } from '../chat/continue-on.ts';
 import { chatForkDeps, forkChat, readForkInfo } from '../chat/fork.ts';
 import { fakeClaude } from '@ruimte/agents/chat/fake-claude';
@@ -31,7 +31,7 @@ import { OutboxStore, type OutboxWork } from '../outbox/outbox.ts';
 import type { OutboxWorker } from '../outbox/outbox-worker.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
 import type { TaskWiring } from './wiring.ts';
-import { PlanStore } from '../plans/plan-store.ts';
+import { isPlanFileName, PlanStore } from '../plans/plan-store.ts';
 import { nodeAccount, nodeMode, startAgentWork } from '../outbox/start-agent.ts';
 import { OutboxLink, wireOutbox } from '../outbox/wiring.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
@@ -147,7 +147,7 @@ export const bootTestDaemon = async ({
     const chatEnvs: Array<Record<string, string>> = [];
     const chats = new ChatManager({
         providers,
-        store: new ChatStore(home, attachments),
+        store: new ChatStore(home, { attachments, isSidecar: isPlanFileName }),
         attachments,
         ...(checkpoints ? { checkpoints } : {}),
         spawn: (options) => {

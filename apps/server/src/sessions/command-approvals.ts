@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { isCanvasView, type ProjectView } from '@ruimte/contracts';
 import { z } from 'zod';
-import { RecordDirectory } from '../record-directory.ts';
+import { RecordDirectory } from '@ruimte/agents/record-directory';
 
 const ApprovalSchema = z.object({
     hash: z.string().min(1),

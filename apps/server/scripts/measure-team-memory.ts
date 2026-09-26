@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { heapStats } from 'bun:jsc';
 import type { ProjectContent } from '@ruimte/contracts';
-import { ChatStore } from '../src/chat/chat-store.ts';
+import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import { ManualClock } from '../src/outbox/manual-clock.ts';
 import { ProjectStore } from '../src/projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../src/tasks/test-daemon.ts';

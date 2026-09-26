@@ -3,10 +3,10 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
-import { AttachmentStore } from '../chat/attachment-store.ts';
+import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { RESUME_PROMPT } from '../chat/chat-session.ts';
-import { ChatStore } from '../chat/chat-store.ts';
+import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import type { SpawnChatProcess } from '@ruimte/agents/chat/chat-process';
 import { fakeClaude } from '@ruimte/agents/chat/fake-claude';
 import { fakeCodex } from '@ruimte/agents/chat/fake-codex';
@@ -87,7 +87,7 @@ const boot = async (spawn?: SpawnChatProcess): Promise<Daemon> => {
     const box: { worker: OutboxWorker | null } = { worker: null };
     const chats = new ChatManager({
         providers,
-        store: new ChatStore(home, attachments),
+        store: new ChatStore(home, { attachments: attachments }),
         attachments,
         spawn: spawn ?? ((options) => (options.command[0] === 'codex' ? codex.spawn(options) : claude.spawn(options))),
         env: { PATH: process.env.PATH, HOME: home },

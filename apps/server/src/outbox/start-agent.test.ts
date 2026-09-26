@@ -8,9 +8,9 @@ import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
 import { startCwdGuard } from '../canvas/project-paths.ts';
 import type { AgentStart, CanvasHost } from '../canvas/verb.ts';
-import { AttachmentStore } from '../chat/attachment-store.ts';
+import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 import { ChatManager } from '../chat/chat-manager.ts';
-import { ChatStore } from '../chat/chat-store.ts';
+import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import { fakeClaude } from '@ruimte/agents/chat/fake-claude';
 import { fakeCodex } from '@ruimte/agents/chat/fake-codex';
 import { inProcess, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
@@ -128,7 +128,7 @@ const boot = async (): Promise<Daemon> => {
     const attachments = new AttachmentStore(home);
     const chats = new ChatManager({
         providers,
-        store: new ChatStore(home, attachments),
+        store: new ChatStore(home, { attachments: attachments }),
         attachments,
         spawn: (options) => (options.command[0] === 'codex' ? codex.spawn(options) : claude.spawn(options)),
         env: { PATH: process.env.PATH, HOME: home },

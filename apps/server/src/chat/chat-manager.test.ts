@@ -8,8 +8,8 @@ import { chatPrompt, verbsNote } from '../context/context-note.ts';
 import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from '../context/notices.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { AttachmentStore } from './attachment-store.ts';
-import { BookmarkStore } from './bookmark-store.ts';
+import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
+import { BookmarkStore } from '@ruimte/agents/chat/bookmark-store';
 import { chatReferenceNote } from '../context/chat-references.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, FakeCheckpoints, RecordingStore } from './chat-test-helpers.ts';
@@ -50,7 +50,7 @@ const retire = async (target: ChatManager): Promise<void> => {
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-chat-'));
     attachments = new AttachmentStore(home);
-    store = new RecordingStore(home, attachments);
+    store = new RecordingStore(home, { attachments });
     claude = inProcess(fakeClaude);
     manager = makeManager();
     recorder = new ChatRecorder();

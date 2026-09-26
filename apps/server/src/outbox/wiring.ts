@@ -2,7 +2,7 @@ import type { Task } from '@ruimte/contracts';
 import type { AgentLineageStore } from '../agents/lineage.ts';
 import type { PendingPromptStore } from '../agents/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
-import { limitResumeAt } from '../chat/limit-resume.ts';
+import { limitResumeAt } from '@ruimte/agents/chat/limit-resume';
 import { wireSummaries, type SummaryWiring } from '../chat/summary.ts';
 import { chatOpener } from '../chat/wake-chat.ts';
 import { deliverMessageHandler } from '../context/deliver-message.ts';

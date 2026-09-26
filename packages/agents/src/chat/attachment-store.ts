@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
-import { attachmentImageMime, type ChatAttachment, type ChatAttachmentUpload } from '@ruimte/contracts';
+import { attachmentImageMime, type ChatAttachment, type ChatAttachmentUpload } from '@ruimte/agent-contracts';
 
 // The extension the file gets on disk when its name does not carry a usable one.
 const EXTENSIONS: Record<string, string> = {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { appendFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
+import type { ChatEvent, ChatInfo, ChatItem } from '@ruimte/agent-contracts';
 import { ChatLog } from './chat-log.ts';
 import { ChatStore } from './chat-store.ts';
 

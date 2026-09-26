@@ -10,7 +10,7 @@ import type { ProviderAccountsService } from '@ruimte/agents/providers/accounts/
 import { testAccounts } from '@ruimte/agents/providers/accounts/test-accounts';
 import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
-import { ChatStore } from './chat-store.ts';
+import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 
 const content = (): ProjectContent => ({

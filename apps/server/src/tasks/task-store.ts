@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { TaskSchema, type Task, type TaskResult } from '@ruimte/contracts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { ClientSinks } from '../client-sinks.ts';
-import { RecordDirectory } from '../record-directory.ts';
+import { RecordDirectory } from '@ruimte/agents/record-directory';
 
 export type TaskListener = (task: Task) => void;
 
