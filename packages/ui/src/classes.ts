@@ -1,6 +1,6 @@
 /*
  * The utility strings more than a couple of call sites share. They live here and not in
- * `styles.css` because each one is only a bundle of utilities. The stylesheet keeps the tokens and
+ * `theme.css` because each one is only a bundle of utilities. The stylesheet keeps the tokens and
  * the rules utilities cannot write, and a shared string keeps a call site's own utility winning.
  * A label takes the line height of the row it sits in, which is why the sizes carry `/[inherit]`.
  */

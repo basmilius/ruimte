@@ -13,8 +13,15 @@ import { Tooltip } from '@ruimte/ui/Tooltip';
 
 An app using it does three things:
 
-- Let Tailwind scan the package: `@source "<path to>/@ruimte/ui/src";` in its stylesheet.
-- Define the semantic tokens the classes name (`bg-surface`, `text-positive-text`, ...). They still live in Ruimte's `apps/client/src/styles.css`.
+- Import the theme right after Tailwind and let Tailwind scan the package:
+
+  ```css
+  @import "tailwindcss";
+  @import "@ruimte/ui/theme.css";
+  @source "<path to>/@ruimte/ui/src";
+  ```
+
+  The theme holds the semantic tokens (`bg-surface`, `text-positive-text`, ...), the type scale and the rules for icon buttons, fields, menus, dialogs and tooltips. It resets Tailwind's palette, so an app adds its own colors in an `@theme inline` block after it. Its light and dark tokens follow `data-theme` on `<html>`.
 - Add the `ui` namespace to its i18next: `UI_LOCALES[language]()` from `@ruimte/ui/locales`, added under `UI_NAMESPACE`. English and Dutch ship with the package.
 
 ## Rules

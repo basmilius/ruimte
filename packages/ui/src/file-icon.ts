@@ -14,7 +14,7 @@ export const FILE_TREE_ICONS: FileTreeIconConfig = { set: ICON_SET, colored: tru
 
 /* The set gives every file type a hue. The library keeps that mapping in the CSS of the tree's
    shadow root, which nothing outside the tree can read, so it is repeated here against the
-   `--file-icon-*` tokens in `styles.css`, which carry the library's own values. A token missing
+   `--file-icon-*` tokens in `theme.css`, which carry the library's own values. A token missing
    here is one the library leaves uncolored; it inherits the muted text color the tree gives it. */
 export type FileIconHue = 'blue' | 'cyan' | 'gray' | 'green' | 'indigo' | 'mauve' | 'orange' | 'pink' | 'purple' | 'red' | 'teal' | 'vermilion' | 'yellow';
 
