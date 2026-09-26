@@ -24,7 +24,7 @@ export const expandHome = (path: string, env: Env): string => {
     return resolve(path);
 };
 
-/* A folder the daemon can resolve the same way whatever folder it was started in. */
+/* A folder the host can resolve the same way whatever folder it was started in. */
 const isRootedPath = (path: string): boolean => path === '~' || path.startsWith('~/') || isAbsolute(path);
 
 /*
@@ -91,7 +91,7 @@ export const withDefaults = (accounts: ProviderAccountMap): ProviderAccountMap =
     return complete;
 };
 
-/* The folder the CLI itself falls back on, as the daemon's own environment sets it. */
+/* The folder the CLI itself falls back on, as the host's own environment sets it. */
 export const defaultFolder = (provider: ChatProvider, env: Env): string => {
     if (provider.home === undefined) {
         return '';
@@ -116,7 +116,7 @@ export const transcriptFolder = (id: string, account: ProviderAccount, provider:
 };
 
 /*
- * The environment of a CLI process of this account. The default account runs in the daemon's own. Any
+ * The environment of a CLI process of this account. The default account runs in the host's own. Any
  * other gets its folder in the CLI's variable, and loses the variables that would sign the CLI in over
  * that folder's login: an inherited key would win, and only the bill would tell. Never HOME, which
  * moves where Claude Code looks in the keychain. The account's own variables come last, so a key a

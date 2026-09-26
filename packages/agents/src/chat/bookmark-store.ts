@@ -29,7 +29,7 @@ const named = (bookmark: ChatBookmark, name: string | undefined): ChatBookmark =
 };
 
 /*
- * The bookmarks of every chat, one file per chat beside its record under `$RUIMTE_HOME/chats`, apart
+ * The bookmarks of every chat, one file per chat beside its record under `<home>/chats`, apart
  * from the record, which is rewritten on every turn. One chain per chat puts two clients' clicks
  * after each other, and every change is told to the listeners from inside that chain, so the lists
  * go out in the order they were written.

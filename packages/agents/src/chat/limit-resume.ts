@@ -1,6 +1,6 @@
 import type { ChatItem, ChatTurnItem, ChatTurnLimit } from '@ruimte/agent-contracts';
 
-/* How long the daemon waits before each next try of a turn that stopped on a limit; one more limited turn in a row than there are delays is an error like any other. */
+/* How long the host waits before each next try of a turn that stopped on a limit; one more limited turn in a row than there are delays is an error like any other. */
 export const LIMIT_RETRY_DELAYS_MS: readonly number[] = [60_000, 5 * 60_000, 15 * 60_000];
 
 /* The last turn of a thread, when it stopped on a limit. */
@@ -36,7 +36,7 @@ const limitedInARow = (items: readonly ChatItem[], turn: ChatTurnItem): number =
 };
 
 /*
- * When the daemon takes a limited turn up again, or null when it does not: a usage limit at its reset
+ * When the host takes a limited turn up again, or null when it does not: a usage limit at its reset
  * and an overload after 1, 5 and 15 minutes. A usage limit that holds past its reset waits those too,
  * so a reset the plan did not keep never turns into a loop.
  */
@@ -58,7 +58,7 @@ export const limitResumeAt = (items: readonly ChatItem[], turn: ChatTurnItem, no
     return tries === 1 ? turn.limit.resetsAt : Math.max(turn.limit.resetsAt, now + delay);
 };
 
-/* The turn the daemon opens to take a limited one up again: what the CLI is told, and what a person reads above it. */
+/* The turn the host opens to take a limited one up again: what the CLI is told, and what a person reads above it. */
 export const limitResumeWake = (kind: ChatTurnLimit['kind']): { text: string; label: string; note: string } =>
     kind === 'usage'
         ? {

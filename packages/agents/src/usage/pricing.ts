@@ -146,7 +146,7 @@ interface Snapshot {
 }
 
 /*
- * One price table for the whole daemon. It starts on the snapshot that ships with the app, so the
+ * One price table for the whole host. It starts on the snapshot that ships with the app, so the
  * first page ever opened already carries prices, then reads the newer copy on disk, then asks
  * LiteLLM once a day. Every step is optional: with the fetch off and nothing on disk the bundled
  * table is what prices everything.

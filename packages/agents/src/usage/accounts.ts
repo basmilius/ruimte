@@ -12,7 +12,7 @@ interface MachineAccount extends UsageAccount {
     signedIn: boolean;
 }
 
-/* The accounts of the CLIs whose usage the daemon reads; a default account nobody named is called after its CLI. */
+/* The accounts of the CLIs whose usage the host reads; a default account nobody named is called after its CLI. */
 export const machineAccounts = (snapshot: ProviderAccounts, nameOf: (kind: UsageProvider) => string): MachineAccount[] =>
     Object.entries(snapshot.accounts).flatMap(([id, account]) => {
         if (!isUsageProvider(account.kind)) {

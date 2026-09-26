@@ -13,14 +13,14 @@ export interface RecordDirectoryOptions<T> {
     idOf(record: T): string;
     /*
      * What a record read from disk is worth keeping as, for a store that drops what went stale while
-     * the daemon was down. Null takes the file with it.
+     * the host was down. Null takes the file with it.
      */
     keep?(record: T): T | null;
 }
 
 /*
- * One kind of record under `$RUIMTE_HOME`, a file per record and the whole of it in memory. A file
- * that does not parse is left alone rather than deleted: it is a record of an older or newer daemon,
+ * One kind of record under a host's data folder, a file per record and the whole of it in memory. A file
+ * that does not parse is left alone rather than deleted: it is a record of an older or newer host,
  * and the one thing worse than not reading it is throwing it away.
  */
 export class RecordDirectory<T> {
@@ -39,7 +39,7 @@ export class RecordDirectory<T> {
         this.keep = options.keep ?? null;
     }
 
-    /* Reads what an earlier run of the daemon wrote down. Call before anything can ask. */
+    /* Reads what an earlier run of the host wrote down. Call before anything can ask. */
     async load(): Promise<void> {
         let names: string[];
         try {

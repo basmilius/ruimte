@@ -380,7 +380,7 @@ export class SubagentReader {
         let shared = this.dirWatches.get(file.dir);
         if (!shared) {
             const watcher = this.seams.watch(file.dir, { recursive: false }, (_event, filename) => this.onClaudeChange(file.dir, filename));
-            // A folder that disappears ends the growing, not the daemon.
+            // A folder that disappears ends the growing, not the host.
             watcher.on('error', () => undefined);
             shared = { watcher, keys: new Set() };
             this.dirWatches.set(file.dir, shared);

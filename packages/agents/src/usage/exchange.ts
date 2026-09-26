@@ -10,7 +10,7 @@ export const FRANKFURTER_URL = 'https://api.frankfurter.app/latest';
 const TTL_MS = 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 10_000;
 
-/* The one currency the page offers next to dollars. Every price the daemon knows is in dollars. */
+/* The one currency the page offers next to dollars. Every price the host knows is in dollars. */
 export const TARGET_CURRENCY = 'EUR';
 
 export const parseRate = (document: unknown, currency: string): Omit<UsageRate, 'fetchedAt'> | null => {

@@ -34,7 +34,7 @@ export const extensionFor = (name: string, mime: string): string => {
 };
 
 /*
- * The files people attach to a message, under `$RUIMTE_HOME/attachments/<chatId>`. The thread keeps
+ * The files people attach to a message, under `<home>/attachments/<chatId>`. The thread keeps
  * only what a row needs (name, mime, size, path); the bytes stay on disk, so a thread with a video
  * in it is still a small JSON file.
  */

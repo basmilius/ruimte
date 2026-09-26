@@ -17,7 +17,7 @@ export interface UsageServiceOptions {
     home: string;
     /* Off with `--no-price-fetch`: the bundled table then prices everything and no rate is asked for. */
     allowPriceFetch?: boolean;
-    /* The projects the daemon knows, so a folder can wear the name it has in the app. */
+    /* The projects the host knows, so a folder can wear the name it has in the app. */
     knownProjects(): Promise<KnownProject[]>;
     /* Where the transcripts are, asked again on every scan when a function. */
     roots?: UsageRootPath[] | (() => UsageRootPath[]);
@@ -43,7 +43,7 @@ const withRecordAccounts = (accounts: UsageAccount[], records: readonly UsageRec
 const EMPTY_SCAN: ScanReport = { at: 0, files: 0, changedFiles: 0, durationMs: 0, roots: [] };
 
 /*
- * What the usage page asks the daemon. It owns one scanner and one price table for every client:
+ * What the usage page asks the host. It owns one scanner and one price table for every client:
  * the transcripts are machine-wide, so a second person looking costs a second aggregation and not a
  * second scan. The scan runs when a request finds the last one stale and, while any client has the
  * page open, once a minute, which is what `usage.changed` announces.

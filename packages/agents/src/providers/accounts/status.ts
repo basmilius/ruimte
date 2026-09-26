@@ -6,7 +6,7 @@ import { runProcess } from '../../run-process.ts';
 /* A CLI that has not said who is signed in by now is not going to; the next pass asks again. */
 const ASK_TIMEOUT_MS = 20_000;
 
-/* Who a CLI says is signed in, from the CLI itself; the daemon never opens a credential. */
+/* Who a CLI says is signed in, from the CLI itself; the host never opens a credential. */
 export interface AccountReading {
     signedIn: boolean;
     email: string | null;

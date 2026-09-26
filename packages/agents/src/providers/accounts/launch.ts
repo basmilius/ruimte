@@ -6,7 +6,7 @@ export class AccountError extends CodedError<'account-unavailable' | 'account-in
 
 /*
  * The accounts as a terminal or a chat starts a CLI under one. Absent, or the CLI's own kind, is the
- * default account, which runs in the daemon's own environment plus the variables a person gave it.
+ * default account, which runs in the host's own environment plus the variables a person gave it.
  */
 export interface AccountLaunches {
     /* The environment of a CLI of this kind under this account. Throws an `AccountError` for one this machine cannot start. */

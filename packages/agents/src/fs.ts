@@ -17,7 +17,7 @@ const isTransient = (e: unknown): boolean =>
 // Two writes of the same file in flight at once (a fire-and-forget save next to an awaited one) must not share a temp name.
 let nextTemp = 0;
 
-/* Where a file waits while it is being written; the pid keeps two daemons over one home apart. */
+/* Where a file waits while it is being written; the pid keeps two hosts over one home apart. */
 export const tempNameFor = (target: string): string => `${target}.${process.pid}-${nextTemp++}.tmp`;
 
 export interface WriteAtomicOptions {

@@ -4,7 +4,7 @@ import type { AgentStatus, ChatApprovalItem, ChatEvent, ChatHistoryResult, ChatI
 
 /*
  * The state of one chat as the client sees it. Every mutation answers the event that describes
- * it, so the daemon broadcasts exactly what it applied and a reload can rebuild from `snapshot`.
+ * it, so the host broadcasts exactly what it applied and a reload can rebuild from `snapshot`.
  */
 export class ChatThread {
     info: ChatInfo;

@@ -6,8 +6,8 @@ export type BackgroundWork = ChatSubagentItem | ChatToolItem;
  * Work a chat's CLI goes on with after the turn that started it ended: a subagent it runs in the
  * background (Claude's `run_in_background`, every agent Codex spawns) and a Claude workflow, whose call
  * answers at launch. A command or a monitor sent to the background is not work of this kind but a
- * `ChatBackgroundTask` in the chat's info, held to `BACKGROUND_COMMAND_LIMIT_MS`; an agent Ruimte opened
- * is a node with a task of its own.
+ * `ChatBackgroundTask` in the chat's info, held to `BACKGROUND_COMMAND_LIMIT_MS`; a row the host drew for
+ * work it delegated itself (origin `ruimte` on the wire) is that work's own.
  */
 export const isBackgroundWork = (item: ChatItem): item is BackgroundWork =>
     (item.kind === 'subagent' && item.background && item.origin !== 'ruimte') || (item.kind === 'tool' && item.name === 'Workflow');

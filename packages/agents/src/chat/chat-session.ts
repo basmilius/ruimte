@@ -74,15 +74,15 @@ export interface ChatSessionOptions {
     nameThread?(input: ChatTitleInput): Promise<string | null>;
     // How a subagent's own transcript says it ended, for a row whose CLI is gone; absent for a CLI that keeps none.
     subagentSettlement?(toolUseId: string): Promise<SubagentSettlement | null>;
-    // What the daemon owes a turn that stopped on a limit; absent, nothing takes one up on its own.
+    // What the host owes a turn that stopped on a limit; absent, nothing takes one up on its own.
     limitResume?: LimitResumeHooks;
 }
 
 export interface LimitResumeHooks {
-    // The machine's switch; the chat's own `resumeAtReset` can still say no.
+    // The host's switch; the chat's own `resumeAtReset` can still say no.
     allowed(): boolean;
     now(): number;
-    // Owes the outbox entry that takes the turn up at `at`, in place of any this chat owed before.
+    // Owes what takes the turn up at `at`, in place of anything this chat was owed before.
     owe(turnId: string, at: number): Promise<void>;
     lapse(): Promise<void>;
     owed(): boolean;
@@ -112,7 +112,7 @@ const newId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random
 
 /*
  * Provider-neutral chat state. Backends live between turns and resume by CLI session id after a
- * crash, daemon restart, or model and mode change.
+ * crash, host restart, or model and mode change.
  */
 export class ChatSession {
     readonly thread: ChatThread;
@@ -133,9 +133,9 @@ export class ChatSession {
     // Turns we settled ourselves whose `result` is still on its way; it may not close the turn after them.
     private staleResults = 0;
     private titleTimer: ReturnType<typeof setTimeout> | null = null;
-    // A name is asked for once per chat this daemon holds; the turn count keeps it once across restarts.
+    // A name is asked for once per chat this host holds; the turn count keeps it once across restarts.
     private naming = false;
-    // Set while the daemon goes down: a CLI dying with it must not end the turn a restart takes up again.
+    // Set while the host goes down: a CLI dying with it must not end the turn a restart takes up again.
     private frozen = false;
     // Background subagents a load found running whose transcript did not show an end yet; no CLI here will report them.
     private readonly orphans = new Set<string>();
@@ -214,7 +214,7 @@ export class ChatSession {
     }
 
     /*
-     * A message while a turn runs joins the queue instead of being refused; the daemon sends it when
+     * A message while a turn runs joins the queue instead of being refused; the host sends it when
      * that turn settles. One queue for both providers: Claude's steer and Codex's own queue have
      * different semantics, and one rule is easier to reason about than a rule per CLI.
      */
@@ -447,7 +447,7 @@ export class ChatSession {
         }
         const info = this.thread.info;
         const patch: Partial<ChatInfo> = { selection, running: false, status: resumeTurnId === null ? 'idle' : 'running', activeTurnId: resumeTurnId };
-        // No process of the daemon that went down is left to run what it kept in the background.
+        // No process of the host that went down is left to run what it kept in the background.
         if (info.background?.length) {
             patch.background = [];
         }
@@ -470,9 +470,9 @@ export class ChatSession {
     }
 
     /*
-     * Takes up a turn the daemon went down in: a new process on the CLI's own session, the same turn
+     * Takes up a turn the host went down in: a new process on the CLI's own session, the same turn
      * with the next attempt, and a prompt that says what happened. Nothing happens when the turn has
-     * ended or already has that attempt, so the outbox may run it twice. A CLI that will not start
+     * ended or already has that attempt, so the host may run it twice. A CLI that will not start
      * throws and leaves the turn waiting for the next try.
      */
     async resume(turnId: string, attempt: number, words: ResumeWords): Promise<void> {
@@ -561,7 +561,7 @@ export class ChatSession {
         return turnId;
     }
 
-    /* The machine's switch or this chat's own changed: a limit still ahead is owed a resume now, or what was owed lapses. */
+    /* The host's switch or this chat's own changed: a limit still ahead is owed a resume now, or what was owed lapses. */
     resumeSettingChanged(): void {
         if (this.resumeAllowed()) {
             this.oweResume(false);
@@ -624,7 +624,7 @@ export class ChatSession {
     }
 
     /*
-     * A resume time the record shows while the outbox holds no entry for it, which a daemon that went
+     * A resume time the record shows while the host holds no entry for it, which a host that went
      * down between the two leaves: owed again at that time, or taken off when nothing may owe it now.
      */
     settleOwedResume(): void {
@@ -709,7 +709,7 @@ export class ChatSession {
         this.options.persistSoon();
     }
 
-    /* A line in the thread outside any turn, for something the daemon has to say about work it gave up on. */
+    /* A line in the thread outside any turn, for something the host has to say about work it gave up on. */
     addNote(level: 'info' | 'warning' | 'error', text: string): void {
         this.emit([this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: Date.now(), turnId: null, level, text })]);
         this.options.persist();
@@ -753,7 +753,7 @@ export class ChatSession {
         this.options.persist();
     }
 
-    /* Ends the process and stops listening to it, as the daemon goes down; the thread stays as it is. */
+    /* Ends the process and stops listening to it, as the host goes down; the thread stays as it is. */
     freeze(): void {
         this.frozen = true;
         this.backend?.stop();
@@ -794,8 +794,8 @@ export class ChatSession {
 
     /*
      * The background subagents of the CLI's own that were running when the chat was stored. Whatever
-     * ran them went with the daemon, so no notification will come: a Claude row settles as done when
-     * its transcript shows the end, and stays running otherwise (a CLI can outlive the daemon for a
+     * ran them went with the host, so no notification will come: a Claude row settles as done when
+     * its transcript shows the end, and stays running otherwise (a CLI can outlive the host for a
      * moment and still finish); a Codex agent works inside its parent's app-server, so it is gone too.
      */
     async settleOrphanedSubagents(): Promise<void> {
@@ -876,7 +876,7 @@ export class ChatSession {
 
     /*
      * What this chat's CLI would run as a skill. A running backend that answers the question itself
-     * (Codex) is the authority; otherwise the daemon's own scan is, narrowed to what the CLI's init
+     * (Codex) is the authority; otherwise the host's own scan is, narrowed to what the CLI's init
      * frame said it has, so a skill turned off in its settings drops out after the first message.
      */
     async skills(scan: () => Promise<ChatSkill[]>): Promise<ChatSkill[]> {
@@ -917,7 +917,7 @@ export class ChatSession {
         }
         events.push(this.thread.patchInfo({ status: this.thread.statusFor(turnId), activeTurnId: turnId }));
         this.emit(events);
-        // On disk before the CLI answers, so a daemon that goes down mid-turn still shows the question.
+        // On disk before the CLI answers, so a host that goes down mid-turn still shows the question.
         this.options.persist();
         return turnId;
     }
@@ -1283,13 +1283,13 @@ export class ChatSession {
     }
 }
 
-/* The turn a restart takes up again, or else why the turn the daemon went down in ends (null when none was running). */
+/* The turn a restart takes up again, or else why the turn the host went down in ends (null when none was running). */
 export interface ResumeDecision {
     resumeTurnId: string | null;
     reason: string | null;
 }
 
-// Whatever was open when the daemon went down: nobody is going to answer it now.
+// Whatever was open when the host went down: nobody is going to answer it now.
 const settleStoredItem = (item: ChatItem, resumeTurnId: string | null): ChatItem => {
     if (item.kind === 'assistant' && item.streaming) {
         return { ...item, streaming: false };

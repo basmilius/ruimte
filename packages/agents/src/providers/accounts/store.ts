@@ -121,7 +121,7 @@ const linkProblem = (
 /*
  * The whole map a person saved, as the file will hold it. A mistake in an account of a known kind
  * refuses the save; an account of an unknown kind keeps the entry the file had under its id, which a
- * client that knows the kind no better than this daemon could only have cut short. Sensitive values
+ * client that knows the kind no better than this host could only have cut short. Sensitive values
  * are still in it: the caller puts them in the keychain before the file is written.
  */
 export const acceptAccounts = (

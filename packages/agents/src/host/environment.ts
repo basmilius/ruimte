@@ -4,7 +4,7 @@
  */
 export const RUIMTE_SESSION_VARIABLES = ['RUIMTE_HOOK_URL', 'RUIMTE_HOOK_TOKEN', 'RUIMTE_CONTEXT_URL', 'RUIMTE_CONTEXT_TOKEN', 'RUIMTE_SESSION_ID'] as const;
 
-// Every hook and context variable, including ones a later version of the daemon adds.
+// Every hook and context variable, including ones a later version of Ruimte adds.
 const RUIMTE_SESSION_PREFIXES = ['RUIMTE_HOOK_', 'RUIMTE_CONTEXT_'];
 
 const inherited = (name: string): boolean =>

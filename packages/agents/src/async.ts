@@ -1,4 +1,4 @@
-/* The two waits the daemon does: a pause it can be woken from, and a deadline on somebody else's promise. */
+/* The two waits the host does: a pause it can be woken from, and a deadline on somebody else's promise. */
 
 /*
  * Resolves after `ms`, or at once when the signal is raised. An abort ends the wait rather than

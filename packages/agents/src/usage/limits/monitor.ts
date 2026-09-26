@@ -32,7 +32,7 @@ export interface LimitAccounts {
     list(): LimitAccount[];
     /* The environment a probe of this account runs in. Throws for an account this machine cannot start. */
     envFor(kind: UsageProvider, id: string): ProbeEnv;
-    /* When a chat or a terminal last started under this account; null when none did since the daemon started. */
+    /* When a chat or a terminal last started under this account; null when none did since the host started. */
     lastUsedAt(id: string): number | null;
 }
 
@@ -105,7 +105,7 @@ export class UsageMonitor {
         return { providers };
     }
 
-    /* Starts the five minute pass. The first read runs at once, so a fresh daemon has numbers. */
+    /* Starts the five minute pass. The first read runs at once, so a fresh host has numbers. */
     start(): void {
         this.timer ??= setInterval(() => void this.refresh(false), PROBE_INTERVAL_MS);
         void this.refresh(false);

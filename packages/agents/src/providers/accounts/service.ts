@@ -257,7 +257,7 @@ export class ProviderAccountsService implements AccountLaunches {
         this.launches.set(id ?? kind, this.now());
     }
 
-    /* When a CLI last started under this account; null when none did since the daemon started. */
+    /* When a CLI last started under this account; null when none did since the host started. */
     lastLaunchAt(id: string): number | null {
         return this.launches.get(id) ?? null;
     }
@@ -599,7 +599,7 @@ export class ProviderAccountsService implements AccountLaunches {
     /*
      * Puts the hooks in the account's folder and links a shadow home to the home it shares, before the
      * CLI is asked anything: Codex writes its own files into a fresh home the moment it starts, and a
-     * real file there is one the daemon will never replace by a link. Answers what a person should
+     * real file there is one the host will never replace by a link. Answers what a person should
      * know about the shadow home, and throws when it cannot be used.
      */
     private async prepare(id: string, kind: AgentKind, account: ProviderAccount): Promise<string | null> {

@@ -55,7 +55,7 @@ export const estimateContextBreakdown = (items: readonly ChatItem[], contextToke
                 break;
             }
             case 'subagent':
-                // A row a `--task` opened stands for a node; the verb call that made it is a tool row of its own.
+                // A row the host drew for work it delegated stands for that work; the call that made it is a tool row of its own.
                 if (item.origin !== 'ruimte') {
                     toolOutput += textTokens(item.prompt ?? '') + textTokens(item.result ?? '');
                 }

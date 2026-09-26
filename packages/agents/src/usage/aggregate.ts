@@ -21,7 +21,7 @@ export interface Aggregation {
 }
 
 /*
- * The calendar day a moment falls in, as the viewer's clock reads it. The daemon may stand in
+ * The calendar day a moment falls in, as the viewer's clock reads it. The host may stand in
  * another zone than the person looking, so the zone travels with the request and every boundary
  * here is local wall clock, never UTC.
  */

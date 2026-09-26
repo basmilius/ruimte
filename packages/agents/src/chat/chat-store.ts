@@ -29,7 +29,7 @@ export type ChatRecordExtras = Record<string, unknown>;
 
 const extrasOf = (record: Record<string, unknown>): ChatRecordExtras => Object.fromEntries(Object.entries(record).filter(([key]) => !OWN_KEYS.has(key)));
 
-/* A thread as it stood when the daemon last wrote down anything about it: the snapshot with the log played over it. */
+/* A thread as it stood when the host last wrote down anything about it: the snapshot with the log played over it. */
 export interface ChatRecord {
     info: ChatInfo;
     items: ChatItem[];
@@ -215,7 +215,7 @@ const readOrNull = async (path: string): Promise<string | null> => {
 };
 
 /*
- * A chat whose first snapshot never reached the disk (the daemon went down within moments of its
+ * A chat whose first snapshot never reached the disk (the host went down within moments of its
  * first turn) is rebuilt from its log when the log starts at the beginning and says what the chat
  * is. Otherwise the chat starts over, and its stream goes on after the last seq the log handed out
  * with a reset marked there, so a client holding a seq from before cannot be answered from after.

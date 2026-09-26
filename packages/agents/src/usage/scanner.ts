@@ -106,7 +106,7 @@ const parseChunk = (text: string, provider: 'claude' | 'codex', from: number, st
 };
 
 export interface UsageScannerOptions {
-    /* The account of every session the daemon knows ran, by `<provider>\0<sessionId>`, the default one under its kind. */
+    /* The account of every session the host knows ran, by `<provider>\0<sessionId>`, the default one under its kind. */
     sessionAccounts?: () => ReadonlyMap<string, string>;
 }
 
@@ -114,7 +114,7 @@ type AccountOf = (record: UsageRecord) => string | undefined;
 
 /*
  * The account a record of a root belongs to, as a record keeps it (absent for the default account):
- * the one account that writes there, else the one the daemon knows ran the session, else the
+ * the one account that writes there, else the one the host knows ran the session, else the
  * default account of the CLI, which is the only one a session nobody started through the host ran under.
  */
 export const accountResolver = (root: UsageRootPath, sessionAccounts: () => ReadonlyMap<string, string>): AccountOf => {
