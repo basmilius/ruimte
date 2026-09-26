@@ -10,6 +10,10 @@ folder a component lives in (`NAMESPACES` in `namespaces.ts`), with `shell` spli
 `panels` and `usage` because it holds nearly half the interface on its own. Two people never write
 in the same file, and a window only downloads the words of the screens it draws.
 
+The chat, its prompt cards, the providers pane and the usage page carry their words in
+`@ruimte/agents-react` (`agent-chat`, `agent-prompts`, `agent-providers`, `agent-usage`), and the
+components of `@ruimte/ui` in `ui`; both are loaded beside these files. The same rules hold there.
+
 `common` holds what several surfaces say the same way: Cancel, Close, Delete, Try again. Read from
 it freely, add to it only when a word is genuinely shared, never to park a string that has a home.
 
