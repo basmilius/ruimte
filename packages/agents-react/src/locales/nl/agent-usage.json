@@ -1,0 +1,13 @@
+{
+  "limits": {
+    "checked": {
+      "now": "nu",
+      "ago": "{{duration}} geleden",
+      "fromTurn": "Uit een turn · {{when}}"
+    },
+    "none": "Nog geen limieten gemeld.",
+    "notInstalled": "Niet geïnstalleerd op deze machine.",
+    "noSubscription": "Dit account gebruikt een API-sleutel en kent geen abonnementslimieten.",
+    "unreachable": "De CLI was niet bereikbaar."
+  }
+}

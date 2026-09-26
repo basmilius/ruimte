@@ -1,51 +1,4 @@
 {
-  "card": {
-    "approval": "Permission request",
-    "question": "Question",
-    "waiting": "Waiting in the terminal"
-  },
-  "toolbar": "Actions",
-  "sending": "Sending…",
-  "error": {
-    "notConnected": "Not connected to the machine",
-    "noChoices": "A chat request has no choices of its own",
-    "terminalOnly": "This prompt can only be answered in its terminal",
-    "expired": "This request was already answered or has expired"
-  },
-  "approval": {
-    "runCommand": "Run command",
-    "allow": "Allow",
-    "deny": "Deny",
-    "addReason": "Add a reason",
-    "allChanges_one": "Allow applies to the {{count}} change in this request.",
-    "allChanges_other": "Allow applies to all {{count}} changes in this request.",
-    "loadingDiff": "Loading diff…",
-    "viewDiff": "View full diff",
-    "collapseDiff": "Collapse diff",
-    "details": "Details",
-    "reasonLabel": "Reason for declining",
-    "reasonPlaceholder": "Reason for declining, optional"
-  },
-  "question": {
-    "multiSelect": "Choose one or more",
-    "answerLabel": "Your answer",
-    "answerPlaceholder": "Your answer",
-    "somethingElse": "Something else…",
-    "previous": "Previous",
-    "next": "Next",
-    "answer": "Answer"
-  },
-  "waiting": {
-    "heading": "Waiting for you in its terminal",
-    "body": "This question can only be answered in the terminal.",
-    "goToTerminal": "Go to terminal"
-  },
-  "meta": {
-    "waiting_one": "{{count}} request waiting",
-    "waiting_other": "{{count}} requests waiting",
-    "question": "Question {{index}} of {{total}}",
-    "draftSaved": "Draft saved"
-  },
   "computer": {
     "heading": "Let an agent use {{app}}?",
     "body": "{{node}} in {{project}} wants to see and operate {{app}} on this machine.",
@@ -56,5 +9,15 @@
     "once": "Allow this time",
     "always": "Always allow",
     "deny": "Deny"
+  },
+  "waiting": {
+    "heading": "Waiting for you in its terminal",
+    "body": "This question can only be answered in the terminal.",
+    "goToTerminal": "Go to terminal"
+  },
+  "error": {
+    "expired": "This request was already answered or has expired",
+    "terminalOnly": "This prompt can only be answered in its terminal",
+    "notConnected": "Not connected to the machine"
   }
 }

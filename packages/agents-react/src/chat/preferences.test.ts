@@ -49,7 +49,7 @@ describe('the default chain', () => {
         expect(selectionFor(remembered, undefined)).toEqual(gpt);
     });
 
-    test('a provider that was never picked for falls through to the daemon', () => {
+    test('a provider that was never picked for falls through to the host', () => {
         expect(selectionFor(remembered, 'gemini')).toBeNull();
     });
 });

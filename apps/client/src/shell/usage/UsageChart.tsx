@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { UsageProvider } from '@ruimte/contracts';
 import { FLOAT } from '@ruimte/ui/classes';
 import { useMeasuredWidth } from '@ruimte/ui/useMeasuredWidth';
-import { PROVIDER_COLORS, PROVIDER_LABELS, slotAxisLabel, slotLabel } from '@/shell/usage/format';
+import { PROVIDER_COLORS, PROVIDER_LABELS, slotAxisLabel, slotLabel } from '@ruimte/agents-react/usage/format';
 import { niceScale, type ChartSlot } from '@/shell/usage/summary';
 
 interface UsageChartProps {

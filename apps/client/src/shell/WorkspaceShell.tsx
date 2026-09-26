@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import i18next from 'i18next';
 import { WebviewParking } from '@/browser/WebviewParking';
 import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
+import { connectWorkspaceChatHost } from '@/chat/workspace-host';
 import { useCanvasShortcuts } from '@/canvas/canvas-shortcuts';
 import { CellOverlayLayer } from '@/shell/CellOverlay';
 import { ForkDialog } from '@/shell/ForkDialog';
@@ -31,6 +32,8 @@ import { prefetcher } from '@/ui/prefetch';
 import { stopVoice } from '@/voice/controller';
 import { VoiceOverlay } from '@/voice/VoiceOverlay';
 import { VoicePanel } from '@/voice/VoicePanel';
+
+connectWorkspaceChatHost();
 
 const ConflictOverlay = lazyDialog(
     () => import('@/conflicts/ConflictOverlay'),

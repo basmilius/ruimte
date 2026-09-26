@@ -19,9 +19,9 @@ import {
     X
 } from 'lucide-react';
 import { canShareView, isCanvasView, type ProjectView } from '@ruimte/contracts';
-import { BookmarkSubmenu } from '@/chat/ui/BookmarkSubmenu';
-import { ForkMenuItem } from '@/chat/ui/ForkMenuItem';
-import { useOffersFork } from '@/chat/ui/use-offers-fork';
+import { BookmarkSubmenu } from '@ruimte/agents-react/chat/ui/BookmarkSubmenu';
+import { ForkMenuItem } from '@/chat/ForkMenuItem';
+import { useOffersFork } from '@/chat/use-offers-fork';
 import { closeCellAction, duplicateViewAction, placeViewOnCanvasAction, showViewOnCanvasAction, splitAction } from '@/actions/client-actions';
 import { FlagSubmenu } from '@/project/FlagSubmenu';
 import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from '@/project/views';

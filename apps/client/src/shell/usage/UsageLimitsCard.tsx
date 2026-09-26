@@ -1,15 +1,18 @@
 import i18next from 'i18next';
 import { useState, type ReactElement } from 'react';
 import { PreviewCard } from '@base-ui-components/react/preview-card';
-import { hasSeveralAccounts } from '@/shell/usage/limit-groups';
+import { hasSeveralAccounts } from '@ruimte/agents-react/usage/limit-groups';
 import { AccountLimitsList, LimitsList } from '@/shell/usage/LimitsList';
-import { useLimitGroups, useMinute, useUsageLimits } from '@/shell/usage/limits';
+import { useLimitGroups, useUsageLimits } from '@ruimte/agents-react/usage/limits';
+import { useNow } from '@ruimte/ui/useNow';
+
+const MINUTE_MS = 60_000;
 
 /* Asking the CLIs starts a process each, so the question waits until the card is actually opened. */
 function CardBody() {
     const limits = useUsageLimits();
     const groups = useLimitGroups(limits);
-    const now = useMinute();
+    const now = useNow(MINUTE_MS);
 
     if (limits === null) {
         return <p className="text-xs text-text-faint">{i18next.t('usage:limits.loading')}</p>;

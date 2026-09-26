@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { effectiveChecks, planProgress } from '@ruimte/plan';
-import { Markdown } from '@/chat/ui/Markdown';
+import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
 import { formatMoment } from '@ruimte/ui/format/datetime';
 import {
     collapsedOf,

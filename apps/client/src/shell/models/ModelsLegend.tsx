@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { UsageProvider } from '@ruimte/contracts';
 import { Toggle } from '@ruimte/ui/controls';
 import { markPath, type ChartModel, type ModelMark } from '@/shell/models/chart';
-import { PROVIDER_LABELS } from '@/shell/usage/format';
+import { PROVIDER_LABELS } from '@ruimte/agents-react/usage/format';
 import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
 
 interface ModelsLegendProps {

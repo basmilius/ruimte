@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { ClipboardPaste, Copy, Scan, Scissors } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Markdown } from '@/chat/ui/Markdown';
+import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { MENU_SEPARATOR } from '@ruimte/ui/classes';
 import { copyText, readClipboardText } from '@ruimte/ui/clipboard';

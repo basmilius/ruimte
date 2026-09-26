@@ -10,7 +10,7 @@ import {
     PATHS_DRAG_TYPE,
     type DragPayload
 } from '@/canvas/drop';
-import { MENTION_DRAG_TYPE } from '@/chat/mentions';
+import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
 
 const drag = (values: Record<string, string>): DragPayload => ({
     types: Object.keys(values),

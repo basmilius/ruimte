@@ -1,0 +1,13 @@
+{
+  "limits": {
+    "checked": {
+      "now": "now",
+      "ago": "{{duration}} ago",
+      "fromTurn": "From a turn · {{when}}"
+    },
+    "none": "No limits reported yet.",
+    "notInstalled": "Not installed on this machine.",
+    "noSubscription": "This account uses an API key, which has no plan limits.",
+    "unreachable": "The CLI could not be reached."
+  }
+}

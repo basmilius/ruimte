@@ -5,18 +5,21 @@ import type { UsageProvider } from '@ruimte/contracts';
 import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
 import { Segmented } from '@ruimte/ui/controls';
 import { openLogin } from '@/shell/settings/providers/account-actions';
-import { PROVIDER_COLORS, PROVIDER_LABELS } from '@/shell/usage/format';
-import { accountNote, checkedLabel, hasSeveralAccounts, isSignedOut, type LimitAccount } from '@/shell/usage/limit-groups';
+import { PROVIDER_COLORS, PROVIDER_LABELS } from '@ruimte/agents-react/usage/format';
+import { accountNote, checkedLabel, hasSeveralAccounts, isSignedOut, type LimitAccount } from '@ruimte/agents-react/usage/limit-groups';
 import { WindowBar } from '@/shell/usage/LimitsList';
-import { useLimitGroups, useMinute, useUsageLimits } from '@/shell/usage/limits';
+import { useLimitGroups, useUsageLimits } from '@ruimte/agents-react/usage/limits';
 import { useProviderAccountsStore } from '@ruimte/agents-react/state/provider-accounts';
-import { useUsageEndpointId } from '@/state/usage';
+import { useChatScope } from '@ruimte/agents-react/scope';
 import { useWindow } from '@/state/window';
 import { Button } from '@ruimte/ui/Button';
 import { SECTION_LABEL } from '@ruimte/ui/classes';
 import { Icon } from '@ruimte/ui/Icon';
 import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
 import { Tooltip } from '@ruimte/ui/Tooltip';
+import { useNow } from '@ruimte/ui/useNow';
+
+const MINUTE_MS = 60_000;
 
 type Filter = UsageProvider | 'all';
 
@@ -99,8 +102,8 @@ export function UsageLimits() {
     const { t } = useTranslation('usage');
     const limits = useUsageLimits();
     const groups = useLimitGroups(limits);
-    const now = useMinute();
-    const endpointId = useUsageEndpointId();
+    const now = useNow(MINUTE_MS);
+    const endpointId = useChatScope().id;
     const loginCommands = useProviderAccountsStore((s) => s.byScope[endpointId]?.accounts?.loginCommands);
     // A login runs in a terminal node on a canvas of a project on the machine these numbers are of.
     const workspaceMachine = useWindow((s) => (s.content.kind === 'workspace' ? s.content.workspace.connection.endpointId : null));

@@ -4,8 +4,8 @@ import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Segmented } from '@ruimte/ui/controls';
 import { useUi } from '@/state/ui';
-import { useUsage, useUsageStore } from '@/state/usage';
-import type { UsageCurrency } from '@/shell/usage/format';
+import { useUsage, useUsageStore } from '@ruimte/agents-react/state/usage';
+import type { UsageCurrency } from '@ruimte/agents-react/usage/format';
 import { Button } from '@ruimte/ui/Button';
 import { Icon } from '@ruimte/ui/Icon';
 

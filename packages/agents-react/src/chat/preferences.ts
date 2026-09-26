@@ -54,7 +54,7 @@ export const parseChatPreferences = (raw: string | null): ChatPreferences => {
 /* Which CLI a chat opens on when its node names none: the last one a model was picked for. */
 export const defaultProvider = (preferences: ChatPreferences): AgentKind | null => preferences.lastProvider;
 
-/* The model a chat of this provider starts with; null lets the daemon fall back to the CLI's own default. */
+/* The model a chat of this provider starts with; null lets the host fall back to the CLI's own default. */
 export const selectionFor = (preferences: ChatPreferences, provider: AgentKind | null | undefined): ModelSelection | null => {
     const owner = provider ?? preferences.lastProvider;
     if (owner === null) {
@@ -75,8 +75,8 @@ export const withSelection = (preferences: ChatPreferences, provider: AgentKind,
  * Given the machine's accounts, a pick it turned off or removed is the default account again, so a new
  * chat is never refused over it; `undefined` is a machine that did not say yet, where the pick stands.
  */
-export const accountFor = (preferences: ChatPreferences, endpointId: string, provider: AgentKind, accounts?: ProviderAccounts | null): string | null => {
-    const picked = preferences.accountByMachine[endpointId]?.[provider] ?? null;
+export const accountFor = (preferences: ChatPreferences, scopeId: string, provider: AgentKind, accounts?: ProviderAccounts | null): string | null => {
+    const picked = preferences.accountByMachine[scopeId]?.[provider] ?? null;
     if (picked === null || accounts === undefined) {
         return picked;
     }
@@ -85,17 +85,17 @@ export const accountFor = (preferences: ChatPreferences, endpointId: string, pro
 };
 
 /* The default account is what an absent pick means, so picking it takes the pick away. */
-export const withAccount = (preferences: ChatPreferences, endpointId: string, provider: AgentKind, account: string | null): ChatPreferences => {
-    const { [provider]: _previous, ...others } = preferences.accountByMachine[endpointId] ?? {};
+export const withAccount = (preferences: ChatPreferences, scopeId: string, provider: AgentKind, account: string | null): ChatPreferences => {
+    const { [provider]: _previous, ...others } = preferences.accountByMachine[scopeId] ?? {};
     const picks = account === null || account === provider ? others : { ...others, [provider]: account };
-    const { [endpointId]: _machine, ...machines } = preferences.accountByMachine;
-    return { ...preferences, accountByMachine: Object.keys(picks).length === 0 ? machines : { ...machines, [endpointId]: picks } };
+    const { [scopeId]: _machine, ...machines } = preferences.accountByMachine;
+    return { ...preferences, accountByMachine: Object.keys(picks).length === 0 ? machines : { ...machines, [scopeId]: picks } };
 };
 
 /* What a machine starts a chat with when it starts one with no client mounting it; `accounts` as `accountFor` takes them. */
-export const chatPreferencesPayload = (preferences: ChatPreferences, endpointId: string, accounts?: ProviderAccounts | null): ChatPreferencesPayload => {
-    const picks = Object.keys(preferences.accountByMachine[endpointId] ?? {}).flatMap((provider) => {
-        const account = accountFor(preferences, endpointId, provider as AgentKind, accounts);
+export const chatPreferencesPayload = (preferences: ChatPreferences, scopeId: string, accounts?: ProviderAccounts | null): ChatPreferencesPayload => {
+    const picks = Object.keys(preferences.accountByMachine[scopeId] ?? {}).flatMap((provider) => {
+        const account = accountFor(preferences, scopeId, provider as AgentKind, accounts);
         return account === null ? [] : [[provider, account] as const];
     });
     return {
@@ -129,8 +129,8 @@ export const rememberChatSelection = (provider: AgentKind, selection: ModelSelec
     write(withSelection(useChatPreferences.getState(), provider, selection));
 };
 
-export const rememberChatAccount = (endpointId: string, provider: AgentKind, account: string | null): void => {
-    write(withAccount(useChatPreferences.getState(), endpointId, provider, account));
+export const rememberChatAccount = (scopeId: string, provider: AgentKind, account: string | null): void => {
+    write(withAccount(useChatPreferences.getState(), scopeId, provider, account));
 };
 
 /* Back to the CLI's own default for this provider; the other providers keep what they had. */

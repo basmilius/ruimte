@@ -1,9 +1,10 @@
 import type { AgentKind, ComputerApproval } from '@ruimte/contracts';
-import { orderPrompts, type PendingPrompt } from '@/prompts/logic/prompts';
-import { isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '@/prompts/logic/subjects';
+import { orderPrompts, type PendingPrompt } from '@ruimte/agents-react/prompts/logic/prompts';
+import { isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '@ruimte/agents-react/prompts/logic/subjects';
 import type { CanvasNode } from '@/state/canvas';
 import type { ChatsById, ChatState } from '@ruimte/agents-react/state/chats';
 import { endpointKey } from '@/state/keys';
+import { computerPrompt, ruimtePayloadOf, waitingPrompt } from '@/prompts/ruimte-prompts';
 import { nodeStatus, type SessionsByKey } from '@/state/sessions';
 
 export interface CanvasPrompt {
@@ -59,7 +60,7 @@ export const canvasPrompts = ({ nodes, endpointId, sessions, chats, computer, wa
             const provider = (node.kind === 'chat' ? chats[key]?.info.provider : sessions[key]?.agent?.kind) ?? node.provider ?? null;
             for (const request of computer) {
                 if (request.nodeId === node.id) {
-                    add(node, { kind: 'computer-approval', nodeId: node.id, request }, provider, node.kind);
+                    add(node, { kind: 'host', nodeId: node.id, prompt: computerPrompt(node.id, request) }, provider, node.kind);
                 }
             }
         }
@@ -82,7 +83,7 @@ export const canvasPrompts = ({ nodes, endpointId, sessions, chats, computer, wa
         }
         const first = since.get(key) ?? session?.agent?.updatedAt ?? 0;
         since.set(key, first);
-        add(node, { kind: 'terminal-waiting', nodeId: node.id, since: first }, provider, 'terminal');
+        add(node, { kind: 'host', nodeId: node.id, prompt: waitingPrompt(node.id, first) }, provider, 'terminal');
     }
     return {
         prompts: orderPrompts(
@@ -108,17 +109,6 @@ export const stackFront = (ids: readonly string[], activeId: string | null, last
     return ids[Math.min(Math.max(lastIndex, 0), ids.length - 1)]!;
 };
 
-const payloadOf = (subject: PromptSubject): unknown => {
-    switch (subject.kind) {
-        case 'chat':
-            return subject.item;
-        case 'computer-approval':
-            return subject.request;
-        case 'terminal-waiting':
-            return subject.since;
-    }
-};
-
 /* Whether a new reading draws the same stack, so a word streaming into a chat does not redraw its cards. */
 export const samePrompts = (a: readonly CanvasPrompt[], b: readonly CanvasPrompt[]): boolean =>
     a.length === b.length &&
@@ -129,6 +119,6 @@ export const samePrompts = (a: readonly CanvasPrompt[], b: readonly CanvasPrompt
             prompt.title === other.title &&
             prompt.provider === other.provider &&
             prompt.subject.kind === other.subject.kind &&
-            payloadOf(prompt.subject) === payloadOf(other.subject)
+            ruimtePayloadOf(prompt.subject) === ruimtePayloadOf(other.subject)
         );
     });

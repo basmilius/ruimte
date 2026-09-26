@@ -15,7 +15,7 @@ import { useProvidersStore } from '@ruimte/agents-react/state/providers';
 import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
-import { useUsageStore } from '@/state/usage';
+import { useUsageStore } from '@ruimte/agents-react/state/usage';
 import { mixedContentRefusal } from '@/station';
 import { connectionAddressFor, pool, transport } from '@/transport';
 import { dropMachine, leaveWorkspace, showStart } from '@/transport/connections';

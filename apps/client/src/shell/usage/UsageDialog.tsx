@@ -14,7 +14,9 @@ import { useEndpointId } from '@/state/keys';
 import { useProvidersStore } from '@ruimte/agents-react/state/providers';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
-import { askedKey, summaryPayload, UsageEndpointContext, USAGE_PERIODS, useUsage, useUsageStore, type UsageMetric, type UsagePeriod } from '@/state/usage';
+import { ChatScopeContext } from '@ruimte/agents-react/scope';
+import { askedKey, summaryPayload, USAGE_PERIODS, useUsage, useUsageStore, type UsageMetric, type UsagePeriod } from '@ruimte/agents-react/state/usage';
+import { chatScopeOf } from '@/transport/chat-scope';
 import { machineTransport } from '@/transport';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import type { Transport } from '@/transport/transport';
@@ -27,8 +29,8 @@ import { Select } from '@ruimte/ui/Select';
 import { Tooltip } from '@ruimte/ui/Tooltip';
 import { CloseButton } from '@ruimte/ui/CloseButton';
 import { Icon } from '@ruimte/ui/Icon';
-import { formatClock, formatCount, formatDate, formatTokens, PROVIDER_LABELS } from '@/shell/usage/format';
-import { useMoney } from '@/shell/usage/money';
+import { formatClock, formatCount, formatDate, formatTokens, PROVIDER_LABELS } from '@ruimte/agents-react/usage/format';
+import { useMoney } from '@ruimte/agents-react/usage/money';
 import { deriveUsage, labelEveryFor } from '@/shell/usage/summary';
 import { UsageBreakdown } from '@/shell/usage/UsageBreakdown';
 import { UsageChart } from '@/shell/usage/UsageChart';
@@ -374,10 +376,10 @@ function Body() {
     );
 
     return (
-        <UsageEndpointContext.Provider value={endpointId}>
+        <ChatScopeContext.Provider value={chatScopeOf(endpointId)}>
             {/* Remounts on a switch, so no effect of the machine that left outlives it. */}
             <Page key={endpointId} endpointId={endpointId} />
-        </UsageEndpointContext.Provider>
+        </ChatScopeContext.Provider>
     );
 }
 

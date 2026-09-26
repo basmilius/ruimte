@@ -13,7 +13,7 @@ import { localTimeZone } from '@ruimte/ui/format/time-zone';
 import { projectNodes } from '@/project/views';
 import { currentEndpointId } from '@/state/keys';
 import { useProcesses, useProcessWarnings } from '@/state/processes';
-import { dayOf, useUsageStore } from '@/state/usage';
+import { dayOf, useUsageStore } from '@ruimte/agents-react/state/usage';
 import type { Transport } from '@/transport/transport';
 import { machineFor } from '@/transport/connections';
 
@@ -37,7 +37,7 @@ const LIVE_MACHINE: MachineReach = {
     transport: () => machineFor(currentEndpointId())?.transport ?? null,
     sample: () => useProcesses.getState().byEndpoint[currentEndpointId()]?.sample ?? null,
     alerts: () => useProcessWarnings.getState().byEndpoint[currentEndpointId()] ?? [],
-    limits: () => useUsageStore.getState().byEndpoint[currentEndpointId()]?.limits ?? null,
+    limits: () => useUsageStore.getState().byScope[currentEndpointId()]?.limits ?? null,
     titles: () => new Map(projectNodes().map((node) => [node.id, node.title])),
     now: () => new Date(),
     timeZone: () => localTimeZone() ?? 'UTC'

@@ -30,6 +30,7 @@ import {
     isUnknownView,
     MAIN_VIEW_NAME,
     type AgentKind,
+    type ComputerApprovalChoice,
     type DeviceReference,
     type NodeAccent,
     type NodeTitleSource,
@@ -47,7 +48,7 @@ import { LOCK_KEYS } from '@/canvas/locks';
 import { toWorld, type Point } from '@/canvas/math';
 import { nearestFreeNodeRect } from '@/canvas/place-node';
 import type { ChatSendExtras } from '@ruimte/agents-react/chat/chat-client';
-import { recentChatMessages } from '@/chat/recent-messages';
+import { recentChatMessages } from '@ruimte/agents-react/chat/recent-messages';
 import {
     liveViewDeletion,
     nodeDeletionFacts,
@@ -59,7 +60,7 @@ import {
 } from '@/project/view-deletion';
 import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
 import { offerViewUndo } from '@/project/view-trash';
-import type { PromptClients } from '@/prompts/logic/subjects';
+import type { ChatPromptClients } from '@ruimte/agents-react/prompts/logic/subjects';
 import { FILES_VIEW_ID } from '@/shell/files-view';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { canSplit, cellAt, cellCount, focusedViewId, freeViewFor, isSameCell, locateView, type SplitDirection, type SplitZone } from '@/shell/split';
@@ -1393,26 +1394,25 @@ export const performConfirmedAsPerson = async <Name extends ActionName>(name: Na
 };
 
 /* The prompt cards answer as the person whose click it was, through the actions Voice asks for too. */
-export const PERSON_PROMPT_CLIENTS: PromptClients = {
-    chat: {
-        approve: async (chatId, requestId, decision, message) => {
-            await performAsPerson('chat.approve', { chatId, requestId, decision, message: message ?? null });
-        },
-        answer: async (chatId, requestId, answers) => {
-            await performAsPerson('chat.answer', {
-                chatId,
-                requestId,
-                answers: Object.entries(answers).map(([questionId, answer]) => ({ questionId, answer }))
-            });
-        },
-        dismiss: async (chatId, itemId) => {
-            await performAsPerson('chat.dismissQuestion', { chatId, itemId });
-        }
+export const PERSON_PROMPT_CLIENTS: ChatPromptClients = {
+    approve: async (chatId, requestId, decision, message) => {
+        await performAsPerson('chat.approve', { chatId, requestId, decision, message: message ?? null });
     },
-    computer: {
-        answer: async (requestId, choice) => (await performAsPerson('computer.answerApproval', { requestId, choice })).accepted
+    answer: async (chatId, requestId, answers) => {
+        await performAsPerson('chat.answer', {
+            chatId,
+            requestId,
+            answers: Object.entries(answers).map(([questionId, answer]) => ({ questionId, answer }))
+        });
+    },
+    dismiss: async (chatId, itemId) => {
+        await performAsPerson('chat.dismissQuestion', { chatId, itemId });
     }
 };
+
+/* The machine's own card about operating an app, answered the same way; false when it no longer waited. */
+export const answerComputerAsPerson = async (requestId: string, choice: ComputerApprovalChoice): Promise<boolean> =>
+    (await performAsPerson('computer.answerApproval', { requestId, choice })).accepted;
 
 const activeViewId = (): string | null => useDocument.getState().activeViewId;
 

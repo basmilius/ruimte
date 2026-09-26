@@ -1,12 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentInfo, ChatInfo, ChatItem, ComputerApproval } from '@ruimte/contracts';
-import { PROMPT_SAMPLES } from '@/prompts/logic/prompts.fixtures';
+import { PROMPT_SAMPLES } from '@ruimte/agents-react/prompts/logic/prompts.fixtures';
 import type { ChatsById } from '@ruimte/agents-react/state/chats';
 import { endpointKey } from '@/state/keys';
 import type { SessionsByKey } from '@/state/sessions';
-import { canvasPrompts, samePrompts, stackFront, type CanvasPromptsInput } from './prompts';
+import { isRuimtePrompt, waitingPrompt } from '@/prompts/ruimte-prompts';
+import { canvasPrompts, samePrompts, stackFront, type CanvasPrompt, type CanvasPromptsInput } from './prompts';
 
 const ENDPOINT = 'local';
+
+/* A chat's own request, or which of Ruimte's own cards it is. */
+const kindOf = (prompt: CanvasPrompt): string =>
+    prompt.subject.kind === 'chat' ? 'chat' : isRuimtePrompt(prompt.subject.prompt) ? prompt.subject.prompt.data.kind : 'host';
 const key = (nodeId: string): string => endpointKey(ENDPOINT, nodeId);
 
 const approval = PROMPT_SAMPLES.find((sample) => sample.label === 'Permission · Command')!.items[0]!;
@@ -60,7 +65,7 @@ const computerCard = (nodeId: string, createdAt: number): ComputerApproval => ({
 describe('canvasPrompts', () => {
     test('prompts come blocking first, oldest first, with an optional question last', () => {
         const { prompts } = canvasPrompts(input());
-        expect(prompts.map((prompt) => [prompt.subject.kind, prompt.title])).toEqual([
+        expect(prompts.map((prompt) => [kindOf(prompt), prompt.title])).toEqual([
             ['terminal-waiting', 'api'],
             ['chat', 'merge'],
             ['terminal-waiting', 'ios'],
@@ -76,7 +81,7 @@ describe('canvasPrompts', () => {
 
     test('a computer use card stands on the chat or terminal whose agent asks, blocking like a permission', () => {
         const { prompts } = canvasPrompts(input({ computer: [computerCard('docs', 10), computerCard('ios', 20), computerCard('elsewhere', 5)] }));
-        expect(prompts.map((prompt) => [prompt.subject.kind, prompt.title, prompt.surface])).toEqual([
+        expect(prompts.map((prompt) => [kindOf(prompt), prompt.title, prompt.surface])).toEqual([
             ['computer-approval', 'docs', 'chat'],
             ['computer-approval', 'ios', 'terminal'],
             ['terminal-waiting', 'api', 'terminal'],
@@ -108,8 +113,8 @@ describe('canvasPrompts', () => {
         const later = input({ waitingSince: first.waitingSince });
         later.sessions = { ...later.sessions, [key('ios')]: { attached: true, agent: agent('needs-you', 900) } };
         const second = canvasPrompts(later);
-        const waiting = second.prompts.find((prompt) => prompt.subject.kind === 'terminal-waiting' && prompt.title === 'ios')!;
-        expect(waiting.subject).toEqual({ kind: 'terminal-waiting', nodeId: 'ios', since: 400 });
+        const waiting = second.prompts.find((prompt) => kindOf(prompt) === 'terminal-waiting' && prompt.title === 'ios')!;
+        expect(waiting.subject).toEqual({ kind: 'host', nodeId: 'ios', prompt: waitingPrompt('ios', 400) });
         later.sessions = { ...later.sessions, [key('ios')]: { attached: true, agent: agent('running', 950) } };
         expect(canvasPrompts({ ...later, waitingSince: second.waitingSince }).waitingSince.has(key('ios'))).toBe(false);
     });

@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import type { UsageTotals } from '@ruimte/contracts';
-import type { UsageMetric } from '@/state/usage';
+import type { UsageMetric } from '@ruimte/agents-react/state/usage';
 import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
 import { totalTokensOf } from '@ruimte/contracts';
-import { formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS } from '@/shell/usage/format';
-import { useMoney } from '@/shell/usage/money';
+import { formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS } from '@ruimte/agents-react/usage/format';
+import { useMoney } from '@ruimte/agents-react/usage/money';
 import type { ProviderTotal } from '@/shell/usage/summary';
 
 interface UsageSummaryProps {

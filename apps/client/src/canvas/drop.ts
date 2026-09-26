@@ -1,6 +1,6 @@
 import type { Reachability } from '@ruimte/contracts';
 import type { Point } from '@/canvas/math';
-import { MENTION_DRAG_TYPE } from '@/chat/mentions';
+import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
 
 /*
  * What a drag inside the app carries for the canvas: the same list the mention type holds, with the

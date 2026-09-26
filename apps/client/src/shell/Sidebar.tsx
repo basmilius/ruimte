@@ -27,7 +27,7 @@ import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isCanvasView, isSessionView, type AgentKind, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction, renameNodeAction, renameViewAction } from '@/actions/client-actions';
-import { useDrafts } from '@/chat/drafts';
+import { useDrafts } from '@ruimte/agents-react/chat/drafts';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';

@@ -4,23 +4,26 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
-import { chatClient, type ChatSendExtras } from '@/chat';
+import type { ChatSendExtras } from '@ruimte/agents-react/chat/chat-client';
 import { defaultProvider, readChatPreferences, selectionFor } from '@ruimte/agents-react/chat/preferences';
-import { showsComposer, useSubagentTrail } from '@/chat/subagent-view';
+import { showsComposer, useSubagentTrail } from '@ruimte/agents-react/chat/subagent-view';
 import { deriveNodeTitle } from '@/chat/title';
-import { Composer } from '@/chat/ui/Composer';
-import { SubagentTimeline } from '@/chat/ui/SubagentTimeline';
-import { Timeline } from '@/chat/ui/Timeline';
+import { Composer } from '@ruimte/agents-react/chat/ui/Composer';
+import { SubagentTimeline } from '@ruimte/agents-react/chat/ui/SubagentTimeline';
+import { Timeline } from '@ruimte/agents-react/chat/ui/Timeline';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useProject } from '@/state/project';
+import { chatClient } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
 import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { bringPromptToFront } from '@/canvas/prompt-stack';
+import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { lazyNamed } from '@/ui/lazy';
 
 // The worker pool and its highlighter load with the first chat node, not with the app.
-const DiffPool = lazyNamed(() => import('@/chat/ui/DiffPool'), 'default');
+const DiffPool = lazyNamed(() => import('@/chat/ChatDiffPool'), 'default');
 
 /* The body of a chat, the same on a canvas inside a frame and filling a view of its own. */
 export function ChatBody({ id, focused, onCanvas = false }: { id: string; focused: boolean; onCanvas?: boolean }) {
@@ -107,7 +110,7 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
                                         chatId={id}
                                         info={info}
                                         focused={focused}
-                                        onCanvas={onCanvas}
+                                        answerPromptsElsewhere={onCanvas && !PROMPTS_IN_NODES ? () => bringPromptToFront(id) : undefined}
                                         disabled={status !== 'open'}
                                         providerFixed={providerFixed}
                                         onSend={send}

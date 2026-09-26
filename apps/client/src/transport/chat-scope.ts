@@ -1,5 +1,5 @@
 import type { ChatScope } from '@ruimte/agents-react/scope';
-import { endpointKey } from '@/state/keys';
+import { endpointKey, isOfEndpoint } from '@/state/keys';
 import { machineTransport } from '@/transport';
 import { chatClient, chatClientFor } from '@/transport/connections';
 
@@ -16,6 +16,7 @@ export const chatScopeOf = (endpointId: string): ChatScope => {
         scope = {
             id: endpointId,
             keyOf: (chatId) => endpointKey(endpointId, chatId),
+            owns: (key) => isOfEndpoint(key, endpointId),
             get transport() {
                 return machineTransport(endpointId);
             },

@@ -12,6 +12,8 @@ export interface ChatScope {
     readonly id: string;
     /* Where a chat's row is kept in the chats store. The app decides what a key looks like; the chat never builds one. */
     keyOf(chatId: string): string;
+    /* Whether a key of the chats store is one of this scope's. */
+    owns(key: string): boolean;
     readonly transport: ChatTransport;
     readonly chats: ChatClient;
 }

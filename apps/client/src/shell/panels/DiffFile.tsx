@@ -20,7 +20,7 @@ import { EmptyState } from '@ruimte/ui/EmptyState';
 import { Separator } from '@ruimte/ui/Separator';
 import { lazyNamed } from '@/ui/lazy';
 
-const UnifiedDiff = lazyNamed(() => import('@/chat/ui/UnifiedDiff'), 'default');
+const UnifiedDiff = lazyNamed(() => import('@ruimte/agents-react/chat/ui/UnifiedDiff'), 'default');
 
 type DiffState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
 

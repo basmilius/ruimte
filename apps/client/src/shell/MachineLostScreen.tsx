@@ -8,11 +8,13 @@ import { StatusCard } from '@/shell/ProjectSwitchScreen';
 import { useMachineEntry } from '@/shell/use-machine-entry';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
-import { useMinute } from '@/shell/usage/limits';
 import { useEndpointId } from '@/state/keys';
 import { pool } from '@/transport';
 import { useEndpointConnection, useLastSeenAt } from '@/transport/status';
 import { Button } from '@ruimte/ui/Button';
+import { useNow } from '@ruimte/ui/useNow';
+
+const MINUTE_MS = 60_000;
 
 /*
  * Stands over the cells while the machine of the open project does not answer. Nothing of the
@@ -27,7 +29,7 @@ export function MachineLostScreen() {
     const entry = useMachineEntry(endpointId);
     const icon = useMachineIcon(entry);
     const lastSeen = useLastSeenAt(endpointId);
-    const now = useMinute();
+    const now = useNow(MINUTE_MS);
 
     // A switch has a screen of its own, which says more about the same wait.
     if (switching || !machineLost(connection)) {

@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import { canShareView, isCanvasView, isOpenableView, type ProjectView } from '@ruimte/contracts';
-import { forkRefusal, lastSettledTurn } from '@/chat/logic/fork';
+import { forkRefusal, lastSettledTurn } from '@ruimte/agents-react/chat/logic/fork';
 import { canKeepAwake, desktop, isApplePlatform } from '@/desktop/bridge';
 import { canOpenAsView, type SessionHandoff } from '@/project/views';
 import type { MenuContext, MenuHost } from '@/shell/menu/model';

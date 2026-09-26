@@ -13,7 +13,7 @@ import {
     shareViewAction,
     showViewOnCanvasAction
 } from '@/actions/client-actions';
-import { offerDraft } from '@/chat/drafts';
+import { offerDraft } from '@ruimte/agents-react/chat/drafts';
 import { GRID, type Point } from '@/canvas/math';
 import { filesOfView } from '@/project/view-deletion';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';

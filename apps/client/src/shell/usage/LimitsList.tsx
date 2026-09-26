@@ -9,8 +9,8 @@ import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
 import { formatClock, formatWeekdayClock, isSameDay } from '@ruimte/ui/format/datetime';
 import { formatCountdown } from '@ruimte/ui/format/duration';
 import { formatPercent } from '@ruimte/ui/format/number';
-import { PROVIDER_COLORS, PROVIDER_LABELS } from '@/shell/usage/format';
-import { accountNote, explain, isSignedOut, nextReset, type LimitAccount, type LimitGroup } from '@/shell/usage/limit-groups';
+import { PROVIDER_COLORS, PROVIDER_LABELS } from '@ruimte/agents-react/usage/format';
+import { accountNote, explain, isSignedOut, nextReset, type LimitAccount, type LimitGroup } from '@ruimte/agents-react/usage/limit-groups';
 
 /* Red where a window is nearly spent, amber where it is worth knowing. A window with room to spare
    is not news, so it takes the text color rather than a hue that competes with the two that are. */

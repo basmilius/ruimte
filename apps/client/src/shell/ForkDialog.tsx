@@ -6,11 +6,10 @@ import { CHAT_FORK_TITLE_MAX, type ChatForkInfoResult } from '@ruimte/contracts'
 import { performAsPerson } from '@/actions/client-actions';
 import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
 import { canContinueOn } from '@ruimte/agents-react/agents/accounts';
-import { useAccountChoice } from '@/chat/account-choice';
+import { useAccountChoice } from '@ruimte/agents-react/chat/account-choice';
 import {
     branchRefusal,
     FORKABLE_PROVIDERS,
-    forkOriginIn,
     forkPayload,
     forkPointLabel,
     forkPointOf,
@@ -18,9 +17,10 @@ import {
     forkShapes,
     type ForkCliChoice,
     type ForkShape
-} from '@/chat/logic/fork';
+} from '@ruimte/agents-react/chat/logic/fork';
 import { accountFor, readChatPreferences, selectionFor } from '@ruimte/agents-react/chat/preferences';
-import { ModelPicker } from '@/chat/ui/Pickers';
+import { forkOriginIn } from '@/chat/fork-origin';
+import { ModelPicker } from '@ruimte/agents-react/chat/ui/Pickers';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { Toggle } from '@ruimte/ui/controls';
 import { canvasOfNode } from '@/state/canvas';

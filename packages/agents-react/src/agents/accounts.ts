@@ -9,7 +9,7 @@ import { chatHost } from '../host';
 export const accountColor = (color: string | undefined): string | undefined => chatHost().accents.all.find((entry) => entry.id === color)?.color;
 
 /*
- * The variable each CLI reads its config folder from, as the daemon's providers name them. Only for
+ * The variable each CLI reads its config folder from, as the host's providers name them. Only for
  * the sentence under the folder; a CLI missing here still works, the sentence just does not name it.
  */
 export const FOLDER_VARIABLES: Partial<Record<AgentKind, string>> = { claude: 'CLAUDE_CONFIG_DIR', codex: 'CODEX_HOME' };

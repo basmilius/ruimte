@@ -3,5 +3,415 @@
     "notConnected": "De agents zijn niet bereikbaar",
     "closedBeforeAnswer": "De verbinding met de agents sloot voordat ze antwoordden",
     "badReply": "Het antwoord op {{type}} past niet bij het contract"
+  },
+  "attachments": {
+    "rejected": {
+      "empty": "Het bestand is leeg",
+      "tooLarge": "Groter dan {{size}}",
+      "tooMany_one": "Hoogstens {{count}} bestand per bericht",
+      "tooMany_other": "Hoogstens {{count}} bestanden per bericht",
+      "tooHeavy": "Bijlagen mogen samen hoogstens {{size}} per bericht wegen"
+    },
+    "unreadable": "Kon {{name}} niet lezen",
+    "unreadableThumbnail": "Kon de miniatuur niet lezen"
+  },
+  "chatReference": {
+    "gone": "Chat niet in dit project",
+    "untitled": "Naamloze chat",
+    "remove": "{{title}} verwijderen"
+  },
+  "fork": {
+    "refusal": {
+      "notInConversation": "Deze turn zit niet in het gesprek",
+      "cliCannotFork": "Deze CLI heeft geen gesprek dat je kunt forken",
+      "noConversation": "De CLI is hier nooit een gesprek begonnen",
+      "turnRunning": "Wacht tot de turn klaar is",
+      "originalGone": "Het origineel zit niet meer in dit project"
+    },
+    "point": {
+      "afterLast": "Na de laatste turn",
+      "afterTurn": "Na turn {{number}} van {{total}}",
+      "about": "{{where}}: \"{{prompt}}\""
+    },
+    "branch": {
+      "unnamed": "Geef de branch een naam",
+      "taken": "Er bestaat al een branch met deze naam"
+    },
+    "pill": {
+      "label": "Fork"
+    }
+  },
+  "resumeCompaction": {
+    "title": "Hervatten met minder context",
+    "carried": "{{tokens}} tokens van eerder",
+    "keep": "Hele geschiedenis houden",
+    "compact": "Comprimeren"
+  },
+  "limit": {
+    "usage": {
+      "pill": "Limiet bereikt",
+      "pillUntil": "Limiet tot {{time}}",
+      "pillResumes": "Verder om {{time}}",
+      "title": "Gestopt op een verbruikslimiet",
+      "resets": "De limiet reset om {{time}}.",
+      "resumes": "Gaat om {{time}} vanzelf verder, als de limiet reset."
+    },
+    "overload": {
+      "pill": "Overbelast",
+      "pillRetry": "Opnieuw om {{time}}",
+      "title": "Het model was overbelast",
+      "sendAgain": "Stuur een bericht om het opnieuw te proberen.",
+      "retries": "Probeert het om {{time}} vanzelf opnieuw."
+    },
+    "toggle": "Verder na reset",
+    "machineOff": "Uitgezet voor deze machine. Zet het aan in Instellingen, Agents.",
+    "continueOn": "Verder op",
+    "continueOnAria": "Verder op {{account}}",
+    "continueOnTip": "Gaat verder onder {{account}}, dat de meeste ruimte over heeft. De onderbroken turn wordt opnieuw verstuurd.",
+    "continueFailed": "Kon niet verder op {{account}}"
+  },
+  "contextMeter": {
+    "aria": "{{percent}}% van de context gebruikt",
+    "title": "Context",
+    "of": "{{used}} van {{window}}",
+    "used": "{{tokens}} gebruikt",
+    "percentUsed": "{{percent}} gebruikt",
+    "estimate": "≈{{tokens}}",
+    "parts": {
+      "toolOutput": "Tool-output",
+      "filesRead": "Gelezen bestanden",
+      "conversation": "Gesprek",
+      "system": "Systeem"
+    },
+    "compactNow": "Nu comprimeren"
+  },
+  "rows": {
+    "user": {
+      "heading": "Jij",
+      "showAll": "Alles tonen",
+      "showLess": "Minder tonen"
+    },
+    "report": {
+      "heading": "Rapport"
+    },
+    "reply": {
+      "agent": "Agent",
+      "writing": "Schrijft…"
+    },
+    "thinking": {
+      "live": "Denkt na…",
+      "thoughtFor": "Nagedacht, {{duration}}"
+    },
+    "note": {
+      "hide": "Verbergen",
+      "show": "Tonen",
+      "openFork": "Fork openen"
+    },
+    "compaction": {
+      "plain": "Context gecomprimeerd",
+      "from": "Context gecomprimeerd vanaf {{tokens}} tokens",
+      "summary": "Alles hierboven kent de agent alleen nog als samenvatting"
+    },
+    "approval": {
+      "allow": "Toegestaan",
+      "allow-always": "Altijd toegestaan",
+      "deny": "Geweigerd",
+      "cancelled": "Niet meer nodig"
+    },
+    "question": {
+      "notAnswered": "(niet beantwoord)",
+      "dismissed": "(weggeklikt)"
+    },
+    "subagent": {
+      "task": "Taak",
+      "label": "Sub-agent",
+      "background": "achtergrond",
+      "doneIn": "klaar in {{duration}}",
+      "failedIn": "mislukt na {{duration}}",
+      "nothingYet": "Nog niets te zien.",
+      "truncated": "Alleen het begin van het werk van deze agent is bewaard.",
+      "showResult": "Resultaat tonen",
+      "hideResult": "Resultaat verbergen"
+    },
+    "workflow": {
+      "notStarted": "nog niet begonnen",
+      "waiting": "wacht",
+      "stopped": "gestopt"
+    }
+  },
+  "work": {
+    "moreCharacters_one": "[nog {{count}} teken]",
+    "moreCharacters_other": "[nog {{count}} tekens]",
+    "loadingDiff": "Diff laden",
+    "runningFor": "loopt al {{elapsed}}",
+    "forksAfter_one": "Een fork gaat verder na deze turn",
+    "forksAfter_other": "{{count}} forks gaan verder na deze turn",
+    "omitted": {
+      "binary": "Binair bestand, geen diff",
+      "tooLarge": "Te groot om te tonen"
+    },
+    "changedFiles_one": "{{count}} gewijzigd bestand",
+    "changedFiles_other": "{{count}} gewijzigde bestanden",
+    "andMore": "en meer, afgekapt",
+    "edits_one": "{{count}} bewerking",
+    "edits_other": "{{count}} bewerkingen",
+    "workingFor": "Werkt al"
+  },
+  "timeline": {
+    "empty": {
+      "ready": "{{model}} staat klaar. Vraag maar raak.",
+      "ask": "Vraag maar raak.",
+      "canRead": "Kan lezen",
+      "worksIn": "Werkt in"
+    },
+    "stripFailed": "De berichtenstrip kon niet worden getekend",
+    "actions": {
+      "label": "Berichtacties",
+      "copied": "Gekopieerd"
+    },
+    "menu": {
+      "copyMessage": "Bericht kopiëren",
+      "copyCode": "Code kopiëren",
+      "copyMarkdown": "Kopiëren als markdown",
+      "forkFromHere": "Vanaf hier forken",
+      "openInPreview": "Openen in preview"
+    }
+  },
+  "group": {
+    "tools": {
+      "Read_one": "{{count}} bestand gelezen",
+      "Read_other": "{{count}} bestanden gelezen",
+      "Write_one": "{{count}} bestand geschreven",
+      "Write_other": "{{count}} bestanden geschreven",
+      "NotebookEdit_one": "{{count}} notebook bewerkt",
+      "NotebookEdit_other": "{{count}} notebooks bewerkt",
+      "Bash_one": "{{count}} commando uitgevoerd",
+      "Bash_other": "{{count}} commando's uitgevoerd",
+      "Grep_one": "{{count}} patroon gezocht",
+      "Grep_other": "{{count}} patronen gezocht",
+      "Glob_one": "{{count}} patroon opgesomd",
+      "Glob_other": "{{count}} patronen opgesomd",
+      "WebFetch_one": "{{count}} pagina opgehaald",
+      "WebFetch_other": "{{count}} pagina's opgehaald",
+      "WebSearch_one": "{{count}} zoekopdracht op het web",
+      "WebSearch_other": "{{count}} zoekopdrachten op het web",
+      "Task_one": "{{count}} taak uitbesteed",
+      "Task_other": "{{count}} taken uitbesteed",
+      "Agent_one": "{{count}} taak uitbesteed",
+      "Agent_other": "{{count}} taken uitbesteed",
+      "Skill_one": "{{count}} skill gebruikt",
+      "Skill_other": "{{count}} skills gebruikt",
+      "TodoWrite_one": "{{count}} plan bijgewerkt",
+      "TodoWrite_other": "{{count}} plannen bijgewerkt"
+    },
+    "calls_one": "{{name}}, {{count}} aanroep",
+    "calls_other": "{{name}}, {{count}} aanroepen",
+    "edited_one": "{{count}} bestand bewerkt",
+    "edited_other": "{{count}} bestanden bewerkt",
+    "toolCalls_one": "{{count}} tool-aanroep",
+    "toolCalls_other": "{{count}} tool-aanroepen",
+    "otherCalls_one": "{{count}} andere tool-aanroep",
+    "otherCalls_other": "{{count}} andere tool-aanroepen"
+  },
+  "turn": {
+    "about": "{{what}}: {{label}}",
+    "wokenByTask_one": "Gewekt door een taak",
+    "wokenByTask_other": "Gewekt door {{count}} taken",
+    "wokenByMessage_one": "Gewekt door een bericht",
+    "wokenByMessage_other": "Gewekt door {{count}} berichten",
+    "subagentFinished": "Sub-agent klaar: {{label}}",
+    "continued": "Zelf verdergegaan",
+    "stopped": "Gestopt na {{duration}}",
+    "youStopped": "Jij stopte na {{duration}}",
+    "failed": "Mislukt na {{duration}}",
+    "worked": "Gewerkt, {{duration}}"
+  },
+  "composer": {
+    "commands": {
+      "model": "Wissel van model",
+      "compact": "Comprimeer de context",
+      "clear": "Begin een nieuwe context",
+      "skill": "Skill",
+      "cli": "{{cli}}-commando",
+      "anyCli": "CLI"
+    },
+    "notice": {
+      "clearFailed": "De thread kon niet worden gewist",
+      "compactFailed": "De context kon niet worden gecomprimeerd",
+      "noAttachments": "{{agent}} neemt geen bijlagen aan",
+      "thisAgent": "Deze agent",
+      "rejected": "{{name}}: {{reason}}",
+      "queuedDoesNotFit": "{{name}} past niet naast dit concept ({{reason}}). Het bericht blijft in de wachtrij.",
+      "thatFile": "Dat bestand",
+      "unreadable": "Dat bestand kon niet worden gelezen"
+    },
+    "placeholder": {
+      "disconnected": "Niet verbonden met de machine",
+      "lead": "Vraag maar raak",
+      "joiner": ", of",
+      "commands": "commando's",
+      "files": "bestanden",
+      "skills": "skills"
+    },
+    "jumpToEnd": "Naar het einde",
+    "mentions": {
+      "here": "Bestanden in deze map",
+      "files": "Bestanden",
+      "chats": "Chats in dit project",
+      "noMatch": "Geen bestanden of chats gevonden",
+      "empty": "Hier staan geen bestanden"
+    },
+    "queue": {
+      "attachments_one": "{{count}} bijlage",
+      "attachments_other": "{{count}} bijlagen",
+      "alreadySent": "Dat bericht was al verstuurd",
+      "editFailed": "Het bericht kon niet worden teruggehaald om te bewerken",
+      "sendNow": "Nu versturen"
+    },
+    "quote": {
+      "add": "Citeren",
+      "remove": "Citaat verwijderen"
+    },
+    "removeAttachment": "{{name}} verwijderen",
+    "attach": "Bestanden toevoegen",
+    "tooLong": "tekens, te lang om te versturen",
+    "stop": "Stoppen, Shift-klik stopt ook de sub-agents",
+    "queueButton": "In de wachtrij zetten",
+    "send": "Versturen",
+    "clear": {
+      "title": "Thread wissen?",
+      "description": "Er loopt een turn. Die stoppen en de thread wissen?",
+      "confirm": "Stoppen en wissen"
+    },
+    "waitingBelow": "Wacht hieronder op je antwoord"
+  },
+  "activity": {
+    "subagents_one": "{{count}} sub-agent",
+    "subagents_other": "{{count}} sub-agents",
+    "shells_one": "{{count}} shell",
+    "shells_other": "{{count}} shells",
+    "monitors_one": "{{count}} monitor",
+    "monitors_other": "{{count}} monitors",
+    "pausedUntil": "gepauzeerd tot {{time}}",
+    "took": {
+      "done": "klaar in {{duration}}",
+      "failed": "mislukt na {{duration}}",
+      "cancelled": "geannuleerd na {{duration}}"
+    },
+    "shell": "Shell",
+    "monitor": "Monitor",
+    "stop": "Stoppen",
+    "stopFailed": "De taak kon niet worden gestopt"
+  },
+  "subagents": {
+    "stop": {
+      "task": "Deze taak stoppen",
+      "mark": "Markeren als gestopt. De CLI kan een losse sub-agent niet stoppen, dus die werkt mogelijk door tot het proces van de chat eindigt."
+    },
+    "title": "Sub-agents",
+    "backToMain": "Terug naar de main agent",
+    "loading": "Gesprek laden…",
+    "loadEarlier": "Eerdere laden",
+    "loadingEarlier": "Laden…",
+    "working": "Bezig…",
+    "unsupported": "Deze machine kan het gesprek van een sub-agent niet openen. Werk Ruimte daar bij om het te lezen.",
+    "unreadable": "Het gesprek kon niet worden gelezen.",
+    "noAnswer": "De machine antwoordde niet",
+    "stopFailed": "De sub-agent kon niet worden gestopt"
+  },
+  "modes": {
+    "supervised": {
+      "label": "Met toezicht",
+      "hint": "Vraagt het eerst bij commando's en wijzigingen in bestanden",
+      "short": "Vragen"
+    },
+    "auto-accept-edits": {
+      "label": "Bewerkingen automatisch accepteren",
+      "hint": "Bewerkingen gaan door, commando's vragen het nog",
+      "short": "Bewerken"
+    },
+    "auto": {
+      "label": "Automatisch",
+      "hint": "De agent beoordeelt routineklussen zelf",
+      "short": "Automatisch"
+    },
+    "full-access": {
+      "label": "Volledige toegang",
+      "hint": "Vraagt nooit om goedkeuring",
+      "short": "Volledig"
+    }
+  },
+  "pickers": {
+    "settings": {
+      "title": "Model en rechten"
+    },
+    "model": {
+      "choose": "Model kiezen",
+      "search": "Modellen zoeken",
+      "noProvider": "Geen chat-CLI geïnstalleerd",
+      "noMatch": "Geen modellen gevonden",
+      "legacyGroup_one": "Legacy-modellen ({{count}})",
+      "legacyGroup_other": "Legacy-modellen ({{count}})",
+      "legacy": "Legacy"
+    },
+    "stash": {
+      "title": "Stashed prompts",
+      "noText": "Geen tekst",
+      "files_one": "{{count}} bestand, niet bewaard",
+      "files_other": "{{count}} bestanden, niet bewaard"
+    },
+    "mode": {
+      "label": "Rechten"
+    },
+    "account": {
+      "label": "Account",
+      "manage": "Accounts beheren…",
+      "resets": "reset om {{time}}",
+      "forkToSwitch": "Dit gesprek staat in een andere map dan {{account}} leest. Fork de chat om verder te gaan onder {{account}}."
+    }
+  },
+  "scrubber": {
+    "strip": "Berichten in deze thread",
+    "tasks": "Taken"
+  },
+  "bookmarks": {
+    "menu": "Bladwijzers",
+    "add": "Bladwijzer plaatsen",
+    "rename": "Bladwijzer hernoemen",
+    "remove": "Bladwijzer verwijderen",
+    "unnamed": "Bladwijzer",
+    "nameLabel": "Naam van de bladwijzer",
+    "namePlaceholder": "Geef een naam, of laat het leeg",
+    "removed": "Bladwijzer verwijderd",
+    "addFailed": "De bladwijzer kon niet worden geplaatst",
+    "renameFailed": "De bladwijzer kon niet worden hernoemd",
+    "removeFailed": "De bladwijzer kon niet worden verwijderd"
+  },
+  "image": {
+    "zoomIn": "Inzoomen",
+    "zoomOut": "Uitzoomen",
+    "reset": "Herstellen"
+  },
+  "account": {
+    "pill": "{{provider}}-account {{account}}"
+  },
+  "common": {
+    "action": {
+      "close": "Sluiten",
+      "copy": "Kopiëren",
+      "delete": "Verwijderen",
+      "dismiss": "Sluiten",
+      "edit": "Bewerken",
+      "remove": "Verwijderen",
+      "selectAll": "Alles selecteren",
+      "undo": "Ongedaan maken"
+    },
+    "status": {
+      "running": "bezig",
+      "paused": "gepauzeerd",
+      "done": "klaar",
+      "failed": "mislukt",
+      "cancelled": "geannuleerd"
+    }
   }
 }

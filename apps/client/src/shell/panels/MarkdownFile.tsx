@@ -8,7 +8,7 @@ import { useDomFind } from '@/find/use-dom-find';
 import { useFind } from '@/find/use-find';
 import { FileMarkdown } from '@/shell/panels/FileMarkdown';
 import { CodeFile } from '@/shell/panels/CodeFile';
-import { FileLinkContext } from '@/shell/panels/file-links';
+import { FileLinkContext } from '@ruimte/agents-react/chat/ui/file-links';
 import { FileScroll } from '@/shell/panels/FileScroll';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';

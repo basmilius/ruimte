@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next';
 import type { UsageModel, UsageProject, UsageProvider, UsageSummaryResult } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { Segmented } from '@ruimte/ui/controls';
-import { useUsageEndpointId } from '@/state/usage';
+import { useChatScope } from '@ruimte/agents-react/scope';
 import { useProjectList } from '@/state/project-list';
-import type { UsageMetric } from '@/state/usage';
+import type { UsageMetric } from '@ruimte/agents-react/state/usage';
 import { SECTION_LABEL } from '@ruimte/ui/classes';
 import { EmptyState } from '@ruimte/ui/EmptyState';
 import { Tooltip } from '@ruimte/ui/Tooltip';
@@ -15,8 +15,8 @@ import { Icon } from '@ruimte/ui/Icon';
 import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
 import { USAGE_PROVIDERS, totalTokensOf } from '@ruimte/contracts';
 import { modelNameFromSlug } from '@ruimte/agents-react/agents/model-name';
-import { formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS, shortPath, slotLabel } from '@/shell/usage/format';
-import { useMoney } from '@/shell/usage/money';
+import { formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS, shortPath, slotLabel } from '@ruimte/agents-react/usage/format';
+import { useMoney } from '@ruimte/agents-react/usage/money';
 import { deriveDays } from '@/shell/usage/summary';
 
 type Breakdown = 'models' | 'projects' | 'day';
@@ -102,7 +102,7 @@ function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; m
 
 function ProjectRows({ projects }: { projects: readonly UsageProject[] }) {
     const rows = useProjectList((s) => s.projects);
-    const endpointId = useUsageEndpointId();
+    const endpointId = useChatScope().id;
     const money = useMoney();
     const top = Math.max(...projects.map((project) => project.costUsd), 0);
     return (

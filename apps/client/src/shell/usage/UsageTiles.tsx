@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import type { UsageTotals } from '@ruimte/contracts';
 import { totalTokensOf } from '@ruimte/contracts';
-import { formatTokens } from '@/shell/usage/format';
-import { useMoney } from '@/shell/usage/money';
+import { formatTokens } from '@ruimte/agents-react/usage/format';
+import { useMoney } from '@ruimte/agents-react/usage/money';
 
 interface UsageTilesProps {
     totals: UsageTotals;

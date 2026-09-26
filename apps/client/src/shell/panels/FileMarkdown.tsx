@@ -1,7 +1,7 @@
 import { useMemo, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Markdown } from '@/chat/ui/Markdown';
-import { useFileLinkCwd } from '@/shell/panels/file-links';
+import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
+import { useFileLinkCwd } from '@ruimte/agents-react/chat/ui/file-links';
 import { parseMarkdownDocument, markdownImagePath } from '@/shell/panels/markdown-document';
 import { FILE_HTML_PLUGINS } from '@/shell/panels/markdown-html';
 import { useFileRead } from '@/shell/panels/use-file-read';
