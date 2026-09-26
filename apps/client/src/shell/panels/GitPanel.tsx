@@ -22,7 +22,7 @@ import { useGitActions, type ActionOutcome } from '@/shell/panels/use-git-action
 import { WorktreeSection } from '@/shell/panels/WorktreeSection';
 import { worktreeBase, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
-import { useColumnResize } from '@/shell/useColumnResize';
+import { useColumnResize } from '@ruimte/ui/useColumnResize';
 import { revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';

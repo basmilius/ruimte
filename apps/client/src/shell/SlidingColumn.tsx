@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
-import { useColumnResize } from '@/shell/useColumnResize';
+import { ColumnResizeHandle } from '@ruimte/ui/ColumnResizeHandle';
+import { useColumnResize } from '@ruimte/ui/useColumnResize';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 
 // How long the open and close motion takes; the same number as `.panel-shell` in `styles.css`.
@@ -79,7 +80,7 @@ export function SlidingColumn({ open, restoreWithProject = true, width, bounds, 
                     style={{ width }}
                     onKeyDown={body?.onKeyDown}
                 >
-                    {open && <div className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize" onPointerDown={startResize} />}
+                    {open && <ColumnResizeHandle from="right" onPointerDown={startResize} />}
                     {children}
                 </div>
             )}

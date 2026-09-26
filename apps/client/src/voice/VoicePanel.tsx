@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { SlidingColumn } from '@/shell/SlidingColumn';
-import { clampColumnSize } from '@/shell/useColumnResize';
+import { clampColumnSize } from '@ruimte/ui/useColumnResize';
 import { lazyNamed } from '@/ui/lazy';
 import { useVoice } from '@/voice/state';
 

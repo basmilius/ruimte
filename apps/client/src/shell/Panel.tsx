@@ -8,7 +8,7 @@ import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
 import { DevicesPanel } from '@/shell/panels/DevicesPanel';
 import { SlidingColumn } from '@/shell/SlidingColumn';
-import { clampColumnSize } from '@/shell/useColumnResize';
+import { clampColumnSize } from '@ruimte/ui/useColumnResize';
 import { useUi, type PanelKind } from '@/state/ui';
 import { PANEL_HEADER, SECTION_LABEL } from '@ruimte/ui/classes';
 import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';

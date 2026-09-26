@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 /* Which edge the column hangs from, and with it the axis the drag runs along. A column pinned to
    the window's right edge grows as the pointer moves left; one that starts at its own left edge
    grows as it moves right, and the same holds for a row between `top` and `bottom`. */
-type ColumnEdge = 'left' | 'right' | 'top' | 'bottom';
+export type ColumnEdge = 'left' | 'right' | 'top' | 'bottom';
 
 interface ColumnResizeOptions {
     /* What the column is wide, or the row is tall, right now, in whole pixels. */

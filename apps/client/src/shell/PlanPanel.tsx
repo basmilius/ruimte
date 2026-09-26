@@ -22,7 +22,7 @@ import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/
 import { PlanList } from '@/plan/PlanList';
 import { resultsText, type PlanFilter } from '@/plan/plan-view';
 import { SlidingColumn } from '@/shell/SlidingColumn';
-import { clampColumnSize } from '@/shell/useColumnResize';
+import { clampColumnSize } from '@ruimte/ui/useColumnResize';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
 import { useChatPlans } from '@/state/plans';

@@ -35,6 +35,10 @@ An app using it does three things:
 
 `createToastStore()` from `toast-store` makes the store an app raises toasts through: `show` puts one up or moves the one with the same id along, from progress to its outcome, a success goes after four seconds, a deletion after eight and a failure waits to be dismissed. `Toasts` draws a store as a stack in the bottom right corner. An app that carries more on a toast extends `Toast`, hands its type to `createToastStore<T>()` and draws the extra through `footer`. `ChoiceCards` is a radio group of a few large cards, each a title, a line under it and an optional icon, for a choice a select would say too little about.
 
+## Resizable columns
+
+`useColumnResize(ref, { size, min, max, from, onSize })` drags the width of a column, or the height of a row, that the app keeps itself: `from` is the edge it hangs from, `max` is read at drag time and `onSize` gets every whole pixel on the way. While a drag lasts the column carries `data-resizing`, so the app can turn off a transition on that size. `ColumnResizeHandle` is the strip on the free edge that starts the drag, and `clampColumnSize` fits a stored size between the same bounds before it is drawn.
+
 ## Rules
 
 Nothing in `src` imports from an app. The client's `conventions.test.ts` holds these files to the same design rules as its own: four type sizes, a `Tooltip` instead of `title`, icons on the 12, 14, 16 and 20 steps, and no `Intl` formatter outside `format/`.
