@@ -9,8 +9,8 @@ import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /* Stops one active sub-agent of a chat, or says nothing when stopping it is not on offer. */
 export function SubagentStopButton({

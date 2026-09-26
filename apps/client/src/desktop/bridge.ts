@@ -9,6 +9,7 @@ import type {
     UpdateState
 } from '@ruimte/desktop-bridge';
 import type { SessionLoginCode } from '@ruimte/pulsar';
+import { isApplePlatform as isApplePlatformFromNavigator } from '@ruimte/ui/platform';
 
 /* The shapes the preload and the page both hold, passed on so the client reads the whole bridge here. */
 export type {
@@ -240,15 +241,8 @@ export const isApplePlatform = (): boolean => {
     if (bridge) {
         return bridge.platform === 'darwin';
     }
-    if (typeof navigator === 'undefined') {
-        return false;
-    }
-    const hints = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData;
-    return applePlatformFrom(hints?.platform || navigator.platform);
+    return isApplePlatformFromNavigator();
 };
-
-/* Never the daemon's platform. The keyboard in question is the one in front of this page. */
-export const applePlatformFrom = (platform: string | undefined): boolean => /mac|iphone|ipad/i.test(platform ?? '');
 
 /* True when the window controls sit over the top right of the window, which Windows and Linux do. */
 export const hasOverlayControls = (): boolean => {

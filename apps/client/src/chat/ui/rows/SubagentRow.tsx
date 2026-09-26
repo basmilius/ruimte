@@ -13,8 +13,8 @@ import { useSubagentSupport } from '@/chat/subagent-support';
 import { canOpenSubagent, crumbOf, type SubagentStep } from '@/chat/subagent-view';
 import { useEndpointId } from '@/state/keys';
 import { useTasks } from '@/state/tasks';
-import { Icon } from '@/ui/Icon';
-import { useNow } from '@/ui/useNow';
+import { Icon } from '@ruimte/ui/Icon';
+import { useNow } from '@ruimte/ui/useNow';
 
 // The work of a long-running agent scrolls inside its row instead of pushing the thread away.
 const CHILDREN_MAX_PX = 320;

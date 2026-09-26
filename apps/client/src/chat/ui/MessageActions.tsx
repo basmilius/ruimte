@@ -9,10 +9,10 @@ import { markdownOf, messageTextOf } from '@/chat/logic/timeline-copy';
 import { useChatRow, useChats } from '@/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
-import { BTN_GROUP } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const COPIED_MS = 1500;
 

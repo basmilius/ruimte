@@ -7,11 +7,11 @@ import { SettingsNav, SettingsSearch, SettingsSearchResults } from '@/shell/sett
 import type { SearchResult } from '@/shell/settings/search';
 import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { useUi, type SettingsSectionId } from '@/state/ui';
-import { CloseButton } from '@/ui/CloseButton';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { CloseButton } from '@ruimte/ui/CloseButton';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
 import { lazyNamed } from '@/ui/lazy';
-import { Select } from '@/ui/Select';
-import { useDialogLayer } from '@/ui/dialog-layer';
+import { Select } from '@ruimte/ui/Select';
+import { useDialogLayer } from '@ruimte/ui/dialog-layer';
 
 // Each pane is a chunk of its own, loaded when it is opened; the search index in `search.ts` never imports one.
 const PANES: Record<SettingsSectionId, ComponentType> = {

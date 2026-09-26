@@ -5,9 +5,9 @@ import { flagOf } from '@ruimte/contracts';
 import { flagAction } from '@/actions/client-actions';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { useDocument } from '@/state/document';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
+import { MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
 
 function ColorItem({ ids, entry, picked }: { ids: readonly string[]; entry: (typeof NODE_ACCENTS)[number]; picked: boolean }) {
     return (

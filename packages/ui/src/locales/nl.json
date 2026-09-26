@@ -1,0 +1,11 @@
+{
+  "action": {
+    "cancel": "Annuleren",
+    "copy": "Kopiëren",
+    "copyError": "Fout kopiëren",
+    "reload": "Herladen",
+    "retry": "Opnieuw proberen",
+    "select": "Selecteren",
+    "selectAll": "Alles selecteren"
+  }
+}

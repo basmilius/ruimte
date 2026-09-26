@@ -6,11 +6,17 @@ import { parseSync, Visitor, type ImportExpression, type JSXElement, type JSXEle
 
 const HERE = new URL('.', import.meta.url).pathname;
 
+/* The components the client draws with, held to the same rules; their files read as `@ruimte/ui/<file>`. */
+const UI_PREFIX = '@ruimte/ui/';
+const UI_SOURCE = join(HERE, '../../../packages/ui/src');
+
+const fileOf = (path: string): string => (path.startsWith(UI_PREFIX) ? join(UI_SOURCE, path.slice(UI_PREFIX.length)) : join(HERE, path));
+
 const sources = (): { path: string; text: string }[] =>
-    [...new Glob('**/*.{ts,tsx}').scanSync(HERE)]
+    [...new Glob('**/*.{ts,tsx}').scanSync(HERE), ...[...new Glob('*.{ts,tsx}').scanSync(UI_SOURCE)].map((path) => `${UI_PREFIX}${path}`)]
         .filter((path) => !path.endsWith('.test.ts'))
         .sort()
-        .map((path) => ({ path, text: readFileSync(join(HERE, path), 'utf8') }));
+        .map((path) => ({ path, text: readFileSync(fileOf(path), 'utf8') }));
 
 type Tree = JSXElement | JSXFragment;
 
@@ -19,7 +25,7 @@ const programs = new Map<string, Program>();
 const programOf = (path: string, text?: string): Program => {
     let program = programs.get(path);
     if (program === undefined) {
-        program = parseSync(path, text ?? readFileSync(join(HERE, path), 'utf8')).program;
+        program = parseSync(path, text ?? readFileSync(fileOf(path), 'utf8')).program;
         programs.set(path, program);
     }
     return program;
@@ -32,8 +38,8 @@ const KEY_LISTENERS: Record<string, string> = {
     'shell/app-shortcuts.ts': "the window's own shortcuts, bound once",
     'canvas/canvas-shortcuts.ts': 'what acts on the project, bound once by the workspace',
     'drawing/use-drawing-keys.ts': "a drawing view's bare tool keys, the one exception the product rules allow, and only while that drawing has the keyboard",
-    'ui/ShortcutHints.tsx': 'mounted once, and only watches a modifier held on its own; it binds no shortcut',
-    'ui/modality.ts': 'started once, and only notes that the keyboard is in use; it binds no shortcut'
+    '@ruimte/ui/ShortcutHints.tsx': 'mounted once, and only watches a modifier held on its own; it binds no shortcut',
+    '@ruimte/ui/modality.ts': 'started once, and only notes that the keyboard is in use; it binds no shortcut'
 };
 
 /* Where `Intl` may be used outside `src/format`, and why there. */
@@ -290,7 +296,7 @@ describe('the conventions of the client', () => {
 
     test('a button with a word in it is a Button, never a height, a padding and a radius of its own', () => {
         const built = sources()
-            .filter(({ path }) => path.endsWith('.tsx') && path !== 'ui/Button.tsx')
+            .filter(({ path }) => path.endsWith('.tsx') && path !== '@ruimte/ui/Button.tsx')
             .flatMap(({ path, text }) => {
                 const found: string[] = [];
                 new Visitor({

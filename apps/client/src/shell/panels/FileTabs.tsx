@@ -10,9 +10,9 @@ import { isCheckoutDiff, useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { isUnsavedDraft, useTextDrafts } from '@/state/text-drafts';
-import { FileIcon } from '@/ui/FileIcon';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { FileIcon } from '@ruimte/ui/FileIcon';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 /* A tab lifts on hover instead of sinking (`surface-raised` is the step above the panel's ground),

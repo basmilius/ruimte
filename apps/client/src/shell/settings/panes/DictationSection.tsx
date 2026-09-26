@@ -5,9 +5,9 @@ import { cancelDictation, observeSpeech, useDictation } from '@/dictation/contro
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@/shell/settings/controls';
-import { Button } from '@/ui/Button';
-import { FORM_ERROR } from '@/ui/classes';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { Button } from '@ruimte/ui/Button';
+import { FORM_ERROR } from '@ruimte/ui/classes';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
 import { formatBytes, formatNumber } from '@/format/number';
 
 export function DictationSection() {

@@ -2,11 +2,11 @@ import { useEffect, useId, useLayoutEffect, useRef, type RefObject } from 'react
 import { Mic, Square, X, LoaderCircle, CircleAlert } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { BTN_GROUP } from '@/ui/classes';
+import { BTN_GROUP } from '@ruimte/ui/classes';
 import { cancelDictation, observeSpeech, registerDictationTarget, toggleDictation, useDictation, type DictationInsertion } from './controller';
 
 const EMPTY_BANDS: number[] = [];

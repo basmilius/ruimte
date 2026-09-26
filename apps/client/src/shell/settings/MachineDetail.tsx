@@ -3,7 +3,8 @@ import { CloudUpload, Plug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { forgetEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { messageOf, usePulsarAccount, withAccessToken } from '@/pulsar/account';
+import { messageOf } from '@ruimte/ui/error-message';
+import { usePulsarAccount, withAccessToken } from '@/pulsar/account';
 import { useRegistrationFailures } from '@/pulsar/auto-register-watch';
 import { addMachineToAccount, openAccountMachine, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { BackgroundServiceSection } from '@/shell/settings/BackgroundServiceSection';
@@ -19,9 +20,9 @@ import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
-import { Button } from '@/ui/Button';
-import { FORM_ERROR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { FORM_ERROR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 
 const ACTION_DEPS: MachineActionDeps = {
     forgetEndpoint,

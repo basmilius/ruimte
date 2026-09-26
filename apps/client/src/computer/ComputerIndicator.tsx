@@ -10,9 +10,9 @@ import { localEndpointLabel, useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
-import { Icon } from '@/ui/Icon';
-import { MenuPopup } from '@/ui/MenuPopup';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const ACTION_ICONS: Record<ComputerControlAction, LucideIcon> = {
     pause: Pause,

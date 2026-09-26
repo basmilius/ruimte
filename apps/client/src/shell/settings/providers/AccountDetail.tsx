@@ -13,10 +13,10 @@ import { CliMark, DetailHeader, REMOVE_BUTTON } from '@/shell/settings/providers
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useToasts } from '@/state/toasts';
-import { Button } from '@/ui/Button';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 // The states in which the machine's own sentence says more than the usual line under the login.
 const TROUBLE = new Set(['folder-missing', 'unavailable', 'failed']);

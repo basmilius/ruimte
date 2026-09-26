@@ -21,10 +21,10 @@ import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { useProviders } from '@/state/providers';
 import { useTransportStatus } from '@/transport/status';
-import { BTN_GROUP } from '@/ui/classes';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const idOf = (prompt: CanvasPrompt): string => prompt.id;
 

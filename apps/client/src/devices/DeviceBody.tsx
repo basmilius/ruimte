@@ -8,11 +8,11 @@ import { useDeviceList, useResolvedDevice } from '@/devices/state';
 import { DeviceStream } from '@/devices/DeviceStream';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
-import { BTN_GROUP } from '@/ui/classes';
-import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
-import { PanelEmpty } from '@/ui/PanelEmpty';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { Button } from '@ruimte/ui/Button';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { PanelEmpty } from '@ruimte/ui/PanelEmpty';
 
 const GESTURES: ReadonlyArray<{ button: DeviceButton; icon: LucideIcon }> = [
     { button: 'swipeHome', icon: Hand },

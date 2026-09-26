@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Laptop, MonitorSmartphone, Server, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Icon } from '@/ui/Icon';
+import { Icon } from '@ruimte/ui/Icon';
 
 /* Where a setting applies: this window's client, the computer it runs on, or the machine that acts on it. */
 export type SettingsScope = 'client' | 'computer' | 'machine';

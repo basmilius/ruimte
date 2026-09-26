@@ -4,7 +4,7 @@ import { Check, Copy, Link2, Trash } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { brokerHostOf, brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
 import type { AuthSession } from '@ruimte/contracts';
-import { messageOf } from '@/pulsar/account';
+import { messageOf } from '@ruimte/ui/error-message';
 import { forgetEndpoint } from '@/endpoint';
 import { formatNumericDate } from '@/format/datetime';
 import { formatAgo } from '@/format/duration';
@@ -17,10 +17,10 @@ import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { pool, transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
-import { Button } from '@/ui/Button';
-import { FORM_ERROR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { FORM_ERROR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /* A disabled control does not take the pointer, so the reason sits on a wrapper around it. */
 export function WithReason({ reason, children }: { reason: string | null; children: ReactElement }) {

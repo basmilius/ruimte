@@ -11,13 +11,13 @@ import { useChatRow } from '@/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { DisabledReason } from '@/ui/DisabledReason';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
-import { selectAllWithin } from '@/ui/selection';
-import { EDIT_SHORTCUTS } from '@/ui/shortcut';
-import { Kbd } from '@/ui/Kbd';
+import { MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { DisabledReason } from '@ruimte/ui/DisabledReason';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
+import { selectAllWithin } from '@ruimte/ui/selection';
+import { EDIT_SHORTCUTS } from '@ruimte/ui/shortcut';
+import { Kbd } from '@ruimte/ui/Kbd';
 
 /*
  * The menu behind a right-click in a thread. Copy is the reason it exists. Everything in a thread

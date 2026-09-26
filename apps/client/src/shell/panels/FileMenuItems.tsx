@@ -6,11 +6,11 @@ import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { isCheckoutDiff, useFiles } from '@/state/files';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
+import { MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Kbd } from '@/ui/Kbd';
+import { Kbd } from '@ruimte/ui/Kbd';
 
 /*
  * Everything an open tab can be asked, as menu items. The toolbar's overflow menu and the right

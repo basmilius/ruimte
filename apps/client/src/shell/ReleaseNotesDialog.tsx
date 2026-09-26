@@ -7,11 +7,11 @@ import { formatDay, formatDayWithYear } from '@/format/datetime';
 import { UpdateAction } from '@/shell/settings/panes/AboutPane';
 import { closeReleaseNotes, missingNotesNotice, notesView, RELEASES_PAGE, useReleaseNotes, type NoteEntry } from '@/state/release-notes';
 import { useUpdates } from '@/state/updates';
-import { Button } from '@/ui/Button';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { CloseButton } from '@/ui/CloseButton';
-import { Icon } from '@/ui/Icon';
-import { Pill } from '@/ui/Pill';
+import { Button } from '@ruimte/ui/Button';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { CloseButton } from '@ruimte/ui/CloseButton';
+import { Icon } from '@ruimte/ui/Icon';
+import { Pill } from '@ruimte/ui/Pill';
 
 const dateOf = (iso: string): string => {
     const date = new Date(iso);

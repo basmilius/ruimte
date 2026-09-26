@@ -6,8 +6,8 @@ import { useEndpointId } from '@/state/keys';
 import { useMachineUrl } from '@/transport/machine-url';
 import { formatBytes } from '@/shell/panels/file-size';
 import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
-import { BTN_GROUP } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { EmptyState } from '@ruimte/ui/EmptyState';
 
 type Zoom = 'fit' | 'full';
 

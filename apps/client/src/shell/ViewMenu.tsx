@@ -14,16 +14,16 @@ import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
-import { Tile } from '@/ui/Tile';
+import { Tile } from '@ruimte/ui/Tile';
 import { useUi } from '@/state/ui';
 import { labelCollator } from '@/format/locale';
-import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
-import { cameThroughPortal } from '@/ui/floating';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
+import { MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { cameThroughPortal } from '@ruimte/ui/floating';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
 import { CANVAS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
-import { Kbd } from '@/ui/Kbd';
-import { MenuPopup } from '@/ui/MenuPopup';
+import { Kbd } from '@ruimte/ui/Kbd';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
 function ViewName({ view, className }: { view: ProjectView; className: string }) {

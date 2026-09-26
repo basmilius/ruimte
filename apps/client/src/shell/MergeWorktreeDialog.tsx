@@ -34,8 +34,8 @@ import { useUi, type WorktreeMergeRequest } from '@/state/ui';
 import { useProjectNodes, worktreeLists, type WorktreeNode } from '@/state/worktrees';
 import type { Transport } from '@/transport/transport';
 import { useTransport } from '@/transport/context';
-import { Button } from '@/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, SECTION_LABEL, SMALL_DIALOG } from '@/ui/classes';
+import { Button } from '@ruimte/ui/Button';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, SECTION_LABEL, SMALL_DIALOG } from '@ruimte/ui/classes';
 
 type Reading = { request: WorktreeMergeRequest; worktrees: Worktree[]; error: { message: string | null } | null };
 

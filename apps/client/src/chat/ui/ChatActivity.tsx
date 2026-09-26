@@ -15,11 +15,11 @@ import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useTasks } from '@/state/tasks';
 import { useToasts } from '@/state/toasts';
-import { FLOAT } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { FLOAT } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 import { statusLookOf, type StatusWord } from '@/ui/status-look';
-import { Tooltip } from '@/ui/Tooltip';
-import { useNow } from '@/ui/useNow';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { useNow } from '@ruimte/ui/useNow';
 
 const NO_TASKS: readonly ChatBackgroundTask[] = [];
 

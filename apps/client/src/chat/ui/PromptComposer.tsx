@@ -11,7 +11,7 @@ import { usePromptSession } from '@/prompts/logic/usePromptSession';
 import { PromptView } from '@/prompts/ui/PromptView';
 import { useNodeComputerApprovals } from '@/state/computer';
 import { useEndpointId } from '@/state/keys';
-import { Icon } from '@/ui/Icon';
+import { Icon } from '@ruimte/ui/Icon';
 
 /* The one being read stays in front; otherwise blocking before optional, oldest first, as everywhere else. */
 const pickSubject = (waiting: readonly PromptSubject[], activeId: string | null): PromptSubject | null =>

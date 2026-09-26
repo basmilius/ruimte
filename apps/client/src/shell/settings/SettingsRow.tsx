@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import clsx from 'clsx';
 import type { LucideIcon } from 'lucide-react';
 import { useUi } from '@/state/ui';
-import { Icon } from '@/ui/Icon';
+import { Icon } from '@ruimte/ui/Icon';
 
 /* How long a row a search result jumped to stays lit. */
 const TARGET_MS = 1600;

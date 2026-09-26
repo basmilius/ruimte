@@ -1,4 +1,4 @@
-import { PromptDialog } from '@/ui/PromptDialog';
+import { PromptDialog } from '@ruimte/ui/PromptDialog';
 
 interface ConfirmDialogProps {
     open: boolean;

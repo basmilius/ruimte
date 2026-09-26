@@ -6,10 +6,10 @@ import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo } from '@ruimte
 import { AgentIcon } from '@/agents/AgentIcon';
 import { modelName } from '@/agents/model-name';
 import { forgetStashed, STASH_SHORTCUT, useStash, type StashedPrompt } from '@/chat/stash';
-import { MENU_LABEL } from '@/ui/classes';
-import { Tooltip } from '@/ui/Tooltip';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
+import { MENU_LABEL } from '@ruimte/ui/classes';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
 
 const triggerClass =
     'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text';

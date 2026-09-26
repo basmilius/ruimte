@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* The components of @ruimte/ui carry their own classes, outside the folder Tailwind scans by itself. */
+@source "../../../packages/ui/src";
+
 /* Markdown reads as prose, which is a rhythm nobody wants to write twice. The plugin brings it;
    `.chat-markdown` below paints it in the theme's tokens and holds it to the app's type scale. */
 @plugin "@tailwindcss/typography";

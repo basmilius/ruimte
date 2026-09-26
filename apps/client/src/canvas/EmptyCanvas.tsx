@@ -12,12 +12,12 @@ import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
 import { useUi } from '@/state/ui';
-import { SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Kbd } from '@/ui/Kbd';
-import type { Shortcut } from '@/ui/shortcut';
-import { Tile } from '@/ui/Tile';
-import { Tooltip } from '@/ui/Tooltip';
+import { SECTION_LABEL, TOOLTIP_KBD } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Kbd } from '@ruimte/ui/Kbd';
+import type { Shortcut } from '@ruimte/ui/shortcut';
+import { Tile } from '@ruimte/ui/Tile';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 interface TileLook {
     icon: ReactNode;

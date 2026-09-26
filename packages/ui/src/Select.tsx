@@ -3,9 +3,9 @@ import { Select as BaseSelect } from '@base-ui-components/react/select';
 import i18next from 'i18next';
 import clsx from 'clsx';
 import { ChevronDown } from 'lucide-react';
-import { MENU_LABEL } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
+import { MENU_LABEL } from './classes.ts';
+import { Icon } from './Icon.tsx';
+import { MenuCheck } from './MenuCheck.tsx';
 
 export interface SelectItem<T extends string> {
     value: T;
@@ -74,7 +74,7 @@ export function Select<T extends string>({
     onValueChange,
     items,
     label,
-    placeholder = i18next.t('common:action.select'),
+    placeholder = i18next.t('ui:action.select'),
     size = 'md',
     variant = 'outlined',
     disabled,

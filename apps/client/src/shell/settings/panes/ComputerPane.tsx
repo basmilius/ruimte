@@ -27,10 +27,10 @@ import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
 import type { Transport } from '@/transport/transport';
-import { Button } from '@/ui/Button';
-import { FORM_ERROR } from '@/ui/classes';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { Pill } from '@/ui/Pill';
+import { Button } from '@ruimte/ui/Button';
+import { FORM_ERROR } from '@ruimte/ui/classes';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { Pill } from '@ruimte/ui/Pill';
 
 /* Accessibility shows up in a running helper, so while one is missing the row asks again this often. */
 const POLL_MS = 2_000;

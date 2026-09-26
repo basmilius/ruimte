@@ -7,8 +7,8 @@ import { useChatPlace } from '@/chat/ui/use-chat-place';
 import { useChatRow } from '@/state/chats';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { DisabledReason } from '@/ui/DisabledReason';
-import { Icon } from '@/ui/Icon';
+import { DisabledReason } from '@ruimte/ui/DisabledReason';
+import { Icon } from '@ruimte/ui/Icon';
 
 /*
  * "Fork conversation…" in the menu of a chat node or a chat view, offered as a fork after the last

@@ -1,0 +1,11 @@
+{
+  "action": {
+    "cancel": "Cancel",
+    "copy": "Copy",
+    "copyError": "Copy error",
+    "reload": "Reload",
+    "retry": "Try again",
+    "select": "Select",
+    "selectAll": "Select all"
+  }
+}

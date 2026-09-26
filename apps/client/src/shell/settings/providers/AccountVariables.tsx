@@ -7,10 +7,10 @@ import { saveAccount } from '@/shell/settings/providers/account-actions';
 import { draftsOf, emptyDraft, variablesChanged, variablesOf, variablesProblem, type VariableDraft } from '@/shell/settings/providers/variables';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Button } from '@/ui/Button';
-import { FORM_ERROR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { FORM_ERROR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 interface AccountVariablesProps {
     endpointId: string;

@@ -4,8 +4,8 @@ import { ChevronRight, GitFork } from 'lucide-react';
 import { useForkIdsAfter } from '@/chat/forks';
 import { ROW_GUTTER } from '@/chat/ui/icons';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
-import { Icon } from '@/ui/Icon';
-import { MenuPopup } from '@/ui/MenuPopup';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
 
 const LINE = '-mx-1 mb-0.5 flex h-7 items-center gap-2 rounded-md px-1 text-xs text-text-muted';
 const LINK = `${LINE} hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-hover data-[popup-open]:text-text`;

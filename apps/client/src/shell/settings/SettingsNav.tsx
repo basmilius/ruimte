@@ -16,8 +16,8 @@ import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useUi } from '@/state/ui';
-import { Icon } from '@/ui/Icon';
-import { formatShortcut } from '@/ui/shortcut';
+import { Icon } from '@ruimte/ui/Icon';
+import { formatShortcut } from '@ruimte/ui/shortcut';
 
 /* The index plus the shortcuts, whose words and keys are only known once the lists are built. */
 const findSettings = (query: string): SearchResult[] => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { messageOf } from '@/pulsar/account';
+import { messageOf } from './error-message.ts';
 
 interface AsyncAction {
     busy: boolean;

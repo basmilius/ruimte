@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Shortcut } from '@/ui/shortcut';
+import type { Shortcut } from '@ruimte/ui/shortcut';
 
 // How long a toast that went well stays up; a failure waits for the person instead.
 export const SUCCESS_MS = 4000;

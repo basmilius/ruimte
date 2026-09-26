@@ -25,7 +25,7 @@ import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { useUi } from '@/state/ui';
 import type { Workspace } from '@/transport/connections';
 import { ConnectionProvider } from '@/transport/ConnectionProvider';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
 import { lazyDialog } from '@/ui/lazy';
 import { prefetcher } from '@/ui/prefetch';
 import { stopVoice } from '@/voice/controller';

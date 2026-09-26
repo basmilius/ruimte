@@ -14,7 +14,7 @@ import { dirnameOf } from '@/shell/panels/files-tree';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { useEndpointId } from '@/state/keys';
 import { useUnsaved } from '@/state/text-drafts';
-import { BTN_GROUP } from '@/ui/classes';
+import { BTN_GROUP } from '@ruimte/ui/classes';
 
 type MarkdownView = 'preview' | 'source';
 

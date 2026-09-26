@@ -32,13 +32,13 @@ import { endpointKey, useEndpointId } from '@/state/keys';
 import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { useNodeHost } from '@/nodes/node-host';
 import { usePage } from '@/nodes/use-page';
-import { Button } from '@/ui/Button';
-import { BTN_GROUP } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
-import { Tooltip } from '@/ui/Tooltip';
-import { Icon } from '@/ui/Icon';
-import { Select } from '@/ui/Select';
-import { formatShortcut, KEY_SHORTCUTS } from '@/ui/shortcut';
+import { Button } from '@ruimte/ui/Button';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { EmptyState } from '@ruimte/ui/EmptyState';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Select } from '@ruimte/ui/Select';
+import { formatShortcut, KEY_SHORTCUTS } from '@ruimte/ui/shortcut';
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {

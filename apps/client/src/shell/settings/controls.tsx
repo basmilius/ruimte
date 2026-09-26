@@ -2,9 +2,9 @@ import clsx from 'clsx';
 import { Switch } from '@base-ui-components/react/switch';
 import { useTranslation } from 'react-i18next';
 import { Minus, Plus } from 'lucide-react';
-import { BTN_GROUP } from '@/ui/classes';
-import { Tooltip } from '@/ui/Tooltip';
-import { Icon } from '@/ui/Icon';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
 
 /* The shared controls of the settings panes; each one is small enough to read at a glance. */
 

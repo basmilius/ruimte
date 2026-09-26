@@ -70,14 +70,14 @@ import { useProviders } from '@/state/providers';
 import { useToasts } from '@/state/toasts';
 import { isShellShortcut } from '@/terminal/keymap';
 import { transportFor } from '@/transport';
-import { BTN_GROUP, FLOAT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { Tooltip } from '@/ui/Tooltip';
-import { FileIcon } from '@/ui/FileIcon';
-import { Icon } from '@/ui/Icon';
-import { PromptDialog } from '@/ui/PromptDialog';
-import { KEY_SHORTCUTS, isModHeld, matchesShortcut } from '@/ui/shortcut';
-import { useNow } from '@/ui/useNow';
+import { BTN_GROUP, FLOAT, MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { FileIcon } from '@ruimte/ui/FileIcon';
+import { Icon } from '@ruimte/ui/Icon';
+import { PromptDialog } from '@ruimte/ui/PromptDialog';
+import { KEY_SHORTCUTS, isModHeld, matchesShortcut } from '@ruimte/ui/shortcut';
+import { useNow } from '@ruimte/ui/useNow';
 
 const SEARCH_DEBOUNCE_MS = 80;
 // What fits above the composer without turning the picker into a file tree.

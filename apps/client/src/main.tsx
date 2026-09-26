@@ -27,7 +27,7 @@ import { startWakeReconnect } from '@/transport/wake';
 import { desktop } from '@/desktop/bridge';
 import { startKeepAwake } from '@/state/keep-awake';
 import { startLastSeen } from '@/state/last-seen-watch';
-import { startInputModality } from '@/ui/modality';
+import { startInputModality } from '@ruimte/ui/modality';
 import { refuseStrayDrops } from '@/canvas/drop';
 import { useTheme } from '@/state/theme';
 import { exposeTerminalTestHooks } from '@/terminal/registry';

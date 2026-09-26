@@ -2,9 +2,9 @@ import { useEffect, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Quote } from 'lucide-react';
 import { selectedAnswerQuote, type QuoteTaker } from '@/chat/ui/quote-selection';
-import { Button } from '@/ui/Button';
-import { FLOAT } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { FLOAT } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 
 const GAP_PX = 6;
 // Keeps the button's middle far enough from the edges that it never sticks out of the thread.

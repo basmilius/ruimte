@@ -12,11 +12,11 @@ import { ModelsChart } from '@/shell/models/ModelsChart';
 import { ModelsLegend } from '@/shell/models/ModelsLegend';
 import { Segmented, Skeleton } from '@/shell/settings/controls';
 import { useUi } from '@/state/ui';
-import { Button } from '@/ui/Button';
-import { EmptyState } from '@/ui/EmptyState';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { CloseButton } from '@/ui/CloseButton';
-import { useDialogLayer } from '@/ui/dialog-layer';
+import { Button } from '@ruimte/ui/Button';
+import { EmptyState } from '@ruimte/ui/EmptyState';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { CloseButton } from '@ruimte/ui/CloseButton';
+import { useDialogLayer } from '@ruimte/ui/dialog-layer';
 
 const SCALES: readonly CostScale[] = ['log', 'linear'];
 

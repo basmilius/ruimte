@@ -4,8 +4,8 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
 import { machineUpdateAnswer, machineUpdatePrompt, type MachineUpdateAnswer } from '@/shell/machine-update';
-import { Button } from '@/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, SMALL_DIALOG } from '@/ui/classes';
+import { Button } from '@ruimte/ui/Button';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, SMALL_DIALOG } from '@ruimte/ui/classes';
 
 /*
  * Asked after an update when the background service still runs the older build, because a restart

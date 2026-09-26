@@ -7,9 +7,9 @@ import { type ProjectIconChoice, type ProjectView, viewIconOf } from '@ruimte/co
 import { renameViewAction, setViewIconAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { resetTitle } from '@/nodes/node-host';
-import { Button } from '@/ui/Button';
-import { FIELD_HINT, SECTION_LABEL } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { FIELD_HINT, SECTION_LABEL } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 import { IconPicker } from '@/ui/IconPicker';
 
 /*

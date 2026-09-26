@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useSettings } from '@/state/settings';
-import { FLOAT } from '@/ui/classes';
+import { FLOAT } from '@ruimte/ui/classes';
 
 /* How close to the bottom of the window the pointer has to come before a hidden dock slides back. */
 const REVEAL_ZONE = 120;

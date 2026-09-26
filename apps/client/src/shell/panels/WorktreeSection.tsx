@@ -14,10 +14,10 @@ import { useChats } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { worktreeLists, type WorktreeNode } from '@/state/worktrees';
-import { FLAT_ROW, MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
-import { MenuPopup } from '@/ui/MenuPopup';
+import { FLAT_ROW, MENU_SEPARATOR, SECTION_LABEL } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
 
 /* The mark per kind of work. The number beside it carries the amount; the tooltip carries the words. */
 const BADGE_MARKS: Record<WorkBadgeKind, LucideIcon> = {

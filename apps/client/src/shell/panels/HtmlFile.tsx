@@ -18,9 +18,9 @@ import { useEndpointId } from '@/state/keys';
 import { useUnsaved } from '@/state/text-drafts';
 import { CellViewContext } from '@/state/workspace-stores';
 import { useTransport } from '@/transport/context';
-import { Button } from '@/ui/Button';
-import { BTN_GROUP } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
+import { Button } from '@ruimte/ui/Button';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { EmptyState } from '@ruimte/ui/EmptyState';
 
 type HtmlView = 'preview' | 'source';
 

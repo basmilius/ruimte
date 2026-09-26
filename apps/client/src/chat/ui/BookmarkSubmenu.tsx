@@ -8,9 +8,9 @@ import { bookmarkLabel, bookmarksInThreadOrder } from '@/chat/logic/bookmarks';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
-import { BTN_GROUP } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 type RowAction = 'rename' | 'remove';
 

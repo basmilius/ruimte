@@ -18,11 +18,11 @@ import { useSettings } from '@/state/settings';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
 import { useWindow } from '@/state/window';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
 import { lazyDialog, lazyNamed } from '@/ui/lazy';
 import { prefetcher } from '@/ui/prefetch';
-import { ShortcutHints } from '@/ui/ShortcutHints';
-import { TooltipProvider } from '@/ui/Tooltip';
+import { ShortcutHints } from '@ruimte/ui/ShortcutHints';
+import { TooltipProvider } from '@ruimte/ui/Tooltip';
 
 const loadWorkspaceShell = () => import('@/shell/WorkspaceShell');
 const WorkspaceShell = lazyNamed(loadWorkspaceShell, 'WorkspaceShell');

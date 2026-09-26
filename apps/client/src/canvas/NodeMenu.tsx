@@ -46,12 +46,12 @@ import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
-import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { Tooltip } from '@/ui/Tooltip';
+import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Kbd } from '@/ui/Kbd';
+import { Kbd } from '@ruimte/ui/Kbd';
 
 /*
  * The context menu of one node, the same from its frame and from its row in the sidebar. `snooze`

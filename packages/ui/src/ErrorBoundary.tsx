@@ -2,12 +2,12 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { Copy, RotateCw, TriangleAlert } from 'lucide-react';
-import { Button } from '@/ui/Button';
-import { BTN_GROUP } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { errorMessageOf, errorReport, shouldReset, type ResetKeys } from '@/ui/error-boundary';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from './Button.tsx';
+import { BTN_GROUP } from './classes.ts';
+import { copyText } from './clipboard.ts';
+import { errorMessageOf, errorReport, shouldReset, type ResetKeys } from './error-boundary.ts';
+import { Icon } from './Icon.tsx';
+import { Tooltip } from './Tooltip.tsx';
 
 interface ErrorBoundaryProps {
     /* What failed, as the first line of the message: "This view failed to render". */
@@ -72,16 +72,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                     <p className="line-clamp-4 text-xs break-words text-text-muted">{errorMessageOf(error)}</p>
                     <div className={clsx('flex items-center gap-2', compact ? 'mt-1' : 'mt-2')}>
                         <Button variant="secondary" size="sm" onClick={() => this.reset()}>
-                            {i18next.t('common:action.retry')}
+                            {i18next.t('ui:action.retry')}
                         </Button>
                         {reload && (
                             <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>
                                 <Icon icon={RotateCw} size={14} />
-                                {i18next.t('common:action.reload')}
+                                {i18next.t('ui:action.reload')}
                             </Button>
                         )}
                         <div className={BTN_GROUP}>
-                            <Tooltip label={i18next.t('common:action.copyError')} name>
+                            <Tooltip label={i18next.t('ui:action.copyError')} name>
                                 <button className="icon-btn icon-btn-sm" onClick={() => copyText(errorReport(label, error, componentStack))}>
                                     <Icon icon={Copy} size={14} />
                                 </button>

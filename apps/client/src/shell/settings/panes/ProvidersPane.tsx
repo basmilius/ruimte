@@ -18,10 +18,10 @@ import { useProviderAccounts } from '@/state/provider-accounts';
 import { useProviders } from '@/state/providers';
 import { useUi } from '@/state/ui';
 import { useWindow } from '@/state/window';
-import { SECTION_LABEL } from '@/ui/classes';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { SECTION_LABEL } from '@ruimte/ui/classes';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 type Picked = { kind: 'cli'; cli: AgentKind } | { kind: 'account'; id: string } | { kind: 'add'; cli: AgentKind };
 

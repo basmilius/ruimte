@@ -15,10 +15,10 @@ import { RuimteAccountDetail } from '@/shell/settings/RuimteAccountDetail';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useUi } from '@/state/ui';
-import { Button } from '@/ui/Button';
-import { SECTION_LABEL } from '@/ui/classes';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { SECTION_LABEL } from '@ruimte/ui/classes';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { Icon } from '@ruimte/ui/Icon';
 
 /*
  * The Ruimte account and one list of machines beside the detail of what is picked. The list joins the

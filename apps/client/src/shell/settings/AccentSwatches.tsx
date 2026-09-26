@@ -3,11 +3,11 @@ import { Menu } from '@base-ui-components/react/menu';
 import { Check, Ellipsis } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { accentColor, accentLabel, FEATURED_ACCENTS, isFeatured, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
-import { ACCENT_SWATCH } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { MenuPopup } from '@/ui/MenuPopup';
-import { Tooltip } from '@/ui/Tooltip';
+import { ACCENT_SWATCH } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const RING = 'ring-2 ring-accent ring-offset-2 ring-offset-surface';
 

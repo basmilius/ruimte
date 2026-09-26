@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
-import { EmptyState } from '@/ui/EmptyState';
+import { EmptyState } from './EmptyState.tsx';
 
 interface PanelEmptyProps {
     /* The panel's own header, kept above the sentence so a person can still act while nothing is listed. */

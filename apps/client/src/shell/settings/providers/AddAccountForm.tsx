@@ -11,9 +11,9 @@ import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { providerAccountsOf } from '@/state/provider-accounts';
 import { useSettings } from '@/state/settings';
-import { Button } from '@/ui/Button';
-import { FORM_ERROR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { FORM_ERROR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 
 interface AddAccountFormProps {
     endpointId: string;

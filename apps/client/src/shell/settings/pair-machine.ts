@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { pairEndpoint } from '@/endpoint';
-import { messageOf } from '@/pulsar/account';
+import { messageOf } from '@ruimte/ui/error-message';
 import { reclaimAfterPairing } from '@/pulsar/machines';
 import { useToasts } from '@/state/toasts';
 

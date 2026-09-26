@@ -12,8 +12,8 @@ import { rehypeChips, type ChipOptions } from '@/chat/ui/rehype-chips';
 import { rehypeFadeWords } from '@/chat/ui/rehype-fade';
 import { remarkHtmlAsText } from '@/chat/ui/remark-html-as-text';
 import { openFileLink, useFileLinkCwd, useFileLinkTarget, type FileRef } from '@/shell/panels/file-links';
-import { FileIcon } from '@/ui/FileIcon';
-import { Icon } from '@/ui/Icon';
+import { FileIcon } from '@ruimte/ui/FileIcon';
+import { Icon } from '@ruimte/ui/Icon';
 
 const languageOf = (className: string | undefined): string => /language-([\w-]+)/.exec(className ?? '')?.[1] ?? 'text';
 

@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import type { FsGrepMatch } from '@ruimte/contracts';
 import { firstContextLine, groupByFile } from '@/shell/palette-grep';
-import { SECTION_LABEL } from '@/ui/classes';
-import { FileIcon } from '@/ui/FileIcon';
+import { SECTION_LABEL } from '@ruimte/ui/classes';
+import { FileIcon } from '@ruimte/ui/FileIcon';
 
 interface LineProps {
     number: number;

@@ -3,11 +3,11 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { CircleAlert, CircleCheck, Copy, LoaderCircle, Trash, X } from 'lucide-react';
 import { elapsedOf, useToasts, type Toast, type ToastDeadline } from '@/state/toasts';
-import { Button } from '@/ui/Button';
-import { FLOAT } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Kbd } from '@/ui/Kbd';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { FLOAT } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Kbd } from '@ruimte/ui/Kbd';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const ICON = {
     progress: LoaderCircle,

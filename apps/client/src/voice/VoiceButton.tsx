@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { Mic } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 import { closeVoicePanel } from '@/voice/controller';
 import { refreshVoiceCredential, useVoice } from '@/voice/state';
 

@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { Button } from '@/ui/Button';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { Button } from '@ruimte/ui/Button';
 import { observeSpeech, registerDictationTarget, useDictation } from './controller';
 import { registerTerminalDictationTarget, terminalTargetKey } from './terminal-targets';
 import { useEndpointId } from '@/state/keys';

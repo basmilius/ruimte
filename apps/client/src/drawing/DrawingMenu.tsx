@@ -5,9 +5,9 @@ import { fitAction, historyAction } from '@/actions/client-actions';
 import { copyDrawing, cutSelection, deleteSelection, duplicateSelection, pasteInto, reorderSelection, toggleLockSelection } from '@/drawing/drawing-actions';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { useDrawing, useDrawingStore } from '@/state/drawing';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Kbd } from '@/ui/Kbd';
+import { MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Kbd } from '@ruimte/ui/Kbd';
 
 /*
  * A right-click on the drawing surface. Every item here is a key `use-drawing-keys.ts` already

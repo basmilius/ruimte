@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ActionRefusal } from '@ruimte/actions';
 import type { Worktree } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
-import { PromptDialog } from '@/ui/PromptDialog';
+import { PromptDialog } from '@ruimte/ui/PromptDialog';
 import { removeAllQuestion, removedToast } from '@/shell/panels/worktree-rows';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';

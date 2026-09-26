@@ -5,7 +5,7 @@ import { DEFAULT_MICROPHONE_ID, listMicrophones, type MicrophoneDevice } from '@
 import { useSettings } from '@/state/settings';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Select } from '@/ui/Select';
+import { Select } from '@ruimte/ui/Select';
 
 export function VoiceInputSection() {
     const { t } = useTranslation('settings');

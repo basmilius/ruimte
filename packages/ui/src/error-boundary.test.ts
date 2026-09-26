@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { errorMessageOf, errorReport, shouldReset } from '@/ui/error-boundary';
+import { ErrorBoundary } from './ErrorBoundary.tsx';
+import { errorMessageOf, errorReport, shouldReset } from './error-boundary.ts';
 
 /*
  * No DOM renderer is installed in the client, so the render itself (the message standing in for a

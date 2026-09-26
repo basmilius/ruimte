@@ -7,10 +7,10 @@ import { isImageMime, type FsReadResult } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl, type MachineResource } from '@/transport/machine-url';
-import { BTN_GROUP } from '@/ui/classes';
-import { Tooltip } from '@/ui/Tooltip';
-import { CloseButton } from '@/ui/CloseButton';
-import { Icon } from '@/ui/Icon';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { CloseButton } from '@ruimte/ui/CloseButton';
+import { Icon } from '@ruimte/ui/Icon';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 8;

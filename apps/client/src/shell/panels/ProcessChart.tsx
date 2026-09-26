@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import type { ProcessPoint } from '@ruimte/contracts';
 import { formatClock } from '@/shell/usage/format';
-import { SECTION_LABEL } from '@/ui/classes';
-import { useMeasuredWidth } from '@/ui/useMeasuredWidth';
+import { SECTION_LABEL } from '@ruimte/ui/classes';
+import { useMeasuredWidth } from '@ruimte/ui/useMeasuredWidth';
 
 const HEIGHT = 44;
 

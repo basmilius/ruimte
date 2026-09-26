@@ -8,9 +8,9 @@ import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { backgroundServiceRow } from '@/shell/settings/background-service';
 import { Toggle } from '@/shell/settings/controls';
-import { Button } from '@/ui/Button';
-import { FORM_ERROR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { FORM_ERROR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 
 type Confirming = 'stop' | 'linger' | 'restart' | null;
 

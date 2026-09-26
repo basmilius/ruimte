@@ -5,8 +5,8 @@ import { ViewSettingsDialog } from '@/shell/ViewSettingsDialog';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
-import { SMALL_DIALOG } from '@/ui/classes';
-import { PromptDialog } from '@/ui/PromptDialog';
+import { SMALL_DIALOG } from '@ruimte/ui/classes';
+import { PromptDialog } from '@ruimte/ui/PromptDialog';
 
 /* Settings, promoting and a new page: everything a view asks before it happens. */
 export function ViewDialogs() {

@@ -12,7 +12,7 @@ import { useServers } from '@/state/server';
 import type { TransportStatus } from '@/transport';
 import { useLatency } from '@/transport/ping';
 import { useEndpointConnection, useLastSeenAt } from '@/transport/status';
-import { Tooltip } from '@/ui/Tooltip';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const DOT: Record<TransportStatus, string> = {
     open: 'bg-status-idle',

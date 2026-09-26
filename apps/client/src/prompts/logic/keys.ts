@@ -1,4 +1,4 @@
-import { matchesShortcut, shortcut, type KeyLike } from '@/ui/shortcut';
+import { matchesShortcut, shortcut, type KeyLike } from '@ruimte/ui/shortcut';
 
 /*
  * The keys inside a prompt card. Bare keys are allowed here and nowhere else on a canvas because a card

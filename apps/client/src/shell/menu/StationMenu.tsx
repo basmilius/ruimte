@@ -10,11 +10,11 @@ import { menuContext } from '@/shell/menu/context';
 import { menuIconOf } from '@/shell/menu/icons';
 import { menuModel } from '@/shell/menu/model';
 import { Brand } from '@/ui/Brand';
-import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { MenuPopup } from '@/ui/MenuPopup';
-import { Tooltip } from '@/ui/Tooltip';
+import { MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /* A fixed box in front of every row, the empty one included, so every label starts on the same line. */
 function RowIcon({ id }: { id: string }) {

@@ -6,8 +6,8 @@ import { Segmented } from '@/shell/settings/controls';
 import { useUi } from '@/state/ui';
 import { useUsage, useUsageStore } from '@/state/usage';
 import type { UsageCurrency } from '@/shell/usage/format';
-import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { Icon } from '@ruimte/ui/Icon';
 
 const CURRENCIES: readonly UsageCurrency[] = ['USD', 'EUR'];
 

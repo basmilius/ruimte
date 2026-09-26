@@ -19,8 +19,8 @@ import {
     type ModelMark,
     type PointAt
 } from '@/shell/models/chart';
-import { EmptyState } from '@/ui/EmptyState';
-import { useMeasuredWidth } from '@/ui/useMeasuredWidth';
+import { EmptyState } from '@ruimte/ui/EmptyState';
+import { useMeasuredWidth } from '@ruimte/ui/useMeasuredWidth';
 
 interface ModelsChartProps {
     /* The models that are switched on and measured, in the order of the list beside the chart. */

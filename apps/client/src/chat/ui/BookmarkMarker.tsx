@@ -6,9 +6,9 @@ import { CHAT_BOOKMARK_LIMITS, type ChatBookmark } from '@ruimte/contracts';
 import { nameBookmark, removeBookmark, useBookmarkNaming } from '@/chat/bookmarks';
 import { bookmarkLabel } from '@/chat/logic/bookmarks';
 import { endpointKey, useEndpointId } from '@/state/keys';
-import { BTN_GROUP } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 interface BookmarkMarkerProps {
     chatId: string;

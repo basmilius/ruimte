@@ -6,11 +6,11 @@ import { FolderSearch, ImageUp } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
-import { Button } from '@/ui/Button';
-import { FORM_ERROR, SECTION_LABEL, SMALL_DIALOG } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { FORM_ERROR, SECTION_LABEL, SMALL_DIALOG } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 import { IconPicker } from '@/ui/IconPicker';
-import { useAsyncAction } from '@/ui/useAsyncAction';
+import { useAsyncAction } from '@ruimte/ui/useAsyncAction';
 
 // The daemon rejects larger files, so the picker catches them before sending the bytes.
 const MAX_BYTES = 256 * 1024;

@@ -3,8 +3,8 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, ExternalLink } from 'lucide-react';
 import { fileManagerName, useServers } from '@/state/server';
 import { transportFor } from '@/transport';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
 
 /* A project's folder, from any row that names the project: reveal it on its machine, or take the path along. */
 export function FolderMenuItems({ endpointId, folder, connected }: { endpointId: string; folder: string; connected: boolean }) {

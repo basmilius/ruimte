@@ -16,8 +16,8 @@ import {
 } from '@/drawing/drawing-actions';
 import type { DrawingState, DrawingTool } from '@/state/drawing';
 import { useUi } from '@/state/ui';
-import { matchesShortcut, type Shortcut } from '@/ui/shortcut';
-import { isInFloatingLayer } from '@/ui/floating';
+import { matchesShortcut, type Shortcut } from '@ruimte/ui/shortcut';
+import { isInFloatingLayer } from '@ruimte/ui/floating';
 
 /*
  * The one place in the app where a bare letter is a shortcut. A drawing has the keyboard the way a

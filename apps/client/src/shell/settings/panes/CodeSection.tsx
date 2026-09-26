@@ -6,7 +6,7 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@/shell/settings/controls';
 import { codeThemesOf, useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
-import { Select } from '@/ui/Select';
+import { Select } from '@ruimte/ui/Select';
 
 const PREVIEW_CODE = [
     '// Greets a visitor by name.',

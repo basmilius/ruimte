@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import { HINT_DELAY_MS, ModifierHold, placeHint, type HoldKey } from './shortcut-hints';
+import { HINT_DELAY_MS, ModifierHold, placeHint, type HoldKey } from './shortcut-hints.ts';
 
 const press = (key: string, held: Partial<HoldKey> = {}): HoldKey => ({
     key,

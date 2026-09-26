@@ -22,8 +22,8 @@ import { toolSummary } from '@/chat/logic/tools';
 import { ROW_GUTTER } from '@/chat/ui/icons';
 import { useOpenForFind } from '@/chat/ui/find-reveal';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 // A long prompt folds so the answer stays in view; the reader can open it.
 const USER_FOLD_LINES = 8;

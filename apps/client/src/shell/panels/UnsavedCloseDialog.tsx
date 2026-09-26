@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Trash } from 'lucide-react';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { closeWithoutSaving, useUnsavedClose } from '@/shell/panels/unsaved-close';
-import { PromptDialog } from '@/ui/PromptDialog';
+import { PromptDialog } from '@ruimte/ui/PromptDialog';
 
 /* Asked only when closing could not save first, so it is about changes that would be lost. */
 export function UnsavedCloseDialog() {

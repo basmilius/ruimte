@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { Search } from 'lucide-react';
-import { DIALOG_DESCRIPTION, MENU_HINT, SMALL_DIALOG } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { DIALOG_DESCRIPTION, MENU_HINT, SMALL_DIALOG } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 
 export interface Choice {
     value: string;

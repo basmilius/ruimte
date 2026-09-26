@@ -9,9 +9,9 @@ import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { filterShortcuts, shortcutGroupOf, shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { useUi } from '@/state/ui';
-import { Icon } from '@/ui/Icon';
-import { Keys } from '@/ui/Kbd';
-import { formatShortcut } from '@/ui/shortcut';
+import { Icon } from '@ruimte/ui/Icon';
+import { Keys } from '@ruimte/ui/Kbd';
+import { formatShortcut } from '@ruimte/ui/shortcut';
 
 function GroupCard({ group, footer }: { group: ShortcutGroup; footer?: ReactNode }) {
     return (

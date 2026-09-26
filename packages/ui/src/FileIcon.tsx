@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { fileIconFor, mountFileIconSprite } from '@/ui/file-icon';
+import { fileIconFor, mountFileIconSprite } from './file-icon.ts';
 
 // Before the first icon renders, so a `<use>` never points at a symbol that is not in the document.
 mountFileIconSprite();

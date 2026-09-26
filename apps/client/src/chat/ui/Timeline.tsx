@@ -41,9 +41,9 @@ import { AgentIcon } from '@/agents/AgentIcon';
 import { useModelName } from '@/agents/model-name';
 import { useContextSources } from '@/context/sources';
 import { FindBar } from '@/find/FindBar';
-import { SECTION_LABEL } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { SECTION_LABEL } from '@ruimte/ui/classes';
+import { EmptyState } from '@ruimte/ui/EmptyState';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
 
 const ESTIMATED_ROW_PX = 56;
 

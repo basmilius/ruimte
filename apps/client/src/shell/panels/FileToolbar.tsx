@@ -9,12 +9,12 @@ import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { useFileActions, type FileActions } from '@/shell/panels/file-actions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
-import { cameThroughPortal } from '@/ui/floating';
-import { Icon } from '@/ui/Icon';
-import { Separator } from '@/ui/Separator';
-import { Tooltip } from '@/ui/Tooltip';
-import { MenuPopup } from '@/ui/MenuPopup';
-import { TextMenu } from '@/ui/TextMenu';
+import { cameThroughPortal } from '@ruimte/ui/floating';
+import { Icon } from '@ruimte/ui/Icon';
+import { Separator } from '@ruimte/ui/Separator';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
+import { TextMenu } from '@ruimte/ui/TextMenu';
 
 /*
  * The bar above every file renderer: the controls that change how the file is drawn, at its right.

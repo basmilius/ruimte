@@ -7,7 +7,7 @@ import type { SubagentStep } from '@/chat/subagent-view';
 import { ROW_GUTTER } from '@/chat/ui/icons';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from '@/chat/ui/rows/WorkRows';
 import { useEndpointId } from '@/state/keys';
-import { Icon } from '@/ui/Icon';
+import { Icon } from '@ruimte/ui/Icon';
 
 function AgentLine({ view, onOpen }: { view: WorkflowAgentView; onOpen?(step: SubagentStep): void }) {
     const { agent, state } = view;

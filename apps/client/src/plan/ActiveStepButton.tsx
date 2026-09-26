@@ -8,8 +8,8 @@ import { usePlanAgent } from '@/plan/plan-agent';
 import { activeSteps, activeStepsLabel, nextActiveTarget, sameActiveSteps } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
 import { useChatRow } from '@/state/chats';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 // Long enough to bridge an agent closing one step before it opens the next, short enough that a stop still shows soon.
 export const ACTIVE_HOLD_MS = 1500;

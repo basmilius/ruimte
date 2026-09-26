@@ -17,8 +17,8 @@ import type { AgentKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/cont
 import { AgentIcon } from '@/agents/AgentIcon';
 import { Favicon } from '@/browser/Favicon';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
-import { FileIcon } from '@/ui/FileIcon';
-import { Icon } from '@/ui/Icon';
+import { FileIcon } from '@ruimte/ui/FileIcon';
+import { Icon } from '@ruimte/ui/Icon';
 
 /* The default mark for a view, when nobody picked an icon. */
 const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {

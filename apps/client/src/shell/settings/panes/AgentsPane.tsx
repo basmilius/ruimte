@@ -9,7 +9,7 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@/shell/settings/controls';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { Select, type SelectItem } from '@/ui/Select';
+import { Select, type SelectItem } from '@ruimte/ui/Select';
 
 /* Both mode rows offer the same choices, and each one explains itself in the popup. Built while the
    pane draws, so the words are the ones the interface is in right now. */

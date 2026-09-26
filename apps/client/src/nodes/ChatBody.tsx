@@ -16,7 +16,7 @@ import { useProject } from '@/state/project';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
 import { lazyNamed } from '@/ui/lazy';
 
 // The worker pool and its highlighter load with the first chat node, not with the app.

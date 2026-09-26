@@ -1,8 +1,8 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { CircleCheck } from 'lucide-react';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 // The camera clears unseen state, so this mark is not another button for the same action.
 export function UnseenMark({ className }: { className?: string }) {

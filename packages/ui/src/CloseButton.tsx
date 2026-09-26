@@ -1,9 +1,9 @@
 import clsx from 'clsx';
 import { X } from 'lucide-react';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { Icon } from '@/ui/Icon';
-import type { Shortcut } from '@/ui/shortcut';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from './Icon.tsx';
+import type { Shortcut } from './shortcut.ts';
+import { Tooltip } from './Tooltip.tsx';
 
 type CloseButtonProps = {
     label: string;

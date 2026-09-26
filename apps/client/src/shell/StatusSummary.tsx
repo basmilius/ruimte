@@ -11,10 +11,10 @@ import { useDocument } from '@/state/document';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
-import { Separator } from '@/ui/Separator';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { Icon } from '@ruimte/ui/Icon';
+import { Separator } from '@ruimte/ui/Separator';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /* A count that walks through the nodes behind it, across views, one per click. */
 function Walker({ label, count, ids, children }: { label: string; count: number; ids: string[]; children: ReactNode }) {

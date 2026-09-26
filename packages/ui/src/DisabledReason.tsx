@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { Tooltip } from '@/ui/Tooltip';
+import { Tooltip } from './Tooltip.tsx';
 
 /*
  * Why a row cannot be picked, in a tooltip beside it rather than in the row itself. A reason is a

@@ -6,11 +6,11 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
 import { adoptMachineName } from '@/transport/server-info';
-import { Button } from '@/ui/Button';
-import { FORM_ERROR } from '@/ui/classes';
+import { Button } from '@ruimte/ui/Button';
+import { FORM_ERROR } from '@ruimte/ui/classes';
 import { IconPicker } from '@/ui/IconPicker';
-import { useAsyncAction } from '@/ui/useAsyncAction';
-import { Tooltip } from '@/ui/Tooltip';
+import { useAsyncAction } from '@ruimte/ui/useAsyncAction';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 interface MachineIdentityFormProps {
     endpointId: string;

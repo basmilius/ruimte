@@ -16,12 +16,12 @@ import { useGitStatus } from '@/state/git-watch';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { Button } from '@/ui/Button';
-import { BTN_GROUP, FORM_ERROR } from '@/ui/classes';
-import { CloseButton } from '@/ui/CloseButton';
-import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { BTN_GROUP, FORM_ERROR } from '@ruimte/ui/classes';
+import { CloseButton } from '@ruimte/ui/CloseButton';
+import { EmptyState } from '@ruimte/ui/EmptyState';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 type Reading = { cwd: string; answer: GitConflictsResult } | { cwd: string; failure: string };
 

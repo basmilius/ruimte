@@ -11,8 +11,8 @@ import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
 import { useMachineEntry } from '@/shell/use-machine-entry';
 import { useEndpointConnection } from '@/transport/status';
-import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { Icon } from '@ruimte/ui/Icon';
 
 /* What is being opened, in the words a person picked it by. */
 const titleOf = (target: SwitchTarget, machine: string): string =>

@@ -12,11 +12,11 @@ import { Skeleton } from '@/shell/settings/controls';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { ProviderButton, SignInButtons } from '@/shell/SignInButtons';
-import { Button } from '@/ui/Button';
-import { FORM_ERROR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { FORM_ERROR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 import { SignInMark } from '@/ui/SignInMark';
-import { Tooltip } from '@/ui/Tooltip';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /* One way to sign in to the account. Remove it while another remains, or add it when the address book offers it. */
 function IdentityRow({ provider }: { provider: ProviderId }) {

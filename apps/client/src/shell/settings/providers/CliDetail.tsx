@@ -10,9 +10,9 @@ import { CliTile, DetailHeader } from '@/shell/settings/providers/parts';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useProviderAccountsStore } from '@/state/provider-accounts';
-import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
-import { Select } from '@/ui/Select';
+import { Button } from '@ruimte/ui/Button';
+import { Icon } from '@ruimte/ui/Icon';
+import { Select } from '@ruimte/ui/Select';
 
 const PROVIDER_DEFAULT = '';
 

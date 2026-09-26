@@ -10,10 +10,10 @@ import { DevicesPanel } from '@/shell/panels/DevicesPanel';
 import { SlidingColumn } from '@/shell/SlidingColumn';
 import { clampColumnSize } from '@/shell/useColumnResize';
 import { useUi, type PanelKind } from '@/state/ui';
-import { PANEL_HEADER, SECTION_LABEL } from '@/ui/classes';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { PANEL_HEADER, SECTION_LABEL } from '@ruimte/ui/classes';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
 import { lazyNamed } from '@/ui/lazy';
-import { CloseButton } from '@/ui/CloseButton';
+import { CloseButton } from '@ruimte/ui/CloseButton';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 const GitPanel = lazyNamed(() => import('@/shell/panels/GitPanel'), 'GitPanel');

@@ -4,8 +4,8 @@ import { AccountDot } from '@/agents/AccountDot';
 import { useAccountChoice } from '@/chat/account-choice';
 import { useChats } from '@/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
-import { Pill } from '@/ui/Pill';
-import { Tooltip } from '@/ui/Tooltip';
+import { Pill } from '@ruimte/ui/Pill';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 function AccountPillOf({ provider, account }: { provider: AgentKind; account: string | undefined }) {
     const { t } = useTranslation('chat');

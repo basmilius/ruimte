@@ -16,9 +16,9 @@ import { useHasViewToolbar, useShowsSubagents, useViewToolbarLeads } from '@/she
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import { type CellAt } from '@/shell/split';
-import { Icon } from '@/ui/Icon';
-import { Separator } from '@/ui/Separator';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Separator } from '@ruimte/ui/Separator';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
 /* What the bar holds that is not the bar: a press on one of these is not the start of a drag. */

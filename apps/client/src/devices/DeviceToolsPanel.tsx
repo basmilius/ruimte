@@ -16,11 +16,11 @@ import {
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
 import { Segmented, Toggle } from '@/shell/settings/controls';
-import { Button } from '@/ui/Button';
-import { FORM_ERROR, PANEL_HEADER, SECTION_LABEL } from '@/ui/classes';
-import { CloseButton } from '@/ui/CloseButton';
-import { Icon } from '@/ui/Icon';
-import { Select } from '@/ui/Select';
+import { Button } from '@ruimte/ui/Button';
+import { FORM_ERROR, PANEL_HEADER, SECTION_LABEL } from '@ruimte/ui/classes';
+import { CloseButton } from '@ruimte/ui/CloseButton';
+import { Icon } from '@ruimte/ui/Icon';
+import { Select } from '@ruimte/ui/Select';
 
 type ActionBody = DeviceAction extends infer Action ? (Action extends DeviceAction ? Omit<Action, 'backendId' | 'platform' | 'deviceId'> : never) : never;
 

@@ -4,7 +4,7 @@ import type { FileSurfaceKind } from '@/shell/panels/FileActionItems';
 import { FileBody } from '@/shell/panels/FileBody';
 import { basenameOf, resolveStoredPath } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';
-import { EmptyState } from '@/ui/EmptyState';
+import { EmptyState } from '@ruimte/ui/EmptyState';
 
 /*
  * The file a node or a view points at. Both hold a path and nothing else, so both resolve it

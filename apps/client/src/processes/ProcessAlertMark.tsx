@@ -5,8 +5,8 @@ import type { ProcessAlert } from '@ruimte/contracts';
 import { alertText } from '@/processes/format';
 import { useMinute } from '@/shell/usage/limits';
 import { useUi } from '@/state/ui';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /*
  * The mark a node with a process warning wears. It opens the processes panel, where the warning

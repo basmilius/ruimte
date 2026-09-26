@@ -6,13 +6,13 @@ import { ChevronDown, ChevronRight, Copy, GitBranch, Plus, Search } from 'lucide
 import type { GitRef } from '@ruimte/contracts';
 import { basenameOf } from '@/shell/panels/files-tree';
 import type { GitTarget } from '@/state/git-target';
-import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { cameThroughPortal } from '@/ui/floating';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { Tooltip } from '@/ui/Tooltip';
-import { MenuPopup } from '@/ui/MenuPopup';
+import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { copyText } from '@ruimte/ui/clipboard';
+import { cameThroughPortal } from '@ruimte/ui/floating';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
 
 // The keys the menu itself owns while the field has focus; every other key is the field's.
 const MENU_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Escape', 'Tab', 'Enter']);

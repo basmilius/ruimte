@@ -61,7 +61,8 @@ import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-rece
 import { absoluteOf, basenameOf } from '@/shell/panels/files-tree';
 import { iconOfEntry } from '@/shell/settings/machine-icon';
 import { mergeMachines } from '@/shell/settings/machine-list';
-import { messageOf, usePulsarAccount } from '@/pulsar/account';
+import { messageOf } from '@ruimte/ui/error-message';
+import { usePulsarAccount } from '@/pulsar/account';
 import { refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -77,14 +78,14 @@ import { useFocusedMachine } from '@/transport/connections';
 import type { Transport } from '@/transport/transport';
 import { useConnections, useOpenEndpoints } from '@/transport/status';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
-import { Button } from '@/ui/Button';
-import { BTN_GROUP, SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
-import { FileIcon } from '@/ui/FileIcon';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { BTN_GROUP, SECTION_LABEL, TOOLTIP_KBD } from '@ruimte/ui/classes';
+import { FileIcon } from '@ruimte/ui/FileIcon';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 import { viewShortcut } from '@/canvas/shortcuts';
-import { Kbd } from '@/ui/Kbd';
-import { KEY_SHORTCUTS, matchesShortcut } from '@/ui/shortcut';
+import { Kbd } from '@ruimte/ui/Kbd';
+import { KEY_SHORTCUTS, matchesShortcut } from '@ruimte/ui/shortcut';
 
 const KIND_ICON: Record<CanvasNodeKind, React.ReactNode> = {
     terminal: <Icon icon={Terminal} size={14} />,

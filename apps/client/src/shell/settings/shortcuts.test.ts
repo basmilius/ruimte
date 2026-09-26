@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { shortcut } from '@/ui/shortcut';
+import { shortcut } from '@ruimte/ui/shortcut';
 import { commandShortcuts, filterShortcuts, shortcutGroupOf, shortcutGroups, shortcutRowId } from './shortcuts.ts';
 
 describe('commandShortcuts', () => {

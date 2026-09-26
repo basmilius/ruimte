@@ -27,13 +27,13 @@ import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
 import { useChatPlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
-import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR, PANEL_HEADER, SECTION_LABEL } from '@/ui/classes';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { CloseButton } from '@/ui/CloseButton';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { Tooltip } from '@/ui/Tooltip';
-import { MenuPopup } from '@/ui/MenuPopup';
+import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR, PANEL_HEADER, SECTION_LABEL } from '@ruimte/ui/classes';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { CloseButton } from '@ruimte/ui/CloseButton';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
 
 // The grid beside the panel keeps at least this much, whatever the drag asks for.
 const MIN_GRID_WIDTH = 360;

@@ -33,7 +33,7 @@ import {
     type AlertAction
 } from '@/processes/format';
 import { performAsPerson, performConfirmedAsPerson, runAsPerson } from '@/actions/client-actions';
-import { messageOf } from '@/pulsar/account';
+import { messageOf } from '@ruimte/ui/error-message';
 import { projectNodes, revealNode } from '@/project/views';
 import { Segmented } from '@/shell/settings/controls';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
@@ -48,12 +48,12 @@ import { useServer } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
 import { useEndpointConnection } from '@/transport/status';
-import { Button } from '@/ui/Button';
-import { FLAT_ROW, MENU_HINT, MENU_LABEL, SECTION_LABEL } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
-import { PanelEmpty } from '@/ui/PanelEmpty';
-import { PromptDialog } from '@/ui/PromptDialog';
+import { Button } from '@ruimte/ui/Button';
+import { FLAT_ROW, MENU_HINT, MENU_LABEL, SECTION_LABEL } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { PanelEmpty } from '@ruimte/ui/PanelEmpty';
+import { PromptDialog } from '@ruimte/ui/PromptDialog';
 
 /* The two scopes and the three sortable columns as ids; their words come from `panels:processes`. */
 const SCOPES = ['ruimte', 'all'] as const;

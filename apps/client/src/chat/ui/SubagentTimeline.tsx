@@ -15,8 +15,8 @@ import { FileLinkContext } from '@/shell/panels/file-links';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { machineTransport } from '@/transport';
-import { Button } from '@/ui/Button';
-import { EmptyState } from '@/ui/EmptyState';
+import { Button } from '@ruimte/ui/Button';
+import { EmptyState } from '@ruimte/ui/EmptyState';
 
 const NO_TURNS = new Set<string>();
 

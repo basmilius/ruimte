@@ -8,8 +8,8 @@ import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
 import { runtimeModeLabel } from '@/chat/runtime-modes';
 import { useChatPreferences } from '@/chat/preferences';
 import { useProviders } from '@/state/providers';
-import { MENU_HINT } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { MENU_HINT } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 
 function Submenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
     return (

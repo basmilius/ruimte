@@ -6,13 +6,13 @@ import { GIT_GROUP } from '@/shell/panels/classes';
 import { performAsPerson } from '@/actions/client-actions';
 import { groupCommits, mergeLogs, relativeTime, type LoadedLog, type LogRow } from '@/shell/panels/commit-log';
 import { useTransport } from '@/transport/context';
-import { Button } from '@/ui/Button';
-import { FLAT_ROW, MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
-import { Pill } from '@/ui/Pill';
-import { PanelEmpty } from '@/ui/PanelEmpty';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { FLAT_ROW, MENU_SEPARATOR, SECTION_LABEL } from '@ruimte/ui/classes';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
+import { Pill } from '@ruimte/ui/Pill';
+import { PanelEmpty } from '@ruimte/ui/PanelEmpty';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 // One screen of rows at a time; the button at the end asks for the next.
 const PAGE = 30;

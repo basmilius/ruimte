@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { saveLayoutAction } from '@/actions/client-actions';
 import { useUi } from '@/state/ui';
-import { PromptDialog } from '@/ui/PromptDialog';
+import { PromptDialog } from '@ruimte/ui/PromptDialog';
 
 /* Names an arrangement of the canvas so it can be brought back later from the dock or the palette. */
 export function LayoutDialog() {

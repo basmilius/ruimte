@@ -4,9 +4,9 @@ import { forkPointOf } from '@/chat/logic/fork';
 import { formatDayClock } from '@/format/datetime';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
 import { useChatRow } from '@/state/chats';
-import { Icon } from '@/ui/Icon';
-import { Pill } from '@/ui/Pill';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Pill } from '@ruimte/ui/Pill';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /*
  * Where a forked chat came from, in its node's header or its view's toolbar. Pressing it leads back

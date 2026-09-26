@@ -1,4 +1,4 @@
-import type { Shortcut } from '@/ui/shortcut';
+import type { Shortcut } from './shortcut.ts';
 
 /* How long the modifier has to be held on its own before every shortcut shows. */
 export const HINT_DELAY_MS = 500;

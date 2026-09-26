@@ -6,11 +6,11 @@ import { ClipboardPaste, Copy, Scan, Scissors } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Markdown } from '@/chat/ui/Markdown';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { copyText, readClipboardText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
-import { EDIT_SHORTCUTS } from '@/ui/shortcut';
-import { Kbd } from '@/ui/Kbd';
+import { MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { copyText, readClipboardText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
+import { EDIT_SHORTCUTS } from '@ruimte/ui/shortcut';
+import { Kbd } from '@ruimte/ui/Kbd';
 
 /*
  * A sticky note: rendered markdown on the canvas, a textarea while the node has focus. The text

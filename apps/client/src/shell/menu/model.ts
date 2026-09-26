@@ -6,7 +6,7 @@ import { APP_SHORTCUTS, BROWSER_KEEPS } from '@/shell/shortcuts';
 import type { ViewOffers } from '@/shell/view-offers';
 import type { KeepAwakeMode } from '@/state/settings';
 import type { PanelKind } from '@/state/ui';
-import { formatShortcut, type Shortcut } from '@/ui/shortcut';
+import { formatShortcut, type Shortcut } from '@ruimte/ui/shortcut';
 import { GO_VIEW_PREFIX, type MenuActionId, type PaletteId } from '@/shell/menu/ids';
 
 export type MenuHost = 'desktop' | 'station';

@@ -10,9 +10,9 @@ import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
+import { MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
 
 /* Which of the three surfaces these items are on, since a file already on one does not offer to go
    there again: a node is not shown on the canvas twice and a view is not opened as one. */

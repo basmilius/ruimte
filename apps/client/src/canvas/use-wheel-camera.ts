@@ -2,7 +2,7 @@ import { useEffect, useRef, type RefObject } from 'react';
 import type { StoreApi } from 'zustand';
 import type { CameraSlice } from '@/canvas/camera-slice';
 import { isApplePlatform } from '@/desktop/bridge';
-import { isModHeld } from '@/ui/shortcut';
+import { isModHeld } from '@ruimte/ui/shortcut';
 import { createPanBatch } from '@/canvas/pan-batch';
 
 /* How long after the last wheel event a zoom settles on a whole percent. */

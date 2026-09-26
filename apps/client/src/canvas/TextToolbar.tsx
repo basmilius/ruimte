@@ -9,10 +9,10 @@ import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { textRect } from '@/canvas/edge-lines';
 import { FONT_STACK } from '@/canvas/text-font';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, BTN_GROUP, FLOAT } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { Tooltip } from '@/ui/Tooltip';
+import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, BTN_GROUP, FLOAT } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const FONTS: readonly DrawingFont[] = ['sans', 'hand', 'mono'];
 

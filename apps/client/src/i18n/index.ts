@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import { UI_LOCALES, UI_NAMESPACE } from '@ruimte/ui/locales';
 import { activeLanguage } from '@/i18n/active';
 import { FALLBACK_LANGUAGE, type AppLanguage } from '@/i18n/languages';
 import { NAMESPACES } from '@/i18n/namespaces';
@@ -20,6 +21,10 @@ const load = async (language: AppLanguage): Promise<void> => {
                 i18next.addResourceBundle(language, namespace, resource.default, true, true);
             })
     );
+    const ui = UI_LOCALES[language];
+    if (ui) {
+        i18next.addResourceBundle(language, UI_NAMESPACE, (await ui()).default, true, true);
+    }
 };
 
 /*
@@ -51,7 +56,7 @@ export const initI18n = async (): Promise<void> => {
         fallbackLng: FALLBACK_LANGUAGE,
         supportedLngs: ['en', 'nl'],
         defaultNS: 'common',
-        ns: [...NAMESPACES],
+        ns: [...NAMESPACES, UI_NAMESPACE],
         // React escapes what it draws, so escaping here would show `&#39;` where an apostrophe was.
         interpolation: { escapeValue: false },
         resources: {}

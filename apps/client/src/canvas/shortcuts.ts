@@ -1,6 +1,6 @@
 import type { SplitDirection } from '@/shell/split';
 import type { NodeKind } from '@/state/canvas';
-import { shortcut, type Shortcut } from '@/ui/shortcut';
+import { shortcut, type Shortcut } from '@ruimte/ui/shortcut';
 
 /*
  * The shortcuts `canvas-shortcuts.ts` binds, in a module of their own so a menu, the palette, the Keyboard

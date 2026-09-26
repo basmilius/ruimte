@@ -14,11 +14,11 @@ import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, u
 import { previewUpdate, type UpdatePreview } from '@/state/update-preview';
 import { describeUpdate, hasUpdate, setAutoDownload, useUpdates } from '@/state/updates';
 import { useFocusedMachine } from '@/transport/connections';
-import { Button } from '@/ui/Button';
+import { Button } from '@ruimte/ui/Button';
 import { BrandSymbol } from '@/ui/Brand';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
-import { Pill } from '@/ui/Pill';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
+import { Pill } from '@ruimte/ui/Pill';
 
 /* The three links, each with its words under `about.links.<id>`. */
 const LINKS = [

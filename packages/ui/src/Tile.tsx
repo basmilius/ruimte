@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import clsx from 'clsx';
-import { Kbd } from '@/ui/Kbd';
-import type { Shortcut } from '@/ui/shortcut';
+import { Kbd } from './Kbd.tsx';
+import type { Shortcut } from './shortcut.ts';
 
 interface TileProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> {
     icon: ReactNode;

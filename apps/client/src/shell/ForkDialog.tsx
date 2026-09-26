@@ -30,11 +30,11 @@ import { useEndpointId } from '@/state/keys';
 import { knownAccounts, providerAccountsOf } from '@/state/provider-accounts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { Button } from '@/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SMALL_DIALOG } from '@/ui/classes';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { Icon } from '@/ui/Icon';
-import { Select } from '@/ui/Select';
+import { Button } from '@ruimte/ui/Button';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SMALL_DIALOG } from '@ruimte/ui/classes';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { Icon } from '@ruimte/ui/Icon';
+import { Select } from '@ruimte/ui/Select';
 
 /*
  * Forks a chat after one of its turns, with the history up to and including that turn: a chat view

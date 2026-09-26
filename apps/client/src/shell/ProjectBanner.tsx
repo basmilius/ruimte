@@ -6,7 +6,7 @@ import { focusedDiagram, useDiagram } from '@/state/diagram';
 import { useDocument } from '@/state/document';
 import { focusedDrawing, useDrawing } from '@/state/drawing';
 import { useProject } from '@/state/project';
-import { Button } from '@/ui/Button';
+import { Button } from '@ruimte/ui/Button';
 
 // One banner slot: possible data loss outranks an agent's repeatable view request.
 export function ProjectBanner() {

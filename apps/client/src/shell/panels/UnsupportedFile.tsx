@@ -5,9 +5,9 @@ import { formatBytes } from '@/shell/panels/file-size';
 import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { Button } from '@/ui/Button';
-import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { EmptyState } from '@ruimte/ui/EmptyState';
+import { Icon } from '@ruimte/ui/Icon';
 
 /* What is left when there is nothing to draw: what the file is, how large, and the way to open it. */
 export function UnsupportedFile({ path, name, read }: { path: string; name: string; read: FsReadBinary | FsReadTooLarge }) {

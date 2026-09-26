@@ -45,10 +45,10 @@ import { useEndpointId } from '@/state/keys';
 import { useCellHasFocus } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
-import { BTN_GROUP } from '@/ui/classes';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { Pill } from '@/ui/Pill';
-import { Tooltip } from '@/ui/Tooltip';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { Pill } from '@ruimte/ui/Pill';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canvas/culling';
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
@@ -68,11 +68,11 @@ import { UnknownNodePlate } from '@/canvas/nodes/UnknownNode';
 import { noteColorClass } from '@/canvas/note-colors';
 import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
-import { FileIcon } from '@/ui/FileIcon';
+import { FileIcon } from '@ruimte/ui/FileIcon';
 import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { useUnsavedStoredPath } from '@/shell/panels/use-unsaved';
 import { resetTitle } from '@/nodes/node-host';
-import { Icon } from '@/ui/Icon';
+import { Icon } from '@ruimte/ui/Icon';
 
 const ICONS: Record<CanvasNodeKind, ReactNode> = {
     terminal: <Icon icon={Terminal} size={14} />,

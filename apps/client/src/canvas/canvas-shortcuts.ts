@@ -38,10 +38,10 @@ import { FILES_VIEW_ID } from '@/shell/files-view';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
 import { cellCount, type SplitDirection } from '@/shell/split';
-import { matchesShortcut, type Shortcut } from '@/ui/shortcut';
+import { matchesShortcut, type Shortcut } from '@ruimte/ui/shortcut';
 import { endpointKey } from '@/state/keys';
 import { windowWorkspace } from '@/state/window';
-import { isInFloatingLayer } from '@/ui/floating';
+import { isInFloatingLayer } from '@ruimte/ui/floating';
 
 const workspaceEndpointId = (): string | null => windowWorkspace()?.connection.endpointId ?? null;
 

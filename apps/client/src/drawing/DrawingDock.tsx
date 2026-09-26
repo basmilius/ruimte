@@ -26,12 +26,12 @@ import { DRAWING_COLORS, type DrawingColor } from '@ruimte/contracts';
 import { fitAction, historyAction } from '@/actions/client-actions';
 import { copyDrawing, exportDrawing, styleSelection, unlockEverything } from '@/drawing/drawing-actions';
 import { useDrawing, useDrawingStore, type DrawingStyle, type DrawingTool } from '@/state/drawing';
-import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
 import { DockShell } from '@/ui/DockShell';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { Separator } from '@/ui/Separator';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { Separator } from '@ruimte/ui/Separator';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { ZoomControls } from '@/ui/ZoomControls';
 

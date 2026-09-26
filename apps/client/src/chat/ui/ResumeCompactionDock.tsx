@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Minimize2 } from 'lucide-react';
 import { formatTokens } from '@/format/number';
-import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { Icon } from '@ruimte/ui/Icon';
 
 /*
  * The offer at the top of the composer, for a chat that lay still long enough that the next message

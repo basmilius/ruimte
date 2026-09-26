@@ -8,7 +8,7 @@ import { FramePainter, wait } from '@/transport/live-stream';
 import { credentialFor } from '@/endpoint/credentials';
 import { useEndpointId } from '@/state/keys';
 import { useEndpoints } from '@/state/endpoints';
-import { EmptyState } from '@/ui/EmptyState';
+import { EmptyState } from '@ruimte/ui/EmptyState';
 import { initialStreamUrl, useBrowserRow } from './registry';
 import { browserStreamScaleLimit, clampBrowserStreamScale, useBrowserStreamQuality } from './stream-quality';
 

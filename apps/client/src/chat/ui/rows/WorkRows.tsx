@@ -10,8 +10,8 @@ import { useOpenForFind } from '@/chat/ui/find-reveal';
 import { ReadImage } from '@/chat/ui/ImageView';
 import { formatClockDuration, formatElapsedShort } from '@/format/duration';
 import { ROW_GUTTER, toolIcon } from '@/chat/ui/icons';
-import { Icon } from '@/ui/Icon';
-import { useTickingText } from '@/ui/useNow';
+import { Icon } from '@ruimte/ui/Icon';
+import { useTickingText } from '@ruimte/ui/useNow';
 import { lazyNamed } from '@/ui/lazy';
 
 // The diff renderers carry shiki; they only load once a thread shows a file change.

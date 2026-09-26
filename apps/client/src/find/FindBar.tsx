@@ -7,11 +7,11 @@ import type { FindOptions } from '@/find/query';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
 import { formatNumber } from '@/format/number';
-import { BTN_GROUP, FLOAT } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Separator } from '@/ui/Separator';
-import { matchesShortcut, type Shortcut } from '@/ui/shortcut';
-import { Tooltip } from '@/ui/Tooltip';
+import { BTN_GROUP, FLOAT } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Separator } from '@ruimte/ui/Separator';
+import { matchesShortcut, type Shortcut } from '@ruimte/ui/shortcut';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const OPTIONS: readonly { key: keyof FindOptions; icon: LucideIcon; label: string }[] = [
     { key: 'caseSensitive', icon: CaseSensitive, label: 'find.caseSensitive' },

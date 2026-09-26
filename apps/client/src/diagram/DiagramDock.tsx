@@ -5,11 +5,11 @@ import { fitAction, historyAction } from '@/actions/client-actions';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { copyDiagram, exportDiagram } from '@/diagram/diagram-actions';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
-import { BTN_GROUP } from '@/ui/classes';
+import { BTN_GROUP } from '@ruimte/ui/classes';
 import { DockShell } from '@/ui/DockShell';
-import { Icon } from '@/ui/Icon';
-import { Separator } from '@/ui/Separator';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Separator } from '@ruimte/ui/Separator';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 import { ZoomControls } from '@/ui/ZoomControls';
 
 /*

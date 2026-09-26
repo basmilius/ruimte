@@ -5,10 +5,10 @@ import { Menu } from '@base-ui-components/react/menu';
 import { AlarmClock, AlarmClockOff, ChevronRight } from 'lucide-react';
 import { formatClock, formatMoment, formatWeekdayClock } from '@/format/datetime';
 import { SNOOZE_CHOICES, snoozeUntil, useSnoozedUntil, useSnoozes, type SnoozeChoice } from '@/state/snooze';
-import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { MenuPopup } from '@/ui/MenuPopup';
-import { Tooltip } from '@/ui/Tooltip';
+import { MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /* The moment a choice lands on, beside its name: a clock today, a weekday for tomorrow. */
 const choiceHint = (choice: SnoozeChoice, now: number): string => {

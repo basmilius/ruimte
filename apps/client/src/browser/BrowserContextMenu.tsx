@@ -8,9 +8,9 @@ import { previewGuestOf } from '@/browser/preview-guests';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { desktop, type BrowserContextAction } from '@/desktop/bridge';
 import { splitKey } from '@/state/keys';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
+import { MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
 
 interface MenuTarget {
     webContentsId: number;

@@ -12,10 +12,10 @@ import { accountName } from '@/pulsar/account-name';
 import { linkStep, typedCode } from '@/pulsar/link-request';
 import { refreshAccountMachines } from '@/pulsar/machines';
 import { SignInButtons } from '@/shell/SignInButtons';
-import { Button } from '@/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SMALL_DIALOG } from '@/ui/classes';
-import { useAsyncAction } from '@/ui/useAsyncAction';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SMALL_DIALOG } from '@ruimte/ui/classes';
+import { useAsyncAction } from '@ruimte/ui/useAsyncAction';
+import { Icon } from '@ruimte/ui/Icon';
 
 interface LinkMachineDialogProps {
     open: boolean;

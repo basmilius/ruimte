@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight, X } from 'lucide-react';
 import { breadcrumbOf, MAIN_AGENT, trailTo, useOpenableSubagents, useSubagentTrail } from '@/chat/subagent-view';
 import { SubagentStopButton } from '@/chat/ui/SubagentStopButton';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const CRUMB_LINK = 'truncate text-text-muted hover:text-text';
 

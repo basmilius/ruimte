@@ -14,7 +14,7 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Stepper, Toggle } from '@/shell/settings/controls';
 import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
-import { Select } from '@/ui/Select';
+import { Select } from '@ruimte/ui/Select';
 
 /* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */
 const EXAMPLE_MOMENT = new Date(2026, 8, 19, 14, 30);

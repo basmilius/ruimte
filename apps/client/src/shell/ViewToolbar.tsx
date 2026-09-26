@@ -14,8 +14,8 @@ import { useNodeHost } from '@/nodes/node-host';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useEndpointId } from '@/state/keys';
 import { useHasPlans } from '@/state/plans';
-import { Pill } from '@/ui/Pill';
-import { Tooltip } from '@/ui/Tooltip';
+import { Pill } from '@ruimte/ui/Pill';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 import { hostIdOf, KINDS_WITH_TOOLBAR, modeOf, useIsFork, useShowsSubagents } from '@/shell/view-toolbar';
 
 // A single view uses the window toolbar; split views render the same controls in each cell toolbar.

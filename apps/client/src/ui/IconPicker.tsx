@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Ban } from 'lucide-react';
 import { PROJECT_ICON_NAMES, type ProjectIconChoice } from '@ruimte/contracts';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
-import { SECTION_LABEL } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { SECTION_LABEL } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 interface IconPickerProps {
     /* The mark as it stands. An image is picked somewhere else and reads here as nothing picked. */

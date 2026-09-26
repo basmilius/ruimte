@@ -31,10 +31,10 @@ import { nextId } from '@/state/canvas';
 import { isWritten, newSeed, useDrawing, useDrawingStore } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
-import { TOOLTIP_KBD } from '@/ui/classes';
-import { isInFloatingLayer } from '@/ui/floating';
-import { Kbd } from '@/ui/Kbd';
-import { isModHeld } from '@/ui/shortcut';
+import { TOOLTIP_KBD } from '@ruimte/ui/classes';
+import { isInFloatingLayer } from '@ruimte/ui/floating';
+import { Kbd } from '@ruimte/ui/Kbd';
+import { isModHeld } from '@ruimte/ui/shortcut';
 import { isApplePlatform } from '@/desktop/bridge';
 
 /*

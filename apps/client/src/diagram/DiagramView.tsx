@@ -19,11 +19,11 @@ import { Swatches } from '@/drawing/DrawingDock';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useProject } from '@/state/project';
-import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
-import { isInFloatingLayer } from '@/ui/floating';
-import { Icon } from '@/ui/Icon';
-import { Tile } from '@/ui/Tile';
-import { Tooltip } from '@/ui/Tooltip';
+import { MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { isInFloatingLayer } from '@ruimte/ui/floating';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tile } from '@ruimte/ui/Tile';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const isChrome = (target: EventTarget | null): boolean =>
     isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-diagram-chrome]') !== null);

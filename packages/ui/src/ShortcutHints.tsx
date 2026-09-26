@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { isApplePlatform } from '@/desktop/bridge';
-import { formatShortcut } from '@/ui/shortcut';
-import { ModifierHold, placeHint, shortcutHintTargets } from '@/ui/shortcut-hints';
+import { isApplePlatform } from './platform.ts';
+import { formatShortcut } from './shortcut.ts';
+import { ModifierHold, placeHint, shortcutHintTargets } from './shortcut-hints.ts';
 
 interface PlacedHint {
     id: number;

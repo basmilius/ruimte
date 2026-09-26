@@ -3,10 +3,10 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
-import { Button } from '@/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FORM_ERROR, MULTILINE_FIELD, SECTION_LABEL, SMALL_DIALOG } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { useAsyncAction } from '@/ui/useAsyncAction';
+import { Button } from './Button.tsx';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FORM_ERROR, MULTILINE_FIELD, SECTION_LABEL, SMALL_DIALOG } from './classes.ts';
+import { Icon } from './Icon.tsx';
+import { useAsyncAction } from './useAsyncAction.ts';
 
 interface PromptDialogProps {
     open: boolean;
@@ -78,7 +78,7 @@ export function PromptDialog({
     fallbackMessage,
     onClose
 }: PromptDialogProps) {
-    const { t } = useTranslation('common');
+    const { t } = useTranslation('ui');
     /* The dialog stays mounted between questions, so every opening starts from what it was handed.
        The token is what it was handed, so a new question resets the fields in the same render that
        shows it and not in a second one after. */

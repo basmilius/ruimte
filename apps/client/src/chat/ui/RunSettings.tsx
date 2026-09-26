@@ -28,10 +28,10 @@ import { formatClock, formatWeekdayClock, isSameDay } from '@/format/datetime';
 import { formatPercent, formatTokens } from '@/format/number';
 import { useMinute, useUsageLimits } from '@/shell/usage/limits';
 import { useUi } from '@/state/ui';
-import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { Tooltip } from '@/ui/Tooltip';
+import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const MODE_ICONS: Record<RuntimeMode, LucideIcon> = {
     supervised: Hand,

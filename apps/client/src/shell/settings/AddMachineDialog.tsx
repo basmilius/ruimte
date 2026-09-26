@@ -3,10 +3,10 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import { KeyRound, Link2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PAIRING_PLACEHOLDER, usePairMachine } from '@/shell/settings/pair-machine';
-import { Button } from '@/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SMALL_DIALOG } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SMALL_DIALOG } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /*
  * Adding a machine from the start screen, which has no Account pane to do it in. The dialog is about

@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tooltip } from '@/ui/Tooltip';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 import { describeConnection, describeLastSeen, describeMachine, describePing, describeVersion, tooltipMachines } from '@/shell/connection-info';
 import { useConnectedEndpoints, useConnection, useEndpointConnection, useLastSeenAt } from '@/transport/status';
 import { pingNow, useLatency } from '@/transport/ping';

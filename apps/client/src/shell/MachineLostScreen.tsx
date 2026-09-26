@@ -12,7 +12,7 @@ import { useMinute } from '@/shell/usage/limits';
 import { useEndpointId } from '@/state/keys';
 import { pool } from '@/transport';
 import { useEndpointConnection, useLastSeenAt } from '@/transport/status';
-import { Button } from '@/ui/Button';
+import { Button } from '@ruimte/ui/Button';
 
 /*
  * Stands over the cells while the machine of the open project does not answer. Nothing of the

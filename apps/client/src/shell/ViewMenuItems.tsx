@@ -37,10 +37,10 @@ import { useSessionRow } from '@/state/sessions';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Kbd } from '@/ui/Kbd';
-import { KEY_SHORTCUTS } from '@/ui/shortcut';
+import { MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Kbd } from '@ruimte/ui/Kbd';
+import { KEY_SHORTCUTS } from '@ruimte/ui/shortcut';
 
 interface ViewMenuItemsProps {
     viewId: string;

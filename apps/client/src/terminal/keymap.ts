@@ -1,6 +1,6 @@
 import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import { shortcut, matchesShortcut, type Shortcut, type KeyLike } from '@/ui/shortcut';
+import { shortcut, matchesShortcut, type Shortcut, type KeyLike } from '@ruimte/ui/shortcut';
 
 /* A shortcut that is a different key on macOS than everywhere else, on purpose. */
 export interface PlatformShortcut {

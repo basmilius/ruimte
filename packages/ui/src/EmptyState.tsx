@@ -1,7 +1,7 @@
 import { cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
-import { Icon } from '@/ui/Icon';
+import { Icon } from './Icon.tsx';
 
 // One size in a panel, a node and a dialog alike, so no caller picks its own.
 const ICON_SIZE = 20;

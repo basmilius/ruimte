@@ -16,11 +16,11 @@ import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { useUsageStore } from '@/state/usage';
 import { transportFor } from '@/transport';
-import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
-import { Pill } from '@/ui/Pill';
-import { Tooltip } from '@/ui/Tooltip';
-import { useNow } from '@/ui/useNow';
+import { Button } from '@ruimte/ui/Button';
+import { Icon } from '@ruimte/ui/Icon';
+import { Pill } from '@ruimte/ui/Pill';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { useNow } from '@ruimte/ui/useNow';
 
 // A time a limit names reads as a clock today and with its day after that, so the words follow the minute.
 const MINUTE_MS = 60_000;

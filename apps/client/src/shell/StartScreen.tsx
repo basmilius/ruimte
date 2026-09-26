@@ -32,12 +32,12 @@ import { useUpdates } from '@/state/updates';
 import { useWindow, type BootFailure } from '@/state/window';
 import { useEndpointConnection, useOpenEndpoints } from '@/transport/status';
 import { BrandIntro } from '@/ui/Brand';
-import { Button } from '@/ui/Button';
-import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { Icon } from '@/ui/Icon';
-import { Kbd } from '@/ui/Kbd';
-import { Tile } from '@/ui/Tile';
+import { Button } from '@ruimte/ui/Button';
+import { MENU_SEPARATOR, SECTION_LABEL } from '@ruimte/ui/classes';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { Icon } from '@ruimte/ui/Icon';
+import { Kbd } from '@ruimte/ui/Kbd';
+import { Tile } from '@ruimte/ui/Tile';
 
 const ROW = 'flex min-h-10 w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-hover disabled:opacity-50';
 

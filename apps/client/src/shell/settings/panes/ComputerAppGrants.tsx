@@ -6,8 +6,8 @@ import { formatDayWithYear } from '@/format/datetime';
 import { useFormatLocale } from '@/format/locale';
 import { SettingsRow, TopIcon } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Button } from '@/ui/Button';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 interface ComputerAppGrantsProps {
     readonly grants: Grants;

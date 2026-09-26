@@ -1,7 +1,7 @@
 import { CircleQuestionMark } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCanvas } from '@/state/canvas';
-import { Icon } from '@/ui/Icon';
+import { Icon } from '@ruimte/ui/Icon';
 
 /*
  * The body of a node a newer Ruimte made. This version cannot draw what it holds, so the plate says

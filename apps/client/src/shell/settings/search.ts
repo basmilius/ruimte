@@ -5,7 +5,7 @@ import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import type { SettingsSectionId } from '@/state/ui';
-import { formatShortcut } from '@/ui/shortcut';
+import { formatShortcut } from '@ruimte/ui/shortcut';
 
 interface SearchEntry {
     /* The `searchId` of the row it leads to. */

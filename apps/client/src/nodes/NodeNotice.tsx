@@ -3,10 +3,10 @@ import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
-import { TextMenu } from '@/ui/TextMenu';
-import { Tooltip } from '@/ui/Tooltip';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
+import { TextMenu } from '@ruimte/ui/TextMenu';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 interface NodeNoticeProps {
     tone?: 'muted' | 'error';

@@ -5,16 +5,16 @@ import { FileText, Search } from 'lucide-react';
 import { DiffFile } from '@/shell/panels/DiffFile';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { FileBody } from '@/shell/panels/FileBody';
-import { FileIcon } from '@/ui/FileIcon';
+import { FileIcon } from '@ruimte/ui/FileIcon';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { INSET_ROW, SECTION_LABEL } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
-import { Tile } from '@/ui/Tile';
+import { INSET_ROW, SECTION_LABEL } from '@ruimte/ui/classes';
+import { EmptyState } from '@ruimte/ui/EmptyState';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tile } from '@ruimte/ui/Tile';
 
 /* The preview with no tab up: a file to open, a search through the folder, and what was closed a moment ago. */
 function EmptyPreview() {

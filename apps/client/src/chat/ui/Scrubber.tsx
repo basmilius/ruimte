@@ -7,10 +7,10 @@ import { Bookmark, Copy, GitFork, type LucideIcon } from 'lucide-react';
 import { layoutTicks, messageAt, slotInView, slotOf, tickWidth, TICK_HEIGHT_PX, type ScrubberTick } from '@/chat/logic/scrubber';
 import { BookmarkMenuItems } from '@/chat/ui/TimelineMenu';
 import { formatMoment } from '@/format/datetime';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { cameThroughPortal } from '@/ui/floating';
-import { Icon } from '@/ui/Icon';
+import { MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { copyText } from '@ruimte/ui/clipboard';
+import { cameThroughPortal } from '@ruimte/ui/floating';
+import { Icon } from '@ruimte/ui/Icon';
 
 const PREVIEW_CHARS = 280;
 

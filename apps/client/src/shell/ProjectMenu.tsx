@@ -20,11 +20,11 @@ import { fileManagerName, useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { useMachineHold, useOpenEndpoints } from '@/transport/status';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
-import { PromptDialog } from '@/ui/PromptDialog';
-import { MenuPopup } from '@/ui/MenuPopup';
+import { MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { PromptDialog } from '@ruimte/ui/PromptDialog';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
 
 interface ProjectRowProps {
     row: ProjectMenuRow;

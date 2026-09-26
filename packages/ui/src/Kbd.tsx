@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
-import { isApplePlatform } from '@/desktop/bridge';
-import { TOOLTIP_KBD } from '@/ui/classes';
-import { formatShortcut, shortcutParts, type Shortcut } from '@/ui/shortcut';
+import { isApplePlatform } from './platform.ts';
+import { TOOLTIP_KBD } from './classes.ts';
+import { formatShortcut, shortcutParts, type Shortcut } from './shortcut.ts';
 
 /* One key, drawn as a cap. Settings prints a shortcut key by key, so a gesture can stand beside it. */
 const KEY_CAP =

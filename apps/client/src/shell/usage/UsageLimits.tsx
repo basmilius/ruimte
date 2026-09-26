@@ -12,11 +12,11 @@ import { useLimitGroups, useMinute, useUsageLimits } from '@/shell/usage/limits'
 import { useProviderAccountsStore } from '@/state/provider-accounts';
 import { useUsageEndpointId } from '@/state/usage';
 import { useWindow } from '@/state/window';
-import { Button } from '@/ui/Button';
-import { SECTION_LABEL } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { SECTION_LABEL } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 import { ProviderLogo } from '@/ui/ProviderLogo';
-import { Tooltip } from '@/ui/Tooltip';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 type Filter = UsageProvider | 'all';
 

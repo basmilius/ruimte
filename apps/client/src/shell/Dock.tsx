@@ -12,14 +12,14 @@ import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { StatusSummary } from '@/shell/StatusSummary';
-import { BTN_GROUP, MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { BTN_GROUP, MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
 import { DockShell } from '@/ui/DockShell';
-import { Tooltip } from '@/ui/Tooltip';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { Separator } from '@/ui/Separator';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { Separator } from '@ruimte/ui/Separator';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Kbd } from '@/ui/Kbd';
+import { Kbd } from '@ruimte/ui/Kbd';
 import { ZoomControls } from '@/ui/ZoomControls';
 
 /*

@@ -17,7 +17,7 @@ import { FileSurface } from '@/shell/panels/FileSurface';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useFiles } from '@/state/files';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
 import { lazyNamed } from '@/ui/lazy';
 
 const DrawingView = lazyNamed(() => import('@/drawing/DrawingView'), 'DrawingView');

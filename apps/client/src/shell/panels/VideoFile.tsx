@@ -8,9 +8,9 @@ import { FileContextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
-import { Button } from '@/ui/Button';
-import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { EmptyState } from '@ruimte/ui/EmptyState';
+import { Icon } from '@ruimte/ui/Icon';
 
 /*
  * Whether there is any point in drawing a player. The mime names the container, and a container the

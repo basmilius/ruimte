@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { MessageSquare, X } from 'lucide-react';
 import { CHIP_IN_MESSAGE, MENTION_TONE } from '@/chat/ui/chips';
 import { useProjectChats } from '@/chat/ui/use-project-chats';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /* A chat attached to a message, under the title it has now rather than the one it had when it was attached. */
 export function ChatReferenceChip({ chatId, onRemove }: { chatId: string; onRemove?: () => void }) {

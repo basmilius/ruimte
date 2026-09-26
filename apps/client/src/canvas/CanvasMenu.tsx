@@ -7,10 +7,10 @@ import type { Point } from '@/canvas/math';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Kbd } from '@/ui/Kbd';
+import { Kbd } from '@ruimte/ui/Kbd';
 
 /* The menu for a right-click on empty canvas; everything it adds lands where the click was. */
 export function CanvasMenuPopup({ at }: { at: () => Point }) {

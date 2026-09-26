@@ -3,11 +3,11 @@ import { Menu } from '@base-ui-components/react/menu';
 import { ArrowUp, ChevronDown } from 'lucide-react';
 import type { GitActionKind } from '@ruimte/contracts';
 import { pushAllButton, type PushButton, type PushEntry } from '@/shell/panels/git-actions';
-import { Button } from '@/ui/Button';
-import { BTN_GROUP, MENU_HINT } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { MenuPopup } from '@/ui/MenuPopup';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { BTN_GROUP, MENU_HINT } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuPopup } from '@ruimte/ui/MenuPopup';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 interface PushMenuProps {
     /* What a folder with a single repository pushes; with more than one the button pushes them all. */

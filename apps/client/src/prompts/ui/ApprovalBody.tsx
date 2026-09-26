@@ -7,8 +7,8 @@ import { approvalChanges, fileChanges } from '@/chat/logic/tools';
 import { isApplePlatform } from '@/desktop/bridge';
 import { isPrimaryKey } from '@/prompts/logic/keys';
 import type { PromptDraft } from '@/prompts/logic/prompts';
-import { Button } from '@/ui/Button';
-import { TextMenu } from '@/ui/TextMenu';
+import { Button } from '@ruimte/ui/Button';
+import { TextMenu } from '@ruimte/ui/TextMenu';
 import { lazyNamed } from '@/ui/lazy';
 
 const EditDiff = lazyNamed(() => import('@/chat/ui/EditDiff'), 'default');

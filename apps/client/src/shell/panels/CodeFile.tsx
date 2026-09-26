@@ -17,10 +17,10 @@ import { useFileEditing } from '@/shell/panels/use-file-editing';
 import { useCodeTheme } from '@/state/code-theme';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
-import { Button } from '@/ui/Button';
-import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { Pill } from '@/ui/Pill';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { Pill } from '@ruimte/ui/Pill';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 // One screen of code, near enough. Small enough to highlight without a stutter, large enough that a
 // long file is a handful of blocks instead of thousands.

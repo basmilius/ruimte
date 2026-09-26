@@ -10,9 +10,9 @@ import { Toggle } from '@/shell/settings/controls';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { worktreeLists } from '@/state/worktrees';
-import { Button } from '@/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, SMALL_DIALOG } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { DIALOG_DESCRIPTION, DIALOG_FOOTER, SMALL_DIALOG } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 
 const warningOf = (pending: PendingEnd | null): string | null => {
     const agents = pending?.agents ?? 0;

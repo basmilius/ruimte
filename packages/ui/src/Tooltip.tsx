@@ -1,10 +1,10 @@
 import { useCallback, type ReactElement, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Tooltip as BaseTooltip } from '@base-ui-components/react/tooltip';
-import { isApplePlatform } from '@/desktop/bridge';
-import { formatShortcut, type Shortcut } from '@/ui/shortcut';
-import { registerShortcutHint } from '@/ui/shortcut-hints';
-import { TOOLTIP_KBD } from '@/ui/classes';
+import { isApplePlatform } from './platform.ts';
+import { formatShortcut, type Shortcut } from './shortcut.ts';
+import { registerShortcutHint } from './shortcut-hints.ts';
+import { TOOLTIP_KBD } from './classes.ts';
 
 type Side = 'top' | 'bottom' | 'left' | 'right';
 

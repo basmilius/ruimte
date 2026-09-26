@@ -52,13 +52,13 @@ import {
 } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
 import { useChatRow } from '@/state/chats';
-import { MENU_LABEL, MENU_SEPARATOR, MULTILINE_FIELD } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { EmptyState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { TextMenu } from '@/ui/TextMenu';
-import { Tooltip } from '@/ui/Tooltip';
+import { MENU_LABEL, MENU_SEPARATOR, MULTILINE_FIELD } from '@ruimte/ui/classes';
+import { copyText } from '@ruimte/ui/clipboard';
+import { EmptyState } from '@ruimte/ui/EmptyState';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { TextMenu } from '@ruimte/ui/TextMenu';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const STATE_ICON: Record<PlanStepState, LucideIcon> = {
     open: Circle,

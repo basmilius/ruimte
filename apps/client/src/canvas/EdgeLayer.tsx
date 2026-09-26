@@ -11,8 +11,8 @@ import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import type { Point } from '@/canvas/math';
 import { useEndpointId } from '@/state/keys';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
-import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 
 function EdgeLabel({
     ids,

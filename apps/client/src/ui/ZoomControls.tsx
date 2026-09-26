@@ -1,12 +1,12 @@
 import { Menu } from '@base-ui-components/react/menu';
 import { Maximize, Minus, Plus, Scan } from 'lucide-react';
 import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
-import { BTN_GROUP, MENU_SEPARATOR } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
-import { MenuCheck } from '@/ui/MenuCheck';
-import { Kbd } from '@/ui/Kbd';
-import { Tooltip } from '@/ui/Tooltip';
-import type { Shortcut } from '@/ui/shortcut';
+import { BTN_GROUP, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
+import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { Kbd } from '@ruimte/ui/Kbd';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import type { Shortcut } from '@ruimte/ui/shortcut';
 
 interface ZoomSelection {
     label: string;

@@ -8,9 +8,9 @@ import { accentColor } from '@/canvas/accents';
 import { FONT_STACK } from '@/canvas/text-font';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
+import { MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { copyText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
 
 export const TextElementView = memo(function TextElementView({ id }: { id: string }) {
     const { t } = useTranslation('canvas');

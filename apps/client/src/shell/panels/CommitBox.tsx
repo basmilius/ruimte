@@ -2,16 +2,16 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FolderGit2, LoaderCircle, Sparkles } from 'lucide-react';
 import type { GitCapabilitiesResult } from '@ruimte/contracts';
-import { MULTILINE_FIELD } from '@/ui/classes';
+import { MULTILINE_FIELD } from '@ruimte/ui/classes';
 import { cancelGitRunAction, performAsPerson } from '@/actions/client-actions';
 import { commitTargets, nextActionId, splitMessage, type CommitCandidate } from '@/shell/panels/git-actions';
 import { useGit } from '@/state/git';
 import { useToasts } from '@/state/toasts';
-import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Button } from '@ruimte/ui/Button';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 import { isApplePlatform } from '@/desktop/bridge';
-import { KEY_SHORTCUTS, matchesShortcut } from '@/ui/shortcut';
+import { KEY_SHORTCUTS, matchesShortcut } from '@ruimte/ui/shortcut';
 
 interface CommitBoxProps {
     /* Where the message being typed is kept: the project and not a repository, since one message

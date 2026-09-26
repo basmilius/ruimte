@@ -24,10 +24,10 @@ import { webglBudget } from '@/terminal/webgl-budget';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { closeHost, readNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { Button } from '@/ui/Button';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { copyText, readClipboardText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
+import { Button } from '@ruimte/ui/Button';
+import { MENU_SEPARATOR } from '@ruimte/ui/classes';
+import { copyText, readClipboardText } from '@ruimte/ui/clipboard';
+import { Icon } from '@ruimte/ui/Icon';
 
 const RESIZE_DEBOUNCE_MS = 50;
 /* ESC CR: what agent CLIs read as "newline, do not submit". Harmless in a plain shell. */

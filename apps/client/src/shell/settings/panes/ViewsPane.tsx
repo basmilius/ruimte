@@ -4,9 +4,9 @@ import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@/shell/settings/controls';
-import { Keys } from '@/ui/Kbd';
+import { Keys } from '@ruimte/ui/Kbd';
 import { useSettings } from '@/state/settings';
-import { shortcut } from '@/ui/shortcut';
+import { shortcut } from '@ruimte/ui/shortcut';
 
 const MOD_HELD = shortcut('Mod');
 

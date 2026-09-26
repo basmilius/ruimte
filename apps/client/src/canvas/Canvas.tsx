@@ -28,7 +28,7 @@ import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
 import { TextToolbar } from '@/canvas/TextToolbar';
 import { CellOverlay } from '@/shell/CellOverlay';
-import { isInFloatingLayer } from '@/ui/floating';
+import { isInFloatingLayer } from '@ruimte/ui/floating';
 
 type Gesture =
     | { kind: 'pan'; last: Point }

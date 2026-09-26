@@ -42,12 +42,12 @@ import type { GitCheckout } from '@/state/git-repos';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { FILE_TREE_ICONS } from '@/ui/file-icon';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
-import { PanelEmpty } from '@/ui/PanelEmpty';
+import { MENU_SEPARATOR, SECTION_LABEL } from '@ruimte/ui/classes';
+import { copyText } from '@ruimte/ui/clipboard';
+import { FILE_TREE_ICONS } from '@ruimte/ui/file-icon';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
+import { PanelEmpty } from '@ruimte/ui/PanelEmpty';
 
 /* The groups in the order a person acts on them; each one reads its heading out of `git.group`. */
 const GROUPS: readonly GitFileState[] = ['conflicted', 'staged', 'unstaged', 'untracked'];

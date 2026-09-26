@@ -3,7 +3,7 @@ import type { StoreApi } from 'zustand';
 import { runAsPerson } from '@/actions/client-actions';
 import { readDrawingElements } from '@/drawing/export';
 import type { DrawingState, DrawingStyle } from '@/state/drawing';
-import { readClipboardText } from '@/ui/clipboard';
+import { readClipboardText } from '@ruimte/ui/clipboard';
 
 /*
  * What the drawing's keys, menu, dock and palette do to the drawing a store holds, as a person's

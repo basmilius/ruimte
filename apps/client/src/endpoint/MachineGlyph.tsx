@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { Server } from 'lucide-react';
 import type { ProjectIconChoice } from '@ruimte/contracts';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
-import { Icon } from '@/ui/Icon';
+import { Icon } from '@ruimte/ui/Icon';
 
 interface MachineGlyphProps {
     /* What a person picked for this machine, or null while nobody has. */

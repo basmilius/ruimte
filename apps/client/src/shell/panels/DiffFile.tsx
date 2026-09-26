@@ -15,9 +15,9 @@ import { useGit } from '@/state/git';
 import { useGitSignal } from '@/state/git-watch';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
-import { BTN_GROUP } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
-import { Separator } from '@/ui/Separator';
+import { BTN_GROUP } from '@ruimte/ui/classes';
+import { EmptyState } from '@ruimte/ui/EmptyState';
+import { Separator } from '@ruimte/ui/Separator';
 import { lazyNamed } from '@/ui/lazy';
 
 const UnifiedDiff = lazyNamed(() => import('@/chat/ui/UnifiedDiff'), 'default');

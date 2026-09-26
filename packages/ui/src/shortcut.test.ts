@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { formatShortcut, matchesShortcut, shortcut, shortcutParts, type KeyLike } from './shortcut';
+import { formatShortcut, matchesShortcut, shortcut, shortcutParts, type KeyLike } from './shortcut.ts';
 
 const event = (patch: Partial<KeyLike>): KeyLike => ({ metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, key: '', code: '', ...patch });
 

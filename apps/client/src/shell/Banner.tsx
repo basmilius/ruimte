@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
 import type { LucideIcon } from 'lucide-react';
-import { FLOAT } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { FLOAT } from '@ruimte/ui/classes';
+import { Icon } from '@ruimte/ui/Icon';
 
 /* The mark in front of the line: a decision to make, a failure to read, or something that happened. */
 export type BannerTone = 'attention' | 'error' | 'neutral';

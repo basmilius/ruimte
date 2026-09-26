@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { PANELS } from '@/shell/panels';
 import { useUi } from '@/state/ui';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@ruimte/ui/Icon';
+import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /* The panel toggles. They stay in the toolbar whether a panel is open or not, so a toggle never
    moves out from under the pointer; the panel's own header carries its title and its close button

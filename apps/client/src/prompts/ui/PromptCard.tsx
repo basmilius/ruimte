@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Hand, MessageCircleQuestionMark, type LucideIcon } from 'lucide-react';
 import { isApplePlatform } from '@/desktop/bridge';
 import { headingKey, isPrimaryKey, staysInCard, stepIndex, toolbarKey } from '@/prompts/logic/keys';
-import { Icon } from '@/ui/Icon';
+import { Icon } from '@ruimte/ui/Icon';
 
 /* The raised glass a chat's composer is made of, for a card that stands on its own over a canvas. */
 export const PROMPT_SURFACE =

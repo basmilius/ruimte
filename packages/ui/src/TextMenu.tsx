@@ -2,13 +2,13 @@ import { useRef, useState, type ComponentProps, type KeyboardEvent as ReactKeybo
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, Scan } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { MENU_SEPARATOR } from '@/ui/classes';
-import { copyText } from '@/ui/clipboard';
-import { Icon } from '@/ui/Icon';
-import { selectAllWithin, selectionWithin } from '@/ui/selection';
-import { isApplePlatform } from '@/desktop/bridge';
-import { EDIT_SHORTCUTS, matchesShortcut } from '@/ui/shortcut';
-import { Kbd } from '@/ui/Kbd';
+import { MENU_SEPARATOR } from './classes.ts';
+import { copyText } from './clipboard.ts';
+import { Icon } from './Icon.tsx';
+import { selectAllWithin, selectionWithin } from './selection.ts';
+import { isApplePlatform } from './platform.ts';
+import { EDIT_SHORTCUTS, matchesShortcut } from './shortcut.ts';
+import { Kbd } from './Kbd.tsx';
 
 /*
  * A block of text and the menu that belongs to it: Copy for what is selected inside it, Select all
@@ -17,7 +17,7 @@ import { Kbd } from '@/ui/Kbd';
  * nothing at all. `items` are what the surface itself can be asked, under a line of their own.
  */
 export function TextMenu({ children, items, ...rest }: ComponentProps<'div'> & { items?: ReactNode }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation('ui');
     const host = useRef<HTMLDivElement>(null);
     // Read when the menu opens: a selection made after that is not the one the click was about.
     const [selection, setSelection] = useState('');

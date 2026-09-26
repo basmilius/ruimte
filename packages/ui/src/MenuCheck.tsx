@@ -1,6 +1,6 @@
 import { Menu } from '@base-ui-components/react/menu';
 import { Check } from 'lucide-react';
-import { Icon } from '@/ui/Icon';
+import { Icon } from './Icon.tsx';
 
 interface MenuCheckProps {
     /* One of several is a bare tick; on or off is a tick in an outlined box, which says the row can be off. */
