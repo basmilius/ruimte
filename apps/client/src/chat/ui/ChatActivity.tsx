@@ -10,7 +10,7 @@ import { badgeCountOf, entryTimeOf, flyoutSubagents, statusWordOf, subagentTitle
 import { useSubagentSupport } from '@/chat/subagent-support';
 import { canOpenSubagent, crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { SubagentStopButton } from '@/chat/ui/SubagentStopButton';
-import { formatElapsedShort } from '@/format/duration';
+import { formatElapsedShort } from '@ruimte/ui/format/duration';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useTasks } from '@/state/tasks';

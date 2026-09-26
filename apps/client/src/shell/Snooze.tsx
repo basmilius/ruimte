@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import { AlarmClock, AlarmClockOff, ChevronRight } from 'lucide-react';
-import { formatClock, formatMoment, formatWeekdayClock } from '@/format/datetime';
+import { formatClock, formatMoment, formatWeekdayClock } from '@ruimte/ui/format/datetime';
 import { SNOOZE_CHOICES, snoozeUntil, useSnoozedUntil, useSnoozes, type SnoozeChoice } from '@/state/snooze';
 import { MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
 import { Icon } from '@ruimte/ui/Icon';

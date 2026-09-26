@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, formatRegionFrom, regionName } from '@/format/regions';
+import { FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, formatRegionFrom, regionName } from './regions.ts';
 
 describe('a stored region', () => {
     test('is kept when this version offers it', () => {

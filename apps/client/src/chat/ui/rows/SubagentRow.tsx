@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Bot, ChevronDown } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
 import type { SubagentBranch } from '@/chat/logic/timeline';
-import { formatElapsedShort } from '@/format/duration';
+import { formatElapsedShort } from '@ruimte/ui/format/duration';
 import { useOpenForFind } from '@/chat/ui/find-reveal';
 import { Markdown } from '@/chat/ui/Markdown';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from '@/chat/ui/rows/WorkRows';

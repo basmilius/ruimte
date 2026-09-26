@@ -30,6 +30,13 @@
     "./error-message": "./src/error-message.ts",
     "./file-icon": "./src/file-icon.ts",
     "./floating": "./src/floating.ts",
+    "./format/datetime": "./src/format/datetime.ts",
+    "./format/duration": "./src/format/duration.ts",
+    "./format/fake-source": "./src/format/fake-source.ts",
+    "./format/locale": "./src/format/locale.ts",
+    "./format/number": "./src/format/number.ts",
+    "./format/regions": "./src/format/regions.ts",
+    "./format/time-zone": "./src/format/time-zone.ts",
     "./locales": "./src/locales.ts",
     "./modality": "./src/modality.ts",
     "./platform": "./src/platform.ts",
@@ -39,8 +46,8 @@
     "./useAsyncAction": "./src/useAsyncAction.ts",
     "./useMeasuredWidth": "./src/useMeasuredWidth.ts",
     "./useNow": "./src/useNow.ts",
-    "./locales/*.json": "./src/locales/*.json",
-    "./theme.css": "./src/theme.css"
+    "./theme.css": "./src/theme.css",
+    "./locales/*.json": "./src/locales/*.json"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

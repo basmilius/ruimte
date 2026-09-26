@@ -1,4 +1,4 @@
-import { numberFormatter } from '@/format/locale';
+import { numberFormatter } from './locale.ts';
 
 const WHOLE: Intl.NumberFormatOptions = { maximumFractionDigits: 0 };
 const ONE_DECIMAL: Intl.NumberFormatOptions = { maximumFractionDigits: 1 };

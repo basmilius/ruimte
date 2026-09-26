@@ -8,7 +8,7 @@ import { Toggle } from '@/shell/settings/controls';
 import { Button } from '@ruimte/ui/Button';
 import { FORM_ERROR } from '@ruimte/ui/classes';
 import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { formatBytes, formatNumber } from '@/format/number';
+import { formatBytes, formatNumber } from '@ruimte/ui/format/number';
 
 export function DictationSection() {
     const { t } = useTranslation('voice');

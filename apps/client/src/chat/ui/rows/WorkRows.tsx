@@ -8,7 +8,7 @@ import { performAsPerson } from '@/actions/client-actions';
 import { fileChanges, liveOutput, readImagePath, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
 import { useOpenForFind } from '@/chat/ui/find-reveal';
 import { ReadImage } from '@/chat/ui/ImageView';
-import { formatClockDuration, formatElapsedShort } from '@/format/duration';
+import { formatClockDuration, formatElapsedShort } from '@ruimte/ui/format/duration';
 import { ROW_GUTTER, toolIcon } from '@/chat/ui/icons';
 import { Icon } from '@ruimte/ui/Icon';
 import { useTickingText } from '@ruimte/ui/useNow';

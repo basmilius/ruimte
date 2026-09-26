@@ -6,9 +6,9 @@ import { limitsAccountId } from '@/agents/account-limits';
 import { AccountDot } from '@/agents/AccountDot';
 import { Tooltip } from '@ruimte/ui/Tooltip';
 import { ProviderLogo } from '@/ui/ProviderLogo';
-import { formatClock, formatWeekdayClock, isSameDay } from '@/format/datetime';
-import { formatCountdown } from '@/format/duration';
-import { formatPercent } from '@/format/number';
+import { formatClock, formatWeekdayClock, isSameDay } from '@ruimte/ui/format/datetime';
+import { formatCountdown } from '@ruimte/ui/format/duration';
+import { formatPercent } from '@ruimte/ui/format/number';
 import { PROVIDER_COLORS, PROVIDER_LABELS } from '@/shell/usage/format';
 import { accountNote, explain, isSignedOut, nextReset, type LimitAccount, type LimitGroup } from '@/shell/usage/limit-groups';
 

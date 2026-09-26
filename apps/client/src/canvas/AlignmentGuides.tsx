@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import type { AlignmentGuide, GapGuide } from '@/canvas/alignment-guides';
 import type { Camera } from '@/canvas/math';
-import { formatNumber } from '@/format/number';
+import { formatNumber } from '@ruimte/ui/format/number';
 
 const TICK = 4;
 

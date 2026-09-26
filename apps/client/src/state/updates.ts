@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { formatPercent } from '@/format/number';
+import { formatPercent } from '@ruimte/ui/format/number';
 import { create } from 'zustand';
 import { desktop, type UpdateState } from '@/desktop/bridge';
 import { compareVersions, isVersion } from '@ruimte/desktop-bridge';

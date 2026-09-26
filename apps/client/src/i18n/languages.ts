@@ -13,9 +13,6 @@ export type AppLanguage = (typeof APP_LANGUAGES)[number];
    by accident can find the way back. */
 export const LANGUAGE_LABELS: Record<AppLanguage, string> = { en: 'English', nl: 'Nederlands' };
 
-/* Where a language comes from when nothing else says: the country most of its speakers are in. */
-export const LANGUAGE_REGIONS: Record<AppLanguage, string> = { en: 'en-US', nl: 'nl-NL' };
-
 export const FALLBACK_LANGUAGE: AppLanguage = 'en';
 
 export const isAppLanguage = (value: unknown): value is AppLanguage => APP_LANGUAGES.some((language) => language === value);

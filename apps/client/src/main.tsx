@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { App } from '@/App';
+import { connectFormat } from '@/format/source';
 import { initI18n } from '@/i18n';
 import { startAgentNotifications } from '@/shell/notifications';
 import { startAttentionWatch } from '@/state/attention';
@@ -38,6 +39,9 @@ import '@/state/settings';
 import '@fontsource-variable/geist';
 import '@xterm/xterm/css/xterm.css';
 import '@/styles.css';
+
+// Before anything that writes a date or a number, so none of it is written in the default region first.
+connectFormat();
 
 /* The desktop app carries its own chunks, so one failing there is no deploy, and a reload would only drop every page. */
 if (!desktop()) {

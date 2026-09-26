@@ -8,7 +8,7 @@ import {
     type ChatAttachment,
     type ChatAttachmentUpload
 } from '@ruimte/contracts';
-import { formatBytes as bytesOf } from '@/format/number';
+import { formatBytes as bytesOf } from '@ruimte/ui/format/number';
 import { readResource, type ReadPiece } from '@/transport/byte-transfer';
 
 interface IncomingFile {

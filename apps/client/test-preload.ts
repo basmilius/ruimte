@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import i18next from 'i18next';
 import { UI_NAMESPACE } from '@ruimte/ui/locales';
 import uiWords from '@ruimte/ui/locales/en.json';
+import { connectFormat } from './src/format/source';
 import { FALLBACK_LANGUAGE } from './src/i18n/languages';
 
 /*
@@ -32,3 +33,6 @@ await i18next.init({
     interpolation: { escapeValue: false },
     resources: { [FALLBACK_LANGUAGE]: { ...resources, [UI_NAMESPACE]: uiWords } }
 });
+
+// The formatters of @ruimte/ui read the client's settings, which the tests set.
+connectFormat();

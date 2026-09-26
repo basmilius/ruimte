@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { ChartSpline } from 'lucide-react';
 import { AddressBookRequestError, type ModelBenchmarksResult } from '@ruimte/pulsar';
-import { formatNumber } from '@/format/number';
+import { formatNumber } from '@ruimte/ui/format/number';
 import { publicAddressBook } from '@/pulsar/account';
 import { chartModels, modelMarks, type CostScale } from '@/shell/models/chart';
 import { ModelsChart } from '@/shell/models/ModelsChart';

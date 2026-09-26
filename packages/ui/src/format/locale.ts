@@ -1,8 +1,32 @@
-import { desktop } from '@/desktop/bridge';
-import { FORMAT_LANGUAGE, FORMAT_SYSTEM } from '@/format/regions';
-import { activeLanguage } from '@/i18n/active';
-import { LANGUAGE_REGIONS } from '@/i18n/languages';
-import { useSettings } from '@/state/settings';
+import { useSyncExternalStore } from 'react';
+import { FORMAT_LANGUAGE, FORMAT_SYSTEM } from './regions.ts';
+
+/*
+ * Where the formatters read what a person set. The app owns both settings and hands them over once,
+ * before the first render; the language writes the words and the region writes the notation.
+ */
+export interface FormatSource {
+    /* The language the interface is written in right now, such as `en` or `nl`. */
+    language(): string;
+    /* A region tag such as `nl-NL`, or `FORMAT_LANGUAGE` or `FORMAT_SYSTEM`. */
+    region(): string;
+    /* The system's own locale when a shell can read it; a browser tab falls back on `navigator`. */
+    systemLocale?(): string | undefined;
+    /* Calls back whenever the language or the region may have changed. */
+    subscribe(onChange: () => void): () => void;
+}
+
+let source: FormatSource = { language: () => 'en', region: () => FORMAT_LANGUAGE, subscribe: () => () => {} };
+
+/* Answers the source it replaced, so a test can put that one back. */
+export const setFormatSource = (next: FormatSource): FormatSource => {
+    const previous = source;
+    source = next;
+    return previous;
+};
+
+/* Where a language comes from when nothing else says: the country most of its speakers are in. */
+const LANGUAGE_REGIONS: Record<string, string> = { en: 'en-US', nl: 'nl-NL' };
 
 /* The one locale to fall back on, so a format never depends on which machine ran the test. */
 export const FALLBACK_LOCALE = 'en-US';
@@ -10,7 +34,7 @@ export const FALLBACK_LOCALE = 'en-US';
 /* A month and a weekday are words, so they come from the language the interface is in, while the
    order, the separators and the clock come from the region. English words in a Dutch notation is
    what a Dutch Mac running an English app should read like, and both halves are a person's to set. */
-export const wordLocale = (): string => activeLanguage();
+export const wordLocale = (): string => source.language();
 
 /* A tag `Intl` will take, or nothing. macOS hands out locales with overrides attached, and a
    formatter built on one it does not know throws where a number was meant to go. */
@@ -32,7 +56,7 @@ const usable = (tag: string | undefined): string | null => {
  * in. A browser has no such thing, so there the language is the best there is.
  */
 export const systemLocale = (): string => {
-    const fromShell = usable(desktop()?.systemLocale);
+    const fromShell = usable(source.systemLocale?.());
     if (fromShell !== null) {
         return fromShell;
     }
@@ -48,9 +72,9 @@ export const systemLocale = (): string => {
  * in when it does not.
  */
 const regionOfLanguage = (): string => {
-    const language = activeLanguage();
+    const language = source.language();
     const system = systemLocale();
-    return system.toLowerCase().startsWith(language) ? system : LANGUAGE_REGIONS[language];
+    return system.toLowerCase().startsWith(language) ? system : (LANGUAGE_REGIONS[language] ?? language);
 };
 
 const resolve = (region: string): string => {
@@ -61,12 +85,14 @@ const resolve = (region: string): string => {
 };
 
 /* The locale every formatter in this folder is built on. Read outside React as well, so it is a
-   plain function over the store rather than a hook. */
-export const formatLocale = (): string => resolve(useSettings.getState().formatRegion);
+   plain function over the source rather than a hook. */
+export const formatLocale = (): string => resolve(source.region());
 
 /* What a component calls to draw again once the region changes. The value is the locale, which a
    caller may use or ignore; subscribing is the point. */
-export const useFormatLocale = (): string => useSettings((s) => resolve(s.formatRegion));
+const subscribe = (onChange: () => void): (() => void) => source.subscribe(onChange);
+
+export const useFormatLocale = (): string => useSyncExternalStore(subscribe, formatLocale, formatLocale);
 
 /*
  * A formatter per options object, keyed on the object itself, so a module-level spec builds its

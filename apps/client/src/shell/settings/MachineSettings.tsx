@@ -6,8 +6,8 @@ import { brokerHostOf, brokerUrlProblem, type BrokerSetting } from '@ruimte/puls
 import type { AuthSession } from '@ruimte/contracts';
 import { messageOf } from '@ruimte/ui/error-message';
 import { forgetEndpoint } from '@/endpoint';
-import { formatNumericDate } from '@/format/datetime';
-import { formatAgo } from '@/format/duration';
+import { formatNumericDate } from '@ruimte/ui/format/datetime';
+import { formatAgo } from '@ruimte/ui/format/duration';
 import { ConfirmDialog } from '@/shell/settings/ConfirmDialog';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';

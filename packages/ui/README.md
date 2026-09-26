@@ -22,8 +22,9 @@ An app using it does three things:
   ```
 
   The theme holds the semantic tokens (`bg-surface`, `text-positive-text`, ...), the type scale and the rules for icon buttons, fields, menus, dialogs and tooltips. It resets Tailwind's palette, so an app adds its own colors in an `@theme inline` block after it. Its light and dark tokens follow `data-theme` on `<html>`.
+- Hand the formatters in `format/` what a person set, once and before the first render: `setFormatSource({ language, region, systemLocale, subscribe })` from `@ruimte/ui/format/locale`. The language writes the words, the region (a tag, `FORMAT_LANGUAGE` or `FORMAT_SYSTEM`) writes the notation. Tests use `fakeFormatSource()`.
 - Add the `ui` namespace to its i18next: `UI_LOCALES[language]()` from `@ruimte/ui/locales`, added under `UI_NAMESPACE`. English and Dutch ship with the package.
 
 ## Rules
 
-Nothing in `src` imports from an app. The client's `conventions.test.ts` holds these files to the same design rules as its own: four type sizes, a `Tooltip` instead of `title`, icons on the 12, 14, 16 and 20 steps.
+Nothing in `src` imports from an app. The client's `conventions.test.ts` holds these files to the same design rules as its own: four type sizes, a `Tooltip` instead of `title`, icons on the 12, 14, 16 and 20 steps, and no `Intl` formatter outside `format/`.

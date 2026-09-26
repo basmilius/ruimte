@@ -1,1 +1,1 @@
-export { formatBytes } from '@/format/number';
+export { formatBytes } from '@ruimte/ui/format/number';

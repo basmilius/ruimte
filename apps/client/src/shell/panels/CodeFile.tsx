@@ -4,7 +4,7 @@ import type { FsReadText } from '@ruimte/contracts';
 import type { Editor } from '@ruimte/editor';
 import { FindBar } from '@/find/FindBar';
 import { useFind } from '@/find/use-find';
-import { formatNumber } from '@/format/number';
+import { formatNumber } from '@ruimte/ui/format/number';
 import { DraftBar, EditorNotice } from '@/shell/panels/DraftBar';
 import type { EditBlock } from '@/shell/panels/edit-gate';
 import { useFileActions } from '@/shell/panels/file-actions';

@@ -9,7 +9,7 @@ import {
     type UsageSummaryResult
 } from '@ruimte/contracts';
 import { asRefusal } from '@/actions/developer-actions';
-import { localTimeZone } from '@/format/time-zone';
+import { localTimeZone } from '@ruimte/ui/format/time-zone';
 import { projectNodes } from '@/project/views';
 import { currentEndpointId } from '@/state/keys';
 import { useProcesses, useProcessWarnings } from '@/state/processes';

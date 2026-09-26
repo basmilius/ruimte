@@ -26,7 +26,7 @@ import {
 import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { effectiveChecks, planProgress } from '@ruimte/plan';
 import { Markdown } from '@/chat/ui/Markdown';
-import { formatMoment } from '@/format/datetime';
+import { formatMoment } from '@ruimte/ui/format/datetime';
 import {
     collapsedOf,
     copyPlanMarkdown,

@@ -16,7 +16,7 @@ import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
 import { Tile } from '@ruimte/ui/Tile';
 import { useUi } from '@/state/ui';
-import { labelCollator } from '@/format/locale';
+import { labelCollator } from '@ruimte/ui/format/locale';
 import { MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
 import { cameThroughPortal } from '@ruimte/ui/floating';
 import { Icon } from '@ruimte/ui/Icon';

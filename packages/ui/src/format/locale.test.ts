@@ -1,14 +1,24 @@
-import { afterEach, describe, expect, test } from 'bun:test';
-import { labelCollator } from '@/format/locale';
-import { LANGUAGE_SYSTEM } from '@/i18n/languages';
-import { useSettings } from '@/state/settings';
+import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
+import { fakeFormatSource } from './fake-source.ts';
+import { labelCollator, setFormatSource, type FormatSource } from './locale.ts';
+
+const source = fakeFormatSource();
+let previous: FormatSource;
+
+beforeAll(() => {
+    previous = setFormatSource(source);
+});
+
+afterAll(() => {
+    setFormatSource(previous);
+});
 
 const inLanguage = (language: string): void => {
-    useSettings.getState().update({ language });
+    source.set({ language });
 };
 
 afterEach(() => {
-    inLanguage(LANGUAGE_SYSTEM);
+    inLanguage('en');
 });
 
 describe('the order labels are read in', () => {

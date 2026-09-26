@@ -13,7 +13,7 @@ import type {
     ChatWorkflow
 } from '@ruimte/contracts';
 import { abortedByMachine } from '@ruimte/contracts';
-import { formatElapsedShort } from '@/format/duration';
+import { formatElapsedShort } from '@ruimte/ui/format/duration';
 import { handbackReportOf } from './handback';
 import { toolEntry } from './tool-catalog';
 import { hasFileChanges, isFileChange } from './tools';

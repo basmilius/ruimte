@@ -63,7 +63,7 @@ import { StashPicker } from '@/chat/ui/Pickers';
 import { RunSettings } from '@/chat/ui/RunSettings';
 import { UploadThumb } from '@/chat/ui/UploadThumb';
 import { isApplePlatform } from '@/desktop/bridge';
-import { formatNumber } from '@/format/number';
+import { formatNumber } from '@ruimte/ui/format/number';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useProviders } from '@/state/providers';

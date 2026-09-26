@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { ChatSubagentStatus, ChatWorkflow, ChatWorkflowAgent } from '@ruimte/contracts';
-import { formatElapsedShort } from '@/format/duration';
+import { formatElapsedShort } from '@ruimte/ui/format/duration';
 
 /* `waiting` has not started yet; `stopped` was still at work by the last report when the workflow ended. */
 export type WorkflowAgentState = ChatSubagentStatus | 'waiting' | 'stopped';

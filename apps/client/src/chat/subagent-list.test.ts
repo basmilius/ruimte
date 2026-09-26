@@ -12,7 +12,7 @@ import {
     summaryWordOf,
     taskIdOf
 } from './subagent-list';
-import { formatMoment } from '@/format/datetime';
+import { formatMoment } from '@ruimte/ui/format/datetime';
 
 const subagent = (id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem => ({
     id,

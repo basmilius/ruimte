@@ -6,7 +6,7 @@ import { isApplePlatform } from '@/desktop/bridge';
 import type { FindOptions } from '@/find/query';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
-import { formatNumber } from '@/format/number';
+import { formatNumber } from '@ruimte/ui/format/number';
 import { BTN_GROUP, FLOAT } from '@ruimte/ui/classes';
 import { Icon } from '@ruimte/ui/Icon';
 import { Separator } from '@ruimte/ui/Separator';

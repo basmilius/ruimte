@@ -13,7 +13,7 @@ const UI_SOURCE = join(HERE, '../../../packages/ui/src');
 const fileOf = (path: string): string => (path.startsWith(UI_PREFIX) ? join(UI_SOURCE, path.slice(UI_PREFIX.length)) : join(HERE, path));
 
 const sources = (): { path: string; text: string }[] =>
-    [...new Glob('**/*.{ts,tsx}').scanSync(HERE), ...[...new Glob('*.{ts,tsx}').scanSync(UI_SOURCE)].map((path) => `${UI_PREFIX}${path}`)]
+    [...new Glob('**/*.{ts,tsx}').scanSync(HERE), ...[...new Glob('**/*.{ts,tsx}').scanSync(UI_SOURCE)].map((path) => `${UI_PREFIX}${path}`)]
         .filter((path) => !path.endsWith('.test.ts'))
         .sort()
         .map((path) => ({ path, text: readFileSync(fileOf(path), 'utf8') }));
@@ -42,7 +42,7 @@ const KEY_LISTENERS: Record<string, string> = {
     '@ruimte/ui/modality.ts': 'started once, and only notes that the keyboard is in use; it binds no shortcut'
 };
 
-/* Where `Intl` may be used outside `src/format`, and why there. */
+/* Where `Intl` may be used outside `@ruimte/ui/format`, and why there. */
 const INTL_OUTSIDE_FORMAT: Record<string, string> = {
     'voice/controller.ts': 'the date told to the speech model, fixed to en-GB so the model always reads one format; no person reads it'
 };
@@ -389,9 +389,9 @@ describe('the conventions of the client', () => {
         expect(between).toEqual([]);
     });
 
-    test('only src/format builds a formatter out of Intl', () => {
+    test('only @ruimte/ui/format builds a formatter out of Intl', () => {
         const building = sources()
-            .filter(({ path }) => !path.startsWith('format/') && !(path in INTL_OUTSIDE_FORMAT))
+            .filter(({ path }) => !path.startsWith(`${UI_PREFIX}format/`) && !(path in INTL_OUTSIDE_FORMAT))
             .flatMap(({ path, text }) => {
                 const found: string[] = [];
                 new Visitor({

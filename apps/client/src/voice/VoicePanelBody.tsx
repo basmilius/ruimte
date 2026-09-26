@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { FadingWords } from '@/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
-import { formatClockDuration } from '@/format/duration';
+import { formatClockDuration } from '@ruimte/ui/format/duration';
 import { Button } from '@ruimte/ui/Button';
 import { FORM_ERROR, PANEL_HEADER, SECTION_LABEL } from '@ruimte/ui/classes';
 import { CloseButton } from '@ruimte/ui/CloseButton';

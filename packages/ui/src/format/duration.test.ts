@@ -1,14 +1,26 @@
-import { afterEach, describe, expect, test } from 'bun:test';
-import { formatAgo, formatClockDuration, formatCountdown, formatDuration, formatElapsedShort } from '@/format/duration';
-import { FORMAT_SYSTEM } from '@/format/regions';
-import { useSettings } from '@/state/settings';
+import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
+import { formatAgo, formatClockDuration, formatCountdown, formatDuration, formatElapsedShort } from './duration.ts';
+import { FORMAT_SYSTEM } from './regions.ts';
+import { fakeFormatSource } from './fake-source.ts';
+import { setFormatSource, type FormatSource } from './locale.ts';
+
+const source = fakeFormatSource();
+let previous: FormatSource;
+
+beforeAll(() => {
+    previous = setFormatSource(source);
+});
+
+afterAll(() => {
+    setFormatSource(previous);
+});
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
 const inRegion = (region: string): void => {
-    useSettings.getState().update({ formatRegion: region });
+    source.set({ region });
 };
 
 afterEach(() => {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import {
     formatClock,
     formatDay,
@@ -9,23 +9,34 @@ import {
     formatNumericDate,
     formatWeekdayDay,
     isSameDay
-} from '@/format/datetime';
-import { FORMAT_LANGUAGE } from '@/format/regions';
-import { LANGUAGE_SYSTEM } from '@/i18n/languages';
-import { useSettings } from '@/state/settings';
+} from './datetime.ts';
+import { FORMAT_LANGUAGE } from './regions.ts';
+import { fakeFormatSource } from './fake-source.ts';
+import { setFormatSource, type FormatSource } from './locale.ts';
+
+const source = fakeFormatSource();
+let previous: FormatSource;
+
+beforeAll(() => {
+    previous = setFormatSource(source);
+});
+
+afterAll(() => {
+    setFormatSource(previous);
+});
 
 const AT = new Date(2026, 8, 19, 8, 5);
 
 const inRegion = (region: string): void => {
-    useSettings.getState().update({ formatRegion: region });
+    source.set({ region });
 };
 
 const inLanguage = (language: string): void => {
-    useSettings.getState().update({ language });
+    source.set({ language });
 };
 
 afterEach(() => {
-    useSettings.getState().update({ formatRegion: FORMAT_LANGUAGE, language: LANGUAGE_SYSTEM });
+    source.set({ region: FORMAT_LANGUAGE, language: 'en' });
 });
 
 describe('a clock', () => {

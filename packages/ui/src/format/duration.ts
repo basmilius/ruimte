@@ -1,4 +1,4 @@
-import { formatDecimal, formatNumber } from '@/format/number';
+import { formatDecimal, formatNumber } from './number.ts';
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;

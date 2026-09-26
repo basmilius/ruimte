@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
-import { formatMoment } from '@/format/datetime';
-import { formatElapsedShort } from '@/format/duration';
+import { formatMoment } from '@ruimte/ui/format/datetime';
+import { formatElapsedShort } from '@ruimte/ui/format/duration';
 import type { StatusWord } from '@/ui/status-look';
 
 export const subagentTitle = (item: ChatSubagentItem): string => item.description || item.summary || item.subagentType || i18next.t('chat:rows.subagent.label');

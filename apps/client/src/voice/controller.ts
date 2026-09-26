@@ -6,7 +6,7 @@ import { chatClientFor } from '@/transport/connections';
 import { VoiceToolQueue } from '@/voice/tool-queue';
 import { voiceWorkspaceRevision } from '@/voice/workspace-context';
 import { claimMicrophone } from '@/audio/ownership';
-import { localTimeZone } from '@/format/time-zone';
+import { localTimeZone } from '@ruimte/ui/format/time-zone';
 import i18next from 'i18next';
 import { isCanvasView, isOpenableView } from '@ruimte/contracts';
 import { focusedCanvas } from '@/state/canvas';

@@ -1,4 +1,4 @@
-import { dateFormatter, wordFormatter } from '@/format/locale';
+import { dateFormatter, wordFormatter } from './locale.ts';
 
 /* The parts that are a word rather than a number, and so come from the language and not the region. */
 const WORD_PARTS = new Set<Intl.DateTimeFormatPartTypes>(['month', 'weekday', 'dayPeriod', 'era']);

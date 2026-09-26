@@ -1,10 +1,22 @@
-import { afterEach, describe, expect, test } from 'bun:test';
-import { formatBytes, formatDecimal, formatMoney, formatNumber, formatPercent, formatTokens, formatUsdSignificant } from '@/format/number';
-import { FORMAT_SYSTEM } from '@/format/regions';
-import { useSettings } from '@/state/settings';
+import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
+import { formatBytes, formatDecimal, formatMoney, formatNumber, formatPercent, formatTokens, formatUsdSignificant } from './number.ts';
+import { FORMAT_SYSTEM } from './regions.ts';
+import { fakeFormatSource } from './fake-source.ts';
+import { setFormatSource, type FormatSource } from './locale.ts';
+
+const source = fakeFormatSource();
+let previous: FormatSource;
+
+beforeAll(() => {
+    previous = setFormatSource(source);
+});
+
+afterAll(() => {
+    setFormatSource(previous);
+});
 
 const inRegion = (region: string): void => {
-    useSettings.getState().update({ formatRegion: region });
+    source.set({ region });
 };
 
 afterEach(() => {

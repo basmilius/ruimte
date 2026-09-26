@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { ExternalLink } from 'lucide-react';
 import { Markdown } from '@/chat/ui/Markdown';
-import { formatDay, formatDayWithYear } from '@/format/datetime';
+import { formatDay, formatDayWithYear } from '@ruimte/ui/format/datetime';
 import { UpdateAction } from '@/shell/settings/panes/AboutPane';
 import { closeReleaseNotes, missingNotesNotice, notesView, RELEASES_PAGE, useReleaseNotes, type NoteEntry } from '@/state/release-notes';
 import { useUpdates } from '@/state/updates';
