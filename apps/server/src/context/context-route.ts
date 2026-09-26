@@ -2,7 +2,7 @@ import type { ActionResult } from '@ruimte/actions';
 import { serverActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
-import { refusalRows } from '../refusal.ts';
+import { refusalRows } from '@ruimte/agents/context/refusal';
 import { CONTEXT_PATH } from './context-store.ts';
 
 /* The refusals of a read that the CLI prints as its own, with what `list` would have said under them. */

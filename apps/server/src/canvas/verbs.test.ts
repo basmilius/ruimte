@@ -525,7 +525,7 @@ describe('help', () => {
 
     test('every flag a verb or an action takes is a line of its own detail', async () => {
         const entries = [
-            ...VERBS.flatMap((entry) => (entry.served === 'canvas' ? [{ words: [entry.name], flagNames: entry.flagNames }] : [])),
+            ...VERBS.flatMap((entry) => (entry.served === 'verb' ? [{ words: [entry.name], flagNames: entry.flagNames }] : [])),
             ...allActions().map(({ action }) => ({ words: action.name.split(' '), flagNames: action.flagNames }))
         ];
         for (const { words, flagNames } of entries) {
@@ -541,7 +541,7 @@ describe('help', () => {
     });
 
     test('every flag of a detail is in the usage help <noun> and a refusal print, and the usage names no flag the parser lacks', async () => {
-        const entries = [...VERBS.flatMap((entry) => (entry.served === 'canvas' ? [entry] : [])), ...allActions().map(({ action }) => action)];
+        const entries = [...VERBS.flatMap((entry) => (entry.served === 'verb' ? [entry] : [])), ...allActions().map(({ action }) => action)];
         for (const { name, usage, detail, flagNames } of entries) {
             const documented = detail.filter((line) => line.startsWith('flag\t--')).map((line) => line.split('\t')[1]!.split(' ')[0]!);
             const spelled = [...usage.matchAll(/(?:^|[^\w-])--([\w-]+)/g)].map((match) => match[1]!);

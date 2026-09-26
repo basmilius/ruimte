@@ -1,7 +1,6 @@
 import { alertVerb } from './alert-verb.ts';
 import { actionDescription } from '@ruimte/actions';
 import { ChatSubagentSourceSchema, ContextSourceSchema } from '@ruimte/contracts';
-import { z } from 'zod';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 // First: verbs join the --dry-run list as they are defined, and node new has always led it.
 import { nodeDeleteAction, nodeListAction, nodeNewAction } from './node-verb.ts';
@@ -25,18 +24,8 @@ import { doneVerb, taskListAction, taskNewAction } from './task-verbs.ts';
 import { teamVerb } from './team-verb.ts';
 import { VIEW_ACTIONS, VIEW_DETAIL, VIEW_SUMMARY } from './view-verb.ts';
 import { worktreeVerb } from './worktree-verb.ts';
-import {
-    DRY_RUN_FLAG,
-    DRY_RUN_PREVIEW,
-    SCOPE_LINE,
-    VerbRefusal,
-    defineNoun,
-    defineVerb,
-    dryRunVerbNames,
-    type ContextVerb,
-    type Noun,
-    type VerbEntry
-} from './verb.ts';
+import { summaryLines } from '@ruimte/agents/context/verb';
+import { SCOPE_LINE, defineHelp, defineNoun, dryRunLine, type ContextVerb, type VerbCall, type VerbEntry } from './verb.ts';
 
 /* The one line about failure every help output ends with; the codes are the CLI's, which is what runs the verb. */
 const REFUSAL_LINE =
@@ -45,89 +34,12 @@ const REFUSAL_LINE =
 /* Agents repeat ids to people, who know nodes, views and plans only by their titles. */
 const IDS_LINE = 'ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id';
 
-/* Said once under the list, since the flag is on some actions and refused by name on the rest. */
-const dryRunLine = (): string =>
-    `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbNames().join(', ')}\tsame checks, nothing made; ${DRY_RUN_PREVIEW}; every other verb refuses the flag`;
+export const verbSummaryLines = (): string[] => summaryLines<VerbCall>(VERBS);
 
-/*
- * Every row says what it is in its first field, so the lines under the list are never read as verbs.
- * A noun names its actions and not their arguments, which keeps the root short; `help <noun>` has those.
- */
-export const verbSummaryLines = (): string[] =>
-    VERBS.map((entry) =>
-        entry.served === 'noun'
-            ? `noun\t${entry.name}\t${entry.actions.map((action) => action.word).join('|')}\t${entry.summary}`
-            : `verb\t${entry.name}\t${entry.usage}\t${entry.summary}`
-    );
-
-/* The signatures of every action of a noun, for `help <noun>` and a refusal about one. */
-const actionLines = (noun: Noun): string[] => noun.actions.map((action) => `action\t${action.name}\t${action.usage}\t${action.summary}`);
-
-const detailLines = (entry: { name: string; usage: string; summary: string; detail: readonly string[] }): string[] => [
-    `usage\t${entry.name}\t${entry.usage}`,
-    `about\t${entry.summary}`,
-    ...entry.detail,
-    REFUSAL_LINE
-];
-
-const nounLines = (noun: Noun): string[] => [
-    `usage\t${noun.name}\t${noun.usage}`,
-    `about\t${noun.summary}`,
-    ...noun.detail,
-    ...actionLines(noun),
-    `detail\truimte-context help ${noun.name} <action>\tone action in full`,
-    REFUSAL_LINE
-];
-
-const helpVerb = defineVerb({
-    name: 'help',
-    usage: '[noun] [action]',
-    summary: 'Lists every verb and noun; with a noun the signature of each of its actions, with a noun and an action or with a verb everything that one takes',
-    detail: [
-        'argument\t<noun>\toptional\tThe noun or verb to detail; without one every verb and noun is listed',
-        'argument\t<action>\toptional\tOne action of that noun, in full',
-        'prints\tverb\tname\targuments\tsummary\tone row per verb',
-        'prints\tnoun\tname\tactions\tsummary\tone row per noun, its actions separated by |; a row that starts with neither is not one'
-    ],
-    positionals: z.array(z.string()).max(2, 'help takes a verb, or a noun and one of its actions, and nothing else'),
-    flags: z.object({}),
-    run: async ({ positionals: [name, actionWord] }) => {
-        if (name === undefined) {
-            return [
-                ...verbSummaryLines(),
-                SCOPE_LINE,
-                IDS_LINE,
-                dryRunLine(),
-                'detail\truimte-context help <noun>\tthe signature of every action of a noun',
-                'detail\truimte-context help <noun> <action>\tone action in full',
-                'detail\truimte-context help <verb>\tone verb in full',
-                REFUSAL_LINE
-            ];
-        }
-        const entry = verbNamed(name);
-        if (!entry) {
-            throw new VerbRefusal('unknown-verb', `${name} is not a verb or a noun`, [
-                'detail\truimte-context help\tevery verb and noun, with what each takes',
-                ...verbSummaryLines()
-            ]);
-        }
-        if (entry.served !== 'noun') {
-            if (actionWord !== undefined) {
-                throw new VerbRefusal('bad-arguments', `${name} is a verb and has no actions; ruimte-context help ${name} details it`, [
-                    `detail\truimte-context help ${name}\tone verb in full`
-                ]);
-            }
-            return detailLines(entry);
-        }
-        if (actionWord === undefined) {
-            return nounLines(entry);
-        }
-        const action = entry.actions.find((candidate) => candidate.word === actionWord);
-        if (!action) {
-            throw new VerbRefusal('unknown-action', `${actionWord} is not an action of ${name}`, actionLines(entry));
-        }
-        return detailLines(action);
-    }
+const helpVerb = defineHelp({
+    entries: () => VERBS,
+    root: () => [SCOPE_LINE, IDS_LINE, dryRunLine()],
+    refusal: REFUSAL_LINE
 });
 
 const listVerb: ContextVerb = {

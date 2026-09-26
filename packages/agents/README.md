@@ -15,6 +15,7 @@ Import per file: `@ruimte/agents/<path under src>`, without the extension.
 - `providers/`: the CLIs a host offers (`registry.ts`), their model catalogs, and `accounts/`, the accounts a CLI runs under.
 - `usage/`: the usage scanner over the CLIs' transcripts, prices, and `limits/`, what is left of each plan.
 - `host/`: `AgentHost`, the request handlers, `cliEnvironment` and an in-memory port pair.
+- `context/`: the registry behind a context CLI such as `ruimte-context`, the verbs an agent runs to act on its app. `context/argv.ts` splits the words, `context/verb.ts` defines verbs and nouns and renders `help` from them, `context/refusal.ts` writes and reads a refusal.
 
 ## A host of its own
 
@@ -27,6 +28,48 @@ A chat core knows nothing a host adds. A host adds it by extending `ChatCore` an
 - `systemNote`: what every agent is told, optional.
 
 `close()` writes every thread and ends every CLI. On the next start a chat goes on through the CLI's own session id.
+
+## Verbs of its own
+
+An agent acts on its app through a CLI of that app, which sends the words after the verb to the app to parse. `createVerbRegistry<Call>({ cli })` makes the registry for one such CLI. `Call` is whatever a verb runs with, such as the caller and the host it reaches the app through; `cli` is the command an agent types, which every pointer to `help` names. Ruimte's registry is in `apps/server/src/canvas/verb.ts`, its table of verbs in `canvas/verbs.ts`.
+
+```ts
+import { z } from 'zod';
+import { createVerbRegistry, requiredField, type VerbEntry } from '@ruimte/agents/context/verb';
+
+interface Call {
+    caller: string;
+    expectedRevision?: number;
+}
+
+const { defineVerb, defineAction, defineNoun, defineHelp, dryRunLine } = createVerbRegistry<Call>({ cli: 'motion-context' });
+
+const layerNew = defineAction('layer', {
+    name: 'new',
+    usage: '--title T',
+    summary: 'Adds a layer to the composition',
+    detail: ['flag\t--title T\trequired\tWhat the layer is called'],
+    positionals: z.array(z.string()).max(0, 'layer new takes no arguments'),
+    flags: z.object({ title: requiredField('layer new needs --title, what the layer is called') }),
+    dryRun: true,
+    revision: true,
+    run: async ({ flags, dryRun }) => [dryRun ? 'dry-run' : `layer\t${flags.title}`]
+});
+
+const layer = defineNoun({ name: 'layer', summary: 'Adds and lists the layers', detail: [], actions: [layerNew] });
+
+const help = defineHelp({
+    entries: () => VERBS,
+    root: () => [dryRunLine()],
+    refusal: 'refusal\trefused<TAB><code><TAB><message> on stderr\texit 3 refused'
+});
+
+export const VERBS: readonly VerbEntry<Call>[] = [help, layer];
+```
+
+A verb stands on its own (`help`); a noun only names what its actions work on (`layer new`). Each takes its positionals and flags as zod schemas, and `help` renders from the same objects, so the two never drift. A flag the detail documents but the usage leaves out is added to the usage. `dryRun: true` adds `--dry-run`, which every other verb refuses by name; `revision: true` adds `--revision N`, which reaches `run` as `call.expectedRevision` for a write that must not land on a newer document.
+
+A verb says no by throwing a `VerbRefusal` with a code, a sentence and the lines the agent can pick instead. `refusalBody` writes it as the CLI prints it, one row per line with tab-separated fields: `refused<TAB><code><TAB><message>`, then every line of advice under it. `field` takes a tab or a newline out of a value before it goes into a row, and `parseRefusalBody` reads a refusal back.
 
 ## Wiring it into an Electron app
 

@@ -1,5 +1,5 @@
 import { isAgentKind, type ContextSource, type ProjectCanvasView } from '@ruimte/contracts';
-import type { ParsedRefusal } from '../refusal.ts';
+import type { ParsedRefusal } from '@ruimte/agents/context/refusal';
 
 const body = (code: string, message: string, ...lines: string[]): ParsedRefusal => ({ code, message, lines });
 

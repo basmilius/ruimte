@@ -19,7 +19,7 @@ export const refusalBody = (code: string, message: string, lines: readonly strin
 };
 
 /*
- * The same without the word that names it, which is what the daemon answers a refused read with:
+ * The same without the word that names it, which is what Ruimte's daemon answers a refused read with:
  * `ruimte-context` puts the prefix on, so a CLI of an older build still prints one refusal.
  */
 export const refusalRows = (code: string, message: string, lines: readonly string[] = []): string => rows(code, message, lines).join('\n');

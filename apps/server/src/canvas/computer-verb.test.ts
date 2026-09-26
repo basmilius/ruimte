@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
 import { computerSetup, SAMPLE_STATE, turnEnded, until, type ComputerSetup } from '../computer/computer-test-helpers.ts';
-import { refusalBody } from '../refusal.ts';
+import { refusalBody } from '@ruimte/agents/context/refusal';
 import { VerbRefusal, type CanvasHost, type Noun } from './verb.ts';
 import { VERBS, verbNamed } from './verbs.ts';
 
