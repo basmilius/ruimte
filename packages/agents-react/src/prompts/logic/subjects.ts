@@ -56,7 +56,7 @@ export interface ApprovalButtonSpec {
 
 /* Unique across the chats of a surface and the app's own prompts, and stable while the prompt waits. */
 export const promptIdOf = (subject: PromptSubject): string =>
-    subject.kind === 'chat' ? `chat:${subject.nodeId}:${subject.item.requestId}` : subject.prompt.id;
+    subject.kind === 'chat' ? `agent-chat:${subject.nodeId}:${subject.item.requestId}` : subject.prompt.id;
 
 export const promptCreatedAt = (subject: PromptSubject): number => (subject.kind === 'chat' ? subject.item.createdAt : subject.prompt.createdAt);
 

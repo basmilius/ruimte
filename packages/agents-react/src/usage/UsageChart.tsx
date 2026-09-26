@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import type { UsageProvider } from '@ruimte/contracts';
+import type { UsageProvider } from '@ruimte/agent-contracts';
 import { FLOAT } from '@ruimte/ui/classes';
 import { useMeasuredWidth } from '@ruimte/ui/useMeasuredWidth';
-import { PROVIDER_COLORS, PROVIDER_LABELS, slotAxisLabel, slotLabel } from '@ruimte/agents-react/usage/format';
-import { niceScale, type ChartSlot } from '@/shell/usage/summary';
+import { PROVIDER_COLORS, PROVIDER_LABELS, slotAxisLabel, slotLabel } from './format';
+import { niceScale, type ChartSlot } from './summary';
 
 interface UsageChartProps {
     slots: readonly ChartSlot[];
@@ -25,7 +25,7 @@ const DIMMED = 0.55;
  * of a day is the height of its bar, and the smaller provider never disappears under the larger one.
  */
 export function UsageChart({ slots, providers, format, labelEvery }: UsageChartProps) {
-    const { t } = useTranslation('usage');
+    const { t } = useTranslation('agent-usage');
     const [measure, width] = useMeasuredWidth();
     const [hovered, setHovered] = useState<number | null>(null);
     const scale = niceScale(Math.max(...slots.map((slot) => slot.total), 0));

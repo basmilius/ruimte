@@ -2,7 +2,7 @@ import type { ComponentProps, ComponentType, ReactNode, RefObject } from 'react'
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { ThemeRegistration } from 'shiki';
-import type { ChatCheckpointDiff, ChatConfigurePayload, ChatItem } from '@ruimte/agent-contracts';
+import type { AgentKind, ChatCheckpointDiff, ChatConfigurePayload, ChatItem } from '@ruimte/agent-contracts';
 import { isApplePlatform } from '@ruimte/ui/platform';
 import type { TimelineRow } from './chat/logic/timeline';
 import type { FindReveal } from './chat/ui/find-reveal';
@@ -139,6 +139,8 @@ export interface ChatHost {
         all: readonly AccentChoice[];
         featured: readonly string[];
         label(id: string): string;
+        /* The accent the app is painted in, which an account without a color of its own wears. */
+        current(): string;
     };
     isApplePlatform(): boolean;
     /* A key the app keeps for itself even while the composer has the keyboard, such as the ones that move between views. */
@@ -187,6 +189,12 @@ export interface ChatHost {
     };
     /* Other chats a message may point at with `@`, beside the files. */
     useReferableChats(): ReadonlyArray<{ id: string; title: string }>;
+    /* Opens the CLI's own login for an account, somewhere the app can run a command; null offers none. */
+    openLogin: ((scopeId: string, kind: AgentKind, accountId: string, name: string) => Promise<void>) | null;
+    /* Why a login cannot start from here right now, or null when it can. */
+    useLoginBlocked(scopeId: string): string | null;
+    /* The name and the mark of a project of the host, for the usage per project; null draws the folder's own. */
+    useProjectLook(scopeId: string, projectId: string | null): { name: string; mark: ReactNode } | null;
     /* Where another chat of the app stands, for a fork's way back and a note from a fork. */
     useChatPlace(chatId: string): ChatPlace;
     /* What a chat may read besides its folder, named under an empty thread. */
@@ -218,7 +226,7 @@ const NO_URL: ResourceUrl = { url: null, failure: null };
 const NOWHERE: ChatPlace = { title: null, go: () => undefined };
 
 const DEFAULT_HOST: ChatHost = {
-    accents: { all: [], featured: [], label: (id) => id },
+    accents: { all: [], featured: [], label: (id) => id, current: () => '' },
     isApplePlatform,
     isAppShortcut: () => false,
     notify: () => undefined,
@@ -233,6 +241,9 @@ const DEFAULT_HOST: ChatHost = {
     dictation: { Textarea: PlainTextarea, composer: null },
     prompts: { useExtra: () => NO_PROMPTS, render: () => null, answer: () => Promise.reject(new Error('This app raises no prompts of its own')) },
     useReferableChats: () => NO_CHATS,
+    openLogin: null,
+    useLoginBlocked: () => null,
+    useProjectLook: () => null,
     useChatPlace: () => NOWHERE,
     useContextSources: () => NO_SOURCES,
     tasks: { useTasks: () => undefined, useTask: () => null },

@@ -8,6 +8,9 @@
     "select": "Select",
     "selectAll": "Select all"
   },
+  "accent": {
+    "more": "More colors"
+  },
   "settings": {
     "title": "Settings",
     "section": "Settings section",

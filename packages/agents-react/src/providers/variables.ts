@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { ProviderAccountVariable } from '@ruimte/contracts';
+import type { ProviderAccountVariable } from '@ruimte/agent-contracts';
 
 const NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
 
@@ -39,7 +39,7 @@ const keepsValue = (draft: VariableDraft): boolean => draft.value === '' && draf
 
 /* The first thing that keeps these from being saved, in a sentence; null when they can be. */
 export const variablesProblem = (drafts: readonly VariableDraft[]): string | null => {
-    const words = (key: string, name: string): string => i18next.t(`settings:providers.account.variables.problem.${key}`, { name });
+    const words = (key: string, name: string): string => i18next.t(`agent-providers:account.variables.problem.${key}`, { name });
     const seen = new Set<string>();
     for (const draft of drafts) {
         const name = draft.name.trim();

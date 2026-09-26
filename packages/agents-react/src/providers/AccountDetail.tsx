@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { LogIn } from 'lucide-react';
-import type { ProviderInfo } from '@ruimte/contracts';
-import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
-import { accountName, FOLDER_VARIABLES, type AccountEntry } from '@ruimte/agents-react/agents/accounts';
+import type { ProviderInfo } from '@ruimte/agent-contracts';
+import { AccountDot } from '../agents/AccountDot';
+import { accountName, FOLDER_VARIABLES, type AccountEntry } from '../agents/accounts';
 import { ConfirmDialog } from '@ruimte/ui/settings/ConfirmDialog';
-import { openLogin, removeAccount, saveAccount } from '@/shell/settings/providers/account-actions';
-import { AccountVariables } from '@/shell/settings/providers/AccountVariables';
-import { AccentSwatches } from '@/shell/settings/AccentSwatches';
+import { chatHost } from '../host';
+import { useChatScope } from '../scope';
+import { removeAccount, saveAccount } from './account-actions';
+import { AccountVariables } from './AccountVariables';
+import { AccountColors } from './AccountColors';
 import { Toggle } from '@ruimte/ui/controls';
-import { CliMark, DetailHeader, REMOVE_BUTTON } from '@/shell/settings/providers/parts';
+import { DetailHeader, REMOVE_BUTTON } from '@ruimte/ui/settings/DetailHeader';
+import { CliMark } from './parts';
 import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { useToasts } from '@/state/toasts';
+import { SettingsSection } from '@ruimte/ui/settings/SettingsSection';
 import { Button } from '@ruimte/ui/Button';
 import { copyText } from '@ruimte/ui/clipboard';
 import { Icon } from '@ruimte/ui/Icon';
@@ -22,7 +24,6 @@ import { Tooltip } from '@ruimte/ui/Tooltip';
 const TROUBLE = new Set(['folder-missing', 'unavailable', 'failed']);
 
 interface AccountDetailProps {
-    endpointId: string;
     provider: ProviderInfo;
     entry: AccountEntry;
     /* False for a CLI without a config folder: it has only its own login, and nothing to sign in here. */
@@ -62,8 +63,9 @@ function NameField({ value, label, onSave }: { value: string; label: string; onS
 }
 
 /* One account: how it looks in a picker, who is signed in, where its folder is, its variables. */
-export function AccountDetail({ endpointId, provider, entry, canLogIn, loginBlocked, secretsAvailable, onRemoved }: AccountDetailProps) {
-    const { t } = useTranslation('settings');
+export function AccountDetail({ provider, entry, canLogIn, loginBlocked, secretsAvailable, onRemoved }: AccountDetailProps) {
+    const { t } = useTranslation('agent-providers');
+    const scope = useChatScope();
     const [confirming, setConfirming] = useState(false);
     const { id, account, status, isDefault } = entry;
     const name = accountName(entry, provider.name);
@@ -73,7 +75,7 @@ export function AccountDetail({ endpointId, provider, entry, canLogIn, loginBloc
 
     const showFolder = (): void => {
         copyText(folder);
-        useToasts.getState().show({ kind: 'success', title: t('providers.account.folderCopied'), description: folder });
+        chatHost().notify({ kind: 'success', title: t('account.folderCopied'), description: folder });
     };
 
     const loginDetail = (): string => {
@@ -81,15 +83,15 @@ export function AccountDetail({ endpointId, provider, entry, canLogIn, loginBloc
             return status.message;
         }
         if (!signedIn) {
-            return t('providers.account.login.signedOutDetail');
+            return t('account.login.signedOutDetail');
         }
-        return status?.plan ? t('providers.account.login.planDetail', { plan: status.plan }) : t('providers.account.login.detail');
+        return status?.plan ? t('account.login.planDetail', { plan: status.plan }) : t('account.login.detail');
     };
 
     const loginButton = (
-        <Button variant="secondary" disabled={loginBlocked !== null} onClick={() => void openLogin(endpointId, provider.kind, id, name)}>
+        <Button variant="secondary" disabled={loginBlocked !== null} onClick={() => void chatHost().openLogin?.(scope.id, provider.kind, id, name)}>
             <Icon icon={LogIn} size={14} />
-            {signedIn ? t('providers.account.login.logInAgain') : t('providers.account.login.logIn')}
+            {signedIn ? t('account.login.logInAgain') : t('account.login.logIn')}
         </Button>
     );
 
@@ -105,63 +107,58 @@ export function AccountDetail({ endpointId, provider, entry, canLogIn, loginBloc
                 subtitle={
                     <>
                         <CliMark kind={provider.kind} size={12} className="text-text-muted" />
-                        {t('providers.account.kind', { provider: provider.name })}
+                        {t('account.kind', { provider: provider.name })}
                     </>
                 }
                 actions={
                     folder !== '' && (
                         <Button variant="secondary" onClick={showFolder}>
-                            {t('providers.account.showFolder')}
+                            {t('account.showFolder')}
                         </Button>
                     )
                 }
             />
             <SettingsSection>
                 <SettingsRow
-                    label={t('providers.account.enabled.label')}
-                    description={t('providers.account.enabled.description')}
+                    label={t('account.enabled.label')}
+                    description={t('account.enabled.description')}
                     control={
                         <Toggle
                             checked={account.enabled !== false}
-                            label={t('providers.account.enabled.label')}
+                            label={t('account.enabled.label')}
                             onChange={(checked) => {
                                 const { enabled: _enabled, ...rest } = account;
-                                void saveAccount(endpointId, id, checked ? rest : { ...rest, enabled: false });
+                                void saveAccount(scope, id, checked ? rest : { ...rest, enabled: false });
                             }}
                         />
                     }
                 />
                 <SettingsRow
-                    label={t('providers.account.name')}
+                    label={t('account.name')}
                     control={
-                        <NameField
-                            key={name}
-                            value={name}
-                            label={t('providers.account.name')}
-                            onSave={(label) => void saveAccount(endpointId, id, { ...account, label })}
-                        />
+                        <NameField key={name} value={name} label={t('account.name')} onSave={(label) => void saveAccount(scope, id, { ...account, label })} />
                     }
                 />
                 <SettingsRow
-                    label={t('providers.account.color')}
+                    label={t('account.color')}
                     control={
-                        <AccentSwatches
+                        <AccountColors
                             value={account.color}
-                            label={t('providers.account.color')}
-                            onChange={(color) => void saveAccount(endpointId, id, { ...account, color })}
+                            label={t('account.color')}
+                            onChange={(color) => void saveAccount(scope, id, { ...account, color })}
                         />
                     }
                 />
             </SettingsSection>
             {canLogIn && (
-                <SettingsSection title={t('providers.account.login.title')}>
+                <SettingsSection title={t('account.login.title')}>
                     <SettingsRow
                         label={
                             signedIn
                                 ? status?.email
-                                    ? t('providers.account.login.signedInAs', { email: status.email })
-                                    : t('providers.account.login.signedIn')
-                                : t('providers.account.login.signedOut')
+                                    ? t('account.login.signedInAs', { email: status.email })
+                                    : t('account.login.signedIn')
+                                : t('account.login.signedOut')
                         }
                         description={loginBlocked === null ? loginDetail() : `${loginDetail()} ${loginBlocked}`}
                         control={
@@ -174,37 +171,31 @@ export function AccountDetail({ endpointId, provider, entry, canLogIn, loginBloc
                             )
                         }
                     />
-                    <SettingsRow label={t('providers.account.folder.label')}>
-                        <input className="field h-8.5 font-mono text-code" value={folder} readOnly aria-label={t('providers.account.folder.label')} />
+                    <SettingsRow label={t('account.folder.label')}>
+                        <input className="field h-8.5 font-mono text-code" value={folder} readOnly aria-label={t('account.folder.label')} />
                         <p className="-mt-1 text-xs text-text-muted">
                             {variable ? (
                                 <Trans
                                     t={t}
-                                    i18nKey="providers.account.folder.detail"
+                                    i18nKey="account.folder.detail"
                                     values={{ variable }}
                                     components={{ code: <code className="font-mono text-code" /> }}
                                 />
                             ) : (
-                                t('providers.account.folder.detailPlain')
+                                t('account.folder.detailPlain')
                             )}
                         </p>
                     </SettingsRow>
                 </SettingsSection>
             )}
-            <AccountVariables
-                key={`${id}:${JSON.stringify(account.env ?? [])}`}
-                endpointId={endpointId}
-                id={id}
-                account={account}
-                secretsAvailable={secretsAvailable}
-            />
+            <AccountVariables key={`${id}:${JSON.stringify(account.env ?? [])}`} id={id} account={account} secretsAvailable={secretsAvailable} />
             <SettingsSection>
                 <SettingsRow
-                    label={t('providers.account.remove.label')}
-                    description={isDefault ? t('providers.account.remove.defaultNote') : t('providers.account.remove.description')}
+                    label={t('account.remove.label')}
+                    description={isDefault ? t('account.remove.defaultNote') : t('account.remove.description')}
                     control={
                         <button type="button" className={REMOVE_BUTTON} disabled={isDefault} onClick={() => setConfirming(true)}>
-                            {t('providers.account.remove.button')}
+                            {t('account.remove.button')}
                         </button>
                     }
                 />
@@ -212,11 +203,11 @@ export function AccountDetail({ endpointId, provider, entry, canLogIn, loginBloc
             <ConfirmDialog
                 open={confirming}
                 onOpenChange={setConfirming}
-                title={t('providers.account.remove.confirmTitle', { account: name })}
-                description={t('providers.account.remove.confirmDescription', { folder })}
-                confirmLabel={t('providers.account.remove.confirm')}
+                title={t('account.remove.confirmTitle', { account: name })}
+                description={t('account.remove.confirmDescription', { folder })}
+                confirmLabel={t('account.remove.confirm')}
                 onConfirm={async () => {
-                    await removeAccount(endpointId, id, provider.kind);
+                    await removeAccount(scope, id, provider.kind);
                     onRemoved();
                 }}
             />

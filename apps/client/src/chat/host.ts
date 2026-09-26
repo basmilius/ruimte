@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import i18next from 'i18next';
 import { setChatHost, type ChatActions } from '@ruimte/agents-react/host';
 import { setLazyPrefetch } from '@ruimte/agents-react/lazy';
@@ -5,8 +6,11 @@ import { performAsPerson, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas/accents';
 import { searchFiles } from '@/chat/file-search';
+import { openLogin, useLoginBlocked } from '@/chat/login';
 import { isApplePlatform } from '@/desktop/bridge';
+import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
+import { useProjectList } from '@/state/project-list';
 import { useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useTasks } from '@/state/tasks';
@@ -59,7 +63,12 @@ const PERSON_CHAT_ACTIONS: ChatActions = {
 export const connectChatHost = (): void => {
     setLazyPrefetch((load) => prefetcher.register(load));
     setChatHost({
-        accents: { all: NODE_ACCENTS, featured: FEATURED_ACCENTS, label: (id) => accentLabel(id as AccentId) },
+        accents: {
+            all: NODE_ACCENTS,
+            featured: FEATURED_ACCENTS,
+            label: (id) => accentLabel(id as AccentId),
+            current: () => useSettings.getState().accent
+        },
         isApplePlatform,
         notify: (toast) => void useToasts.getState().show(toast),
         actions: PERSON_CHAT_ACTIONS,
@@ -87,6 +96,19 @@ export const connectChatHost = (): void => {
         confirm: {
             stopSubagents: (endpointId, chatId, run) => void askBeforeStoppingSubagents(transportFor(endpointId), chatId, run),
             stopTask: (endpointId, childId, title, run) => void askBeforeStoppingTask(transportFor(endpointId), childId, title, run)
+        },
+        openLogin,
+        useLoginBlocked,
+        useProjectLook: (endpointId, projectId) => {
+            const summary = useProjectList(
+                (s) => s.projects.find((row) => row.endpointId === endpointId && projectId !== null && row.summary.projectId === projectId)?.summary
+            );
+            return summary === undefined
+                ? null
+                : {
+                      name: summary.name,
+                      mark: createElement(ProjectGlyph, { projectId: summary.projectId, endpointId, icon: summary.icon, color: summary.color, size: 16 })
+                  };
         },
         fork: (chatId, turnId) => useUi.getState().setForkDialog({ chatId, turnId }),
         openSettings: (section) => useUi.getState().setSettings({ open: true, section }),

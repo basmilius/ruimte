@@ -1,21 +1,20 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LogIn } from 'lucide-react';
-import type { UsageProvider } from '@ruimte/contracts';
-import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
+import type { UsageProvider } from '@ruimte/agent-contracts';
+import { AccountDot } from '../agents/AccountDot';
 import { Segmented } from '@ruimte/ui/controls';
-import { openLogin } from '@/shell/settings/providers/account-actions';
-import { PROVIDER_COLORS, PROVIDER_LABELS } from '@ruimte/agents-react/usage/format';
-import { accountNote, checkedLabel, hasSeveralAccounts, isSignedOut, type LimitAccount } from '@ruimte/agents-react/usage/limit-groups';
-import { WindowBar } from '@/shell/usage/LimitsList';
-import { useLimitGroups, useUsageLimits } from '@ruimte/agents-react/usage/limits';
-import { useProviderAccountsStore } from '@ruimte/agents-react/state/provider-accounts';
-import { useChatScope } from '@ruimte/agents-react/scope';
-import { useWindow } from '@/state/window';
+import { chatHost } from '../host';
+import { PROVIDER_COLORS, PROVIDER_LABELS } from './format';
+import { accountNote, checkedLabel, hasSeveralAccounts, isSignedOut, type LimitAccount } from './limit-groups';
+import { WindowBar } from './LimitsList';
+import { useLimitGroups, useUsageLimits } from './limits';
+import { useProviderAccountsStore } from '../state/provider-accounts';
+import { useChatScope } from '../scope';
 import { Button } from '@ruimte/ui/Button';
 import { SECTION_LABEL } from '@ruimte/ui/classes';
 import { Icon } from '@ruimte/ui/Icon';
-import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
+import { ProviderLogo } from '../agents/ProviderLogo';
 import { Tooltip } from '@ruimte/ui/Tooltip';
 import { useNow } from '@ruimte/ui/useNow';
 
@@ -30,7 +29,7 @@ interface Login {
 }
 
 function LoginButton({ account, login }: { account: LimitAccount; login: Login }) {
-    const { t } = useTranslation('usage');
+    const { t } = useTranslation('agent-usage');
     const button = (
         <Button
             variant="secondary"
@@ -54,7 +53,7 @@ function LoginButton({ account, login }: { account: LimitAccount; login: Login }
 
 /* One account: where its numbers come from, then a bar per window, or why there are none. */
 function LimitCard({ account, named, now, login }: { account: LimitAccount; named: boolean; now: number; login: Login | null }) {
-    const { t } = useTranslation('usage');
+    const { t } = useTranslation('agent-usage');
     const signedOut = isSignedOut(account);
     const note = signedOut ? null : accountNote(account);
     const plan = signedOut ? null : account.entry?.plan;
@@ -99,14 +98,14 @@ function LimitCard({ account, named, now, login }: { account: LimitAccount; name
  * credential: every CLI holds its own login and answers the question when the daemon starts one and asks.
  */
 export function UsageLimits() {
-    const { t } = useTranslation('usage');
+    const { t } = useTranslation('agent-usage');
     const limits = useUsageLimits();
     const groups = useLimitGroups(limits);
     const now = useNow(MINUTE_MS);
-    const endpointId = useChatScope().id;
-    const loginCommands = useProviderAccountsStore((s) => s.byScope[endpointId]?.accounts?.loginCommands);
-    // A login runs in a terminal node on a canvas of a project on the machine these numbers are of.
-    const workspaceMachine = useWindow((s) => (s.content.kind === 'workspace' ? s.content.workspace.connection.endpointId : null));
+    const scopeId = useChatScope().id;
+    const loginCommands = useProviderAccountsStore((s) => s.byScope[scopeId]?.accounts?.loginCommands);
+    const { openLogin } = chatHost();
+    const blocked = chatHost().useLoginBlocked(scopeId);
     const [filter, setFilter] = useState<Filter>('all');
 
     if (limits === null) {
@@ -115,9 +114,10 @@ export function UsageLimits() {
     const filterable = groups.length > 1 && hasSeveralAccounts(groups);
     const current = filterable && groups.some((group) => group.kind === filter) ? filter : 'all';
     const shown = current === 'all' ? groups : groups.filter((group) => group.kind === current);
-    const blocked = workspaceMachine === endpointId ? null : t('settings:providers.account.login.needsProject');
     const loginFor = (kind: UsageProvider): Login | null =>
-        loginCommands?.[kind] === undefined ? null : { blocked, open: (account) => void openLogin(endpointId, kind, account.id, account.name) };
+        openLogin === null || loginCommands?.[kind] === undefined
+            ? null
+            : { blocked, open: (account) => void openLogin(scopeId, kind, account.id, account.name) };
 
     return (
         <section className="flex flex-col gap-3">

@@ -8,6 +8,9 @@
     "select": "Selecteren",
     "selectAll": "Alles selecteren"
   },
+  "accent": {
+    "more": "Meer kleuren"
+  },
   "settings": {
     "title": "Instellingen",
     "section": "Onderdeel van de instellingen",

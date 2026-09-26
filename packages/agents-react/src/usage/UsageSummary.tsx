@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import type { UsageTotals } from '@ruimte/contracts';
-import type { UsageMetric } from '@ruimte/agents-react/state/usage';
-import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
-import { totalTokensOf } from '@ruimte/contracts';
-import { formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS } from '@ruimte/agents-react/usage/format';
-import { useMoney } from '@ruimte/agents-react/usage/money';
-import type { ProviderTotal } from '@/shell/usage/summary';
+import type { UsageTotals } from '@ruimte/agent-contracts';
+import type { UsageMetric } from '../state/usage';
+import { ProviderLogo } from '../agents/ProviderLogo';
+import { totalTokensOf } from '@ruimte/agent-contracts';
+import { formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS } from './format';
+import { useMoney } from './money';
+import type { ProviderTotal } from './summary';
 
 interface UsageSummaryProps {
     metric: UsageMetric;
@@ -20,7 +20,7 @@ interface UsageSummaryProps {
  * legend, which is why the mark is the same color the bar segment is drawn in.
  */
 export function UsageSummary({ metric, costUsd, totals, sessions, providers }: UsageSummaryProps) {
-    const { t } = useTranslation('usage');
+    const { t } = useTranslation('agent-usage');
     const money = useMoney();
     return (
         <div className="flex flex-col gap-4">

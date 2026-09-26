@@ -10,5 +10,122 @@
     "folderMissing": "Map ontbreekt",
     "unavailable": "Niet beschikbaar",
     "failed": "Controle mislukt"
+  },
+  "failed": "De instellingen van de providers konden niet worden getekend",
+  "list": {
+    "label": "Agent-CLI's en hun accounts",
+    "default": "Standaard",
+    "addAccount": "Een {{provider}}-account toevoegen",
+    "notInstalled": "Niet geïnstalleerd",
+    "missing": "Ontbreekt",
+    "notInstalledNote": "Installeer er een en start Ruimte op die machine opnieuw om hem toe te voegen.",
+    "none": "Geen agent-CLI's gevonden op deze machine.",
+    "noAccounts": "Deze machine houdt nog geen accounts bij. Werk Ruimte daar bij om er een toe te voegen."
+  },
+  "abilities": {
+    "version": "Versie {{version}}.",
+    "chatAndTerminal": "Chat en terminal.",
+    "terminalOnly": "Alleen terminal.",
+    "reportsStatus": "Meldt de agentstatus.",
+    "noStatus": "Meldt geen agentstatus."
+  },
+  "cli": {
+    "addAccount": "Account toevoegen",
+    "onlyDefault": "{{provider}} heeft geen instelling voor zijn configuratiemap, dus alleen zijn standaardaccount.",
+    "defaults": {
+      "title": "Standaarden voor nieuwe chats",
+      "description": "Een model of account kiezen in een chat verandert hier ook de standaard.",
+      "account": "Account",
+      "accountFor": "Standaardaccount voor {{provider}}",
+      "model": "Model",
+      "modelFor": "Standaardmodel voor {{provider}}",
+      "shared": "Gedeeld door elk {{provider}}-account.",
+      "usesCliDefault": "Gebruikt het standaardmodel van de CLI zelf.",
+      "providerDefault": "Standaard van de provider",
+      "legacyModel": "{{name}} (legacy)"
+    },
+    "accounts": "Accounts"
+  },
+  "account": {
+    "kind": "{{provider}}-account",
+    "enabled": {
+      "label": "Dit account gebruiken",
+      "description": "Uitgezet wordt het niet aangeboden voor nieuwe chats en agents."
+    },
+    "showFolder": "Map tonen",
+    "folderCopied": "Pad van de map gekopieerd",
+    "name": "Naam",
+    "color": "Kleur",
+    "login": {
+      "title": "Login",
+      "signedInAs": "Ingelogd als {{email}}",
+      "signedIn": "Ingelogd",
+      "planDetail": "{{plan}}-abonnement. Opnieuw inloggen opent een terminal-node met de login van de CLI zelf.",
+      "detail": "Opnieuw inloggen opent een terminal-node met de login van de CLI zelf.",
+      "signedOut": "Niet ingelogd",
+      "signedOutDetail": "Opent een terminal-node die de login van de CLI met deze map draait.",
+      "logIn": "Inloggen",
+      "logInAgain": "Opnieuw inloggen"
+    },
+    "folder": {
+      "label": "Map",
+      "detail": "Aan de CLI gegeven als <code>{{variable}}</code>. De CLI bewaart hier zijn eigen login, instellingen en geschiedenis.",
+      "detailPlain": "De CLI bewaart hier zijn eigen login, instellingen en geschiedenis."
+    },
+    "variables": {
+      "title": "Variabelen",
+      "description": "Extra omgeving voor alleen dit account. Gevoelige waarden blijven in de sleutelhanger.",
+      "add": "Variabele toevoegen",
+      "name": "Naam van variabele {{index}}",
+      "value": "Waarde van {{name}}",
+      "kept": "Bewaard in de sleutelhanger",
+      "lock": "{{name}} in de sleutelhanger bewaren",
+      "unlock": "{{name}} als platte tekst bewaren",
+      "noKeychain": "Deze machine heeft geen sleutelhanger, dus een waarde kan niet geheim blijven.",
+      "remove": "{{name}} verwijderen",
+      "none": "Geen variabelen",
+      "discard": "Weggooien",
+      "problem": {
+        "noName": "Elke variabele heeft een naam nodig.",
+        "invalidName": "{{name}} is geen naam voor een variabele.",
+        "duplicate": "{{name}} staat er twee keer in.",
+        "noValue": "{{name}} heeft een waarde nodig."
+      }
+    },
+    "remove": {
+      "label": "Account verwijderen",
+      "description": "Chats die het gebruiken vragen bij hun volgende turn om een ander account. De map blijft op de schijf.",
+      "defaultNote": "Het standaardaccount gebruikt de eigen map van de CLI en kan niet weg. Zet het in plaats daarvan hierboven uit.",
+      "button": "Verwijderen",
+      "confirmTitle": "{{account}} verwijderen?",
+      "confirmDescription": "Ruimte vergeet dit account. De map blijft op de schijf staan op {{folder}}, met de login erin.",
+      "confirm": "Account verwijderen"
+    },
+    "saveFailed": "Kon het account niet opslaan"
+  },
+  "add": {
+    "title": "Een {{provider}}-account toevoegen",
+    "description": "Ruimte maakt er een map voor op de machine en opent dan een terminal-node waarin je inlogt.",
+    "name": "Naam",
+    "namePlaceholder": "Werk",
+    "color": "Kleur",
+    "advanced": "Geavanceerd",
+    "link": {
+      "label": "Een bestaande map koppelen",
+      "description": "Gebruik een configuratiemap die al op de machine staat in plaats van een nieuwe. Ruimte verplaatst of verwijdert hem nooit.",
+      "placeholder": "Pad op de machine"
+    },
+    "create": "Account toevoegen",
+    "linkButton": "Map koppelen",
+    "failed": "Kon het account niet toevoegen"
+  },
+  "section": {
+    "label": "Providers",
+    "description": "De agent-CLI's op deze machine en de accounts waarmee ze inloggen."
+  },
+  "notAnswering": "Geeft geen antwoord. Pas dit aan zodra de machine terug is.",
+  "common": {
+    "save": "Opslaan",
+    "cancel": "Annuleren"
   }
 }

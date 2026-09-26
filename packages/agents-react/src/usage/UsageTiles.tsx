@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import type { UsageTotals } from '@ruimte/contracts';
-import { totalTokensOf } from '@ruimte/contracts';
-import { formatTokens } from '@ruimte/agents-react/usage/format';
-import { useMoney } from '@ruimte/agents-react/usage/money';
+import type { UsageTotals } from '@ruimte/agent-contracts';
+import { totalTokensOf } from '@ruimte/agent-contracts';
+import { formatTokens } from './format';
+import { useMoney } from './money';
 
 interface UsageTilesProps {
     totals: UsageTotals;
@@ -11,7 +11,7 @@ interface UsageTilesProps {
 
 /* What the period moved, split by the kinds of token that are priced differently. */
 export function UsageTiles({ totals, cacheSavingsUsd }: UsageTilesProps) {
-    const { t } = useTranslation('usage');
+    const { t } = useTranslation('agent-usage');
     const money = useMoney();
     const tiles: { id: string; value: string }[] = [
         { id: 'processed', value: formatTokens(totalTokensOf(totals)) },

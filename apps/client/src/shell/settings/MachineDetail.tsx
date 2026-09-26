@@ -11,7 +11,7 @@ import { BackgroundServiceSection } from '@/shell/settings/BackgroundServiceSect
 import { ConfirmDialog } from '@ruimte/ui/settings/ConfirmDialog';
 import { MachineIdentityForm } from '@/shell/settings/MachineIdentityForm';
 import { BrokerRow, DirectRow, MachineAccess, RefuseStatementsRow, StreamingRow, WithReason } from '@/shell/settings/MachineSettings';
-import { DetailHeader, REMOVE_BUTTON } from '@/shell/settings/providers/parts';
+import { DetailHeader, REMOVE_BUTTON } from '@ruimte/ui/settings/DetailHeader';
 import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useMachineIcon } from '@/shell/settings/machine-icon';

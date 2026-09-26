@@ -1,22 +1,17 @@
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, Plus } from 'lucide-react';
-import type { AgentKind, ModelInfo, ProviderInfo } from '@ruimte/contracts';
-import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
-import { ACCOUNT_TONE_CLASSES, accountName, accountStatusLine, type AccountEntry } from '@ruimte/agents-react/agents/accounts';
-import {
-    accountFor,
-    forgetChatSelection,
-    rememberChatAccount,
-    rememberChatSelection,
-    selectionFor,
-    useChatPreferences
-} from '@ruimte/agents-react/chat/preferences';
+import type { AgentKind, ModelInfo, ProviderInfo } from '@ruimte/agent-contracts';
+import { AccountDot } from '../agents/AccountDot';
+import { ACCOUNT_TONE_CLASSES, accountName, accountStatusLine, type AccountEntry } from '../agents/accounts';
+import { accountFor, forgetChatSelection, rememberChatAccount, rememberChatSelection, selectionFor, useChatPreferences } from '../chat/preferences';
 import { Segmented, Toggle } from '@ruimte/ui/controls';
-import { providerAbilities } from '@/shell/settings/provider-abilities';
-import { CliTile, DetailHeader } from '@/shell/settings/providers/parts';
+import { useChatScope } from '../scope';
+import { providerAbilities } from './provider-abilities';
+import { DetailHeader } from '@ruimte/ui/settings/DetailHeader';
+import { CliTile } from './parts';
 import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { useProviderAccountsStore } from '@ruimte/agents-react/state/provider-accounts';
+import { SettingsSection } from '@ruimte/ui/settings/SettingsSection';
+import { useProviderAccountsStore } from '../state/provider-accounts';
 import { Button } from '@ruimte/ui/Button';
 import { Icon } from '@ruimte/ui/Icon';
 import { Select } from '@ruimte/ui/Select';
@@ -80,7 +75,6 @@ function ModelOptionRows({ provider, model, options }: { provider: AgentKind; mo
 }
 
 interface CliDetailProps {
-    endpointId: string;
     provider: ProviderInfo;
     /* Null for a machine that keeps no accounts. */
     entries: AccountEntry[] | null;
@@ -90,13 +84,14 @@ interface CliDetailProps {
 }
 
 /* One CLI: what it is, what a new chat of it starts with, and its accounts. */
-export function CliDetail({ endpointId, provider, entries, canAddAccount, onAddAccount, onPickAccount }: CliDetailProps) {
-    const { t } = useTranslation('settings');
+export function CliDetail({ provider, entries, canAddAccount, onAddAccount, onPickAccount }: CliDetailProps) {
+    const { t } = useTranslation('agent-providers');
+    const { id: scopeId } = useChatScope();
     const preferences = useChatPreferences();
     const selection = selectionFor(preferences, provider.kind);
     const model = provider.models.find((entry) => entry.slug === selection?.model);
-    const machineAccounts = useProviderAccountsStore((s) => (s.byScope[endpointId]?.loaded ? s.byScope[endpointId].accounts : undefined));
-    const picked = accountFor(preferences, endpointId, provider.kind, machineAccounts) ?? provider.kind;
+    const machineAccounts = useProviderAccountsStore((s) => (s.byScope[scopeId]?.loaded ? s.byScope[scopeId].accounts : undefined));
+    const picked = accountFor(preferences, scopeId, provider.kind, machineAccounts) ?? provider.kind;
     // An account that is off is out of every picker, unless it is the one picked already.
     const choosable = (entries ?? []).filter((entry) => entry.account.enabled !== false || entry.id === picked);
     const canLogIn = canAddAccount;
@@ -106,32 +101,32 @@ export function CliDetail({ endpointId, provider, entries, canAddAccount, onAddA
             <DetailHeader
                 mark={<CliTile kind={provider.kind} />}
                 title={provider.name}
-                subtitle={`${provider.version ? `${t('providers.abilities.version', { version: provider.version })} ` : ''}${providerAbilities(provider)}`}
+                subtitle={`${provider.version ? `${t('abilities.version', { version: provider.version })} ` : ''}${providerAbilities(provider)}`}
                 actions={
                     canAddAccount && (
                         <Button variant="secondary" className="whitespace-nowrap" onClick={onAddAccount}>
                             <Icon icon={Plus} size={14} />
-                            {t('providers.cli.addAccount')}
+                            {t('cli.addAccount')}
                         </Button>
                     )
                 }
             />
-            <SettingsSection title={t('providers.cli.defaults.title')} description={t('providers.cli.defaults.description')}>
+            <SettingsSection title={t('cli.defaults.title')} description={t('cli.defaults.description')}>
                 {choosable.length > 0 && (
                     <SettingsRow
                         searchId="providers.defaults.account"
-                        label={t('providers.cli.defaults.account')}
+                        label={t('cli.defaults.account')}
                         control={
                             <Select
                                 value={picked}
-                                label={t('providers.cli.defaults.accountFor', { provider: provider.name })}
+                                label={t('cli.defaults.accountFor', { provider: provider.name })}
                                 align="end"
                                 items={choosable.map((entry) => ({
                                     value: entry.id,
                                     label: accountName(entry, provider.name),
                                     icon: <AccountDot color={entry.account.color} className="size-2" />
                                 }))}
-                                onValueChange={(id) => rememberChatAccount(endpointId, provider.kind, id)}
+                                onValueChange={(id) => rememberChatAccount(scopeId, provider.kind, id)}
                             />
                         }
                     />
@@ -139,18 +134,18 @@ export function CliDetail({ endpointId, provider, entries, canAddAccount, onAddA
                 {provider.models.length > 0 && (
                     <SettingsRow
                         searchId="providers.defaults.model"
-                        label={t('providers.cli.defaults.model')}
-                        description={model ? t('providers.cli.defaults.shared', { provider: provider.name }) : t('providers.cli.defaults.usesCliDefault')}
+                        label={t('cli.defaults.model')}
+                        description={model ? t('cli.defaults.shared', { provider: provider.name }) : t('cli.defaults.usesCliDefault')}
                         control={
                             <Select
                                 value={model?.slug ?? PROVIDER_DEFAULT}
-                                label={t('providers.cli.defaults.modelFor', { provider: provider.name })}
+                                label={t('cli.defaults.modelFor', { provider: provider.name })}
                                 align="end"
                                 items={[
-                                    { value: PROVIDER_DEFAULT, label: t('providers.cli.defaults.providerDefault') },
+                                    { value: PROVIDER_DEFAULT, label: t('cli.defaults.providerDefault') },
                                     ...provider.models.map((entry) => ({
                                         value: entry.slug,
-                                        label: entry.legacy ? t('providers.cli.defaults.legacyModel', { name: entry.name }) : entry.name
+                                        label: entry.legacy ? t('cli.defaults.legacyModel', { name: entry.name }) : entry.name
                                     }))
                                 ]}
                                 onValueChange={(value) =>
@@ -163,15 +158,12 @@ export function CliDetail({ endpointId, provider, entries, canAddAccount, onAddA
                     />
                 )}
                 {model && <ModelOptionRows provider={provider.kind} model={model} options={selection?.options ?? {}} />}
-                {choosable.length === 0 && provider.models.length === 0 && <SettingsRow muted label={t('providers.cli.defaults.usesCliDefault')} />}
+                {choosable.length === 0 && provider.models.length === 0 && <SettingsRow muted label={t('cli.defaults.usesCliDefault')} />}
             </SettingsSection>
             {entries === null ? (
-                <p className="text-xs text-text-faint">{t('providers.list.noAccounts')}</p>
+                <p className="text-xs text-text-faint">{t('list.noAccounts')}</p>
             ) : (
-                <SettingsSection
-                    title={t('providers.cli.accounts')}
-                    footer={canAddAccount ? undefined : t('providers.cli.onlyDefault', { provider: provider.name })}
-                >
+                <SettingsSection title={t('cli.accounts')} footer={canAddAccount ? undefined : t('cli.onlyDefault', { provider: provider.name })}>
                     {entries.map((entry) => {
                         const status = accountStatusLine(entry.status, canLogIn);
                         return (

@@ -59,7 +59,7 @@ describe('a new account', () => {
     const before: ChatHost['accents'] = chatHost().accents;
     beforeAll(() => {
         const featured = ['blue', 'orange', 'lime', 'indigo', 'pink'];
-        setChatHost({ accents: { all: [...featured, 'red'].map((id) => ({ id, color: '#000000' })), featured, label: (id) => id } });
+        setChatHost({ accents: { all: [...featured, 'red'].map((id) => ({ id, color: '#000000' })), featured, label: (id) => id, current: () => 'blue' } });
     });
     afterAll(() => setChatHost({ accents: before }));
 

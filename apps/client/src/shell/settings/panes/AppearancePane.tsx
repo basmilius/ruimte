@@ -1,13 +1,13 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { accentColor } from '@/canvas/accents';
+import { FEATURED_ACCENTS, NODE_ACCENTS, accentColor, accentLabel } from '@/canvas/accents';
 import { formatDayClock } from '@ruimte/ui/format/datetime';
 import { useFormatLocale } from '@ruimte/ui/format/locale';
 import { formatMoney } from '@ruimte/ui/format/number';
 import { FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@ruimte/ui/format/regions';
 import { chooseLanguage, chooseRegion } from '@/i18n';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
-import { AccentSwatches } from '@/shell/settings/AccentSwatches';
+import { AccentSwatches } from '@ruimte/ui/AccentSwatches';
 import { CodeSection } from '@/shell/settings/panes/CodeSection';
 import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -84,7 +84,16 @@ function AccentRow() {
     const { t } = useTranslation('settings');
     const accent = useSettings((s) => s.accent);
     const update = useSettings((s) => s.update);
-    return <AccentSwatches value={accent} label={t('appearance.accent.label')} onChange={(id) => update({ accent: id })} />;
+    return (
+        <AccentSwatches
+            value={accent}
+            label={t('appearance.accent.label')}
+            accents={NODE_ACCENTS}
+            featured={FEATURED_ACCENTS}
+            labelOf={accentLabel}
+            onChange={(id) => update({ accent: id })}
+        />
+    );
 }
 
 function TerminalPreview({ fontSize }: { fontSize: number }) {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { UsageBucket, UsageSummaryResult, UsageTotals } from '@ruimte/contracts';
-import { formatTokens, formatUsd, moneyFormat, shortPath } from '@ruimte/agents-react/usage/format';
+import type { UsageBucket, UsageSummaryResult, UsageTotals } from '@ruimte/agent-contracts';
+import { formatTokens, formatUsd, moneyFormat, shortPath } from './format';
 import { deriveDays, deriveUsage, enumerateSlots, labelEveryFor } from './summary.ts';
 
 const totals = (patch: Partial<UsageTotals> = {}): UsageTotals => ({

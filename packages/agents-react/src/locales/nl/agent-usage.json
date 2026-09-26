@@ -1,13 +1,131 @@
 {
   "limits": {
+    "title": "Limieten",
+    "explain": "Het streepje op een balk laat zien hoeveel van het venster voorbij is. Een balk voorbij dat streepje verbruikt sneller dan het venster teruggeeft.",
+    "loading": "Limieten laden…",
+    "used": "{{percent}}% gebruikt",
+    "bar": "{{window}}, {{percent}}% gebruikt",
+    "windowPassed": "{{percent}}% van het venster voorbij",
+    "faster": "Verbruikt sneller dan het venster teruggeeft.",
+    "slower": "Verbruikt langzamer dan het venster teruggeeft.",
+    "resets": "Reset {{at}}",
+    "none": "Nog geen limieten gemeld.",
+    "notInstalled": "Niet geïnstalleerd op deze machine.",
+    "noSubscription": "Dit account gebruikt een API-sleutel en kent geen abonnementslimieten.",
+    "unreachable": "De CLI was niet bereikbaar.",
+    "filter": "Accounts waarvan je de limieten ziet",
+    "signedOut": "Niet ingelogd",
+    "signedOutDetail": "Niet ingelogd. Log in om de limieten te zien.",
+    "logIn": "Inloggen",
+    "nextReset": "{{window}} reset {{at}}",
     "checked": {
       "now": "nu",
       "ago": "{{duration}} geleden",
       "fromTurn": "Uit een turn · {{when}}"
+    }
+  },
+  "settings": {
+    "currency": {
+      "label": "Valuta",
+      "dollars": "Prijzen zoals gepubliceerd, in dollars.",
+      "noRate": "Nog geen wisselkoers. De pagina toont dollars zolang die er niet is.",
+      "converted": "Omgerekend met de ECB-referentiekoers van {{date}}.",
+      "options": {
+        "USD": "Dollars",
+        "EUR": "Euro's"
+      }
     },
-    "none": "Nog geen limieten gemeld.",
-    "notInstalled": "Niet geïnstalleerd op deze machine.",
-    "noSubscription": "Dit account gebruikt een API-sleutel en kent geen abonnementslimieten.",
-    "unreachable": "De CLI was niet bereikbaar."
+    "page": {
+      "label": "Verbruikspagina",
+      "description": "Kosten, tokens en planlimieten, per account.",
+      "open": "Verbruik openen"
+    }
+  },
+  "section": {
+    "label": "Verbruik",
+    "description": "De valuta van de verbruikspagina."
+  },
+  "dialog": {
+    "title": "Verbruik",
+    "description": "Kosten, tokens en limieten van je abonnement",
+    "close": "Verbruik sluiten",
+    "rescan": "Opnieuw scannen",
+    "period": "Periode",
+    "metric": "Eenheid",
+    "failed": "Verbruik kon niet worden getekend",
+    "periods": {
+      "today": "Vandaag",
+      "7d": "7 dagen",
+      "30d": "30 dagen",
+      "90d": "90 dagen"
+    },
+    "metrics": {
+      "cost": "Kosten",
+      "tokens": "Tokens"
+    },
+    "accounts": {
+      "label": "Account",
+      "all": "Alle accounts"
+    }
+  },
+  "empty": {
+    "noTranscripts": "Geen transcripts van Claude of Codex gevonden. De machine leest ~/.claude/projects en ~/.codex/sessions.",
+    "noUsage": "Nog geen verbruik op deze machine."
+  },
+  "agents": {
+    "none": "Op deze machine staat geen agent-CLI.",
+    "installed": "Deze machine heeft {{list}}.",
+    "settings": "Agent-instellingen"
+  },
+  "provenance": {
+    "failed": "Kon de transcripts niet lezen. Dit is de laatste scan die wel lukte.",
+    "scanned_one": "Gescand om {{time}}, {{files}} bestand",
+    "scanned_other": "Gescand om {{time}}, {{files}} bestanden",
+    "bundledPrices": "Prijzen uit de meegeleverde tabel",
+    "fetchedPrices": "Prijzen van LiteLLM, {{date}}",
+    "rate": "{{currency}} tegen de ECB-koers van {{date}}"
+  },
+  "summary": {
+    "sessions_one": "{{sessions}} sessie",
+    "sessions_other": "{{sessions}} sessies",
+    "calls_one": "{{calls}} aanroep",
+    "calls_other": "{{calls}} aanroepen",
+    "apiRates": "tegen API-tarieven"
+  },
+  "tiles": {
+    "processed": "Verwerkt",
+    "uncachedInput": "Input zonder cache",
+    "cachedInput": "Input uit cache",
+    "cacheWrites": "Naar cache geschreven",
+    "output": "Output",
+    "cacheSavings": "Bespaard met cache"
+  },
+  "chart": {
+    "total": "Totaal"
+  },
+  "breakdown": {
+    "title": "Uitsplitsing",
+    "tabs": {
+      "models": "Modellen",
+      "projects": "Projecten",
+      "day": "Dag"
+    },
+    "models": {
+      "model": "Model",
+      "calls": "Aanroepen",
+      "input": "Input",
+      "output": "Output",
+      "cache": "Cache R/W",
+      "cost": "Kosten",
+      "share": "Aandeel",
+      "pricedAs": "Geprijsd als {{model}}",
+      "noPrice": "Geen prijs bekend voor dit model"
+    },
+    "days": {
+      "day": "Dag",
+      "total": "Totaal",
+      "tokens": "Tokens",
+      "empty": "Geen activiteit in deze periode."
+    }
   }
 }

@@ -74,7 +74,7 @@ import { IS_STATION } from '@/station';
 import { NewViewItems } from '@/shell/ViewMenu';
 import { setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
-import { UsageLimitsCard } from '@/shell/usage/UsageLimitsCard';
+import { UsageLimitsCard } from '@ruimte/agents-react/usage/UsageLimitsCard';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { FolderMenuItems } from '@/shell/FolderMenuItems';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';

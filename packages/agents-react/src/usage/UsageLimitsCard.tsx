@@ -1,9 +1,9 @@
 import i18next from 'i18next';
 import { useState, type ReactElement } from 'react';
 import { PreviewCard } from '@base-ui-components/react/preview-card';
-import { hasSeveralAccounts } from '@ruimte/agents-react/usage/limit-groups';
-import { AccountLimitsList, LimitsList } from '@/shell/usage/LimitsList';
-import { useLimitGroups, useUsageLimits } from '@ruimte/agents-react/usage/limits';
+import { hasSeveralAccounts } from './limit-groups';
+import { AccountLimitsList, LimitsList } from './LimitsList';
+import { useLimitGroups, useUsageLimits } from './limits';
 import { useNow } from '@ruimte/ui/useNow';
 
 const MINUTE_MS = 60_000;
@@ -15,7 +15,7 @@ function CardBody() {
     const now = useNow(MINUTE_MS);
 
     if (limits === null) {
-        return <p className="text-xs text-text-faint">{i18next.t('usage:limits.loading')}</p>;
+        return <p className="text-xs text-text-faint">{i18next.t('agent-usage:limits.loading')}</p>;
     }
     return hasSeveralAccounts(groups) ? <AccountLimitsList groups={groups} now={now} /> : <LimitsList limits={limits} now={now} compact />;
 }

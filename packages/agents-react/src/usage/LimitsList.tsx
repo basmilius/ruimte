@@ -1,16 +1,16 @@
 import { Fragment } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import type { UsageLimitsSnapshot, UsageWindow } from '@ruimte/contracts';
-import { limitsAccountId } from '@ruimte/agents-react/agents/account-limits';
-import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
+import type { UsageLimitsSnapshot, UsageWindow } from '@ruimte/agent-contracts';
+import { limitsAccountId } from '../agents/account-limits';
+import { AccountDot } from '../agents/AccountDot';
 import { Tooltip } from '@ruimte/ui/Tooltip';
-import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
+import { ProviderLogo } from '../agents/ProviderLogo';
 import { formatClock, formatWeekdayClock, isSameDay } from '@ruimte/ui/format/datetime';
 import { formatCountdown } from '@ruimte/ui/format/duration';
 import { formatPercent } from '@ruimte/ui/format/number';
-import { PROVIDER_COLORS, PROVIDER_LABELS } from '@ruimte/agents-react/usage/format';
-import { accountNote, explain, isSignedOut, nextReset, type LimitAccount, type LimitGroup } from '@ruimte/agents-react/usage/limit-groups';
+import { PROVIDER_COLORS, PROVIDER_LABELS } from './format';
+import { accountNote, explain, isSignedOut, nextReset, type LimitAccount, type LimitGroup } from './limit-groups';
 
 /* Red where a window is nearly spent, amber where it is worth knowing. A window with room to spare
    is not news, so it takes the text color rather than a hue that competes with the two that are. */
@@ -31,7 +31,7 @@ const elapsedShare = (window: UsageWindow, now: number): number | null => {
 };
 
 export function WindowBar({ window, now, compact }: { window: UsageWindow; now: number; compact: boolean }) {
-    const { t } = useTranslation('usage');
+    const { t } = useTranslation('agent-usage');
     const percent = Math.round(window.used * 100);
     const elapsed = elapsedShare(window, now);
     // The bar fills as the quota is spent, so the mark beside it is how much of the window has run.
@@ -141,7 +141,7 @@ export function LimitsList({ limits, now, compact = false }: LimitsListProps) {
 
 /* One window on one line, for a card that holds several accounts: the label, a thin bar with the elapsed mark, the percent. */
 function WindowLine({ window, now }: { window: UsageWindow; now: number }) {
-    const { t } = useTranslation('usage');
+    const { t } = useTranslation('agent-usage');
     const percent = Math.round(window.used * 100);
     const elapsed = elapsedShare(window, now);
     const mark = elapsed === null ? null : Math.round(elapsed * 100);
@@ -172,7 +172,7 @@ function WindowLine({ window, now }: { window: UsageWindow; now: number }) {
 }
 
 function AccountLines({ account, now }: { account: LimitAccount; now: number }) {
-    const { t } = useTranslation('usage');
+    const { t } = useTranslation('agent-usage');
     const signedOut = isSignedOut(account);
     const note = signedOut ? null : accountNote(account);
     const windows = signedOut || note !== null ? [] : (account.entry?.windows ?? []);
