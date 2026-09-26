@@ -1,8 +1,8 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '../fs.ts';
-import { Serializer } from '../serializer.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
+import { Serializer } from '@ruimte/agents/serializer';
 
 const RecordSchema = z.object({
     branch: z.string().min(1),

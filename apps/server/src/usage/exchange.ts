@@ -1,7 +1,7 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { UsageRate } from '@ruimte/contracts';
-import { isNotFound, writeAtomic } from '../fs.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import { errorText } from '../error-text.ts';
 
 export const FRANKFURTER_URL = 'https://api.frankfurter.app/latest';

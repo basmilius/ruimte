@@ -2,7 +2,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ComputerAppGrants } from '@ruimte/contracts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '../fs.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import { helperDirectory } from './helper.ts';
 
 const SettingsSchema = z.object({

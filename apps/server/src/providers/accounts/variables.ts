@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import type { ProviderAccountVariable } from '@ruimte/contracts';
-import { CodedError } from '../../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 
 /*
  * The variables of an account, and where a sensitive value is kept: the keychain of this machine,

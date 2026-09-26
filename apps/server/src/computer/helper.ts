@@ -3,7 +3,7 @@ import { connect } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import type { z } from 'zod';
 import { readLocalSecret } from '../auth/local-secret.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import { HelperReplySchema, type HelperRequest } from './helper-protocol.ts';
 
 export type HelperFailureCode = 'unavailable' | 'helper-unreachable' | 'helper-busy' | 'helper-error' | 'helper-invalid';

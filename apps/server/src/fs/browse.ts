@@ -4,7 +4,7 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import type { FsBrowseResult } from '@ruimte/contracts';
 import { PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
 import { classifyEntry } from './visibility.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 
 type BrowseErrorCode = 'cwd-required' | 'windows-path';
 

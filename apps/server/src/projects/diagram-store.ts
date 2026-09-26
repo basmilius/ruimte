@@ -12,7 +12,7 @@ import type { WatchSeams } from '../fs/watch-seam.ts';
 import { diagramsDirOf, parseDiagram, privateDiagramsDirOf, readDiagram, tooNewMessage, viewFilePathIn, writeDiagram } from './project-files.ts';
 import { ProjectError, type ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 
 type DiagramErrorCode = 'project-not-found' | 'diagram-not-found' | 'diagram-invalid' | 'rev-conflict';
 

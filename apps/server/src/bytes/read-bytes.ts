@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises';
 import { BYTES_READ_MAX_BYTES, type BytesReadPayload, type BytesReadResult, type ByteResource, type ChatAttachment } from '@ruimte/contracts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 
 type BytesErrorCode = 'not-found' | 'too-large' | 'bad-offset';
 

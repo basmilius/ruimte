@@ -1,7 +1,7 @@
 import type { ActionHandlers } from '@ruimte/actions';
 import { deriveProjectContextSources, deviceButtons, isCanvasView, type ContextSource, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
 import { VerbRefusal, field, orNote, type CanvasHost, type DeviceDriveHost } from '../canvas/verb.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import type { ServerActionContext } from './context.ts';
 
 /* Every device node this caller may operate, for a refusal that offers what the next call takes. */

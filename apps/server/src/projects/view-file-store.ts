@@ -6,7 +6,7 @@ import { tooNewMessage, viewFilePathIn, viewIdOfFile, type JsonDocumentRead, typ
 import type { ProjectStore, ProjectViewFiles } from './project-store.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import { Serializer } from '../serializer.ts';
+import { Serializer } from '@ruimte/agents/serializer';
 
 // The same burst rule the project file follows: an editor or git writes more than once per save.
 const WATCH_SETTLE_MS = 150;

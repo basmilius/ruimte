@@ -3,10 +3,10 @@ import { join } from 'node:path';
 import { PLAN_LIMITS, PlanSchema, type Plan, type PlanActor, type PlanMeta, type PlanOfChat, type PlanOp } from '@ruimte/contracts';
 import { applyPlanOps, createPlan, planProgress, randomItemId, refuse, type PlanApplied, type PlanDraft, type PlanRefusal } from '@ruimte/plan';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '../fs.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { ClientSinks } from '../client-sinks.ts';
-import { KeyedSerializer } from '../serializer.ts';
+import { KeyedSerializer } from '@ruimte/agents/serializer';
 
 const SUFFIX = '.plans.json';
 

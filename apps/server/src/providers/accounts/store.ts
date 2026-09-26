@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ProviderAccountIdSchema, ProviderAccountSchema, type AgentKind, type ProviderAccount, type ProviderAccountMap } from '@ruimte/contracts';
-import { CodedError } from '../../coded-error.ts';
-import { isNotFound, writeAtomic } from '../../fs.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import type { ChatProvider } from '../provider.ts';
 import {
     accountFolder,

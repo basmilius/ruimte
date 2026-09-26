@@ -3,7 +3,7 @@ import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ChatInfoSchema, ChatItemSchema, type ChatInfo, type ChatItem } from '@ruimte/contracts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic, writeAtomicSync } from '../fs.ts';
+import { isNotFound, writeAtomic, writeAtomicSync } from '@ruimte/agents/fs';
 import { isPlanFileName } from '../plans/plan-store.ts';
 import { isBookmarkFileName } from './bookmark-store.ts';
 import { migrateInlineAttachments, type AttachmentStore } from './attachment-store.ts';

@@ -1,4 +1,4 @@
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 
 type ChatErrorCode =
     | 'history-expired'

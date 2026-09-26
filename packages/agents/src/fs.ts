@@ -6,6 +6,11 @@ import { dirname } from 'node:path';
 const RENAME_RETRIES = 5;
 const RENAME_RETRY_MS = 40;
 
+// Node has no synchronous sleep; a wait on a value nobody changes is one.
+const sleepSync = (ms: number): void => {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+};
+
 const isTransient = (e: unknown): boolean =>
     typeof e === 'object' && e !== null && 'code' in e && (e.code === 'EPERM' || e.code === 'EBUSY' || e.code === 'EACCES');
 
@@ -85,7 +90,7 @@ export const replaceSync = (temp: string, target: string): void => {
             if (!isTransient(e) || attempt >= RENAME_RETRIES) {
                 throw e;
             }
-            Bun.sleepSync(RENAME_RETRY_MS);
+            sleepSync(RENAME_RETRY_MS);
         }
     }
 };

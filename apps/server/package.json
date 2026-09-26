@@ -20,6 +20,7 @@
   "dependencies": {
     "@modelcontextprotocol/client": "^2.1.0",
     "@ruimte/actions": "workspace:*",
+    "@ruimte/agents": "workspace:*",
     "@ruimte/contracts": "workspace:*",
     "@ruimte/csp": "workspace:*",
     "@ruimte/diagram": "workspace:*",

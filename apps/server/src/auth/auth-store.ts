@@ -3,10 +3,10 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PushSubscribePayloadSchema, type AuthSession, type PairingOrigin, type PushSubscribePayload } from '@ruimte/contracts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '../fs.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import { isPublicKey } from '@ruimte/pulsar/verify-node';
 import { errorText } from '../error-text.ts';
-import { Serializer } from '../serializer.ts';
+import { Serializer } from '@ruimte/agents/serializer';
 
 // A pairing URL that nobody used in ten minutes is not going to be.
 export const PAIRING_TTL_MS = 10 * 60 * 1000;

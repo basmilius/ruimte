@@ -6,7 +6,7 @@ import { ProjectIconChoiceSchema, type EndpointNameSource, type ProjectIconChoic
 import { BrokerSettingSchema, type BrokerSetting } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { generateKeyPair, signMessage } from './auth/keys.ts';
-import { isNotFound, writeAtomic } from './fs.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import type { SessionEvent, SessionSink } from './sessions/manager.ts';
 import { errorText } from './error-text.ts';
 import { ClientSinks } from './client-sinks.ts';

@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { isNotFound, writeAtomic } from '../fs.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import { claudeProjectSlug } from './claude-transcript.ts';
 import { ChatError } from './errors.ts';
 

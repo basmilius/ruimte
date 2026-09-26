@@ -1,5 +1,5 @@
 import type { AgentKind } from '@ruimte/contracts';
-import { CodedError } from '../../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import type { Env } from './accounts.ts';
 
 export class AccountError extends CodedError<'account-unavailable' | 'account-incompatible'> {}

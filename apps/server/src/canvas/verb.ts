@@ -26,7 +26,7 @@ import type { NoticeDelivery, Notice } from '../context/notices.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import { field } from '../refusal.ts';
 import { parseArgv } from './argv.ts';
 

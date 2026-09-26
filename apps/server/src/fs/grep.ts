@@ -1,5 +1,5 @@
 import { FS_GREP_CONTEXT_LINES, FS_GREP_MAX_RESULTS, type FsGrepMatch, type FsGrepResult } from '@ruimte/contracts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import { listSearchableFiles } from './search.ts';
 
 // A file larger than this is generated, minified or data; searching it costs more than it answers.

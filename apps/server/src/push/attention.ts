@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { writeAtomicSync } from '../fs.ts';
+import { writeAtomicSync } from '@ruimte/agents/fs';
 import { PushAttentionResultSchema, type PushAttentionEntry } from '@ruimte/contracts';
 
 const RETENTION_MS = 30 * 24 * 60 * 60_000;

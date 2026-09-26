@@ -10,7 +10,7 @@ import {
     type RequestType,
     type ServerFrame
 } from '@ruimte/contracts';
-import { CodedError } from './coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 
 export interface ClientAccess {
     reachability: 'loopback' | 'lan' | 'tunnel' | 'public';

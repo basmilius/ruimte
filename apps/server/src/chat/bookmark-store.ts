@@ -2,8 +2,8 @@ import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CHAT_BOOKMARK_LIMITS, ChatBookmarksSchema, type ChatBookmark } from '@ruimte/contracts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '../fs.ts';
-import { KeyedSerializer } from '../serializer.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
+import { KeyedSerializer } from '@ruimte/agents/serializer';
 import { ChatError } from './errors.ts';
 
 const SUFFIX = '.bookmarks.json';

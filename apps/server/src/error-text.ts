@@ -1,23 +1,13 @@
-/*
- * How an error reaches a log or a terminal. Bun prints an Error object handed to the console with a
- * code frame of the bundle it came from, which in a compiled binary is a few lines of minified source,
- * so an error is always turned into a string first.
- */
+import { describeError, setErrorStacks } from '@ruimte/agents/error-text';
+
+export { describeError };
 
 export const DEBUG_VARIABLE = 'RUIMTE_DEBUG';
 
 export const debugFrom = (env: Record<string, string | undefined>): boolean => env[DEBUG_VARIABLE] === '1';
 
-/** The message of an error, or its whole stack with the debug variable set. */
-export const describeError = (error: unknown, debug: boolean): string => {
-    if (!(error instanceof Error)) {
-        return String(error);
-    }
-    if (debug) {
-        return error.stack ?? `${error.name}: ${error.message}`;
-    }
-    return error.message === '' ? error.name : error.message;
-};
+// What the chats say about an error follows the same switch as the daemon's own lines.
+setErrorStacks(debugFrom(process.env));
 
 /** `describeError` with the debug variable of this process, for a log line. */
 export const errorText = (error: unknown): string => describeError(error, debugFrom(process.env));

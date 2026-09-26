@@ -11,9 +11,9 @@ import type {
     ComputerUseStatus
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import { errorText } from '../error-text.ts';
-import { writeAtomic } from '../fs.ts';
+import { writeAtomic } from '@ruimte/agents/fs';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { APPROVAL_WAIT_MS, ComputerApprovals, MAX_HOLD_MS, realTimers, type AppRef, type CallerInfo, type Timers } from './approvals.ts';
 import { HelperFailure, helperDirectory, type ComputerHelper } from './helper.ts';

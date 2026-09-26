@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 
 type RevealErrorCode = 'path-not-found' | 'reveal-failed';
 

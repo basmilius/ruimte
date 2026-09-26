@@ -3,7 +3,7 @@ import type { WatchSeams } from '../fs/watch-seam.ts';
 import { drawingsDirOf, privateDrawingsDirOf, readDrawing, viewFilePathIn, writeDrawing } from './project-files.ts';
 import type { ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 
 type DrawingErrorCode = 'project-not-found' | 'drawing-not-found' | 'drawing-invalid' | 'rev-conflict';
 

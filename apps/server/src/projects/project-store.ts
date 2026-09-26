@@ -35,7 +35,7 @@ import {
 } from '@ruimte/contracts';
 import { revisionConflictMessage } from '@ruimte/actions';
 import { z } from 'zod';
-import { fileExists, isNotFound, writeAtomic } from '../fs.ts';
+import { fileExists, isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watch-seam.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import {
@@ -66,9 +66,9 @@ import { ProjectHolds } from './project-holds.ts';
 import { ProjectIndex } from './project-index.ts';
 import { IdentityCache, readIdeaName, sniffIconMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 import { errorText } from '../error-text.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import { ClientSinks } from '../client-sinks.ts';
-import { Serializer } from '../serializer.ts';
+import { Serializer } from '@ruimte/agents/serializer';
 
 type ProjectErrorCode =
     | 'project-not-found'

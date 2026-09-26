@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 import { ChatEventSchema, type ChatEvent } from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
-import { writeAtomicSync } from '../fs.ts';
+import { writeAtomicSync } from '@ruimte/agents/fs';
 
 export interface ChatLogLine {
     seq: number;

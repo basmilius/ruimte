@@ -1,7 +1,7 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { UsagePriceBasis, UsagePricing, UsageTotals } from '@ruimte/contracts';
-import { isNotFound, writeAtomic } from '../fs.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import { errorText } from '../error-text.ts';
 import bundled from './prices-snapshot.json' with { type: 'json' };
 

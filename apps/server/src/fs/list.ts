@@ -2,7 +2,7 @@ import { lstat, readdir, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { FS_LIST_MAX_ENTRIES, type FsEntry, type FsEntryKind, type FsListResult } from '@ruimte/contracts';
 import { ignoredPaths } from '../git/ignore.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import { classifyEntry, isBuildOutput } from './visibility.ts';
 
 type ListErrorCode = 'not-found' | 'not-a-directory';

@@ -28,7 +28,7 @@ import {
 import { StuckJudge, type ObservedGroup, type ObservedProcess, type Observation, type StuckThresholds } from './stuck.ts';
 import { groupsFor, indexTree, machineDisk, ruimteTotals, type TreeEntry, type TreeIndex } from './tree.ts';
 import { errorText } from '../error-text.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import { ClientSinks } from '../client-sinks.ts';
 
 export const FINE_INTERVAL_MS = 2000;

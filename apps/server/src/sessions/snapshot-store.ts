@@ -1,6 +1,6 @@
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { isNotFound, writeAtomic } from '../fs.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import { errorText } from '../error-text.ts';
 
 const SNAPSHOT_INTERVAL_MS = 30_000;

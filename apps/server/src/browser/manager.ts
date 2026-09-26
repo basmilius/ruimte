@@ -13,7 +13,7 @@ import {
 } from '@ruimte/contracts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import { FrameFanout, streamKeyOf } from '../streams/frame-fanout.ts';
 import { ClientSinks } from '../client-sinks.ts';
 

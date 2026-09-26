@@ -1,7 +1,7 @@
 import { lstat } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES, isImageMime, isVideoMime, type FsReadResult } from '@ruimte/contracts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import { looksLikeSvg, sniffMime } from './sniff.ts';
 
 type ReadErrorCode = 'not-found' | 'not-a-file' | 'bad-path';

@@ -1,8 +1,8 @@
 import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { z } from 'zod';
-import { isNotFound, writeAtomic } from './fs.ts';
-import { KeyedSerializer } from './serializer.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
+import { KeyedSerializer } from '@ruimte/agents/serializer';
 
 // The id is a node id or a chat id a client chose, so it is encoded before it becomes a file name.
 export const recordFileName = (id: string): string => `${encodeURIComponent(id)}.json`;

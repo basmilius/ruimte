@@ -14,7 +14,7 @@ import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
 import type { SessionSnapshot, SnapshotStore } from './snapshot-store.ts';
 import { errorText } from '../error-text.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import { ClientSinks } from '../client-sinks.ts';
 
 type SessionErrorCode =

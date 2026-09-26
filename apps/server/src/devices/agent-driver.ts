@@ -1,6 +1,6 @@
 import { deviceTools, type DeviceButton, type DeviceInfo, type DeviceInput, type DeviceReference } from '@ruimte/contracts';
 import { realTimers, type Timers } from '../computer/approvals.ts';
-import { CodedError } from '../coded-error.ts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import { pngSize, writeShot } from '../shots.ts';
 import { centerOf, findElements, flattenTree, type DeviceElement } from './device-tree.ts';
 import type { DeviceManager } from './manager.ts';

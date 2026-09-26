@@ -1,7 +1,7 @@
 import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { UsageRoot } from '@ruimte/contracts';
-import { isNotFound, writeAtomic } from '../fs.ts';
+import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import { decodeIndex, encodeIndex, type IndexedFile, type UsageIndex } from './index-file.ts';
 import { foldByKey, type UsageRecord } from './record.ts';
 import { claudeMightCarryUsage, parseClaudeLine } from './readers/claude.ts';

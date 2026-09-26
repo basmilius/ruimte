@@ -13,7 +13,7 @@ import {
 } from '@ruimte/service';
 import { buildFileOf, readBuildFile } from '../service/self-update.ts';
 import { describeError } from '../error-text.ts';
-import { replaceSync, tempNameFor } from '../fs.ts';
+import { replaceSync, tempNameFor } from '@ruimte/agents/fs';
 
 /*
  * `ruimte service install|uninstall|status`: the background service for a machine without the app.
