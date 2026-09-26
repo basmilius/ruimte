@@ -7,6 +7,7 @@ import type { ChatBookmark } from '@ruimte/agent-contracts';
 import { useForkedTurns } from '../forks';
 import { bookmarkRows } from '../logic/bookmarks';
 import { deriveTimelineRows, findSubagentBranch, type TimelineRow } from '../logic/timeline';
+import { withThreadCards } from '../logic/thread-cards';
 import { openFromMain, useSubagentTrail, type SubagentStep } from '../subagent-view';
 import { registerItemJumper, registerMessageStepper, registerTimeline, setTimelineAtEnd } from '../timeline-scroll';
 import {
@@ -109,7 +110,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     const bookmarks = useChatRow(chatId, (row) => row?.bookmarks);
     const forkedTurns = useForkedTurns(chatId);
     const info = useChatRow(chatId, (row) => row?.info ?? null);
-    const { keyOf } = useChatScope();
+    const { id: scopeId, keyOf } = useChatScope();
     // Read when the menu opens rather than subscribed to, for the same reason the rows use the structure.
     const fullItems = () => useChats.getState().byKey[keyOf(chatId)]?.items;
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -139,7 +140,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     const [composerHeight, setComposerHeight] = useState(0);
     const [frame, setFrame] = useState({ width: 0, height: 0, column: false });
 
-    const rows = useMemo(() => {
+    const threadRows = useMemo(() => {
         if (!order || !items) {
             return [];
         }
@@ -148,6 +149,8 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
             { expandedGroups: groups.ids, expandedTurns: turns.ids, expandedSubagents: subagents.ids, activeTurnId, forkedTurns }
         );
     }, [order, items, groups.ids, turns.ids, subagents.ids, activeTurnId, forkedTurns]);
+    const cards = chatHost().useThreadCards(scopeId, chatId);
+    const rows = useMemo(() => withThreadCards(threadRows, cards), [threadRows, cards]);
 
     const empty = rows.length === 0;
     const marks = useMemo(() => bookmarkRows(rows, bookmarks ?? [], items ?? {}), [rows, bookmarks, items]);

@@ -165,6 +165,7 @@
       "worksIn": "Werkt in"
     },
     "stripFailed": "De berichtenstrip kon niet worden getekend",
+    "cardFailed": "Deze kaart kon niet worden getekend",
     "actions": {
       "label": "Berichtacties",
       "copied": "Gekopieerd"
@@ -227,6 +228,7 @@
     "worked": "Gewerkt, {{duration}}"
   },
   "composer": {
+    "slotFailed": "Dit onderdeel kon niet worden getekend",
     "commands": {
       "model": "Wissel van model",
       "compact": "Comprimeer de context",

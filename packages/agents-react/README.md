@@ -8,7 +8,7 @@ Import per file, the way `@ruimte/ui` does: `@ruimte/agents-react/chat/ui/Timeli
 
 - **`ChatTransport`** (`transport`) is how the chat reaches whatever runs the chats: a typed request out of `AGENT_REQUEST_SCHEMAS` with its typed answer, the events of `AGENT_EVENT_SCHEMAS`, and the status of the link. A link that comes back counts as a fresh one: the chat asks `chat.list` again and attaches every open chat. `portTransport(port)` (`port-transport`) runs one over a `FramePort` of `@ruimte/agent-contracts/port`; its `close()` fails what still waits. A refusal carries a `code` (`errorCode`, `isConnectionError`).
 - **`ChatScope`** (`scope`) is one host of chats as everything under `ChatScopeContext` sees it: an `id` for the stores that keep a row per host (providers, accounts, usage), `keyOf` and `owns` for the rows of the chats store, whose keys the app decides, the `transport`, and the `ChatClient` on it. An app with several hosts renders a scope per host; the usage page renders the host it shows as a scope of its own.
-- **`setChatHost`** (`host`) hands over, once and before the first render, what only the app decides: its palette for account colors, toasts, its own actions (else every action is a request on the transport), file search for `@`, attached files, code themes, how replies stream, file links, find in a thread, dictation, prompts of its own beside a chat's, other chats to point at, the places of forks, tasks, confirmations, logins, project marks, and which settings section to open. Whatever an app leaves out is the chat without that part.
+- **`setChatHost`** (`host`) hands over, once and before the first render, what only the app decides: its palette for account colors, toasts, its own actions (else every action is a request on the transport), file search for `@`, attached files, code themes, how replies stream, file links, find in a thread, dictation, prompts of its own beside a chat's, other chats to point at, the places of forks, tasks, confirmations, logins, project marks, which settings section to open, and its own parts in the chat (below). Whatever an app leaves out is the chat without that part.
 - **`setLazyPrefetch`** (`lazy`) hands the modules the chat loads lazily (the diff renderers) to the app's prefetcher.
 
 ## Wiring it up
@@ -119,6 +119,32 @@ The stylesheet goes right after the ui theme, and Tailwind scans the `dist` of b
 @source "<path to>/node_modules/@ruimte/ui/dist";
 @source "<path to>/node_modules/@ruimte/agents-react/dist";
 @plugin "@tailwindcss/typography";
+```
+
+## An app's own parts in the chat
+
+Three fields of `setChatHost` put an app's own words and parts in the chat. Each is optional; without them the chat looks as it always did.
+
+- **`useComposerPlaceholder(scopeId, chatId)`** returns the words an empty composer opens with, in place of "Ask anything". The keys it hints at (`/`, `@`, `$`) still follow, and a composer without a connection still says so. Return null to keep the chat's own words.
+- **`ComposerSlot`** is a component drawn in the composer's row of controls, after the pickers. It gets `scopeId`, `chatId`, `disabled` and `insert(text)`, which types the text in at the caret as if the person had typed it, a space apart from a word it would touch.
+- **`useThreadCards(scopeId, chatId)`** returns the cards an app shows between the messages of a thread, as `{ id, at, render }`. `at` is a time in milliseconds on the clock of a chat item's `createdAt`. A card goes right before the first row that began after it: in a folded turn that is under the fold, in an open turn between its calls, and in a running turn above the working line. `render` is called only while the card is on screen. The cards are the app's alone and never go over the wire. Return the same array while none of them changed.
+
+```tsx
+setChatHost({
+    useComposerPlaceholder: () => 'Message the producer',
+    ComposerSlot: ({ insert, disabled }) => {
+        const time = usePlayhead((s) => s.time);
+        return (
+            <Button variant="secondary" size="sm" disabled={disabled} onClick={() => insert(`at ${formatTime(time)}`)}>
+                {formatTime(time)}
+            </Button>
+        );
+    },
+    useThreadCards: (_scopeId, chatId) => {
+        const versions = useVersions(chatId);
+        return useMemo(() => versions.map((version) => ({ id: `v${version.n}`, at: version.at, render: () => <VersionCard version={version} /> })), [versions]);
+    }
+});
 ```
 
 ## Settings and usage

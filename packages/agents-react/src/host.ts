@@ -127,6 +127,25 @@ export interface ResourceUrl {
     failure: string | null;
 }
 
+/* What an app's own control in the composer's row gets. */
+export interface ComposerSlotProps {
+    scopeId: string;
+    chatId: string;
+    disabled: boolean;
+    /* Puts text in the draft at the caret, a space apart from the words beside it, and gives the editor the focus. */
+    insert(text: string): void;
+}
+
+/* A card of the app's own between the messages of a thread. */
+export interface ThreadCard {
+    /* Unique within the chat; the thread keys its row by it, so the same card keeps its place and its measure. */
+    id: string;
+    /* When it happened, in milliseconds on the clock of a chat item's `createdAt`: it follows every row from before then. */
+    at: number;
+    /* Called only while the card is on screen, since the thread draws only the rows in view. */
+    render(): ReactNode;
+}
+
 /*
  * What the app around the chat decides and the chat cannot. Set once, before the first render, with
  * `setChatHost`; whatever an app leaves out keeps the default here, which is the chat without that
@@ -215,6 +234,12 @@ export interface ChatHost {
     openSettings(section: 'providers' | 'agents'): void;
     /* Whether the host lets a chat go on by itself once a limit it stopped on lifts. */
     useResumeAtReset(scopeId: string): boolean;
+    /* The words an empty composer opens with, before the keys it hints at; null keeps the chat's own. */
+    useComposerPlaceholder(scopeId: string, chatId: string): string | null;
+    /* The app's own control in the composer's row, after the pickers; null draws none. */
+    ComposerSlot: ComponentType<ComposerSlotProps> | null;
+    /* Cards of the app's own in a thread, in any order. Hand back the same array while none changed, or the thread lays out its rows again on every render. */
+    useThreadCards(scopeId: string, chatId: string): readonly ThreadCard[];
 }
 
 const NO_PROMPTS: readonly HostPrompt[] = [];
@@ -224,6 +249,7 @@ const NO_FIND: TimelineFind = { open: false, bar: null, reveal: null, hitRows: N
 const NO_SOURCES: ReadonlyArray<{ title: string }> = [];
 const NO_URL: ResourceUrl = { url: null, failure: null };
 const NOWHERE: ChatPlace = { title: null, go: () => undefined };
+const NO_CARDS: readonly ThreadCard[] = [];
 
 const DEFAULT_HOST: ChatHost = {
     accents: { all: [], featured: [], label: (id) => id, current: () => '' },
@@ -250,7 +276,10 @@ const DEFAULT_HOST: ChatHost = {
     confirm: { stopSubagents: (_scopeId, _chatId, run) => run(), stopTask: (_scopeId, _childId, _title, run) => run() },
     fork: null,
     openSettings: () => undefined,
-    useResumeAtReset: () => true
+    useResumeAtReset: () => true,
+    useComposerPlaceholder: () => null,
+    ComposerSlot: null,
+    useThreadCards: () => NO_CARDS
 };
 
 let host: ChatHost = DEFAULT_HOST;

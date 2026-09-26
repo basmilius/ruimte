@@ -165,6 +165,7 @@
       "worksIn": "It works in"
     },
     "stripFailed": "The message strip failed to render",
+    "cardFailed": "This card failed to render",
     "actions": {
       "label": "Message actions",
       "copied": "Copied"
@@ -227,6 +228,7 @@
     "worked": "Worked for {{duration}}"
   },
   "composer": {
+    "slotFailed": "This control failed to render",
     "commands": {
       "model": "Switch the model",
       "compact": "Compact the context",

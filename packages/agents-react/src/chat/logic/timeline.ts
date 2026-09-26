@@ -13,6 +13,7 @@ import type {
     ChatWorkflow
 } from '@ruimte/agent-contracts';
 import { abortedByMachine } from '@ruimte/agent-contracts';
+import type { ThreadCard } from '../../host';
 import { formatElapsedShort } from '@ruimte/ui/format/duration';
 import { handbackReportOf } from './handback';
 import { toolEntry } from './tool-catalog';
@@ -52,7 +53,9 @@ export type TimelineRow =
     | { kind: 'changed-files'; id: string; turnId: string; tools: ChatToolItem[]; diff: ChatCheckpointDiff | null; checkpoint: boolean }
     | { kind: 'turn-fold'; id: string; turn: ChatTurnItem; label: string; work: string[]; hiddenCount: number; expanded: boolean }
     | { kind: 'forks'; id: string; turnId: string }
-    | { kind: 'working'; id: string; startedAt: number };
+    | { kind: 'working'; id: string; startedAt: number }
+    // A card of the app's own (`thread-cards.ts`), never derived from an item.
+    | { kind: 'app-card'; id: string; card: ThreadCard };
 
 interface TimelineOptions {
     expandedGroups: ReadonlySet<string>;
@@ -68,7 +71,7 @@ interface TimelineOptions {
  * against each other; prose and cards are blocks and need room around them. Where the two meet,
  * the block gap marks the seam, so an answer never looks glued to the call above it.
  */
-const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'report', 'thinking', 'changed-files', 'compaction']);
+const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'report', 'thinking', 'changed-files', 'compaction', 'app-card']);
 
 export const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
 

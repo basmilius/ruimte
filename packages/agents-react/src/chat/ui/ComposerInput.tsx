@@ -3,11 +3,14 @@ import { Compartment, EditorState, Prec, Transaction, type Extension } from '@co
 import { EditorView, placeholder as placeholderText } from '@codemirror/view';
 import { chatHost } from '../../host';
 import { composerEditorExtensions, externalChange } from './composer/editor';
+import { insertAtSelection } from './composer/insert';
 
 export interface ComposerInputHandle {
     focus(): void;
     /* Puts the caret at `pos`, clamped to the text, and gives the editor the focus. */
     setCaret(pos: number): void;
+    /* Types text in over the selection (`insertAtSelection`) and gives the editor the focus. */
+    insert(text: string): void;
 }
 
 export interface InputSelection {
@@ -160,6 +163,14 @@ export function ComposerInput({
                     return;
                 }
                 view.dispatch({ selection: { anchor: Math.min(pos, view.state.doc.length) }, scrollIntoView: true });
+                view.focus();
+            },
+            insert: (text: string) => {
+                const view = viewRef.current;
+                if (!view) {
+                    return;
+                }
+                view.dispatch(insertAtSelection(view.state, text));
                 view.focus();
             }
         }),

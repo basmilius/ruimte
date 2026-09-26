@@ -1,3 +1,6 @@
+import { useTranslation } from 'react-i18next';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import type { ThreadCard } from '../../../host';
 import type { TimelineRow } from '../../logic/timeline';
 import type { SubagentStep } from '../../subagent-view';
 import { AgentTurnRow, ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow, QuestionHistoryRow, ReportRow, ThinkingRow, UserRow } from './MessageRows';
@@ -15,6 +18,20 @@ export interface RowProps {
     openSubagent(toolUseId: string): void;
     /* Opens the whole conversation of a subagent or a workflow's agent in the thread's place; absent where there is nowhere to open it. */
     openConversation?(step: SubagentStep): void;
+}
+
+/* Its own component, so a card that throws while it renders is caught by the boundary around it. */
+function AppCardBody({ card }: { card: ThreadCard }) {
+    return card.render();
+}
+
+function AppCardRow({ card }: { card: ThreadCard }) {
+    const { t } = useTranslation('agent-chat');
+    return (
+        <ErrorBoundary label={t('timeline.cardFailed')} resetKeys={[card]} compact className="relative rounded-lg">
+            <AppCardBody card={card} />
+        </ErrorBoundary>
+    );
 }
 
 /* One row of a thread, the chat's own or a subagent's read back, drawn the same way in both. */
@@ -58,5 +75,7 @@ export function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, open
             return <CompactionRow preTokens={row.preTokens} />;
         case 'working':
             return <WorkingRow startedAt={row.startedAt} />;
+        case 'app-card':
+            return <AppCardRow card={row.card} />;
     }
 }

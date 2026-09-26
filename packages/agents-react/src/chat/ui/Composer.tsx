@@ -66,6 +66,7 @@ import { useChatRow } from '../../state/chats';
 import { useProviders } from '../../state/providers';
 import { BTN_GROUP, FLOAT, MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
 import { copyText } from '@ruimte/ui/clipboard';
+import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
 import { Tooltip } from '@ruimte/ui/Tooltip';
 import { FileIcon } from '@ruimte/ui/FileIcon';
 import { Icon } from '@ruimte/ui/Icon';
@@ -180,6 +181,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
     // The structure, which a delta leaves alone. The prompts and the requests are items of their own.
     const items = useChatRow(chatId, (row) => row?.structure);
     const chats = chatHost().useReferableChats();
+    const placeholderLead = chatHost().useComposerPlaceholder(scope.id, chatId);
 
     const pending = useMemo(() => [...approvals, ...questions], [approvals, questions]);
     const provider = providers.find((entry) => entry.kind === info.provider);
@@ -552,6 +554,12 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
             .catch(() => setNotice(t('composer.notice.unreadable')));
     };
 
+    const insertIntoDraft = (added: string): void => {
+        if (!disabled) {
+            inputRef.current?.insert(added);
+        }
+    };
+
     const removeAttachment = (index: number): void => {
         setDraft((current) => ({ ...current, attachments: current.attachments.filter((_, i) => i !== index) }));
     };
@@ -873,13 +881,14 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
         if (disabled) {
             return t('composer.placeholder.disconnected');
         }
-        return hintedPlaceholder(t('composer.placeholder.lead'), t('composer.placeholder.joiner'), [
+        return hintedPlaceholder(placeholderLead ?? t('composer.placeholder.lead'), t('composer.placeholder.joiner'), [
             { key: '/', label: t('composer.placeholder.commands') },
             ...(mentionable ? [{ key: '@', label: t('composer.placeholder.files') }] : []),
             ...(hasSkills ? [{ key: '$', label: t('composer.placeholder.skills') }] : [])
         ]);
-    }, [disabled, mentionable, hasSkills, t]);
+    }, [disabled, placeholderLead, mentionable, hasSkills, t]);
     const attachable = capabilities?.attachments !== false;
+    const Slot = chatHost().ComposerSlot;
 
     return (
         <div className="chat-composer-content pointer-events-none relative z-10 w-full">
@@ -1228,6 +1237,11 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                             account={accountChoice === null ? null : { choice: accountChoice, started, onPick: chooseAccount }}
                         />
                         <StashPicker onRestore={restoreStashed} />
+                        {Slot !== null && (
+                            <ErrorBoundary label={t('composer.slotFailed')} resetKeys={[chatId]} compact className="relative rounded-lg">
+                                <Slot scopeId={scope.id} chatId={chatId} disabled={disabled} insert={insertIntoDraft} />
+                            </ErrorBoundary>
+                        )}
                         <span className="grow" />
                         <div className="flex h-9 shrink-0 items-center gap-0.5 rounded-full bg-surface-hover">
                             <div ref={setDictationToolbar} className="flex items-center pl-1 empty:hidden [&_.icon-btn]:rounded-full" />
