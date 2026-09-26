@@ -8,6 +8,7 @@ const TONES = {
     raised: 'bg-surface-active text-text-muted',
     idle: 'bg-status-idle/15 text-status-idle',
     needsYou: 'bg-status-needs-you/15 text-status-needs-you',
+    error: 'bg-status-error/15 text-status-error',
     accent: 'bg-accent-soft text-accent'
 };
 
