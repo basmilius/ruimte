@@ -6,3 +6,10 @@ Twenty takes for the hero visual of ruimte.app, built into one page to choose fr
 - `node shot.mjs <id> --t 1,4,8 --w 360` renders stills of one take with Playwright into `shots/`.
 
 A take that is chosen is ported to TypeScript under `apps/site/src/components/hero`; nothing here ships.
+
+## Intro films
+
+Four one-minute films about building a festival site, drawn in code on the same harness and scored with Web Audio (`FILM-BRIEF.md`, `SCORE-BRIEF.md`).
+
+- `node film-render.mjs <id>` renders `renders/<id>.mp4` (needs `pip install imageio-ffmpeg` for H.264).
+- `node film-score.mjs <id>` renders the score and muxes `renders/<id>-music.mp4`.

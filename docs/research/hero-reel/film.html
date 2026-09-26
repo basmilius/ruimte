@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="fonts.css" rel="stylesheet">
+<style>body { margin: 0; background: #0d0d10; } #frame { display: block; width: 960px; height: 540px; }</style>
+</head>
+<body>
+<canvas id="frame"></canvas>
+<script>window.__errors = []; window.addEventListener('error', (e) => window.__errors.push(String(e.message)));</script>
+<script src="harness.js"></script>
+<script src="pieces.bundle.js"></script>
+<script src="film.js"></script>
+<script src="score.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+document.write('<script src="films/' + q.get('film') + '.js"><\/script>');
+</script>
+<script>
+(async () => {
+    const faces = ['600 40px Geist', '400 20px Geist', '500 20px Geist', '700 40px Geist', '500 16px "JetBrains Mono"', '700 16px "JetBrains Mono"', '400 20px Kalam', '700 20px Kalam'];
+    await Promise.race([Promise.all(faces.map((f) => document.fonts.load(f).catch(() => null))), new Promise((r) => setTimeout(r, 4000))]);
+    window.__film = Film.mount(Film.get(q.get('film')), document.getElementById('frame'));
+    window.__ready = true;
+})();
+</script>
+</body>
+</html>

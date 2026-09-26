@@ -517,8 +517,9 @@
 
     /* Drives one take inside a host element. The host sets the size; the canvas fills it at 560:500. */
     class Runner {
-        constructor(def, host, { quality = 1, maxDpr = 2, interactive = true } = {}) {
+        constructor(def, host, { quality = 1, maxDpr = 2, interactive = true, options = {} } = {}) {
             this.def = def;
+            this.options = options;
             this.host = host;
             this.quality = quality;
             this.maxDpr = maxDpr;
@@ -578,6 +579,7 @@
                 H,
                 R,
                 id: this.def.id,
+                options: this.options,
                 quality: this.quality,
                 ctx: this.ctx,
                 canvas: this.canvas,

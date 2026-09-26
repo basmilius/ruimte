@@ -15,7 +15,8 @@ Reel.add({
 
         const SIZE = 90;
         const FONT = `600 ${SIZE}px ${R.fonts.display}`;
-        const WORD = ['r', 'u', 'i', 'm', 't', 'e'];
+        // A host may set the word (the intro film sets it with a capital R); the i keeps its accent dot.
+        const WORD = [...((env.options && env.options.word) || 'ruimte')];
         const DOT_AT = 2;
         const BASELINE = 286;
         const CX = W / 2;
