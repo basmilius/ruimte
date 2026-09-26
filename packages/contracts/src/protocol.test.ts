@@ -1,6 +1,8 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS } from '@ruimte/agent-contracts/protocol';
 import { EndpointInfoSchema } from './auth.ts';
 import { DirectChallengeFrameSchema, DirectVerdictFrameSchema } from './direct.ts';
+import { EVENT_SCHEMAS, REQUEST_SCHEMAS } from './index.ts';
 import { PROTOCOL_VERSION, acceptsOfferedProtocol, protocolMismatch, protocolOfRefusal, protocolRefusalReason } from './protocol.ts';
 
 test('the same version is no mismatch', () => {
@@ -38,5 +40,16 @@ test('an endpoint.info and a challenge from before versions still parse', () => 
         type: 'direct.refused',
         reason: 'no',
         protocol: 2
+    });
+});
+
+describe('the requests of a chat host', () => {
+    test('every one sits in the wire tables, as the very same schema', () => {
+        for (const [type, pair] of Object.entries(AGENT_REQUEST_SCHEMAS)) {
+            expect(REQUEST_SCHEMAS[type as keyof typeof REQUEST_SCHEMAS]).toBe(pair);
+        }
+        for (const [type, schema] of Object.entries(AGENT_EVENT_SCHEMAS)) {
+            expect(EVENT_SCHEMAS[type as keyof typeof EVENT_SCHEMAS]).toBe(schema);
+        }
     });
 });

@@ -12,6 +12,7 @@
     "check:swift": "bun scripts/generate-swift.ts --check && bun ../../apps/ios/Scripts/generate-renderer.ts --check"
   },
   "dependencies": {
+    "@ruimte/agent-contracts": "workspace:*",
     "@ruimte/pulsar": "workspace:*",
     "zod": "^4.6.5"
   },

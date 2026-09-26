@@ -193,10 +193,22 @@
         "typescript": "^7.0.2",
       },
     },
+    "packages/agent-contracts": {
+      "name": "@ruimte/agent-contracts",
+      "version": "0.0.0",
+      "dependencies": {
+        "zod": "^4.6.5",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.2",
+        "typescript": "^7.0.2",
+      },
+    },
     "packages/contracts": {
       "name": "@ruimte/contracts",
       "version": "0.0.0",
       "dependencies": {
+        "@ruimte/agent-contracts": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "zod": "^4.6.5",
       },
@@ -891,6 +903,8 @@
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.1", "", {}, "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw=="],
 
     "@ruimte/actions": ["@ruimte/actions@workspace:packages/actions"],
+
+    "@ruimte/agent-contracts": ["@ruimte/agent-contracts@workspace:packages/agent-contracts"],
 
     "@ruimte/client": ["@ruimte/client@workspace:apps/client"],
 

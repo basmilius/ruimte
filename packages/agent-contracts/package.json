@@ -1,0 +1,27 @@
+{
+  "name": "@ruimte/agent-contracts",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./agent": "./src/agent.ts",
+    "./chat": "./src/chat.ts",
+    "./ids": "./src/ids.ts",
+    "./model": "./src/model.ts",
+    "./protocol": "./src/protocol.ts",
+    "./provider-accounts": "./src/provider-accounts.ts",
+    "./usage": "./src/usage.ts",
+    "./worktree": "./src/worktree.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
+  }
+}
