@@ -13,6 +13,7 @@
     "./port": "./src/port.ts",
     "./protocol": "./src/protocol.ts",
     "./provider-accounts": "./src/provider-accounts.ts",
+    "./task": "./src/task.ts",
     "./usage": "./src/usage.ts",
     "./worktree": "./src/worktree.ts"
   },

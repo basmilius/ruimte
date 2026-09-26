@@ -5,6 +5,7 @@ export * from './ids.ts';
 export * from './model.ts';
 export * from './protocol.ts';
 export * from './provider-accounts.ts';
+export * from './task.ts';
 export * from './usage.ts';
 export * from './worktree.ts';
 export type * from './port.ts';
