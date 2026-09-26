@@ -195,4 +195,45 @@ describe('AgentHost over a port', () => {
         const argv = claude.started.at(-1)!.argv;
         expect(argv[argv.indexOf('--append-system-prompt') + 1]).toBe('You are the agent of chat-4.');
     });
+
+    test('hands a chat the folders of its core, and a change starts the next turn in a new process', async () => {
+        const reading: string[] = ['/brand/kit'];
+        class ReadingCore extends ChatCore {
+            protected override foldersFor(_chatId: string): readonly string[] {
+                return [...reading];
+            }
+        }
+        await host.close();
+        host = await AgentHost.open({
+            dataDir,
+            env: { HOME: dataDir, PATH: process.env.PATH },
+            background: false,
+            command: ['claude'],
+            spawn: claude.spawn,
+            core: (options) => new ReadingCore(options)
+        });
+        const [renderer, utility] = memoryPortPair();
+        host.connect(utility);
+        client = new Client(renderer);
+        const answered = (text: string): boolean => [...client.items.values()].some((item) => item.kind === 'assistant' && item.text === `echo: ${text}`);
+
+        ok(await client.request('chat.create', { chatId: 'chat-5', provider: 'claude', cwd: dataDir }));
+        ok(await client.request('chat.attach', { chatId: 'chat-5' }));
+        ok(await client.request('chat.send', { chatId: 'chat-5', text: 'read the kit' }));
+        await client.until(() => answered('read the kit'));
+        const launches = claude.started.length;
+        expect(claude.started.at(-1)!.argv).toContain('--add-dir=/brand/kit');
+
+        ok(await client.request('chat.send', { chatId: 'chat-5', text: 'same folders' }));
+        await client.until(() => answered('same folders'));
+        expect(claude.started.length).toBe(launches);
+
+        reading.length = 0;
+        ok(await client.request('chat.send', { chatId: 'chat-5', text: 'done reading' }));
+        await client.until(() => answered('done reading'));
+        expect(claude.started.length).toBe(launches + 1);
+        const argv = claude.started.at(-1)!.argv;
+        expect(argv.some((arg) => arg.startsWith('--add-dir'))).toBe(false);
+        expect(argv).toContain('--resume');
+    });
 });

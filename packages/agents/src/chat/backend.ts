@@ -37,6 +37,9 @@ export interface BackendLaunch {
     // The part of it a resumed thread has to hear again in front of its next prompt, for a CLI that ignores new
     // instructions on a resume; null when there is nothing to repeat.
     resumeNote: string | null;
+    // Folders outside `cwd` the agent may reach without asking. Claude Code takes them as `--add-dir`; Codex's
+    // sandbox reads the whole disk already and keeps writes to the workspace, so it needs nothing.
+    folders?: readonly string[];
     // How the CLI is started; a test runs a fake in the same process, everything else spawns it.
     spawn?: SpawnChatProcess;
 }

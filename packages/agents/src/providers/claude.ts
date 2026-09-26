@@ -28,12 +28,17 @@ interface ClaudeLaunch {
     runtimeMode: RuntimeMode;
     resume: string | null;
     allowedTools?: readonly string[];
+    folders?: readonly string[];
 }
 
 /* The argument list for one Claude Code chat process. */
 export const claudeArgs = (launch: ClaudeLaunch): string[] => {
     // The `=` form matters, since the flag is variadic and would swallow a prompt argument after it (measured on Claude Code 2.1.274).
-    const args = [...CLAUDE_CHAT_ARGS, ...(launch.allowedTools ?? []).map((tool) => `--allowedTools=${tool}`)];
+    const args = [
+        ...CLAUDE_CHAT_ARGS,
+        ...(launch.allowedTools ?? []).map((tool) => `--allowedTools=${tool}`),
+        ...(launch.folders ?? []).map((folder) => `--add-dir=${folder}`)
+    ];
     const contextWindow = launch.selection.options.contextWindow;
     args.push('--model', `${launch.selection.model}${contextWindow === '1m' ? '[1m]' : ''}`);
     const effort = launch.selection.options.effort;

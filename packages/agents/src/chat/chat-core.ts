@@ -377,6 +377,7 @@ export class ChatCore {
             },
             instructions: () => this.instructionsFor(payload.chatId),
             resumeNote: () => this.resumeNoteFor(payload.chatId),
+            folders: () => this.foldersFor(payload.chatId),
             ...(promptNotes ? { promptNotes } : {}),
             ...(references ? { references } : {}),
             ...(this.checkpoints ? { checkpoints: this.checkpoints } : {}),
@@ -905,6 +906,15 @@ export class ChatCore {
     /* What of the instructions a resumed thread hears again in front of its next prompt, for a CLI that ignores them on a resume. */
     protected resumeNoteFor(_chatId: string): string | null {
         return null;
+    }
+
+    /*
+     * Folders outside its working directory a chat's agent may reach without asking, absolute. Asked
+     * before every turn, so a host can hand one over for as long as it is needed: a change starts the
+     * next turn in a new process that resumes the thread, and never cuts a turn in flight.
+     */
+    protected foldersFor(_chatId: string): readonly string[] {
+        return [];
     }
 
     /* What the host says in front of a chat's next real prompt, beside what the chat keeps itself. */

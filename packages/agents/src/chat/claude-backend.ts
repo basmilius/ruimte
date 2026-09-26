@@ -43,8 +43,11 @@ export class ClaudeBackend implements ChatBackend {
         if (this.child) {
             return Promise.resolve();
         }
-        const { selection, runtimeMode, resume } = this.launch;
-        const args = [...this.launch.command, ...claudeArgs({ selection, runtimeMode, resume, allowedTools: this.allowedTools })];
+        const { selection, runtimeMode, resume, folders } = this.launch;
+        const args = [
+            ...this.launch.command,
+            ...claudeArgs({ selection, runtimeMode, resume, allowedTools: this.allowedTools, ...(folders ? { folders } : {}) })
+        ];
         if (this.launch.instructions !== null) {
             args.push('--append-system-prompt', this.launch.instructions);
         }

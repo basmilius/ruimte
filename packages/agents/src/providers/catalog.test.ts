@@ -88,4 +88,11 @@ describe('claudeArgs', () => {
         }
         expect(claudeArgs({ selection, runtimeMode: 'auto', resume: null }).some((arg) => arg.startsWith('--allowedTools'))).toBe(false);
     });
+
+    test('adds each folder in the form that swallows no argument', () => {
+        const selection = { model: 'claude-sonnet-5', options: {} };
+        const args = claudeArgs({ selection, runtimeMode: 'auto', resume: null, folders: ['/brand/kit', '/shared/assets'] });
+        expect(args.filter((arg) => arg.startsWith('--add-dir'))).toEqual(['--add-dir=/brand/kit', '--add-dir=/shared/assets']);
+        expect(claudeArgs({ selection, runtimeMode: 'auto', resume: null }).some((arg) => arg.startsWith('--add-dir'))).toBe(false);
+    });
 });

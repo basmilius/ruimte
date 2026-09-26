@@ -58,6 +58,8 @@ export interface ChatSessionOptions {
     // What the agent is told at the start of every process, and what of it a resumed thread hears again; see `BackendLaunch`.
     instructions?(): string | null;
     resumeNote?(): string | null;
+    // The folders beside the working directory, asked before every turn; a change starts the next turn in a new process.
+    folders?(): readonly string[];
     promptNotes?: PromptNotes;
     references?: ChatReferences;
     // Trees per turn, so a settled turn can show what the working tree holds against its start.
@@ -110,6 +112,9 @@ const continuedNoteId = (turnId: string): string => `continued-${turnId}`;
 
 const newId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+const sameFolders = (first: readonly string[], second: readonly string[]): boolean =>
+    first.length === second.length && first.every((folder, i) => folder === second[i]);
+
 /*
  * Provider-neutral chat state. Backends live between turns and resume by CLI session id after a
  * crash, host restart, or model and mode change.
@@ -128,6 +133,7 @@ export class ChatSession {
     private launchedSelection: ModelSelection | null = null;
     // The account the running CLI was started under, which what it reports about a plan belongs to.
     private launchedAccount: string | undefined = undefined;
+    private launchedFolders: readonly string[] = [];
     // The checkpoint of the turn in flight; everything queued for that turn waits for it.
     private turnReady: Promise<void> = Promise.resolve();
     // Turns we settled ourselves whose `result` is still on its way; it may not close the turn after them.
@@ -302,7 +308,7 @@ export class ChatSession {
         };
         // The prompt waits for the checkpoint, so the tree is the folder as it was before the agent edited it.
         this.turnReady = this.checkpoint(turnId);
-        this.run((backend) => backend.sendTurn(input));
+        this.startTurnWith((backend) => backend.sendTurn(input));
     }
 
     /* Asks the CLI to fold its context: a call of its own, or the slash command as a turn. */
@@ -319,7 +325,7 @@ export class ChatSession {
         this.openTurn(null, null, {});
         // Folding the context changes no file, so this turn needs no checkpoint.
         this.turnReady = Promise.resolve();
-        this.run((backend) => backend.compact());
+        this.startTurnWith((backend) => backend.compact());
     }
 
     cancel(): void {
@@ -557,7 +563,7 @@ export class ChatSession {
         ]);
         this.options.persist();
         this.turnReady = this.checkpoint(turnId);
-        this.run((backend) => backend.sendTurn({ text: wake.text, preamble, attachments: [], mentions: [], skills: [] }));
+        this.startTurnWith((backend) => backend.sendTurn({ text: wake.text, preamble, attachments: [], mentions: [], skills: [] }));
         return turnId;
     }
 
@@ -1006,6 +1012,14 @@ export class ChatSession {
             .catch((error: unknown) => this.receive(this.generation, { type: 'failed', message: errorText(error) }));
     }
 
+    /* Only where a turn starts, so a stop or a resume never ends the process of the turn it is about. */
+    private startTurnWith(work: (backend: ChatBackend) => void): void {
+        if (this.backend && !sameFolders(this.options.folders?.() ?? [], this.launchedFolders)) {
+            this.restartPending = true;
+        }
+        this.run(work);
+    }
+
     private ensureBackend(): Promise<ChatBackend> {
         if (this.backend && this.restartPending) {
             // Let the old one go quietly; its events are dropped and its exit must not end the chat.
@@ -1028,6 +1042,8 @@ export class ChatSession {
         const generation = this.generation;
         const info = this.thread.info;
         this.launchedSelection = info.selection;
+        const folders = this.options.folders?.() ?? [];
+        this.launchedFolders = folders;
         const launch: BackendLaunch = {
             command: this.options.command,
             cwd: info.cwd,
@@ -1039,6 +1055,7 @@ export class ChatSession {
             generation,
             instructions: this.options.instructions?.() ?? null,
             resumeNote: this.options.resumeNote?.() ?? null,
+            ...(folders.length > 0 ? { folders } : {}),
             ...(this.options.spawn ? { spawn: this.options.spawn } : {})
         };
         const made: { backend: ChatBackend | null } = { backend: null };
