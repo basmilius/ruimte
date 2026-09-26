@@ -1,6 +1,6 @@
 import type { ChatItem } from '@ruimte/contracts';
 import type { ChatManager } from './chat-manager.ts';
-import type { ChatSession } from './chat-session.ts';
+import type { ChatSession } from '@ruimte/agents/chat/chat-session';
 
 /* A chat the daemon may open a turn in, as the outbox handlers see it: what its thread holds, and the one call that opens one, false while a turn or an owed resume is in the way. */
 export interface WakeChat {

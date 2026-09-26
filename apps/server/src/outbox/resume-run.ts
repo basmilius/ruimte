@@ -1,5 +1,5 @@
 import type { InterruptedRun } from '../chat/chat-manager.ts';
-import { notResumedNote } from '../chat/chat-session.ts';
+import { notResumedNote } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import type { OutboxEntry, OutboxWork, ResumeRunEntry } from './outbox.ts';
 

@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatItem, Plan, ProjectContent } from '@ruimte/contracts';
-import { PLAN_RESUME_PREAMBLE, RESUME_PROMPT } from '../chat/chat-session.ts';
+import { PLAN_RESUME_PREAMBLE, RESUME_PROMPT } from '../chat/chat-manager.ts';
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';

@@ -1,7 +1,7 @@
-import type { AgentKind } from '@ruimte/contracts';
-import { cleanTitle } from '@ruimte/agents/title-file';
-import { streamCommand } from '../git/run.ts';
+import type { AgentKind } from '@ruimte/agent-contracts';
+import { cleanTitle } from '../title-file.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
+import { runProcess } from '../run-process.ts';
 
 // Enough of a conversation to name it; the rest of a long prompt or answer says nothing a title needs.
 const MAX_PROMPT_CHARS = 2000;
@@ -63,7 +63,7 @@ export const parseTitle = (output: string): string | null => {
 };
 
 /*
- * A title for a chat whose CLI names nothing itself, from the agent CLI the machine already has in
+ * A title for a chat whose CLI names nothing itself, from the agent CLI the host already has in
  * its one-shot print mode. Null when no CLI here answers a single prompt, when it fails or when it
  * takes too long: the name the client derived from the prompt then stays.
  */
@@ -73,16 +73,10 @@ export const suggestChatTitle = async (registry: ProviderRegistry, preferred: Ag
     if (provider === null || args === null) {
         return null;
     }
-    let kill: (() => void) | null = null;
-    const timer = setTimeout(() => kill?.(), TIMEOUT_MS);
     try {
-        const result = await streamCommand(provider.command[0]!, args, input.cwd, {
-            onSpawn: (stop) => {
-                kill = stop;
-            }
-        });
-        return result.code === 0 ? parseTitle(result.stdout) : null;
-    } finally {
-        clearTimeout(timer);
+        const result = await runProcess([provider.command[0]!, ...args], { cwd: input.cwd, timeoutMs: TIMEOUT_MS });
+        return result.exitCode === 0 ? parseTitle(result.stdout) : null;
+    } catch {
+        return null;
     }
 };

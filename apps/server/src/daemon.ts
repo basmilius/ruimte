@@ -46,7 +46,7 @@ import { DirectPeers } from './pulsar/peers.ts';
 import { greetingLines } from './cli/greeting.ts';
 import { guardWeriftTurn } from './pulsar/turn-guard.ts';
 import { registerDirectHandlers } from './handlers/direct.ts';
-import { suggestChatTitle } from './chat/chat-title.ts';
+import { suggestChatTitle } from '@ruimte/agents/chat/chat-title';
 import { decideAccess, handleLocalTicketRequest, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
 import { readOrCreateLocalSecret } from './auth/local-secret.ts';
 import { signLinkRequest, signRegistration } from './auth/registration.ts';

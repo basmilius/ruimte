@@ -8,34 +8,47 @@ import type {
     ChatSkill,
     ChatSubagentItem,
     ChatTurnItem,
-    ContextSource,
     ModelSelection,
-    RuntimeMode,
-    Task
-} from '@ruimte/contracts';
-import { notResumedNote } from '@ruimte/contracts';
-import { chatReferenceNote, resolveChatReferences } from '../context/chat-references.ts';
-import { contextChangeNote } from '../context/context-note.ts';
-import type { CheckpointService } from '../git/checkpoints.ts';
-import type { ChatProvider } from '@ruimte/agents/providers/provider';
-import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
-import type { BackendEvent, BackendLaunch, ChatBackend } from '@ruimte/agents/chat/backend';
-import { runningInBackground } from '@ruimte/agents/chat/background-work';
-import type { SpawnChatProcess } from '@ruimte/agents/chat/chat-process';
+    RuntimeMode
+} from '@ruimte/agent-contracts';
+import { notResumedNote } from '@ruimte/agent-contracts';
+import type { ChatProvider } from '../providers/provider.ts';
+import type { LimitsUpdate } from '../usage/limits/normalize.ts';
+import type { BackendEvent, BackendLaunch, ChatBackend } from './backend.ts';
+import { runningInBackground } from './background-work.ts';
+import type { SpawnChatProcess } from './chat-process.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
-import { limitedTurn, limitResumeAt, limitResumeWake } from '@ruimte/agents/chat/limit-resume';
-import { ThreadProjector } from '@ruimte/agents/chat/projector';
-import type { SubagentSettlement } from '@ruimte/agents/chat/subagent-settlement';
-import { ChatThread } from '@ruimte/agents/chat/thread';
+import { limitedTurn, limitResumeAt, limitResumeWake } from './limit-resume.ts';
+import { ThreadProjector } from './projector.ts';
+import type { SubagentSettlement } from './subagent-settlement.ts';
+import { ChatThread } from './thread.ts';
 import { errorText } from '../error-text.ts';
 
-interface ChatSessionOptions {
+/* What a host keeps of a chat's turns in git (or anything like it), so a turn can show what it changed. */
+export interface TurnCheckpoints {
+    take(cwd: string): Promise<string | null>;
+    diff(cwd: string, tree: string): Promise<ChatCheckpointDiff | null>;
+    /* The diff of a turn that ended, with the tree of the folder it was taken against: where that turn left the files. */
+    settle(cwd: string, tree: string): Promise<{ diff: ChatCheckpointDiff; after: string } | null>;
+}
+
+/* What a host says in front of the next real prompt, beside the preambles a chat keeps itself. */
+export interface PromptNotes {
+    /* `shown` also lands in the thread as a note a person reads; `heard` only reaches the CLI. */
+    next(): { shown: string[]; heard: string[] };
+    /* The chat started over, so the next prompt is its first again. */
+    reset(): void;
+}
+
+/* Chats a person attached to a message: the ones the host knows, and what the agent is told about them. */
+export type ChatReferences = (ids: readonly string[] | undefined) => { ids: string[]; note: string | null };
+
+export interface ChatSessionOptions {
     info: ChatInfo;
     items?: ChatItem[];
     // Said once, in front of the next real prompt, and kept in the record until then (a fork's note for its agent).
     preambles?: string[];
-    clearedTaskIds?: string[];
     provider: ChatProvider;
     // The executable and leading arguments; a test points this at a fake CLI.
     command: string[];
@@ -45,14 +58,10 @@ interface ChatSessionOptions {
     // What the agent is told at the start of every process, and what of it a resumed thread hears again; see `BackendLaunch`.
     instructions?(): string | null;
     resumeNote?(): string | null;
-    // The links as they are now: named in the CLI's first prompt, and a change between two turns put in front of the next one.
-    contextSources?(): ContextSource[];
-    // The name of a chat of the same project a person attached to a message; null for any other id.
-    chatTitle?(id: string): string | null;
-    // What another node left for this chat, taken as it is handed over: delivered once, in front of the next prompt.
-    messages?(): string[];
-    // Git trees per turn, so a settled turn can show what the working tree holds against its start.
-    checkpoints?: CheckpointService;
+    promptNotes?: PromptNotes;
+    references?: ChatReferences;
+    // Trees per turn, so a settled turn can show what the working tree holds against its start.
+    checkpoints?: TurnCheckpoints;
     emit(event: ChatEvent): void;
     /* What a turn said about the plan it runs on. It belongs to the machine, so it leaves the chat. */
     onLimits?(update: LimitsUpdate): void;
@@ -89,11 +98,12 @@ export interface ChatSendExtras {
     attachments?: ChatAttachment[];
 }
 
-// What a resumed CLI is told: its transcript ends where the process did, and a tool call that was out is lost to it.
-export const RESUME_PROMPT = 'The machine restarted while you were working on the previous message. Continue where you left off.';
-
-// Said in front of a resume when the chat keeps a plan with steps left.
-export const PLAN_RESUME_PREAMBLE = 'You keep a plan in this chat: ruimte-context plan read shows where you were.';
+/* How a turn the host went down in is taken up: what the CLI is told, the note a person reads, and what goes in front. */
+export interface ResumeWords {
+    prompt: string;
+    note: string;
+    preamble: string | null;
+}
 
 /* One per limited turn, so a second fork of the same turn writes no second note. */
 const continuedNoteId = (turnId: string): string => `continued-${turnId}`;
@@ -118,8 +128,6 @@ export class ChatSession {
     private launchedSelection: ModelSelection | null = null;
     // The account the running CLI was started under, which what it reports about a plan belongs to.
     private launchedAccount: string | undefined = undefined;
-    // The links at the previous turn; null until the first turn, whose backend hears about them at launch.
-    private lastSources: ContextSource[] | null = null;
     // The checkpoint of the turn in flight; everything queued for that turn waits for it.
     private turnReady: Promise<void> = Promise.resolve();
     // Turns we settled ourselves whose `result` is still on its way; it may not close the turn after them.
@@ -131,12 +139,10 @@ export class ChatSession {
     private frozen = false;
     // Background subagents a load found running whose transcript did not show an end yet; no CLI here will report them.
     private readonly orphans = new Set<string>();
-    private readonly clearedTasks: Set<string>;
     private pendingPreambles: readonly string[];
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
-        this.clearedTasks = new Set(options.clearedTaskIds);
         this.pendingPreambles = options.preambles ?? [];
         this.thread = new ChatThread(options.info, options.items);
         this.projector = new ThreadProjector(this.thread, { providerName: options.provider.name });
@@ -157,10 +163,6 @@ export class ChatSession {
     /* What still waits for the next real prompt, for the record. */
     get preambles(): readonly string[] {
         return this.pendingPreambles;
-    }
-
-    get clearedTaskIds(): string[] {
-        return [...this.clearedTasks];
     }
 
     get pid(): number | null {
@@ -288,9 +290,9 @@ export class ChatSession {
         this.settleAgentTurn();
         const { preamble, note } = this.contextNote(text);
         // A slash command must stay the first thing the CLI reads, as `contextNote` keeps it.
-        const references = text.startsWith('/') ? [] : resolveChatReferences(extras.chats, (id) => this.options.chatTitle?.(id) ?? null);
-        const turnId = this.openTurn(text, note, { ...extras, chats: references.map((reference) => reference.id) }, requestedTurnId);
-        const said = [preamble, chatReferenceNote(references)].filter((part): part is string => part !== null);
+        const references = text.startsWith('/') || !this.options.references ? { ids: [], note: null } : this.options.references(extras.chats);
+        const turnId = this.openTurn(text, note, { ...extras, chats: references.ids }, requestedTurnId);
+        const said = [preamble, references.note].filter((part): part is string => part !== null);
         const input = {
             text,
             preamble: said.length === 0 ? null : said.join('\n\n'),
@@ -385,18 +387,15 @@ export class ChatSession {
      * A turn in the way is refused unless forced, and a forced clear does not wait for it to end,
      * since the turn disappears with the thread anyway. Writing the empty thread is the caller's.
      */
-    clear(force: boolean, tasks: readonly Task[] = []): void {
+    clear(force: boolean): void {
         if (this.busy && !force) {
             throw new ChatError('chat-busy', `Chat ${this.id} is still working on the previous message`);
-        }
-        for (const task of tasks) {
-            this.clearedTasks.add(task.id);
         }
         void this.dispose();
         this.generation += 1;
         this.projector.reset();
-        // Null again, so the fresh CLI hears about its links at launch as it would on a first turn.
-        this.lastSources = null;
+        // The fresh CLI hears what the host tells it at launch, as it would on a first turn.
+        this.options.promptNotes?.reset();
         // A cleared chat starts a new conversation, which what was waiting to be said no longer describes.
         this.pendingPreambles = [];
         this.staleResults = 0;
@@ -476,7 +475,7 @@ export class ChatSession {
      * ended or already has that attempt, so the outbox may run it twice. A CLI that will not start
      * throws and leaves the turn waiting for the next try.
      */
-    async resume(turnId: string, attempt: number, preamble: string | null = null): Promise<void> {
+    async resume(turnId: string, attempt: number, words: ResumeWords): Promise<void> {
         if (!this.awaitsResume(turnId, attempt)) {
             return;
         }
@@ -496,12 +495,12 @@ export class ChatSession {
         const now = Date.now();
         this.emit([
             this.thread.upsert({ ...turn, attempt }),
-            this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: 'Resumed after the machine restarted' })
+            this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: words.note })
         ]);
         this.options.persist();
         // The turn keeps the checkpoint it started with, so its card still shows everything it changed.
         this.turnReady = Promise.resolve();
-        backend.sendTurn({ text: RESUME_PROMPT, preamble, attachments: [], mentions: [], skills: [] });
+        backend.sendTurn({ text: words.prompt, preamble: words.preamble, attachments: [], mentions: [], skills: [] });
     }
 
     /* Ends a running turn nobody is working on, with the reason in the thread when there is one; the queue goes out after it. */
@@ -652,10 +651,10 @@ export class ChatSession {
     }
 
     /*
-     * The limited turn went on in a fork, so what the outbox owes for it lapses, and the note says where
+     * The limited turn went on elsewhere (a fork), so what the host owes for it lapses, and the note says where
      * it went. The note is also the mark that keeps a switch turned on later from owing that turn again.
      */
-    continuedInFork(note: string): void {
+    continuedElsewhere(note: string): void {
         this.lapseResume();
         const turn = limitedTurn(this.thread.list());
         if (turn === null || this.wentOn(turn)) {
@@ -700,59 +699,14 @@ export class ChatSession {
         return true;
     }
 
-    /*
-     * The task row in the thread of the chat that gave it, written from the task alone so
-     * writing it twice changes nothing. A new row joins the turn that is running, which is the turn
-     * that ran the verb; a cancelled task gets a note saying why its row failed.
-     */
-    upsertTaskRow(task: Task): void {
-        if (this.clearedTasks.has(task.id)) {
+    /* Writes items a host draws in the thread itself (a row for work it delegated), leaving the ones that did not change alone. */
+    upsertItems(items: readonly ChatItem[]): void {
+        const changed = items.filter((item) => JSON.stringify(this.thread.get(item.id)) !== JSON.stringify(item));
+        if (changed.length === 0) {
             return;
         }
-        const id = `task-${task.id}`;
-        const existing = this.thread.get(id);
-        const row: ChatSubagentItem = {
-            id,
-            kind: 'subagent',
-            createdAt: task.createdAt,
-            turnId: existing?.turnId ?? this.thread.info.activeTurnId,
-            toolUseId: id,
-            description: task.title,
-            subagentType: null,
-            prompt: task.prompt,
-            background: true,
-            status: task.status === 'open' ? 'running' : task.status === 'done' ? 'done' : 'failed',
-            startedAt: task.createdAt,
-            finishedAt: task.settledAt,
-            summary: null,
-            result: task.result?.text ?? null,
-            usage: null,
-            lastTool: null,
-            itemsTruncated: false,
-            origin: 'ruimte',
-            childId: task.childId
-        };
-        const events: ChatEvent[] = [];
-        if (JSON.stringify(existing) !== JSON.stringify(row)) {
-            events.push(this.thread.upsert(row));
-        }
-        const noteId = `${id}-cancelled`;
-        if (task.status === 'cancelled' && this.thread.get(noteId) === undefined) {
-            events.push(
-                this.thread.upsert({
-                    id: noteId,
-                    kind: 'note',
-                    createdAt: task.settledAt ?? task.createdAt,
-                    turnId: null,
-                    level: 'warning',
-                    text: `The task "${task.title}" was cancelled: ${task.result?.text ?? 'its node was removed'}`
-                })
-            );
-        }
-        if (events.length > 0) {
-            this.emit(events);
-            this.options.persistSoon();
-        }
+        this.emit(changed.map((item) => this.thread.upsert(item)));
+        this.options.persistSoon();
     }
 
     /* A line in the thread outside any turn, for something the daemon has to say about work it gave up on. */
@@ -1021,28 +975,21 @@ export class ChatSession {
     }
 
     /*
-     * What the agent has to hear before this prompt: a link made or removed between turns, and any
-     * message another node left for it. Each is said once, and only in front of a real prompt.
-     *
-     * The thread gets less of it than the CLI. A message is written there as it lands, by whichever
-     * channel got it first, so repeating it above the turn it opened tells a person the same thing
-     * twice; the rest nobody has read yet.
+     * What the agent has to hear before this prompt: what the chat kept for it and what the host says.
+     * Each is said once, and only in front of a real prompt. The thread gets only what the host shows.
      */
     private contextNote(text: string): { preamble: string | null; note: string | null } {
         // A slash command must stay the first thing the CLI reads; the rest waits for a real prompt.
         if (text.startsWith('/')) {
             return { preamble: null, note: null };
         }
-        const current = this.options.contextSources?.() ?? [];
-        const previous = this.lastSources;
-        this.lastSources = current;
+        const host = this.options.promptNotes?.next() ?? { shown: [], heard: [] };
         // Every caller persists right after opening its turn, so the record forgets them along with the turn it writes.
         const preambles = this.pendingPreambles;
         this.pendingPreambles = [];
-        const read = [...preambles, ...(previous === null ? [] : [contextChangeNote(previous, current)])].filter((part): part is string => part !== null);
-        const messages = this.options.messages?.() ?? [];
+        const read = [...preambles, ...host.shown];
         const joined = (parts: string[]): string | null => (parts.length === 0 ? null : parts.join('\n\n'));
-        return { preamble: joined([...read, ...messages]), note: joined(read) };
+        return { preamble: joined([...read, ...host.heard]), note: joined(read) };
     }
 
     /* Runs one turn against the backend; a backend that will not start ends the turn with the reason. */
@@ -1341,9 +1288,6 @@ export interface ResumeDecision {
     resumeTurnId: string | null;
     reason: string | null;
 }
-
-/* The one sentence a turn that a restart did not take up again ends with, whatever the reason; the client reads it too. */
-export { notResumedNote };
 
 // Whatever was open when the daemon went down: nobody is going to answer it now.
 const settleStoredItem = (item: ChatItem, resumeTurnId: string | null): ChatItem => {

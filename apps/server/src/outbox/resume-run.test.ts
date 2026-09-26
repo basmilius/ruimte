@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 import { ChatManager } from '../chat/chat-manager.ts';
-import { RESUME_PROMPT } from '../chat/chat-session.ts';
+import { RESUME_PROMPT } from '../chat/chat-manager.ts';
 import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import type { SpawnChatProcess } from '@ruimte/agents/chat/chat-process';
 import { fakeClaude } from '@ruimte/agents/chat/fake-claude';
