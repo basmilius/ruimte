@@ -14,3 +14,24 @@ export const rowRhythm = (row: TimelineRow, previous: TimelineRow | null): strin
     const seam = !question && previous !== null && previous.kind !== 'user' && isBlock(row) !== isBlock(previous);
     return clsx(question && 'pb-(--chat-answer-gap)', seam && 'pt-(--chat-block-gap)');
 };
+
+/*
+ * Whether a reply's header goes over this row, and the time it shows: the first row after the question
+ * or the agent's own turn opener, whatever row that is, dated when that turn began. A thread that
+ * starts halfway through a reply has no time to show.
+ */
+export const replyHeader = (row: TimelineRow, previous: TimelineRow | null): { at: number | null } | null => {
+    if (row.kind === 'user' || row.kind === 'turn-start') {
+        return null;
+    }
+    if (previous === null) {
+        return { at: null };
+    }
+    if (previous.kind === 'user') {
+        return { at: previous.item.createdAt };
+    }
+    if (previous.kind === 'turn-start') {
+        return { at: previous.turn.createdAt };
+    }
+    return null;
+};

@@ -15,13 +15,14 @@ import { FadingWords } from '../FadingWords';
 import { settledBlocksText } from '../markdown-blocks';
 import { WHOLE_FADE_CLASS } from '../rehype-fade';
 import { useRevealedText } from '../reveal';
-import { formatElapsedShort } from '@ruimte/ui/format/duration';
+import { formatAgo, formatElapsedShort } from '@ruimte/ui/format/duration';
 import { formatTokens } from '@ruimte/ui/format/number';
 import { toolSummary } from '../../logic/tools';
 import { ROW_GUTTER } from '../icons';
 import { useOpenForFind } from '../find-reveal';
 import { Icon } from '@ruimte/ui/Icon';
 import { Tooltip } from '@ruimte/ui/Tooltip';
+import { useTickingText } from '@ruimte/ui/useNow';
 
 // A long prompt folds so the answer stays in view; the reader can open it.
 const USER_FOLD_LINES = 8;
@@ -145,12 +146,38 @@ export function ReportRow({ id, text }: { id: string; text: string }) {
     );
 }
 
-/* The heading of a reply, named after the agent the chat runs. */
+/* The heading of a reply, named after its author when the host names one and after the agent the chat runs otherwise. */
 function ReplyHeading({ chatId }: { chatId: string }) {
     const { t } = useTranslation('agent-chat');
+    const { id } = useChatScope();
+    const author = chatHost().useReplyAuthor(id, chatId);
     const kind = useChatRow(chatId, (row) => row?.info.provider);
     const name = useProviders((s) => s.providers.find((provider) => provider.kind === kind)?.name);
-    return <MessageHeading>{name ?? t('rows.reply.agent')}</MessageHeading>;
+    return <MessageHeading>{author?.name ?? name ?? t('rows.reply.agent')}</MessageHeading>;
+}
+
+/*
+ * The line over a reply with who wrote it and how long ago, when the host names its author. A screen
+ * reader hears the name from the reply's own heading, so this line is for the eye only.
+ */
+export function ReplyHeader({ chatId, at }: { chatId: string; at: number | null }) {
+    const { id } = useChatScope();
+    const author = chatHost().useReplyAuthor(id, chatId);
+    if (author === null) {
+        return null;
+    }
+    return (
+        <div aria-hidden className="mb-1 flex h-6 items-center gap-2 text-sm font-medium text-text select-none">
+            {author.mark}
+            <span className="min-w-0 truncate">{author.name}</span>
+            {at !== null && <ReplyAge at={at} />}
+        </div>
+    );
+}
+
+function ReplyAge({ at }: { at: number }) {
+    const ref = useTickingText(() => formatAgo(Date.now() - at), 30_000);
+    return <span ref={ref} className="shrink-0 font-normal text-text-faint" />;
 }
 
 /* The line that stands where the next words will land; a component, so the word is read at render and not at import. */

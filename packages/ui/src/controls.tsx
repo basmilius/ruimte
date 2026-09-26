@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { Switch } from '@base-ui-components/react/switch';
 import { useTranslation } from 'react-i18next';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, type LucideIcon } from 'lucide-react';
 import { BTN_GROUP } from './classes.ts';
 import { Tooltip } from './Tooltip.tsx';
 import { Icon } from './Icon.tsx';
@@ -11,6 +11,7 @@ import { Icon } from './Icon.tsx';
 interface Option<T extends string> {
     id: T;
     label: string;
+    icon?: LucideIcon;
 }
 
 export function Segmented<T extends string>({
@@ -31,15 +32,17 @@ export function Segmented<T extends string>({
             {options.map((option) => (
                 <button
                     key={option.id}
+                    type="button"
                     role="radio"
                     aria-checked={value === option.id}
                     disabled={disabled}
                     className={clsx(
-                        'h-7 rounded-md px-3 transition-colors disabled:opacity-50',
+                        'flex h-7 items-center gap-1.5 rounded-md px-3 transition-colors disabled:opacity-50',
                         value === option.id ? 'bg-surface-raised text-text shadow-node' : 'text-text-muted hover:text-text'
                     )}
                     onClick={() => onChange(option.id)}
                 >
+                    {option.icon && <Icon icon={option.icon} size={14} />}
                     {option.label}
                 </button>
             ))}
@@ -82,6 +85,7 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
         <div className={`${BTN_GROUP} shrink-0 rounded-lg bg-surface-sunken p-0.5`} role="group" aria-label={label}>
             <Tooltip label={t('controls.stepper.smaller')}>
                 <button
+                    type="button"
                     className="icon-btn icon-btn-sm"
                     aria-label={t('controls.stepper.smallerFor', { label })}
                     disabled={value <= min}
@@ -96,6 +100,7 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
             </span>
             <Tooltip label={t('controls.stepper.larger')}>
                 <button
+                    type="button"
                     className="icon-btn icon-btn-sm"
                     aria-label={t('controls.stepper.largerFor', { label })}
                     disabled={value >= max}

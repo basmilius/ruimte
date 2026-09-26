@@ -146,6 +146,13 @@ export interface ThreadCard {
     render(): ReactNode;
 }
 
+/* Who writes a chat's replies, as the header over each one names them. */
+export interface ReplyAuthor {
+    name: string;
+    /* Drawn before the name, such as an avatar. */
+    mark?: ReactNode;
+}
+
 /*
  * What the app around the chat decides and the chat cannot. Set once, before the first render, with
  * `setChatHost`; whatever an app leaves out keeps the default here, which is the chat without that
@@ -240,6 +247,8 @@ export interface ChatHost {
     ComposerSlot: ComponentType<ComposerSlotProps> | null;
     /* Cards of the app's own in a thread, in any order. Hand back the same array while none changed, or the thread lays out its rows again on every render. */
     useThreadCards(scopeId: string, chatId: string): readonly ThreadCard[];
+    /* A header over every reply with its author and how long ago it began; null names the agent for a screen reader only. */
+    useReplyAuthor(scopeId: string, chatId: string): ReplyAuthor | null;
 }
 
 const NO_PROMPTS: readonly HostPrompt[] = [];
@@ -279,7 +288,8 @@ const DEFAULT_HOST: ChatHost = {
     useResumeAtReset: () => true,
     useComposerPlaceholder: () => null,
     ComposerSlot: null,
-    useThreadCards: () => NO_CARDS
+    useThreadCards: () => NO_CARDS,
+    useReplyAuthor: () => null
 };
 
 let host: ChatHost = DEFAULT_HOST;

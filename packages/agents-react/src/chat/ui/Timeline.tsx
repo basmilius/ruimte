@@ -28,11 +28,12 @@ import { BookmarkMarker } from './BookmarkMarker';
 import { MessageActions } from './MessageActions';
 import { Scrubber, type CardChat } from './Scrubber';
 import { TimelineMenuPopup } from './TimelineMenu';
-import { FOLLOW_THRESHOLD_PX, rowRhythm } from './rows/row-rhythm';
+import { FOLLOW_THRESHOLD_PX, replyHeader, rowRhythm } from './rows/row-rhythm';
 import { QuoteButton } from './QuoteButton';
 import { QuoteTakerContext, type QuoteTaker } from './quote-selection';
 import { useToggleSet } from './useToggleSet';
 import { Row } from './rows/Rows';
+import { ReplyHeader } from './rows/MessageRows';
 import { useChatRow, useChats } from '../../state/chats';
 import { chatHost } from '../../host';
 import { useChatScope } from '../../scope';
@@ -421,6 +422,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                             // Put turn gaps inside the measured row so the virtualizer includes them.
                                             const question = row.kind === 'user';
                                             const previous = virtualRow.index > 0 ? rows[virtualRow.index - 1]! : null;
+                                            const header = replyHeader(row, previous);
                                             return (
                                                 <div
                                                     key={row.id}
@@ -434,6 +436,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                                     )}
                                                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                                                 >
+                                                    {header !== null && <ReplyHeader chatId={chatId} at={header.at} />}
                                                     <FindRevealContext.Provider value={chatFind.reveal}>
                                                         <MarkableRow row={row} chatId={chatId} bookmark={marks.get(row.id) ?? null}>
                                                             <Row

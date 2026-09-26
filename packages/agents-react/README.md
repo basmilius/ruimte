@@ -123,11 +123,18 @@ The stylesheet goes right after the ui theme, and Tailwind scans the `dist` of b
 
 ## An app's own parts in the chat
 
-Three fields of `setChatHost` put an app's own words and parts in the chat. Each is optional; without them the chat looks as it always did.
+Four fields of `setChatHost` put an app's own words and parts in the chat. Each is optional; without them the chat looks as it always did.
 
 - **`useComposerPlaceholder(scopeId, chatId)`** returns the words an empty composer opens with, in place of "Ask anything". The keys it hints at (`/`, `@`, `$`) still follow, and a composer without a connection still says so. Return null to keep the chat's own words.
 - **`ComposerSlot`** is a component drawn in the composer's row of controls, after the pickers. It gets `scopeId`, `chatId`, `disabled` and `insert(text)`, which types the text in at the caret as if the person had typed it, a space apart from a word it would touch.
 - **`useThreadCards(scopeId, chatId)`** returns the cards an app shows between the messages of a thread, as `{ id, at, render }`. `at` is a time in milliseconds on the clock of a chat item's `createdAt`. A card goes right before the first row that began after it: in a folded turn that is under the fold, in an open turn between its calls, and in a running turn above the working line. `render` is called only while the card is on screen. The cards are the app's alone and never go over the wire. Return the same array while none of them changed.
+- **`useReplyAuthor(scopeId, chatId)`** returns `{ name, mark? }` to draw a header over every reply: the mark (an avatar, say), the name and how long ago the turn began. It goes over the first row after the question or the agent's own turn opener, so a reply split by tool calls gets one. A screen reader hears the name from the reply's heading instead. Return null to keep the thread without headers.
+
+The gaps between messages are custom properties on `.chat-thread`, in the `components` layer, so an app's own rule overrides them: `--chat-answer-gap` from a question to its answer, `--chat-turn-gap` from the end of a turn to the next question, and `--chat-block-gap` where a run of tool lines meets prose or a card. A chat in a view of its own (`.chat-column`) sets wider ones.
+
+```css
+.chat-thread, .chat-column .chat-thread { --chat-answer-gap: 14px; --chat-turn-gap: 14px; --chat-block-gap: 8px; }
+```
 
 ```tsx
 setChatHost({
@@ -143,7 +150,8 @@ setChatHost({
     useThreadCards: (_scopeId, chatId) => {
         const versions = useVersions(chatId);
         return useMemo(() => versions.map((version) => ({ id: `v${version.n}`, at: version.at, render: () => <VersionCard version={version} /> })), [versions]);
-    }
+    },
+    useReplyAuthor: () => ({ name: 'Producer', mark: <Avatar role="producer" /> })
 });
 ```
 
