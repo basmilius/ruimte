@@ -22,6 +22,23 @@ three `@ruimte/<os>-<cpu>` packages, and `ruimte` last,
 a version already on the registry skipped, and a prerelease under the `next` tag. A run that failed
 halfway can run again.
 
+The libraries can also go out on their own, between two releases of Ruimte. Ruimte and the
+libraries count up one series of versions: after Ruimte 0.7.0 the libraries go out as 0.7.1, and
+the next release of Ruimte is 0.7.2, which publishes the libraries again at its own version. A tag
+starts it:
+
+```sh
+git tag libraries-v0.7.1 && git push origin libraries-v0.7.1
+```
+
+The tag starts `npm.yml` and never `release.yml`, which only takes `v*`. The run refuses a version
+that already has a `v` tag, runs `ci.yml` on the tagged commit, and publishes the four libraries
+with `publish.ts --libraries`, without compiling a daemon. Again by hand:
+`gh workflow run npm.yml --ref libraries-v0.7.1 -f version=0.7.1 -f libraries=true`; the `--ref`
+is what `ci.yml` checks out. The other way round nothing stops a release of Ruimte on a version
+the libraries already took, and then npm skips them, so a release of Ruimte picks the next version
+after the last tag of either kind (`git tag --sort=-v:refname | head -3`).
+
 There is no npm token. Every package trusts the workflow through Trusted Publishing, set on
 npmjs.com per package under Settings, Trusted publishing: GitHub Actions, owner `basmilius`,
 repository `ruimte`, workflow `npm.yml`, environment `npm`. npm only offers that setting for a
@@ -43,6 +60,7 @@ RUIMTE_VERSION=0.0.0-local bun apps/server/scripts/compile.ts --target darwin-ar
 bun packages/npm/scripts/build.ts --version 0.0.0-local --binaries /tmp/npm/binaries --out /tmp/npm/out --only darwin-arm64
 bun packages/npm/scripts/build-libraries.ts --version 0.0.0-local --out /tmp/npm/out
 bun packages/npm/scripts/publish.ts --out /tmp/npm/out --dry-run    # wants all three platforms
+bun packages/npm/scripts/publish.ts --out /tmp/npm/out --libraries --dry-run
 ```
 
 `bun run test:integration` does the first two and runs `node <launcher> --version` against the result.

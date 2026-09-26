@@ -2,17 +2,25 @@ name: npm
 
 # Publishes `ruimte`, its three `@ruimte/<os>-<cpu>` binary packages (Apple silicon only on macOS) and the libraries
 # `@ruimte/agent-contracts`, `@ruimte/ui`, `@ruimte/agents` and `@ruimte/agents-react` with the version of a release.
+# A tag `libraries-v1.2.3` publishes the libraries alone, on a version Ruimte itself skips.
 # npm trusts this workflow through OIDC (Trusted Publishing, configured per package on npmjs.com for
 # `npm.yml` and the `npm` environment), so there is no token anywhere. A version that is already on
 # the registry is skipped, so a run that failed halfway can simply run again.
 on:
   release:
     types: [published]
+  push:
+    tags:
+      - 'libraries-v*'
   workflow_dispatch:
     inputs:
       version:
         description: The release to publish, without the v (0.2.0); its tag has to exist
         required: true
+      libraries:
+        description: Only the libraries, from the tag libraries-v<version>
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -22,23 +30,52 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      libraries: ${{ steps.version.outputs.libraries }}
+      ref: ${{ steps.version.outputs.ref }}
     steps:
       - id: version
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || github.ref_name }}
           INPUT: ${{ inputs.version }}
+          LIBRARIES: ${{ inputs.libraries || startsWith(github.ref, 'refs/tags/libraries-v') }}
         run: |
-          version="${INPUT:-${TAG#v}}"
+          if [ "$LIBRARIES" = "true" ]; then
+            version="${INPUT:-${TAG#libraries-v}}"
+            ref="libraries-v$version"
+          else
+            version="${INPUT:-${TAG#v}}"
+            ref="v$version"
+          fi
           if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
             echo "Not a version: $version" >&2
             exit 1
           fi
+          # Ruimte and the libraries count up one series, and a release of Ruimte publishes the
+          # libraries at its own version, so a version Ruimte took is never the libraries' alone.
+          if [ "$LIBRARIES" = "true" ] && gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$version" --silent 2>/dev/null; then
+            echo "v$version is a release of Ruimte; the libraries went out with it." >&2
+            exit 1
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "libraries=$LIBRARIES" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+  # release.yml runs ci.yml on a release of Ruimte before this workflow starts; the libraries have no
+  # such gate of their own. It checks out the commit that started this run, so a dispatch passes
+  # `--ref libraries-v<version>`.
+  verify:
+    needs: version
+    if: needs.version.outputs.libraries == 'true'
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
 
   # A macOS binary has to be re-signed with codesign after Bun writes it, or the kernel kills it on
   # launch, so the darwin targets build on macOS. Bun cross-compiles the Linux ones from anywhere.
   binaries:
     needs: version
+    if: needs.version.outputs.libraries != 'true'
     strategy:
       matrix:
         include:
@@ -52,7 +89,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: v${{ needs.version.outputs.version }}
+          ref: ${{ needs.version.outputs.ref }}
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -68,7 +105,9 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: [version, binaries]
+    needs: [version, verify, binaries]
+    # One of verify and binaries is always skipped, and a skipped need skips this job unless it says otherwise.
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && needs.version.result == 'success' }}
     runs-on: ubuntu-latest
     environment: npm
     permissions:
@@ -77,7 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: v${{ needs.version.outputs.version }}
+          ref: ${{ needs.version.outputs.ref }}
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -90,11 +129,13 @@ jobs:
       # Trusted Publishing needs npm 11.5.1 or newer.
       - run: npm install -g npm@latest && npm --version
       - uses: actions/download-artifact@v4
+        if: needs.version.outputs.libraries != 'true'
         with:
           path: binaries
       - name: Lay out the packages
+        if: needs.version.outputs.libraries != 'true'
         run: bun packages/npm/scripts/build.ts --version ${{ needs.version.outputs.version }} --binaries binaries --out npm-packages
       - name: Lay out the libraries
         run: bun packages/npm/scripts/build-libraries.ts --version ${{ needs.version.outputs.version }} --out npm-packages
       - name: Publish, libraries and platform packages first
-        run: bun packages/npm/scripts/publish.ts --out npm-packages
+        run: bun packages/npm/scripts/publish.ts --out npm-packages ${{ needs.version.outputs.libraries == 'true' && '--libraries' || '' }}
