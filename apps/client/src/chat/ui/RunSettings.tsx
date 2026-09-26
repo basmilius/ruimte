@@ -16,12 +16,12 @@ import {
     type LucideIcon
 } from 'lucide-react';
 import type { AgentKind, ChatUsage, ModelInfo, ModelOptionDescriptor, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
-import { AccountDot } from '@/agents/AccountDot';
-import { limitsOfAccount, sessionWindow } from '@/agents/account-limits';
-import { canContinueOn } from '@/agents/accounts';
-import { AgentIcon } from '@/agents/AgentIcon';
+import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
+import { limitsOfAccount, sessionWindow } from '@ruimte/agents-react/agents/account-limits';
+import { canContinueOn } from '@ruimte/agents-react/agents/accounts';
+import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import type { AccountChoice } from '@/chat/account-choice';
-import { modelName, shortModelName } from '@/agents/model-name';
+import { modelName, shortModelName } from '@ruimte/agents-react/agents/model-name';
 import { CONTEXT_OPTION, contextFraction, contextSegments, orderOptions, type ContextPart } from '@/chat/logic/context-usage';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { formatClock, formatWeekdayClock, isSameDay } from '@ruimte/ui/format/datetime';

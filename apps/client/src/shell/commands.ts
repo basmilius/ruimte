@@ -28,7 +28,7 @@ import { activeViewOf, useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { windowWorkspace } from '@/state/window';
-import { providersOf } from '@/state/providers';
+import { providersOf } from '@ruimte/agents-react/state/providers';
 import { useSettings } from '@/state/settings';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useTheme } from '@/state/theme';

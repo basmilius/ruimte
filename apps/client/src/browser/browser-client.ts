@@ -3,7 +3,7 @@ import i18next from 'i18next';
 import { endpointKey } from '@/state/keys';
 import { useBrowser } from './registry';
 import { HandlerTable } from '@/transport/handler-table';
-import { MountedRegistry, type MountedEntry } from '@/transport/mounted-registry';
+import { MountedRegistry, type MountedEntry } from '@ruimte/agents-react/mounted-registry';
 import { isConnectionError, type Transport, type TransportStatus } from '@/transport/transport';
 
 interface MountedBrowser extends MountedEntry {

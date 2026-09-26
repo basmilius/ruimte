@@ -34,7 +34,7 @@ import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canva
 import { finderPaths } from '@/canvas/finder-drop';
 import { askDeleteView, askViewSettings, newFileViewsAfter, revealNode, showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
-import { useChats } from '@/state/chats';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { ViewMenuItems } from '@/shell/ViewMenuItems';
@@ -54,7 +54,7 @@ import {
     type SidebarViewRow
 } from '@/shell/sidebar-rows';
 import { useSidebarSource } from '@/shell/sidebar-source';
-import { AgentIcon } from '@/agents/AgentIcon';
+import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { TaskMark } from '@/tasks/TaskMark';
 import { childTask, useTasks } from '@/state/tasks';

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { CircleCheck, CircleSlash, CircleX, Hourglass, LoaderCircle } from 'lucide-react';
-import { statusLookOf, taskStatusWord } from '@/ui/status-look';
+import { statusLookOf, taskStatusWord } from './status-look';
 
 describe('how a state looks', () => {
     test('every state has one icon and one tone, and only running spins', () => {

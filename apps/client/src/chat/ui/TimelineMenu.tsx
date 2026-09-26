@@ -7,7 +7,7 @@ import { forkRefusal, turnIdOfRow } from '@/chat/logic/fork';
 import { markdownOf, messageTextOf } from '@/chat/logic/timeline-copy';
 import type { TimelineTarget } from '@/chat/logic/timeline-target';
 import { openFileLink, useFileLinkCwd } from '@/shell/panels/file-links';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';

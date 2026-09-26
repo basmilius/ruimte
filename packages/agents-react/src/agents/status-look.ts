@@ -1,5 +1,4 @@
 import { CircleCheck, CircleSlash, CircleX, Hourglass, LoaderCircle, type LucideIcon } from 'lucide-react';
-import type { Task } from '@ruimte/contracts';
 
 /* The states a piece of work settles into, wherever it is drawn. */
 export type StatusWord = 'running' | 'paused' | 'done' | 'failed' | 'cancelled';
@@ -26,8 +25,15 @@ const LOOKS: Record<StatusWord, StatusLook> = {
 
 export const statusLookOf = (word: StatusWord): StatusLook => LOOKS[word];
 
-/* A task calls its running state `open`, which is the daemon's word for it and not a person's; an open task whose child stopped on a limit is paused. */
-export const taskStatusWord = (task: Pick<Task, 'status' | 'paused'>): StatusWord => {
+/* A task as far as its look goes, for an app that hands work to agents as tasks. */
+export interface TaskState {
+    status: 'open' | 'done' | 'failed' | 'cancelled';
+    /* Set while the child waits out a limit. */
+    paused?: object;
+}
+
+/* A task calls its running state `open`, which is the host's word for it and not a person's; an open task whose child stopped on a limit is paused. */
+export const taskStatusWord = (task: TaskState): StatusWord => {
     if (task.status !== 'open') {
         return task.status;
     }

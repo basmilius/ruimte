@@ -18,6 +18,7 @@ import { useSettings } from '@/state/settings';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
 import { useWindow } from '@/state/window';
+import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
 import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
 import { lazyDialog, lazyNamed } from '@/ui/lazy';
 import { prefetcher } from '@/ui/prefetch';
@@ -119,32 +120,34 @@ export function App() {
 
     return (
         <TooltipProvider>
-            {/* The last resort, for a failure outside every view, node and panel. It unmounts the
+            <ChatScopeProvider>
+                {/* The last resort, for a failure outside every view, node and panel. It unmounts the
                 parked browser pages as well, which is why everything below carries a boundary of its own. */}
-            <ErrorBoundary label={i18next.t('common:state.error')} className="fixed inset-0 bg-bg" reload>
-                <WindowContent />
-                <ErrorBoundary label={failed('palette')} compact className={FLOATING_FAILURE}>
-                    <CommandPalette />
+                <ErrorBoundary label={i18next.t('common:state.error')} className="fixed inset-0 bg-bg" reload>
+                    <WindowContent />
+                    <ErrorBoundary label={failed('palette')} compact className={FLOATING_FAILURE}>
+                        <CommandPalette />
+                    </ErrorBoundary>
+                    <ErrorBoundary label={failed('settings')} compact className={FLOATING_FAILURE}>
+                        <SettingsDialog />
+                    </ErrorBoundary>
+                    <UsageDialog />
+                    <ModelsDialog />
+                    <ErrorBoundary label={failed('toasts')} compact className={FLOATING_FAILURE}>
+                        <Toasts />
+                    </ErrorBoundary>
+                    <ReleaseNotesDialog />
+                    <ErrorBoundary label={failed('machineUpdate')} compact className={FLOATING_FAILURE}>
+                        <MachineUpdateDialog />
+                    </ErrorBoundary>
+                    <ErrorBoundary label={failed('link')} compact className={FLOATING_FAILURE}>
+                        <LinkRequestDialog />
+                    </ErrorBoundary>
+                    <ErrorBoundary label={failed('shortcutHints')} compact className={FLOATING_FAILURE}>
+                        <ShortcutHints />
+                    </ErrorBoundary>
                 </ErrorBoundary>
-                <ErrorBoundary label={failed('settings')} compact className={FLOATING_FAILURE}>
-                    <SettingsDialog />
-                </ErrorBoundary>
-                <UsageDialog />
-                <ModelsDialog />
-                <ErrorBoundary label={failed('toasts')} compact className={FLOATING_FAILURE}>
-                    <Toasts />
-                </ErrorBoundary>
-                <ReleaseNotesDialog />
-                <ErrorBoundary label={failed('machineUpdate')} compact className={FLOATING_FAILURE}>
-                    <MachineUpdateDialog />
-                </ErrorBoundary>
-                <ErrorBoundary label={failed('link')} compact className={FLOATING_FAILURE}>
-                    <LinkRequestDialog />
-                </ErrorBoundary>
-                <ErrorBoundary label={failed('shortcutHints')} compact className={FLOATING_FAILURE}>
-                    <ShortcutHints />
-                </ErrorBoundary>
-            </ErrorBoundary>
+            </ChatScopeProvider>
         </TooltipProvider>
     );
 }

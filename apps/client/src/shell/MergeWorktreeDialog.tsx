@@ -25,7 +25,7 @@ import {
 import { nodesInWorktree } from '@/shell/panels/worktree-rows';
 import { Segmented, Toggle } from '@ruimte/ui/controls';
 import { nodeWorking } from '@/state/agent-work';
-import { useChats } from '@/state/chats';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { useEndpointId, endpointKey } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';

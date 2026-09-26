@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem } from '@ruimte/contracts';
-import type { ChatState } from '@/state/chats';
+import type { ChatState } from '@ruimte/agents-react/state/chats';
 import { chatCompletion, completionPrompt } from '@/voice/chat-follow-up';
 
 const state = (items: ChatItem[]): ChatState => {

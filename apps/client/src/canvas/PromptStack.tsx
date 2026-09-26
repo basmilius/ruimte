@@ -19,7 +19,7 @@ import { PromptView } from '@/prompts/ui/PromptView';
 import { formatClock } from '@/shell/usage/format';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
-import { useProviders } from '@/state/providers';
+import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useTransportStatus } from '@/transport/status';
 import { BTN_GROUP } from '@ruimte/ui/classes';
 import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';

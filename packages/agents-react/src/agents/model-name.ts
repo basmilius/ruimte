@@ -1,5 +1,5 @@
-import type { AgentKind, ModelInfo } from '@ruimte/contracts';
-import { useProviders } from '@/state/providers';
+import type { AgentKind, ModelInfo } from '@ruimte/agent-contracts';
+import { useProviders } from '../state/providers';
 
 /*
  * A model id as a person reads it, for a model no catalog names: without its vendor prefix and its

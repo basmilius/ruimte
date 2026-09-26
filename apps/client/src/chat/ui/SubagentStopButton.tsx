@@ -5,7 +5,7 @@ import type { ChatSubagentItem } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import { askBeforeStoppingTask } from '@/agents/end-children';
 import { stopLabel, stopOf, subagentTitle } from '@/chat/subagent-list';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { canvasPrompts, samePrompts, type CanvasPrompt } from '@/canvas/prompts';
 import { useCanvasStore } from '@/state/canvas';
-import { useChats } from '@/state/chats';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { computerApprovalsOf, useComputer } from '@/state/computer';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';

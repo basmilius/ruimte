@@ -1,15 +1,22 @@
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, Plus } from 'lucide-react';
 import type { AgentKind, ModelInfo, ProviderInfo } from '@ruimte/contracts';
-import { AccountDot } from '@/agents/AccountDot';
-import { ACCOUNT_TONE_CLASSES, accountName, accountStatusLine, type AccountEntry } from '@/agents/accounts';
-import { accountFor, forgetChatSelection, rememberChatAccount, rememberChatSelection, selectionFor, useChatPreferences } from '@/chat/preferences';
+import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
+import { ACCOUNT_TONE_CLASSES, accountName, accountStatusLine, type AccountEntry } from '@ruimte/agents-react/agents/accounts';
+import {
+    accountFor,
+    forgetChatSelection,
+    rememberChatAccount,
+    rememberChatSelection,
+    selectionFor,
+    useChatPreferences
+} from '@ruimte/agents-react/chat/preferences';
 import { Segmented, Toggle } from '@ruimte/ui/controls';
 import { providerAbilities } from '@/shell/settings/provider-abilities';
 import { CliTile, DetailHeader } from '@/shell/settings/providers/parts';
 import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { useProviderAccountsStore } from '@/state/provider-accounts';
+import { useProviderAccountsStore } from '@ruimte/agents-react/state/provider-accounts';
 import { Button } from '@ruimte/ui/Button';
 import { Icon } from '@ruimte/ui/Icon';
 import { Select } from '@ruimte/ui/Select';
@@ -88,7 +95,7 @@ export function CliDetail({ endpointId, provider, entries, canAddAccount, onAddA
     const preferences = useChatPreferences();
     const selection = selectionFor(preferences, provider.kind);
     const model = provider.models.find((entry) => entry.slug === selection?.model);
-    const machineAccounts = useProviderAccountsStore((s) => (s.byEndpoint[endpointId]?.loaded ? s.byEndpoint[endpointId].accounts : undefined));
+    const machineAccounts = useProviderAccountsStore((s) => (s.byScope[endpointId]?.loaded ? s.byScope[endpointId].accounts : undefined));
     const picked = accountFor(preferences, endpointId, provider.kind, machineAccounts) ?? provider.kind;
     // An account that is off is out of every picker, unless it is the one picked already.
     const choosable = (entries ?? []).filter((entry) => entry.account.enabled !== false || entry.id === picked);

@@ -1,12 +1,12 @@
 import i18next from 'i18next';
-import { NODE_ACCENT_NAMES, type AgentKind, type ProviderAccount, type ProviderAccounts, type ProviderAccountStatus } from '@ruimte/contracts';
-import { accentColor, FEATURED_ACCENTS, type AccentId } from '@/canvas/accents';
+import type { AgentKind, ProviderAccount, ProviderAccounts, ProviderAccountStatus } from '@ruimte/agent-contracts';
+import { chatHost } from '../host';
 
 /*
- * An account wears one of the node accents, so the app paints from one palette. A color that is none
+ * An account wears one of the host's accents, so the app paints from one palette. A color that is none
  * of them (an older name, or one written by hand) reads as undefined, and the dot takes the accent.
  */
-export const accountColor = (color: string | undefined): string | undefined => accentColor(color);
+export const accountColor = (color: string | undefined): string | undefined => chatHost().accents.all.find((entry) => entry.id === color)?.color;
 
 /*
  * The variable each CLI reads its config folder from, as the daemon's providers name them. Only for
@@ -51,7 +51,7 @@ export const ACCOUNT_TONE_CLASSES: Record<AccountTone, string> = {
  * folder: it has no login of its own to report, so being there is all a ready one says.
  */
 export const accountStatusLine = (status: ProviderAccountStatus | null, canLogIn: boolean): { text: string; tone: AccountTone } => {
-    const words = (key: string, values?: Record<string, string>): string => i18next.t(`settings:providers.status.${key}`, values);
+    const words = (key: string, values?: Record<string, string>): string => i18next.t(`agent-providers:status.${key}`, values);
     switch (status?.state ?? 'checking') {
         case 'checking':
             return { text: words('checking'), tone: 'muted' };
@@ -98,10 +98,11 @@ export const mintAccountId = (kind: AgentKind, label: string, taken: ReadonlySet
  * The first featured accent no account of the CLI wears yet, then any other, so a new one stands apart.
  * An account without a color of its own wears `fallback`, the accent the app is painted in.
  */
-export const freeAccountColor = (entries: readonly AccountEntry[], fallback: AccentId): AccentId => {
+export const freeAccountColor = (entries: readonly AccountEntry[], fallback: string): string => {
+    const { all, featured } = chatHost().accents;
     const worn = new Set(entries.map((entry) => (accountColor(entry.account.color) === undefined ? fallback : entry.account.color)));
-    const choices = [...FEATURED_ACCENTS, ...NODE_ACCENT_NAMES.filter((id) => !FEATURED_ACCENTS.includes(id))];
-    return choices.find((id) => !worn.has(id)) ?? FEATURED_ACCENTS[entries.length % FEATURED_ACCENTS.length]!;
+    const choices = [...featured, ...all.map((entry) => entry.id).filter((id) => !featured.includes(id))];
+    return choices.find((id) => !worn.has(id)) ?? featured[entries.length % featured.length] ?? fallback;
 };
 
 /* The accounts of a CLI a picker offers: every one that is on, and the one in use even while it is off. */

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import { agentsWorking, nodeWorking } from '@/state/agent-work';
-import type { ChatState } from '@/state/chats';
+import type { ChatState } from '@ruimte/agents-react/state/chats';
 import type { SessionState, StatusOf } from '@/state/sessions';
 
 const agent = (status: AgentStatus, live = true): AgentInfo => ({

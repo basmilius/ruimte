@@ -7,7 +7,7 @@ import { findRanges } from '@/find/dom-text';
 import { clearFindHighlights, setFindHighlights } from '@/find/highlights';
 import { compileFind, stepIndex } from '@/find/query';
 import { useFind, type FindState } from '@/find/use-find';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 
 const NOTHING: ChatSearch = { hits: [], invalid: false };
 

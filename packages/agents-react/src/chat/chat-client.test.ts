@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatBookmark, ChatEvent, ChatInfo, ChatItem, EventMap, EventType, ProviderInfo, RequestMap, RequestType } from '@ruimte/contracts';
+import type { AgentEventType, AgentRequestType, ChatBookmark, ChatEvent, ChatInfo, ChatItem, ProviderInfo } from '@ruimte/agent-contracts';
 import type { ChatSink } from '../state/chats';
-import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import { ChatTransportError, type ChatEventMap, type ChatRequestMap, type ChatTransport, type ChatTransportStatus } from '../transport';
 import { ChatClient } from './chat-client';
 
-type Call = { type: RequestType; payload: unknown };
+type Call = { type: AgentRequestType; payload: unknown };
 
 const info = (chatId: string): ChatInfo => ({
     chatId,
@@ -22,46 +22,46 @@ const info = (chatId: string): ChatInfo => ({
     createdAt: 0
 });
 
-class FakeTransport implements Transport {
-    status: TransportStatus = 'open';
+class FakeTransport implements ChatTransport {
+    status: ChatTransportStatus = 'open';
     readonly calls: Call[] = [];
     items: ChatItem[] = [];
-    // What `chat.list` answers: every chat the daemon has loaded, attached here or not.
+    // What `chat.list` answers: every chat the host has loaded, attached here or not.
     chats: ChatInfo[] = [];
     // What `chat.attach` answers when a test wants more than the thread, such as a seq or the events after `since`.
-    attachResult: ((payload: RequestMap['chat.attach']['payload']) => Partial<RequestMap['chat.attach']['result']>) | null = null;
-    private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
+    attachResult: ((payload: ChatRequestMap['chat.attach']['payload']) => Partial<ChatRequestMap['chat.attach']['result']>) | null = null;
+    private readonly statusHandlers = new Set<(status: ChatTransportStatus) => void>();
     private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
 
-    request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
+    request<T extends AgentRequestType>(type: T, payload: ChatRequestMap[T]['payload']): Promise<ChatRequestMap[T]['result']> {
         this.calls.push({ type, payload });
         if (this.status !== 'open') {
-            return Promise.reject(new TransportError('not-connected', 'offline'));
+            return Promise.reject(new ChatTransportError('not-connected', 'offline'));
         }
         const chatId = (payload as { chatId?: string }).chatId ?? '';
         switch (type) {
             case 'chat.create':
-                return Promise.resolve(info(chatId) as RequestMap[T]['result']);
+                return Promise.resolve(info(chatId) as ChatRequestMap[T]['result']);
             case 'chat.attach':
                 return Promise.resolve({
                     info: info(chatId),
                     items: this.items,
-                    ...this.attachResult?.(payload as RequestMap['chat.attach']['payload'])
-                } as RequestMap[T]['result']);
+                    ...this.attachResult?.(payload as ChatRequestMap['chat.attach']['payload'])
+                } as ChatRequestMap[T]['result']);
             case 'chat.send':
-                return Promise.resolve({ queued: false, turnId: 'turn-test' } as RequestMap[T]['result']);
+                return Promise.resolve({ queued: false, turnId: 'turn-test' } as ChatRequestMap[T]['result']);
             case 'chat.list':
-                return Promise.resolve({ chats: this.chats } as RequestMap[T]['result']);
+                return Promise.resolve({ chats: this.chats } as ChatRequestMap[T]['result']);
             case 'provider.list':
                 return Promise.resolve({
                     providers: [{ kind: 'claude', name: 'Claude Code', installed: true, version: '1', models: [], defaultModel: null }]
-                } as RequestMap[T]['result']);
+                } as ChatRequestMap[T]['result']);
             default:
-                return Promise.resolve({} as RequestMap[T]['result']);
+                return Promise.resolve({} as ChatRequestMap[T]['result']);
         }
     }
 
-    on<E extends EventType>(event: E, handler: (payload: EventMap[E]) => void): () => void {
+    on<E extends AgentEventType>(event: E, handler: (payload: ChatEventMap[E]) => void): () => void {
         let handlers = this.eventHandlers.get(event);
         if (!handlers) {
             handlers = new Set();
@@ -73,27 +73,27 @@ class FakeTransport implements Transport {
         };
     }
 
-    subscribeStatus(handler: (status: TransportStatus) => void): () => void {
+    subscribeStatus(handler: (status: ChatTransportStatus) => void): () => void {
         this.statusHandlers.add(handler);
         return () => {
             this.statusHandlers.delete(handler);
         };
     }
 
-    emit<E extends EventType>(event: E, payload: EventMap[E]): void {
+    emit<E extends AgentEventType>(event: E, payload: ChatEventMap[E]): void {
         for (const handler of this.eventHandlers.get(event) ?? []) {
             handler(payload);
         }
     }
 
-    setStatus(status: TransportStatus): void {
+    setStatus(status: ChatTransportStatus): void {
         this.status = status;
         for (const handler of this.statusHandlers) {
             handler(status);
         }
     }
 
-    of(type: RequestType): Call[] {
+    of(type: AgentRequestType): Call[] {
         return this.calls.filter((call) => call.type === type);
     }
 }
@@ -172,7 +172,7 @@ describe('ChatClient', () => {
         expect(sink.resets).toEqual([{ chatId: 'c', items: transport.items }]);
     });
 
-    test('tells the daemon the composer preference once it has one, and says it again on a fresh socket', () => {
+    test('tells the host the composer preference once it has one, and says it again on a fresh socket', () => {
         const { transport, client } = setup();
         transport.setStatus('closed');
         transport.setStatus('open');
@@ -186,7 +186,7 @@ describe('ChatClient', () => {
         expect(transport.of('chat.setPreferences').map((call) => call.payload)).toEqual([preference, preference]);
     });
 
-    test('the bookmarks come with the attach and after that with every change, and a daemon without them leaves none', async () => {
+    test('the bookmarks come with the attach and after that with every change, and a host without them leaves none', async () => {
         const { transport, sink, client } = setup();
         const bookmark: ChatBookmark = { itemId: 'u1', excerpt: 'hi', createdAt: 1 };
         transport.attachResult = (payload) => (payload.chatId === 'marked' ? { bookmarks: [bookmark] } : {});
@@ -236,7 +236,7 @@ describe('ChatClient', () => {
         expect(sink.resets).toHaveLength(1);
         expect(sink.events.at(-1)).toEqual({ chatId: 'a', event: later });
 
-        // The daemon no longer holds what came after the seq it was offered, so the whole thread comes instead.
+        // The host no longer holds what came after the seq it was offered, so the whole thread comes instead.
         transport.attachResult = () => ({ seq: 9 });
         transport.setStatus('closed');
         transport.setStatus('open');

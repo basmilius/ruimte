@@ -2,7 +2,7 @@ import type { AgentKind, ComputerApproval } from '@ruimte/contracts';
 import { orderPrompts, type PendingPrompt } from '@/prompts/logic/prompts';
 import { isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '@/prompts/logic/subjects';
 import type { CanvasNode } from '@/state/canvas';
-import type { ChatsById, ChatState } from '@/state/chats';
+import type { ChatsById, ChatState } from '@ruimte/agents-react/state/chats';
 import { endpointKey } from '@/state/keys';
 import { nodeStatus, type SessionsByKey } from '@/state/sessions';
 

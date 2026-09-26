@@ -11,13 +11,13 @@ import { useSubagentSupport } from '@/chat/subagent-support';
 import { canOpenSubagent, crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { SubagentStopButton } from '@/chat/ui/SubagentStopButton';
 import { formatElapsedShort } from '@ruimte/ui/format/duration';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useTasks } from '@/state/tasks';
 import { useToasts } from '@/state/toasts';
 import { FLOAT } from '@ruimte/ui/classes';
 import { Icon } from '@ruimte/ui/Icon';
-import { statusLookOf, type StatusWord } from '@/ui/status-look';
+import { statusLookOf, type StatusWord } from '@ruimte/agents-react/agents/status-look';
 import { Tooltip } from '@ruimte/ui/Tooltip';
 import { useNow } from '@ruimte/ui/useNow';
 

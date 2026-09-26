@@ -5,13 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { ChartNoAxesColumn, LoaderCircle, RefreshCw, TriangleAlert, Unplug } from 'lucide-react';
 import { USAGE_PROVIDERS, type UsageAccount } from '@ruimte/contracts';
-import { AccountDot } from '@/agents/AccountDot';
+import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
 import { Segmented, Skeleton } from '@ruimte/ui/controls';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { useEndpoints } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 import { useEndpointId } from '@/state/keys';
-import { useProvidersStore } from '@/state/providers';
+import { useProvidersStore } from '@ruimte/agents-react/state/providers';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { askedKey, summaryPayload, UsageEndpointContext, USAGE_PERIODS, useUsage, useUsageStore, type UsageMetric, type UsagePeriod } from '@/state/usage';
@@ -51,7 +51,7 @@ const DIALOG_CENTER = 'pointer-events-none absolute inset-0';
  */
 function MachineAgents({ endpointId }: { endpointId: string }) {
     const { t } = useTranslation('usage');
-    const row = useProvidersStore((s) => s.byEndpoint[endpointId]);
+    const row = useProvidersStore((s) => s.byScope[endpointId]);
     const installed = useMemo(() => (row?.providers ?? []).filter((provider) => provider.installed), [row]);
     if (!row?.loaded) {
         return null;

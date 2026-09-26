@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { ChatInfo } from '@ruimte/contracts';
 import { forkIdsAfter, forkedTurnIds } from '@/chat/logic/fork';
-import { useChats, type ChatsById } from '@/state/chats';
+import { useChats, type ChatsById } from '@ruimte/agents-react/state/chats';
 import { splitKey, useEndpointId } from '@/state/keys';
 
 /* The chats this client holds of one machine, which is where the forks it knows of are. */

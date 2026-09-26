@@ -8,8 +8,8 @@ import {
     type UsageProvider,
     type UsageWindow
 } from '@ruimte/contracts';
-import { limitsAccountId } from '@/agents/account-limits';
-import { accountName, accountsOfKind, accountStatusLine } from '@/agents/accounts';
+import { limitsAccountId } from '@ruimte/agents-react/agents/account-limits';
+import { accountName, accountsOfKind, accountStatusLine } from '@ruimte/agents-react/agents/accounts';
 import { formatDuration } from '@ruimte/ui/format/duration';
 import { PROVIDER_LABELS } from '@/shell/usage/format';
 

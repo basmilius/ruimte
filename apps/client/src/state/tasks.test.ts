@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { Task } from '@ruimte/contracts';
-import { taskStatusWord } from '@/ui/status-look';
+import { taskStatusWord } from '@ruimte/agents-react/agents/status-look';
 import { childTask, edgeTask, useTasks } from './tasks';
 
 const task = (id: string, overrides: Partial<Task> = {}): Task => ({

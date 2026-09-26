@@ -6,7 +6,7 @@ import { VOICE_TOOL_ACTIONS, VOICE_TOOL_DEFINITIONS } from '@ruimte/actions';
 import type { ProjectCanvasView, ProjectDocument, ProjectNode } from '@ruimte/contracts';
 import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
 import { defaultCanvases } from '@/state/canvas';
-import { useChats } from '@/state/chats';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useSettings } from '@/state/settings';

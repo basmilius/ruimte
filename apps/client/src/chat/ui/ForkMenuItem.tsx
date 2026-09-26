@@ -4,7 +4,7 @@ import { GitFork, MessageSquareShare, Undo2 } from 'lucide-react';
 import { performAsPerson } from '@/actions/client-actions';
 import { forkRefusal, lastSettledTurn, summaryRefusal } from '@/chat/logic/fork';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { DisabledReason } from '@ruimte/ui/DisabledReason';

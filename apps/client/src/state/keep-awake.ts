@@ -1,6 +1,6 @@
 import { desktop, type DesktopBridge, type KeepAwakeRequest } from '@/desktop/bridge';
 import { agentsWorking } from '@/state/agent-work';
-import { useChats, type ChatsById } from '@/state/chats';
+import { useChats, type ChatsById } from '@ruimte/agents-react/state/chats';
 import { useSessions, type SessionsByKey } from '@/state/sessions';
 import { useSettings, type Settings } from '@/state/settings';
 

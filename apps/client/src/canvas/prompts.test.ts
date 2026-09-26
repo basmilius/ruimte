@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentInfo, ChatInfo, ChatItem, ComputerApproval } from '@ruimte/contracts';
 import { PROMPT_SAMPLES } from '@/prompts/logic/prompts.fixtures';
-import type { ChatsById } from '@/state/chats';
+import type { ChatsById } from '@ruimte/agents-react/state/chats';
 import { endpointKey } from '@/state/keys';
 import type { SessionsByKey } from '@/state/sessions';
 import { canvasPrompts, samePrompts, stackFront, type CanvasPromptsInput } from './prompts';

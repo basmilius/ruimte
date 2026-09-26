@@ -1,4 +1,4 @@
-import type { UsageProvider } from '@ruimte/contracts';
+import type { UsageProvider } from '@ruimte/agent-contracts';
 
 /*
  * The marks of Anthropic and OpenAI. Lucide has no brand marks, so these are the icon rule's

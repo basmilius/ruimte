@@ -1,0 +1,14 @@
+{
+  "status": {
+    "checking": "Controleren",
+    "disabled": "Uitgezet",
+    "notFound": "CLI niet gevonden",
+    "signedOut": "Niet ingelogd",
+    "ready": "Ingelogd",
+    "readyPlan": "Ingelogd · {{plan}}",
+    "available": "Klaar",
+    "folderMissing": "Map ontbreekt",
+    "unavailable": "Niet beschikbaar",
+    "failed": "Controle mislukt"
+  }
+}

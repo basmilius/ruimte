@@ -1,8 +1,8 @@
 import i18next from 'i18next';
 import type { AgentKind, ProviderAccount, ProviderAccountMap } from '@ruimte/contracts';
 import { createNodeAction } from '@/actions/client-actions';
-import { accountFor, readChatPreferences, rememberChatAccount } from '@/chat/preferences';
-import { providerAccountsOf, useProviderAccountsStore } from '@/state/provider-accounts';
+import { accountFor, readChatPreferences, rememberChatAccount } from '@ruimte/agents-react/chat/preferences';
+import { providerAccountsOf, useProviderAccountsStore } from '@ruimte/agents-react/state/provider-accounts';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';

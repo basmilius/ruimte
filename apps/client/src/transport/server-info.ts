@@ -2,7 +2,7 @@ import type { EndpointNameSource } from '@ruimte/contracts';
 import { noteDaemonIdentity } from '@/endpoint/identity';
 import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
-import { useProvidersStore } from '@/state/providers';
+import { useProvidersStore } from '@ruimte/agents-react/state/providers';
 import { pool, transportFor } from '@/transport';
 import { watchOpenMachines } from './open-machines';
 

@@ -9,7 +9,7 @@ export interface MountedEntry {
 /*
  * What a client keeps for the nodes it has open on one machine, and the reconnect discipline they
  * all share: a lost socket detaches everything, and the socket that comes back attaches it again.
- * The daemon on the other side is a fresh one as far as this client knows, so nothing is assumed.
+ * The host on the other side is a fresh one as far as this client knows, so nothing is assumed.
  */
 export class MountedRegistry<T extends MountedEntry> extends Map<string, T> {
     /* Nothing is attached over a link that is gone; `report` is how a store hears about it. */

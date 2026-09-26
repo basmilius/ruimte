@@ -5,7 +5,7 @@ import { useDictation } from '@/dictation/controller';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
 import { isFilesView, type CellView } from '@/shell/files-view';
 import { useCellView } from '@/shell/use-cell-view';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 import { useHasPlans } from '@/state/plans';
 

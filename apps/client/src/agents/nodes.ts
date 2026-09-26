@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { readChatPreferences } from '@/chat/preferences';
+import { readChatPreferences } from '@ruimte/agents-react/chat/preferences';
 import type { AddNodeOptions } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 

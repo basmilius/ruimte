@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
 import type { AgentKind } from '@ruimte/contracts';
-import { AgentIcon } from '@/agents/AgentIcon';
+import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 
 // Each CLI in its color of the usage charts, so a mark here reads as the same CLI there.
 const CLI_COLORS: Record<AgentKind, string> = {

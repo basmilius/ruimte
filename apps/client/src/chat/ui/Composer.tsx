@@ -27,6 +27,7 @@ import { useAccountChoice } from '@/chat/account-choice';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, readStoredAttachments, uploadBytes } from '@/chat/attachments';
 import { chatSuggestions } from '@/chat/chat-references';
+import { searchFiles } from '@/chat/file-search';
 import { EMPTY_DRAFT, isEmptyDraft, joinDraftText, readDraft, takeBackIntoDraft, takeDraftOffers, writeDraft, type ChatDraft } from '@/chat/drafts';
 import {
     MENTION_DRAG_TYPE,
@@ -45,7 +46,7 @@ import { dismissResumeCompaction, useResumeCompactionDismissal } from '@/chat/re
 import { composerStopLabel, composerStopOf } from '@/chat/subagent-list';
 import { PROMPT_MAX_CHARS, pasteBecomesAttachment, pastedTextName, promptGuard, usableSlashCommands } from '@/chat/guards';
 import { withQuote } from '@/chat/quote';
-import { rememberChatAccount, rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
+import { rememberChatAccount, rememberChatPreferences, rememberChatSelection } from '@ruimte/agents-react/chat/preferences';
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
 import { ChatActivity } from '@/chat/ui/ChatActivity';
@@ -64,9 +65,9 @@ import { RunSettings } from '@/chat/ui/RunSettings';
 import { UploadThumb } from '@/chat/ui/UploadThumb';
 import { isApplePlatform } from '@/desktop/bridge';
 import { formatNumber } from '@ruimte/ui/format/number';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useEndpointId } from '@/state/keys';
-import { useProviders } from '@/state/providers';
+import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useToasts } from '@/state/toasts';
 import { isShellShortcut } from '@/terminal/keymap';
 import { transportFor } from '@/transport';
@@ -264,11 +265,10 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
         }
         let stale = false;
         const search = (): void => {
-            chatClient
-                .searchFiles(info.cwd, mention.query, MENTION_RESULTS)
-                .then((result) => {
+            searchFiles(endpointId, info.cwd, mention.query, MENTION_RESULTS)
+                .then((files) => {
                     if (!stale) {
-                        setSearched(result.files);
+                        setSearched(files);
                         setMenuIndex(0);
                     }
                 })
@@ -286,7 +286,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             stale = true;
             clearTimeout(timer);
         };
-    }, [info.cwd, mention]);
+    }, [endpointId, info.cwd, mention]);
 
     /* The daemon's skill list, once per chat and again once the CLI announced its own after the first message. */
     useEffect(() => {

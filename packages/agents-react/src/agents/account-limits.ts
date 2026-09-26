@@ -1,5 +1,5 @@
-import type { AgentKind, ProviderAccounts, UsageLimitsProvider, UsageLimitsSnapshot, UsageWindow } from '@ruimte/contracts';
-import { accountsOfKind, type AccountEntry } from '@/agents/accounts';
+import type { AgentKind, ProviderAccounts, UsageLimitsProvider, UsageLimitsSnapshot, UsageWindow } from '@ruimte/agent-contracts';
+import { accountsOfKind, type AccountEntry } from './accounts';
 
 /* The account a plan entry is of; an entry from a machine before accounts is its CLI's default account. */
 export const limitsAccountId = (entry: UsageLimitsProvider): string => entry.account?.id ?? entry.kind;

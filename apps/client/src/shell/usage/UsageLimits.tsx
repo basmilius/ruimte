@@ -2,20 +2,20 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LogIn } from 'lucide-react';
 import type { UsageProvider } from '@ruimte/contracts';
-import { AccountDot } from '@/agents/AccountDot';
+import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
 import { Segmented } from '@ruimte/ui/controls';
 import { openLogin } from '@/shell/settings/providers/account-actions';
 import { PROVIDER_COLORS, PROVIDER_LABELS } from '@/shell/usage/format';
 import { accountNote, checkedLabel, hasSeveralAccounts, isSignedOut, type LimitAccount } from '@/shell/usage/limit-groups';
 import { WindowBar } from '@/shell/usage/LimitsList';
 import { useLimitGroups, useMinute, useUsageLimits } from '@/shell/usage/limits';
-import { useProviderAccountsStore } from '@/state/provider-accounts';
+import { useProviderAccountsStore } from '@ruimte/agents-react/state/provider-accounts';
 import { useUsageEndpointId } from '@/state/usage';
 import { useWindow } from '@/state/window';
 import { Button } from '@ruimte/ui/Button';
 import { SECTION_LABEL } from '@ruimte/ui/classes';
 import { Icon } from '@ruimte/ui/Icon';
-import { ProviderLogo } from '@/ui/ProviderLogo';
+import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
 import { Tooltip } from '@ruimte/ui/Tooltip';
 
 type Filter = UsageProvider | 'all';
@@ -101,7 +101,7 @@ export function UsageLimits() {
     const groups = useLimitGroups(limits);
     const now = useMinute();
     const endpointId = useUsageEndpointId();
-    const loginCommands = useProviderAccountsStore((s) => s.byEndpoint[endpointId]?.accounts?.loginCommands);
+    const loginCommands = useProviderAccountsStore((s) => s.byScope[endpointId]?.accounts?.loginCommands);
     // A login runs in a terminal node on a canvas of a project on the machine these numbers are of.
     const workspaceMachine = useWindow((s) => (s.content.kind === 'workspace' ? s.content.workspace.connection.endpointId : null));
     const [filter, setFilter] = useState<Filter>('all');

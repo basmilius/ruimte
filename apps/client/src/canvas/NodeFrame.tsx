@@ -23,7 +23,7 @@ import {
     X
 } from 'lucide-react';
 import { focusNodeAction, renameNodeAction } from '@/actions/client-actions';
-import { AgentIcon } from '@/agents/AgentIcon';
+import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { TaskMark } from '@/tasks/TaskMark';
 import { useChildTask } from '@/state/tasks';

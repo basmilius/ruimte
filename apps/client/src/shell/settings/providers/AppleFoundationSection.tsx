@@ -5,7 +5,7 @@ import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@ruimte/ui/controls';
 import { useServers } from '@/state/server';
-import { useProvidersStore } from '@/state/providers';
+import { useProvidersStore } from '@ruimte/agents-react/state/providers';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';

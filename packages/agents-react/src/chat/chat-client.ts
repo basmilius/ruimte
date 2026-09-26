@@ -5,19 +5,18 @@ import type {
     ChatBookmark,
     ChatPreferencesPayload,
     ChatSkill,
-    FsSearchResult,
     ModelSelection,
+    ProviderInfo,
     RuntimeMode
-} from '@ruimte/contracts';
+} from '@ruimte/agent-contracts';
+import { MountedRegistry, type MountedEntry } from '../mounted-registry';
 import type { ChatSink } from '../state/chats';
-import type { ProviderInfo } from '@ruimte/contracts';
-import { MountedRegistry, type MountedEntry } from '../transport/mounted-registry';
-import { isConnectionError, type Transport, type TransportStatus } from '../transport/transport';
+import { isConnectionError, type ChatTransport, type ChatTransportStatus } from '../transport';
 
 interface ChatOpenOptions {
-    /* Which agent CLI answers; a chat that exists on the daemon keeps its own. */
+    /* Which agent CLI answers; a chat that exists on the host keeps its own. */
     provider?: AgentKind;
-    /* The account of that CLI; a chat that exists on the daemon keeps its own. */
+    /* The account of that CLI; a chat that exists on the host keeps its own. */
     account?: string;
     cwd?: string;
     /* A CLI session to continue, for a chat opened from a terminal that ran the agent. */
@@ -47,20 +46,20 @@ interface ProviderSink {
 }
 
 /*
- * One daemon chat per node id. Like the terminal's session client: a node opens on mount and
- * detaches on unmount, and every mounted chat is attached again when the transport comes back.
- * The provider list is fetched once per connection and handed to its own store. The transport it is
- * given never changes machines, so a reattach stays on the daemon these chats run on.
+ * One chat per chat id on one host. A chat opens on mount and detaches on unmount, and every mounted
+ * chat is attached again when the transport comes back. The provider list is fetched once per
+ * connection and handed to its own store. The transport it is given never changes hosts, so a
+ * reattach stays on the host these chats run on.
  */
 export class ChatClient {
-    private readonly transport: Transport;
+    private readonly transport: ChatTransport;
     private readonly sink: ChatSink;
     private readonly providers: ProviderSink | null;
     private readonly mounted = new MountedRegistry<Mounted>();
     private readonly unsubscribe: Array<() => void> = [];
     private preferences: ChatPreferencesPayload | null = null;
 
-    constructor(transport: Transport, sink: ChatSink, providers: ProviderSink | null = null) {
+    constructor(transport: ChatTransport, sink: ChatSink, providers: ProviderSink | null = null) {
         this.transport = transport;
         this.sink = sink;
         this.providers = providers;
@@ -116,7 +115,7 @@ export class ChatClient {
     }
 
     /*
-     * Points a chat that has not spoken yet at another CLI. The daemon fixes a chat's provider when
+     * Points a chat that has not spoken yet at another CLI. The host fixes a chat's provider when
      * it registers the chat, so the only way over is to drop the empty one and register it again.
      */
     async retarget(chatId: string, provider: AgentKind, selection: ModelSelection): Promise<void> {
@@ -133,7 +132,7 @@ export class ChatClient {
     }
 
     /*
-     * Tells the daemon what a chat it starts on its own is made with while this socket is connected,
+     * Tells the host what a chat it starts on its own is made with while this socket is connected,
      * since no client mounting that chat sends a composer preference. Said again on every fresh socket.
      */
     setPreferences(preferences: ChatPreferencesPayload): void {
@@ -154,7 +153,7 @@ export class ChatClient {
         }
     }
 
-    /* Current daemons return the stable turn id; older compatible ones only report whether the message queued. */
+    /* Current hosts return the stable turn id; older compatible ones only report whether the message queued. */
     async send(chatId: string, text: string, extras: ChatSendExtras = {}): Promise<{ queued: boolean; turnId?: string }> {
         return this.transport.request('chat.send', {
             chatId,
@@ -181,11 +180,6 @@ export class ChatClient {
     async removeBookmark(chatId: string, itemId: string): Promise<ChatBookmark[]> {
         const { bookmarks } = await this.transport.request('chat.removeBookmark', { chatId, itemId });
         return bookmarks;
-    }
-
-    /* Files under `cwd` that fuzzy-match `query`, for the composer's mention picker. */
-    async searchFiles(cwd: string, query: string, limit = 8): Promise<FsSearchResult> {
-        return this.transport.request('fs.search', { cwd, query, limit });
     }
 
     /* What this chat's CLI would run as a skill, for the composer's `$` picker. */
@@ -216,7 +210,7 @@ export class ChatClient {
                 this.sink.status(info.chatId, info);
             }
         } catch {
-            // The next status event says it instead; an older daemon never answers this at all.
+            // The next status event says it instead; an older host never answers this at all.
         }
     }
 
@@ -236,7 +230,7 @@ export class ChatClient {
         return this.mounted.has(chatId);
     }
 
-    /* Lets go of the machine; the chats keep running there, the daemon only stops streaming them here. */
+    /* Lets go of the machine; the chats keep running there, the host only stops streaming them here. */
     dispose(): void {
         for (const off of this.unsubscribe) {
             off();
@@ -248,7 +242,7 @@ export class ChatClient {
     }
 
     /*
-     * A reattach offers the last seq the store holds. The daemon answers only what came after it when
+     * A reattach offers the last seq the store holds. The host answers only what came after it when
      * it still has all of that, and the whole thread otherwise, so a short drop costs a few events.
      */
     private async attach(chatId: string): Promise<void> {
@@ -279,7 +273,7 @@ export class ChatClient {
         } else {
             this.sink.reset(chatId, result.info, result.items);
         }
-        // A daemon without bookmarks sends none, and then this chat has none.
+        // A host without bookmarks sends none, and then this chat has none.
         this.sink.bookmarks(chatId, result.bookmarks ?? []);
     }
 
@@ -290,7 +284,7 @@ export class ChatClient {
         void this.transport.request('chat.setPreferences', this.preferences).catch(() => undefined);
     }
 
-    private onStatus(status: TransportStatus): void {
+    private onStatus(status: ChatTransportStatus): void {
         if (status === 'open') {
             this.sendPreferences();
             void this.loadProviders();

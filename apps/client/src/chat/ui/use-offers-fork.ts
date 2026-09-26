@@ -1,5 +1,5 @@
 import { lastSettledTurn } from '@/chat/logic/fork';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 
 /*
  * Whether `ForkMenuItem` draws anything. A menu asks before it draws a line above the row, or an

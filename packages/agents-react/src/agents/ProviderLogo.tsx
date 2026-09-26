@@ -1,6 +1,6 @@
 import clsx from 'clsx';
-import type { UsageProvider } from '@ruimte/contracts';
-import { PROVIDER_PATHS } from '@/ui/provider-paths';
+import type { UsageProvider } from '@ruimte/agent-contracts';
+import { PROVIDER_PATHS } from './provider-paths';
 
 interface ProviderLogoProps {
     provider: UsageProvider;

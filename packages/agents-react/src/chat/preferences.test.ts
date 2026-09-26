@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ModelSelection, ProviderAccounts } from '@ruimte/contracts';
+import type { ModelSelection, ProviderAccounts } from '@ruimte/agent-contracts';
 import {
     accountFor,
     chatPreferencesPayload,

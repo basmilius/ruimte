@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatInfo, ChatItem } from '@ruimte/contracts';
-import { applyEvent, useChats, type ChatState } from '@/state/chats';
-import { endpointKey } from '@/state/keys';
+import type { ChatInfo, ChatItem } from '@ruimte/agent-contracts';
+import { applyEvent, chatSink, useChats, type ChatState } from './chats';
 
 const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
     chatId: 'chat-1',
@@ -139,7 +138,7 @@ describe('bookmarks in the store', () => {
 
 describe('the statuses beside the threads', () => {
     test('stay the same object while a reply streams, and change with the info', () => {
-        const key = endpointKey('status-test', 'chat-1');
+        const key = 'status-test/chat-1';
         const reply: ChatItem = { id: 'r', kind: 'assistant', createdAt: 0, turnId: null, text: 'Hello', streaming: true };
         useChats.getState().reset(key, info({ status: 'running' }), [reply]);
         const streaming = useChats.getState().statusByKey;
@@ -155,11 +154,22 @@ describe('the statuses beside the threads', () => {
         expect(useChats.getState().statusByKey[key]).toBeUndefined();
     });
 
-    test('hold a chat nobody attached to, and leave with the machine', () => {
-        const key = endpointKey('gone', 'chat-1');
+    test('hold a chat nobody attached to, and leave with the host', () => {
+        const key = 'gone/chat-1';
+        const other = 'kept/chat-1';
         useChats.getState().status(key, info({ status: 'running' }));
+        useChats.getState().status(other, info({ status: 'running' }));
         expect(useChats.getState().statusByKey[key]?.info.status).toBe('running');
-        useChats.getState().clear('gone');
+        useChats.getState().forgetWhere((candidate) => candidate.startsWith('gone/'));
         expect(useChats.getState().statusByKey[key]).toBeUndefined();
+        expect(useChats.getState().byKey[key]).toBeUndefined();
+        expect(useChats.getState().statusByKey[other]?.info.status).toBe('running');
+        useChats.getState().forget(other);
+    });
+
+    test('a sink writes under the keys of its scope', () => {
+        chatSink((chatId) => `sink/${chatId}`).status('chat-1', info({ status: 'idle' }));
+        expect(useChats.getState().statusByKey['sink/chat-1']?.info.status).toBe('idle');
+        useChats.getState().forget('sink/chat-1');
     });
 });

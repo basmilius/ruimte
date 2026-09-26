@@ -6,7 +6,7 @@ import { placeBookmark } from '@/chat/bookmarks';
 import { forkRefusal } from '@/chat/logic/fork';
 import type { TimelineRow } from '@/chat/logic/timeline';
 import { markdownOf, messageTextOf } from '@/chat/logic/timeline-copy';
-import { useChatRow, useChats } from '@/state/chats';
+import { useChatRow, useChats } from '@ruimte/agents-react/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
 import { BTN_GROUP } from '@ruimte/ui/classes';

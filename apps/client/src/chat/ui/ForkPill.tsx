@@ -3,7 +3,7 @@ import { GitFork } from 'lucide-react';
 import { forkPointOf } from '@/chat/logic/fork';
 import { formatDayClock } from '@ruimte/ui/format/datetime';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { Icon } from '@ruimte/ui/Icon';
 import { Pill } from '@ruimte/ui/Pill';
 import { Tooltip } from '@ruimte/ui/Tooltip';

@@ -3,11 +3,11 @@ import { Menu } from '@base-ui-components/react/menu';
 import { Bot, ChevronRight, MessageSquare } from 'lucide-react';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
-import { AgentIcon } from '@/agents/AgentIcon';
+import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
 import { runtimeModeLabel } from '@/chat/runtime-modes';
-import { useChatPreferences } from '@/chat/preferences';
-import { useProviders } from '@/state/providers';
+import { useChatPreferences } from '@ruimte/agents-react/chat/preferences';
+import { useProviders } from '@ruimte/agents-react/state/providers';
 import { MENU_HINT } from '@ruimte/ui/classes';
 import { Icon } from '@ruimte/ui/Icon';
 

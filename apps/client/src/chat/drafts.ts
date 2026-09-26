@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { ChatAttachmentUpload } from '@ruimte/contracts';
 import { checkAttachmentLimits, uploadBytes } from '@/chat/attachments';
-import { persistedJson } from '@/chat/persisted-json';
+import { persistedJson } from '@ruimte/agents-react/chat/persisted-json';
 
 const STORAGE_KEY = 'ruimte.chat.drafts';
 

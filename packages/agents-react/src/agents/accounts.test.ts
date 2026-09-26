@@ -1,5 +1,6 @@
-import { describe, expect, test } from 'bun:test';
-import type { ProviderAccounts, ProviderAccountStatus } from '@ruimte/contracts';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import type { ProviderAccounts, ProviderAccountStatus } from '@ruimte/agent-contracts';
+import { chatHost, setChatHost, type ChatHost } from '../host';
 import { accountName, accountStatusLine, accountsOfKind, canContinueOn, freeAccountColor, hasAccountChoice, mintAccountId, offeredAccounts } from './accounts';
 
 const status = (id: string, patch: Partial<ProviderAccountStatus> = {}): ProviderAccountStatus => ({
@@ -55,6 +56,13 @@ describe('the status line', () => {
 });
 
 describe('a new account', () => {
+    const before: ChatHost['accents'] = chatHost().accents;
+    beforeAll(() => {
+        const featured = ['blue', 'orange', 'lime', 'indigo', 'pink'];
+        setChatHost({ accents: { all: [...featured, 'red'].map((id) => ({ id, color: '#000000' })), featured, label: (id) => id } });
+    });
+    afterAll(() => setChatHost({ accents: before }));
+
     test('gets an id from its name that no other account has', () => {
         expect(mintAccountId('claude', 'Work (EU)', new Set())).toBe('claude_work-eu');
         expect(mintAccountId('codex', 'Privé', new Set(['codex_prive']))).toBe('codex_prive-2');

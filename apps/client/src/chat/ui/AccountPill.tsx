@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import type { AgentKind } from '@ruimte/contracts';
-import { AccountDot } from '@/agents/AccountDot';
+import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
 import { useAccountChoice } from '@/chat/account-choice';
-import { useChats } from '@/state/chats';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { Pill } from '@ruimte/ui/Pill';
 import { Tooltip } from '@ruimte/ui/Tooltip';

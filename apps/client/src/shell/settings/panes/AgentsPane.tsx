@@ -1,6 +1,6 @@
 import { Trans, useTranslation } from 'react-i18next';
 import type { RuntimeMode } from '@ruimte/contracts';
-import { rememberChatPreferences, useChatPreferences } from '@/chat/preferences';
+import { rememberChatPreferences, useChatPreferences } from '@ruimte/agents-react/chat/preferences';
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@/chat/runtime-modes';
 import { canKeepAwake } from '@/desktop/bridge';
 import { MachineSwitchSections } from '@/shell/settings/MachineSwitchSection';

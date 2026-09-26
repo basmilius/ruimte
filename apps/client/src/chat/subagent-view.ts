@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 import type { ChatItem, ChatSubagentItem } from '@ruimte/contracts';
 import { useSubagentSupport } from '@/chat/subagent-support';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
 
 /* One conversation on the way down from the chat: the call that opened it and what that call called it. */

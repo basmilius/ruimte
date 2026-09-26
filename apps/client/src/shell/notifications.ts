@@ -3,7 +3,7 @@ import type { EventMap } from '@ruimte/contracts';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { openSidebarTarget } from '@/shell/sidebar-navigation';
 import { projectNodes, revealNode } from '@/project/views';
-import { useChats } from '@/state/chats';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { seenNodeIds } from '@/state/in-sight';
 import { currentEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions } from '@/state/sessions';

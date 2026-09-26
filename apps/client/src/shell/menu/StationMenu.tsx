@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { Menu } from '@base-ui-components/react/menu';
 import { ChevronRight, Menu as MenuGlyph } from 'lucide-react';
 import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
-import { AgentIcon } from '@/agents/AgentIcon';
+import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { runMenuCommand } from '@/shell/menu/actions';
 import { menuContext } from '@/shell/menu/context';
 import { menuIconOf } from '@/shell/menu/icons';

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { uploadBytes } from '@/chat/attachments';
 import { isEmptyDraft, type ChatDraft } from '@/chat/drafts';
 import { isRecord } from '@/chat/logic/json';
-import { persistedJson } from '@/chat/persisted-json';
+import { persistedJson } from '@ruimte/agents-react/chat/persisted-json';
 import { withQuote } from '@/chat/quote';
 import { shortcut } from '@ruimte/ui/shortcut';
 

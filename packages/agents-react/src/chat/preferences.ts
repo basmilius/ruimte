@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { AgentKind, ChatPreferencesPayload, ModelSelection, ProviderAccounts, RuntimeMode } from '@ruimte/contracts';
-import { persistedJson } from '@/chat/persisted-json';
+import type { AgentKind, ChatPreferencesPayload, ModelSelection, ProviderAccounts, RuntimeMode } from '@ruimte/agent-contracts';
+import { persistedJson } from './persisted-json';
 
 const STORAGE_KEY = 'ruimte.chat.preferences';
 

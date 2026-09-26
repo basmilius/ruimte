@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import type { AgentKind, ProviderAccounts } from '@ruimte/contracts';
-import { accountName, accountsOfKind, hasAccountChoice, offeredAccounts, type AccountEntry } from '@/agents/accounts';
-import { useProviderAccounts } from '@/state/provider-accounts';
-import { useProviders } from '@/state/providers';
+import { accountName, accountsOfKind, hasAccountChoice, offeredAccounts, type AccountEntry } from '@ruimte/agents-react/agents/accounts';
+import { useProviderAccounts } from '@ruimte/agents-react/state/provider-accounts';
+import { useProviders } from '@ruimte/agents-react/state/providers';
 
 export interface AccountChoice {
     accounts: ProviderAccounts;

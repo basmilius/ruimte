@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ProviderAccounts, ProviderAccountStatus, UsageLimitsProvider, UsageLimitsSnapshot } from '@ruimte/contracts';
+import type { ProviderAccounts, ProviderAccountStatus, UsageLimitsProvider, UsageLimitsSnapshot } from '@ruimte/agent-contracts';
 import { continueTarget, hasUnreadAccount, limitsOfAccount } from './account-limits';
 
 const status = (id: string, state: ProviderAccountStatus['state'] = 'ready'): ProviderAccountStatus => ({

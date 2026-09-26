@@ -12,7 +12,7 @@ import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { FOLLOW_THRESHOLD_PX, rowRhythm } from '@/chat/ui/rows/row-rhythm';
 import { useToggleSet } from '@/chat/ui/useToggleSet';
 import { FileLinkContext } from '@/shell/panels/file-links';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { machineTransport } from '@/transport';
 import { Button } from '@ruimte/ui/Button';

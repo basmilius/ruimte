@@ -6,7 +6,7 @@ import { Bookmark, ChevronRight, Pencil, X } from 'lucide-react';
 import { goToBookmark, removeBookmark } from '@/chat/bookmarks';
 import { bookmarkLabel, bookmarksInThreadOrder } from '@/chat/logic/bookmarks';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { BTN_GROUP } from '@ruimte/ui/classes';
 import { Icon } from '@ruimte/ui/Icon';

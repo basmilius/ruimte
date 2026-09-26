@@ -369,18 +369,6 @@
             "reportsStatus": "Meldt de agentstatus.",
             "noStatus": "Meldt geen agentstatus."
         },
-        "status": {
-            "checking": "Controleren",
-            "disabled": "Uitgezet",
-            "notFound": "CLI niet gevonden",
-            "signedOut": "Niet ingelogd",
-            "ready": "Ingelogd",
-            "readyPlan": "Ingelogd · {{plan}}",
-            "available": "Klaar",
-            "folderMissing": "Map ontbreekt",
-            "unavailable": "Niet beschikbaar",
-            "failed": "Controle mislukt"
-        },
         "cli": {
             "addAccount": "Account toevoegen",
             "onlyDefault": "{{provider}} heeft geen instelling voor zijn configuratiemap, dus alleen zijn standaardaccount.",

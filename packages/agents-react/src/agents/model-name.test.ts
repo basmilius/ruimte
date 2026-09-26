@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ModelInfo } from '@ruimte/contracts';
+import type { ModelInfo } from '@ruimte/agent-contracts';
 import { modelName, modelNameFromSlug, sharedModelPrefix, shortModelName } from './model-name.ts';
 
 const model = (slug: string, name: string): ModelInfo => ({ slug, name, legacy: false, isDefault: false, options: [] });

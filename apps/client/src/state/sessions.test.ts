@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { CanvasNode } from '@/state/canvas';
-import { chatSinkFor, useChats } from '@/state/chats';
-import { endpointKey } from '@/state/keys';
+import { useChats } from '@ruimte/agents-react/state/chats';
+import { chatSinkFor } from '@/state/chats';
+import { endpointKey, isOfEndpoint } from '@/state/keys';
 import { nodeStatus, sessionSinkFor, useSessions } from '@/state/sessions';
 
 const LOCAL = 'local';
@@ -49,7 +50,7 @@ describe('clearing one machine', () => {
         const info = { chatId: 'c1', provider: 'claude', cwd: '/work', status: 'idle', activeTurnId: null } as never;
         chatSinkFor(LOCAL).reset('c1', info, []);
         chatSinkFor(REMOTE).reset('c1', info, []);
-        useChats.getState().clear(REMOTE);
+        useChats.getState().forgetWhere((key) => isOfEndpoint(key, REMOTE));
         expect(Object.keys(useChats.getState().byKey)).toEqual([endpointKey(LOCAL, 'c1')]);
     });
 });

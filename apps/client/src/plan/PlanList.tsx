@@ -51,7 +51,7 @@ import {
     type PlanRow
 } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
-import { useChatRow } from '@/state/chats';
+import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { MENU_LABEL, MENU_SEPARATOR, MULTILINE_FIELD } from '@ruimte/ui/classes';
 import { copyText } from '@ruimte/ui/clipboard';
 import { EmptyState } from '@ruimte/ui/EmptyState';

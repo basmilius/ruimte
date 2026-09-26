@@ -1,0 +1,14 @@
+{
+  "status": {
+    "checking": "Checking",
+    "disabled": "Turned off",
+    "notFound": "CLI not found",
+    "signedOut": "Not logged in",
+    "ready": "Logged in",
+    "readyPlan": "Logged in · {{plan}}",
+    "available": "Ready",
+    "folderMissing": "Folder missing",
+    "unavailable": "Not available",
+    "failed": "Check failed"
+  }
+}

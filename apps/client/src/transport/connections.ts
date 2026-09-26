@@ -1,22 +1,24 @@
 import { notifyRequested } from '@/shell/notifications';
 import i18next from 'i18next';
-import { ChatClient } from '@/chat/chat-client';
+import { ChatClient } from '@ruimte/agents-react/chat/chat-client';
 import { BrowserClient } from '@/browser/browser-client';
 import { DeviceClient } from '@/devices/device-client';
-import { chatPreferencesPayload, useChatPreferences } from '@/chat/preferences';
+import { chatPreferencesPayload, useChatPreferences } from '@ruimte/agents-react/chat/preferences';
 import { DiagramClient } from '@/diagram/diagram-client';
 import { DrawingClient } from '@/drawing/drawing-client';
 import { foldList } from '@/project/list';
 import { panelsPort } from '@/project/panels-port';
 import { ProjectClient, type ProjectSink } from '@/project/project-client';
-import { useChats, chatSinkFor } from '@/state/chats';
+import { useChats } from '@ruimte/agents-react/state/chats';
+import { chatSinkFor } from '@/state/chats';
 import { activeEndpoint, endpointById, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { isOfEndpoint } from '@/state/keys';
 import { isRealMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
 import { PlanSync } from '@/state/plans';
 import { watchPushAttention } from '@/state/push-attention';
-import { knownAccounts, providerAccountsOf, useProviderAccountsStore, watchProviderAccounts } from '@/state/provider-accounts';
-import { providerSinkFor } from '@/state/providers';
+import { knownAccounts, providerAccountsOf, useProviderAccountsStore, watchProviderAccounts } from '@ruimte/agents-react/state/provider-accounts';
+import { providerSinkFor } from '@ruimte/agents-react/state/providers';
 import { sessionSinkFor, useSessions } from '@/state/sessions';
 import { defaultWorkspaceStores } from '@/state/workspace';
 import { workspaceOf, useWindow, windowWorkspace } from '@/state/window';
@@ -226,7 +228,7 @@ const disposeConnection = (connection: Connection): void => {
     connection.drawings.dispose();
     connection.diagrams.dispose();
     useSessions.getState().clear(connection.endpointId);
-    useChats.getState().clear(connection.endpointId);
+    useChats.getState().forgetWhere((key) => isOfEndpoint(key, connection.endpointId));
 };
 
 /*
@@ -412,7 +414,7 @@ export const startConnections = (): (() => void) => {
     // An account for new agents that a machine turned off or removed is left out of what that machine is told.
     const offAccounts = useProviderAccountsStore.subscribe((state, before) => {
         for (const machine of machines.values()) {
-            if (state.byEndpoint[machine.endpointId] !== before.byEndpoint[machine.endpointId]) {
+            if (state.byScope[machine.endpointId] !== before.byScope[machine.endpointId]) {
                 tellPreferences(machine);
             }
         }

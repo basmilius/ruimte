@@ -4,8 +4,25 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
+    "./agents/AccountDot": "./src/agents/AccountDot.tsx",
+    "./agents/AgentIcon": "./src/agents/AgentIcon.tsx",
+    "./agents/ProviderLogo": "./src/agents/ProviderLogo.tsx",
+    "./agents/account-limits": "./src/agents/account-limits.ts",
+    "./agents/accounts": "./src/agents/accounts.ts",
+    "./agents/model-name": "./src/agents/model-name.ts",
+    "./agents/provider-paths": "./src/agents/provider-paths.ts",
+    "./agents/status-look": "./src/agents/status-look.ts",
+    "./chat/chat-client": "./src/chat/chat-client.ts",
+    "./chat/persisted-json": "./src/chat/persisted-json.ts",
+    "./chat/preferences": "./src/chat/preferences.ts",
+    "./host": "./src/host.ts",
     "./locales": "./src/locales.ts",
+    "./mounted-registry": "./src/mounted-registry.ts",
     "./port-transport": "./src/port-transport.ts",
+    "./scope": "./src/scope.ts",
+    "./state/chats": "./src/state/chats.ts",
+    "./state/provider-accounts": "./src/state/provider-accounts.ts",
+    "./state/providers": "./src/state/providers.ts",
     "./transport": "./src/transport.ts",
     "./locales/*.json": "./src/locales/*.json"
   },
@@ -15,7 +32,11 @@
   "dependencies": {
     "@ruimte/agent-contracts": "workspace:*",
     "@ruimte/ui": "workspace:*",
-    "zod": "^4.6.5"
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.47.0",
+    "simple-icons": "^16.32.0",
+    "zod": "^4.6.5",
+    "zustand": "^5.0.15"
   },
   "peerDependencies": {
     "i18next": "^26.4.2",

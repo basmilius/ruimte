@@ -1,9 +1,9 @@
-import type { AgentKind } from '@ruimte/contracts';
+import type { AgentKind } from '@ruimte/agent-contracts';
 import clsx from 'clsx';
 import { Bot } from 'lucide-react';
 import { siClaude, siGithubcopilot, siGooglegemini } from 'simple-icons';
 import { Icon } from '@ruimte/ui/Icon';
-import { PROVIDER_PATHS } from '@/ui/provider-paths';
+import { PROVIDER_PATHS } from './provider-paths';
 
 // simple-icons removed OpenAI's mark at its request, so Codex reuses the usage page's path.
 const MARKS: Partial<Record<AgentKind, { title: string; path: string }>> = {

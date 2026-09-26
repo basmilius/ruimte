@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { accountColor } from '@/agents/accounts';
+import { accountColor } from './accounts';
 
 /* The color an account wears, or the app's accent while it wears none of the accents. */
 export function AccountDot({ color, className }: { color: string | undefined; className?: string }) {
