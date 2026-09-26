@@ -171,7 +171,7 @@ import { SettingsDialog } from '@ruimte/ui/settings/SettingsDialog';
 />;
 ```
 
-`ProvidersPane` takes the `target` a search result leads to and `detailOf`, for a provider the app draws itself. The usage page is `UsageDialog` around `UsagePage`, with an `ErrorBoundary` between them; `pickers` and `notice` take what the app says about the host itself. `UsageLimitsCard` draws the plan windows of the scope's host behind a trigger of the app's.
+`ProvidersPane` takes the `target` a search result leads to, `detailOf`, for a provider the app draws itself, and `defaults={false}` for an app that decides what a new chat starts with elsewhere, which leaves "Defaults for new chats" out of a CLI's detail. The usage page is `UsageDialog` around `UsagePage`, with an `ErrorBoundary` between them; `pickers` and `notice` take what the app says about the host itself. `UsageLimitsCard` draws the plan windows of the scope's host behind a trigger of the app's.
 
 ## Rules
 

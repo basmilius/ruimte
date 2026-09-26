@@ -56,10 +56,12 @@ interface ProvidersPaneProps {
     target?: string | null;
     /* The detail of a provider the app draws itself, such as a model the host runs on its own; null draws the CLI's own. */
     detailOf?(provider: ProviderInfo): ReactNode | null;
+    /* False leaves "Defaults for new chats" out of a CLI's detail, for an app that decides those elsewhere. */
+    defaults?: boolean;
 }
 
 /* The agent CLIs of the host in scope, each with its accounts, beside the detail of what is picked. */
-export function ProvidersPane({ target = null, detailOf }: ProvidersPaneProps) {
+export function ProvidersPane({ target = null, detailOf, defaults = true }: ProvidersPaneProps) {
     const { t } = useTranslation('agent-providers');
     const { id: scopeId } = useChatScope();
     const providers = useProviders((s) => s.providers);
@@ -214,6 +216,7 @@ export function ProvidersPane({ target = null, detailOf }: ProvidersPaneProps) {
             <CliDetail
                 provider={provider}
                 entries={accounts === null ? null : entriesOf(provider.kind)}
+                defaults={defaults}
                 canAddAccount={canAddAccount(provider.kind)}
                 onAddAccount={() => setPicked({ kind: 'add', cli: provider.kind })}
                 onPickAccount={(id) => setPicked({ kind: 'account', id })}

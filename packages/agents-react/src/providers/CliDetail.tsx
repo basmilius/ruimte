@@ -78,13 +78,14 @@ interface CliDetailProps {
     provider: ProviderInfo;
     /* Null for a machine that keeps no accounts. */
     entries: AccountEntry[] | null;
+    defaults: boolean;
     canAddAccount: boolean;
     onAddAccount(): void;
     onPickAccount(id: string): void;
 }
 
-/* One CLI: what it is, what a new chat of it starts with, and its accounts. */
-export function CliDetail({ provider, entries, canAddAccount, onAddAccount, onPickAccount }: CliDetailProps) {
+/* One CLI: what it is, what a new chat of it starts with unless `defaults` is off, and its accounts. */
+export function CliDetail({ provider, entries, defaults, canAddAccount, onAddAccount, onPickAccount }: CliDetailProps) {
     const { t } = useTranslation('agent-providers');
     const { id: scopeId } = useChatScope();
     const preferences = useChatPreferences();
@@ -111,55 +112,57 @@ export function CliDetail({ provider, entries, canAddAccount, onAddAccount, onPi
                     )
                 }
             />
-            <SettingsSection title={t('cli.defaults.title')} description={t('cli.defaults.description')}>
-                {choosable.length > 0 && (
-                    <SettingsRow
-                        searchId="providers.defaults.account"
-                        label={t('cli.defaults.account')}
-                        control={
-                            <Select
-                                value={picked}
-                                label={t('cli.defaults.accountFor', { provider: provider.name })}
-                                align="end"
-                                items={choosable.map((entry) => ({
-                                    value: entry.id,
-                                    label: accountName(entry, provider.name),
-                                    icon: <AccountDot color={entry.account.color} className="size-2" />
-                                }))}
-                                onValueChange={(id) => rememberChatAccount(scopeId, provider.kind, id)}
-                            />
-                        }
-                    />
-                )}
-                {provider.models.length > 0 && (
-                    <SettingsRow
-                        searchId="providers.defaults.model"
-                        label={t('cli.defaults.model')}
-                        description={model ? t('cli.defaults.shared', { provider: provider.name }) : t('cli.defaults.usesCliDefault')}
-                        control={
-                            <Select
-                                value={model?.slug ?? PROVIDER_DEFAULT}
-                                label={t('cli.defaults.modelFor', { provider: provider.name })}
-                                align="end"
-                                items={[
-                                    { value: PROVIDER_DEFAULT, label: t('cli.defaults.providerDefault') },
-                                    ...provider.models.map((entry) => ({
-                                        value: entry.slug,
-                                        label: entry.legacy ? t('cli.defaults.legacyModel', { name: entry.name }) : entry.name
-                                    }))
-                                ]}
-                                onValueChange={(value) =>
-                                    value === PROVIDER_DEFAULT
-                                        ? forgetChatSelection(provider.kind)
-                                        : rememberChatSelection(provider.kind, { model: value, options: {} })
-                                }
-                            />
-                        }
-                    />
-                )}
-                {model && <ModelOptionRows provider={provider.kind} model={model} options={selection?.options ?? {}} />}
-                {choosable.length === 0 && provider.models.length === 0 && <SettingsRow muted label={t('cli.defaults.usesCliDefault')} />}
-            </SettingsSection>
+            {defaults && (
+                <SettingsSection title={t('cli.defaults.title')} description={t('cli.defaults.description')}>
+                    {choosable.length > 0 && (
+                        <SettingsRow
+                            searchId="providers.defaults.account"
+                            label={t('cli.defaults.account')}
+                            control={
+                                <Select
+                                    value={picked}
+                                    label={t('cli.defaults.accountFor', { provider: provider.name })}
+                                    align="end"
+                                    items={choosable.map((entry) => ({
+                                        value: entry.id,
+                                        label: accountName(entry, provider.name),
+                                        icon: <AccountDot color={entry.account.color} className="size-2" />
+                                    }))}
+                                    onValueChange={(id) => rememberChatAccount(scopeId, provider.kind, id)}
+                                />
+                            }
+                        />
+                    )}
+                    {provider.models.length > 0 && (
+                        <SettingsRow
+                            searchId="providers.defaults.model"
+                            label={t('cli.defaults.model')}
+                            description={model ? t('cli.defaults.shared', { provider: provider.name }) : t('cli.defaults.usesCliDefault')}
+                            control={
+                                <Select
+                                    value={model?.slug ?? PROVIDER_DEFAULT}
+                                    label={t('cli.defaults.modelFor', { provider: provider.name })}
+                                    align="end"
+                                    items={[
+                                        { value: PROVIDER_DEFAULT, label: t('cli.defaults.providerDefault') },
+                                        ...provider.models.map((entry) => ({
+                                            value: entry.slug,
+                                            label: entry.legacy ? t('cli.defaults.legacyModel', { name: entry.name }) : entry.name
+                                        }))
+                                    ]}
+                                    onValueChange={(value) =>
+                                        value === PROVIDER_DEFAULT
+                                            ? forgetChatSelection(provider.kind)
+                                            : rememberChatSelection(provider.kind, { model: value, options: {} })
+                                    }
+                                />
+                            }
+                        />
+                    )}
+                    {model && <ModelOptionRows provider={provider.kind} model={model} options={selection?.options ?? {}} />}
+                    {choosable.length === 0 && provider.models.length === 0 && <SettingsRow muted label={t('cli.defaults.usesCliDefault')} />}
+                </SettingsSection>
+            )}
             {entries === null ? (
                 <p className="text-xs text-text-faint">{t('list.noAccounts')}</p>
             ) : (
