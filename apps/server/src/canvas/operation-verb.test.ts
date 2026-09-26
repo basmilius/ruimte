@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
-import { ManualClock } from '../outbox/manual-clock.ts';
+import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 

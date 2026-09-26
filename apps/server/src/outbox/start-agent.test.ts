@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readdir, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatItem, ProjectContent } from '@ruimte/contracts';
-import { AgentLineageStore } from '../agents/lineage.ts';
+import { AgentLineageStore } from '@ruimte/agents/lineage';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
 import { startCwdGuard } from '../canvas/project-paths.ts';
@@ -18,8 +18,8 @@ import { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
-import { OutboxStore, type StartAgentEntry } from './outbox.ts';
-import { OutboxWorker, type OutboxClock } from './outbox-worker.ts';
+import { OutboxStore, type OutboxWork, type StartAgentEntry } from './outbox.ts';
+import { OutboxWorker, type OutboxClock } from '@ruimte/agents/outbox/outbox-worker';
 import { HEADLESS_TERMINAL, nodeMode, startAgentHandler, startAgentWork, type StartAgentDeps } from './start-agent.ts';
 
 /* Nothing here fails, so no retry is ever timed; the clock only has to say one moment. */
@@ -61,7 +61,7 @@ interface Daemon {
     /* What the start-agent handler logged, including a start it gave up on. */
     logged: string[];
     outbox: OutboxStore;
-    worker: OutboxWorker;
+    worker: OutboxWorker<OutboxWork>;
     sessions: SessionManager;
     chats: ChatManager;
     adapter: FakePtyAdapter;

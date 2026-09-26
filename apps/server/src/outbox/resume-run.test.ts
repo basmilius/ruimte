@@ -13,9 +13,9 @@ import { fakeCodex } from '@ruimte/agents/chat/fake-codex';
 import { inProcess, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
 import { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { ManualClock } from './manual-clock.ts';
-import { OutboxStore } from './outbox.ts';
-import { OutboxWorker, RETRY_DELAYS_MS } from './outbox-worker.ts';
+import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
+import { OutboxStore, type OutboxWork } from './outbox.ts';
+import { OutboxWorker, RETRY_DELAYS_MS } from '@ruimte/agents/outbox/outbox-worker';
 import { oweResume, resumeRunHandler, resumeRunParked } from './resume-run.ts';
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
@@ -42,7 +42,7 @@ const content = (): ProjectContent => ({
 interface Daemon {
     chats: ChatManager;
     outbox: OutboxStore;
-    worker: OutboxWorker;
+    worker: OutboxWorker<OutboxWork>;
     claude: InProcessCli;
     codex: InProcessCli;
     until(check: () => boolean): Promise<void>;
@@ -84,7 +84,7 @@ const boot = async (spawn?: SpawnChatProcess): Promise<Daemon> => {
     const codex = inProcess(fakeCodex);
     const attachments = new AttachmentStore(home);
     // Declared before the chats, which ask it to owe a resume while they load.
-    const box: { worker: OutboxWorker | null } = { worker: null };
+    const box: { worker: OutboxWorker<OutboxWork> | null } = { worker: null };
     const chats = new ChatManager({
         providers,
         store: new ChatStore(home, { attachments: attachments }),

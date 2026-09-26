@@ -6,7 +6,7 @@ import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate } from '../git/test-repo.ts';
 import { Worktrees } from '../git/worktrees.ts';
-import { ManualClock } from '../outbox/manual-clock.ts';
+import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { ChatStore } from '@ruimte/agents/chat/chat-store';

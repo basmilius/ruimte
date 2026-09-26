@@ -23,7 +23,7 @@ import {
 import { agentNode, nameOf } from '../canvas/agents.ts';
 import { MAX_CANVAS_NODES, newId } from '../canvas/nodes.ts';
 import { placeFree } from '../canvas/placement.ts';
-import { narrowerMode } from '../canvas/mode.ts';
+import { narrowerMode } from '@ruimte/agents/modes';
 import type { WorktreeWant } from '../canvas/verb.ts';
 import { branchSlug } from '../canvas/worktree.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
@@ -31,7 +31,7 @@ import { git } from '../git/run.ts';
 import { freeBranch, type Worktrees } from '../git/worktrees.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import type { AgentLineageStore } from '../agents/lineage.ts';
+import type { AgentLineageStore } from '@ruimte/agents/lineage';
 import { AccountError, storedAccount } from '@ruimte/agents/providers/accounts/launch';
 import { codexServiceTier, codexThreadOptions } from '@ruimte/agents/providers/codex';
 import type { ChatManager } from './chat-manager.ts';

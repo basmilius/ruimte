@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AgentLineageStore } from './lineage.ts';
@@ -100,4 +100,21 @@ test('a fork keeps the depth of its original and lives on its own: no child, no 
     expect(restarted.descendants('chat-a')).toEqual([]);
     await restarted.prune('p1', new Set(['chat-a']));
     expect(restarted.projectOf('chat-b')).toBeNull();
+});
+
+// A record exactly as a Ruimte daemon before lineage moved into @ruimte/agents wrote it, so one updated in place reads it.
+const WRITTEN = '{"projectId":"p1","nodeId":"chat-2","openedBy":"chat-1","depth":1,"agent":true,"ceiling":"auto-accept-edits","createdAt":1000,"endedAt":2000}';
+
+test('a record an older host wrote reads back whole, and a new one is written in the same shape', async () => {
+    await store.put({ projectId: 'p1', nodeId: 'chat-3', openedBy: 'chat-1', depth: 1, agent: true, ceiling: 'auto' });
+    await writeFile(join(home, 'lineage', 'chat-2.json'), WRITTEN);
+    const restarted = new AgentLineageStore(home);
+    await restarted.load();
+    expect(restarted.ceilingOf('chat-2')).toBe('auto-accept-edits');
+    expect(restarted.endedAt('chat-2')).toBe(2000);
+    expect(restarted.startedBy('chat-2')).toBe('chat-1');
+    const written = JSON.parse(await readFile(join(home, 'lineage', 'chat-3.json'), 'utf8')) as { createdAt: number };
+    expect(await readFile(join(home, 'lineage', 'chat-3.json'), 'utf8')).toBe(
+        `{"projectId":"p1","nodeId":"chat-3","openedBy":"chat-1","depth":1,"agent":true,"ceiling":"auto","createdAt":${written.createdAt}}`
+    );
 });

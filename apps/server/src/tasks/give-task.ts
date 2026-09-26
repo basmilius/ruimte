@@ -1,6 +1,6 @@
 import { taskBrief } from '../canvas/task-verbs.ts';
 import type { GiveTaskEntry } from '../outbox/outbox.ts';
-import type { OutboxOutcome } from '../outbox/outbox-worker.ts';
+import type { OutboxOutcome } from '@ruimte/agents/outbox/outbox-worker';
 import type { TaskStore } from './task-store.ts';
 import type { WakeChat } from './wake-parent.ts';
 

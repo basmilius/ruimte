@@ -1,7 +1,7 @@
 import { join } from 'node:path';
-import { RuntimeModeSchema, type RuntimeMode } from '@ruimte/contracts';
-import { RecordDirectory } from '@ruimte/agents/record-directory';
+import { RuntimeModeSchema, type RuntimeMode } from '@ruimte/agent-contracts';
 import { z } from 'zod';
+import { RecordDirectory } from './record-directory.ts';
 
 const LineageSchema = z.object({
     projectId: z.string().min(1),
@@ -28,19 +28,19 @@ type Lineage = z.infer<typeof LineageSchema>;
 const openedByAgent = (entry: Lineage): boolean => entry.agent && entry.relation !== 'fork';
 
 /*
- * Lineage lives under `$RUIMTE_HOME`, outside the agent-writable project, so agents cannot reset
- * their own depth. Persisting it also prevents a daemon restart from resetting recursion limits.
+ * Lineage lives in `lineage` under the host's data folder, outside the agent-writable project, so agents
+ * cannot reset their own depth. Persisting it also prevents a restart of the host from resetting recursion limits.
  */
 export class AgentLineageStore {
     readonly dir: string;
     private readonly opened: RecordDirectory<Lineage>;
 
-    constructor(home: string) {
-        this.dir = join(home, 'lineage');
+    constructor(dataDir: string) {
+        this.dir = join(dataDir, 'lineage');
         this.opened = new RecordDirectory({ dir: this.dir, schema: LineageSchema, idOf: (entry) => entry.nodeId });
     }
 
-    /* Reads what an earlier run of the daemon wrote down. Call before any verb can ask. */
+    /* Reads what an earlier run of the host wrote down. Call before any verb can ask. */
     load(): Promise<void> {
         return this.opened.load();
     }

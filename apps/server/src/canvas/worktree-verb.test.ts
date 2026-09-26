@@ -5,7 +5,7 @@ import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate } from '../git/test-repo.ts';
 import { Worktrees } from '../git/worktrees.ts';
-import { ManualClock } from '../outbox/manual-clock.ts';
+import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 

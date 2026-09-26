@@ -16,6 +16,7 @@ Import per file: `@ruimte/agents/<path under src>`, without the extension.
 - `usage/`: the usage scanner over the CLIs' transcripts, prices, and `limits/`, what is left of each plan.
 - `host/`: `AgentHost`, the request handlers, `cliEnvironment` and an in-memory port pair.
 - `context/`: the registry behind a context CLI such as `ruimte-context`, the verbs an agent runs to act on its app. `context/argv.ts` splits the words, `context/verb.ts` defines verbs and nouns and renders `help` from them, `context/refusal.ts` writes and reads a refusal.
+- `outbox/`: work a host owes that has to outlive the process, such as starting an agent a verb opened, and the worker that does it. `lineage.ts` keeps who opened whom and how deep, `modes.ts` the order of the runtime modes and the ceiling an opener hands down.
 
 ## A host of its own
 
@@ -70,6 +71,43 @@ export const VERBS: readonly VerbEntry<Call>[] = [help, layer];
 A verb stands on its own (`help`); a noun only names what its actions work on (`layer new`). Each takes its positionals and flags as zod schemas, and `help` renders from the same objects, so the two never drift. A flag the detail documents but the usage leaves out is added to the usage. `dryRun: true` adds `--dry-run`, which every other verb refuses by name; `revision: true` adds `--revision N`, which reaches `run` as `call.expectedRevision` for a write that must not land on a newer document.
 
 A verb says no by throwing a `VerbRefusal` with a code, a sentence and the lines the agent can pick instead. `refusalBody` writes it as the CLI prints it, one row per line with tab-separated fields: `refused<TAB><code><TAB><message>`, then every line of advice under it. `field` takes a tab or a newline out of a value before it goes into a row, and `parseRefusalBody` reads a refusal back.
+
+## Agents that open agents
+
+A chat that starts others owes work it cannot do inside the verb: the start itself, a wake once a child is done. `OutboxStore` keeps that work, one file per entry under `<dataDir>/outbox`, until it is done, and `OutboxWorker` works it off. The host hands in its own kinds as a zod discriminated union on `kind`, each with a `payload`, and gets back a store and a worker typed by them:
+
+```ts
+import { z } from 'zod';
+import { OutboxStore } from '@ruimte/agents/outbox/outbox';
+import { OutboxWorker } from '@ruimte/agents/outbox/outbox-worker';
+
+const WorkSchema = z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('start-chat'), payload: z.object({ prompt: z.string() }) }),
+    z.object({ kind: z.literal('end-children'), payload: z.object({ chatIds: z.array(z.string()) }) })
+]);
+
+const store = new OutboxStore({
+    dataDir,
+    work: WorkSchema,
+    lanesOf: (entry) => (entry.kind === 'end-children' ? [entry.target, ...entry.payload.chatIds] : [entry.target]),
+    outlivesTarget: (entry) => entry.kind === 'end-children'
+});
+await store.load();
+
+const worker = new OutboxWorker({
+    store,
+    handlers: {
+        'start-chat': async (entry) => startChat(entry.target, entry.payload.prompt),
+        'end-children': async (entry) => endChats(entry.payload.chatIds)
+    }
+});
+worker.start();
+await worker.enqueue(projectId, chatId, { kind: 'start-chat', payload: { prompt } });
+```
+
+Every entry has a `target`, the node or chat it is about. Entries for one target run one at a time and oldest first, while other targets do not wait; `lanesOf` names more nodes an entry holds, and `outlivesTarget` keeps an entry that `prune` would otherwise drop with its target. A handler must be idempotent, since a restart between the work and the removal of its file runs it again. A handler that throws is tried again after 1, 5 and 30 seconds and then given up on (`onParked`); one that answers `'wait'` keeps its entry without an attempt until `wake(target)` names its target. `enqueue` with a `notBefore` owes work at a time, which holds no lane until then. The clock is a seam: a test passes `ManualClock` (`outbox/manual-clock.ts`) and moves it by hand.
+
+`AgentLineageStore` writes down, under `<dataDir>/lineage`, which node opened which, how deep it sits and the widest mode it may run in: outside the project, so an agent with a shell cannot reset its own depth, and on disk, so a restart does not either. `ceilingForOpening(openerMode, requested)` in `modes.ts` refuses a `--mode` wider than the opener's own with a `VerbRefusal`, `narrowerMode` clamps a mode to a ceiling, and `modeFlag` is the flag's schema. Ruimte binds the store to its kinds in `apps/server/src/outbox/outbox.ts`.
 
 ## Wiring it into an Electron app
 

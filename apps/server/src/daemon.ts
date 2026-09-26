@@ -23,7 +23,7 @@ import {
 import { AgentStore } from './agents/agent-store.ts';
 import { ClaudeTitleReader } from '@ruimte/agents/chat/claude-title';
 import { CodexTitleReader } from './agents/codex-title.ts';
-import { AgentLineageStore } from './agents/lineage.ts';
+import { AgentLineageStore } from '@ruimte/agents/lineage';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutboxStore } from './outbox/outbox.ts';
 import { nodeAccount, nodeMode, startAgentWork } from './outbox/start-agent.ts';

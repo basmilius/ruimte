@@ -37,7 +37,7 @@ import { documentOnDisk, rawPrivateViews, setPrivateViews } from '../projects/pr
 import { ProjectStore } from '../projects/project-store.ts';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { AgentLineageStore } from '../agents/lineage.ts';
+import { AgentLineageStore } from '@ruimte/agents/lineage';
 import { DIAGRAM_EXAMPLE } from './diagram-verb.ts';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas-route.ts';

@@ -6,7 +6,7 @@ import type { ChatItem, ChatSubagentItem, ChatTurnItem, ProjectContent } from '@
 import { nextLine } from '../canvas/task-verbs.ts';
 import { claudeStoppingOnResume } from '@ruimte/agents/chat/fake-claude';
 import type { FakeCli } from '@ruimte/agents/chat/fake-cli';
-import { ManualClock } from '../outbox/manual-clock.ts';
+import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from './test-daemon.ts';
 import { WAITING_GRACE_MS } from './waiting-child.ts';

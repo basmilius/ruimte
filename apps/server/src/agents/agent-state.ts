@@ -2,7 +2,7 @@ import type { AgentStateHost } from '../canvas/verb.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
 import type { SessionManager } from '../sessions/manager.ts';
-import type { AgentLineageStore } from './lineage.ts';
+import type { AgentLineageStore } from '@ruimte/agents/lineage';
 
 export interface AgentStateSources {
     outbox: Pick<OutboxStore, 'list'>;

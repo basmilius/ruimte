@@ -5,12 +5,12 @@ import { join } from 'node:path';
 import type { ChatItem, ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
-import { AgentLineageStore } from '../agents/lineage.ts';
+import { AgentLineageStore } from '@ruimte/agents/lineage';
 import { STOPPED_TASK_REASON } from '../chat/chat-manager.ts';
 import { TaskStore } from '../tasks/task-store.ts';
 import { ENDED_REASON, endChildrenHandler, oweEndChildren, wireEndChildren, type EndChildrenDeps } from './end-children.ts';
 import { OutboxStore } from './outbox.ts';
-import { ManualClock } from './manual-clock.ts';
+import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import type { EndChildrenEntry, OutboxEntry } from './outbox.ts';
 
 const content = (): ProjectContent => ({

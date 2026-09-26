@@ -5,7 +5,7 @@ import type { ChatManager } from '../chat/chat-manager.ts';
 import { chatOpener } from '../chat/wake-chat.ts';
 import { errorText } from '../error-text.ts';
 import type { OutboxEntry, OutboxWork, StartAgentEntry } from '../outbox/outbox.ts';
-import type { OutboxHandlers } from '../outbox/outbox-worker.ts';
+import type { OutboxHandlers } from '@ruimte/agents/outbox/outbox-worker';
 import { backgroundLimitHandler } from './background-limit.ts';
 import { giveTaskHandler } from './give-task.ts';
 import { TaskCoordinator, type TaskCoordinatorDeps } from './task-coordinator.ts';
@@ -37,10 +37,10 @@ export interface TaskWiring {
     coordinator: TaskCoordinator;
     waiting: WaitingObserver;
     host: TaskHost;
-    wakeParent: OutboxHandlers['wake-parent'];
-    backgroundLimit: OutboxHandlers['background-limit'];
-    giveTask: OutboxHandlers['give-task'];
-    deliverWaiting: OutboxHandlers['deliver-waiting'];
+    wakeParent: OutboxHandlers<OutboxWork>['wake-parent'];
+    backgroundLimit: OutboxHandlers<OutboxWork>['background-limit'];
+    giveTask: OutboxHandlers<OutboxWork>['give-task'];
+    deliverWaiting: OutboxHandlers<OutboxWork>['deliver-waiting'];
     onParked(entry: OutboxEntry, error: unknown): void;
     onStartGaveUp(entry: StartAgentEntry, error: unknown): void;
     /* What the daemon does with the child's own prune of the project: cancel, then look at the parents again. */

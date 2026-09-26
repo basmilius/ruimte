@@ -1,5 +1,5 @@
 import type { Task } from '@ruimte/contracts';
-import type { AgentLineageStore } from '../agents/lineage.ts';
+import type { AgentLineageStore } from '@ruimte/agents/lineage';
 import type { PendingPromptStore } from '../agents/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { limitResumeAt } from '@ruimte/agents/chat/limit-resume';
@@ -14,7 +14,7 @@ import { wireTasks, type TaskWiring } from '../tasks/wiring.ts';
 import { errorText } from '../error-text.ts';
 import { wireEndChildren, type EndChildrenWiring } from './end-children.ts';
 import type { OutboxStore, OutboxWork } from './outbox.ts';
-import { OutboxWorker, type OutboxClock } from './outbox-worker.ts';
+import { OutboxWorker, type OutboxClock } from '@ruimte/agents/outbox/outbox-worker';
 import { oweResume, resumeRunHandler, resumeRunParked } from './resume-run.ts';
 import { startAgentHandler } from './start-agent.ts';
 
@@ -37,7 +37,7 @@ export class OutboxLink {
     private readonly onEnqueued: ((work: OutboxWork) => void) | null;
     private readonly outbox: OutboxStore;
     private readonly projectOf: (chatId: string) => string | null;
-    private worker: OutboxWorker | null = null;
+    private worker: OutboxWorker<OutboxWork> | null = null;
 
     constructor(options: OutboxLinkOptions) {
         this.onEnqueued = options.onEnqueued ?? null;
@@ -50,7 +50,7 @@ export class OutboxLink {
         });
     }
 
-    bind(worker: OutboxWorker): void {
+    bind(worker: OutboxWorker<OutboxWork>): void {
         this.worker = worker;
     }
 
@@ -106,7 +106,7 @@ export class OutboxLink {
         }
     }
 
-    private require(): OutboxWorker {
+    private require(): OutboxWorker<OutboxWork> {
         if (this.worker === null) {
             throw new Error('The outbox is used before it is wired');
         }
@@ -140,7 +140,7 @@ export interface OutboxWiringDeps {
 }
 
 export interface OutboxWiring {
-    worker: OutboxWorker;
+    worker: OutboxWorker<OutboxWork>;
     tasks: TaskWiring;
     endChildren: EndChildrenWiring;
     summaries: SummaryWiring;

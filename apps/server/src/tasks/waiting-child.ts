@@ -3,7 +3,7 @@ import type { ChatRequestHost } from '../canvas/verb.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import type { DeliverWaitingEntry, OutboxWork } from '../outbox/outbox.ts';
-import type { OutboxOutcome } from '../outbox/outbox-worker.ts';
+import type { OutboxOutcome } from '@ruimte/agents/outbox/outbox-worker';
 import type { SessionEvent } from '../sessions/manager.ts';
 
 /* What a child waits on: an answer anyone may give, or an approval only a person gives. */

@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
-import { ManualClock } from '../outbox/manual-clock.ts';
+import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import type { ProviderAccountsService } from '@ruimte/agents/providers/accounts/service';
 import { testAccounts } from '@ruimte/agents/providers/accounts/test-accounts';

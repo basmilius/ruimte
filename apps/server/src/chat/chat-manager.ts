@@ -21,7 +21,7 @@ import type { ChatRecord, ChatRecordExtras } from '@ruimte/agents/chat/chat-stor
 import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 import { limitedTurn } from '@ruimte/agents/chat/limit-resume';
 import { storedAccount } from '@ruimte/agents/providers/accounts/launch';
-import { narrowerMode } from '../canvas/mode.ts';
+import { narrowerMode } from '@ruimte/agents/modes';
 import { chatReferenceNote, resolveChatReferences } from '../context/chat-references.ts';
 import { chatPrompt, contextChangeNote, contextPrompt } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';

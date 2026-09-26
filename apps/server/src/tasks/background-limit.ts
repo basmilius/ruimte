@@ -1,7 +1,7 @@
 import { commandLabel, runningInBackground } from '@ruimte/agents/chat/background-work';
 import { loadChat, type ChatOpenerDeps } from '../chat/wake-chat.ts';
 import type { BackgroundLimitEntry, OutboxStore } from '../outbox/outbox.ts';
-import type { OutboxOutcome } from '../outbox/outbox-worker.ts';
+import type { OutboxOutcome } from '@ruimte/agents/outbox/outbox-worker';
 import type { TaskCoordinator } from './task-coordinator.ts';
 import type { TaskStore } from './task-store.ts';
 

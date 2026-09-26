@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatSubagentItem, ChatTurnItem, ProjectContent, Task } from '@ruimte/contracts';
 import { nextLine } from '../canvas/task-verbs.ts';
-import { ManualClock } from '../outbox/manual-clock.ts';
+import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from './test-daemon.ts';
 

@@ -1,4 +1,4 @@
-import type { AgentLineageStore } from '../agents/lineage.ts';
+import type { AgentLineageStore } from '@ruimte/agents/lineage';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionManager } from '../sessions/manager.ts';

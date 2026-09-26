@@ -1,5 +1,5 @@
 import { errorText } from '../error-text.ts';
-import { lanesOf, type OutboxEntry, type OutboxStore } from './outbox.ts';
+import type { OutboxEntryOf, OutboxStore, OutboxWorkShape } from './outbox.ts';
 
 /* How long a failed entry waits before each next attempt; one more failure than there are delays parks it. */
 export const RETRY_DELAYS_MS: readonly number[] = [1_000, 5_000, 30_000];
@@ -22,16 +22,16 @@ export const systemClock: OutboxClock = {
  */
 export type OutboxOutcome = void | 'wait';
 
-export type OutboxHandlers = {
-    [K in OutboxEntry['kind']]: (entry: Extract<OutboxEntry, { kind: K }>) => Promise<OutboxOutcome>;
+export type OutboxHandlers<Work extends OutboxWorkShape> = {
+    [K in Work['kind']]: (entry: Extract<OutboxEntryOf<Work>, { kind: K }>) => Promise<OutboxOutcome>;
 };
 
-export interface OutboxWorkerOptions {
-    store: OutboxStore;
-    handlers: OutboxHandlers;
+export interface OutboxWorkerOptions<Work extends OutboxWorkShape> {
+    store: OutboxStore<Work>;
+    handlers: OutboxHandlers<Work>;
     clock?: OutboxClock;
     /* An entry that failed every attempt and is given up on (and logged); the work it stood for is not done. */
-    onParked?: (entry: OutboxEntry, error: unknown) => void;
+    onParked?: (entry: OutboxEntryOf<Work>, error: unknown) => void;
 }
 
 /*
@@ -39,11 +39,11 @@ export interface OutboxWorkerOptions {
  * about one node never overlap while nodes beside it do not wait on each other. A handler is
  * idempotent, since a restart between the work and the removal of its file runs it again.
  */
-export class OutboxWorker {
-    private readonly store: OutboxStore;
-    private readonly handlers: OutboxHandlers;
+export class OutboxWorker<Work extends OutboxWorkShape> {
+    private readonly store: OutboxStore<Work>;
+    private readonly handlers: OutboxHandlers<Work>;
     private readonly clock: OutboxClock;
-    private readonly onParked: (entry: OutboxEntry, error: unknown) => void;
+    private readonly onParked: (entry: OutboxEntryOf<Work>, error: unknown) => void;
     private readonly running = new Set<string>();
     // Entries that said `wait`, until their target is woken; in memory only, so a restart looks again.
     private readonly waiting = new Set<string>();
@@ -53,7 +53,7 @@ export class OutboxWorker {
     private started = false;
     private waiters: Array<() => void> = [];
 
-    constructor(options: OutboxWorkerOptions) {
+    constructor(options: OutboxWorkerOptions<Work>) {
         this.store = options.store;
         this.handlers = options.handlers;
         this.clock = options.clock ?? systemClock;
@@ -74,7 +74,7 @@ export class OutboxWorker {
     }
 
     /* Owes a piece of work and starts on it; resolves once the entry is on disk, not once it is done. */
-    async enqueue(projectId: string, target: string, work: Parameters<OutboxStore['put']>[2], notBefore?: number): Promise<void> {
+    async enqueue(projectId: string, target: string, work: Work, notBefore?: number): Promise<void> {
         const now = this.clock.now();
         await this.store.put(projectId, target, work, now, notBefore ?? now);
         this.drain();
@@ -124,7 +124,7 @@ export class OutboxWorker {
                 nextDue = nextDue === null ? entry.notBefore : Math.min(nextDue, entry.notBefore);
                 continue;
             }
-            const lanes = lanesOf(entry);
+            const lanes = this.store.lanesOf(entry);
             // Oldest first per target. A younger entry never overtakes one that waits out a retry.
             for (const lane of lanes) {
                 busy.add(lane);
@@ -143,14 +143,14 @@ export class OutboxWorker {
         this.notifySettled();
     }
 
-    private async run(entry: OutboxEntry): Promise<void> {
-        const lanes = lanesOf(entry);
+    private async run(entry: OutboxEntryOf<Work>): Promise<void> {
+        const lanes = this.store.lanesOf(entry);
         for (const lane of lanes) {
             this.running.add(lane);
         }
         const woken = this.wakes.get(entry.target) ?? 0;
         try {
-            const outcome = await (this.handlers[entry.kind] as (entry: OutboxEntry) => Promise<OutboxOutcome>)(entry);
+            const outcome = await (this.handlers[entry.kind as Work['kind']] as (entry: OutboxEntryOf<Work>) => Promise<OutboxOutcome>)(entry);
             if (outcome === 'wait') {
                 if ((this.wakes.get(entry.target) ?? 0) === woken && this.store.has(entry.id)) {
                     this.waiting.add(entry.id);
@@ -168,7 +168,7 @@ export class OutboxWorker {
         }
     }
 
-    private async failed(entry: OutboxEntry, error: unknown): Promise<void> {
+    private async failed(entry: OutboxEntryOf<Work>, error: unknown): Promise<void> {
         const delay = RETRY_DELAYS_MS[entry.attempts];
         if (delay === undefined) {
             await this.store.remove(entry.id);

@@ -2,7 +2,7 @@ import type { Task } from '@ruimte/contracts';
 import type { WakeChat } from '../chat/wake-chat.ts';
 import { errorText } from '../error-text.ts';
 import type { OutboxEntry, OutboxWork, WakeParentEntry } from '../outbox/outbox.ts';
-import type { OutboxOutcome } from '../outbox/outbox-worker.ts';
+import type { OutboxOutcome } from '@ruimte/agents/outbox/outbox-worker';
 import type { TaskStore } from './task-store.ts';
 
 /* What the parent reads of one result; the rest stays with the child, whose id is right beside it. */

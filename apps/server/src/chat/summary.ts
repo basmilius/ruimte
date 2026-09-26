@@ -3,7 +3,7 @@ import { newId } from '../canvas/nodes.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import { errorText } from '../error-text.ts';
 import type { DeliverSummaryEntry, OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
-import type { OutboxOutcome } from '../outbox/outbox-worker.ts';
+import type { OutboxOutcome } from '@ruimte/agents/outbox/outbox-worker';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import type { ChatManager } from './chat-manager.ts';

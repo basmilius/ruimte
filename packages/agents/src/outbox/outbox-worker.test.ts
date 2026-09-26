@@ -2,23 +2,42 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { OutboxStore, type OutboxEntry, type OutboxWork } from './outbox.ts';
+import { z } from 'zod';
 import { ManualClock } from './manual-clock.ts';
+import { OutboxStore, type OutboxEntryOf } from './outbox.ts';
 import { OutboxWorker, RETRY_DELAYS_MS } from './outbox-worker.ts';
 
-const work = (node: 'chat' | 'terminal' = 'chat'): OutboxWork => ({ kind: 'start-agent', payload: { node, provider: 'claude', cwd: null } });
+const TestWorkSchema = z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('start'), payload: z.object({ node: z.enum(['chat', 'terminal']) }) }),
+    z.object({ kind: z.literal('resume'), payload: z.object({ turnId: z.string().min(1) }) }),
+    z.object({ kind: z.literal('wake'), payload: z.object({ taskId: z.string().min(1) }) }),
+    z.object({ kind: z.literal('end'), payload: z.object({ nodeIds: z.array(z.string().min(1)) }) })
+]);
+
+type TestWork = z.infer<typeof TestWorkSchema>;
+
+// Ending holds the lanes of the nodes it ends, and is owed exactly because its target is gone.
+const openStore = (): OutboxStore<TestWork> =>
+    new OutboxStore({
+        dataDir: home,
+        work: TestWorkSchema,
+        lanesOf: (entry) => (entry.kind === 'end' ? [entry.target, ...entry.payload.nodeIds] : [entry.target]),
+        outlivesTarget: (entry) => entry.kind === 'end'
+    });
+
+const work = (node: 'chat' | 'terminal' = 'chat'): TestWork => ({ kind: 'start', payload: { node } });
 
 const unused = (): never => {
-    throw new Error('no resume in these tests');
+    throw new Error('this kind is not owed in this test');
 };
 
 let home: string;
-let store: OutboxStore;
+let store: OutboxStore<TestWork>;
 let clock: ManualClock;
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-outbox-'));
-    store = new OutboxStore(home);
+    store = openStore();
     clock = new ManualClock();
 });
 
@@ -35,16 +54,10 @@ test('an entry is on disk until its work is done, and then it is gone', async ()
         store,
         clock,
         handlers: {
-            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
-            'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
-            'deliver-waiting': () => Promise.reject(new Error('no waiting children in these tests')),
-            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'background-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
-            'resume-run': unused,
-            'wake-parent': unused,
-            'end-children': unused,
-            'start-agent': (entry) => {
+            resume: unused,
+            wake: unused,
+            end: unused,
+            start: (entry) => {
                 seen.push(entry.target);
                 return new Promise((resolve) => {
                     release = resolve;
@@ -63,27 +76,21 @@ test('an entry is on disk until its work is done, and then it is gone', async ()
 });
 
 test('what an earlier run owed is started once after a restart, and not again after the next one', async () => {
-    // The verb wrote its entry and the daemon went down before the worker got to it.
+    // The entry was written and the host went down before the worker got to it.
     await store.put('project', 'terminal-1', work('terminal'), clock.now());
 
     const runs: string[] = [];
-    const restart = async (): Promise<OutboxWorker> => {
-        const reloaded = new OutboxStore(home);
+    const restart = async (): Promise<OutboxWorker<TestWork>> => {
+        const reloaded = openStore();
         await reloaded.load();
         const worker = new OutboxWorker({
             store: reloaded,
             clock,
             handlers: {
-                'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
-                'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
-                'deliver-waiting': () => Promise.reject(new Error('no waiting children in these tests')),
-                'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
-                'background-limit': () => Promise.reject(new Error('no limits in these tests')),
-                'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
-                'resume-run': unused,
-                'wake-parent': unused,
-                'end-children': unused,
-                'start-agent': async (entry) => {
+                resume: unused,
+                wake: unused,
+                end: unused,
+                start: async (entry) => {
                     runs.push(entry.target);
                 }
             }
@@ -110,16 +117,10 @@ test('entries for one target run one after the other, oldest first, while other 
         store,
         clock,
         handlers: {
-            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
-            'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
-            'deliver-waiting': () => Promise.reject(new Error('no waiting children in these tests')),
-            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'background-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
-            'resume-run': unused,
-            'wake-parent': unused,
-            'end-children': unused,
-            'start-agent': (entry) => {
+            resume: unused,
+            wake: unused,
+            end: unused,
+            start: (entry) => {
                 const key = `${entry.target}:${entry.payload.node}`;
                 order.push(key);
                 if (key === 'node-a:terminal') {
@@ -150,21 +151,15 @@ test('entries for one target run one after the other, oldest first, while other 
 
 test('a failure waits 1, 5 and 30 seconds on the clock and is then given up on', async () => {
     let attempts = 0;
-    const parked: OutboxEntry[] = [];
+    const parked: OutboxEntryOf<TestWork>[] = [];
     const worker = new OutboxWorker({
         store,
         clock,
         handlers: {
-            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
-            'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
-            'deliver-waiting': () => Promise.reject(new Error('no waiting children in these tests')),
-            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'background-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
-            'resume-run': unused,
-            'wake-parent': unused,
-            'end-children': unused,
-            'start-agent': async () => {
+            resume: unused,
+            wake: unused,
+            end: unused,
+            start: async () => {
                 attempts += 1;
                 throw new Error('no');
             }
@@ -194,16 +189,10 @@ test('a retry that was waiting survives a restart with its attempts', async () =
         store,
         clock,
         handlers: {
-            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
-            'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
-            'deliver-waiting': () => Promise.reject(new Error('no waiting children in these tests')),
-            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'background-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
-            'resume-run': unused,
-            'wake-parent': unused,
-            'end-children': unused,
-            'start-agent': async () => {
+            resume: unused,
+            wake: unused,
+            end: unused,
+            start: async () => {
                 throw new Error('no');
             }
         }
@@ -213,7 +202,7 @@ test('a retry that was waiting survives a restart with its attempts', async () =
     await worker.settled();
     worker.stop();
 
-    const reloaded = new OutboxStore(home);
+    const reloaded = openStore();
     await reloaded.load();
     expect(reloaded.list().map((entry) => [entry.attempts, entry.notBefore - clock.now()])).toEqual([[1, RETRY_DELAYS_MS[0]]]);
 });
@@ -230,7 +219,7 @@ test('pruning drops what a project owed for nodes it no longer places', async ()
     expect(await filesOnDisk()).toHaveLength(2);
 });
 
-const wakeWork = (taskId: string): OutboxWork => ({ kind: 'wake-parent', payload: { taskId } });
+const wakeWork = (taskId: string): TestWork => ({ kind: 'wake', payload: { taskId } });
 
 test('an entry that waits keeps its file, costs no attempt, holds no lane and runs again only once its target is woken', async () => {
     let busy = true;
@@ -239,30 +228,24 @@ test('an entry that waits keeps its file, costs no attempt, holds no lane and ru
         store,
         clock,
         handlers: {
-            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
-            'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
-            'deliver-waiting': () => Promise.reject(new Error('no waiting children in these tests')),
-            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'background-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
-            'end-children': unused,
-            'start-agent': unused,
-            'wake-parent': async (entry) => {
+            end: unused,
+            start: unused,
+            wake: async (entry) => {
                 runs.push(entry.payload.taskId);
                 return busy ? 'wait' : undefined;
             },
             // The resume of the same chat behind it is not held up by a wake that waits for that resume.
-            'resume-run': async (entry) => {
+            resume: async (entry) => {
                 runs.push(`resume ${entry.payload.turnId}`);
             }
         }
     });
     worker.start();
     await worker.enqueue('project', 'chat-1', wakeWork('task-1'));
-    await worker.enqueue('project', 'chat-1', { kind: 'resume-run', payload: { turnId: 'turn-1', attempt: 2 } });
+    await worker.enqueue('project', 'chat-1', { kind: 'resume', payload: { turnId: 'turn-1' } });
     await worker.settled();
     expect(runs).toEqual(['task-1', 'resume turn-1']);
-    expect(store.list().map((entry) => [entry.kind, entry.attempts])).toEqual([['wake-parent', 0]]);
+    expect(store.list().map((entry) => [entry.kind, entry.attempts])).toEqual([['wake', 0]]);
 
     // No clock brings it back. Only a wake of its own target does.
     clock.advance(RETRY_DELAYS_MS.at(-1)! * 10);
@@ -285,16 +268,10 @@ test('a wake that lands while the entry is still deciding to wait runs it again 
         store,
         clock,
         handlers: {
-            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
-            'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
-            'deliver-waiting': () => Promise.reject(new Error('no waiting children in these tests')),
-            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'background-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
-            'start-agent': unused,
-            'end-children': unused,
-            'resume-run': unused,
-            'wake-parent': () => {
+            start: unused,
+            end: unused,
+            resume: unused,
+            wake: () => {
                 calls += 1;
                 if (calls > 1) {
                     return Promise.resolve();
@@ -343,22 +320,16 @@ test('ending children waits for a start of one of them that runs, and holds back
         store,
         clock,
         handlers: {
-            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
-            'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
-            'deliver-waiting': () => Promise.reject(new Error('no waiting children in these tests')),
-            'resume-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'background-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
-            'resume-run': unused,
-            'wake-parent': unused,
-            'start-agent': (entry) => hold(`start ${entry.target}`),
-            'end-children': (entry) => hold(`end ${entry.payload.nodeIds.join(',')}`)
+            resume: unused,
+            wake: unused,
+            start: (entry) => hold(`start ${entry.target}`),
+            end: (entry) => hold(`end ${entry.payload.nodeIds.join(',')}`)
         }
     });
     worker.start();
     await worker.enqueue('project', 'child-a', work());
     clock.advance(1);
-    await worker.enqueue('project', 'lead', { kind: 'end-children', payload: { nodeIds: ['child-a', 'child-b'] } });
+    await worker.enqueue('project', 'lead', { kind: 'end', payload: { nodeIds: ['child-a', 'child-b'] } });
     clock.advance(1);
     await worker.enqueue('project', 'child-b', work());
     // The start of child-a was running first; the ending waits for it, and child-b's start waits behind the ending.
@@ -374,10 +345,10 @@ test('ending children waits for a start of one of them that runs, and holds back
 });
 
 test('an entry that ends children is kept when the node it is about leaves the project', async () => {
-    await store.put('project', 'lead', { kind: 'end-children', payload: { nodeIds: ['child'] } }, clock.now());
+    await store.put('project', 'lead', { kind: 'end', payload: { nodeIds: ['child'] } }, clock.now());
     await store.put('project', 'gone', work(), clock.now());
     await store.prune('project', new Set(['child']));
-    expect(store.list().map((entry) => entry.kind)).toEqual(['end-children']);
+    expect(store.list().map((entry) => entry.kind)).toEqual(['end']);
 });
 
 test('work due at a later time runs then, and the work owed after it for the same node does not wait for it', async () => {
@@ -386,25 +357,19 @@ test('work due at a later time runs then, and the work owed after it for the sam
         store,
         clock,
         handlers: {
-            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
-            'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
-            'deliver-waiting': () => Promise.reject(new Error('no waiting children in these tests')),
-            'resume-limit': async (entry) => {
+            resume: async (entry) => {
                 runs.push(`resume ${entry.payload.turnId}`);
             },
-            'background-limit': () => Promise.reject(new Error('no limits in these tests')),
-            'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
-            'resume-run': unused,
-            'wake-parent': async () => {
+            wake: async () => {
                 runs.push('wake');
             },
-            'end-children': unused,
-            'start-agent': unused
+            end: unused,
+            start: unused
         }
     });
     worker.start();
-    await worker.enqueue('project', 'chat-1', { kind: 'resume-limit', payload: { turnId: 'turn-1' } }, clock.now() + 60_000);
-    await worker.enqueue('project', 'chat-1', { kind: 'wake-parent', payload: { taskId: 'task-1' } });
+    await worker.enqueue('project', 'chat-1', { kind: 'resume', payload: { turnId: 'turn-1' } }, clock.now() + 60_000);
+    await worker.enqueue('project', 'chat-1', { kind: 'wake', payload: { taskId: 'task-1' } });
     await worker.settled();
     expect(runs).toEqual(['wake']);
 

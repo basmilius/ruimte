@@ -1,6 +1,4 @@
-import { randomBytes } from 'node:crypto';
-import { join } from 'node:path';
-import { RecordDirectory } from '@ruimte/agents/record-directory';
+import { OutboxStore as BaseOutboxStore, type OutboxEntryOf } from '@ruimte/agents/outbox/outbox';
 import { AgentKindSchema, ModelSelectionSchema, ProviderAccountIdSchema, RuntimeModeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 
@@ -89,21 +87,8 @@ const OutboxWorkSchema = z.discriminatedUnion('kind', [
     DeliverWaitingSchema
 ]);
 
-const OutboxEntrySchema = z.intersection(
-    OutboxWorkSchema,
-    z.object({
-        id: z.string().min(1),
-        projectId: z.string().min(1),
-        // The node the work is about. Entries for one target run one at a time, and it goes with the node.
-        target: z.string().min(1),
-        createdAt: z.number(),
-        attempts: z.number().int().nonnegative(),
-        notBefore: z.number()
-    })
-);
-
 export type OutboxWork = z.infer<typeof OutboxWorkSchema>;
-export type OutboxEntry = z.infer<typeof OutboxEntrySchema>;
+export type OutboxEntry = OutboxEntryOf<OutboxWork>;
 export type StartAgentEntry = Extract<OutboxEntry, { kind: 'start-agent' }>;
 export type ResumeRunEntry = Extract<OutboxEntry, { kind: 'resume-run' }>;
 export type ResumeLimitEntry = Extract<OutboxEntry, { kind: 'resume-limit' }>;
@@ -115,71 +100,20 @@ export type EndChildrenEntry = Extract<OutboxEntry, { kind: 'end-children' }>;
 export type DeliverSummaryEntry = Extract<OutboxEntry, { kind: 'deliver-summary' }>;
 export type DeliverWaitingEntry = Extract<OutboxEntry, { kind: 'deliver-waiting' }>;
 
-/* The nodes an entry is about. Work on any of them waits while it runs. Ending children holds their lanes too, so no start or resume of one runs beside it. */
-export const lanesOf = (entry: OutboxEntry): string[] => (entry.kind === 'end-children' ? [entry.target, ...entry.payload.nodeIds] : [entry.target]);
-
 /*
- * Work the daemon still owes, one file per entry under `$RUIMTE_HOME/outbox`, removed once it is
- * done. On disk because the owing outlives the process. A node written a moment before a restart
- * still has its agent started after it. Only a verb or a restart puts something here, never a clock;
- * the exceptions are a `resume-limit`, only where a person turned it on, a `background-limit` and
- * the grace of a `deliver-waiting`, each due at a time.
+ * Work the daemon still owes, under `$RUIMTE_HOME/outbox`. Only a verb or a restart puts something
+ * here, never a clock; the exceptions are a `resume-limit`, only where a person turned it on, a
+ * `background-limit` and the grace of a `deliver-waiting`, each due at a time.
  */
-export class OutboxStore {
-    readonly dir: string;
-    private readonly entries: RecordDirectory<OutboxEntry>;
-
+export class OutboxStore extends BaseOutboxStore<OutboxWork> {
     constructor(home: string) {
-        this.dir = join(home, 'outbox');
-        this.entries = new RecordDirectory({ dir: this.dir, schema: OutboxEntrySchema, idOf: (entry) => entry.id });
-    }
-
-    /* Reads what an earlier run of the daemon still owed. Call before the worker starts. */
-    load(): Promise<void> {
-        return this.entries.load();
-    }
-
-    /* `notBefore` later than `now` is work due at a time, which holds no lane until then. */
-    async put(projectId: string, target: string, work: OutboxWork, now: number, notBefore = now): Promise<OutboxEntry> {
-        const entry: OutboxEntry = {
-            ...work,
-            id: `${work.kind}-${randomBytes(6).toString('hex')}`,
-            projectId,
-            target,
-            createdAt: now,
-            attempts: 0,
-            notBefore
-        };
-        await this.entries.write(entry);
-        return entry;
-    }
-
-    /* The same entry with what its last attempt left behind. */
-    async update(entry: OutboxEntry): Promise<void> {
-        if (!this.entries.has(entry.id)) {
-            return;
-        }
-        await this.entries.write(entry);
-    }
-
-    remove(id: string): Promise<void> {
-        return this.entries.remove(id);
-    }
-
-    /* Oldest first, which is the order the work was owed in. */
-    list(): OutboxEntry[] {
-        return this.entries.all().sort((a, b) => a.createdAt - b.createdAt);
-    }
-
-    has(id: string): boolean {
-        return this.entries.has(id);
-    }
-
-    /*
-     * Drops what this project owed for ids it no longer has. Nothing is started for a node that was
-     * deleted. Ending the children of a deleted node is owed exactly because it is gone, so that stays.
-     */
-    prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
-        return this.entries.prune((entry) => entry.projectId === projectId && entry.kind !== 'end-children' && !ids.has(entry.target));
+        super({
+            dataDir: home,
+            work: OutboxWorkSchema,
+            // Ending children holds their lanes too, so no start or resume of one runs beside it.
+            lanesOf: (entry) => (entry.kind === 'end-children' ? [entry.target, ...entry.payload.nodeIds] : [entry.target]),
+            // Ending the children of a deleted node is owed exactly because it is gone.
+            outlivesTarget: (entry) => entry.kind === 'end-children'
+        });
     }
 }

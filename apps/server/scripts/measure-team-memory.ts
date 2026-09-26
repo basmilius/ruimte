@@ -5,7 +5,7 @@ import { parseArgs } from 'node:util';
 import { heapStats } from 'bun:jsc';
 import type { ProjectContent } from '@ruimte/contracts';
 import { ChatStore } from '@ruimte/agents/chat/chat-store';
-import { ManualClock } from '../src/outbox/manual-clock.ts';
+import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { ProjectStore } from '../src/projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../src/tasks/test-daemon.ts';
 
