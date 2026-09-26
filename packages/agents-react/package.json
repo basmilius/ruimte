@@ -154,6 +154,7 @@
     "./usage/limits": "./src/usage/limits.ts",
     "./usage/money": "./src/usage/money.ts",
     "./usage/summary": "./src/usage/summary.ts",
+    "./theme.css": "./src/theme.css",
     "./locales/*.json": "./src/locales/*.json"
   },
   "scripts": {
