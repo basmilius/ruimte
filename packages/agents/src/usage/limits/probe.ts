@@ -1,7 +1,8 @@
 import { withTimeout } from '../../async.ts';
-import type { UsageLimitsProvider } from '@ruimte/contracts';
-import { CodexTransport } from '@ruimte/agents/chat/codex-transport';
-import { readClaudeUsage, readCodexLimits, type ProviderReading } from '@ruimte/agents/usage/limits/normalize';
+import type { UsageLimitsProvider } from '@ruimte/agent-contracts';
+import { spawnChatProcess, type ChatProcess, type SpawnChatProcess } from '../../chat/chat-process.ts';
+import { CodexTransport, DEFAULT_CODEX_CLIENT, type CodexClientInfo } from '../../chat/codex-transport.ts';
+import { readClaudeUsage, readCodexLimits, type ProviderReading } from './normalize.ts';
 import { errorText } from '../../error-text.ts';
 
 /* A CLI that has not answered by now is not going to; the next pass tries again. */
@@ -19,24 +20,33 @@ const timeoutOf = <T>(work: Promise<T>, ms: number, what: string): Promise<T> =>
  * `claude -p` on the stream-json protocol answers `get_usage` before any prompt, but only once it
  * has been initialized: without that first control request the process waits and says nothing.
  */
-export const probeClaude = async (command: readonly string[], env: Record<string, string>): Promise<ProbeResult> => {
-    const child = Bun.spawn([...command, '-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose'], {
-        stdin: 'pipe',
-        stdout: 'pipe',
-        stderr: 'ignore',
-        env
-    });
+export const probeClaude = async (
+    command: readonly string[],
+    env: Record<string, string>,
+    spawn: SpawnChatProcess = spawnChatProcess
+): Promise<ProbeResult> => {
+    let child: ChatProcess;
+    try {
+        child = spawn({
+            command: [...command, '-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose'],
+            cwd: process.cwd(),
+            env,
+            onExit: () => undefined
+        });
+    } catch (error) {
+        return failure(errorText(error));
+    }
     const write = (frame: unknown): void => {
         child.stdin.write(`${JSON.stringify(frame)}\n`);
         child.stdin.flush();
     };
     const read = async (): Promise<ProbeResult> => {
-        write({ type: 'control_request', request_id: 'ruimte-init', request: { subtype: 'initialize', hooks: {} } });
+        write({ type: 'control_request', request_id: 'probe-init', request: { subtype: 'initialize', hooks: {} } });
         let asked = false;
         let buffer = '';
         const decoder = new TextDecoder();
-        for await (const chunk of child.stdout) {
-            buffer += decoder.decode(chunk as Uint8Array, { stream: true });
+        for await (const chunk of child.stdout as unknown as AsyncIterable<Uint8Array>) {
+            buffer += decoder.decode(chunk, { stream: true });
             let at = buffer.indexOf('\n');
             for (; at !== -1; at = buffer.indexOf('\n')) {
                 const line = buffer.slice(0, at);
@@ -56,7 +66,7 @@ export const probeClaude = async (command: readonly string[], env: Record<string
                 }
                 if (!asked) {
                     asked = true;
-                    write({ type: 'control_request', request_id: 'ruimte-usage', request: { subtype: 'get_usage' } });
+                    write({ type: 'control_request', request_id: 'probe-usage', request: { subtype: 'get_usage' } });
                     continue;
                 }
                 if (envelope.response?.subtype === 'error') {
@@ -73,12 +83,17 @@ export const probeClaude = async (command: readonly string[], env: Record<string
     } catch (error) {
         return failure(errorText(error));
     } finally {
-        child.kill();
+        child.stdin.end();
+        child.kill('SIGTERM');
     }
 };
 
 /* The same question to Codex: the app-server answers it over JSON-RPC right after the handshake. */
-export const probeCodex = async (command: readonly string[], env: Record<string, string>): Promise<ProbeResult> => {
+export const probeCodex = async (
+    command: readonly string[],
+    env: Record<string, string>,
+    client: CodexClientInfo = DEFAULT_CODEX_CLIENT
+): Promise<ProbeResult> => {
     let transport: CodexTransport | null = null;
     try {
         transport = new CodexTransport({
@@ -89,11 +104,7 @@ export const probeCodex = async (command: readonly string[], env: Record<string,
             onExit: () => undefined
         });
         const open = transport;
-        await timeoutOf(
-            open.request('initialize', { clientInfo: { name: 'ruimte', title: 'Ruimte', version: '0.1.0' }, capabilities: { experimentalApi: true } }),
-            PROBE_TIMEOUT_MS,
-            'Codex'
-        );
+        await timeoutOf(open.request('initialize', { clientInfo: client, capabilities: { experimentalApi: true } }), PROBE_TIMEOUT_MS, 'Codex');
         open.notify('initialized', {});
         const answer = await timeoutOf(open.request('account/rateLimits/read', undefined), CODEX_READ_TIMEOUT_MS, 'Codex');
         const snapshot = typeof answer === 'object' && answer !== null ? (answer as { rateLimits?: unknown }).rateLimits : null;

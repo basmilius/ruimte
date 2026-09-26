@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ProviderAccountsService } from '../providers/accounts/service.ts';
-import { testAccounts } from '../providers/accounts/test-accounts.ts';
+import type { ProviderAccountsService } from '@ruimte/agents/providers/accounts/service';
+import { testAccounts } from '@ruimte/agents/providers/accounts/test-accounts';
 import { makeHarness, type Harness } from './test-helpers.ts';
 
 let harness: Harness;
@@ -19,7 +19,7 @@ beforeEach(async () => {
     const home = await mkdtemp(join(tmpdir(), 'ruimte-account-'));
     env = { PATH: '/usr/bin:/bin', HOME: home, ANTHROPIC_API_KEY: 'sk-inherited' };
     accounts = await testAccounts({
-        ruimteHome: home,
+        home,
         env,
         accounts: {
             claude_personal: { kind: 'claude', label: 'Personal', home: '~/.claude_personal' },

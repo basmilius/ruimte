@@ -35,7 +35,7 @@ import { PlanStore } from '../plans/plan-store.ts';
 import { nodeAccount, nodeMode, startAgentWork } from '../outbox/start-agent.ts';
 import { OutboxLink, wireOutbox } from '../outbox/wiring.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import type { AccountLaunches } from '../providers/accounts/launch.ts';
+import type { AccountLaunches } from '@ruimte/agents/providers/accounts/launch';
 import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';

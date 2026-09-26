@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentKind } from '@ruimte/contracts';
+import type { AgentKind } from '@ruimte/agent-contracts';
 import { providerFor } from '../registry.ts';
 import { accountEnv, accountFolder, accountProblem, canContinue, readAccount, withDefaults } from './accounts.ts';
 

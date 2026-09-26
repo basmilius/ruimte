@@ -1,11 +1,11 @@
 /*
- * Refreshes `src/usage/prices-snapshot.json`, the price table the app falls back to when it has
+ * Refreshes `packages/agents/src/usage/prices-snapshot.json`, the price table the app falls back to when it has
  * never reached LiteLLM. Only the Anthropic and OpenAI chat and responses entries are kept, and
  * only the five fields the pricing code reads, which is what holds the file to a few dozen KB.
  * Run it by hand now and then: `bun run --cwd apps/server snapshot-prices`.
  */
 import { join } from 'node:path';
-import { LITELLM_URL } from '../src/usage/pricing.ts';
+import { LITELLM_URL } from '@ruimte/agents/usage/pricing';
 
 const PROVIDERS = new Set(['anthropic', 'openai']);
 const MODES = new Set(['chat', 'responses']);
@@ -40,6 +40,6 @@ for (const [name, entry] of Object.entries(document)) {
     kept[name] = trimmed;
 }
 
-const target = join(import.meta.dir, '..', 'src', 'usage', 'prices-snapshot.json');
+const target = join(import.meta.dir, '..', '..', '..', 'packages', 'agents', 'src', 'usage', 'prices-snapshot.json');
 await Bun.write(target, `${JSON.stringify(kept, null, 2)}\n`);
 console.log(`Wrote ${Object.keys(kept).length} models to ${target}`);

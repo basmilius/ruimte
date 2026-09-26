@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ProviderAccountsService } from '../providers/accounts/service.ts';
 import { testAccounts } from '../providers/accounts/test-accounts.ts';
-import { limitAccountsOf, sessionAccountsOf, usageAccountsOf, usageRootsOf } from './accounts.ts';
+import { chatSessionAccounts, limitAccountsOf, usageAccountsOf, usageRootsOf } from './accounts.ts';
 
 let root: string;
 let home: string;
@@ -16,7 +16,7 @@ beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-usage-accounts-'));
     home = join(root, 'home');
     service = await testAccounts({
-        ruimteHome: root,
+        home: root,
         env: { HOME: home },
         accounts: {
             claude_work: { kind: 'claude', label: 'Work', color: 'blue', home: join(root, 'work') },
@@ -62,24 +62,15 @@ describe('the accounts of the usage page and the limits', () => {
         expect(limits.lastUsedAt('claude_work')).not.toBeNull();
     });
 
-    test('knows which account ran a session of a chat or a terminal', () => {
-        const known = sessionAccountsOf(
-            [
-                { provider: 'codex', agentSessionId: 't-1', account: 'codex_work' },
-                { provider: 'codex', agentSessionId: 't-2' },
-                { provider: 'codex', agentSessionId: null, account: 'codex_work' }
-            ],
-            [
-                {
-                    agent: { kind: 'codex', agentSessionId: 't-3', transcriptPath: null, status: 'idle', live: true, updatedAt: 0 },
-                    launch: { kind: 'codex', account: 'codex_work' }
-                }
-            ]
-        );
+    test('knows which account ran a session of a chat', () => {
+        const known = chatSessionAccounts([
+            { provider: 'codex', agentSessionId: 't-1', account: 'codex_work' },
+            { provider: 'codex', agentSessionId: 't-2' },
+            { provider: 'codex', agentSessionId: null, account: 'codex_work' }
+        ]);
         expect([...known]).toEqual([
             ['codex\0t-1', 'codex_work'],
-            ['codex\0t-2', 'codex'],
-            ['codex\0t-3', 'codex_work']
+            ['codex\0t-2', 'codex']
         ]);
     });
 });

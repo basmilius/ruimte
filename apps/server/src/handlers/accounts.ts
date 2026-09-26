@@ -1,5 +1,5 @@
 import { translate, type Dispatcher } from '../dispatcher.ts';
-import type { ProviderAccountsService } from '../providers/accounts/service.ts';
+import type { ProviderAccountsService } from '@ruimte/agents/providers/accounts/service';
 
 /* A paired client may change them: the accounts are the person's settings of this machine, and no verb reaches them. */
 export const registerProviderAccountHandlers = (dispatcher: Dispatcher, accounts: ProviderAccountsService): void => {

@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { AgentKind, ProviderAccounts, ProviderInfo } from '@ruimte/contracts';
-import type { SessionEvent } from '../../sessions/manager.ts';
+import type { AgentKind, ProviderAccounts, ProviderInfo } from '@ruimte/agent-contracts';
+import type { AgentEvent } from '../../events.ts';
 import { providerFor } from '../registry.ts';
 import { ProviderAccountsService } from './service.ts';
 import type { ShadowHomeReport } from './shadow-home.ts';
@@ -37,7 +37,8 @@ describe('ProviderAccountsService', () => {
 
     const make = async (): Promise<ProviderAccountsService> => {
         const service = new ProviderAccountsService({
-            ruimteHome: dir,
+            home: dir,
+            host: { name: 'Host', variablePrefixes: ['HOST_'], keychainPrefix: 'host' },
             providers,
             env,
             ask: async (kind, _command, askedEnv) => {
@@ -64,7 +65,7 @@ describe('ProviderAccountsService', () => {
             }
         });
         await service.load();
-        service.subscribe('client', (event: SessionEvent) => {
+        service.subscribe('client', (event: AgentEvent) => {
             if (event.event === 'accounts.changed') {
                 events.push(event.payload);
             }
@@ -386,8 +387,8 @@ describe('ProviderAccountsService', () => {
         const refused = (variables: NonNullable<ProviderAccounts['accounts'][string]['env']>) =>
             service.save({ claude_personal: { kind: 'claude', home, env: variables } });
         await expect(refused([{ name: 'ANTHROPIC_API_KEY', value: '', sensitive: true, valueRedacted: true }])).rejects.toThrow('has no value');
-        for (const name of ['HOME', 'PATH', 'RUIMTE_CONTEXT_URL', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME']) {
-            await expect(refused([{ name, value: 'x', sensitive: false }])).rejects.toThrow(`${name} is set by Ruimte itself`);
+        for (const name of ['HOME', 'PATH', 'HOST_CONTEXT_URL', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME']) {
+            await expect(refused([{ name, value: 'x', sensitive: false }])).rejects.toThrow(`${name} is set by Host itself`);
         }
         await expect(
             refused([

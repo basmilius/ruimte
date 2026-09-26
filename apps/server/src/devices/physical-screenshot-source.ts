@@ -1,4 +1,4 @@
-import { wait } from '../async.ts';
+import { wait } from '@ruimte/agents/async';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

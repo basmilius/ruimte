@@ -1,4 +1,4 @@
-import type { UsageProvider, UsageTotals } from '@ruimte/contracts';
+import type { UsageProvider, UsageTotals } from '@ruimte/agent-contracts';
 
 /* One priced call, as a reader found it on a line. The scanner keeps these; the aggregator sums them. */
 export interface UsageRecord {

@@ -1,6 +1,6 @@
 import { lstat, mkdir, readdir, readlink, symlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { isNotFound } from '@ruimte/agents/fs';
+import { isNotFound } from '../../fs.ts';
 
 /*
  * A Codex shadow home: a folder of its own for one login, sharing everything else with a Codex home

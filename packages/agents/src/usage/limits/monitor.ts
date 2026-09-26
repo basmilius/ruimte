@@ -1,8 +1,9 @@
-import type { UsageLimitsProvider, UsageLimitsSnapshot, UsageProvider } from '@ruimte/contracts';
+import type { UsageLimitsProvider, UsageLimitsSnapshot, UsageProvider } from '@ruimte/agent-contracts';
 import { definedEnv } from '../../providers/accounts/launch.ts';
 import type { ProviderRegistry } from '../../providers/registry.ts';
-import type { SessionEvent, SessionSink } from '../../sessions/manager.ts';
-import { mergeWindows, type LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
+import type { AgentEvent, AgentSink } from '../../events.ts';
+import { mergeWindows, type LimitsUpdate } from './normalize.ts';
+import type { CodexClientInfo } from '../../chat/codex-transport.ts';
 import { probeClaude, probeCodex, type ProbeResult } from './probe.ts';
 import { ClientSinks } from '../../client-sinks.ts';
 import { errorText } from '../../error-text.ts';
@@ -60,6 +61,8 @@ export interface UsageMonitorOptions {
     /* How to ask; a test answers without starting a CLI. */
     probe?: (kind: UsageProvider, command: readonly string[], env: ProbeEnv) => Promise<ProbeResult>;
     now?: () => number;
+    // How the host names itself to the app-server a probe opens.
+    client?: CodexClientInfo;
 }
 
 /*
@@ -73,7 +76,7 @@ export class UsageMonitor {
     private readonly accounts: LimitAccounts | null;
     private readonly probe: NonNullable<UsageMonitorOptions['probe']>;
     private readonly now: () => number;
-    private readonly sinks = new ClientSinks();
+    private readonly sinks = new ClientSinks<AgentEvent>();
     // By account id, so the default account of a CLI is under the CLI's kind.
     private readonly states = new Map<string, ProviderState>();
     private inFlight: Promise<void> | null = null;
@@ -82,14 +85,14 @@ export class UsageMonitor {
     constructor(options: UsageMonitorOptions) {
         this.registry = options.providers;
         this.accounts = options.accounts ?? null;
-        this.probe = options.probe ?? ((kind, command, env) => (kind === 'claude' ? probeClaude(command, env) : probeCodex(command, env)));
+        this.probe = options.probe ?? ((kind, command, env) => (kind === 'claude' ? probeClaude(command, env) : probeCodex(command, env, options.client)));
         this.now = options.now ?? Date.now;
         for (const kind of PROVIDERS) {
             this.stateOf(kind, kind);
         }
     }
 
-    subscribe(clientId: string, sink: SessionSink): () => void {
+    subscribe(clientId: string, sink: AgentSink): () => void {
         return this.sinks.subscribe(clientId, sink);
     }
 
@@ -228,7 +231,7 @@ export class UsageMonitor {
     }
 
     private emit(): void {
-        const event: SessionEvent = { event: 'usage.limitsChanged', payload: this.snapshot() };
+        const event: AgentEvent = { event: 'usage.limitsChanged', payload: this.snapshot() };
         this.sinks.emit(event);
     }
 }

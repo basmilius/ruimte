@@ -1,4 +1,4 @@
-import { addTotals, EMPTY_TOTALS, totalTokensOf } from '@ruimte/contracts';
+import { addTotals, EMPTY_TOTALS, totalTokensOf } from '@ruimte/agent-contracts';
 import type {
     UsageBucket,
     UsageModel,
@@ -8,7 +8,7 @@ import type {
     UsageResolution,
     UsageSummaryPayload,
     UsageTotals
-} from '@ruimte/contracts';
+} from '@ruimte/agent-contracts';
 import { cacheSavingsOf, costOf, type PriceBook } from './pricing.ts';
 import { ProjectResolver, type KnownProject } from './projects.ts';
 import type { UsageRecord } from './record.ts';

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { Glob } from 'bun';
 import { describe, expect, test } from 'bun:test';
 
@@ -12,8 +12,14 @@ const isTest = (path: string): boolean => path.endsWith('.test.ts');
 
 describe('the boundary of @ruimte/agents', () => {
     test('nothing imports from an app or from contracts beyond the chat host', () => {
+        const leaves = (path: string, specifier: string): boolean =>
+            specifier.startsWith('.') && relative(HERE, resolve(dirname(join(HERE, path)), specifier)).startsWith('..');
         const reaching = sources()
-            .filter(({ text }) => /from '@\/|from '(\.\.\/)+(apps|\.\.)|from '@ruimte\/contracts'/.test(text))
+            .filter(({ path, text }) =>
+                [...text.matchAll(/from '([^']+)'/g)].some(
+                    ([, specifier]) => specifier!.startsWith('@/') || specifier === '@ruimte/contracts' || leaves(path, specifier!)
+                )
+            )
             .map(({ path }) => path);
         expect(reaching).toEqual([]);
     });

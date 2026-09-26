@@ -1,5 +1,5 @@
-import type { UsageAccount, UsageSummaryPayload, UsageSummaryResult } from '@ruimte/contracts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { UsageAccount, UsageSummaryPayload, UsageSummaryResult } from '@ruimte/agent-contracts';
+import type { AgentEvent, AgentSink } from '../events.ts';
 import { accountOfRecord, aggregate } from './aggregate.ts';
 import { ExchangeRates } from './exchange.ts';
 import { PriceBook } from './pricing.ts';
@@ -54,7 +54,7 @@ export class UsageService {
     private readonly rates: ExchangeRates;
     private readonly knownProjects: UsageServiceOptions['knownProjects'];
     private readonly accounts: (() => UsageAccount[]) | null;
-    private readonly sinks = new ClientSinks((clientId) => this.unfollow(clientId));
+    private readonly sinks = new ClientSinks<AgentEvent>((clientId) => this.unfollow(clientId));
     private readonly followers = new Set<string>();
     private report: ScanReport = EMPTY_SCAN;
     private failed = false;
@@ -69,7 +69,7 @@ export class UsageService {
         this.knownProjects = options.knownProjects;
     }
 
-    subscribe(clientId: string, sink: SessionSink): () => void {
+    subscribe(clientId: string, sink: AgentSink): () => void {
         return this.sinks.subscribe(clientId, sink);
     }
 
@@ -155,7 +155,7 @@ export class UsageService {
         }
     }
 
-    private emit(event: SessionEvent): void {
+    private emit(event: AgentEvent): void {
         this.sinks.emit(event);
     }
 }

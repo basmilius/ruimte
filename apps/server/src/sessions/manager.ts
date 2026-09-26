@@ -8,7 +8,7 @@ import { modeOfHook, normalizeHook, settleWaiting } from '../agents/hooks.ts';
 import { isTerminalReply } from './terminal-replies.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { narrowerMode } from '../canvas/mode.ts';
-import { launchEnv, storedAccount, type AccountLaunches } from '../providers/accounts/launch.ts';
+import { launchEnv, storedAccount, type AccountLaunches } from '@ruimte/agents/providers/accounts/launch';
 import { contextHint, verbsNote } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';

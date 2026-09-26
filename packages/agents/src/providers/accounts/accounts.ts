@@ -1,8 +1,8 @@
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
-import { AgentKindSchema, ProviderAccountSchema, type AgentKind, type ProviderAccount, type ProviderAccountMap } from '@ruimte/contracts';
-import type { ChatProvider } from '@ruimte/agents/providers/provider';
-import { variablesProblem } from './variables.ts';
+import { AgentKindSchema, ProviderAccountSchema, type AgentKind, type ProviderAccount, type ProviderAccountMap } from '@ruimte/agent-contracts';
+import type { ChatProvider } from '../provider.ts';
+import { DEFAULT_ACCOUNTS_HOST, variablesProblem, type AccountsHost, type ReservedVariables } from './variables.ts';
 
 export type Env = Record<string, string | undefined>;
 
@@ -36,12 +36,12 @@ export const accountProblem = (
     account: ProviderAccount,
     provider: ChatProvider,
     env: Env,
-    folderVariables: readonly string[] = []
+    reserved: ReservedVariables = { host: DEFAULT_ACCOUNTS_HOST, folderVariables: [] }
 ): string | null => {
     if (isKnownKind(id) && id !== account.kind) {
         return `"${id}" is the id of the default ${id} account`;
     }
-    const variables = variablesProblem(account.env ?? [], folderVariables);
+    const variables = variablesProblem(account.env ?? [], reserved);
     if (variables !== null) {
         return variables;
     }
@@ -160,7 +160,13 @@ export const canContinue = (from: NamedAccount, to: NamedAccount, providerOf: (k
  * An account as the file holds it, or null for one to drop. An unknown kind comes back as it was
  * read, extra fields included; a known kind has to parse and make sense.
  */
-export const readAccount = (id: string, raw: unknown, providerOf: (kind: AgentKind) => ChatProvider, env: Env): unknown => {
+export const readAccount = (
+    id: string,
+    raw: unknown,
+    providerOf: (kind: AgentKind) => ChatProvider,
+    env: Env,
+    host: AccountsHost = DEFAULT_ACCOUNTS_HOST
+): unknown => {
     if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
         return null;
     }
@@ -172,7 +178,7 @@ export const readAccount = (id: string, raw: unknown, providerOf: (kind: AgentKi
         return isKnownKind(id) ? null : raw;
     }
     const parsed = ProviderAccountSchema.safeParse(raw);
-    if (!parsed.success || accountProblem(id, parsed.data, providerOf(kind), env, folderVariablesOf(providerOf)) !== null) {
+    if (!parsed.success || accountProblem(id, parsed.data, providerOf(kind), env, { host, folderVariables: folderVariablesOf(providerOf) }) !== null) {
         return null;
     }
     return parsed.data;

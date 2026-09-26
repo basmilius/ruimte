@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { ProviderRegistry } from './registry.ts';
-import { withDefaults } from './accounts/accounts.ts';
+import { withDefaults } from '@ruimte/agents/providers/accounts/accounts';
 
 test('the machine switch takes effect without restarting the registry or trusting cached detection', async () => {
     let enabled = false;

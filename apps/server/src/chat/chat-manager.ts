@@ -30,7 +30,7 @@ import type {
 import { narrowerMode } from '../canvas/mode.ts';
 import { chatPrompt, contextPrompt } from '../context/context-note.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
-import { AccountError, definedEnv, isDefaultAccountOf, launchEnv, storedAccount, type AccountLaunches } from '../providers/accounts/launch.ts';
+import { AccountError, definedEnv, isDefaultAccountOf, launchEnv, storedAccount, type AccountLaunches } from '@ruimte/agents/providers/accounts/launch';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
@@ -51,7 +51,7 @@ import type { CodexProcessSpec } from '@ruimte/agents/chat/codex-thread';
 import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 import { SubagentReader, type SubagentReaderOptions } from '@ruimte/agents/chat/subagent-reader';
 import { errorText } from '../error-text.ts';
-import { usageRoots } from '../usage/roots.ts';
+import { usageRoots } from '@ruimte/agents/usage/roots';
 import { ClientSinks } from '../client-sinks.ts';
 
 /* A turn that was running when the daemon went down, and the attempt that would take it up again. */

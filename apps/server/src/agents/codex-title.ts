@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { usageRoots } from '../usage/roots.ts';
+import { usageRoots } from '@ruimte/agents/usage/roots';
 import { cleanTitle, readLines } from '@ruimte/agents/title-file';
 
 // Every line of the index is about a name; one without this key is not worth parsing.

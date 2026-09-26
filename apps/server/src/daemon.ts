@@ -120,15 +120,18 @@ import { isTrackedPath } from './git/ignore.ts';
 import { ProjectStore } from './projects/project-store.ts';
 import { probeCodexNoDaemon, takesNoteOnLine } from './providers/launch.ts';
 import { ProviderRegistry } from './providers/registry.ts';
-import { ProviderAccountsService } from './providers/accounts/service.ts';
+import { ProviderAccountsService } from '@ruimte/agents/providers/accounts/service';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
 import { SessionError, SessionManager } from './sessions/manager.ts';
 import { CommandApprovals, commandsSet } from './sessions/command-approvals.ts';
 import { startCwdGuard } from './canvas/project-paths.ts';
 import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
-import { limitAccountsOf, sessionAccountsOf, usageAccountsOf, usageRootsOf } from './usage/accounts.ts';
-import { UsageMonitor } from './usage/limits/monitor.ts';
-import { UsageService } from './usage/usage-service.ts';
+import { limitAccountsOf, usageAccountsOf, usageRootsOf } from '@ruimte/agents/usage/accounts';
+import { sessionAccountsOf } from './usage/session-accounts.ts';
+import { RUIMTE_ACCOUNTS_HOST } from './providers/accounts-host.ts';
+import { RUIMTE_CODEX_CLIENT } from './providers/codex-provider.ts';
+import { UsageMonitor } from '@ruimte/agents/usage/limits/monitor';
+import { UsageService } from '@ruimte/agents/usage/usage-service';
 import { errorText } from './error-text.ts';
 import { BrowserDriver } from './browser/drive.ts';
 import { BrowserManager } from './browser/manager.ts';
@@ -243,7 +246,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const providers = new ProviderRegistry({ appleEnabled: () => identity.appleFoundationEnabled });
     // Before the managers, which start every CLI under the account its node or chat names.
     const providerAccounts = new ProviderAccountsService({
-        ruimteHome: config.home,
+        home: config.home,
+        host: RUIMTE_ACCOUNTS_HOST,
+        client: RUIMTE_CODEX_CLIENT,
         providers,
         install: config.installHooks
             ? async (kind, folder) => {
@@ -459,7 +464,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             ),
         accounts: () => usageAccountsOf(providerAccounts, nameOfCli)
     });
-    const limits = new UsageMonitor({ providers, accounts: limitAccountsOf(providerAccounts, nameOfCli, process.env) });
+    const limits = new UsageMonitor({ providers, accounts: limitAccountsOf(providerAccounts, nameOfCli, process.env), client: RUIMTE_CODEX_CLIENT });
     providerAccounts.listen(() => limits.accountsChanged());
     const sampler = await createSampler(process.platform, config.home);
     const processes = new ProcessMonitor({

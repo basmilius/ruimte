@@ -12,17 +12,18 @@ import {
     type ProviderAccountStatus,
     type ProviderAccountVariable,
     type ProviderInfo
-} from '@ruimte/contracts';
+} from '@ruimte/agent-contracts';
 import { ClientSinks } from '../../client-sinks.ts';
 import { errorText } from '../../error-text.ts';
-import type { SessionSink } from '../../sessions/manager.ts';
-import type { ChatProvider } from '@ruimte/agents/providers/provider';
+import type { AgentEvent, AgentSink } from '../../events.ts';
+import type { ChatProvider } from '../provider.ts';
 import { accountEnv, accountFolder, canContinue, defaultFolder, expandHome, isDefaultAccount, isKnownKind, transcriptFolder, type Env } from './accounts.ts';
 import { AccountError, isDefaultAccountOf, type AccountLaunches } from './launch.ts';
 import { prepareShadowHome, type ShadowHomeReport } from './shadow-home.ts';
-import { askAccount, type AskAccount } from './status.ts';
+import { askAccountAs, type AskAccount } from './status.ts';
 import { acceptAccounts, accountsPath, InvalidAccountError, readAccounts, wireAccounts, writeAccounts, type StoredAccounts } from './store.ts';
-import { platformSecrets, secretKey, SecretsUnavailableError, type SecretStore } from './variables.ts';
+import { DEFAULT_ACCOUNTS_HOST, platformSecrets, secretKey, SecretsUnavailableError, type AccountsHost, type SecretStore } from './variables.ts';
+import { DEFAULT_CODEX_CLIENT, type CodexClientInfo } from '../../chat/codex-transport.ts';
 
 /* Who is signed in changes by hand and rarely; often enough to notice, rarely enough not to start CLIs all day. */
 const CHECK_INTERVAL_MS = 15 * 60_000;
@@ -32,14 +33,18 @@ const LOGIN_POLL_MS = 3_000;
 const LOGIN_WATCH_MS = 5 * 60_000;
 
 export interface ProviderAccountsOptions {
-    ruimteHome: string;
+    // The data folder: `providers.json`, and a folder per account the host makes.
+    home: string;
+    host?: AccountsHost;
+    // How the host names itself to an app-server it asks who is signed in.
+    client?: CodexClientInfo;
     providers: { list(): Promise<ProviderInfo[]>; get(kind: AgentKind): ChatProvider; enabled?(kind: AgentKind): boolean };
     env?: Env;
     // How to ask a CLI who is signed in; a test answers without starting one.
     ask?: AskAccount;
     prepareShadow?: (home: string, shadow: string) => Promise<ShadowHomeReport>;
     folderExists?: (path: string) => boolean;
-    // What the daemon puts in a config folder of an account (its hooks); absent puts nothing there.
+    // What the host puts in a config folder of an account (its hooks); absent puts nothing there.
     install?: (kind: AgentKind, folder: string) => Promise<void>;
     // Where sensitive values are kept; null on a machine without a keychain. Absent is the platform's own.
     secrets?: SecretStore | null;
@@ -100,7 +105,8 @@ const sameStatus = (left: ProviderAccountStatus, right: ProviderAccountStatus): 
  */
 export class ProviderAccountsService implements AccountLaunches {
     private readonly path: string;
-    private readonly ruimteHome: string;
+    private readonly home: string;
+    private readonly host: AccountsHost;
     private readonly providers: ProviderAccountsOptions['providers'];
     private readonly env: Env;
     private readonly ask: AskAccount;
@@ -114,7 +120,7 @@ export class ProviderAccountsService implements AccountLaunches {
     private readonly sleep: (ms: number) => Promise<void>;
     private readonly watches = new Map<string, LoginWatch>();
     private writes: Promise<unknown> = Promise.resolve();
-    private readonly sinks = new ClientSinks();
+    private readonly sinks = new ClientSinks<AgentEvent>();
     private readonly listeners = new Set<() => void>();
     // When a CLI last started under each account, by id; kept in memory, so a restart forgets it.
     private readonly launches = new Map<string, number>();
@@ -125,26 +131,27 @@ export class ProviderAccountsService implements AccountLaunches {
     private timer: ReturnType<typeof setInterval> | null = null;
 
     constructor(options: ProviderAccountsOptions) {
-        this.path = accountsPath(options.ruimteHome);
-        this.ruimteHome = options.ruimteHome;
+        this.path = accountsPath(options.home);
+        this.home = options.home;
+        this.host = options.host ?? DEFAULT_ACCOUNTS_HOST;
         this.providers = options.providers;
         this.env = options.env ?? process.env;
-        this.ask = options.ask ?? askAccount;
+        this.ask = options.ask ?? askAccountAs(options.client ?? DEFAULT_CODEX_CLIENT);
         this.prepareShadow = options.prepareShadow ?? prepareShadowHome;
         this.folderExists = options.folderExists ?? isFolder;
         this.install = options.install;
-        this.secrets = options.secrets === undefined ? platformSecrets(options.ruimteHome) : options.secrets;
+        this.secrets = options.secrets === undefined ? platformSecrets(this.host, options.home) : options.secrets;
         this.now = options.now ?? Date.now;
         this.sleep = options.sleep ?? sleep;
     }
 
     async load(): Promise<void> {
-        this.stored = await readAccounts(this.path, (kind) => this.providers.get(kind), this.env);
+        this.stored = await readAccounts(this.path, (kind) => this.providers.get(kind), this.env, this.host);
         this.accounts = wireAccounts(this.stored);
         await this.readSecrets();
     }
 
-    subscribe(clientId: string, sink: SessionSink): () => void {
+    subscribe(clientId: string, sink: AgentSink): () => void {
         return this.sinks.subscribe(clientId, sink);
     }
 
@@ -282,7 +289,7 @@ export class ProviderAccountsService implements AccountLaunches {
     }
 
     /*
-     * An account in a folder of its own under `$RUIMTE_HOME/accounts`, signed in by nobody yet. A
+     * An account in a folder of its own under `<home>/accounts`, signed in by nobody yet. A
      * Codex account is a shadow home over the CLI's own folder, so its threads go on under the other.
      */
     create(payload: ProviderAccountCreatePayload): Promise<ProviderAccountCreateResult> {
@@ -352,7 +359,7 @@ export class ProviderAccountsService implements AccountLaunches {
     }
 
     private async commit(accounts: ProviderAccountMap, isDirectory: (path: string) => boolean): Promise<ProviderAccounts> {
-        const stored = acceptAccounts(accounts, this.stored, (kind) => this.providers.get(kind), this.env, isDirectory);
+        const stored = acceptAccounts(accounts, this.stored, (kind) => this.providers.get(kind), this.env, isDirectory, this.host);
         const { writes, removals } = this.planSecrets(stored);
         for (const [key, value] of writes) {
             await this.requireSecrets().write(key, value);
@@ -462,7 +469,7 @@ export class ProviderAccountsService implements AccountLaunches {
     }
 
     private accountsFolder(): string {
-        return join(this.ruimteHome, 'accounts');
+        return join(this.home, 'accounts');
     }
 
     /* A free id for a new account; a folder a removed account left behind is never handed to another. */
@@ -545,7 +552,7 @@ export class ProviderAccountsService implements AccountLaunches {
     private async check(id: string, account: ProviderAccount, installed: ProviderInfo[]): Promise<ProviderAccountStatus> {
         const kind = account.kind;
         if (!isKnownKind(kind)) {
-            return this.status(id, account, 'unavailable', { message: 'This version of Ruimte does not know this CLI' });
+            return this.status(id, account, 'unavailable', { message: `This version of ${this.host.name} does not know this CLI` });
         }
         const provider = this.providers.get(kind);
         const isDefault = isDefaultAccount(id, account);

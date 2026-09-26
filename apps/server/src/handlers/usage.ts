@@ -1,6 +1,6 @@
 import type { Dispatcher } from '../dispatcher.ts';
-import type { UsageMonitor } from '../usage/limits/monitor.ts';
-import type { UsageService } from '../usage/usage-service.ts';
+import type { UsageMonitor } from '@ruimte/agents/usage/limits/monitor';
+import type { UsageService } from '@ruimte/agents/usage/usage-service';
 
 export const registerUsageHandlers = (dispatcher: Dispatcher, usage: UsageService, limits: UsageMonitor): void => {
     dispatcher.register('usage.summary', (payload) => usage.summary(payload));

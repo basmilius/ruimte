@@ -32,7 +32,7 @@ import { freeBranch, type Worktrees } from '../git/worktrees.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { AgentLineageStore } from '../agents/lineage.ts';
-import { AccountError, storedAccount } from '../providers/accounts/launch.ts';
+import { AccountError, storedAccount } from '@ruimte/agents/providers/accounts/launch';
 import { codexServiceTier, codexThreadOptions } from '@ruimte/agents/providers/codex';
 import type { ChatManager } from './chat-manager.ts';
 import { forkClaudeTranscript, type TranscriptCutPoint } from './claude-fork.ts';

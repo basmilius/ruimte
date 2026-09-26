@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ProviderAccountIdSchema, ProviderAccountSchema, type AgentKind, type ProviderAccount, type ProviderAccountMap } from '@ruimte/contracts';
-import { CodedError } from '@ruimte/agents/coded-error';
-import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
-import type { ChatProvider } from '@ruimte/agents/providers/provider';
+import { ProviderAccountIdSchema, ProviderAccountSchema, type AgentKind, type ProviderAccount, type ProviderAccountMap } from '@ruimte/agent-contracts';
+import { CodedError } from '../../coded-error.ts';
+import { isNotFound, writeAtomic } from '../../fs.ts';
+import type { ChatProvider } from '../provider.ts';
 import {
     accountFolder,
     accountProblem,
@@ -16,11 +16,11 @@ import {
     withDefaults,
     type Env
 } from './accounts.ts';
-import { redactVariables } from './variables.ts';
+import { DEFAULT_ACCOUNTS_HOST, redactVariables, type AccountsHost } from './variables.ts';
 
 const FILE_VERSION = 1;
 
-export const accountsPath = (ruimteHome: string): string => join(ruimteHome, 'providers.json');
+export const accountsPath = (home: string): string => join(home, 'providers.json');
 
 /*
  * The accounts as the file holds them. A known kind is a parsed account; an unknown one is the entry
@@ -29,7 +29,12 @@ export const accountsPath = (ruimteHome: string): string => join(ruimteHome, 'pr
 export type StoredAccounts = Record<string, unknown>;
 
 /* Every entry that does not parse is dropped on its own; a file that is not JSON at all reads as none. */
-export const readAccounts = async (path: string, providerOf: (kind: AgentKind) => ChatProvider, env: Env): Promise<StoredAccounts> => {
+export const readAccounts = async (
+    path: string,
+    providerOf: (kind: AgentKind) => ChatProvider,
+    env: Env,
+    host: AccountsHost = DEFAULT_ACCOUNTS_HOST
+): Promise<StoredAccounts> => {
     let parsed: unknown;
     try {
         parsed = JSON.parse(await readFile(path, 'utf8'));
@@ -48,7 +53,7 @@ export const readAccounts = async (path: string, providerOf: (kind: AgentKind) =
         if (!ProviderAccountIdSchema.safeParse(id).success) {
             continue;
         }
-        const account = readAccount(id, raw, providerOf, env);
+        const account = readAccount(id, raw, providerOf, env, host);
         if (account !== null) {
             stored[id] = account;
         }
@@ -124,10 +129,11 @@ export const acceptAccounts = (
     before: StoredAccounts,
     providerOf: (kind: AgentKind) => ChatProvider,
     env: Env,
-    isDirectory: (path: string) => boolean
+    isDirectory: (path: string) => boolean,
+    host: AccountsHost = DEFAULT_ACCOUNTS_HOST
 ): StoredAccounts => {
     const stored: StoredAccounts = {};
-    const folderVariables = folderVariablesOf(providerOf);
+    const reserved = { host, folderVariables: folderVariablesOf(providerOf) };
     for (const [id, account] of Object.entries(withDefaults(saved))) {
         if (!isKnownKind(account.kind)) {
             if (isKnownKind(id)) {
@@ -139,7 +145,7 @@ export const acceptAccounts = (
             continue;
         }
         const provider = providerOf(account.kind);
-        const problem = accountProblem(id, account, provider, env, folderVariables) ?? linkProblem(id, account, before[id], provider, env, isDirectory);
+        const problem = accountProblem(id, account, provider, env, reserved) ?? linkProblem(id, account, before[id], provider, env, isDirectory);
         if (problem !== null) {
             throw new InvalidAccountError(`${id}: ${problem}`);
         }

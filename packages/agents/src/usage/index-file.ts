@@ -1,4 +1,4 @@
-import type { UsageProvider } from '@ruimte/contracts';
+import type { UsageProvider } from '@ruimte/agent-contracts';
 import type { UsageRecord } from './record.ts';
 import type { CodexParserState } from './readers/codex.ts';
 

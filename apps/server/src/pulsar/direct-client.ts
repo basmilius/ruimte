@@ -1,4 +1,4 @@
-import { wait, withTimeout } from '../async.ts';
+import { wait, withTimeout } from '@ruimte/agents/async';
 import {
     ChannelLiveness,
     channelBinding,

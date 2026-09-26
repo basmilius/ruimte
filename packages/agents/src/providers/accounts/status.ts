@@ -1,6 +1,7 @@
-import type { AgentKind } from '@ruimte/contracts';
+import type { AgentKind } from '@ruimte/agent-contracts';
 import { withTimeout } from '../../async.ts';
-import { CodexTransport } from '@ruimte/agents/chat/codex-transport';
+import { CodexTransport, type CodexClientInfo } from '../../chat/codex-transport.ts';
+import { runProcess } from '../../run-process.ts';
 
 /* A CLI that has not said who is signed in by now is not going to; the next pass asks again. */
 const ASK_TIMEOUT_MS = 20_000;
@@ -55,17 +56,16 @@ export const readCodexAccount = (answer: unknown): AccountReading => {
 };
 
 const askClaude = async (command: readonly string[], env: Record<string, string | undefined>): Promise<AccountReading> => {
-    const child = Bun.spawn([...command, 'auth', 'status', '--json'], { stdin: 'ignore', stdout: 'pipe', stderr: 'ignore', env });
-    try {
-        // Signed out exits 1 and still prints the status, so the output decides and the exit code does not.
-        const output = await withTimeout(new Response(child.stdout).text(), ASK_TIMEOUT_MS, 'Claude Code did not answer in time');
-        return readClaudeAuthStatus(output);
-    } finally {
-        child.kill();
-    }
+    const { stdout } = await runProcess([...command, 'auth', 'status', '--json'], {
+        env,
+        timeoutMs: ASK_TIMEOUT_MS,
+        timeoutMessage: 'Claude Code did not answer in time'
+    });
+    // Signed out exits 1 and still prints the status, so the output decides and the exit code does not.
+    return readClaudeAuthStatus(stdout);
 };
 
-const askCodex = async (command: readonly string[], env: Record<string, string | undefined>): Promise<AccountReading> => {
+const askCodex = async (command: readonly string[], env: Record<string, string | undefined>, client: CodexClientInfo): Promise<AccountReading> => {
     const transport = new CodexTransport({
         command: [...command],
         cwd: process.cwd(),
@@ -75,7 +75,7 @@ const askCodex = async (command: readonly string[], env: Record<string, string |
     });
     try {
         await withTimeout(
-            transport.request('initialize', { clientInfo: { name: 'ruimte', title: 'Ruimte', version: '0.1.0' }, capabilities: { experimentalApi: true } }),
+            transport.request('initialize', { clientInfo: client, capabilities: { experimentalApi: true } }),
             ASK_TIMEOUT_MS,
             'Codex did not answer in time'
         );
@@ -89,12 +89,14 @@ const askCodex = async (command: readonly string[], env: Record<string, string |
 };
 
 /* Starts the CLI in the account's environment and asks it; only Claude Code and Codex can say. */
-export const askAccount: AskAccount = (kind, command, env) => {
-    if (kind === 'claude') {
-        return askClaude(command, env);
-    }
-    if (kind === 'codex') {
-        return askCodex(command, env);
-    }
-    return Promise.reject(new Error(`${kind} cannot say who is signed in`));
-};
+export const askAccountAs =
+    (client: CodexClientInfo): AskAccount =>
+    (kind, command, env) => {
+        if (kind === 'claude') {
+            return askClaude(command, env);
+        }
+        if (kind === 'codex') {
+            return askCodex(command, env, client);
+        }
+        return Promise.reject(new Error(`${kind} cannot say who is signed in`));
+    };

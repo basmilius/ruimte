@@ -1,5 +1,5 @@
-import type { AgentKind, ProviderInfo } from '@ruimte/agent-contracts';
-import type { ModelCatalog } from './catalog.ts';
+import type { AgentKind, ProviderCapabilities, ProviderInfo } from '@ruimte/agent-contracts';
+import { ModelCatalog } from './catalog.ts';
 import { claudeProvider } from './claude-provider.ts';
 import { codexProvider } from './codex-provider.ts';
 import type { CliDetection } from './detect.ts';
@@ -9,6 +9,46 @@ import type { ChatProvider } from './provider.ts';
 const DETECTION_TTL_MS = 60_000;
 
 const DISABLED: CliDetection = { installed: false, version: 'Disabled in Settings' };
+
+const NO_CAPABILITIES: ProviderCapabilities = {
+    chat: false,
+    terminal: false,
+    hooks: false,
+    streamsToolOutput: false,
+    diffs: 'none',
+    attachments: false,
+    mentions: false,
+    denyReason: false,
+    allowAlways: false,
+    asyncQuestions: false,
+    compaction: 'none',
+    reportsCost: false,
+    reportsContextWindow: false,
+    reportsThinking: false,
+    slashCommands: false
+};
+
+/* A CLI of a kind the host does not offer: a record or an account may still name one, and it starts nothing. */
+export const unofferedProvider = (kind: AgentKind): ChatProvider => ({
+    kind,
+    name: kind,
+    catalog: new ModelCatalog({ defaultModel: '', profiles: {}, models: [] }),
+    capabilities: NO_CAPABILITIES,
+    command: [kind],
+    resumeCommand: '',
+    detect: () => Promise.resolve({ installed: false, version: null }),
+    firstPromptArgs: () => {
+        throw new Error(`${kind} is not offered here`);
+    },
+    createBackend: () => {
+        throw new Error(`${kind} is not offered here`);
+    }
+});
+
+const BUILT_IN_PROVIDERS: readonly ChatProvider[] = [claudeProvider, codexProvider];
+
+/* The provider of a kind, for the places that have no registry at hand. */
+export const providerFor = (kind: AgentKind): ChatProvider => BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? unofferedProvider(kind);
 
 export interface ProviderRegistryOptions {
     // The CLIs a host offers, in the order every menu lists them; absent, the chat CLIs this package ships.
@@ -30,7 +70,7 @@ export class ProviderRegistry {
     private readonly cache = new Map<AgentKind, { at: number; detection: CliDetection }>();
 
     constructor(options: ProviderRegistryOptions = {}) {
-        this.providers = options.providers ?? [claudeProvider, codexProvider];
+        this.providers = options.providers ?? [...BUILT_IN_PROVIDERS];
         this.commands = options.commands ?? {};
         this.detect = options.detect ?? null;
         this.env = options.env ?? process.env;
@@ -50,7 +90,7 @@ export class ProviderRegistry {
         );
     }
 
-    /* The provider of a kind; a kind this host does not offer falls back to its first CLI. */
+    /* The provider of a kind, one this host does not offer included. */
     get(kind: AgentKind): ChatProvider {
         return this.providers.find((provider) => provider.kind === kind) ?? this.fallback(kind);
     }
@@ -82,8 +122,8 @@ export class ProviderRegistry {
         this.cache.delete(kind);
     }
 
-    protected fallback(_kind: AgentKind): ChatProvider {
-        return this.providers[0]!;
+    protected fallback(kind: AgentKind): ChatProvider {
+        return unofferedProvider(kind);
     }
 
     private async detection(provider: ChatProvider): Promise<CliDetection> {

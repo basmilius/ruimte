@@ -1,4 +1,4 @@
-import type { AgentKind, ProviderAccountMap, ProviderInfo } from '@ruimte/contracts';
+import type { AgentKind, ProviderAccountMap, ProviderInfo } from '@ruimte/agent-contracts';
 import { providerFor } from '../registry.ts';
 import { ProviderAccountsService } from './service.ts';
 import { accountsPath, writeAccounts } from './store.ts';
@@ -17,18 +17,18 @@ export const memorySecrets = (values = new Map<string, string>()): SecretStore &
 });
 
 /*
- * The accounts of a machine as a test wants them: written to `providers.json` under `ruimteHome` as
+ * The accounts of a machine as a test wants them: written to `providers.json` under `home` as
  * they are, with only the folders in `folders` on disk, and every CLI signed in without being asked.
  */
 export const testAccounts = async (options: {
-    ruimteHome: string;
+    home: string;
     env: Record<string, string | undefined>;
     accounts: ProviderAccountMap;
     // The folders that exist; a test takes one away to see what a missing folder does.
     folders: Set<string>;
 }): Promise<ProviderAccountsService> => {
     const service = new ProviderAccountsService({
-        ruimteHome: options.ruimteHome,
+        home: options.home,
         providers: {
             list: async () => (['claude', 'codex'] as AgentKind[]).map((kind) => ({ kind, installed: true }) as ProviderInfo),
             get: (kind) => providerFor(kind)
@@ -40,7 +40,7 @@ export const testAccounts = async (options: {
         secrets: memorySecrets()
     });
     // Written and not saved, so an account whose folder is already gone is there the way a person left it.
-    await writeAccounts(accountsPath(options.ruimteHome), options.accounts);
+    await writeAccounts(accountsPath(options.home), options.accounts);
     await service.load();
     return service;
 };

@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { UsageProvider } from '@ruimte/contracts';
+import type { UsageProvider } from '@ruimte/agent-contracts';
 
 export interface UsageRootPath {
     provider: UsageProvider;

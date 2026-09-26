@@ -1,13 +1,33 @@
-import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
+import { mkdir, open, readFile, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { UsageRoot } from '@ruimte/contracts';
-import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
+import type { UsageRoot } from '@ruimte/agent-contracts';
+import { isNotFound, writeAtomic } from '../fs.ts';
 import { decodeIndex, encodeIndex, type IndexedFile, type UsageIndex } from './index-file.ts';
 import { foldByKey, type UsageRecord } from './record.ts';
 import { claudeMightCarryUsage, parseClaudeLine } from './readers/claude.ts';
 import { cloneCodexState, codexMightCarryUsage, createCodexState, parseCodexLine, type CodexParserState } from './readers/codex.ts';
 import { usageRoots, type UsageRootPath } from './roots.ts';
 import { errorText } from '../error-text.ts';
+
+/* What a file holds from `from` to its end, as it is at the read. */
+const readFrom = async (path: string, from: number): Promise<string> => {
+    const handle = await open(path, 'r');
+    try {
+        const { size } = await handle.stat();
+        const buffer = Buffer.alloc(Math.max(0, size - from));
+        let filled = 0;
+        while (filled < buffer.length) {
+            const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, from + filled);
+            if (bytesRead === 0) {
+                break;
+            }
+            filled += bytesRead;
+        }
+        return buffer.subarray(0, filled).toString('utf8');
+    } finally {
+        await handle.close();
+    }
+};
 
 export interface ScanReport {
     at: number;
@@ -95,7 +115,7 @@ type AccountOf = (record: UsageRecord) => string | undefined;
 /*
  * The account a record of a root belongs to, as a record keeps it (absent for the default account):
  * the one account that writes there, else the one the daemon knows ran the session, else the
- * default account of the CLI, which is the only one a session nobody started through Ruimte ran under.
+ * default account of the CLI, which is the only one a session nobody started through the host ran under.
  */
 export const accountResolver = (root: UsageRootPath, sessionAccounts: () => ReadonlyMap<string, string>): AccountOf => {
     const accounts = root.accounts ?? [root.provider];
@@ -224,7 +244,7 @@ export class UsageScanner {
         }
         const grown = known !== undefined && known.provider === provider && info.size > known.size;
         const from = grown ? known.offset : 0;
-        const text = await Bun.file(path).slice(from).text();
+        const text = await readFrom(path, from);
         const parsed = parseChunk(text, provider, from, grown ? known.codex : null);
         const before = grown ? known.records : [];
         const entry: IndexedFile = {

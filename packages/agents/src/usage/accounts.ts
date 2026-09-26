@@ -1,12 +1,4 @@
-import {
-    USAGE_PROVIDERS,
-    type AgentInfo,
-    type AgentLaunch,
-    type ChatInfo,
-    type ProviderAccounts,
-    type UsageAccount,
-    type UsageProvider
-} from '@ruimte/contracts';
+import { USAGE_PROVIDERS, type ChatInfo, type ProviderAccounts, type UsageAccount, type UsageProvider } from '@ruimte/agent-contracts';
 import { definedEnv } from '../providers/accounts/launch.ts';
 import type { ProviderAccountsService } from '../providers/accounts/service.ts';
 import type { LimitAccount, LimitAccounts } from './limits/monitor.ts';
@@ -73,20 +65,12 @@ export const limitAccountsOf = (
     lastUsedAt: (id) => service.lastLaunchAt(id)
 });
 
-/* The account every CLI session a chat or a terminal here ran was under, by `<provider>\0<sessionId>`, for the transcripts accounts share. */
-export const sessionAccountsOf = (
-    chats: ReadonlyArray<Pick<ChatInfo, 'provider' | 'agentSessionId' | 'account'>>,
-    terminals: ReadonlyArray<{ agent: AgentInfo | null; launch: AgentLaunch | null }>
-): Map<string, string> => {
+/* The account every CLI session a chat here ran was under, by `<provider>\0<sessionId>`, for the transcripts accounts share. */
+export const chatSessionAccounts = (chats: ReadonlyArray<Pick<ChatInfo, 'provider' | 'agentSessionId' | 'account'>>): Map<string, string> => {
     const known = new Map<string, string>();
     for (const chat of chats) {
         if (chat.agentSessionId !== null) {
             known.set(`${chat.provider}\0${chat.agentSessionId}`, chat.account ?? chat.provider);
-        }
-    }
-    for (const { agent, launch } of terminals) {
-        if (agent !== null && launch !== null && launch.kind === agent.kind) {
-            known.set(`${agent.kind}\0${agent.agentSessionId}`, launch.account ?? agent.kind);
         }
     }
     return known;

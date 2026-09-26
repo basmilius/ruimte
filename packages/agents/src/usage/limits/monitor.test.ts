@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { UsageProvider } from '@ruimte/contracts';
+import type { UsageProvider } from '@ruimte/agent-contracts';
 import { ProviderRegistry } from '../../providers/registry.ts';
 import { UsageMonitor, type LimitAccount, type LimitAccounts } from './monitor.ts';
 import type { ProbeResult } from './probe.ts';

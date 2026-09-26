@@ -6,8 +6,8 @@ import { join } from 'node:path';
 import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import type { ProviderAccountsService } from '../providers/accounts/service.ts';
-import { testAccounts } from '../providers/accounts/test-accounts.ts';
+import type { ProviderAccountsService } from '@ruimte/agents/providers/accounts/service';
+import { testAccounts } from '@ruimte/agents/providers/accounts/test-accounts';
 import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 import { ChatStore } from './chat-store.ts';
@@ -60,7 +60,7 @@ beforeEach(async () => {
     limitUpdates = [];
     machine = { resumeAtReset: false };
     accounts = await testAccounts({
-        ruimteHome: home,
+        home,
         env,
         accounts: {
             claude_personal: { kind: 'claude', label: 'Personal', home: personal },
