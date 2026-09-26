@@ -52,7 +52,7 @@ import { MAX_NOTICE_LENGTH } from '../context/notices.ts';
 import type { Notice, NoticeDelivery } from '../context/notices.ts';
 import { MAX_TITLE_LENGTH, NEW_NODE, OPENING_OFF_CANVAS, type AgentStart, type CanvasHost, type Noun } from './verb.ts';
 import { VERBS } from './verbs.ts';
-import { TaskStore } from '../tasks/task-store.ts';
+import { TaskStore } from '@ruimte/agents/tasks/task-store';
 import { freeBranch } from '../git/worktrees.ts';
 import { MAX_TASK_PROMPT_LENGTH, nextLine, taskBrief } from './task-verbs.ts';
 

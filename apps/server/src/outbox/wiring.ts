@@ -1,15 +1,14 @@
-import type { Task } from '@ruimte/contracts';
 import type { AgentLineageStore } from '@ruimte/agents/lineage';
 import type { PendingPromptStore } from '../agents/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { limitResumeAt } from '@ruimte/agents/chat/limit-resume';
 import { wireSummaries, type SummaryWiring } from '../chat/summary.ts';
-import { chatOpener } from '../chat/wake-chat.ts';
+import { chatOpener } from '@ruimte/agents/chat/wake-chat';
 import { deliverMessageHandler } from '../context/deliver-message.ts';
 import type { NoticeStore } from '../context/notices.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { SessionManager } from '../sessions/manager.ts';
-import type { TaskStore } from '../tasks/task-store.ts';
+import type { TaskStore } from '@ruimte/agents/tasks/task-store';
 import { wireTasks, type TaskWiring } from '../tasks/wiring.ts';
 import { errorText } from '../error-text.ts';
 import { wireEndChildren, type EndChildrenWiring } from './end-children.ts';
@@ -87,25 +86,6 @@ export class OutboxLink {
         }
     }
 
-    /* Owes the settle of a task at `at`, for when the commands its child runs in the background are still all that holds it. */
-    async oweBackgroundLimit(task: Task, commands: readonly string[], at: number): Promise<void> {
-        const work: OutboxWork = { kind: 'background-limit', payload: { taskId: task.id, commands: [...commands] } };
-        await this.require().enqueue(task.projectId, task.childId, work, at);
-        this.onEnqueued?.(work);
-    }
-
-    owesBackgroundLimit(taskId: string): boolean {
-        return this.outbox.list().some((entry) => entry.kind === 'background-limit' && entry.payload.taskId === taskId);
-    }
-
-    async lapseBackgroundLimit(taskId: string): Promise<void> {
-        for (const entry of this.outbox.list()) {
-            if (entry.kind === 'background-limit' && entry.payload.taskId === taskId) {
-                await this.outbox.remove(entry.id);
-            }
-        }
-    }
-
     private require(): OutboxWorker<OutboxWork> {
         if (this.worker === null) {
             throw new Error('The outbox is used before it is wired');
@@ -170,17 +150,13 @@ export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
         tasks,
         chats,
         placed,
-        owedTurn: (taskId) => outbox.list().some((entry) => entry.kind === 'give-task' && entry.payload.taskId === taskId),
+        entries: () => outbox.list(),
+        remove: (id) => outbox.remove(id),
         titleFor: (nodeId) => projects.index.titleFor(nodeId),
         madeBy: (nodeId) => lineage.madeBy(nodeId),
         enqueue,
         alert: (target, nodeId, title, body) => deps.alert(target, nodeId, title, body),
         wake: (chatId) => link.wake(chatId),
-        backgroundLimit: {
-            owed: (taskId) => link.owesBackgroundLimit(taskId),
-            owe: (task, commands, at) => link.oweBackgroundLimit(task, commands, at),
-            lapse: (taskId) => link.lapseBackgroundLimit(taskId)
-        },
         // The same answer the chat itself gives as its turn ends, so a task pauses exactly while a retry is owed.
         retryAt: (chatId, turn, items) =>
             deps.resumeAtReset?.() === true && chats.get(chatId)?.info.resumeAtReset !== false ? limitResumeAt(items, turn, now()) : null,

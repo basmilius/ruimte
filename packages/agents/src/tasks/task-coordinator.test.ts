@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { notResumedNote, type ChatBackgroundTask, type ChatItem, type ChatTurnItem, type Task } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import { notResumedNote, type ChatBackgroundTask, type ChatItem, type ChatTurnItem, type Task } from '@ruimte/agent-contracts';
+import type { AgentEvent } from '../events.ts';
 import { TaskCoordinator, resultOfTurn } from './task-coordinator.ts';
 import { TaskStore } from './task-store.ts';
 
@@ -85,7 +85,7 @@ const workflow = (state: 'running' | 'done' | 'error'): ChatItem => ({
 const ends = (chatId: string, item: ChatTurnItem): void => {
     coordinator.chatEvent({ event: 'chat.event', payload: { chatId, event: { type: 'item', item } } });
     // Only `activeTurnId` of the info is read, so the rest of it is left out.
-    coordinator.chatEvent({ event: 'chat.event', payload: { chatId, event: { type: 'info', info: { activeTurnId: null } } } } as unknown as SessionEvent);
+    coordinator.chatEvent({ event: 'chat.event', payload: { chatId, event: { type: 'info', info: { activeTurnId: null } } } } as unknown as AgentEvent);
 };
 
 const open = (parentId: string, childId: string): Promise<Task> => tasks.open({ projectId: 'p', parentId, childId, title: childId, prompt: 'go' }, 1);
@@ -228,10 +228,18 @@ describe('the coordinator', () => {
         expect(limits.get(task.id)?.at).toBe(10 + 30 * 60_000);
     });
 
-    test('nothing that dies with the daemon settles a task', async () => {
+    test('an agent that is not a chat fails its task when it ends without done', async () => {
+        const task = await open('chat-lead', 'terminal-child');
+        const owedOnce = nextOwed();
+        coordinator.agentEnded('terminal-child', 'It ended without a result.');
+        await owedOnce;
+        expect(tasks.get(task.id)).toMatchObject({ status: 'failed', result: { text: 'It ended without a result.', source: 'exit' } });
+    });
+
+    test('nothing that dies with the host settles a task', async () => {
         const task = await open('chat-lead', 'terminal-child');
         coordinator.stop();
-        coordinator.terminalEnded('terminal-child');
+        coordinator.agentEnded('terminal-child', 'It ended without a result.');
         expect(tasks.get(task.id)?.status).toBe('open');
     });
 });

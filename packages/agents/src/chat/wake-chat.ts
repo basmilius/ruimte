@@ -1,15 +1,15 @@
-import type { ChatItem } from '@ruimte/contracts';
-import type { ChatManager } from './chat-manager.ts';
-import type { ChatSession } from '@ruimte/agents/chat/chat-session';
+import type { ChatItem } from '@ruimte/agent-contracts';
+import type { ChatCore } from './chat-core.ts';
+import type { ChatSession } from './chat-session.ts';
 
-/* A chat the daemon may open a turn in, as the outbox handlers see it: what its thread holds, and the one call that opens one, false while a turn or an owed resume is in the way. */
+/* A chat the host may open a turn in, as the outbox handlers see it: what its thread holds, and the one call that opens one, false while a turn or an owed resume is in the way. */
 export interface WakeChat {
     items(): ChatItem[];
     wake(wake: { text: string; label: string; note?: string; taskIds: string[]; messageFrom?: string[] }): boolean;
 }
 
 export interface ChatOpenerDeps {
-    chats: Pick<ChatManager, 'get' | 'hasStored' | 'create'>;
+    chats: Pick<ChatCore, 'get' | 'hasStored' | 'create'>;
     /* Whether a project still places the node; one that left the document is nobody's to open a turn in. */
     placed(nodeId: string): boolean;
 }

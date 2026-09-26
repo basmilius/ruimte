@@ -1,9 +1,8 @@
-import type { Task } from '@ruimte/contracts';
+import type { Task } from '@ruimte/agent-contracts';
 import type { WakeChat } from '../chat/wake-chat.ts';
-import { errorText } from '../error-text.ts';
-import type { OutboxEntry, OutboxWork, WakeParentEntry } from '../outbox/outbox.ts';
-import type { OutboxOutcome } from '@ruimte/agents/outbox/outbox-worker';
+import type { OutboxOutcome } from '../outbox/outbox-worker.ts';
 import type { TaskStore } from './task-store.ts';
+import type { TaskWork, WakeParentEntry } from './task-work.ts';
 
 /* What the parent reads of one result; the rest stays with the child, whose id is right beside it. */
 export const RESULT_PREVIEW_BYTES = 8 * 1024;
@@ -22,18 +21,17 @@ const cutAt = (text: string, bytes: number): { text: string; cut: boolean } => {
 
 /*
  * The prompt a woken chat's CLI gets. Every task is named with its child's id, so the agent can go
- * on with that node (read it, notify it) without asking which one it was.
+ * on with that node (read it, notify it) without asking which one it was. `restOf` says where the rest
+ * of a result that was cut is to be read.
  */
-export const wakePrompt = (tasks: readonly Task[], teamsOut = 0): string => {
+export const wakePrompt = (tasks: readonly Task[], teamsOut = 0, restOf?: (childId: string) => string): string => {
     const head = tasks.length === 1 ? 'A task you gave has settled. Its result:' : `${tasks.length} tasks you gave have settled. Their results:`;
     const sections = tasks.map((task) => {
         const { text, cut } = cutAt(task.result?.text ?? '', RESULT_PREVIEW_BYTES);
         const lines = [`## ${task.title} (node ${task.childId}, task ${task.id}): ${task.status}`, '', text === '' ? '(no result text)' : text];
         if (cut) {
-            lines.push(
-                '',
-                `[The result was cut at ${RESULT_PREVIEW_BYTES / 1024} KiB. ruimte-context read ${task.childId} shows the rest once a line runs from that node into you; ruimte-context link new --to ${task.childId} draws it.]`
-            );
+            const rest = restOf === undefined ? '' : ` ${restOf(task.childId)}`;
+            lines.push('', `[The result was cut at ${RESULT_PREVIEW_BYTES / 1024} KiB.${rest}]`);
         }
         return lines.join('\n');
     });
@@ -54,12 +52,12 @@ export const wakeLabel = (tasks: readonly Task[]): string => tasks.map((task) =>
 
 export const wakeNote = (tasks: readonly Task[]): string => `Woken by ${tasks.length} finished ${tasks.length === 1 ? 'task' : 'tasks'}`;
 
-export type { WakeChat };
-
 export interface WakeParentDeps {
     tasks: Pick<TaskStore, 'pendingWake' | 'readyWake' | 'openBatches' | 'markWoken' | 'dropWake'>;
     /* The chat as it is now, loading it from disk when nobody has; null for a chat that has no thread any more. */
     chat(chatId: string): Promise<WakeChat | null>;
+    /* Where the rest of a result that was cut is read, after the line that says so. */
+    restOf?: (childId: string) => string;
 }
 
 /*
@@ -94,7 +92,14 @@ export const wakeParentHandler =
             return held();
         }
         const teamsOut = deps.tasks.openBatches(parentId).length;
-        if (!chat.wake({ text: wakePrompt(tasks, teamsOut), label: wakeLabel(tasks), note: wakeNote(tasks), taskIds: tasks.map((task) => task.id) })) {
+        if (
+            !chat.wake({
+                text: wakePrompt(tasks, teamsOut, deps.restOf),
+                label: wakeLabel(tasks),
+                note: wakeNote(tasks),
+                taskIds: tasks.map((task) => task.id)
+            })
+        ) {
             return 'wait';
         }
         await deps.tasks.markWoken(tasks.map((task) => task.id));
@@ -102,63 +107,9 @@ export const wakeParentHandler =
     };
 
 export interface OweWakeDeps {
-    enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
+    enqueue(projectId: string, target: string, work: TaskWork): Promise<void>;
 }
 
 /* A settled task owes its parent a wake; one entry per task, and the first to run takes every task there is. */
 export const oweWake = (deps: OweWakeDeps, task: Task): Promise<void> =>
     deps.enqueue(task.projectId, task.parentId, { kind: 'wake-parent', payload: { taskId: task.id } });
-
-export interface ParkedNoteDeps {
-    /* The chat that opened a node, or null for a node a person opened. */
-    madeBy(nodeId: string): string | null;
-    titleFor(nodeId: string): string | null;
-    note(chatId: string, text: string): Promise<void>;
-    /* Raises attention on a node, for a person who has to step in. */
-    alert(nodeId: string, body: string): void;
-}
-
-/* What the chat is told about work that was given up on, in the words of the kind it was. */
-const parkedText = (entry: OutboxEntry, title: string, reason: string): string => {
-    switch (entry.kind) {
-        case 'wake-parent':
-            return `The machine could not wake this chat with the results of its tasks: ${reason}`;
-        case 'start-agent':
-            return `The machine could not start the agent in ${title} (${entry.target}): ${reason}`;
-        case 'give-task':
-            return `The machine could not give a task to ${title} (${entry.target}): ${reason}`;
-        case 'deliver-message':
-            return `The machine could not give ${title} (${entry.target}) a turn on the message it was sent: ${reason}`;
-        case 'resume-limit':
-            return `The machine could not take up ${title} (${entry.target}) again after its limit: ${reason}`;
-        case 'background-limit':
-            return `The machine could not settle the task of ${title} (${entry.target}) once its background commands ran too long: ${reason}`;
-        default:
-            return `The machine could not resume the turn of ${title} (${entry.target}) after a restart: ${reason}`;
-    }
-};
-
-/*
- * A piece of owed work the daemon gave up on is said in the thread of the chat it was for: the chat
- * that opened the node, or the chat a wake was for. Only in a chat, since a terminal has no thread.
- */
-export const parkedNote =
-    (deps: ParkedNoteDeps) =>
-    (entry: OutboxEntry, error: unknown): void => {
-        // A summary that was not delivered is said in its fork, by its own handler; a note about a waiting child was only news.
-        if (entry.kind === 'deliver-summary' || entry.kind === 'deliver-waiting') {
-            return;
-        }
-        /* A message is nobody's to answer for but the chat it was left for, which has no opener in this. */
-        const chatId = entry.kind === 'wake-parent' || entry.kind === 'deliver-message' ? entry.target : deps.madeBy(entry.target);
-        if (chatId === null) {
-            return;
-        }
-        const title = deps.titleFor(entry.target) ?? entry.target;
-        const reason = errorText(error);
-        const text = parkedText(entry, title, reason);
-        void deps.note(chatId, text).catch((e: unknown) => console.error(`Leaving a note in ${chatId} failed:`, errorText(e)));
-        if (entry.kind === 'wake-parent') {
-            deps.alert(chatId, text);
-        }
-    };

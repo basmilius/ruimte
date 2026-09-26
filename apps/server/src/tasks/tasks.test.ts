@@ -9,7 +9,7 @@ import type { FakeCli } from '@ruimte/agents/chat/fake-cli';
 import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from './test-daemon.ts';
-import { WAITING_GRACE_MS } from './waiting-child.ts';
+import { WAITING_GRACE_MS } from '@ruimte/agents/tasks/waiting-child';
 
 type Daemon = TestDaemon;
 

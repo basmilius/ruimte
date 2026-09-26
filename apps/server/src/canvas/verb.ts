@@ -4,15 +4,12 @@ import {
     type ContextSource,
     type AgentStatus,
     type BrowserDriveAction,
-    type ChatApprovalItem,
-    type ChatQuestionItem,
     type DiagramContent,
     type GitDiffResult,
     type ProjectCanvasView,
     type ProjectContent,
     type RuntimeMode,
     type ModelSelection,
-    type Task,
     type Worktree,
     type WorktreeMergePayload,
     type WorktreeMergeResult
@@ -27,6 +24,8 @@ import type { PlanStore } from '../plans/plan-store.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
 import { field } from '@ruimte/agents/context/refusal';
+import type { ChatRequests } from '@ruimte/agents/tasks/waiting-child';
+import type { TaskVerbs } from '@ruimte/agents/tasks/wiring';
 import {
     REVISION_FLAG,
     VerbRefusal,
@@ -151,14 +150,7 @@ export interface AgentStateHost {
 }
 
 /* The questions and approvals a chat node asks, as its own thread holds them. */
-export interface ChatRequestHost {
-    /* The one under this request id, in whatever state; null when the chat holds none, or nobody loaded it. */
-    request(nodeId: string, requestId: string): ChatQuestionItem | ChatApprovalItem | null;
-    /* Those it waits on now, oldest first. */
-    waiting(nodeId: string): (ChatQuestionItem | ChatApprovalItem)[];
-    /* Answers a pending question the way a person's `chat.answer` does; false when it no longer waits. */
-    answer(nodeId: string, requestId: string, answers: Record<string, string>): boolean;
-}
+export type ChatRequestHost = ChatRequests;
 
 /*
  * What a verb reaches a page through. One door for both kinds of page: one this machine runs itself
@@ -191,18 +183,7 @@ export interface WorktreeHost {
     merge(payload: Omit<WorktreeMergePayload, 'actionId' | 'stopAgent' | 'commitFirst' | 'into' | 'remove'>): Promise<WorktreeMergeResult>;
 }
 
-export interface TaskHost {
-    /* `batchId` ties the tasks of one `team --task` call together, which wake the parent as one. */
-    open(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string; batchId?: string }): Promise<Task>;
-    /* Opens a task for an agent that is already running, and owes the turn that carries it. */
-    give(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string }): Promise<Task>;
-    /* Whether the daemon has a chat for this node at all, and whether a turn of it is in the way. */
-    chatState(nodeId: string): Promise<'none' | 'idle' | 'running'>;
-    /* Ends the open task of this child with the result it reported; null when it has none open. */
-    done(childId: string, text: string): Promise<Task | null>;
-    /* Every task the node gave or was given, oldest first. */
-    involving(nodeId: string): Task[];
-}
+export type TaskHost = TaskVerbs;
 
 export interface NodeAccount {
     kind: AgentKind;

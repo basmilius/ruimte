@@ -21,7 +21,13 @@ const WRITTEN = {
     'end-children-0a1b2c3d4e60':
         '{"kind":"end-children","payload":{"nodeIds":["chat-2","terminal-3"]},"id":"end-children-0a1b2c3d4e60","projectId":"project-1","target":"chat-1","createdAt":1001,"attempts":2,"notBefore":6001}',
     'background-limit-0a1b2c3d4e61':
-        '{"kind":"background-limit","payload":{"taskId":"task-1","commands":["bun dev"],"restarted":true},"id":"background-limit-0a1b2c3d4e61","projectId":"project-1","target":"chat-2","createdAt":1002,"attempts":0,"notBefore":1801002}'
+        '{"kind":"background-limit","payload":{"taskId":"task-1","commands":["bun dev"],"restarted":true},"id":"background-limit-0a1b2c3d4e61","projectId":"project-1","target":"chat-2","createdAt":1002,"attempts":0,"notBefore":1801002}',
+    'wake-parent-0a1b2c3d4e62':
+        '{"kind":"wake-parent","payload":{"taskId":"task-1"},"id":"wake-parent-0a1b2c3d4e62","projectId":"project-1","target":"chat-1","createdAt":1003,"attempts":1,"notBefore":2003}',
+    'give-task-0a1b2c3d4e63':
+        '{"kind":"give-task","payload":{"taskId":"task-2"},"id":"give-task-0a1b2c3d4e63","projectId":"project-1","target":"chat-3","createdAt":1004,"attempts":0,"notBefore":1004}',
+    'deliver-waiting-0a1b2c3d4e64':
+        '{"kind":"deliver-waiting","payload":{"childId":"chat-2","requestId":"req-1"},"id":"deliver-waiting-0a1b2c3d4e64","projectId":"project-1","target":"chat-1","createdAt":1005,"attempts":0,"notBefore":16005}'
 };
 
 test('an entry an older daemon wrote reads back whole, and nothing ends children beside a start of one of them', async () => {
@@ -32,7 +38,14 @@ test('an entry an older daemon wrote reads back whole, and nothing ends children
     const store = new OutboxStore(home);
     await store.load();
     expect(store.list()).toEqual(Object.values(WRITTEN).map((text) => JSON.parse(text)));
-    expect(store.list().map((entry) => store.lanesOf(entry))).toEqual([['chat-2'], ['chat-1', 'chat-2', 'terminal-3'], ['chat-2']]);
+    expect(store.list().map((entry) => store.lanesOf(entry))).toEqual([
+        ['chat-2'],
+        ['chat-1', 'chat-2', 'terminal-3'],
+        ['chat-2'],
+        ['chat-1'],
+        ['chat-3'],
+        ['chat-1']
+    ]);
 });
 
 test('a new entry is written in the shape an older daemon reads', async () => {

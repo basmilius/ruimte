@@ -1,6 +1,6 @@
 import type { AgentKind, ServerFrame } from '@ruimte/contracts';
 import { agentStates } from '../agents/agent-state.ts';
-import { chatRequests } from './waiting-child.ts';
+import { chatRequests } from '@ruimte/agents/tasks/waiting-child';
 import { AgentLineageStore } from '@ruimte/agents/lineage';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
@@ -40,8 +40,8 @@ import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
-import { restartBackgroundLimits } from './background-limit.ts';
-import { TaskStore } from './task-store.ts';
+import { restartBackgroundLimits } from '@ruimte/agents/tasks/background-limit';
+import { TaskStore } from '@ruimte/agents/tasks/task-store';
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
@@ -210,10 +210,10 @@ export const bootTestDaemon = async ({
     endChildren.start();
     sessions.onProcessChange = (sessionId, phase) => {
         if (phase === 'changed' && sessions.get(sessionId)?.exited !== false) {
-            wiring.coordinator.terminalEnded(sessionId);
+            wiring.terminals.ended(sessionId);
         }
     };
-    sessions.observe((event) => wiring.coordinator.sessionEvent(event));
+    sessions.observe((event) => wiring.terminals.sessionEvent(event));
     store.index.onPlaces = outboxWiring.places;
 
     sessions.observe(recheck);

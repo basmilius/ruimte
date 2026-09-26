@@ -1,24 +1,24 @@
-import type { ChatBackgroundTask, ChatItem, ChatTurnItem, Task, TaskResult } from '@ruimte/contracts';
-import { abortedByMachine } from '@ruimte/contracts';
-import { BACKGROUND_COMMAND_LIMIT_MS, commandLabel, isBackgroundWork, runningInBackground, runsInBackground } from '@ruimte/agents/chat/background-work';
+import type { ChatBackgroundTask, ChatItem, ChatTurnItem, Task, TaskResult } from '@ruimte/agent-contracts';
+import { abortedByMachine } from '@ruimte/agent-contracts';
+import { BACKGROUND_COMMAND_LIMIT_MS, commandLabel, isBackgroundWork, runningInBackground, runsInBackground } from '../chat/background-work.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { AgentEvent } from '../events.ts';
 import type { TaskStore } from './task-store.ts';
 
 export interface TaskCoordinatorDeps {
     tasks: TaskStore;
     now(): number;
-    /* The thread of a chat, when this daemon has it loaded. */
+    /* The thread of a chat, when this host has it loaded. */
     chatItems(chatId: string): readonly ChatItem[] | null;
     /* Whether a project still places the node; a child that went is cancelled by the prune, never failed. */
     placed(nodeId: string): boolean;
-    /* Whether the daemon still owes the turn that carries a task, which is a task nobody is working on yet. */
+    /* Whether the host still owes the turn that carries a task, which is a task nobody is working on yet. */
     owedTurn(taskId: string): boolean;
     /* Owes the parent a wake; only ever writes the outbox. */
     oweWake(task: Task): Promise<void>;
     /* Raises attention on a node whose task failed, for the person who has to look at why. */
     alert(nodeId: string, title: string, body: string): void;
-    /* When the daemon takes up a turn that stopped on an overload again; null when it does not, which makes it an error like any other. */
+    /* When the host takes up a turn that stopped on an overload again; null when it does not, which makes it an error like any other. */
     retryAt?(chatId: string, turn: ChatTurnItem, items: readonly ChatItem[]): number | null;
     /*
      * What comes after the work a chat left running in the background ended: a turn its CLI opens about
@@ -82,7 +82,8 @@ export const resultOfTurn = (turn: ChatTurnItem, items: readonly ChatItem[], at:
  * in the outbox, never starts a turn, since it runs inside the broadcast of the child it heard. A chat
  * child settles when a turn ends with none of its own tasks still open or waiting to wake it and no work
  * of its CLI's still running in the background, or once the commands it runs there outlast their limit;
- * a terminal child settles only on `done`, or fails when it exits without one.
+ * an agent that is not a chat, which the host tells it about, settles only on `done`, or fails when it
+ * ends without one.
  */
 export class TaskCoordinator {
     private readonly deps: TaskCoordinatorDeps;
@@ -94,13 +95,13 @@ export class TaskCoordinator {
         this.deps = deps;
     }
 
-    /* The daemon is going down: what dies with it did not end its task. */
+    /* The host is going down: what dies with it did not end its task. */
     stop(): void {
         this.stopped = true;
     }
 
     /* For `chats.observe()`. */
-    chatEvent(event: SessionEvent): void {
+    chatEvent(event: AgentEvent): void {
         if (this.stopped || event.event !== 'chat.event') {
             return;
         }
@@ -117,28 +118,19 @@ export class TaskCoordinator {
         }
     }
 
-    /* For `sessions.observe()`: a terminal agent that said goodbye. */
-    sessionEvent(event: SessionEvent): void {
-        if (this.stopped || event.event !== 'session.status' || event.payload.agent?.status !== 'exited') {
-            return;
-        }
-        this.terminalEnded(event.payload.sessionId);
-    }
-
-    /* A terminal whose shell went, with or without its agent saying so first. */
-    terminalEnded(sessionId: string): void {
+    /*
+     * An agent that is not a chat ended, so no turn of it will answer its task: it fails with `text`,
+     * which says how that kind of agent reports back.
+     */
+    agentEnded(childId: string, text: string): void {
         if (this.stopped) {
             return;
         }
-        const task = this.deps.tasks.openFor(sessionId);
-        if (!task || !this.deps.placed(sessionId)) {
+        const task = this.deps.tasks.openFor(childId);
+        if (!task || !this.deps.placed(childId)) {
             return;
         }
-        this.settle(task, 'failed', {
-            text: 'It ended without a result: a terminal reports back with ruimte-context done.',
-            source: 'exit',
-            at: this.deps.now()
-        });
+        this.settle(task, 'failed', { text, source: 'exit', at: this.deps.now() });
     }
 
     startFailed(childId: string, error: unknown): void {
@@ -150,7 +142,7 @@ export class TaskCoordinator {
         this.failed(childId, `The task could not be given: ${errorText(error)}`);
     }
 
-    /* `ruimte-context done` from the child itself, which wins over whatever else was about to settle it. */
+    /* `done` from the child itself, which wins over whatever else was about to settle it. */
     async done(childId: string, text: string): Promise<Task | null> {
         const task = this.deps.tasks.openFor(childId);
         if (!task) {
@@ -274,7 +266,7 @@ export class TaskCoordinator {
 
     /*
      * A limit is work waiting, not work that failed: the plan's limit always holds the task until the child
-     * finishes after it, an overload only while the daemon still owes the turn another try.
+     * finishes after it, an overload only while the host still owes the turn another try.
      */
     private pauseFor(chatId: string, turn: ChatTurnItem, items: readonly ChatItem[]): NonNullable<Task['paused']> | null {
         const limit = turn.state === 'error' ? turn.limit : undefined;

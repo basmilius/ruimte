@@ -1,30 +1,37 @@
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
-import { TaskSchema, type Task, type TaskResult } from '@ruimte/contracts';
-import type { SessionSink } from '../sessions/manager.ts';
+import { TaskSchema, type Task, type TaskChangedEvent, type TaskResult } from '@ruimte/agent-contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import { RecordDirectory } from '@ruimte/agents/record-directory';
+import { RecordDirectory } from '../record-directory.ts';
 
 export type TaskListener = (task: Task) => void;
 
+/* What a client hears of a task: the whole of it, every time it is written. */
+export interface TaskEvent {
+    event: 'task.changed';
+    payload: TaskChangedEvent;
+}
+
+export type TaskSink = (event: TaskEvent) => void;
+
 /*
- * What a chat asked of the nodes it opened with `--task`, one file per task under `$RUIMTE_HOME/tasks`,
+ * What a chat asked of the nodes it opened with `--task`, one file per task under `<dataDir>/tasks`,
  * beside the lineage and for the same reason: an agent with a shell in the project folder can rewrite
- * `project.json`, and waking the parent is a promise the daemon keeps. A settled task stays until its
- * parent leaves the project, so the parent can still list what came of it.
+ * the project's files, and waking the parent is a promise the host keeps. A settled task stays until
+ * its parent leaves the project, so the parent can still list what came of it.
  */
 export class TaskStore {
     readonly dir: string;
     private readonly tasks: RecordDirectory<Task>;
     private readonly listeners = new Set<TaskListener>();
-    private readonly sinks = new ClientSinks();
+    private readonly sinks = new ClientSinks<TaskEvent>();
 
-    constructor(home: string) {
-        this.dir = join(home, 'tasks');
+    constructor(dataDir: string) {
+        this.dir = join(dataDir, 'tasks');
         this.tasks = new RecordDirectory({ dir: this.dir, schema: TaskSchema, idOf: (task) => task.id });
     }
 
-    /* Reads what an earlier run of the daemon wrote down. Call before any verb or observer can ask. */
+    /* Reads what an earlier run of the host wrote down. Call before any verb or observer can ask. */
     load(): Promise<void> {
         return this.tasks.load();
     }
@@ -38,7 +45,7 @@ export class TaskStore {
     }
 
     /* Every socket hears every task: the edge and the header of a child are drawn from it. */
-    subscribe(clientId: string, sink: SessionSink): () => void {
+    subscribe(clientId: string, sink: TaskSink): () => void {
         return this.sinks.subscribe(clientId, sink);
     }
 

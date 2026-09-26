@@ -1,10 +1,9 @@
-import type { ChatApprovalItem, ChatItem, ChatQuestionItem, Task } from '@ruimte/contracts';
-import type { ChatRequestHost } from '../canvas/verb.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
+import type { ChatApprovalItem, ChatItem, ChatQuestionItem, Task } from '@ruimte/agent-contracts';
+import type { ChatCore } from '../chat/chat-core.ts';
 import { errorText } from '../error-text.ts';
-import type { DeliverWaitingEntry, OutboxWork } from '../outbox/outbox.ts';
-import type { OutboxOutcome } from '@ruimte/agents/outbox/outbox-worker';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { AgentEvent } from '../events.ts';
+import type { OutboxOutcome } from '../outbox/outbox-worker.ts';
+import type { DeliverWaitingEntry, TaskWork } from './task-work.ts';
 
 /* What a child waits on: an answer anyone may give, or an approval only a person gives. */
 export type WaitingRequest = ChatQuestionItem | ChatApprovalItem;
@@ -12,8 +11,18 @@ export type WaitingRequest = ChatQuestionItem | ChatApprovalItem;
 export const isPendingRequest = (item: ChatItem | null | undefined): item is WaitingRequest =>
     (item?.kind === 'question' && item.state === 'pending') || (item?.kind === 'approval' && item.decision === 'pending');
 
-/* What `answer` reaches, read off the chats the daemon has loaded: a chat nobody loaded since a restart waits on nothing. */
-export const chatRequests = (chats: Pick<ChatManager, 'get' | 'answer'>): ChatRequestHost => ({
+/* What the chats of agent nodes ask and wait on, which a verb such as `answer` reaches. */
+export interface ChatRequests {
+    /* The one under this request id, in whatever state; null when the chat holds none, or nobody loaded it. */
+    request(nodeId: string, requestId: string): WaitingRequest | null;
+    /* Those it waits on now, oldest first. */
+    waiting(nodeId: string): WaitingRequest[];
+    /* Answers a pending question the way a person's `chat.answer` does; false when it no longer waits. */
+    answer(nodeId: string, requestId: string, answers: Record<string, string>): boolean;
+}
+
+/* Read off the chats the host has loaded: a chat nobody loaded since a restart waits on nothing. */
+export const chatRequests = (chats: Pick<ChatCore, 'get' | 'answer'>): ChatRequests => ({
     request: (nodeId, requestId) => {
         // The projector writes each under the kind it is.
         const thread = chats.get(nodeId)?.thread;
@@ -43,7 +52,7 @@ export const WAITING_GRACE_MS = 15_000;
 
 export interface WaitingObserverDeps {
     openTask(childId: string): Task | undefined;
-    enqueue(projectId: string, target: string, work: OutboxWork, notBefore: number): Promise<void>;
+    enqueue(projectId: string, target: string, work: TaskWork, notBefore: number): Promise<void>;
     now(): number;
     log?(message: string): void;
 }
@@ -69,7 +78,7 @@ export class WaitingObserver {
     }
 
     /* For `chats.observe()`. */
-    chatEvent(event: SessionEvent): void {
+    chatEvent(event: AgentEvent): void {
         if (this.stopped || event.event !== 'chat.event') {
             return;
         }
@@ -114,28 +123,37 @@ const questionLine = (question: ChatQuestionItem['questions'][number]): string =
     return `- question ${question.id}: ${quoted(question.question)} (${how})`;
 };
 
+/*
+ * The words a host speaks in: its name, at the head of what a parent's CLI hears, and the command an
+ * agent types, whose `answer <child> <request> --answer A` or `--answers JSON` answers a child's question.
+ */
+export interface WaitingWords {
+    app: string;
+    cli: string;
+}
+
 /* The call that answers it, in the shape the verb takes for this many questions. */
-const answerCall = (childId: string, item: ChatQuestionItem): string => {
+const answerCall = (cli: string, childId: string, item: ChatQuestionItem): string => {
     if (item.questions.length === 1) {
         const multi = item.questions[0]!.multiSelect ? ', several labels in one --answer separated by a comma' : '';
-        return `ruimte-context answer ${childId} ${item.requestId} --answer '<a choice label as written, or your own words>'${multi}`;
+        return `${cli} answer ${childId} ${item.requestId} --answer '<a choice label as written, or your own words>'${multi}`;
     }
     const shape = Object.fromEntries(item.questions.map((question) => [question.id, '...']));
-    return `ruimte-context answer ${childId} ${item.requestId} --answers '${JSON.stringify(shape)}', one answer per question id`;
+    return `${cli} answer ${childId} ${item.requestId} --answers '${JSON.stringify(shape)}', one answer per question id`;
 };
 
 /*
  * What the parent's thread shows and what its CLI hears, from one request of one child. The note's
  * first line is what a person sees at a glance; under it, what the CLI hears in front of its next turn.
  */
-export const waitingTexts = (child: { id: string; title: string }, item: WaitingRequest): { note: string; preamble: string } => {
+export const waitingTexts = (child: { id: string; title: string }, item: WaitingRequest, words: WaitingWords): { note: string; preamble: string } => {
     const who = `${child.title} (node ${child.id})`;
     if (item.kind === 'approval') {
         const what = item.description === null ? item.toolName : `${item.toolName}: ${item.description}`;
         return {
             note: `${who} waits for a person to approve ${what}`,
             preamble: [
-                `Ruimte: ${who}, an agent you gave a task, waits for a person to approve ${what} (request ${item.requestId}). This did not wake you.`,
+                `${words.app}: ${who}, an agent you gave a task, waits for a person to approve ${what} (request ${item.requestId}). This did not wake you.`,
                 'Only a person answers an approval; there is no verb for it. If it holds up your plan, tell the person.'
             ].join('\n')
         };
@@ -143,21 +161,22 @@ export const waitingTexts = (child: { id: string; title: string }, item: Waiting
     const asked = item.questions.length === 1 ? quotedShort(item.questions[0]!.question) : `${item.questions.length} questions`;
     const how = [
         ...item.questions.map(questionLine),
-        `A person can answer it in that node, and this chat with ${answerCall(child.id, item)}. Whoever answers first wins; the verb refuses a question that was answered already.`
+        `A person can answer it in that node, and this chat with ${answerCall(words.cli, child.id, item)}. Whoever answers first wins; the verb refuses a question that was answered already.`
     ];
     return {
         note: [`${who} waits for an answer to ${asked}`, '', ...how].join('\n'),
         preamble: [
-            `Ruimte: ${who}, an agent you gave a task, asked a question and waits for an answer (request ${item.requestId}). This did not wake you.`,
+            `${words.app}: ${who}, an agent you gave a task, asked a question and waits for an answer (request ${item.requestId}). This did not wake you.`,
             ...how
         ].join('\n')
     };
 };
 
 export interface DeliverWaitingDeps {
-    request: ChatRequestHost['request'];
+    request: ChatRequests['request'];
     titleFor(nodeId: string): string | null;
     deliver(chatId: string, delivery: { noteId: string; note: string; preamble: string }): Promise<boolean>;
+    words: WaitingWords;
 }
 
 /*
@@ -172,6 +191,6 @@ export const deliverWaitingHandler =
         if (!isPendingRequest(item)) {
             return;
         }
-        const texts = waitingTexts({ id: childId, title: deps.titleFor(childId) ?? childId }, item);
+        const texts = waitingTexts({ id: childId, title: deps.titleFor(childId) ?? childId }, item, deps.words);
         await deps.deliver(entry.target, { noteId: waitingNoteId(childId, requestId), ...texts });
     };

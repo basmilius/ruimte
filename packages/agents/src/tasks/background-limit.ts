@@ -1,9 +1,9 @@
-import { commandLabel, runningInBackground } from '@ruimte/agents/chat/background-work';
+import { commandLabel, runningInBackground } from '../chat/background-work.ts';
 import { loadChat, type ChatOpenerDeps } from '../chat/wake-chat.ts';
-import type { BackgroundLimitEntry, OutboxStore } from '../outbox/outbox.ts';
-import type { OutboxOutcome } from '@ruimte/agents/outbox/outbox-worker';
-import type { TaskCoordinator } from './task-coordinator.ts';
+import type { OutboxOutcome } from '../outbox/outbox-worker.ts';
+import type { TaskCoordinator, TaskCoordinatorDeps } from './task-coordinator.ts';
 import type { TaskStore } from './task-store.ts';
+import { isBackgroundLimit, type AnyOutboxEntry, type BackgroundLimitEntry, type TaskOutbox } from './task-work.ts';
 
 export interface BackgroundLimitDeps extends ChatOpenerDeps {
     tasks: Pick<TaskStore, 'get'>;
@@ -37,15 +37,34 @@ export const backgroundLimitHandler =
         await deps.coordinator.outlasted(entry.target, running.length > 0 ? running : entry.payload.commands, entry.payload.restarted ? 'restart' : 'limit');
     };
 
+export interface RestartedOutbox {
+    list(): readonly AnyOutboxEntry[];
+    update(entry: BackgroundLimitEntry): Promise<void>;
+}
+
 /*
- * Every limit still owed when the daemon starts was owed by an earlier run, and the CLI whose commands
+ * Every limit still owed when the host starts was owed by an earlier run, and the CLI whose commands
  * it waits on went down with that run, so nothing is left to wait for: each is due now and fails its
  * task. Call after the outbox loaded and before its worker starts.
  */
-export const restartBackgroundLimits = async (outbox: OutboxStore, now: number): Promise<void> => {
+export const restartBackgroundLimits = async (outbox: RestartedOutbox, now: number): Promise<void> => {
     for (const entry of outbox.list()) {
-        if (entry.kind === 'background-limit') {
+        if (isBackgroundLimit(entry)) {
             await outbox.update({ ...entry, notBefore: now, payload: { ...entry.payload, restarted: true } });
         }
     }
 };
+
+/* The `background-limit` entries of a host's outbox, one per task at most, as the coordinator owes and drops them. */
+export const backgroundLimits = (outbox: Pick<TaskOutbox, 'list' | 'enqueue' | 'remove'>): TaskCoordinatorDeps['limit'] => ({
+    owed: (taskId) => outbox.list().some((entry) => isBackgroundLimit(entry) && entry.payload.taskId === taskId),
+    owe: (task, commands, at) =>
+        outbox.enqueue(task.projectId, task.childId, { kind: 'background-limit', payload: { taskId: task.id, commands: [...commands] } }, at),
+    lapse: async (taskId) => {
+        for (const entry of outbox.list()) {
+            if (isBackgroundLimit(entry) && entry.payload.taskId === taskId) {
+                await outbox.remove(entry.id);
+            }
+        }
+    }
+});

@@ -1,4 +1,5 @@
 import { OutboxStore as BaseOutboxStore, type OutboxEntryOf } from '@ruimte/agents/outbox/outbox';
+import { BackgroundLimitWorkSchema, DeliverWaitingWorkSchema, GiveTaskWorkSchema, WakeParentWorkSchema } from '@ruimte/agents/tasks/task-work';
 import { AgentKindSchema, ModelSelectionSchema, ProviderAccountIdSchema, RuntimeModeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 
@@ -31,25 +32,6 @@ const ResumeLimitSchema = z.object({
     payload: z.object({ turnId: z.string().min(1) })
 });
 
-const BackgroundLimitSchema = z.object({
-    kind: z.literal('background-limit'),
-    // The target is the child; the task its background commands hold open, and what they were when the limit started, for a child whose process went since.
-    // `restarted` marks an entry an earlier run of the daemon owed, whose commands went down with it.
-    payload: z.object({ taskId: z.string().min(1), commands: z.array(z.string()), restarted: z.literal(true).optional() })
-});
-
-const WakeParentSchema = z.object({
-    kind: z.literal('wake-parent'),
-    // The target is the chat to wake; the task that settled is only what owed it, since a wake takes every settled task.
-    payload: z.object({ taskId: z.string().min(1) })
-});
-
-const GiveTaskSchema = z.object({
-    kind: z.literal('give-task'),
-    // The target is the agent the task went to; the record itself holds what it asks and who asked.
-    payload: z.object({ taskId: z.string().min(1) })
-});
-
 const DeliverMessageSchema = z.object({
     kind: z.literal('deliver-message'),
     // The target is the chat the message was left for; the message itself waits in the notice store, with any that came in beside it.
@@ -68,23 +50,18 @@ const DeliverSummarySchema = z.object({
     payload: z.object({ forkId: z.string().min(1), turnId: z.string().min(1), text: z.string() })
 });
 
-const DeliverWaitingSchema = z.object({
-    kind: z.literal('deliver-waiting'),
-    // The target is the chat that gave the child its task; the child waits on this request of its own.
-    payload: z.object({ childId: z.string().min(1), requestId: z.string().min(1) })
-});
-
+// The kinds a task owes are @ruimte/agents' own (`tasks/task-work.ts`), each at the place it always had.
 const OutboxWorkSchema = z.discriminatedUnion('kind', [
     StartAgentSchema,
     ResumeRunSchema,
     ResumeLimitSchema,
-    BackgroundLimitSchema,
-    WakeParentSchema,
-    GiveTaskSchema,
+    BackgroundLimitWorkSchema,
+    WakeParentWorkSchema,
+    GiveTaskWorkSchema,
     DeliverMessageSchema,
     EndChildrenSchema,
     DeliverSummarySchema,
-    DeliverWaitingSchema
+    DeliverWaitingWorkSchema
 ]);
 
 export type OutboxWork = z.infer<typeof OutboxWorkSchema>;

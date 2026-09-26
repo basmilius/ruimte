@@ -28,8 +28,8 @@ import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutboxStore } from './outbox/outbox.ts';
 import { nodeAccount, nodeMode, startAgentWork } from './outbox/start-agent.ts';
 import { OutboxLink, wireOutbox } from './outbox/wiring.ts';
-import { restartBackgroundLimits } from './tasks/background-limit.ts';
-import { TaskStore } from './tasks/task-store.ts';
+import { restartBackgroundLimits } from '@ruimte/agents/tasks/background-limit';
+import { TaskStore } from '@ruimte/agents/tasks/task-store';
 import { registerTaskHandlers } from './handlers/tasks.ts';
 import { registerPlanHandlers } from './handlers/plan.ts';
 import { isPlanFileName, PlanStore } from './plans/plan-store.ts';
@@ -107,7 +107,7 @@ import { GitStatusWatcher } from './git/status-watcher.ts';
 import { worktreeAgents } from './git/worktree-agents.ts';
 import { worktreeHost } from './git/worktree-host.ts';
 import { agentStates } from './agents/agent-state.ts';
-import { chatRequests } from './tasks/waiting-child.ts';
+import { chatRequests } from '@ruimte/agents/tasks/waiting-child';
 import { WorktreeMerge } from './git/worktree-merge.ts';
 import { Worktrees } from './git/worktrees.ts';
 import { holdsForeground } from './processes/foreground.ts';
@@ -501,7 +501,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         processes.nudge();
         selfUpdate.nudge();
         if (manager.get(sessionId)?.exited !== false) {
-            taskWiring.coordinator.terminalEnded(sessionId);
+            taskWiring.terminals.ended(sessionId);
         }
     };
     manager.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);
@@ -635,7 +635,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         onError: (error) => console.error('Push delivery failed:', errorText(error))
     });
     manager.observe((event) => push.consume(event));
-    manager.observe((event) => taskWiring.coordinator.sessionEvent(event));
+    manager.observe((event) => taskWiring.terminals.sessionEvent(event));
     chats.observe((event) => push.consume(event));
     manager.observe((event) => computer.observe(event));
     chats.observe((event) => computer.observe(event));

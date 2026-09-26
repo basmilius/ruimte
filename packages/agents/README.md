@@ -17,6 +17,7 @@ Import per file: `@ruimte/agents/<path under src>`, without the extension.
 - `host/`: `AgentHost`, the request handlers, `cliEnvironment` and an in-memory port pair.
 - `context/`: the registry behind a context CLI such as `ruimte-context`, the verbs an agent runs to act on its app. `context/argv.ts` splits the words, `context/verb.ts` defines verbs and nouns and renders `help` from them, `context/refusal.ts` writes and reads a refusal.
 - `outbox/`: work a host owes that has to outlive the process, such as starting an agent a verb opened, and the worker that does it. `lineage.ts` keeps who opened whom and how deep, `modes.ts` the order of the runtime modes and the ceiling an opener hands down.
+- `tasks/`: what one chat asks of another, the coordinator that settles it from what the child does, and the wake, the limit on background commands and the note about a waiting child that the outbox owes for it.
 
 ## A host of its own
 
@@ -108,6 +109,66 @@ await worker.enqueue(projectId, chatId, { kind: 'start-chat', payload: { prompt 
 Every entry has a `target`, the node or chat it is about. Entries for one target run one at a time and oldest first, while other targets do not wait; `lanesOf` names more nodes an entry holds, and `outlivesTarget` keeps an entry that `prune` would otherwise drop with its target. A handler must be idempotent, since a restart between the work and the removal of its file runs it again. A handler that throws is tried again after 1, 5 and 30 seconds and then given up on (`onParked`); one that answers `'wait'` keeps its entry without an attempt until `wake(target)` names its target. `enqueue` with a `notBefore` owes work at a time, which holds no lane until then. The clock is a seam: a test passes `ManualClock` (`outbox/manual-clock.ts`) and moves it by hand.
 
 `AgentLineageStore` writes down, under `<dataDir>/lineage`, which node opened which, how deep it sits and the widest mode it may run in: outside the project, so an agent with a shell cannot reset its own depth, and on disk, so a restart does not either. `ceilingForOpening(openerMode, requested)` in `modes.ts` refuses a `--mode` wider than the opener's own with a `VerbRefusal`, `narrowerMode` clamps a mode to a ceiling, and `modeFlag` is the flag's schema. Ruimte binds the store to its kinds in `apps/server/src/outbox/outbox.ts`.
+
+### Tasks
+
+A chat can give another chat a task and sleep until it is done. `wireTasks` in `tasks/wiring.ts` keeps the rules Ruimte keeps: a task settles on the child's last answer, or on `done`, and never while its CLI still runs a background subagent or workflow. A command left running in the background holds it for at most 30 minutes, through a `background-limit` entry, and a restart fails a task that only such commands held. A settled task wakes its parent once, as soon as the parent has no turn running, and the tasks of one batch wake it together. A child that waits on a question or an approval leaves its parent a note after 15 seconds and does not wake it.
+
+The host implements:
+
+- `chats`: `TaskChats`, a `Pick` of `ChatCore` (`get`, `observe`, `hasStored`, `create`, `answer`, `deliverNote`). Hand in the host's own core.
+- `outbox`: `TaskOutbox`, with `list`, `enqueue`, `remove` and `wake` over the host's `OutboxStore` and `OutboxWorker`. The outbox's union takes the four task kinds from `tasks/task-work.ts` beside the host's own.
+- `placed(nodeId)`: whether the node still exists. A child that went is cancelled by `prune`, never failed.
+- `titleFor(nodeId)`, and `alert(nodeId, title, body)` for a task that failed.
+- `words`: `app` and `cli`, which the note about a waiting child names. It tells the parent to run `<cli> answer <child> <request> --answer A` (or `--answers JSON`). `assignment(task)` is what a running chat is sent with a task given to it, and `restOf(childId)` says where the rest of a result cut at 8 KiB is read.
+- `changed(task)`, optional: told of every task written, from inside a chat's broadcast, so it only notes. Ruimte draws the task's row in the parent from it.
+
+The host gets:
+
+- `verbs`, the `TaskVerbs` its CLI's verbs call: `open` (also with a `batchId`), `give` for a chat that already runs, `chatState`, `done` and `involving`. The verbs themselves, and what they print, are the host's.
+- `handlers` for the four kinds, to spread into the worker's handlers, `onParked` for the worker, and `prune(projectId, ids)` for nodes that went.
+- `requests`, which is what an `answer` verb reaches, and `coordinator`. `coordinator.agentEnded(childId, text)` fails the task of an agent that is not a chat, and `coordinator.startFailed(childId, error)` fails one whose agent never started. A host with only chats needs neither.
+
+`TaskStore` keeps one file per task under `<dataDir>/tasks`, and `subscribe` sends every client `task.changed`. Load it and the outbox, then call `restartBackgroundLimits(outbox, now)` before the worker starts.
+
+```ts
+import { OutboxWorker } from '@ruimte/agents/outbox/outbox-worker';
+import { restartBackgroundLimits } from '@ruimte/agents/tasks/background-limit';
+import { TaskStore } from '@ruimte/agents/tasks/task-store';
+import { BackgroundLimitWorkSchema, DeliverWaitingWorkSchema, GiveTaskWorkSchema, WakeParentWorkSchema } from '@ruimte/agents/tasks/task-work';
+import { wireTasks } from '@ruimte/agents/tasks/wiring';
+
+const WorkSchema = z.discriminatedUnion('kind', [StartChatSchema, BackgroundLimitWorkSchema, WakeParentWorkSchema, GiveTaskWorkSchema, DeliverWaitingWorkSchema]);
+const outbox = new OutboxStore({ dataDir, work: WorkSchema });
+await outbox.load();
+await restartBackgroundLimits(outbox, Date.now());
+const tasks = new TaskStore(dataDir);
+await tasks.load();
+
+let worker: OutboxWorker<z.infer<typeof WorkSchema>>;
+const wiring = wireTasks({
+    tasks,
+    chats: core,
+    outbox: {
+        list: () => outbox.list(),
+        enqueue: (projectId, target, work, notBefore) => worker.enqueue(projectId, target, work, notBefore),
+        remove: (id) => outbox.remove(id),
+        wake: (target) => worker.wake(target)
+    },
+    placed: (nodeId) => layers.has(nodeId),
+    titleFor: (nodeId) => layers.get(nodeId)?.title ?? null,
+    alert: (nodeId, title) => notify(nodeId, title),
+    words: { app: 'Motion', cli: 'motion-context' }
+});
+worker = new OutboxWorker({
+    store: outbox,
+    handlers: { ...wiring.handlers, 'start-chat': startChat },
+    onParked: (entry, error) => wiring.onParked(entry, error)
+});
+worker.start();
+```
+
+`AgentHost` offers no tasks of its own. A task is given and reported through the verbs of a context CLI, and the host needs to know which chat ran a verb. A plain host has neither. An app that wants tasks extends `ChatCore` for its CLI, as it does for its verbs, and wires tasks as above. The core of an `AgentHost` (`host.chats`) works as `chats` too, which `tasks/wiring.test.ts` does.
 
 ## Wiring it into an Electron app
 

@@ -1,5 +1,5 @@
 import type { ChatItem } from '@ruimte/contracts';
-import type { WakeChat } from '../chat/wake-chat.ts';
+import type { WakeChat } from '@ruimte/agents/chat/wake-chat';
 import type { DeliverMessageEntry } from '../outbox/outbox.ts';
 import type { OutboxOutcome } from '@ruimte/agents/outbox/outbox-worker';
 import type { Notice, NoticeStore } from './notices.ts';
