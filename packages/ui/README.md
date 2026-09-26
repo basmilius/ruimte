@@ -18,8 +18,10 @@ An app using it does three things:
   ```css
   @import "tailwindcss";
   @import "@ruimte/ui/theme.css";
-  @source "<path to>/@ruimte/ui/src";
+  @source "<path to>/node_modules/@ruimte/ui/dist";
   ```
+
+  The package on npm ships compiled JavaScript in `dist`, and the class names Tailwind looks for are in there.
 
   The theme holds the semantic tokens (`bg-surface`, `text-positive-text`, ...), the type scale and the rules for icon buttons, fields, menus, dialogs and tooltips. It resets Tailwind's palette, so an app adds its own colors in an `@theme inline` block after it. Its light and dark tokens follow `data-theme` on `<html>`.
 - Hand the formatters in `format/` what a person set, once and before the first render: `setFormatSource({ language, region, systemLocale, subscribe })` from `@ruimte/ui/format/locale`. The language writes the words, the region (a tag, `FORMAT_LANGUAGE` or `FORMAT_SYSTEM`) writes the notation. Tests use `fakeFormatSource()`.

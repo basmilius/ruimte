@@ -110,14 +110,14 @@ function Chat({ chatId }: { chatId: string }) {
 </ChatScopeContext.Provider>;
 ```
 
-The stylesheet goes right after the ui theme, and Tailwind scans both packages. The markdown of a thread builds on the typography plugin, and a few rules read the terminal colors (`--term-bg`, `--term-fg`, `--term-green`, `--term-red`) and the find colors (`--find-current`) an app defines:
+The stylesheet goes right after the ui theme, and Tailwind scans the `dist` of both packages, which is what npm ships. The markdown of a thread builds on the typography plugin, and a few rules read the terminal colors (`--term-bg`, `--term-fg`, `--term-green`, `--term-red`) and the find colors (`--find-current`) an app defines:
 
 ```css
 @import "tailwindcss";
 @import "@ruimte/ui/theme.css";
 @import "@ruimte/agents-react/theme.css";
-@source "<path to>/@ruimte/ui/src";
-@source "<path to>/@ruimte/agents-react/src";
+@source "<path to>/node_modules/@ruimte/ui/dist";
+@source "<path to>/node_modules/@ruimte/agents-react/dist";
 @plugin "@tailwindcss/typography";
 ```
 
