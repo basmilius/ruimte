@@ -3,6 +3,13 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { AgentKind } from '@ruimte/contracts';
 import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
+import {
+    codexRulesPathIn as codexRulesPathInFolder,
+    codexRulesText,
+    defaultCodexHome,
+    installCodexRules as installCodexRulesAt,
+    type CodexRules
+} from '@ruimte/agents/providers/codex-rules';
 import { HOOK_EVENTS } from './hooks.ts';
 import { errorText } from '../error-text.ts';
 
@@ -153,35 +160,16 @@ export const defaultHookPaths = (env: Record<string, string | undefined> = proce
     };
 };
 
-/*
- * Lets Codex run `ruimte-context` outside its sandbox without asking: the seatbelt of workspace-write
- * blocks every socket, loopback included, and Codex 0.154 has no setting that opens only the daemon's.
- * The daemon already enforces every verb (mode ceiling, depth, cwd). A file of its own, so a person's
- * `default.rules` is never touched, and rules only load from this folder, never from a flag.
- */
-export const CODEX_RULES = '# Written by Ruimte; it is rewritten when it changes.\nprefix_rule(pattern=["ruimte-context"], decision="allow")\n';
+/* Lets Codex run `ruimte-context` outside its sandbox without asking; the daemon already enforces every verb (mode ceiling, depth, cwd). */
+const RUIMTE_CODEX_RULES: CodexRules = { app: 'Ruimte', commands: ['ruimte-context'] };
 
-/* Idempotent like the hooks: a file that already says the same is left alone. */
-export const installCodexRules = async (path: string): Promise<InstallResult> => {
-    try {
-        if ((await readFile(path, 'utf8')) === CODEX_RULES) {
-            return 'unchanged';
-        }
-    } catch (e) {
-        if (!isNotFound(e)) {
-            throw new Error(`Cannot read ${path}: ${errorText(e)}`);
-        }
-    }
-    await mkdir(dirname(path), { recursive: true });
-    await writeAtomic(path, CODEX_RULES, 0o644);
-    return 'written';
-};
+export const CODEX_RULES = codexRulesText(RUIMTE_CODEX_RULES);
 
-// Codex loads every `*.rules` file in the `rules` folder of its home.
-export const codexRulesPathIn = (folder: string): string => join(folder, 'rules', 'ruimte.rules');
+export const installCodexRules = (path: string): Promise<InstallResult> => installCodexRulesAt(path, RUIMTE_CODEX_RULES);
 
-export const defaultCodexRulesPath = (env: Record<string, string | undefined> = process.env): string =>
-    codexRulesPathIn(env.CODEX_HOME ?? join(env.HOME ?? homedir(), '.codex'));
+export const codexRulesPathIn = (folder: string): string => codexRulesPathInFolder(folder, RUIMTE_CODEX_RULES);
+
+export const defaultCodexRulesPath = (env: Record<string, string | undefined> = process.env): string => codexRulesPathIn(defaultCodexHome(env));
 
 export interface FolderInstall {
     path: string;

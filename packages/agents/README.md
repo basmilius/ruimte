@@ -29,6 +29,7 @@ A chat core knows nothing a host adds. A host adds it by extending `ChatCore` an
 - `env`: the environment the CLIs start in. `cliEnvironment(process.env)` drops the variables of a Ruimte terminal the app may have been started from, so its CLIs never post to that Ruimte;
 - `systemNote`: what every agent is told, optional;
 - `claude`: the options of the Claude backend, such as `allowedTools` for the app's own context CLI;
+- `codexRules`: the same for Codex, `{ app, commands }`. Its sandbox in `workspace-write` blocks every socket, loopback included, so a context CLI would stop on an approval each call. The host writes `<app>.rules` into the `rules` folder of the Codex home and of every Codex account, allowing only the named commands out of the sandbox, never the network as a whole (`providers/codex-rules.ts`);
 - `core`: the app's own core. It gets the `ChatCoreOptions` a plain core would get, since the core needs the providers and accounts the host builds first, and adds its own to them. Without it the host runs a plain `ChatCore`, and `host.chats` has the type the factory returns.
 
 ```ts

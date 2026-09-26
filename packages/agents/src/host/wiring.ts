@@ -13,7 +13,9 @@ import { definedEnv } from '../providers/accounts/launch.ts';
 import { ProviderAccountsService } from '../providers/accounts/service.ts';
 import type { AccountsHost } from '../providers/accounts/variables.ts';
 import { createClaudeProvider } from '../providers/claude-provider.ts';
+import { errorText } from '../error-text.ts';
 import { createCodexProvider } from '../providers/codex-provider.ts';
+import { codexRulesPathIn, defaultCodexHome, installCodexRules, type CodexRules } from '../providers/codex-rules.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { chatSessionAccounts, limitAccountsOf, usageAccountsOf, usageRootsOf } from '../usage/accounts.ts';
 import { UsageMonitor } from '../usage/limits/monitor.ts';
@@ -32,6 +34,8 @@ export interface AgentWiringOptions<Core extends ChatCore = ChatCore> {
     client?: CodexClientInfo;
     accountsHost?: AccountsHost;
     claude?: ClaudeBackendOptions;
+    // The commands Codex runs outside its sandbox without asking, such as the host's context CLI; written in its home and every account's.
+    codexRules?: CodexRules;
     // The core of an app that extends `ChatCore`, made from what a plain core would get; absent, a plain core.
     core?: (options: ChatCoreOptions) => Core;
     // A test runs fake CLIs: the commands to start and how.
@@ -55,6 +59,15 @@ export interface AgentWiring<Core extends ChatCore = ChatCore> {
     stop(): Promise<void>;
 }
 
+// A folder the rule cannot be written to only costs an approval per call, so it never stops the host.
+const installRulesIn = async (kind: AgentKind, folder: string, rules: CodexRules): Promise<void> => {
+    if (kind !== 'codex') {
+        return;
+    }
+    const path = codexRulesPathIn(folder, rules);
+    await installCodexRules(path, rules).catch((e: unknown) => console.error(`Could not write the codex rules in ${path}:`, errorText(e)));
+};
+
 /*
  * The chats of a host with the providers, accounts and usage around them, and the handlers of
  * every agent request. `AgentHost` serves them over a port; an app that answers requests on a wire
@@ -64,14 +77,19 @@ export interface AgentWiring<Core extends ChatCore = ChatCore> {
 export const wireAgents = <Core extends ChatCore = ChatCore>(options: AgentWiringOptions<Core>): AgentWiring<Core> => {
     const env = options.env ?? cliEnvironment();
     const client = options.client ?? DEFAULT_CODEX_CLIENT;
+    const codexRules = options.codexRules;
     const providers = new ProviderRegistry({ providers: [createClaudeProvider(options.claude), createCodexProvider({ client })], env });
     const accounts = new ProviderAccountsService({
         home: options.dataDir,
         providers,
         env,
         client,
-        ...(options.accountsHost ? { host: options.accountsHost } : {})
+        ...(options.accountsHost ? { host: options.accountsHost } : {}),
+        ...(codexRules ? { install: (kind: AgentKind, folder: string) => installRulesIn(kind, folder, codexRules) } : {})
     });
+    if (codexRules) {
+        void installRulesIn('codex', defaultCodexHome(env), codexRules);
+    }
     const nameOf = (kind: AgentKind | UsageProvider): string => providers.get(kind).name;
     const limits = new UsageMonitor({ providers, accounts: limitAccountsOf(accounts, nameOf, env), client });
     accounts.listen(() => limits.accountsChanged());
