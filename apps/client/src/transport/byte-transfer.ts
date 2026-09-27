@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, type ByteResource, type BytesReadPayload, type BytesReadResult } from '@ruimte/contracts';
+import { blobTypeFor, decodeBase64 } from './piece';
 
 export type ReadPiece = (payload: BytesReadPayload) => Promise<BytesReadResult>;
 
@@ -9,24 +10,6 @@ export interface ReadResourceOptions {
     /* How often a file that changed halfway is started over before it counts as a failure. */
     restarts?: number;
 }
-
-/*
- * What a blob URL may claim to be. The URL has this page's origin, so anything a browser would run
- * when it is opened (HTML, XML, JavaScript) is typed as a download instead. An SVG keeps its type,
- * because an `<img>` does not draw one without it and runs nothing inside it.
- */
-const DRAWABLE = /^(image\/(png|jpeg|gif|webp|avif|bmp|x-icon|svg\+xml)|video\/[\w.+-]+|application\/pdf|text\/plain)$/;
-
-export const blobTypeFor = (mime: string): string => (DRAWABLE.test(mime) ? mime : 'application/octet-stream');
-
-const decodeBase64 = (data: string): Uint8Array<ArrayBuffer> => {
-    const binary = atob(data);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) {
-        bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-};
 
 /*
  * A resource's bytes over the wire, one piece per request. The client asks for the next piece only
