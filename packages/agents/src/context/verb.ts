@@ -83,6 +83,15 @@ export interface NounSpec<Call extends VerbCallBase> {
     actions: readonly Action<Call>[];
 }
 
+/* Guidance that belongs to no single verb, such as the API a verb's input is written against. */
+export interface HelpTopic {
+    name: string;
+    /* The one line the root of `help` gives it. */
+    summary: string;
+    /* The lines `help <topic>` prints, as they are. */
+    body: readonly string[];
+}
+
 export interface HelpSpec<Call extends VerbCallBase> {
     /* A function, since the help verb is itself one of the entries it lists. */
     entries(): readonly VerbEntry<Call>[];
@@ -90,6 +99,8 @@ export interface HelpSpec<Call extends VerbCallBase> {
     root(): readonly string[];
     /* The one line about failure every help output ends with: how the CLI prints a refusal and what it exits with. */
     refusal: string;
+    /* Printed by `help <topic>` and listed under the verbs; a verb or noun of the same name wins. */
+    topics?: readonly HelpTopic[];
 }
 
 export interface VerbRegistry<Call extends VerbCallBase> {
@@ -271,16 +282,22 @@ export const createVerbRegistry = <Call extends VerbCallBase>(options: { cli: st
             `detail\t${cli} help ${noun.name} <action>\tone action in full`,
             spec.refusal
         ];
+        const topics = spec.topics ?? [];
+        const topicLines = topics.map((topic) => `topic\t${topic.name}\t${topic.summary}`);
+        const topicPointer = topics.length > 0 ? [`detail\t${cli} help <topic>\tone topic in full`] : [];
         return defineVerb({
             name: 'help',
             usage: '[noun] [action]',
             summary:
                 'Lists every verb and noun; with a noun the signature of each of its actions, with a noun and an action or with a verb everything that one takes',
             detail: [
-                'argument\t<noun>\toptional\tThe noun or verb to detail; without one every verb and noun is listed',
+                topics.length > 0
+                    ? 'argument\t<noun>\toptional\tThe noun, verb or topic to detail; without one every verb, noun and topic is listed'
+                    : 'argument\t<noun>\toptional\tThe noun or verb to detail; without one every verb and noun is listed',
                 'argument\t<action>\toptional\tOne action of that noun, in full',
                 'prints\tverb\tname\targuments\tsummary\tone row per verb',
-                'prints\tnoun\tname\tactions\tsummary\tone row per noun, its actions separated by |; a row that starts with neither is not one'
+                'prints\tnoun\tname\tactions\tsummary\tone row per noun, its actions separated by |; a row that starts with neither is not one',
+                ...(topics.length > 0 ? ['prints\ttopic\tname\tsummary\tone row per topic, after the verbs and nouns'] : [])
             ],
             positionals: z.array(z.string()).max(2, 'help takes a verb, or a noun and one of its actions, and nothing else'),
             flags: z.object({}),
@@ -289,18 +306,30 @@ export const createVerbRegistry = <Call extends VerbCallBase>(options: { cli: st
                 if (name === undefined) {
                     return [
                         ...summaryLines(entries),
+                        ...topicLines,
                         ...spec.root(),
                         `detail\t${cli} help <noun>\tthe signature of every action of a noun`,
                         `detail\t${cli} help <noun> <action>\tone action in full`,
                         `detail\t${cli} help <verb>\tone verb in full`,
+                        ...topicPointer,
                         spec.refusal
                     ];
                 }
                 const entry = entries.find((candidate) => candidate.name === name);
+                const topic = entry ? undefined : topics.find((candidate) => candidate.name === name);
+                if (topic) {
+                    if (actionWord !== undefined) {
+                        throw new VerbRefusal('bad-arguments', `${name} is a topic and has no actions; ${cli} help ${name} prints it`, [
+                            `detail\t${cli} help ${name}\tthe topic in full`
+                        ]);
+                    }
+                    return [`about\t${topic.summary}`, ...topic.body];
+                }
                 if (!entry) {
-                    throw new VerbRefusal('unknown-verb', `${name} is not a verb or a noun`, [
+                    throw new VerbRefusal('unknown-verb', topics.length > 0 ? `${name} is not a verb, a noun or a topic` : `${name} is not a verb or a noun`, [
                         `detail\t${cli} help\tevery verb and noun, with what each takes`,
-                        ...summaryLines(entries)
+                        ...summaryLines(entries),
+                        ...topicLines
                     ]);
                 }
                 if (entry.served !== 'noun') {

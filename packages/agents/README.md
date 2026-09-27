@@ -78,13 +78,14 @@ const layer = defineNoun({ name: 'layer', summary: 'Adds and lists the layers', 
 const help = defineHelp({
     entries: () => VERBS,
     root: () => [dryRunLine()],
-    refusal: 'refusal\trefused<TAB><code><TAB><message> on stderr\texit 3 refused'
+    refusal: 'refusal\trefused<TAB><code><TAB><message> on stderr\texit 3 refused',
+    topics: [{ name: 'runtime', summary: 'The API a layer script is written against', body: ['api\tclip(from, to)\tone stretch of the timeline'] }]
 });
 
 export const VERBS: readonly VerbEntry<Call>[] = [help, layer];
 ```
 
-A verb stands on its own (`help`); a noun only names what its actions work on (`layer new`). Each takes its positionals and flags as zod schemas, and `help` renders from the same objects, so the two never drift. A flag the detail documents but the usage leaves out is added to the usage. `dryRun: true` adds `--dry-run`, which every other verb refuses by name; `revision: true` adds `--revision N`, which reaches `run` as `call.expectedRevision` for a write that must not land on a newer document.
+A verb stands on its own (`help`); a noun only names what its actions work on (`layer new`). Each takes its positionals and flags as zod schemas, and `help` renders from the same objects, so the two never drift. A flag the detail documents but the usage leaves out is added to the usage. `dryRun: true` adds `--dry-run`, which every other verb refuses by name; `revision: true` adds `--revision N`, which reaches `run` as `call.expectedRevision` for a write that must not land on a newer document. A topic is guidance that belongs to no single verb: the root of `help` lists it by its summary and `help <topic>` prints its body.
 
 A verb says no by throwing a `VerbRefusal` with a code, a sentence and the lines the agent can pick instead. `refusalBody` writes it as the CLI prints it, one row per line with tab-separated fields: `refused<TAB><code><TAB><message>`, then every line of advice under it. `field` takes a tab or a newline out of a value before it goes into a row, and `parseRefusalBody` reads a refusal back.
 
