@@ -1,4 +1,4 @@
-import { BYTES_CHUNK_MAX, type BytesReadResult } from '@ruimte/contracts';
+import type { BytesReadResult } from '@ruimte/contracts';
 import { blobTypeFor, decodeBase64 } from './piece';
 
 // At the root, since a service worker only controls the pages under the folder its script is in.
@@ -15,6 +15,9 @@ export const BYTES_STREAM_PATH = '/machine-bytes/file';
 const WINDOW_BYTES = 8 * 1024 * 1024;
 
 const AHEAD = 2;
+
+// `BYTES_CHUNK_MAX`, which a test holds this to: importing the value would bring every schema into the worker.
+export const STREAM_PIECE_BYTES = 256 * 1024;
 
 export interface StreamedFile {
     machine: string;
@@ -103,7 +106,7 @@ const streamPieces = (
     ask: AskPiece,
     ahead: number
 ): ReadableStream<Uint8Array<ArrayBuffer>> => {
-    const lengthAt = (offset: number): number => Math.min(BYTES_CHUNK_MAX, last + 1 - offset);
+    const lengthAt = (offset: number): number => Math.min(STREAM_PIECE_BYTES, last + 1 - offset);
     const pending: Promise<BytesReadResult>[] = [];
     let next = start + lengthAt(start);
     let position = start;
@@ -184,7 +187,7 @@ export const answerRange = async (request: RangeRequest, ask: AskPiece, options:
 
     let first: BytesReadResult;
     try {
-        first = await ask({ machine: file.machine, path: file.path, offset: start, length: Math.min(BYTES_CHUNK_MAX, last + 1 - start) });
+        first = await ask({ machine: file.machine, path: file.path, offset: start, length: Math.min(STREAM_PIECE_BYTES, last + 1 - start) });
     } catch (e) {
         return refuse(502, messageOf(e));
     }

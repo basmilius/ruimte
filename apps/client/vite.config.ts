@@ -2,7 +2,7 @@ import { realpathSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defaultClientConditions, defineConfig, searchForWorkspaceRoot, type Plugin } from 'vite';
+import { build, defaultClientConditions, defineConfig, searchForWorkspaceRoot, type Plugin } from 'vite';
 
 // The dev daemon sits on 4211 so an installed Ruimte can keep 4210.
 const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
@@ -33,8 +33,48 @@ const stationHead = (): Plugin => ({
     })
 });
 
+/*
+ * The service worker behind a video over a direct connection (`src/worker/bytes-worker.ts`). A worker
+ * only controls the pages under its own folder, so it has to be one classic script at the root and
+ * never a hashed chunk under `/assets/`: a small build of its own, served in dev and written beside
+ * `index.html`. The page registers it as `BYTES_WORKER_SCRIPT`.
+ */
+const bytesWorker = (): Plugin => {
+    const fileName = 'bytes-worker.js';
+    const bundle = async (): Promise<string> => {
+        const result = await build({
+            configFile: false,
+            root: fileURLToPath(new URL('.', import.meta.url)),
+            publicDir: false,
+            logLevel: 'warn',
+            resolve: { conditions: ['source', ...defaultClientConditions] },
+            build: { write: false, rolldownOptions: { input: fileURLToPath(new URL('./src/worker/bytes-worker.ts', import.meta.url)), output: { format: 'iife' } } }
+        });
+        const output = Array.isArray(result) ? result[0] : result;
+        if (!output || !('output' in output)) {
+            throw new Error('The bytes worker did not build');
+        }
+        return output.output[0].code;
+    };
+    return {
+        name: 'ruimte-bytes-worker',
+        configureServer: (server) => {
+            server.middlewares.use(`/${fileName}`, (_request, response, next) => {
+                bundle().then((code) => {
+                    response.setHeader('content-type', 'text/javascript');
+                    response.setHeader('cache-control', 'no-cache');
+                    response.end(code);
+                }, next);
+            });
+        },
+        async generateBundle() {
+            this.emitFile({ type: 'asset', fileName, source: await bundle() });
+        }
+    };
+};
+
 export default defineConfig(({ mode }) => ({
-    plugins: [react(), tailwindcss(), ...(mode === 'station' ? [stationHead()] : [])],
+    plugins: [react(), tailwindcss(), bytesWorker(), ...(mode === 'station' ? [stationHead()] : [])],
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))

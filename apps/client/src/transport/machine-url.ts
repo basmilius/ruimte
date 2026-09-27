@@ -6,16 +6,20 @@ import { activeEndpoint, endpointById, useEndpoints } from '@/state/endpoints';
 import { transportFor } from '@/transport';
 import { BlobCache, type BlobLease, type BlobState } from './blob-cache';
 import { readResource } from './byte-transfer';
+import { bytesStreamUrl } from './bytes-stream';
+import { bytesWorkerReady } from './bytes-worker-host';
 import { useEndpointConnection } from './status';
 
 /*
  * Bytes a machine serves that something on screen draws, with what pins one version of them: an
- * attachment id never changes, a project icon has a version, and a file has its mtime and size.
+ * attachment id never changes, a project icon has a version, and a file has its mtime and size. A
+ * video is a file a player reads in ranges, which over a direct connection is never loaded whole.
  */
 export type MachineResource =
     | { kind: 'attachment'; chatId: string; attachmentId: string }
     | { kind: 'projectIcon'; projectId: string; theme: 'light' | 'dark'; version: string }
-    | { kind: 'file'; path: string; mtime: number; size: number };
+    | { kind: 'file'; path: string; mtime: number; size: number }
+    | { kind: 'video'; path: string; mtime: number; size: number };
 
 export type MachineUrl = BlobState;
 
@@ -77,7 +81,9 @@ export const machineResourceKey = (endpointId: string, resource: MachineResource
  * route. Over a direct connection there is no HTTP to count on, even where the address happens to
  * answer, because across two networks it will not. The bytes come over the channel instead, and the
  * URL is a blob URL from a cache shared by everything on screen. A load that failed is tried again
- * when the connection opens, since the usual reason is that it was not open.
+ * when the connection opens, since the usual reason is that it was not open. A video is the exception:
+ * the bytes worker answers its player's ranges on this page's origin, so it starts at once and never
+ * sits in memory whole, and it only falls back to a blob while the worker does not control the page.
  */
 export const useMachineUrl = (resource: MachineResource | null, endpointId?: string): MachineUrl => {
     const activeId = useEndpoints((s) => s.activeId);
@@ -88,9 +94,12 @@ export const useMachineUrl = (resource: MachineResource | null, endpointId?: str
     // What the request asks for, as a string, so the dependency is stable where `resource` is a new object on every render.
     const wire = resource === null ? null : JSON.stringify(wireResourceOf(resource));
     const [held, setHeld] = useState<{ key: string; lease: BlobLease; state: MachineUrl } | null>(null);
+    // Once per mount, so a worker that takes control halfway does not swap the source under a playing video.
+    const [workerReady] = useState(bytesWorkerReady);
+    const streamed = direct && workerReady && resource?.kind === 'video';
 
     useEffect(() => {
-        if (!direct || key === null || wire === null) {
+        if (!direct || streamed || key === null || wire === null) {
             return;
         }
         const payload = JSON.parse(wire) as ByteResource;
@@ -109,7 +118,7 @@ export const useMachineUrl = (resource: MachineResource | null, endpointId?: str
             lease.release();
             setHeld((current) => (current?.lease === lease ? null : current));
         };
-    }, [direct, key, wire, machineId]);
+    }, [direct, streamed, key, wire, machineId]);
 
     const lease = held !== null && held.key === key ? held.lease : null;
     useEffect(() => {
@@ -123,6 +132,9 @@ export const useMachineUrl = (resource: MachineResource | null, endpointId?: str
     }
     if (!direct) {
         return { url: httpUrlFor(machineId, resource), failure: null };
+    }
+    if (streamed && resource.kind === 'video') {
+        return { url: bytesStreamUrl({ machine: machineId, path: resource.path, mtime: resource.mtime, size: resource.size }), failure: null };
     }
     return held !== null && held.key === key ? held.state : NOTHING;
 };

@@ -24,6 +24,7 @@ import { ViewDialogs } from '@/shell/ViewDialogs';
 import { ViewHost } from '@/shell/ViewHost';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { useUi } from '@/state/ui';
+import { startBytesWorker } from '@/transport/bytes-worker-host';
 import type { Workspace } from '@/transport/connections';
 import { ConnectionProvider } from '@/transport/ConnectionProvider';
 import { ErrorBoundary, lazyDialog, prefetcher } from '@basmilius/react-ui';
@@ -32,6 +33,7 @@ import { VoiceOverlay } from '@/voice/VoiceOverlay';
 import { VoicePanel } from '@/voice/VoicePanel';
 
 connectWorkspaceChatHost();
+startBytesWorker();
 
 const ConflictOverlay = lazyDialog(
     () => import('@/conflicts/ConflictOverlay'),

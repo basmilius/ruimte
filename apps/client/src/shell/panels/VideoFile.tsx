@@ -17,7 +17,7 @@ import { Button, EmptyState, Icon } from '@basmilius/react-ui';
  */
 const canPlay = (mime: string): boolean => typeof document !== 'undefined' && document.createElement('video').canPlayType(mime) !== '';
 
-/* A video from the daemon's own route, which serves it in ranges so the scrubber works. */
+/* A video in ranges, so the scrubber works: from the daemon's own route, or over a direct connection through the bytes worker. */
 export function VideoFile({ path, name, read }: { path: string; name: string; read: FsReadBinary }) {
     const { t } = useTranslation('panels');
     const platform = useServer((s) => s.platform);
@@ -25,7 +25,7 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
     const [failed, setFailed] = useState(!canPlay(read.mime));
     const transport = useTransport();
     const endpointId = useEndpointId();
-    const bytes = useMachineUrl({ kind: 'file', path, mtime: read.mtime, size: read.size }, endpointId);
+    const bytes = useMachineUrl({ kind: 'video', path, mtime: read.mtime, size: read.size }, endpointId);
 
     const reveal = (): void => {
         void transport.request('fs.reveal', { path }).catch(() => undefined);

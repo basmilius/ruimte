@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { BYTES_CHUNK_MAX, type BytesReadResult } from '@ruimte/contracts';
-import { answerRange, bytesStreamUrl, parseRange, type PieceQuestion, type RangeRequest } from './bytes-stream';
+import { STREAM_PIECE_BYTES, answerRange, bytesStreamUrl, parseRange, type PieceQuestion, type RangeRequest } from './bytes-stream';
 
 const MTIME = 1_700_000_000_123;
 
@@ -52,6 +52,10 @@ describe('parseRange', () => {
 });
 
 describe('answerRange', () => {
+    test('asks for pieces as large as the wire allows', () => {
+        expect(STREAM_PIECE_BYTES).toBe(BYTES_CHUNK_MAX);
+    });
+
     test('an open range is answered up to the window, with the headers a player seeks by', async () => {
         const size = BYTES_CHUNK_MAX * 4;
         const daemon = machine(size);
