@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct RichChatComposer: UIViewRepresentable {
     @Binding var text: String
@@ -7,6 +8,9 @@ struct RichChatComposer: UIViewRepresentable {
     let mentions: [String]
     let skills: [String]
     @Binding var focused: Bool
+    var maximumHeight: CGFloat = 144
+    var importItems: (([NSItemProvider]) -> Void)?
+    var pasteLongText: ((String) -> Void)?
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorScheme) private var colorScheme
@@ -35,13 +39,19 @@ struct RichChatComposer: UIViewRepresentable {
 
     func updateUIView(_ view: ComposerTextView, context: Context) {
         context.coordinator.parent = self
+        view.importItems = importItems
+        view.pasteLongText = pasteLongText
         context.coordinator.updating = true
         defer { context.coordinator.updating = false }
         if view.isEditable != isEnabled { view.isEditable = isEnabled }
         view.tintColor = .label
         // Replacing marked text interrupts composition for Chinese, Japanese and dictation.
         if view.markedTextRange == nil {
-            if view.text != text { view.text = text }
+            if view.text != text {
+                if let range = view.textRange(from: view.beginningOfDocument, to: view.endOfDocument) {
+                    view.replace(range, withText: text)
+                }
+            }
             context.coordinator.decorate(view)
             let length = (view.text as NSString).length
             let location = min(selection.location, length)
@@ -59,7 +69,7 @@ struct RichChatComposer: UIViewRepresentable {
         guard let width = proposal.width else { return nil }
         let font = UIFont.preferredFont(forTextStyle: .body, compatibleWith: uiView.traitCollection)
         let measured = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude)).height
-        let height = ceil(min(max(measured, font.lineHeight), font.lineHeight * 6))
+        let height = ceil(min(max(measured, font.lineHeight), max(font.lineHeight, maximumHeight)))
         uiView.isScrollEnabled = measured > height + 1
         return CGSize(width: width, height: height)
     }
@@ -127,6 +137,22 @@ struct RichChatComposer: UIViewRepresentable {
 
 final class ComposerTextView: UITextView {
     let placeholder = UILabel()
+    var importItems: (([NSItemProvider]) -> Void)?
+    var pasteLongText: ((String) -> Void)?
+
+    override func paste(_ sender: Any?) {
+        let providers = UIPasteboard.general.itemProviders
+        if let importItems, providers.contains(where: { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) })
+        {
+            importItems(providers)
+        } else if let pasteLongText, let text = UIPasteboard.general.string,
+            text.utf8.count >= ChatDraftLimits.pasteBytes
+        {
+            pasteLongText(text)
+        } else {
+            super.paste(sender)
+        }
+    }
 
     override init(frame: CGRect, textContainer: NSTextContainer?) {
         super.init(frame: frame, textContainer: textContainer)
@@ -170,6 +196,8 @@ private enum ChatDraftStyle {
     static func attributed(_ text: String, font: UIFont, mentions: [String], skills: [String]) -> NSAttributedString {
         let result = NSMutableAttributedString(
             string: text, attributes: [.font: font, .foregroundColor: MobileStyle.textColor])
+        // Full-document Markdown matching competes with typing on pasted logs; keep those in plain text.
+        guard text.utf16.count <= 32_000 else { return result }
         let code = ChatDraftSyntax.codeRanges(in: text)
         func apply(_ pattern: String, _ values: [NSAttributedString.Key: Any]) {
             for match in ChatDraftSyntax.matches(pattern, in: text)

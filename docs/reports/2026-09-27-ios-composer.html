@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ruimte · iOS-composer: analyse en plan</title><style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+
+:root {
+  --ui-ground: #ececef; --ui-panel: #fff; --ui-text: #18181b;
+  --ui-muted: #6f6f78; --ui-fill: #ececef; --ui-border: #e2e2e6;
+  --ui-action: #000; --ui-on-action: #fff;
+}
+.composer-studies { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.composer-studies figure { min-width: 0; margin: 0; }
+.composer-study { padding: 24px 12px; background: var(--ui-ground); border-radius: 16px; color: var(--ui-text); }
+.composer-sketch { max-width: 375px; margin: auto; background: var(--ui-panel); border-radius: 28px; overflow: hidden; }
+.composer-sketch p { margin: 0; font: 17px/24px -apple-system, BlinkMacSystemFont, sans-serif; text-wrap: wrap; }
+.composer-sketch .draft-line { padding: 12px 16px 4px; min-height: 40px; }
+.composer-sketch .placeholder { color: var(--ui-muted); }
+.composer-sketch .tools { display: flex; align-items: center; gap: 4px; min-height: 52px; padding: 0 8px 8px; }
+.composer-sketch .glyph { width: 44px; height: 44px; flex: 0 0 44px; display: grid; place-items: center; color: var(--ui-muted); }
+.composer-sketch .spacer { flex: 1; }
+.composer-sketch .run-setting { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 10px; border-radius: 16px; background: var(--ui-fill); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.composer-sketch .run-setting svg { width: 12px; height: 12px; }
+.composer-sketch .send-dot { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ui-action); color: var(--ui-on-action); }
+.composer-sketch .send-dot.idle { background: var(--ui-fill); color: var(--ui-muted); }
+.composer-sketch .stop-dot { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ui-fill); color: var(--ui-text); }
+.composer-sketch .stop-dot svg { width: 16px; height: 16px; }
+.composer-sketch.current { border-radius: 24px; }
+.composer-sketch.current .draft-line { padding: 18px 20px 10px; min-height: 52px; line-height: 24px; }
+.composer-sketch.current .tools { padding: 0 14px 10px; gap: 0; min-height: 54px; }
+.composer-sketch.current .run-setting { padding: 0; background: none; min-height: 44px; font-size: 12px; color: var(--ui-muted); }
+.composer-sketch.current .send-dot { width: 32px; height: 32px; opacity: .25; }
+.composer-sketch.current .send-dot svg { width: 15px; height: 15px; }
+.composer-study .context-note { color: var(--ui-muted); max-width: 343px; margin: 0 auto 8px; font-size: 12px; }
+.composer-sketch .file-example { display: inline-flex; align-items: center; gap: 8px; margin: 12px 16px 0; padding: 8px 10px; background: var(--ui-fill); border-radius: 12px; font-size: 13px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root { --ui-ground: #08080a; --ui-panel: #18181c; --ui-text: #ececf1; --ui-muted: #9a9aa6; --ui-fill: #1f1f24; --ui-border: #1f1f24; --ui-action: #fff; --ui-on-action: #000; }
+}
+@media (max-width: 800px) { .composer-studies { grid-template-columns: 1fr; } }
+@media (max-width: 420px) {
+  .composer-sketch:not(.current) .tools { flex-wrap: wrap; }
+  .composer-sketch:not(.current) .run-setting { order: -1; margin-inline: 8px; flex: 0 0 calc(100% - 16px); justify-content: space-between; }
+}
+@media print { .composer-studies { grid-template-columns: 1fr; } .composer-study { print-color-adjust: exact; } }
+
+</style></head><body>
+<a class="skip" href="#conclusion">Naar de inhoud</a>
+<header>
+<p class="eyebrow">Ruimte / iOS-composer / 27 september 2026</p>
+<h1>De composer opnieuw vormgeven en afmaken</h1>
+<p class="intro">Geef de composer eerst een compactere compositie en een duidelijkere knoppenhiërarchie. Werk dat ontwerp samen uit met betrouwbaar conceptbehoud, verzenden, contextkeuze en bijlagen. De native editor blijft het uitgangspunt.</p>
+<p class="status">Geïmplementeerd op 28 september 2026. Nieuwe build geïnstalleerd op de iPhone van Bas.</p>
+<p class="caption">De bevindingen en studies hieronder beschrijven de uitgangssituatie en het goedgekeurde plan. De implementatie heeft 19 gerichte Mac-tests voor conceptopslag, invoer, verzenden en wachtrijherstel doorstaan. De iPhone-app en unit-testbestanden compileren; bun run check slaagt. De Mac-tests gebruiken de productiecode voor opslag en ChatModel, met een vervanging voor de niet onderzochte timeline. Toetsenbordgedrag, VoiceOver, Liquid Glass en de visuele afwerking zijn nog niet op het toestel beoordeeld.</p>
+<p class="caption">Volledige review op basis van de werkboom rond d3775609, inclusief aanwezige lokale wijzigingen. SwiftUI met een UIKit-teksteditor, MobileStyle/RuimteColors, Lucide en Liquid Glass. De bronbestanden kunnen door parallel werk intussen verder wijzigen.</p>
+<nav aria-label="Inhoud"><a href="#conclusion">Conclusie</a><a href="#visual">Visueel voorstel</a><a href="#findings">Problemen</a><a href="#design">Gewenst gedrag</a><a href="#plan">Volgorde</a><a href="#acceptance">Acceptatie</a><a href="#evidence">Onderbouwing</a></nav>
+</header>
+<main>
+<section id="conclusion" class="recommendation">
+<h2>Uiterlijk en gedrag samen ontwerpen</h2>
+<p>De grootste problemen zijn concreet: het concept verliest context bij herstel, offline gaan blokkeert ook typen, en Retry herhaalt de mislukte handeling niet. Daarnaast loopt iOS achter op de desktopcomposer bij suggesties, bijlagevoorbeelden, zichtbare instellingen en het beheren van de wachtrij.</p>
+<p>De code bevat al zinvolle bescherming: een mislukte verzending bewaart het huidige concept, tekst die tijdens een verzending verandert wordt niet zomaar gewist, de editor blijft bestaan tijdens de promptovergang, marked text krijgt bescherming en Reduce Motion is verwerkt. Bouw daarop voort.</p>
+<p class="note">Dit is een code- en gedragsreview, geen visuele toestelmeting. De problemen in opslag en bediening zijn rechtstreeks uit de code afgeleid. Overlap, toetsenbordgedrag, VoiceOver en haperingen moeten nog op de fysieke iPhone worden beoordeeld.</p>
+</section>
+
+<section id="visual">
+<h2>De UI krijgt een eigen ontwerpstap</h2>
+<p>De eerdere versie zette functioneel herstel voorop en behandelde het uiterlijk te laat. Ook de visuele compositie moet veranderen: minder hoogte in rust, een herkenbare instellingenknop, één toevoegactie en een vast ritme voor tekst en bediening. Deze richting wordt vóór de implementatie uitgewerkt in de relevante toestanden.</p>
+<p>Uit de huidige layout volgt minimaal 106 pt voor een lege composer: minimaal 52 pt voor de tekstzone, 44 pt voor de bediening en 10 pt onderruimte. Daar komt 24 pt buitenruimte bij. Dat is een berekende ondergrens, geen toestelmeting. Een ontwerprichting van ongeveer 92 tot 96 pt bij standaardtekst is haalbaar zonder de aanraakvlakken te verkleinen; grotere tekst mag de composer hoger maken.</p>
+<div class="table" role="region" aria-label="Aanvullende visuele bevindingen" tabindex="0"><table class="wide"><caption>Visuele hiërarchie en maatvoering</caption><thead><tr><th scope="col">Ernst</th><th scope="col">Locatie</th><th scope="col">Nu</th><th scope="col">Voorgesteld</th><th scope="col">Waarom</th></tr></thead><tbody>
+<tr id="f13"><th scope="row">F13<br><span class="badge warning">MEDIUM</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:459">ChatScreen.swift:459</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:487">ChatScreen.swift:487</a></td><td>Een lege kaart heeft dezelfde ruime tweerijige basis als een gevuld concept. De bovenruimte is 18 pt.</td><td>Gebruik circa 12 pt bovenruimte, 4 tot 6 pt tussen tekst en bediening en 8 pt onderruimte als startmaten. Houd 44 pt aanraakvlakken. Richt de lege toestand op circa 92 tot 96 pt.</td><td>Het tekstveld mag compact beginnen en met de inhoud groeien. Exacte maten moeten met de native fonts en het toetsenbord worden bevestigd.</td></tr>
+<tr id="f14"><th scope="row">F14<br><span class="badge warning">MEDIUM</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:456">ChatScreen.swift:456</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:450">ChatScreen.swift:450</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:466">ChatScreen.swift:466</a></td><td>Tekst, bijlagen en wachtrij gebruiken respectievelijk 20, 12 en 16 pt binnenmarge. De toolbar heeft nog een eigen marge van 14 pt.</td><td>Gebruik één inhoudslijn op 16 pt voor tekst en context. Lijn de zichtbare knopvormen optisch uit via hun 44 pt hitvlakken. Geef context een eigen strook boven de tekst; plaats een wachtrijsamenvatting boven de container, zodat de tekstzone niet verschuift.</td><td>De maten zijn bevestigd. Het oordeel over de samenhang is een ontwerpbeoordeling op basis van de code, nog te toetsen in de native weergave.</td></tr>
+<tr id="f15"><th scope="row">F15<br><span class="badge warning">MEDIUM</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:477">ChatScreen.swift:477</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:661">ChatScreen.swift:661</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:513">ChatScreen.swift:513</a></td><td>Plus en foto gebruiken beide 20 pt iconen. Het model is kale captiontekst, terwijl de primaire pijl 15 pt is. Veel verschillende functies concurreren op één rij.</td><td>Bundel toevoegen onder plus. Maak modelinstellingen een rustige capsule met een leesbaar semibold label en chevron. Gebruik een herkenbare verzendcirkel van circa 36 pt met een 18 tot 20 pt pijl en 44 pt hitvlak. Een lege verzendknop blijft zichtbaar maar neutraal. Stop houdt een eigen vaste plek zodra de agent werkt.</td><td>Een duidelijk onderscheid tussen toevoegen, instellingen en verzenden helpt de gebruiker de knoppenrij lezen. Alle iconen blijven Lucide; de bestaande semantische productkleuren blijven leidend.</td></tr>
+</tbody></table></div>
+<div class="composer-studies">
+<figure><div class="composer-study" role="img" aria-label="Schematische huidige lege composer met een afzonderlijke fotoactie en klein modellabel"><div class="composer-sketch current"><p class="draft-line placeholder">Message the agent…</p><div class="tools"><span class="glyph"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span class="glyph"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></span><span class="run-setting">GPT-6 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span><span class="spacer"></span><span class="glyph"><span class="send-dot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-7 7 7-7 7 7"/></svg></span></span></div></div></div><figcaption>Huidige opbouw, schematisch uit de code. Geen screenshot. De precieze UIKit-teksthoogte en glaseffecten zijn hier niet nagebootst.</figcaption></figure>
+<figure><div class="composer-study" role="img" aria-label="Voorgestelde lege composer met minder bovenruimte, één toevoegknop en herkenbare modelinstellingen"><div class="composer-sketch"><p class="draft-line placeholder">Message the agent…</p><div class="tools"><span class="glyph"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span class="run-setting">GPT-6 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span><span class="spacer"></span><span class="glyph"><span class="send-dot idle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-7 7 7-7 7 7"/></svg></span></span></div></div></div><figcaption>Voorstel in rust. Compacte tweerijige basis; het model blijft zichtbaar en de verzendknop heeft een neutrale lege toestand.</figcaption></figure>
+<figure><div class="composer-study" role="img" aria-label="Voorgestelde composer met een bestand boven de tekst en een actieve verzendknop"><div class="composer-sketch"><div class="file-example"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg> Screenshot.png</div><p class="draft-line">Maak de composer compacter.</p><div class="tools"><span class="glyph"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span class="run-setting">GPT-6 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span><span class="spacer"></span><span class="glyph"><span class="send-dot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-7 7 7-7 7 7"/></svg></span></span></div></div></div><figcaption>Met inhoud. Bijlagen staan boven de tekst; toevoegen, instellingen en verzenden houden dezelfde onderlinge positie. Thumbnail, preview en een aparte verwijderactie horen bij de verdere uitwerking.</figcaption></figure>
+<figure><div class="composer-study" role="img" aria-label="Voorgestelde composer tijdens een lopende beurt met wachtrijstatus erboven en afzonderlijke stopknop"><p class="context-note">1 message queued</p><div class="composer-sketch"><p class="draft-line">Behoud de native teksteditor.</p><div class="tools"><span class="glyph"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span class="run-setting">GPT-6 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span><span class="spacer"></span><span class="glyph"><span class="stop-dot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></span></span><span class="glyph"><span class="send-dot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-7 7 7-7 7 7"/></svg></span></span></div></div></div><figcaption>Tijdens een beurt. Stop verschijnt links van verzenden. Het voorstel voor de actieve wachtrijactie moet ook een herkenbare toestand en toegankelijke naam krijgen; het pijlicoon alleen is daarvoor onvoldoende.</figcaption></figure>
+</div>
+<p class="caption">De studies vergelijken compositie, geen afgeronde pixelmaten of interacties. Ze gebruiken de lichte en donkere RuimteColors als basis. Liquid Glass, Dynamic Type, safe areas en keyboardanimatie moeten in SwiftUI worden beoordeeld. De studies zijn geen productimplementatie.</p>
+<p>Werk daarna de typen-met-toetsenbord-, grote-tekst-, fout- en prompttoestand op dezelfde maatvoering uit. Houd één glaslaag, laat alleen het geactiveerde onderdeel drukfeedback geven en laat de container omhoog groeien vanuit een stabiele onderrand. De huidige morph is een technisch uitgangspunt; zijn visuele uitwerking staat nog ter beoordeling.</p>
+</section>
+
+<section id="findings">
+<h2>Bevindingen</h2>
+<p>HIGH betekent verlies, misleidend herstel of een blokkade in de normale handeling. MEDIUM betreft ontbrekende bediening of een concreet te toetsen gebruiksrisico. LOW betreft afwerking. De kolom Waarom benoemt waar runtimebewijs nog ontbreekt.</p>
+<div class="table" role="region" aria-label="Behoud en herstel" tabindex="0"><table class="wide"><caption>Behoud en herstel</caption><thead><tr><th scope="col">Ernst</th><th scope="col">Locatie</th><th scope="col">Nu</th><th scope="col">Voorgesteld</th><th scope="col">Waarom</th></tr></thead><tbody><tr id="f1"><th scope="row">F1<br><span class="badge danger">HIGH</span></th><td><a href="../../apps/ios/App/Sessions/ChatModel.swift" title="apps/ios/App/Sessions/ChatModel.swift:21">ChatModel.swift:21</a>, <a href="../../apps/ios/App/Sessions/ChatModel.swift" title="apps/ios/App/Sessions/ChatModel.swift:296">ChatModel.swift:296</a></td><td><strong>Concepten volledig bewaren</strong><br>Alleen tekst wordt opgeslagen. Bijlagen, gekozen bestanden en skills bestaan alleen in het geheugen. Na herstel kunnen @- en $-teksten blijven staan zonder de metadata waarmee ze worden meegestuurd.</td><td>Bewaar een versieerbaar concept met tekst, context, bijlagereferenties en selectie. Bewaar bijlagebytes in lokale bestanden. Migreer bestaande tekstconcepten zonder context te verzinnen.</td><td>Een hersteld concept moet dezelfde inhoud versturen. Dit is een bevestigde fout in de opslag en payloadopbouw; verlies is niet beperkt tot een appherstart, omdat chatmodellen ook worden vrijgegeven.</td></tr><tr id="f2"><th scope="row">F2<br><span class="badge danger">HIGH</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:502">ChatScreen.swift:502</a>, <a href="../../apps/ios/App/Sessions/RichChatComposer.swift" title="apps/ios/App/Sessions/RichChatComposer.swift:40">RichChatComposer.swift:40</a></td><td><strong>Schrijven bij verbindingsverlies</strong><br>De hele composer wordt uitgeschakeld tijdens laden en offline zijn. Dat schakelt ook de lokale teksteditor uit. In de schrijfstand ontbreekt een eigen verbindingsmelding.</td><td>Laat lokaal typen, selecteren en conceptbeheer beschikbaar. Blokkeer alleen acties die de machine nodig hebben en geef bij verzenden de reden aan.</td><td>Een netwerkonderbreking onderbreekt nu ook het schrijfwerk. Offline schrijven hoeft geen automatische verzending na herstel te betekenen.</td></tr><tr id="f3"><th scope="row">F3<br><span class="badge danger">HIGH</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:57">ChatScreen.swift:57</a>, <a href="../../apps/ios/App/Sessions/ChatModel.swift" title="apps/ios/App/Sessions/ChatModel.swift:277">ChatModel.swift:277</a></td><td><strong>Fouten koppelen aan de juiste actie</strong><br>Verzenden, importeren, zoeken en configureren delen één foutmelding. De knop Retry doet altijd model.attach(), ook als verzenden of een bijlage mislukte.</td><td>Toon de fout naast de betrokken handeling. Herhaal alleen die handeling waar dat veilig kan. Onderscheid een geweigerde verzending van een verzending waarvan het antwoord verloren ging.</td><td>Retry belooft herstel dat de huidige knop niet uitvoert. Bij een onzekere ontvangst eerst synchroniseren en de onzekerheid tonen; het protocol biedt hier nog geen sleutel voor ontdubbelen.</td></tr></tbody></table></div>
+<div class="table" role="region" aria-label="Zichtbare toestand en controle over de inhoud" tabindex="0"><table class="wide"><caption>Zichtbare toestand en controle over de inhoud</caption><thead><tr><th scope="col">Ernst</th><th scope="col">Locatie</th><th scope="col">Nu</th><th scope="col">Voorgesteld</th><th scope="col">Waarom</th></tr></thead><tbody><tr id="f4"><th scope="row">F4<br><span class="badge warning">MEDIUM</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:463">ChatScreen.swift:463</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:523">ChatScreen.swift:523</a>, <a href="../../apps/ios/App/Sessions/ChatModel.swift" title="apps/ios/App/Sessions/ChatModel.swift:303">ChatModel.swift:303</a></td><td><strong>Verzenden en wachtrij herkenbaar maken</strong><br>De knop heet altijd Send message. Het antwoord met queued wordt weggegooid. De wachtrij laat uitsluitend een aantal zien; openen, aanpassen, verwijderen en nu versturen ontbreken.</td><td>Gebruik het verzendresultaat. Benoem toevoegen aan de wachtrij vooraf. Laat een compacte rij een lijst met berichtinhoud en acties openen, met behoud van een nieuw concept bij terugnemen.</td><td>Desktop en de bestaande requests chat.unqueue en chat.sendNow bieden deze bediening al. Send now stopt de lopende beurt en zet dit bericht vooraan; dat gevolg moet ook op iOS zichtbaar zijn.</td></tr><tr id="f5"><th scope="row">F5<br><span class="badge warning">MEDIUM</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:471">ChatScreen.swift:471</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:725">ChatScreen.swift:725</a>, <a href="../../apps/ios/App/Sessions/ChatDraftSyntax.swift" title="apps/ios/App/Sessions/ChatDraftSyntax.swift:35">ChatDraftSyntax.swift:35</a>, <a href="../../apps/ios/App/Sessions/ChatModel.swift" title="apps/ios/App/Sessions/ChatModel.swift:323">ChatModel.swift:323</a></td><td><strong>Context kiezen tijdens het typen</strong><br>Bestanden, skills en commando’s zijn alleen via een menu en aparte zoekpagina bereikbaar. Getypte @, $ en / openen niets. Invoegen vervangt een ingetypte zoekprefix niet. Chatverwijzingen ontbreken. De commandolijst filtert geen commando’s die alleen in de terminal werken.</td><td>Voeg suggesties bij de cursor toe, met het menu als alternatief. Vervang de actieve zoekrange, herken code als gewone tekst, toon laad- en fouttoestanden, en bied bestanden, chats en skills met hun betekenis aan. Filter commando’s en providerfuncties zoals op desktop.</td><td>Context toevoegen vraagt nu een onderbreking van het typen. Metadata moet overeenkomen met de zichtbare tokens. Chatverwijzingen kunnen het bestaande chats-veld gebruiken.</td></tr><tr id="f6"><th scope="row">F6<br><span class="badge warning">MEDIUM</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:438">ChatScreen.swift:438</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:477">ChatScreen.swift:477</a></td><td><strong>Bijlagen kunnen controleren</strong><br>Elke bijlage is een naamchip die bij aantikken direct verwijdert. Foto’s heten allemaal Photo plus extensie. Er is geen thumbnail, preview of bestandsgrootte; de fotokiezer kiest één item per keer.</td><td>Toon fotominiaturen en bestandskaarten met grootte. Een tik opent een preview; verwijderen heeft een eigen knop. Ondersteun meerdere foto’s, en laat bestanden, foto’s, plakken en slepen dezelfde import volgen.</td><td>De gebruiker moet vóór verzenden kunnen controleren welke bestanden meegaan. De huidige naamchips maken dat bij meerdere foto’s onmogelijk.</td></tr><tr id="f7"><th scope="row">F7<br><span class="badge warning">MEDIUM</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:266">ChatScreen.swift:266</a>, <a href="../../apps/ios/App/Sessions/ChatModel.swift" title="apps/ios/App/Sessions/ChatModel.swift:313">ChatModel.swift:313</a>, <a href="../../packages/agent-contracts/src/chat.ts" title="packages/agent-contracts/src/chat.ts:32">chat.ts:32</a></td><td><strong>Import en validatie afmaken</strong><br>De bestandskiezer noemt 25 MiB, terwijl het model en contract maximaal 10 MiB totaal toelaten. Een foto kan nog worden ingelezen terwijl verzenden al beschikbaar is; er is geen pending import in het concept. Voor tekst en aantallen mentions/skills ontbreekt controle vóór verzenden.</td><td>Reserveer direct een zichtbaar importitem. Maak bezig, klaar en mislukt expliciet en voorkom dat een bedoelde bijlage ongemerkt bij het volgende bericht belandt. Gebruik overal 8 bestanden en 10 MiB totaal, plus de contractgrenzen van 64 mentions en 16 skills. Neem de desktopgrens van 120.000 teksttekens over als productregel, met dezelfde telwijze.</td><td>Tegenstrijdige limieten en onzichtbaar lopende imports geven onverwachte resultaten. De tekstgrens is een desktopregel, geen grens uit het wire-schema.</td></tr><tr id="f8"><th scope="row">F8<br><span class="badge warning">MEDIUM</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:613">ChatScreen.swift:613</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:662">ChatScreen.swift:662</a></td><td><strong>Instellingen tonen zoals ze actief zijn</strong><br>Model, modelopties en permissies zijn gewone knoppen zonder aangevinkte waarde. De gesloten composer toont het model en eventueel account, maar geen opties of zichtbare permissiestand. Account heeft wel een In use-aanduiding.</td><td>Open compacte uitvoerinstellingen met huidige waarden, radioselecties en switches. Toon model en een beknopte relevante instelling of permissiestatus in de composer; zet details en beschikbaar contextgebruik in het paneel. Maak een mislukte wijziging zichtbaar bij die keuze.</td><td>Een keuzemenu moet ook vertellen wat nu gekozen is. Desktop RunSettings doet dat al; de iOS-versie hoeft niet dezelfde hoeveelheid tekst in zijn werkbalk te plaatsen.</td></tr></tbody></table></div>
+<div class="table" role="region" aria-label="Leesbaarheid, focus en rustige feedback" tabindex="0"><table class="wide"><caption>Leesbaarheid, focus en rustige feedback</caption><thead><tr><th scope="col">Ernst</th><th scope="col">Locatie</th><th scope="col">Nu</th><th scope="col">Voorgesteld</th><th scope="col">Waarom</th></tr></thead><tbody><tr id="f9"><th scope="row">F9<br><span class="badge warning">MEDIUM</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:468">ChatScreen.swift:468</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:480">ChatScreen.swift:480</a>, <a href="../../apps/ios/App/Sessions/RichChatComposer.swift" title="apps/ios/App/Sessions/RichChatComposer.swift:62">RichChatComposer.swift:62</a></td><td><strong>Ruimte geven aan tekst en bediening</strong><br>Plus, foto, model/account, Stop en Send delen altijd één rij. De editor groeit tot zes regels, onafhankelijk van de beschikbare schermhoogte. Een brede of grote-tekstvariant voor deze werkbalk ontbreekt.</td><td>Bundel toevoegen onder één plusknop. Houd verzenden en stoppen op vaste plekken. Laat instellingen bij smalle breedte of grote tekst naar een eigen rij gaan. Begrens de editor op beschikbare hoogte en bied voor een lang concept een ruimere schrijfweergave.</td><td>De vaste opbouw is bevestigd; afkappen of overlap op specifieke toestellen is een te toetsen risico. Eerst meten met toetsenbord, lange modelnamen, landscape en grote tekst.</td></tr><tr id="f10"><th scope="row">F10<br><span class="badge warning">MEDIUM</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:125">ChatScreen.swift:125</a>, <a href="../../apps/ios/App/Sessions/ChatComposerMorph.swift" title="apps/ios/App/Sessions/ChatComposerMorph.swift:97">ChatComposerMorph.swift:97</a></td><td><strong>Focus behouden rond vragen en toestemmingen</strong><br>Binnenkomst van een prompt zet composerFocused uit. De eerdere focus wordt niet onthouden of na de laatste prompt hersteld. In deze componenten ontbreekt expliciete VoiceOver-focusoverdracht. Tijdens een overgang zijn beide inhoudslagen tijdelijk niet aanraakbaar.</td><td>Bewaar of de gebruiker aan het schrijven was en herstel focus alleen als dat nog passend is. Stuur VoiceOver naar de nieuwe vraag en daarna terug. Toets een omgekeerde overgang en opeenvolgende requests; houd één bereikbare primaire actie.</td><td>De editor blijft terecht gemount om selectie en invoer te bewaren. Het herstel van de interactie moet dezelfde zorg krijgen. Het precieze VoiceOver- en animatiegedrag is niet op een toestel bevestigd.</td></tr><tr id="f11"><th scope="row">F11<br><span class="badge info">LOW</span></th><td><a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:500">ChatScreen.swift:500</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:496">ChatScreen.swift:496</a></td><td><strong>Aanraakfeedback op het juiste element</strong><br>Elke aanraking of sleepbeweging binnen de composer activeert een tint over de volledige kaart, ook bij tekstselectie en scrollen.</td><td>Geef de afzonderlijke knoppen native aanraakfeedback. Laat selecteren en scrollen in de tekst de kaartkleur niet veranderen. Behoud de bestaande concentrische vorm en regular-glasslaag.</td><td>Feedback hoort bij de handeling die plaatsvindt. De algehele drukstatus voegt een terugkerende visuele reactie toe aan gewone tekstbewerking; hoe storend die is moet op het toestel worden beoordeeld.</td></tr></tbody></table></div>
+<div class="table" role="region" aria-label="Responsiviteit van de editor" tabindex="0"><table class="wide"><caption>Responsiviteit van de editor</caption><thead><tr><th scope="col">Ernst</th><th scope="col">Locatie</th><th scope="col">Nu</th><th scope="col">Voorgesteld</th><th scope="col">Waarom</th></tr></thead><tbody><tr id="f12"><th scope="row">F12<br><span class="badge warning">MEDIUM</span></th><td><a href="../../apps/ios/App/Sessions/ChatModel.swift" title="apps/ios/App/Sessions/ChatModel.swift:21">ChatModel.swift:21</a>, <a href="../../apps/ios/App/Sessions/RichChatComposer.swift" title="apps/ios/App/Sessions/RichChatComposer.swift:97">RichChatComposer.swift:97</a>, <a href="../../apps/ios/App/Sessions/ChatScreen.swift" title="apps/ios/App/Sessions/ChatScreen.swift:270">ChatScreen.swift:270</a></td><td><strong>Typen soepel houden bij lange concepten</strong><br>Elke tekstwijziging schrijft het hele concept naar UserDefaults en herbouwt de Markdown-attributen over de volledige tekst. Bestanden worden synchroon gelezen vanuit de UI-task; base64 voor verzenden wordt in het MainActor-model gemaakt.</td><td>Meet eerst normale en lange concepten. Bundel conceptopslag met flush bij levenscycluswissels, beperk herstyling tot relevante veranderingen en doe bestand-I/O en codering buiten de UI-actor. Behoud native undo, selectie en marked text.</td><td>De werkhoeveelheid is uit de code aantoonbaar; typen dat hapert is nog niet gemeten. Optimaliseer op metingen en verander de editor-engine alleen als deze aanpak tekortschiet.</td></tr></tbody></table></div>
+</section>
+<section id="design">
+<h2>De voorgestelde composer</h2>
+<p>Eén zwevende glascontainer, met van boven naar beneden een eventuele bijlagestrook, het tekstveld en de bedieningsrij. Suggesties verschijnen vlak boven de composer. De onderste rij bevat toevoegen, de samenvatting van uitvoerinstellingen, en verzenden met Stop ernaast zolang een beurt loopt. Bij weinig ruimte schuiven de instellingen naar een eigen rij.</p>
+<p>Plus opent bestanden, foto’s en expliciete contextkeuze. Een tik op een bijlage opent de preview. Het instellingenpaneel toont model, ondersteunde modelopties, account, permissies en beschikbaar contextgebruik. De wachtrij opent vanuit een compacte samenvatting boven de container; meerdere wachtende berichten maken de teksteditor niet steeds hoger.</p>
+<div class="table" role="region" aria-label="Gedrag per toestand" tabindex="0"><table><thead><tr><th scope="col">Toestand</th><th scope="col">Wat de gebruiker kan doen en ziet</th></tr></thead><tbody>
+<tr><th scope="row">Leeg of aan het schrijven</th><td>Native bewerken, systeemdictatie, undo en selectie. Verzenden alleen bij geldige inhoud. Return maakt een nieuwe regel; Cmd+Return blijft verzenden.</td></tr>
+<tr><th scope="row">Offline of opnieuw verbinden</th><td>Doorwerken aan het lokale concept. Zichtbare verbindingsstatus. Geen automatische verzending zodra de verbinding terugkomt.</td></tr>
+<tr><th scope="row">Bestand wordt ingelezen</th><td>Direct een bijlage met voortgang of een bezigstatus. Verzenden wacht op de bedoelde bijlagen. Annuleren verwijdert ook het lopende importitem.</td></tr>
+<tr><th scope="row">Bericht versturen</th><td>Eén actieve verzending. Het geaccepteerde bericht en het concept dat daarna wordt geschreven blijven uit elkaar. Een fout houdt inhoud beschikbaar.</td></tr>
+<tr><th scope="row">Agent werkt</th><td>Stop blijft beschikbaar. De verzendactie benoemt toevoegen aan de wachtrij. Bericht bekijken, terugnemen, verwijderen en nu versturen zijn bereikbaar.</td></tr>
+<tr><th scope="row">Vraag of toestemming</th><td>Dezelfde container neemt de prompt over. Concept, bijlagen en selectie blijven bestaan. Alleen optionele vragen kunnen worden gesloten. Na de laatste prompt keert de schrijfstand terug met passend focusherstel.</td></tr>
+</tbody></table></div>
+<p>Behouden: de bestaande concentrische hoeken, semantische kleuren en Lucide-iconen. Apple adviseert Liquid Glass voor bediening boven inhoud en terughoudend gebruik van extra glaslagen. Dat ondersteunt het behouden van één container. <a href="https://developer.apple.com/design/human-interface-guidelines/materials">Apple: Materials</a>.</p>
+</section>
+<section id="plan">
+<h2>Implementatievolgorde</h2>
+<p>Dit was de geplande volgorde voor de implementatie van 28 september. De toestelbeoordeling uit de acceptatiecriteria blijft een afzonderlijke controle. De eerste stap legt het visuele ontwerp en de toestanden vast. Daarna levert conceptopslag de basis voor verzenden, context en bijlagen. De visuele uitwerking wordt vanaf die eerste implementatiestappen meegenomen, niet pas als afwerking.</p>
+<ol class="steps">
+<li class="step"><div><h3>De visuele richting uitwerken</h3><p>Werk F9 en F13 tot en met F15 uit tot één samenhangend ontwerp voor leeg, typen met toetsenbord, meerdere regels, bijlagen, actieve beurt, fout en vraag/toestemming. Gebruik de studies hierboven voor het basisritme. Leg inhoudsmarges, knopvormen, teksthiërarchie, maximale groei en de grote-tekstvariant vast.</p><p>Klaar wanneer die toestanden naast elkaar dezelfde composer vormen, de primaire actie steeds herkenbaar is en de lege variant aantoonbaar minder ruimte inneemt zonder kleinere hitvlakken. Daarna volgt de implementatie van opslag en gedrag binnen deze opbouw.</p></div></li>
+<li class="step"><div><h3>Conceptopslag en lokale bewerkbaarheid</h3><p>Los F1 en F2 op. Maak één conceptmodel en opslag voor tekst, context en lokale bijlagen, met versie en migratie. Koppel de sleutel aan machine en chat. Bewaar selectie waar herstel mogelijk is en scheid lokaal bewerken van beschikbaarheid van de verbinding.</p><p>Raakt ChatModel, RichChatComposer en een kleine nieuwe opslagcomponent. Klaar wanneer heropenen en appherstart dezelfde te verzenden inhoud teruggeven, offline typen werkt en een oud tekstconcept zonder verlies migreert.</p></div></li>
+<li class="step"><div><h3>Verzenden, fouten en wachtrij</h3><p>Los F3 en F4 op en leg de validatie van F7 vast. Laat verzenden een concreet resultaat opleveren, inclusief queued. Scheid fouten per handeling en gebruik bestaande chat.unqueue en chat.sendNow. Lees bij het terugnemen eerst de bijlagen en verwerk pas na bevestiging de verwijdering uit de wachtrij. Voeg het teruggenomen bericht samen met tekst die intussen is getypt.</p><p>Raakt ChatModel, de acties in ChatScreen en aparte wachtrijpresentatie. Klaar wanneer een dubbele tik één request maakt, een fout geen concept wist, wachtrijacties hun gevolgen benoemen en een inmiddels verstuurd bericht niet als bewerkbaar wordt gepresenteerd. Bij verloren ontvangstbevestiging geen automatische herhaling.</p></div></li>
+<li class="step"><div><h3>Context en commando’s bij de cursor</h3><p>Los F5 op. Breid de editorcallbacks uit met tekst, selectie en actieve zoekrange. Maak suggesties voor bestanden, chats, skills en bruikbare commando’s, met debounce en bescherming tegen verouderde antwoorden. Gebruik de bestaande metadata en chats-contracten. Toon alleen functies die de provider ondersteunt.</p><p>Raakt RichChatComposer, ChatDraftSyntax, de zoeklogica en een suggestiecomponent. Klaar wanneer typen, kiezen, wissen, plakken en undo de zichtbare tekst en metadata gelijk houden; ook bij Unicode, paden met spaties en @ of $ in code. De bestaande expliciete kiezer blijft bruikbaar met touch en VoiceOver.</p></div></li>
+<li class="step"><div><h3>Bijlagen met preview en duidelijke import</h3><p>Los F6 en F7 op. Maak één importpad voor bestanden, meerdere foto’s, geplakte afbeeldingen en ondersteunde drops. Reserveer een conceptitem vóór het lezen, lees buiten de UI-actor, valideer vóór en na het lezen, en toon fouten bij het bestand. Gebruik lokale previews en aparte verwijderknoppen. Grote geplakte tekst kan, net als op desktop, een tekstbijlage worden met een expliciete mogelijkheid om als tekst te plakken.</p><p>Klaar wanneer 8 bestanden en 10 MiB totaal overal dezelfde betekenis hebben, een negende of te grote bijlage niet stil verdwijnt, en een langzame foto-import niet ongemerkt bij een volgend bericht terechtkomt. Preview, selectie en verwijdering moeten met VoiceOver afzonderlijk bereikbaar zijn.</p></div></li>
+<li class="step"><div><h3>Instellingen, indeling en focus</h3><p>Rond F8 tot en met F11 en F13 tot en met F15 af volgens de vooraf gekozen visuele richting. Haal de uitvoerinstellingen en composerbediening uit de grote ChatScreen-view. Geef geselecteerde waarden native keuzestaten. Maak een compacte en grote-tekstindeling, plus een ruimere editor voor lange concepten. Behoud ChatPromptState en de gemounte editor; maak de focusoverdracht expliciet en beperk drukfeedback tot knoppen.</p><p>Klaar wanneer send, stop en de actieve instelling herkenbaar blijven op een smalle breedte en bij grote tekst. Een nieuwe prompt, een volgende prompt en terugkeer naar het concept behouden inhoud, passende focus en één toegankelijke primaire actie. Reduce Motion verandert alleen de presentatie.</p></div></li>
+<li class="step"><div><h3>Meten en gericht afronden</h3><p>Onderzoek F12 met de uiteindelijke editor en bijlage-import. Meet typen en selecteren in normale, 10.000- en 120.000-tekenconcepten, ook tijdens streaming. Bundel opslag, beperk stylingwerk en verplaats codering waar de metingen dat onderbouwen.</p><p>Voeg betekenisvolle toestands- en opslagtests toe voor verlies, foutafhandeling, zoekraces en wachtrijraces. Voer daarna de toestelmatrix hieronder uit. Volg de bestaande afspraak uit de iOS-README: alleen Bas’ fysieke iPhone, geen simulator, UI-testrun of installatie op iPad. Een bredere iPad-acceptatie blijft apart.</p></div></li>
+</ol>
+<p>De bestaande requests dekken het grootste deel van dit plan. Nieuwe wirevelden zijn alleen nodig als een later gekozen herstelgarantie dat vereist, bijvoorbeeld expliciete ontdubbeling van verzendingen. Daarvoor geldt de bestaande regel dat nieuwe velden optioneel blijven en oudere machines begrijpelijk reageren.</p>
+</section>
+<section id="acceptance">
+<h2>Wanneer dit af is</h2>
+<div class="table" role="region" aria-label="Acceptatiecriteria" tabindex="0"><table><thead><tr><th scope="col">Scenario</th><th scope="col">Te bewijzen resultaat</th></tr></thead><tbody>
+<tr><th scope="row">Concept herstellen</th><td>Tekst, bestanden, skills, chatverwijzingen en bijlagen behouden hun betekenis na weggaan, vrijgeven van het model en appherstart. Tijdelijke opslagproblemen geven een melding.</td></tr>
+<tr><th scope="row">Verzending onderbreken</th><td>Fout, timeout, dubbel tikken en doorwerken tijdens verzending verliezen geen nieuw concept. Een onzekere verzending wordt niet stil herhaald. Wachtrijterugname bewaart reeds getypte tekst.</td></tr>
+<tr><th scope="row">Bijlagen importeren</th><td>Meerdere foto’s, leeg bestand, 8 versus 9 bestanden, exact 10 MiB versus één byte te veel, falende import en import annuleren hebben voorspelbare uitkomsten.</td></tr>
+<tr><th scope="row">Tekst bewerken</th><td>Nieuwe regels, autocorrectie, systeemdictatie, emoji, CJK-compositie, undo/redo, selectie, lange plaksels en suggesties werken zonder verplaatste cursor of verloren tekst.</td></tr>
+<tr><th scope="row">Prompt overnemen</th><td>Vraag, toestemming, meerdere requests, mislukte antwoorden en afhandeling op een tweede client laten concept en focus intact. Beoordeel ook onderbroken overgangen in een vertraagde opname op 10% snelheid.</td></tr>
+<tr><th scope="row">Bereikbaarheid</th><td>Keyboard open en dicht, portrait en landscape, lange model/accountnamen, grote Dynamic Type, VoiceOver, Reduce Motion, Reduce Transparency, hoog contrast en licht/donker. Geen verborgen primaire actie; effectieve aanraakvlakken minimaal 44 × 44 pt.</td></tr>
+</tbody></table></div>
+<p>De 44 × 44 pt-toets volgt <a href="https://developer.apple.com/design/tips/">Apple: UI Design Dos and Don’ts</a>. Grote tekst vraagt ook aanpassing van de indeling; zie <a href="https://developer.apple.com/videos/play/wwdc2024/10074/">Apple: Get started with Dynamic Type</a>. De huidige buitenframes van de hoofdknoppen zijn al 44 pt; de werkelijke hitgebieden tijdens de morph zijn nog niet gemeten.</p>
+</section>
+<section id="evidence">
+<h2>Wat is onderzocht</h2>
+<div class="table" role="region" aria-label="Reviewdekking" tabindex="0"><table><thead><tr><th scope="col">Categorie</th><th scope="col">Bekeken bewijs</th><th scope="col">Resultaat</th></tr></thead><tbody>
+<tr><th scope="row">Typografie</th><td>UIFont.preferredFont, Dynamic Type, zesregellimiet, model/accounttruncatie en promptlayout.</td><td>F9, F13 en F15. Bestaande schaalbare fonts behouden; layout op toestel niet geverifieerd.</td></tr>
+<tr><th scope="row">Oppervlakken</th><td>MobileStyle, concentrische vorm, regular glass, bijlagestrook en 44 pt-frames.</td><td>F6, F9, F11, F13 en F14. Geen bewezen fout in hoekradius of glaskeuze.</td></tr>
+<tr><th scope="row">Animatie</th><td>ChatComposerMorph, meetvoorkeuren, overgangs-ID, hit testing, opacity/blur en Reduce Motion.</td><td>F10 en F11. Timing, keyboard en omgekeerde overgangen niet op toestel geverifieerd.</td></tr>
+<tr><th scope="row">Iconen</th><td>Lucide voor plus, foto, pijl, stop, keuzes en prompts; semantische kleuren en labels.</td><td>Iconenfamilie consistent. F4/F8 gaan over ontbrekende betekenis en selectiestatus; F15 over grootte en hiërarchie; geen bewezen stroke- of uitlijnfout.</td></tr>
+<tr><th scope="row">Prestaties</th><td>Tekstdecoratie, UserDefaults, bestand-I/O, base64, observeerbare staat en bestaande tests.</td><td>F12. Werk op de UI-actor vastgesteld; geen profiler- of frametijdmeting gedaan.</td></tr>
+</tbody></table></div>
+<p>Gelezen met rg, nl, sed en cat: de iOS-composer, ChatModel, ChatDraftSyntax, ChatPromptState/Card/Morph, MobileStyle, SharedMachineSession, SessionScreenTests en ChatPromptStateTests. Vergeleken met desktop Composer, drafts, guards en RunSettings, de chatcontracten en serverwachtrij. Bestaande tests dekken onder andere behoud bij verzendfouten en dubbele promptantwoorden; ze bewijzen geen compleet herstel van een concept.</p>
+<p>Relevante vergelijking: <a href="../../packages/agents-react/src/chat/ui/Composer.tsx" title="packages/agents-react/src/chat/ui/Composer.tsx:625">Composer.tsx:625</a> voor wachtrijterugname, <a href="../../packages/agents-react/src/chat/drafts.ts" title="packages/agents-react/src/chat/drafts.ts:8">drafts.ts:8</a> voor het complete concept, <a href="../../packages/agents-react/src/chat/guards.ts" title="packages/agents-react/src/chat/guards.ts:3">guards.ts:3</a> voor tekstlimieten, en <a href="../../packages/agents-react/src/chat/ui/RunSettings.tsx" title="packages/agents-react/src/chat/ui/RunSettings.tsx:236">RunSettings.tsx:236</a> voor zichtbare keuzestaten.</p>
+<p>De gekoppelde Ruimte-context bevatte geen bronnen. Er is geen simulator, appbuild, toestelinstallatie, toestelbediening of testuitvoering gedaan. Dit rapport verandert geen productcode.</p>
+<div class="table" role="region" aria-label="Overwogen alternatieven" tabindex="0"><table><thead><tr><th scope="col">Locatie</th><th scope="col">Overwogen</th><th scope="col">Afgewezen omdat</th></tr></thead><tbody>
+<tr><th scope="row">RichChatComposer</th><td>De native editor vervangen door de desktopeditor in een webview.</td><td>De gevonden problemen zitten in opslag en bediening. UIKit levert selectie, toetsenbord en systeemdictatie; vervanging vereist eerst bewijs dat de huidige editor tekortschiet.</td></tr>
+<tr><th scope="row">ChatComposerMorph</th><td>Meer glas, grotere schaduwen en extra animatie.</td><td>De container gebruikt al de native vorm en regular glass. Meer effecten lossen de bevestigde problemen niet op.</td></tr>
+<tr><th scope="row">Verzendactie</th><td>Een bericht tijdens een beurt automatisch als live instructie naar de provider sturen.</td><td>De huidige productregel is één gedeelde wachtrij. Nu versturen heeft al een expliciete actie met andere gevolgen.</td></tr>
+<tr><th scope="row">Toolbar</th><td>Ook direct een eigen dicteerknop, camera, stash en alle desktopopties toevoegen.</td><td>Systeemdictatie en de huidige native pickers zijn een bruikbaar begin. Extra functies krijgen pas plaats nadat de hoofdhandelingen en smalle layout kloppen.</td></tr>
+</tbody></table></div>
+<p><strong>Oordeel: Block.</strong> Eerst F1 tot en met F3 oplossen voordat de composer als afgerond geldt. Nog niet geverifieerd: fysieke iPhone, VoiceOver, keyboard/focus, visuele afkapping, animatie op 10% snelheid, prestaties, Dynamic Type, iPad-multitasking en de uitvoering van de beschreven tests.</p>
+</section>
+</main>
+<footer><p>Lokaal rapport met dezelfde paarse accentkleur als de bestaande Ruimte-rapporten. Het plan is niet uitgevoerd of gepubliceerd.</p><p id="report-checks">Rapport uitgebreid met drie visuele bevindingen en vier schematische studies. Bronlinks, interne ankers en placeholders zijn opnieuw statisch gecontroleerd. Lokale bronlinks en interne ankers zijn gecontroleerd. Het rapport heeft stijlen voor smalle schermen, licht/donker, toetsenbordfocus en print; weergave, contrast en toetsenbordbediening zijn niet in een browser geverifieerd. Er was geen bestaande Playwright-installatie op de gecontroleerde locaties.</p></footer>
+</body></html>

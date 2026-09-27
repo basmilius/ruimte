@@ -12,6 +12,7 @@ struct ChatPromptCard: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @FocusState private var answerFocused: Bool
     @FocusState private var reasonFocused: Bool
+    @AccessibilityFocusState private var headingFocused: Bool
     @State private var showingFullDiff = false
     @State private var contentHeight: CGFloat = 0
     @State private var actionsHeight: CGFloat = 44
@@ -84,6 +85,7 @@ struct ChatPromptCard: View {
         )
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("chat.prompt")
+        .task(id: item.text("requestId")) { headingFocused = true }
         .mobileSheet(isPresented: $showingFullDiff) {
             NavigationStack {
                 ScrollView { diffContent.padding() }
@@ -105,6 +107,7 @@ struct ChatPromptCard: View {
                 Image(lucide: isApproval ? "hand" : "message-circle-question-mark")
                     .foregroundStyle(MobileStyle.statusNeedsYou).accessibilityHidden(true)
                 Text(title).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader).accessibilityFocused($headingFocused)
                 Spacer(minLength: 0)
             }
             HStack(spacing: 8) {

@@ -9,6 +9,9 @@ struct ChatTimeline: UIViewControllerRepresentable {
     let chatID: String
     var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
+    var composer: AnyView?
+    var latestButton: AnyView?
+    var onViewportHeightChanged: (CGFloat) -> Void = { _ in }
     var dismissKeyboard: () -> Void = {}
     var scrollToLatest = 0
     var onMessagesBelowChanged: (Bool) -> Void = { _ in }
@@ -23,7 +26,11 @@ struct ChatTimeline: UIViewControllerRepresentable {
         controller.dismissKeyboard = dismissKeyboard
         controller.onMessagesBelowChanged = onMessagesBelowChanged
         controller.onNearTop = onNearTop
-        controller.setViewportInsets(top: topInset, bottom: bottomInset)
+        controller.onViewportHeightChanged = onViewportHeightChanged
+        controller.setComposer(composer, latestButton: latestButton)
+        context.animate {
+            controller.setViewportInsets(top: topInset, bottom: bottomInset)
+        }
         controller.update(entries: presentation.entries, revision: presentation.revision)
         controller.askForEarlierNearTop()
         controller.scrollToLatest(command: scrollToLatest)
@@ -226,7 +233,14 @@ final class ChatTimelineCollection: UICollectionView {
     }
 
     override func layoutSubviews() {
-        if userIsScrolling || scrollingToTarget {
+        let resizingViewport =
+            measuredGeometry.map {
+                $0.height != bounds.height || $0.topInset != adjustedContentInset.top
+                    || $0.bottomInset != adjustedContentInset.bottom
+            } ?? false
+        let animatesViewport = resizingViewport && !UIAccessibility.isReduceMotionEnabled
+        // Keyboard and composer resizing inherit their enclosing animation; streamed row sizing stays immediate.
+        if userIsScrolling || scrollingToTarget || animatesViewport {
             super.layoutSubviews()
         } else {
             UIView.performWithoutAnimation { super.layoutSubviews() }
@@ -246,7 +260,12 @@ final class ChatTimelineCollection: UICollectionView {
             abs(contentOffset.y - offset) >= 1
         {
             adjustingOffset = true
-            setContentOffset(CGPoint(x: contentOffset.x, y: offset), animated: false)
+            let target = CGPoint(x: contentOffset.x, y: offset)
+            if animatesViewport {
+                contentOffset = target
+            } else {
+                UIView.performWithoutAnimation { contentOffset = target }
+            }
             adjustingOffset = false
         }
         // Hosted text can finish measuring after a snapshot. Keep the same reading position on those later passes too.
@@ -259,6 +278,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     var dismissKeyboard: () -> Void = {}
     var onMessagesBelowChanged: (Bool) -> Void = { _ in }
     var onNearTop: () -> Void = {}
+    var onViewportHeightChanged: (CGFloat) -> Void = { _ in }
     private var lastScrollCommand = 0
     private var lastItemScrollCommand = 0
     private var requestedItem: String?
@@ -282,6 +302,12 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     private var pendingUpdate: ([ChatTimelineEntry], Int)?
     private var displayLink: CADisplayLink?
     private var applyingSnapshot = false
+    private var composerHost: UIHostingController<AnyView>?
+    private var latestButtonHost: UIHostingController<AnyView>?
+    private var viewportInsets = UIEdgeInsets.zero
+    private var reportedViewportHeight: CGFloat = 0
+    private var fullHeightConstraint: NSLayoutConstraint!
+    private var keyboardHeightConstraint: NSLayoutConstraint!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -316,11 +342,14 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         }
         view.addSubview(collection)
         setContentScrollView(collection, for: .top)
+        view.keyboardLayoutGuide.usesBottomSafeArea = false
+        fullHeightConstraint = collection.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        keyboardHeightConstraint = collection.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor)
         NSLayoutConstraint.activate([
             collection.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collection.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collection.topAnchor.constraint(equalTo: view.topAnchor),
-            collection.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            fullHeightConstraint,
         ])
         let registration = UICollectionView.CellRegistration<ChatHostingCell, String> {
             [weak self] cell, _, id in
@@ -390,12 +419,96 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
 
     func setViewportInsets(top: CGFloat, bottom: CGFloat) {
         loadViewIfNeeded()
-        let insets = UIEdgeInsets(top: max(0, top), left: 0, bottom: max(0, bottom), right: 0)
+        viewportInsets = UIEdgeInsets(top: max(0, top), left: 0, bottom: max(0, bottom), right: 0)
+        updateViewportInsets()
+    }
+
+    private func updateViewportInsets() {
+        var insets = viewportInsets
+        if let composerHost { insets.bottom = composerHost.view.bounds.height }
         guard collection.contentInset != insets else { return }
         collection.prepareForContentChange()
         collection.contentInset = insets
         collection.verticalScrollIndicatorInsets = insets
         collection.setNeedsLayout()
+        collection.layoutIfNeeded()
+    }
+
+    func setComposer(_ content: AnyView?, latestButton: AnyView?) {
+        loadViewIfNeeded()
+        guard let content else {
+            removeHost(&latestButtonHost)
+            removeHost(&composerHost)
+            keyboardHeightConstraint.isActive = false
+            fullHeightConstraint.isActive = true
+            view.keyboardLayoutGuide.keyboardDismissPadding = 0
+            return
+        }
+        if let composerHost {
+            composerHost.rootView = content
+        } else {
+            let host = addHost(content)
+            composerHost = host
+            // One UIKit layout owns both frames, including interactive keyboard movement.
+            fullHeightConstraint.isActive = false
+            keyboardHeightConstraint.isActive = true
+            NSLayoutConstraint.activate([
+                host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                host.view.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor),
+            ])
+        }
+        if let latestButton, let composerHost {
+            if let latestButtonHost {
+                latestButtonHost.rootView = latestButton
+            } else {
+                let host = addHost(latestButton)
+                latestButtonHost = host
+                NSLayoutConstraint.activate([
+                    host.view.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                    host.view.bottomAnchor.constraint(equalTo: composerHost.view.topAnchor, constant: -20),
+                    host.view.widthAnchor.constraint(equalToConstant: 44),
+                    host.view.heightAnchor.constraint(equalToConstant: 44),
+                ])
+            }
+        } else {
+            removeHost(&latestButtonHost)
+        }
+    }
+
+    private func addHost(_ content: AnyView) -> UIHostingController<AnyView> {
+        let host = UIHostingController(rootView: content)
+        host.safeAreaRegions = []
+        host.sizingOptions = [.intrinsicContentSize]
+        host.view.backgroundColor = .clear
+        host.view.tintColor = MobileStyle.accentColor
+        host.view.translatesAutoresizingMaskIntoConstraints = false
+        addChild(host)
+        view.addSubview(host.view)
+        host.didMove(toParent: self)
+        return host
+    }
+
+    private func removeHost(_ host: inout UIHostingController<AnyView>?) {
+        guard let removing = host else { return }
+        removing.willMove(toParent: nil)
+        removing.view.removeFromSuperview()
+        removing.removeFromParent()
+        host = nil
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        updateViewportInsets()
+        if let composerHost { view.keyboardLayoutGuide.keyboardDismissPadding = composerHost.view.bounds.height }
+        let height = max(0, collection.bounds.height - viewportInsets.top)
+        if height != reportedViewportHeight {
+            reportedViewportHeight = height
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.onViewportHeightChanged(self.reportedViewportHeight)
+            }
+        }
     }
 
     func scrollToLatest(command: Int) {

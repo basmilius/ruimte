@@ -50,16 +50,21 @@ final class SessionScreenTests: XCTestCase {
         let client = SessionClientFake()
         client.failure = true
         let id = UUID().uuidString
-        let model = ChatModel(client: client, chatID: id)
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = ChatModel(client: client, chatID: id, draftRoot: root)
         model.connected = true
         model.draft = "Keep this draft"
-        model.addAttachment(data: Data("file".utf8), name: "note.txt", mime: "text/plain")
+        await model.addAttachment(data: Data("file".utf8), name: "note.txt", mime: "text/plain")
         await model.send()
         XCTAssertEqual(model.draft, "Keep this draft")
         XCTAssertEqual(model.attachments.count, 1)
-        XCTAssertNotNil(model.error)
-        XCTAssertEqual(UserDefaults.standard.string(forKey: "ruimte.chat.draft.\(id)"), "Keep this draft")
-        UserDefaults.standard.removeObject(forKey: "ruimte.chat.draft.\(id)")
+        XCTAssertNotNil(model.sendProblem)
+        XCTAssertTrue(model.sendUncertain)
+        await model.composition.flush()
+        let restored = ChatModel(client: client, chatID: id, draftRoot: root)
+        XCTAssertEqual(restored.draft, "Keep this draft")
+        XCTAssertEqual(restored.attachments.count, 1)
     }
 
     @MainActor func testInputIsSerializedAndNeverResizesRemoteTerminal() async {
@@ -104,7 +109,8 @@ final class SessionScreenTests: XCTestCase {
         var resized: [Int] = []
         model.resizeDisplay = { cols, rows in resized += [cols, rows] }
         client.emit("session.size", .object(["sessionId": .string("other"), "cols": .number(90), "rows": .number(20)]))
-        client.emit("session.size", .object(["sessionId": .string("terminal"), "cols": .number(100), "rows": .number(30)]))
+        client.emit(
+            "session.size", .object(["sessionId": .string("terminal"), "cols": .number(100), "rows": .number(30)]))
         XCTAssertEqual(resized, [100, 30])
         XCTAssertEqual(model.cols, 100)
         model.stop()

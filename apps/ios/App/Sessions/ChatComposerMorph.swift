@@ -20,6 +20,7 @@ struct ChatComposerActionBounds {
     let title: String?
     let loading: Bool
     let enabled: Bool
+    let emphasized: Bool
     let perform: (() -> Void)?
 }
 
@@ -38,6 +39,7 @@ struct ChatComposerAction: ViewModifier {
     var loading = false
     var opacity: Double = 1
     var enabled = true
+    var emphasized = true
     var perform: (() -> Void)?
     func body(content: Content) -> some View {
         content.opacity(0).contentShape(Rectangle())
@@ -45,7 +47,7 @@ struct ChatComposerAction: ViewModifier {
                 [
                     prompt: ChatComposerActionBounds(
                         anchor: $0, opacity: opacity, icon: icon, title: title, loading: loading,
-                        enabled: enabled, perform: perform)
+                        enabled: enabled, emphasized: emphasized, perform: perform)
                 ]
             }
     }
@@ -117,8 +119,10 @@ struct ChatComposerMorph<Draft: View, Prompt: View>: View {
                         end.perform?()
                     } label: {
                         ZStack {
-                            Capsule().fill(MobileStyle.accent)
-                                .opacity(start.opacity + (end.opacity - start.opacity) * Double(progress))
+                            Capsule().fill(start.emphasized ? MobileStyle.accent : MobileStyle.inset)
+                                .opacity(start.opacity * (1 - Double(progress)))
+                            Capsule().fill(end.emphasized ? MobileStyle.accent : MobileStyle.inset)
+                                .opacity(end.opacity * Double(progress))
                             ComposerActionLabel(action: start).fixedSize()
                                 .modifier(
                                     ComposerContentFade(progress: progress, incoming: false, reduceMotion: reduceMotion)
@@ -129,7 +133,6 @@ struct ChatComposerMorph<Draft: View, Prompt: View>: View {
                                 )
                                 .opacity(end.opacity)
                         }
-                        .foregroundStyle(MobileStyle.onAccent)
                         .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -231,11 +234,12 @@ private struct ComposerActionLabel: View {
             if action.loading {
                 ProgressView().tint(MobileStyle.onAccent)
             } else {
-                Image(lucide: action.icon, size: action.title == nil ? 15 : 16)
+                Image(lucide: action.icon, size: action.title == nil ? 19 : 16)
             }
             if let title = action.title { Text(title) }
         }
         .font(.subheadline.weight(.semibold))
+        .foregroundStyle(action.emphasized ? MobileStyle.onAccent : MobileStyle.muted)
     }
 }
 

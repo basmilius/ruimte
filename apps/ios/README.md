@@ -70,7 +70,7 @@ what ends) or mark a sub-agent of the CLI's own as stopped. Long-press the compo
 Stop with sub-agents. Task marks appear on the nodes a task opened, wake turns say how many
 tasks woke them, and a failed task or a wake the machine gave up on leaves an unseen mark.
 Once a chat's CLI has two accounts that are on, the composer names the chat's account with its dot beside the
-model, and the model menu has an Account submenu. Before the first turn any account can be picked; after it only
+model, and Run settings has an Account section. Before the first turn any account can be picked; after it only
 an account that writes its conversations to the same folder, and the others say to fork.
 Model and permission picks are remembered and sent to every connected machine for the chats it
 starts on its own. Older machines keep working: requests they do not know are ignored.
@@ -163,7 +163,26 @@ are cached in the app. Live Activities also use Lucide. System-provided controls
 their native icons, and provider logos and custom project SVGs remain separate.
 The package and upstream ISC notices are in `App/Design/Lucide-LICENSE.txt`.
 
-In writing mode the chat composer shows its context, photo and model controls. A pending
+In writing mode the composer has one Add menu, a model and account capsule, and separate
+Stop and Send actions. Run settings shows selected model options, permissions and context
+usage. Large accessibility text moves settings onto their own row. The editor grows with
+the available height and can open in a sheet for longer messages. Typing `@`, `$` or `/`
+offers files and project conversations, skills or usable commands at the cursor.
+
+Each machine and chat has a local draft containing text, references, attachments and selection.
+Metadata saves after a short debounce; attachment bytes live in separate files. Legacy text
+drafts migrate after the first successful save. Offline editing remains available. Imports
+show progress and errors before sending, with limits of eight files and 10 MiB combined.
+Photos support multiple selection; images can be pasted or dropped, and long pasted text can
+be attached as a file. Attachment previews and removal are separate actions.
+
+During a turn, Send adds to the queue. The queue sheet can edit, remove or send a waiting
+message immediately; sending immediately stops the current turn. Editing merges the queued
+message into the current draft. A lost send acknowledgement keeps the draft and asks the
+person to check the conversation before retrying, including after reopening the app. Text
+and attachments added during a send stay in the composer when that earlier send succeeds.
+
+A pending
 permission or question takes over the same glass shape, growing upward from the composer.
 The request stays in place until it is handled; answering the last request restores the draft,
 attachments and selection. Questions show
@@ -175,6 +194,10 @@ shape grows from the send circle into the prompt button. The send button remains
 disabled for an empty draft; a running turn puts Stop beside it. Prompt actions sit in a bottom
 safe-area bar with a soft scroll-edge blur. Reduce Motion switches states directly.
 The shape uses concentric corners with a minimum 24-point radius away from screen edges.
+The composer and timeline share a UIKit container anchored to `UIKeyboardLayoutGuide`.
+SwiftUI keyboard avoidance is disabled on that screen so it cannot resize the timeline
+ahead of the native keyboard animation. The container measures the composer's inset in
+the same layout pass; dragging the keyboard remains interactive.
 
 Current iteration agreement: build and install only on Bas's physical iPhone,
 `00008160-000C312926A0000A`. No simulator, UI tests or iPad installation. Targeted

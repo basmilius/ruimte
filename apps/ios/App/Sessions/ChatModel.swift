@@ -18,15 +18,42 @@ final class ChatModel {
     /// Moves only when a subagent row or the work under one changes, unlike `revision`, which moves on every streamed
     /// word.
     private(set) var subagentRevision = 0
-    var draft: String { didSet { UserDefaults.standard.set(draft, forKey: draftKey) } }
-    var attachments: [ChatUpload] = []
-    var mentions: [String] = []
-    var skills: [String] = []
+    let composition: ChatComposition
+    var draft: String {
+        get { composition.text }
+        set { composition.text = newValue }
+    }
+    var attachments: [ChatUpload] {
+        get { composition.uploads }
+        set { composition.uploads = newValue }
+    }
+    var mentions: [String] {
+        get { composition.mentions }
+        set { composition.mentions = newValue }
+    }
+    var skills: [String] {
+        get { composition.skills }
+        set { composition.skills = newValue }
+    }
     var providers: [JSONValue] = []
     /// Nil from a machine before accounts.
     var accounts: ProviderAccountList?
-    var suggestions: [String] = []
+    var suggestions: [ChatSuggestion] = []
     var suggestionKind = ""
+    var searching = false
+    var searchProblem: String?
+    var projectChats: [ChatDraftReference] = []
+    var sendProblem: String?
+    var sendUncertain: Bool {
+        get { composition.deliveryUncertain }
+        set { composition.deliveryUncertain = newValue }
+    }
+    var queuedNotice = false
+    var queueBusy = false
+    var queueProblem: String?
+    var settingsProblem: String?
+    var configuring = false
+    @ObservationIgnored private var searchGeneration = 0
     var error: String?
     var connected = false
     var loading = false
@@ -45,12 +72,12 @@ final class ChatModel {
     /// One reattach per connection is enough, since the snapshot brings the thread up to date. A machine that keeps
     /// sending unreadable events would otherwise cause a reattach on every one.
     private var reattachedOverRejectedEvent = false
-    private var draftKey: String { "ruimte.chat.draft.\(chatID)" }
 
-    init(client: any MachineRequesting, chatID: String) {
+    init(client: any MachineRequesting, chatID: String, machineID: String = "local", draftRoot: URL? = nil) {
         self.client = client
         self.chatID = chatID
-        draft = UserDefaults.standard.string(forKey: "ruimte.chat.draft.\(chatID)") ?? ""
+        composition = ChatComposition(machineID: machineID, chatID: chatID, root: draftRoot)
+        if composition.deliveryUncertain { sendProblem = Self.uncertainSendMessage }
         presentation.forkable = true
     }
 
@@ -112,6 +139,7 @@ final class ChatModel {
     }
 
     func stop() {
+        Task { await composition.flush() }
         generation += 1
         attachTask?.cancel()
         for cancel in unsubscribe { cancel() }
@@ -230,7 +258,9 @@ final class ChatModel {
 
     /// The page before, unless one is on its way or there is none; cheap enough to ask on every scroll.
     func loadOlderIfIdle() {
-        guard connected, !loading, !loadingHistory, let cursor = history.cursor, cursor != failedHistoryCursor else { return }
+        guard connected, !loading, !loadingHistory, let cursor = history.cursor, cursor != failedHistoryCursor else {
+            return
+        }
         Task { await loadOlder() }
     }
 
@@ -285,88 +315,267 @@ final class ChatModel {
         }
     }
 
+    var capabilities: JSONValue { providers.first { $0["kind"] == info["provider"] }?["capabilities"] ?? .null }
+    var canAttach: Bool { capabilities["attachments"]?.boolValue != false }
+    var canMention: Bool { capabilities["mentions"]?.boolValue != false }
+    var queue: [JSONValue] { info.list("queue") }
+    var working: Bool { info["activeTurnId"]?.stringValue != nil }
+    var canSend: Bool {
+        connected && !loading && !sending && !queueBusy && !configuring && !sendUncertain && composition.hasContent
+            && composition.imports.isEmpty && composition.validation == nil
+    }
+
     func send() async {
-        guard !sending, connected,
-            !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty
-        else { return }
+        guard canSend else { return }
         sending = true
+        sendProblem = nil
+        queuedNotice = false
         defer { sending = false }
-        let text = draft
+        let snapshot = composition.record
         let uploads = attachments
-        let tokens = ChatDraftSyntax.tokens(in: text, mentions: mentions, skills: skills)
-        let activeMentions = mentions.filter { value in tokens.contains { $0.kind == "@" && $0.value == value } }
-        let activeSkills = skills.filter { value in tokens.contains { $0.kind == "$" && $0.value == value } }
-        let values: [String: JSONValue] = [
-            "text": .string(text), "mentions": .array(activeMentions.map(JSONValue.string)),
-            "skills": .array(activeSkills.map(JSONValue.string)), "attachments": .array(uploads.map(\.payload)),
-        ]
-        if await perform("chat.send", values) {
-            if draft == text {
+        let tokens = ChatDraftSyntax.tokens(in: snapshot.text, mentions: snapshot.mentions, skills: snapshot.skills)
+        do {
+            let payloads = try await Task.detached {
+                try uploads.map { upload -> JSONValue in
+                    let data = try Data(contentsOf: upload.url, options: .mappedIfSafe)
+                    guard data.count == upload.size else {
+                        throw DraftFailure("An attachment changed. Attach it again before sending.")
+                    }
+                    return .object([
+                        "name": .string(upload.name), "mime": .string(upload.mime),
+                        "data": .string(data.base64EncodedString()),
+                    ])
+                }
+            }.value
+            // An interrupted or killed client cannot know whether the machine accepted this request.
+            sendUncertain = true
+            await composition.flush()
+            let result = try await client.request(
+                "chat.send",
+                payload: target([
+                    "text": .string(snapshot.text),
+                    "mentions": .array(
+                        snapshot.mentions.filter { value in tokens.contains { $0.kind == "@" && $0.value == value } }
+                            .map(JSONValue.string)),
+                    "skills": .array(
+                        snapshot.skills.filter { value in tokens.contains { $0.kind == "$" && $0.value == value } }.map(
+                            JSONValue.string)),
+                    "chats": .array(snapshot.chats.map { .string($0.id) }),
+                    "attachments": .array(payloads),
+                ]))
+            sendUncertain = false
+            queuedNotice = result["queued"]?.boolValue == true
+            if draft == snapshot.text && mentions == snapshot.mentions && skills == snapshot.skills
+                && composition.chats == snapshot.chats
+            {
                 draft = ""
-                mentions.removeAll()
-                skills.removeAll()
+                mentions = []
+                skills = []
+                composition.chats = []
+                composition.selection = NSRange(location: 0, length: 0)
             }
             attachments.removeAll { upload in uploads.contains { $0.id == upload.id } }
+            await composition.flush()
+        } catch {
+            if let failure = error as? MachineClientError {
+                switch failure {
+                case .disconnected, .timeout, .invalid:
+                    sendUncertain = true
+                    sendProblem = Self.uncertainSendMessage
+                    if connected { attach() }
+                default:
+                    sendUncertain = false
+                    sendProblem = error.localizedDescription
+                }
+            } else {
+                sendProblem = error.localizedDescription
+            }
+            await composition.flush()
         }
     }
 
-    func addAttachment(data: Data, name: String, mime: String) {
-        guard !data.isEmpty, attachments.count < 8,
-            attachments.reduce(data.count, { $0 + $1.data.count }) <= 10 * 1024 * 1024
-        else {
-            error = "Choose up to 8 nonempty files, totaling at most 10 MiB per message."
-            return
+    private static let uncertainSendMessage =
+        "The send was interrupted. Check the conversation before sending again; the machine may already have received it."
+
+    func addAttachment(data: Data, name: String, mime: String) async {
+        guard let id = composition.reserve(name) else { return }
+        await composition.finishImport(id, data: data, name: name, mime: mime)
+    }
+
+    func configure(_ values: [String: JSONValue]) async -> Bool {
+        guard connected, !configuring, !sending else { return false }
+        configuring = true
+        defer { configuring = false }
+        do {
+            _ = try await client.request("chat.configure", payload: target(values))
+            settingsProblem = nil
+            return true
+        } catch {
+            settingsProblem = error.localizedDescription
+            return false
         }
-        attachments.append(ChatUpload(name: String(name.prefix(255)), mime: mime, data: data))
+    }
+
+    func queueAction(_ message: JSONValue, edit: Bool = false, sendNow: Bool = false) async {
+        guard connected, !queueBusy, !sending, !composition.importing else { return }
+        queueBusy = true
+        queueProblem = nil
+        defer { queueBusy = false }
+        var recovered: [ChatUpload] = []
+        var requestedRemoval = false
+        let incoming = ChatDraftRecord(
+            text: message.text("text"),
+            mentions: message.list("mentions").compactMap(\.stringValue),
+            skills: message.list("skills").compactMap(\.stringValue),
+            chats: message.list("chats").compactMap { value in
+                guard let id = value.stringValue else { return nil }
+                return projectChats.first { $0.id == id } ?? ChatDraftReference(id: id, title: "Conversation")
+            })
+        do {
+            if edit {
+                for stored in message.list("attachments") {
+                    let resource = try await client.readResource(
+                        .object([
+                            "kind": .string("attachment"), "chatId": .string(chatID),
+                            "attachmentId": stored["id"] ?? .null,
+                        ]), maxBytes: ChatDraftLimits.bytes)
+                    recovered.append(
+                        try await composition.files.stage(
+                            data: resource.data, name: stored.text("name"), mime: stored.text("mime")))
+                }
+                if let problem = ChatDraftLimits.attachmentProblem(
+                    count: attachments.count + recovered.count,
+                    bytes: (attachments + recovered).reduce(0) { $0 + $1.size })
+                {
+                    throw DraftFailure(problem)
+                }
+            }
+            requestedRemoval = !sendNow
+            _ = try await client.request(
+                sendNow ? "chat.sendNow" : "chat.unqueue", payload: target(["messageId": message["id"] ?? .null]))
+            if !sendNow, var values = info.objectValue {
+                values["queue"] = .array(queue.filter { $0["id"] != message["id"] })
+                info = .object(values)
+            }
+            if edit {
+                try composition.takeBack(incoming, uploads: recovered)
+                await composition.flush()
+            }
+        } catch {
+            if edit, requestedRemoval, let failure = error as? MachineClientError {
+                switch failure {
+                case .disconnected, .timeout, .invalid:
+                    do {
+                        try composition.takeBack(incoming, uploads: recovered)
+                        sendUncertain = true
+                        sendProblem =
+                            "Taking the message out of the queue was interrupted. A copy is saved in your draft. Check the conversation and queue before sending again."
+                        queueProblem = sendProblem
+                        await composition.flush()
+                        if connected { attach() }
+                        return
+                    } catch { queueProblem = error.localizedDescription }
+                default: break
+                }
+            }
+            for upload in recovered { await composition.files.discard(upload) }
+            queueProblem = error.localizedDescription
+        }
     }
 
     func search(_ kind: String, query: String) async {
+        searchGeneration += 1
+        let current = searchGeneration
         suggestionKind = kind
         suggestions = []
+        searchProblem = nil
+        searching = true
+        defer { if current == searchGeneration { searching = false } }
         do {
+            try await Task.sleep(for: .milliseconds(180))
+            var found: [ChatSuggestion] = []
             switch kind {
             case "@":
-                let result = try await client.request(
-                    "fs.search",
-                    payload: .object([
-                        "cwd": info["cwd"] ?? .string(""), "query": .string(String(query.prefix(256))),
-                        "limit": .number(30),
-                    ]))
-                guard !Task.isCancelled else { return }
-                suggestions = result["files"]?.arrayValue?.compactMap(\.stringValue) ?? []
+                found = projectChats.filter {
+                    $0.id != chatID && !composition.chats.contains($0)
+                        && (query.isEmpty || $0.title.localizedCaseInsensitiveContains(query))
+                }
+                .prefix(4).map { ChatSuggestion(kind: "chat", value: $0.id, title: $0.title, detail: "Conversation") }
+                if canMention {
+                    let result = try await client.request(
+                        "fs.search",
+                        payload: .object([
+                            "cwd": info["cwd"] ?? .string(""), "query": .string(String(query.prefix(256))),
+                            "limit": .number(20),
+                        ]))
+                    found += result.list("files").compactMap(\.stringValue).map {
+                        ChatSuggestion(kind: "@", value: $0, title: ($0 as NSString).lastPathComponent, detail: $0)
+                    }
+                }
             case "$":
                 let result = try await client.request("skills.list", payload: target())
-                guard !Task.isCancelled else { return }
-                suggestions = (result["skills"]?.arrayValue ?? []).compactMap { $0["name"]?.stringValue }
-                    .filter { query.isEmpty || $0.localizedCaseInsensitiveContains(query) }
-            default:
-                suggestions =
-                    ["clear", "compact", "stop"] + (info["slashCommands"]?.arrayValue?.compactMap(\.stringValue) ?? [])
-                suggestions = Array(Set(suggestions)).sorted().filter {
-                    query.isEmpty || $0.localizedCaseInsensitiveContains(query)
+                found = result.list("skills").filter {
+                    query.isEmpty || $0.text("name").localizedCaseInsensitiveContains(query)
                 }
+                .map {
+                    ChatSuggestion(
+                        kind: "$", value: $0.text("name"), title: $0.text("name"), detail: $0.text("description"))
+                }
+            default:
+                var local = ["clear", "stop", "model"]
+                if capabilities.text("compaction") != "none" { local.append("compact") }
+                found = Array(Set(local + info.list("slashCommands").compactMap(\.stringValue)))
+                    .filter {
+                        !ChatSuggestion.terminalOnly.contains($0)
+                            && (query.isEmpty || $0.localizedCaseInsensitiveContains(query))
+                    }
+                    .sorted().map {
+                        ChatSuggestion(
+                            kind: "/", value: $0, title: "/" + $0,
+                            detail: local.contains($0) ? "Conversation action" : "Agent command")
+                    }
             }
-        } catch is CancellationError {} catch { self.error = error.localizedDescription }
+            guard !Task.isCancelled, current == searchGeneration else { return }
+            suggestions = found
+        } catch is CancellationError {} catch {
+            guard current == searchGeneration, !Task.isCancelled else { return }
+            searchProblem = error.localizedDescription
+        }
     }
 
-    @discardableResult
-    func chooseSuggestion(_ value: String, selection: NSRange? = nil) -> NSRange {
-        if suggestionKind == "@" { mentions = Array(Set(mentions + [value])).sorted() }
-        if suggestionKind == "$" { skills = Array(Set(skills + [value])).sorted() }
-        let insertion = ChatDraftSyntax.insertion(
-            text: draft, selection: selection ?? NSRange(location: (draft as NSString).length, length: 0),
-            kind: suggestionKind, value: value)
-        draft = insertion.text
-        return insertion.selection
+    func chooseSuggestion(_ suggestion: ChatSuggestion) {
+        if suggestion.kind == "chat" {
+            if !composition.chats.contains(where: { $0.id == suggestion.value }) {
+                composition.chats.append(ChatDraftReference(id: suggestion.value, title: suggestion.title))
+            }
+            if let query = ChatDraftSyntax.query(in: draft, selection: composition.selection), query.kind == "@" {
+                draft = (draft as NSString).replacingCharacters(in: query.range, with: "")
+                composition.selection = NSRange(location: query.range.location, length: 0)
+            }
+        } else {
+            if suggestion.kind == "@" { mentions = Array(Set(mentions + [suggestion.value])).sorted() }
+            if suggestion.kind == "$" { skills = Array(Set(skills + [suggestion.value])).sorted() }
+            let insertion = ChatDraftSyntax.insertion(
+                text: draft, selection: composition.selection, kind: suggestion.kind, value: suggestion.value)
+            draft = insertion.text
+            composition.selection = insertion.selection
+        }
     }
 }
 
-struct ChatUpload: Identifiable {
-    let id = UUID()
-    let name: String
-    let mime: String
-    let data: Data
-    var payload: JSONValue {
-        .object(["name": .string(name), "mime": .string(mime), "data": .string(data.base64EncodedString())])
+struct ChatSuggestion: Identifiable {
+    let kind: String
+    let value: String
+    let title: String
+    let detail: String
+    var id: String { kind + value }
+    var icon: String {
+        kind == "chat" ? "messages-square" : kind == "@" ? "file-text" : kind == "$" ? "sparkles" : "circle-slash"
     }
+    static let terminalOnly: Set<String> = [
+        "bug", "color", "config", "doctor", "exit", "heapdump", "help", "hooks", "ide", "install-github-app",
+        "keybindings", "login", "logout", "migrate-installer", "privacy-settings", "quit", "release-notes",
+        "reload-plugins", "reload-skills", "rename", "resume", "status", "statusline", "terminal-setup", "theme",
+        "upgrade", "vim",
+    ]
 }

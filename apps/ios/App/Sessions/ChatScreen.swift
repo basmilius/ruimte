@@ -1,27 +1,22 @@
-import PhotosUI
 import RuimtePulsar
 import RuimteTransport
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct ChatScreen: View {
     @AppStorage("ruimte.chat.streaming") private var streamingMode: ChatStreamingMode = .words
     @State private var model: ChatModel
     @State private var visible = false
     @State private var holdingChat = false
-    @State private var showingFiles = false
     @State private var showingClear = false
+    @State private var clearDraft: String?
     @State private var subagentList: SubagentListRoute?
     @State private var showingPlans = false
     @State private var endingAgents: EndingAgents?
-    @State private var pickerKind: String?
-    @State private var photo: PhotosPickerItem?
     @State private var prompts = ChatPromptState()
     @State private var viewportHeight: CGFloat = 700
     @State private var composerFocused = false
-    @GestureState private var composerPressed = false
-    @State private var composerSelection = NSRange(location: 0, length: 0)
-    @State private var composerHeight: CGFloat = 72
+    @State private var resumeDraftFocus = false
+    @State private var settingsPresented = false
     @State private var messagesBelow = false
     @State private var scrollToLatest = 0
     @State private var viewportWidth: CGFloat = 0
@@ -31,7 +26,6 @@ struct ChatScreen: View {
     @State private var forkAfterIndex: String?
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.colorScheme) private var colorScheme
     let title: String
     let isPrepared: Bool
     /// The project the chat stands in, which is what a fork's way back and a summary's way to the fork need.
@@ -44,7 +38,9 @@ struct ChatScreen: View {
         client: any MachineRequesting, chatID: String, title: String, isPrepared: Bool = true,
         workspace: MobileWorkspace? = nil, session: SharedMachineSession? = nil
     ) {
-        _model = State(initialValue: ChatModel(client: client, chatID: chatID))
+        _model = State(
+            initialValue: ChatModel(
+                client: client, chatID: chatID, machineID: (session ?? workspace?.session)?.machine.id ?? "local"))
         self.title = title
         self.isPrepared = isPrepared
         self.workspace = workspace
@@ -54,12 +50,14 @@ struct ChatScreen: View {
     var body: some View {
         VStack(spacing: 0) {
             if let error = model.error {
-                SessionErrorBanner(message: error) { model.attach() }
+                SessionErrorBanner(message: error, retryTitle: "Reload conversation") { model.attach() }
             }
             MobileScrollViewport(edges: .top) { insets in
                 ChatTimeline(
                     presentation: model.presentation, client: model.client, chatID: model.chatID,
-                    topInset: insets.top, bottomInset: composerHeight, dismissKeyboard: { composerFocused = false },
+                    topInset: insets.top, composer: AnyView(composerDock),
+                    latestButton: showScrollButton && !scrollButtonBesideComposer ? AnyView(scrollToBottomButton) : nil,
+                    onViewportHeightChanged: { viewportHeight = $0 }, dismissKeyboard: { composerFocused = false },
                     scrollToLatest: scrollToLatest, onMessagesBelowChanged: { messagesBelow = $0 },
                     onNearTop: { model.loadOlderIfIdle() }
                 )
@@ -84,47 +82,25 @@ struct ChatScreen: View {
                         .allowsHitTesting(false)
                 }
             }
-            .overlay(alignment: .bottom) {
-                HStack(alignment: .bottom, spacing: 16) {
-                    GlassEffectContainer(spacing: 8) {
-                        promptComposer
-                    }
-                    .frame(maxWidth: 760)
-                    if scrollButtonBesideComposer {
-                        scrollToBottomButton
-                            .opacity(showScrollButton ? 1 : 0)
-                            .allowsHitTesting(showScrollButton)
-                            .accessibilityHidden(!showScrollButton)
-                            .padding(.bottom, 8)
-                    }
-                }
-                .frame(maxWidth: scrollButtonBesideComposer ? 820 : 760)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 12)
-                .frame(maxWidth: .infinity)
-                .onGeometryChange(for: CGFloat.self) {
-                    $0.size.height
-                } action: {
-                    composerHeight = $0
-                }
-                .overlay(alignment: .top) {
-                    if showScrollButton && !scrollButtonBesideComposer {
-                        scrollToBottomButton.offset(y: -64)
-                    }
-                }
-            }
         }
         .onGeometryChange(for: CGSize.self) {
             $0.size
         } action: {
             viewportWidth = $0.width
-            viewportHeight = $0.height
         }
         .onChange(of: model.pending, initial: true) { _, requests in
             prompts.update(requests)
-            if prompts.active != nil { composerFocused = false }
         }
-        .ignoresSafeArea(.container, edges: .bottom)
+        .onChange(of: prompts.activeID) { previous, next in
+            if next != nil && previous == nil {
+                resumeDraftFocus = composerFocused
+                composerFocused = false
+            } else if next == nil && resumeDraftFocus && visible {
+                composerFocused = true
+                resumeDraftFocus = false
+            }
+        }
+        .ignoresSafeArea(edges: .bottom)
         .background(MobileStyle.surface.ignoresSafeArea())
         .tint(MobileStyle.accent)
         .navigationTitle(title)
@@ -248,56 +224,19 @@ struct ChatScreen: View {
         }
         .endingAgentsConfirmation($endingAgents)
         .alert("Clear this conversation?", isPresented: $showingClear) {
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { clearDraft = nil }
             Button("Clear conversation", role: .destructive) {
-                Task { await model.perform("chat.clear", ["force": .bool(true)]) }
+                let snapshot = clearDraft
+                clearDraft = nil
+                Task {
+                    if await model.perform("chat.clear", ["force": .bool(true)]), let snapshot, model.draft == snapshot
+                    {
+                        model.draft = ""
+                    }
+                }
             }
         } message: {
             Text("This removes the conversation history and stops any active turn on every client.")
-        }
-        .fileImporter(isPresented: $showingFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) {
-            result in
-            Task {
-                do {
-                    for url in try result.get() {
-                        let accessed = url.startAccessingSecurityScopedResource()
-                        defer { if accessed { url.stopAccessingSecurityScopedResource() } }
-                        let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                        guard size <= 25 * 1024 * 1024 else {
-                            model.error = "Files must be at most 25 MiB."
-                            continue
-                        }
-                        let data = try Data(contentsOf: url, options: .mappedIfSafe)
-                        model.addAttachment(
-                            data: data, name: url.lastPathComponent,
-                            mime: UTType(filenameExtension: url.pathExtension)?.preferredMIMEType
-                                ?? "application/octet-stream")
-                    }
-                } catch { model.error = error.localizedDescription }
-            }
-        }
-        .onChange(of: photo) { _, item in
-            Task {
-                do {
-                    if let data = try await item?.loadTransferable(type: Data.self) {
-                        let type = item?.supportedContentTypes.first ?? .image
-                        model.addAttachment(
-                            data: data, name: "Photo.\(type.preferredFilenameExtension ?? "jpg")",
-                            mime: type.preferredMIMEType ?? "image/jpeg")
-                    }
-                } catch { model.error = error.localizedDescription }
-                photo = nil
-            }
-        }
-        .mobileSheet(isPresented: Binding(get: { pickerKind != nil }, set: { if !$0 { pickerKind = nil } })) {
-            ChatSuggestionPicker(
-                model: model, kind: pickerKind ?? "@",
-                choose: { value in
-                    composerSelection = model.chooseSuggestion(value, selection: composerSelection)
-                    pickerKind = nil
-                    composerFocused = true
-                }
-            ) { pickerKind = nil }
         }
     }
 
@@ -306,6 +245,11 @@ struct ChatScreen: View {
         holdingChat = true
         if let machineSession { model = machineSession.retainChat(model) } else { model.start() }
         if let workspace {
+            let items = workspace.views.flatMap { view in [view] + view.list("nodes") }
+            model.projectChats = items.filter { $0.text("kind") == "chat" }.map {
+                ChatDraftReference(
+                    id: $0.stableID, title: $0.text("title", fallback: $0.text("name", fallback: "Conversation")))
+            }
             model.presentation.places = ChatPlaces(
                 title: { ChatForking.origin(in: workspace.views, chatID: $0)?.title },
                 shape: { ChatForking.origin(in: workspace.views, chatID: $0)?.shape },
@@ -406,15 +350,35 @@ struct ChatScreen: View {
         .accessibilityIdentifier("chat.scroll-to-bottom")
     }
 
-    private var isWorking: Bool { model.info["activeTurnId"]?.stringValue != nil }
-
-    private var composerShape: ConcentricRectangle {
-        ConcentricRectangle(corners: .concentric(minimum: 24))
+    private var composerDock: some View {
+        HStack(alignment: .bottom, spacing: 16) {
+            VStack(spacing: 0) {
+                if prompts.active == nil {
+                    ChatComposerAccessory(model: model, focused: $composerFocused, availableHeight: viewportHeight)
+                }
+                GlassEffectContainer(spacing: 8) { promptComposer }
+            }
+            .frame(maxWidth: 760)
+            if scrollButtonBesideComposer {
+                scrollToBottomButton
+                    .opacity(showScrollButton ? 1 : 0)
+                    .allowsHitTesting(showScrollButton)
+                    .accessibilityHidden(!showScrollButton)
+                    .padding(.bottom, 8)
+            }
+        }
+        .frame(maxWidth: scrollButtonBesideComposer ? 820 : 760)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var promptComposer: some View {
         ChatComposerMorph(request: prompts.active) {
-            composer
+            ChatComposerView(
+                model: model, focused: $composerFocused, settingsPresented: $settingsPresented,
+                availableHeight: viewportHeight, send: send, stopWithSubagents: stopWithSubagents)
         } prompt: { pending in
             ChatPromptCard(
                 prompts: prompts, item: pending, connected: model.connected && !model.loading,
@@ -427,117 +391,6 @@ struct ChatScreen: View {
                 _ = try await model.client.request(action, payload: model.target(values))
             }
         }
-    }
-
-    private var composer: some View {
-        let photoIcon = Image(lucide: "image")
-        return VStack(alignment: .leading, spacing: 0) {
-            if !model.attachments.isEmpty {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 6) {
-                        ForEach(model.attachments) { upload in
-                            Button {
-                                model.attachments.removeAll { $0.id == upload.id }
-                            } label: {
-                                Label(upload.name, lucideIcon: "circle-x", iconSize: 14)
-                                    .font(.caption).lineLimit(1).padding(.horizontal, 10).frame(minHeight: 44)
-                            }
-                            .buttonStyle(.plain)
-                            .background(MobileStyle.inset, in: Capsule())
-                            .accessibilityLabel("Remove \(upload.name)")
-                        }
-                    }
-                }.scrollIndicators(.hidden).padding(.horizontal, 12).padding(.top, 10)
-            }
-            RichChatComposer(
-                text: $model.draft, selection: $composerSelection,
-                mentions: model.mentions, skills: model.skills, focused: $composerFocused
-            )
-            .padding(.horizontal, 20)
-            .padding(.top, 18)
-            .padding(.bottom, 10)
-            .frame(maxWidth: .infinity, minHeight: 52)
-            .contentShape(Rectangle())
-            .onTapGesture { composerFocused = true }
-            .accessibilityIdentifier("chat.composer")
-            if let queue = model.info["queue"]?.arrayValue, !queue.isEmpty {
-                Text("\(queue.count) message\(queue.count == 1 ? "" : "s") queued")
-                    .font(.caption).foregroundStyle(MobileStyle.muted).monospacedDigit()
-                    .padding(.horizontal, 16).padding(.bottom, 6)
-            }
-            HStack(spacing: 0) {
-                Menu {
-                    Button("Attach files", lucideIcon: "file-text") { showingFiles = true }
-                    Button("Mention a file", lucideIcon: "at-sign") { pickerKind = "@" }
-                    Button("Use a skill", lucideIcon: "sparkles") { pickerKind = "$" }
-                    Button("Command", lucideIcon: "circle-slash") { pickerKind = "/" }
-                } label: {
-                    Image(lucide: "plus").frame(width: 44, height: 44)
-                }.accessibilityLabel("Add context")
-                PhotosPicker(selection: $photo, matching: .images) {
-                    photoIcon.frame(width: 44, height: 44)
-                }.accessibilityLabel("Attach photo")
-                modelMenu.frame(maxWidth: 200, alignment: .leading)
-                Spacer(minLength: 0)
-                if isWorking { stopAction }
-                primaryAction
-            }
-            .font(.system(.subheadline, weight: .medium))
-            .foregroundStyle(MobileStyle.muted)
-            .padding(.horizontal, 14).padding(.bottom, 10)
-        }
-        .background {
-            Color.clear
-                .contentShape(composerShape)
-                .onTapGesture { composerFocused = true }
-        }
-        .contentShape(composerShape)
-        .overlay {
-            composerShape.fill(.primary.opacity(composerPressed ? 0.07 : 0))
-                .allowsHitTesting(false)
-        }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0).updating($composerPressed) { _, pressed, _ in pressed = true }
-        )
-        .disabled(!model.connected || model.loading)
-    }
-
-    private var primaryAction: some View {
-        Button {
-            send()
-        } label: {
-            Group {
-                if model.sending {
-                    ProgressView()
-                } else {
-                    Image(lucide: "arrow-up", size: 15)
-                }
-            }
-            .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
-            .frame(width: 32, height: 32)
-            .modifier(ChatComposerAction(prompt: false, loading: model.sending, opacity: hasDraft ? 1 : 0.25))
-            .frame(width: 44, height: 44)
-        }
-        .buttonStyle(.plain)
-        .disabled(!model.connected || model.loading || model.sending || !hasDraft)
-        .accessibilityLabel("Send message")
-        .keyboardShortcut(.return, modifiers: .command)
-    }
-
-    private var stopAction: some View {
-        Button {
-            Task { await model.perform("chat.cancel") }
-        } label: {
-            Image(lucide: "square", size: 12)
-                .foregroundStyle(MobileStyle.text).frame(width: 32, height: 32)
-                .background(MobileStyle.inset, in: Circle()).frame(width: 44, height: 44)
-        }.buttonStyle(.plain).accessibilityLabel("Stop turn")
-            // A touch has no Shift-click, so stopping the sub-agents as well is the long press.
-            .contextMenu {
-                Button("Stop turn", lucideIcon: "square") { Task { await model.perform("chat.cancel") } }
-                Button("Stop with sub-agents", lucideIcon: "square", role: .destructive) { stopWithSubagents() }
-            }
-            .accessibilityAction(named: "Stop with sub-agents") { stopWithSubagents() }
     }
 
     /// Stops the turn, ends every agent the chat opened and marks its CLI's own sub-agents stopped; asks first only
@@ -557,190 +410,40 @@ struct ChatScreen: View {
         }
     }
 
-    /// The chosen model as its CLI's catalog names it; a chat that has not picked one yet says so.
-    private var modelLabel: String {
-        let slug = model.info["selection"]?.text("model") ?? ""
-        return slug.isEmpty ? "Model" : ModelName.of(slug, in: model.models)
-    }
-
-    /// The account the chat runs under and the ones it may pick, only while its CLI has two accounts that are on:
-    /// with one there is nothing to choose or tell apart.
-    private var accountChoice: ChatAccountChoice? {
-        let kind = model.info.text("provider")
-        guard let accounts = model.accounts, !kind.isEmpty, accounts.hasChoice(kind) else { return nil }
-        let provider = model.providers.first { $0["kind"] == model.info["provider"] }?.text("name") ?? ""
-        return ChatAccountChoice(
-            kind: kind, provider: provider.isEmpty ? usageProviderName(kind) : provider,
-            currentID: model.info["account"]?.stringValue ?? kind, accounts: accounts,
-            started: ProviderAccountList.chatStarted(model.info))
-    }
-
-    @ViewBuilder private func accountMenu(_ choice: ChatAccountChoice) -> some View {
-        Menu {
-            ForEach(choice.offered) { account in
-                let locked = choice.locked(account)
-                Button {
-                    configureAccount(account.id)
-                } label: {
-                    Label {
-                        Text(account.name(provider: choice.provider))
-                        if account.id == choice.currentID {
-                            Text("In use")
-                        } else if locked {
-                            Text("This conversation is kept in another folder. Fork the chat to go on under it.")
-                        }
-                    } icon: {
-                        AccountDot.menuImage(account.color)
-                    }
-                }
-                .disabled(locked)
-            }
-        } label: {
-            Label {
-                Text("Account")
-                Text(choice.currentName)
-            } icon: {
-                AccountDot.menuImage(choice.current?.color)
-            }
-        }
-    }
-
-    private func configureAccount(_ id: String) {
-        guard id != model.info["account"]?.stringValue ?? model.info.text("provider") else { return }
-        Task { await model.perform("chat.configure", ["account": .string(id)]) }
-    }
-
-    private var modelMenu: some View {
-        Menu {
-            Section("Model") {
-                ForEach(Array(model.models.enumerated()), id: \.offset) { _, option in
-                    Button(option.text("name", fallback: ModelName.fromSlug(option.text("slug")))) {
-                        configureSelection(.object(["model": option["slug"] ?? .null, "options": .object([:])]))
-                    }
-                }
-            }
-            if let selected = model.models.first(where: { $0["slug"] == model.info["selection"]?["model"] }) {
-                ForEach(Array((selected["options"]?.arrayValue ?? []).enumerated()), id: \.offset) { _, option in
-                    Menu(option["label"]?.stringValue ?? "Option") {
-                        if option["type"]?.stringValue == "boolean" {
-                            Button("On") { configureOption(option, value: .bool(true)) }
-                            Button("Off") { configureOption(option, value: .bool(false)) }
-                        } else {
-                            ForEach(Array((option["choices"]?.arrayValue ?? []).enumerated()), id: \.offset) {
-                                _, choice in
-                                Button(choice["label"]?.stringValue ?? "Choice") {
-                                    configureOption(option, value: choice["id"] ?? .null)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if let choice = accountChoice { accountMenu(choice) }
-            Section("Permissions") {
-                ForEach(["supervised", "auto-accept-edits", "auto", "full-access"], id: \.self) { mode in
-                    Button(mode.replacingOccurrences(of: "-", with: " ").capitalized) {
-                        Task {
-                            if await model.perform("chat.configure", ["runtimeMode": .string(mode)]) {
-                                ChatPreferences.shared.rememberRuntimeMode(mode)
-                            }
-                        }
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                // The name gives way before the model does; the dot says which account on its own.
-                if let choice = accountChoice {
-                    AccountDot(color: choice.current?.color, size: 7)
-                    Text(choice.currentName).lineLimit(1)
-                    Text("·")
-                }
-                Text(modelLabel).lineLimit(1).layoutPriority(1)
-                Image(lucide: "chevron-down", size: 12)
-            }.font(.caption.weight(.medium)).foregroundStyle(MobileStyle.muted).frame(minHeight: 44)
-                .accessibilityValue(model.info["runtimeMode"]?.stringValue ?? "Permissions")
-        }
-    }
-
-    private func configureOption(_ option: JSONValue, value: JSONValue) {
-        guard let key = option["id"]?.stringValue, var selection = model.info["selection"]?.objectValue else { return }
-        var options = selection["options"]?.objectValue ?? [:]
-        options[key] = value
-        selection["options"] = .object(options)
-        configureSelection(.object(selection))
-    }
-
-    private func configureSelection(_ selection: JSONValue) {
-        let provider = model.info.text("provider")
-        Task {
-            if await model.perform("chat.configure", ["selection": selection]) {
-                ChatPreferences.shared.rememberSelection(selection, provider: provider)
-            }
-        }
-    }
-
     private func send() {
-        switch model.draft.trimmingCharacters(in: .whitespacesAndNewlines) {
-        case "/clear": showingClear = true
-        case "/stop": Task { if await model.perform("chat.cancel") { model.draft = "" } }
-        case "/compact": Task { if await model.perform("chat.compact") { model.draft = "" } }
+        guard model.canSend else { return }
+        let snapshot = model.draft
+        switch snapshot.trimmingCharacters(in: .whitespacesAndNewlines) {
+        case "/model":
+            settingsPresented = true
+            model.draft = ""
+        case "/clear":
+            clearDraft = snapshot
+            showingClear = true
+        case "/stop", "/compact":
+            Task {
+                model.sending = true
+                defer { model.sending = false }
+                let action =
+                    snapshot.trimmingCharacters(in: .whitespacesAndNewlines) == "/stop" ? "chat.cancel" : "chat.compact"
+                if await model.perform(action), model.draft == snapshot { model.draft = "" }
+            }
         default: Task { await model.send() }
         }
     }
 
 }
 
-/// The accounts of a chat's CLI as its run settings offer them.
-private struct ChatAccountChoice {
-    let kind: String
-    let provider: String
-    let currentID: String
-    let accounts: ProviderAccountList
-    /// Once the chat spoke, only an account that reads its conversation can take it over.
-    let started: Bool
-
-    var offered: [ProviderAccountEntry] { accounts.offered(kind, current: currentID) }
-    /// Nil for an account the machine no longer has.
-    var current: ProviderAccountEntry? { accounts.accounts(of: kind).first { $0.id == currentID } }
-    var currentName: String { current?.name(provider: provider) ?? currentID }
-
-    func locked(_ account: ProviderAccountEntry) -> Bool {
-        started && !accounts.canContinue(kind, from: currentID, to: account.id)
-    }
-}
-
 struct SessionErrorBanner: View {
     let message: String
+    var retryTitle = "Retry"
     let retry: () -> Void
     var body: some View {
         HStack(alignment: .top) {
             Image(lucide: "circle-alert")
             Text(message).font(.callout).frame(maxWidth: .infinity, alignment: .leading)
-            Button("Retry", action: retry)
+            Button(retryTitle, action: retry)
         }.padding().background(.regularMaterial).accessibilityElement(children: .contain)
-    }
-}
-
-private struct ChatSuggestionPicker: View {
-    @Bindable var model: ChatModel
-    let kind: String
-    let choose: (String) -> Void
-    let close: () -> Void
-    @State private var query = ""
-    var body: some View {
-        NavigationStack {
-            List(model.suggestions, id: \.self) { value in
-                Button(kind + value) {
-                    choose(value)
-                }
-            }
-            .overlay { if model.suggestions.isEmpty { ContentUnavailableView.search(text: query) } }
-            .searchable(text: $query)
-            .task(id: query) { await model.search(kind, query: query) }
-            .navigationTitle(kind == "@" ? "Files" : kind == "$" ? "Skills" : "Commands")
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done", action: close) } }
-        }
     }
 }
 
