@@ -9,9 +9,7 @@ import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useChatPlans, usePlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
-import { Icon } from '@ruimte/ui/Icon';
-import { Pill } from '@ruimte/ui/Pill';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Icon, Pill, Tooltip } from '@basmilius/react-ui';
 
 /*
  * "6/11" in a chat's header, only while the chat has a plan. A red dot for a failed step, an

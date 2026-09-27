@@ -6,8 +6,7 @@ import { DiagramScene } from '@/diagram/DiagramScene';
 import { useDiagramMirror } from '@/diagram/mirror';
 import { showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Icon } from '@ruimte/ui/Icon';
+import { EmptyState, Icon } from '@basmilius/react-ui';
 
 /* World units of air around a mirrored diagram, so nothing touches the frame. */
 const PADDING = 24;

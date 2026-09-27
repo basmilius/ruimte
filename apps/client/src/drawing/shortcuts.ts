@@ -1,4 +1,4 @@
-import { shortcut } from '@ruimte/ui/shortcut';
+import { shortcut } from '@basmilius/react-ui';
 
 /* The shortcuts `use-drawing-keys.ts` binds, apart from the handler so the dock and the Keyboard pane print them. */
 export const DRAWING_SHORTCUTS = {

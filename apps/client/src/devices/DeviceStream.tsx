@@ -19,8 +19,7 @@ import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
 import { FramePainter, wait } from '@/transport/live-stream';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Icon } from '@ruimte/ui/Icon';
+import { EmptyState, Icon } from '@basmilius/react-ui';
 
 const RETRY_MS = 1_000;
 const BOTTOM_EDGE_START = 0.92;

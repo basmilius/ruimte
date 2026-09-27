@@ -21,10 +21,7 @@ import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useTransportStatus } from '@/transport/status';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { ButtonGroup, ErrorBoundary, IconButton, Tooltip } from '@basmilius/react-ui';
 
 const idOf = (prompt: CanvasPrompt): string => prompt.id;
 
@@ -60,19 +57,11 @@ function SourceRow({
             </span>
             <span className="grow" />
             {count > 1 && (
-                <span className={`${BTN_GROUP} shrink-0`}>
-                    <Tooltip label={t('promptStack.previous')} name>
-                        <button type="button" className="icon-btn icon-btn-xs" disabled={index === 0} onClick={() => onStep(-1)}>
-                            <Icon icon={ChevronLeft} size={12} />
-                        </button>
-                    </Tooltip>
+                <ButtonGroup render={<span />} className="shrink-0">
+                    <IconButton icon={ChevronLeft} size="xs" label={t('promptStack.previous')} disabled={index === 0} onClick={() => onStep(-1)} />
                     <span className="px-1 tabular-nums">{t('promptStack.position', { index: index + 1, count })}</span>
-                    <Tooltip label={t('promptStack.next')} name>
-                        <button type="button" className="icon-btn icon-btn-xs" disabled={index === count - 1} onClick={() => onStep(1)}>
-                            <Icon icon={ChevronRight} size={12} />
-                        </button>
-                    </Tooltip>
-                </span>
+                    <IconButton icon={ChevronRight} size="xs" label={t('promptStack.next')} disabled={index === count - 1} onClick={() => onStep(1)} />
+                </ButtonGroup>
             )}
         </div>
     );

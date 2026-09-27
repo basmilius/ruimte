@@ -32,13 +32,7 @@ import { endpointKey, useEndpointId } from '@/state/keys';
 import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { useNodeHost } from '@/nodes/node-host';
 import { usePage } from '@/nodes/use-page';
-import { Button } from '@ruimte/ui/Button';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { Icon } from '@ruimte/ui/Icon';
-import { Select } from '@ruimte/ui/Select';
-import { formatShortcut, KEY_SHORTCUTS } from '@ruimte/ui/shortcut';
+import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, formatShortcut, KEY_SHORTCUTS } from '@basmilius/react-ui';
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {
@@ -72,36 +66,23 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
 
     return (
         <>
-            <div className={BTN_GROUP}>
-                <Tooltip label={t('browser.back')} name>
-                    <button className="icon-btn icon-btn-sm" disabled={!state?.canGoBack} onClick={() => command('back')}>
-                        <Icon icon={ArrowLeft} size={14} />
-                    </button>
-                </Tooltip>
-                <Tooltip label={t('browser.forward')} name>
-                    <button className="icon-btn icon-btn-sm" disabled={!state?.canGoForward} onClick={() => command('forward')}>
-                        <Icon icon={ArrowRight} size={14} />
-                    </button>
-                </Tooltip>
+            <ButtonGroup>
+                <IconButton icon={ArrowLeft} size="sm" label={t('browser.back')} disabled={!state?.canGoBack} onClick={() => command('back')} />
+                <IconButton icon={ArrowRight} size="sm" label={t('browser.forward')} disabled={!state?.canGoForward} onClick={() => command('forward')} />
                 {/* While a page is on its way the same square ends it, the way every browser does it. */}
                 {state?.loading ? (
-                    <Tooltip label={t('browser.stop')} name>
-                        <button className="icon-btn icon-btn-sm" onClick={() => command('stop')}>
-                            <Icon icon={X} size={14} />
-                        </button>
-                    </Tooltip>
+                    <IconButton icon={X} size="sm" label={t('browser.stop')} onClick={() => command('stop')} />
                 ) : (
-                    <Tooltip
+                    <IconButton
+                        icon={RotateCw}
+                        size="sm"
                         label={t('common:action.reload')}
                         kbd={t('browser.reloadHint', { shortcut: formatShortcut(KEY_SHORTCUTS.shift, isApplePlatform()) })}
-                        name
-                    >
-                        <button className="icon-btn icon-btn-sm" disabled={!hasPage} onClick={(e) => command('reload', e.shiftKey)}>
-                            <Icon icon={RotateCw} size={14} />
-                        </button>
-                    </Tooltip>
+                        disabled={!hasPage}
+                        onClick={(e) => command('reload', e.shiftKey)}
+                    />
                 )}
-            </div>
+            </ButtonGroup>
             <div
                 className={clsx(
                     'app-no-drag relative mx-[30px] flex h-7 grow items-center gap-2 overflow-hidden rounded-md border border-border-soft bg-surface-sunken px-2.5 text-xs text-text-muted',
@@ -139,7 +120,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                     rather than fills: it says the wait is the page's, not how far along it is. */}
                 {state?.loading && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label={t('browser.loading')} />}
             </div>
-            <div className={BTN_GROUP}>
+            <ButtonGroup>
                 {!native && (
                     <Select<string>
                         value={String(scale)}
@@ -153,30 +134,22 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                         className="w-[76px] justify-center tabular-nums"
                     />
                 )}
-                <Tooltip label={t('browser.openExternal')} name>
-                    <button
-                        className="icon-btn icon-btn-sm"
-                        disabled={!hasPage}
-                        onClick={() => {
-                            const target = state?.url ?? url;
-                            if (native) {
-                                void desktop()?.openExternal(target);
-                            } else {
-                                window.open(target, '_blank', 'noopener,noreferrer');
-                            }
-                        }}
-                    >
-                        <Icon icon={ExternalLink} size={14} />
-                    </button>
-                </Tooltip>
-                {native && (
-                    <Tooltip label={t('browser.inspect')} name>
-                        <button className="icon-btn icon-btn-sm" disabled={!hasPage} onClick={() => browserRegistry.inspect(key)}>
-                            <Icon icon={Code} size={14} />
-                        </button>
-                    </Tooltip>
-                )}
-            </div>
+                <IconButton
+                    icon={ExternalLink}
+                    size="sm"
+                    label={t('browser.openExternal')}
+                    disabled={!hasPage}
+                    onClick={() => {
+                        const target = state?.url ?? url;
+                        if (native) {
+                            void desktop()?.openExternal(target);
+                        } else {
+                            window.open(target, '_blank', 'noopener,noreferrer');
+                        }
+                    }}
+                />
+                {native && <IconButton icon={Code} size="sm" label={t('browser.inspect')} disabled={!hasPage} onClick={() => browserRegistry.inspect(key)} />}
+            </ButtonGroup>
             {/* The bar is the one piece a browser node and a browser view both mount, and the plate
                 it draws lands in the parked host either way, never in the bar itself. */}
             <BrowserErrorPlate id={id} />

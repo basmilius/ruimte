@@ -9,8 +9,7 @@ import { useNodeHost } from '@/nodes/node-host';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
-import { Button } from '@ruimte/ui/Button';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Button, Tooltip } from '@basmilius/react-ui';
 
 /* How long the ring of a tap stays; with motion off it stands still for as long. */
 const PING_MS = 700;

@@ -1,6 +1,5 @@
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Pencil, Trash } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
@@ -11,8 +10,7 @@ import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import type { Point } from '@/canvas/math';
 import { useEndpointId } from '@/state/keys';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
-import { MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
+import { Icon, ContextMenu, Input } from '@basmilius/react-ui';
 
 function EdgeLabel({
     ids,
@@ -32,11 +30,12 @@ function EdgeLabel({
         // A pixel wider on every side than the field, since a foreignObject clips the focus outline around it.
         return (
             <foreignObject x={at.x - 61} y={at.y - 15} width="122" height="30">
-                <input
+                <Input
                     autoFocus
                     defaultValue={label ?? ''}
                     maxLength={MAX_TITLE_LENGTH}
-                    className="field field-sm m-px w-[120px] text-center"
+                    size="sm"
+                    className="m-px w-[120px] text-center"
                     onPointerDown={(e) => e.stopPropagation()}
                     onBlur={(e) => {
                         // Both directions carry the name: to a person this is one line, and one line has one name.
@@ -188,19 +187,15 @@ export const EdgeLayer = memo(function EdgeLayer() {
                                 </g>
                             )}
                         </ContextMenu.Trigger>
-                        <ContextMenu.Portal>
-                            <ContextMenu.Positioner className="z-(--z-popup)">
-                                <ContextMenu.Popup className="menu-popup">
-                                    <ContextMenu.Item className="menu-item" onClick={() => setEditing(key)}>
-                                        <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <span className={MENU_HINT}>{t('menu.doubleClick')}</span>
-                                    </ContextMenu.Item>
-                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                                    <ContextMenu.Item className="menu-item" onClick={remove}>
-                                        <Icon icon={Trash} size={14} /> {t('common:action.remove')}
-                                    </ContextMenu.Item>
-                                </ContextMenu.Popup>
-                            </ContextMenu.Positioner>
-                        </ContextMenu.Portal>
+                        <ContextMenu.Popup>
+                            <ContextMenu.Item onClick={() => setEditing(key)}>
+                                <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <ContextMenu.Hint>{t('menu.doubleClick')}</ContextMenu.Hint>
+                            </ContextMenu.Item>
+                            <ContextMenu.Separator />
+                            <ContextMenu.Item onClick={remove}>
+                                <Icon icon={Trash} size={14} /> {t('common:action.remove')}
+                            </ContextMenu.Item>
+                        </ContextMenu.Popup>
                     </ContextMenu.Root>
                 );
             })}

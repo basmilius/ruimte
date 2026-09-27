@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
 import { CircleAlert, Hand, House, LoaderCircle, Lock, Mic, RotateCcw, RotateCw, Smartphone, Undo2, type LucideIcon } from 'lucide-react';
 import { deviceButtons, type DeviceButton, type DeviceInfo, type DeviceInput, type DeviceReference } from '@ruimte/contracts';
 import { useNodeHost } from '@/nodes/node-host';
@@ -8,11 +7,7 @@ import { useDeviceList, useResolvedDevice } from '@/devices/state';
 import { DeviceStream } from '@/devices/DeviceStream';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { Button } from '@ruimte/ui/Button';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { PanelEmpty } from '@ruimte/ui/PanelEmpty';
+import { Button, ButtonGroup, Icon, IconButton, PanelEmpty, Menu } from '@basmilius/react-ui';
 
 const GESTURES: ReadonlyArray<{ button: DeviceButton; icon: LucideIcon }> = [
     { button: 'swipeHome', icon: Hand },
@@ -45,61 +40,33 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
         return t(`device.controls.${androidName ?? button}`);
     };
     return (
-        <div className={BTN_GROUP}>
-            {buttons.includes('back') && (
-                <Tooltip label={label('back')} name>
-                    <button className="icon-btn" onClick={() => send({ kind: 'button', button: 'back' })}>
-                        <Icon icon={Undo2} size={16} />
-                    </button>
-                </Tooltip>
-            )}
-            {buttons.includes('home') && (
-                <Tooltip label={label('home')} name>
-                    <button className="icon-btn" onClick={() => send({ kind: 'button', button: 'home' })}>
-                        <Icon icon={House} size={16} />
-                    </button>
-                </Tooltip>
-            )}
+        <ButtonGroup>
+            {buttons.includes('back') && <IconButton icon={Undo2} label={label('back')} onClick={() => send({ kind: 'button', button: 'back' })} />}
+            {buttons.includes('home') && <IconButton icon={House} label={label('home')} onClick={() => send({ kind: 'button', button: 'home' })} />}
             {gestures.length > 0 && (
                 <Menu.Root>
-                    <Tooltip label={t('device.controls.gestures')} name>
-                        <Menu.Trigger className="icon-btn">
-                            <Icon icon={Hand} size={16} />
-                        </Menu.Trigger>
-                    </Tooltip>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
-                            <Menu.Popup className="menu-popup">
-                                {gestures.map((gesture) => (
-                                    <Menu.Item key={gesture.button} className="menu-item" onClick={() => send({ kind: 'button', button: gesture.button })}>
-                                        <Icon icon={gesture.icon} size={14} /> {label(gesture.button)}
-                                    </Menu.Item>
-                                ))}
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
+                    <IconButton render={<Menu.Trigger />} icon={Hand} label={t('device.controls.gestures')} />
+                    <Menu.Popup align="end">
+                        {gestures.map((gesture) => (
+                            <Menu.Item key={gesture.button} onClick={() => send({ kind: 'button', button: gesture.button })}>
+                                <Icon icon={gesture.icon} size={14} /> {label(gesture.button)}
+                            </Menu.Item>
+                        ))}
+                    </Menu.Popup>
                 </Menu.Root>
             )}
             <Menu.Root>
-                <Tooltip label={t('device.controls.rotate')} name>
-                    <Menu.Trigger className="icon-btn">
-                        <Icon icon={RotateCw} size={16} />
-                    </Menu.Trigger>
-                </Tooltip>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
-                        <Menu.Popup className="menu-popup">
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'rotate', direction: 'left' })}>
-                                <Icon icon={RotateCcw} size={14} /> {t('device.controls.rotateLeft')}
-                            </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'rotate', direction: 'right' })}>
-                                <Icon icon={RotateCw} size={14} /> {t('device.controls.rotateRight')}
-                            </Menu.Item>
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
+                <IconButton render={<Menu.Trigger />} icon={RotateCw} label={t('device.controls.rotate')} />
+                <Menu.Popup align="end">
+                    <Menu.Item onClick={() => send({ kind: 'rotate', direction: 'left' })}>
+                        <Icon icon={RotateCcw} size={14} /> {t('device.controls.rotateLeft')}
+                    </Menu.Item>
+                    <Menu.Item onClick={() => send({ kind: 'rotate', direction: 'right' })}>
+                        <Icon icon={RotateCw} size={14} /> {t('device.controls.rotateRight')}
+                    </Menu.Item>
+                </Menu.Popup>
             </Menu.Root>
-        </div>
+        </ButtonGroup>
     );
 }
 

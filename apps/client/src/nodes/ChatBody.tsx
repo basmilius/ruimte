@@ -17,10 +17,9 @@ import { chatClient } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { ErrorBoundary, lazyNamed } from '@basmilius/react-ui';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
-import { lazyNamed } from '@/ui/lazy';
 
 // The worker pool and its highlighter load with the first chat node, not with the app.
 const DiffPool = lazyNamed(() => import('@/chat/ChatDiffPool'), 'default');

@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
 import {
     Circle,
     Diamond,
@@ -26,14 +25,9 @@ import { DRAWING_COLORS, type DrawingColor } from '@ruimte/contracts';
 import { fitAction, historyAction } from '@/actions/client-actions';
 import { copyDrawing, exportDrawing, styleSelection, unlockEverything } from '@/drawing/drawing-actions';
 import { useDrawing, useDrawingStore, type DrawingStyle, type DrawingTool } from '@/state/drawing';
-import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { DockShell } from '@/ui/DockShell';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuCheck } from '@ruimte/ui/MenuCheck';
-import { Separator } from '@ruimte/ui/Separator';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Separator, Tooltip, DockShell, ZoomControls } from '@basmilius/react-ui';
+import { useSettings } from '@/state/settings';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
-import { ZoomControls } from '@/ui/ZoomControls';
 
 interface ToolRow {
     tool: DrawingTool;
@@ -85,8 +79,7 @@ const SWATCH = 'h-5 w-5 rounded-full border border-border-strong';
 /* One row of a menu that picks a value, with the tick where every other menu keeps it. */
 function RadioRow({ label, value }: { label: string; value: string | number }) {
     return (
-        <Menu.RadioItem value={value} className="menu-item">
-            <MenuCheck kind="radio" />
+        <Menu.RadioItem value={value}>
             <span>{label}</span>
         </Menu.RadioItem>
     );
@@ -114,133 +107,123 @@ export function DrawingDock() {
             empty: s.elements.length === 0
         }))
     );
+    const dockAutoHide = useSettings((s) => s.dockAutoHide);
     const set = (patch: Partial<DrawingStyle>): void => styleSelection(drawingStore, patch);
 
     return (
-        <DockShell data-drawing-chrome className="px-4" barClassName="flex-wrap justify-center">
-            <div className={BTN_GROUP}>
+        <DockShell data-drawing-chrome autoHide={dockAutoHide} className="px-4" barClassName="flex-wrap justify-center">
+            <ButtonGroup>
                 {TOOLS.map((row) => (
-                    <Tooltip key={row.tool} label={t(`tools.${row.tool}`)} kbd={row.kbd} name>
-                        <button className="icon-btn" data-active={tool === row.tool} onClick={() => drawingStore.getState().setTool(row.tool)}>
-                            <Icon icon={row.icon} size={16} />
-                        </button>
-                    </Tooltip>
+                    <IconButton
+                        key={row.tool}
+                        icon={row.icon}
+                        label={t(`tools.${row.tool}`)}
+                        kbd={row.kbd}
+                        active={tool === row.tool}
+                        onClick={() => drawingStore.getState().setTool(row.tool)}
+                    />
                 ))}
-                <Tooltip label={t('tools.keep')} kbd="Q" name>
-                    <button className="icon-btn" data-active={toolLocked} onClick={() => drawingStore.getState().toggleToolLock()}>
-                        <Icon icon={toolLocked ? Lock : LockOpen} size={16} />
-                    </button>
-                </Tooltip>
-            </div>
+                <IconButton
+                    icon={toolLocked ? Lock : LockOpen}
+                    label={t('tools.keep')}
+                    kbd="Q"
+                    active={toolLocked}
+                    onClick={() => drawingStore.getState().toggleToolLock()}
+                />
+            </ButtonGroup>
 
             <Separator />
 
-            <div className={BTN_GROUP}>
+            <ButtonGroup>
                 <Menu.Root>
-                    <Tooltip label={t('color.label')}>
-                        <Menu.Trigger className="icon-btn" aria-label={t('color.label')}>
-                            <span className={SWATCH} style={{ background: `var(--draw-${style.stroke})` }} />
-                        </Menu.Trigger>
-                    </Tooltip>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="center">
-                            <Menu.Popup className="menu-popup">
-                                <div className={MENU_LABEL}>{t('color.stroke')}</div>
-                                <Swatches value={style.stroke} onPick={(stroke) => set({ stroke })} />
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>{t('color.fill')}</div>
-                                <Swatches value={style.fillColor} onPick={(fillColor) => set({ fillColor })} />
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>{t('color.note')}</div>
-                                <Swatches value={style.noteColor} onPick={(noteColor) => set({ noteColor })} paper />
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
+                    <IconButton render={<Menu.Trigger />} label={t('color.label')}>
+                        <span className={SWATCH} style={{ background: `var(--draw-${style.stroke})` }} />
+                    </IconButton>
+                    <Menu.Popup side="top" sideOffset={10} align="center">
+                        <Menu.Label>{t('color.stroke')}</Menu.Label>
+                        <Swatches value={style.stroke} onPick={(stroke) => set({ stroke })} />
+                        <Menu.Separator />
+                        <Menu.Label>{t('color.fill')}</Menu.Label>
+                        <Swatches value={style.fillColor} onPick={(fillColor) => set({ fillColor })} />
+                        <Menu.Separator />
+                        <Menu.Label>{t('color.note')}</Menu.Label>
+                        <Swatches value={style.noteColor} onPick={(noteColor) => set({ noteColor })} paper />
+                    </Menu.Popup>
                 </Menu.Root>
 
                 <Menu.Root>
-                    <Tooltip label={t('style.label')} name>
-                        <Menu.Trigger className="icon-btn">
-                            <Icon icon={Palette} size={16} />
-                        </Menu.Trigger>
-                    </Tooltip>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="center">
-                            <Menu.Popup className="menu-popup min-w-44">
-                                <div className={MENU_LABEL}>{t('style.strokeWidth')}</div>
-                                <Menu.RadioGroup value={style.strokeWidth} onValueChange={(value: DrawingStyle['strokeWidth']) => set({ strokeWidth: value })}>
-                                    {WIDTHS.map((row) => (
-                                        <RadioRow key={row.value} label={t(`style.widths.${row.key}`)} value={row.value} />
-                                    ))}
-                                </Menu.RadioGroup>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>{t('style.strokeStyle')}</div>
-                                <Menu.RadioGroup value={style.strokeStyle} onValueChange={(value: DrawingStyle['strokeStyle']) => set({ strokeStyle: value })}>
-                                    {STROKE_STYLES.map((strokeStyle) => (
-                                        <RadioRow key={strokeStyle} label={t(`style.strokeStyles.${strokeStyle}`)} value={strokeStyle} />
-                                    ))}
-                                </Menu.RadioGroup>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>{t('style.fill')}</div>
-                                <Menu.RadioGroup value={style.fill} onValueChange={(value: DrawingStyle['fill']) => set({ fill: value })}>
-                                    {FILLS.map((fill) => (
-                                        <RadioRow key={fill} label={t(`style.fills.${fill}`)} value={fill} />
-                                    ))}
-                                </Menu.RadioGroup>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>{t('style.sloppiness')}</div>
-                                <Menu.RadioGroup value={style.roughness} onValueChange={(value: DrawingStyle['roughness']) => set({ roughness: value })}>
-                                    {ROUGHNESS.map((row) => (
-                                        <RadioRow key={row.value} label={t(`style.roughness.${row.key}`)} value={row.value} />
-                                    ))}
-                                </Menu.RadioGroup>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>{t('style.text')}</div>
-                                <Menu.RadioGroup value={style.font} onValueChange={(value: DrawingStyle['font']) => set({ font: value })}>
-                                    {FONTS.map((font) => (
-                                        <RadioRow key={font} label={t(`style.fonts.${font}`)} value={font} />
-                                    ))}
-                                </Menu.RadioGroup>
-                                <Menu.RadioGroup value={style.textSize} onValueChange={(value: number) => set({ textSize: value })}>
-                                    {TEXT_SIZES.map((size) => (
-                                        <RadioRow key={size} label={t('style.textSize', { size })} value={size} />
-                                    ))}
-                                </Menu.RadioGroup>
-                                <Menu.RadioGroup value={style.align} onValueChange={(value: DrawingStyle['align']) => set({ align: value })}>
-                                    {ALIGNMENTS.map((align) => (
-                                        <RadioRow key={align} label={t(`style.alignments.${align}`)} value={align} />
-                                    ))}
-                                </Menu.RadioGroup>
-                                {anyLocked && (
-                                    <>
-                                        <Menu.Separator className={MENU_SEPARATOR} />
-                                        <Menu.Item className="menu-item" onClick={() => unlockEverything(drawingStore)}>
-                                            <span className="grid h-4 w-4 place-items-center">
-                                                <Icon icon={LockOpen} size={14} />
-                                            </span>
-                                            {t('style.unlockAll')}
-                                        </Menu.Item>
-                                    </>
-                                )}
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
+                    <IconButton render={<Menu.Trigger />} icon={Palette} label={t('style.label')} />
+                    <Menu.Popup side="top" sideOffset={10} align="center" className="min-w-44">
+                        <Menu.Label>{t('style.strokeWidth')}</Menu.Label>
+                        <Menu.RadioGroup value={style.strokeWidth} onValueChange={(value: DrawingStyle['strokeWidth']) => set({ strokeWidth: value })}>
+                            {WIDTHS.map((row) => (
+                                <RadioRow key={row.value} label={t(`style.widths.${row.key}`)} value={row.value} />
+                            ))}
+                        </Menu.RadioGroup>
+                        <Menu.Separator />
+                        <Menu.Label>{t('style.strokeStyle')}</Menu.Label>
+                        <Menu.RadioGroup value={style.strokeStyle} onValueChange={(value: DrawingStyle['strokeStyle']) => set({ strokeStyle: value })}>
+                            {STROKE_STYLES.map((strokeStyle) => (
+                                <RadioRow key={strokeStyle} label={t(`style.strokeStyles.${strokeStyle}`)} value={strokeStyle} />
+                            ))}
+                        </Menu.RadioGroup>
+                        <Menu.Separator />
+                        <Menu.Label>{t('style.fill')}</Menu.Label>
+                        <Menu.RadioGroup value={style.fill} onValueChange={(value: DrawingStyle['fill']) => set({ fill: value })}>
+                            {FILLS.map((fill) => (
+                                <RadioRow key={fill} label={t(`style.fills.${fill}`)} value={fill} />
+                            ))}
+                        </Menu.RadioGroup>
+                        <Menu.Separator />
+                        <Menu.Label>{t('style.sloppiness')}</Menu.Label>
+                        <Menu.RadioGroup value={style.roughness} onValueChange={(value: DrawingStyle['roughness']) => set({ roughness: value })}>
+                            {ROUGHNESS.map((row) => (
+                                <RadioRow key={row.value} label={t(`style.roughness.${row.key}`)} value={row.value} />
+                            ))}
+                        </Menu.RadioGroup>
+                        <Menu.Separator />
+                        <Menu.Label>{t('style.text')}</Menu.Label>
+                        <Menu.RadioGroup value={style.font} onValueChange={(value: DrawingStyle['font']) => set({ font: value })}>
+                            {FONTS.map((font) => (
+                                <RadioRow key={font} label={t(`style.fonts.${font}`)} value={font} />
+                            ))}
+                        </Menu.RadioGroup>
+                        <Menu.RadioGroup value={style.textSize} onValueChange={(value: number) => set({ textSize: value })}>
+                            {TEXT_SIZES.map((size) => (
+                                <RadioRow key={size} label={t('style.textSize', { size })} value={size} />
+                            ))}
+                        </Menu.RadioGroup>
+                        <Menu.RadioGroup value={style.align} onValueChange={(value: DrawingStyle['align']) => set({ align: value })}>
+                            {ALIGNMENTS.map((align) => (
+                                <RadioRow key={align} label={t(`style.alignments.${align}`)} value={align} />
+                            ))}
+                        </Menu.RadioGroup>
+                        {anyLocked && (
+                            <>
+                                <Menu.Separator />
+                                <Menu.Item onClick={() => unlockEverything(drawingStore)}>
+                                    <span className="grid h-4 w-4 place-items-center">
+                                        <Icon icon={LockOpen} size={14} />
+                                    </span>
+                                    {t('style.unlockAll')}
+                                </Menu.Item>
+                            </>
+                        )}
+                    </Menu.Popup>
                 </Menu.Root>
-            </div>
+            </ButtonGroup>
 
             <Separator />
 
             <ZoomControls
                 zoom={zoom}
                 labels={{
-                    out: t('zoom.out'),
-                    in: t('zoom.in'),
                     presets: t('zoom.presets'),
                     fit: t('zoom.fit'),
                     fitEverything: t('zoom.fitEverything')
                 }}
                 shortcuts={DRAWING_SHORTCUTS}
-                onZoomTo={(next) => drawingStore.getState().zoomTo(next)}
+                onZoomChange={(next) => drawingStore.getState().zoomTo(next)}
                 onFitAll={() => fitAction(viewId)}
                 selection={{
                     label: t('zoom.selection'),
@@ -252,54 +235,48 @@ export function DrawingDock() {
 
             <Separator />
 
-            <div className={BTN_GROUP}>
+            <ButtonGroup>
                 <Menu.Root>
-                    <Tooltip label={t('export.label')} name>
-                        <Menu.Trigger className="icon-btn">
-                            <Icon icon={MoreHorizontal} size={16} />
-                        </Menu.Trigger>
-                    </Tooltip>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
-                            <Menu.Popup className="menu-popup min-w-52">
-                                <div className={MENU_LABEL}>{hasSelection ? t('export.selection') : t('export.drawing')}</div>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawing(drawingStore, 'png')}>
-                                    <Icon icon={Copy} size={14} /> {t('export.copyPng')}
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => exportDrawing(drawingStore, 'png')}>
-                                    <Icon icon={Download} size={14} /> {t('export.savePng')}
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawing(drawingStore, 'svg')}>
-                                    <Icon icon={Copy} size={14} /> {t('export.copySvg')}
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => exportDrawing(drawingStore, 'svg')}>
-                                    <Icon icon={Download} size={14} /> {t('export.saveSvg')}
-                                </Menu.Item>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.CheckboxItem
-                                    className="menu-item"
-                                    checked={exportBackground}
-                                    closeOnClick={false}
-                                    onCheckedChange={(checked) => drawingStore.getState().setExportBackground(checked)}
-                                >
-                                    <MenuCheck kind="checkbox" />
-                                    {t('export.withBackground')}
-                                </Menu.CheckboxItem>
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
+                    <IconButton render={<Menu.Trigger />} icon={MoreHorizontal} label={t('export.label')} />
+                    <Menu.Popup side="top" sideOffset={10} align="end" className="min-w-52">
+                        <Menu.Label>{hasSelection ? t('export.selection') : t('export.drawing')}</Menu.Label>
+                        <Menu.Item disabled={empty} onClick={() => void copyDrawing(drawingStore, 'png')}>
+                            <Icon icon={Copy} size={14} /> {t('export.copyPng')}
+                        </Menu.Item>
+                        <Menu.Item disabled={empty} onClick={() => exportDrawing(drawingStore, 'png')}>
+                            <Icon icon={Download} size={14} /> {t('export.savePng')}
+                        </Menu.Item>
+                        <Menu.Item disabled={empty} onClick={() => void copyDrawing(drawingStore, 'svg')}>
+                            <Icon icon={Copy} size={14} /> {t('export.copySvg')}
+                        </Menu.Item>
+                        <Menu.Item disabled={empty} onClick={() => exportDrawing(drawingStore, 'svg')}>
+                            <Icon icon={Download} size={14} /> {t('export.saveSvg')}
+                        </Menu.Item>
+                        <Menu.Separator />
+                        <Menu.CheckboxItem
+                            checked={exportBackground}
+                            closeOnClick={false}
+                            onCheckedChange={(checked) => drawingStore.getState().setExportBackground(checked)}
+                        >
+                            {t('export.withBackground')}
+                        </Menu.CheckboxItem>
+                    </Menu.Popup>
                 </Menu.Root>
-                <Tooltip label={t('common:action.undo')} kbd={DRAWING_SHORTCUTS.undo} name>
-                    <button className="icon-btn" disabled={!canUndo} onClick={() => historyAction('undo', viewId)}>
-                        <Icon icon={Undo2} size={16} />
-                    </button>
-                </Tooltip>
-                <Tooltip label={t('common:action.redo')} kbd={DRAWING_SHORTCUTS.redo} name>
-                    <button className="icon-btn" disabled={!canRedo} onClick={() => historyAction('redo', viewId)}>
-                        <Icon icon={Redo2} size={16} />
-                    </button>
-                </Tooltip>
-            </div>
+                <IconButton
+                    icon={Undo2}
+                    label={t('common:action.undo')}
+                    kbd={DRAWING_SHORTCUTS.undo}
+                    disabled={!canUndo}
+                    onClick={() => historyAction('undo', viewId)}
+                />
+                <IconButton
+                    icon={Redo2}
+                    label={t('common:action.redo')}
+                    kbd={DRAWING_SHORTCUTS.redo}
+                    disabled={!canRedo}
+                    onClick={() => historyAction('redo', viewId)}
+                />
+            </ButtonGroup>
         </DockShell>
     );
 }
@@ -311,10 +288,12 @@ export function Swatches({ value, onPick, paper = false }: { value: DrawingColor
         <div className="flex gap-1 px-2 py-1.5">
             {DRAWING_COLORS.map((color) => (
                 <Tooltip key={color} label={t(`color.names.${color}`)}>
-                    <button
-                        className={`${SWATCH} ${color === value ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-raised' : ''}`}
+                    <ColorSwatch
                         aria-label={t(`color.names.${color}`)}
-                        style={{ background: `var(--draw${paper ? '-paper' : ''}-${color})` }}
+                        color={`var(--draw${paper ? '-paper' : ''}-${color})`}
+                        picked={color === value}
+                        on="popup"
+                        className="border border-border-strong"
                         onClick={() => onPick(color)}
                     />
                 </Tooltip>

@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useShallow } from 'zustand/react/shallow';
 import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
 import { gridTakesPath } from '@/shell/view-drag';
@@ -28,7 +27,7 @@ import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
 import { TextToolbar } from '@/canvas/TextToolbar';
 import { CellOverlay } from '@/shell/CellOverlay';
-import { isInFloatingLayer } from '@ruimte/ui/floating';
+import { isInFloatingLayer, ContextMenu } from '@basmilius/react-ui';
 
 type Gesture =
     | { kind: 'pan'; last: Point }

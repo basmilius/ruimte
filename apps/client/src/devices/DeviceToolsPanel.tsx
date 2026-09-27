@@ -15,12 +15,7 @@ import {
 } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
-import { Segmented, Toggle } from '@ruimte/ui/controls';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR, PANEL_HEADER, SECTION_LABEL } from '@ruimte/ui/classes';
-import { CloseButton } from '@ruimte/ui/CloseButton';
-import { Icon } from '@ruimte/ui/Icon';
-import { Select } from '@ruimte/ui/Select';
+import { Segmented, Switch, Button, CloseButton, FormError, Icon, Input, PanelHeader, SectionLabel, Select } from '@basmilius/react-ui';
 
 type ActionBody = DeviceAction extends infer Action ? (Action extends DeviceAction ? Omit<Action, 'backendId' | 'platform' | 'deviceId'> : never) : never;
 
@@ -95,17 +90,12 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
     const disabled = pending || settings === null;
     return (
         <aside className="flex h-full min-h-0 w-full flex-col bg-surface">
-            <header className={PANEL_HEADER}>
-                <span className={SECTION_LABEL}>{t('device.tools.title')}</span>
+            <PanelHeader title={t('device.tools.title')}>
                 {pending && <Icon icon={LoaderCircle} size={14} className="animate-spin text-text-muted" />}
                 <CloseButton label={t('device.tools.close')} className="ml-auto" onClick={onClose} />
-            </header>
+            </PanelHeader>
             <div className="min-h-0 grow overflow-y-auto">
-                {error && (
-                    <p className={`${FORM_ERROR} border-b border-border px-3 py-2 break-words`} role="alert">
-                        {error}
-                    </p>
-                )}
+                {error && <FormError className="border-b border-border px-3 py-2 break-words">{error}</FormError>}
                 {settings === null && !error && (
                     <div className="flex items-center gap-2 px-3 py-3 text-xs text-text-muted">
                         <Icon icon={LoaderCircle} size={14} className="animate-spin" /> {t('device.tools.loading')}
@@ -151,7 +141,7 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
                                         { id: 'dark', label: t('device.tools.display.dark') }
                                     ]}
                                     disabled={disabled || settings?.appearance === undefined}
-                                    onChange={(value) => void act({ action: 'setAppearance', value })}
+                                    onValueChange={(value) => void act({ action: 'setAppearance', value })}
                                 />
                             </ToolRow>
                         )}
@@ -178,7 +168,7 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
                                         { id: 'tinted', label: t('device.tools.display.tinted') }
                                     ]}
                                     disabled={disabled || settings?.liquidGlass === undefined}
-                                    onChange={(value) => void act({ action: 'setLiquidGlass', value })}
+                                    onValueChange={(value) => void act({ action: 'setLiquidGlass', value })}
                                 />
                             </ToolRow>
                         )}
@@ -226,7 +216,7 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
 function ToolSection({ title, children }: { title: string; children: ReactNode }) {
     return (
         <section className="flex flex-col gap-2.5 border-b border-border px-3 py-3 last:border-b-0">
-            <h3 className={SECTION_LABEL}>{title}</h3>
+            <SectionLabel render={<h3 />}>{title}</SectionLabel>
             {children}
         </section>
     );
@@ -256,11 +246,11 @@ function SettingToggle({
 }) {
     return (
         <ToolRow label={label}>
-            <Toggle
+            <Switch
                 checked={value ?? false}
                 label={label}
                 disabled={disabled || value === undefined}
-                onChange={(next) => void act({ action: 'setToggle', setting, value: next })}
+                onCheckedChange={(next) => void act({ action: 'setToggle', setting, value: next })}
             />
         </ToolRow>
     );
@@ -288,8 +278,9 @@ function TextAction({
     };
     return (
         <form className="flex gap-1.5" onSubmit={submit}>
-            <input
-                className="field field-sm min-w-0 grow disabled:opacity-50"
+            <Input
+                size="sm"
+                className="min-w-0 grow disabled:opacity-50"
                 value={value}
                 disabled={disabled}
                 placeholder={placeholder}
@@ -322,16 +313,18 @@ function LocationTools({
         <ToolSection title={t('device.tools.location.title')}>
             {canSet && (
                 <div className="flex gap-1.5">
-                    <input
-                        className="field field-sm w-1/2 min-w-0 disabled:opacity-50"
+                    <Input
+                        size="sm"
+                        className="w-1/2 min-w-0 disabled:opacity-50"
                         inputMode="decimal"
                         value={latitude}
                         disabled={disabled}
                         placeholder={t('device.tools.location.latitude')}
                         onChange={(event) => setLatitude(event.target.value)}
                     />
-                    <input
-                        className="field field-sm w-1/2 min-w-0 disabled:opacity-50"
+                    <Input
+                        size="sm"
+                        className="w-1/2 min-w-0 disabled:opacity-50"
                         inputMode="decimal"
                         value={longitude}
                         disabled={disabled}
@@ -404,8 +397,9 @@ function PermissionTools({
     };
     return (
         <ToolSection title={t('device.tools.permissions.title')}>
-            <input
-                className="field field-sm min-w-0 disabled:opacity-50"
+            <Input
+                size="sm"
+                className="min-w-0 disabled:opacity-50"
                 value={appId}
                 disabled={disabled}
                 placeholder={appIdPlaceholder}
@@ -446,16 +440,18 @@ function PushAction({ appIdPlaceholder, disabled, act }: { appIdPlaceholder: str
     };
     return (
         <form className="flex flex-col gap-1.5" onSubmit={submit}>
-            <input
-                className="field field-sm min-w-0 disabled:opacity-50"
+            <Input
+                size="sm"
+                className="min-w-0 disabled:opacity-50"
                 value={appId}
                 disabled={disabled}
                 placeholder={appIdPlaceholder}
                 onChange={(event) => setAppId(event.target.value)}
             />
             <div className="flex gap-1.5">
-                <input
-                    className="field field-sm min-w-0 grow disabled:opacity-50"
+                <Input
+                    size="sm"
+                    className="min-w-0 grow disabled:opacity-50"
                     value={payload}
                     disabled={disabled}
                     placeholder={t('device.tools.push.alertText')}

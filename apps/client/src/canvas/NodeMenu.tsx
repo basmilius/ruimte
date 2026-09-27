@@ -1,10 +1,6 @@
 import type { ReactNode } from 'react';
-import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import {
-    Check,
-    ChevronRight,
     ChevronsDownUp,
     ChevronsUpDown,
     Copy,
@@ -46,12 +42,8 @@ import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
-import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuCheck } from '@ruimte/ui/MenuCheck';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { ColorSwatch, Icon, Tooltip, Kbd, ContextMenu } from '@basmilius/react-ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Kbd } from '@ruimte/ui/Kbd';
 
 /*
  * The context menu of one node, the same from its frame and from its row in the sidebar. `snooze`
@@ -75,13 +67,7 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
     const groupWorktrees = useGroupWorktrees(node?.kind === 'group' ? id : null);
 
     if (!node) {
-        return snooze ? (
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">{snooze}</ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
-        ) : null;
+        return snooze ? <ContextMenu.Popup>{snooze}</ContextMenu.Popup> : null;
     }
 
     const remove = (): void => {
@@ -147,198 +133,170 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
     const filePath = node.kind === 'file' && node.path ? resolveStoredPath(projectFolder, node.path) : null;
 
     return (
-        <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-(--z-popup)">
-                <ContextMenu.Popup className="menu-popup">
-                    {snooze}
-                    <ContextMenu.Item className="menu-item" onClick={onRename}>
-                        <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <span className={MENU_HINT}>{t('menu.doubleClick')}</span>
+        <ContextMenu.Popup>
+            {snooze}
+            <ContextMenu.Item onClick={onRename}>
+                <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <ContextMenu.Hint>{t('menu.doubleClick')}</ContextMenu.Hint>
+            </ContextMenu.Item>
+            <ContextMenu.Item onClick={() => duplicateNodeAction(canvasStore.getState().viewId, id)}>
+                <Icon icon={Copy} size={14} /> {t('menu.duplicate')}
+            </ContextMenu.Item>
+            <ContextMenu.Item onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
+                <Icon icon={Maximize2} size={14} /> {t('node.zoomTo')}
+            </ContextMenu.Item>
+            <ContextMenu.Item onClick={() => canvasStore.getState().startLink(id)}>
+                <Icon icon={Link2} size={14} /> {t('menu.connect')}
+                <ContextMenu.Hint>{t('menu.connectHint')}</ContextMenu.Hint>
+            </ContextMenu.Item>
+            {node.kind === 'group' && (
+                <>
+                    <ContextMenu.Item onClick={() => canvasStore.getState().toggleGroupCollapse(id)}>
+                        {node.collapsed ? <Icon icon={ChevronsUpDown} size={14} /> : <Icon icon={ChevronsDownUp} size={14} />}{' '}
+                        {node.collapsed ? t('group.expand') : t('group.collapse')}
                     </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={() => duplicateNodeAction(canvasStore.getState().viewId, id)}>
-                        <Icon icon={Copy} size={14} /> {t('menu.duplicate')}
-                    </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
-                        <Icon icon={Maximize2} size={14} /> {t('node.zoomTo')}
-                    </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().startLink(id)}>
-                        <Icon icon={Link2} size={14} /> {t('menu.connect')}
-                        <span className={MENU_HINT}>{t('menu.connectHint')}</span>
-                    </ContextMenu.Item>
-                    {node.kind === 'group' && (
-                        <>
-                            <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().toggleGroupCollapse(id)}>
-                                {node.collapsed ? <Icon icon={ChevronsUpDown} size={14} /> : <Icon icon={ChevronsDownUp} size={14} />}{' '}
-                                {node.collapsed ? t('group.expand') : t('group.collapse')}
-                            </ContextMenu.Item>
-                            {node.worktree ? (
-                                <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().setGroupWorktree(id, null)}>
-                                    <Icon icon={GitBranch} size={14} /> {t('menu.unbindWorktree')}
-                                    <span className={MENU_HINT}>{t('menu.unbindWorktreeHint')}</span>
-                                </ContextMenu.Item>
-                            ) : (
-                                <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setWorktreeDialogFor(id)}>
-                                    <Icon icon={GitBranch} size={14} /> {t('menu.bindWorktree')}
-                                </ContextMenu.Item>
-                            )}
-                            {groupWorktrees.length > 0 && projectFolder !== null && (
-                                <>
-                                    <ContextMenu.Item
-                                        className="menu-item"
-                                        onClick={() =>
-                                            useUi.getState().setWorktreeMerge({ folder: projectFolder, paths: groupWorktrees.map((worktree) => worktree.path) })
-                                        }
-                                    >
-                                        <Icon icon={GitMerge} size={14} /> {t('menu.mergeWorktrees', { count: groupWorktrees.length })}
-                                    </ContextMenu.Item>
-                                    <ContextMenu.Item
-                                        className="menu-item"
-                                        onClick={() =>
-                                            useUi
-                                                .getState()
-                                                .setWorktreeRemoval({ folder: projectFolder, paths: groupWorktrees.map((worktree) => worktree.path) })
-                                        }
-                                    >
-                                        <Icon icon={Trash} size={14} /> {t('menu.removeWorktrees', { count: groupWorktrees.length })}
-                                    </ContextMenu.Item>
-                                </>
-                            )}
-                        </>
+                    {node.worktree ? (
+                        <ContextMenu.Item onClick={() => canvasStore.getState().setGroupWorktree(id, null)}>
+                            <Icon icon={GitBranch} size={14} /> {t('menu.unbindWorktree')}
+                            <ContextMenu.Hint>{t('menu.unbindWorktreeHint')}</ContextMenu.Hint>
+                        </ContextMenu.Item>
+                    ) : (
+                        <ContextMenu.Item onClick={() => useUi.getState().setWorktreeDialogFor(id)}>
+                            <Icon icon={GitBranch} size={14} /> {t('menu.bindWorktree')}
+                        </ContextMenu.Item>
                     )}
-                    {nodeWorktree && projectFolder !== null && (
+                    {groupWorktrees.length > 0 && projectFolder !== null && (
                         <>
-                            <ContextMenu.Separator className={MENU_SEPARATOR} />
                             <ContextMenu.Item
-                                className="menu-item"
-                                onClick={() => {
-                                    // Selecting the node is what points the git panel at the worktree it works in.
-                                    canvasStore.getState().select([id]);
-                                    useUi.getState().setPanel({ open: true, kind: 'git' });
-                                    const tab = worktreeDiffTab(nodeWorktree);
-                                    useFiles.getState().open(tab.path, useSettings.getState().filesTabLimit, tab.view);
-                                }}
+                                onClick={() =>
+                                    useUi.getState().setWorktreeMerge({ folder: projectFolder, paths: groupWorktrees.map((worktree) => worktree.path) })
+                                }
                             >
-                                <Icon icon={GitBranch} size={14} /> {t('menu.viewWorktree')}
-                                <span className={`${MENU_HINT} font-mono`}>{nodeWorktree.branch}</span>
+                                <Icon icon={GitMerge} size={14} /> {t('menu.mergeWorktrees', { count: groupWorktrees.length })}
                             </ContextMenu.Item>
                             <ContextMenu.Item
-                                className="menu-item"
-                                onClick={() => useUi.getState().setWorktreeMerge({ folder: projectFolder, paths: [nodeWorktree.path] })}
+                                onClick={() =>
+                                    useUi.getState().setWorktreeRemoval({ folder: projectFolder, paths: groupWorktrees.map((worktree) => worktree.path) })
+                                }
                             >
-                                <Icon icon={GitMerge} size={14} /> {t('menu.mergeWorktrees', { count: 1 })}
+                                <Icon icon={Trash} size={14} /> {t('menu.removeWorktrees', { count: groupWorktrees.length })}
                             </ContextMenu.Item>
-                            <ContextMenu.Item
-                                className="menu-item"
-                                onClick={() => useUi.getState().setWorktreeRemoval({ folder: projectFolder, paths: [nodeWorktree.path] })}
-                            >
-                                <Icon icon={Trash} size={14} /> {t('menu.removeWorktrees', { count: 1 })}
-                            </ContextMenu.Item>
-                            <ContextMenu.Separator className={MENU_SEPARATOR} />
                         </>
                     )}
-                    {node.kind === 'terminal' && canOpenInChat && (
-                        <ContextMenu.Item className="menu-item" onClick={openInChat}>
-                            <Icon icon={MessageSquare} size={14} /> {t('menu.openInChat')}
-                        </ContextMenu.Item>
-                    )}
-                    {node.kind === 'chat' && chatSession && (
-                        <ContextMenu.Item className="menu-item" onClick={openInTerminal}>
-                            <Icon icon={Terminal} size={14} /> {t('menu.openInTerminal')}
-                        </ContextMenu.Item>
-                    )}
-                    {node.kind === 'chat' && <ForkMenuItem chatId={id} />}
-                    {node.kind === 'chat' && <BookmarkSubmenu chatId={id} />}
-                    {canOpenAsView(node.kind) && (
-                        <ContextMenu.Item className="menu-item" onClick={() => askOpenAsView(id)}>
-                            <Icon icon={Frame} size={14} /> {t('menu.openAsView')}
-                            <span className={MENU_HINT}>{t('menu.openAsViewHint')}</span>
-                        </ContextMenu.Item>
-                    )}
-                    {workingFolder && (
-                        <ContextMenu.Item
-                            className="menu-item"
-                            onClick={() => void transport.request('fs.reveal', { path: workingFolder }).catch(() => undefined)}
-                        >
-                            <Icon icon={ExternalLink} size={14} /> {t('menu.reveal', { app: fileManagerName(platform) })}
-                        </ContextMenu.Item>
-                    )}
-                    {node.kind === 'file' && filePath !== null && (
-                        <>
-                            <ContextMenu.Separator className={MENU_SEPARATOR} />
-                            <FileActionItems path={filePath} on="node" />
-                            <ContextMenu.Separator className={MENU_SEPARATOR} />
-                        </>
-                    )}
-                    {node.kind === 'note' && (
-                        <>
-                            <ChatAgentSubmenu
-                                label={t('menu.startAgentFromNote')}
-                                icon={<Icon icon={Sparkles} size={14} />}
-                                onPick={(provider) => void startAgentFromNote(provider)}
-                            />
-                            <ContextMenu.SubmenuRoot>
-                                <ContextMenu.SubmenuTrigger className="menu-item">
-                                    <Icon icon={Palette} size={14} /> {t('menu.noteColor')}
-                                    <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
-                                </ContextMenu.SubmenuTrigger>
-                                <ContextMenu.Portal>
-                                    <ContextMenu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
-                                        <ContextMenu.Popup className="menu-popup min-w-40">
-                                            {NOTE_COLORS.map((color) => (
-                                                <ContextMenu.Item key={color.id} className="menu-item" onClick={() => colorNoteAction(viewId, id, color.id)}>
-                                                    <MenuCheck kind="radio" checked={(node.color ?? DEFAULT_NOTE_COLOR) === color.id} />
-                                                    <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} />{' '}
-                                                    {t(`noteColors.${color.id}`)}
-                                                </ContextMenu.Item>
-                                            ))}
-                                        </ContextMenu.Popup>
-                                    </ContextMenu.Positioner>
-                                </ContextMenu.Portal>
-                            </ContextMenu.SubmenuRoot>
-                        </>
-                    )}
-                    <FlagSubmenu id={id} />
+                </>
+            )}
+            {nodeWorktree && projectFolder !== null && (
+                <>
+                    <ContextMenu.Separator />
+                    <ContextMenu.Item
+                        onClick={() => {
+                            // Selecting the node is what points the git panel at the worktree it works in.
+                            canvasStore.getState().select([id]);
+                            useUi.getState().setPanel({ open: true, kind: 'git' });
+                            const tab = worktreeDiffTab(nodeWorktree);
+                            useFiles.getState().open(tab.path, useSettings.getState().filesTabLimit, tab.view);
+                        }}
+                    >
+                        <Icon icon={GitBranch} size={14} /> {t('menu.viewWorktree')}
+                        <ContextMenu.Hint className="font-mono">{nodeWorktree.branch}</ContextMenu.Hint>
+                    </ContextMenu.Item>
+                    <ContextMenu.Item onClick={() => useUi.getState().setWorktreeMerge({ folder: projectFolder, paths: [nodeWorktree.path] })}>
+                        <Icon icon={GitMerge} size={14} /> {t('menu.mergeWorktrees', { count: 1 })}
+                    </ContextMenu.Item>
+                    <ContextMenu.Item onClick={() => useUi.getState().setWorktreeRemoval({ folder: projectFolder, paths: [nodeWorktree.path] })}>
+                        <Icon icon={Trash} size={14} /> {t('menu.removeWorktrees', { count: 1 })}
+                    </ContextMenu.Item>
+                    <ContextMenu.Separator />
+                </>
+            )}
+            {node.kind === 'terminal' && canOpenInChat && (
+                <ContextMenu.Item onClick={openInChat}>
+                    <Icon icon={MessageSquare} size={14} /> {t('menu.openInChat')}
+                </ContextMenu.Item>
+            )}
+            {node.kind === 'chat' && chatSession && (
+                <ContextMenu.Item onClick={openInTerminal}>
+                    <Icon icon={Terminal} size={14} /> {t('menu.openInTerminal')}
+                </ContextMenu.Item>
+            )}
+            {node.kind === 'chat' && <ForkMenuItem chatId={id} />}
+            {node.kind === 'chat' && <BookmarkSubmenu chatId={id} />}
+            {canOpenAsView(node.kind) && (
+                <ContextMenu.Item onClick={() => askOpenAsView(id)}>
+                    <Icon icon={Frame} size={14} /> {t('menu.openAsView')}
+                    <ContextMenu.Hint>{t('menu.openAsViewHint')}</ContextMenu.Hint>
+                </ContextMenu.Item>
+            )}
+            {workingFolder && (
+                <ContextMenu.Item onClick={() => void transport.request('fs.reveal', { path: workingFolder }).catch(() => undefined)}>
+                    <Icon icon={ExternalLink} size={14} /> {t('menu.reveal', { app: fileManagerName(platform) })}
+                </ContextMenu.Item>
+            )}
+            {node.kind === 'file' && filePath !== null && (
+                <>
+                    <ContextMenu.Separator />
+                    <FileActionItems path={filePath} on="node" />
+                    <ContextMenu.Separator />
+                </>
+            )}
+            {node.kind === 'note' && (
+                <>
+                    <ChatAgentSubmenu
+                        label={t('menu.startAgentFromNote')}
+                        icon={<Icon icon={Sparkles} size={14} />}
+                        onPick={(provider) => void startAgentFromNote(provider)}
+                    />
                     <ContextMenu.SubmenuRoot>
-                        <ContextMenu.SubmenuTrigger className="menu-item">
-                            <Icon icon={Palette} size={14} /> {t('menu.color')}
-                            <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
+                        <ContextMenu.SubmenuTrigger>
+                            <Icon icon={Palette} size={14} /> {t('menu.noteColor')}
                         </ContextMenu.SubmenuTrigger>
-                        <ContextMenu.Portal>
-                            <ContextMenu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
-                                {/* Every hue at once, so the labels give way to a grid the eye
-                                    reads in one pass; the name of a color lives in its tooltip. */}
-                                <ContextMenu.Popup className="menu-popup grid min-w-0 grid-cols-6 gap-1 p-2">
-                                    <Tooltip label={t('menu.noAccent')}>
-                                        <ContextMenu.Item
-                                            aria-label={t('menu.noAccent')}
-                                            className={clsx(ACCENT_SWATCH, 'border border-border-strong text-text-muted')}
-                                            onClick={() => canvasStore.getState().setNodeAccent(id, null)}
-                                        >
-                                            {!node.accent && <Icon icon={Check} size={12} />}
-                                        </ContextMenu.Item>
-                                    </Tooltip>
-                                    {NODE_ACCENTS.map((a) => (
-                                        <Tooltip key={a.id} label={accentLabel(a.id)}>
-                                            <ContextMenu.Item
-                                                aria-label={accentLabel(a.id)}
-                                                className={clsx(ACCENT_SWATCH, node.accent === a.id && ACCENT_SWATCH_PICKED)}
-                                                style={{ background: a.color }}
-                                                onClick={() => canvasStore.getState().setNodeAccent(id, a.id)}
-                                            >
-                                                {node.accent === a.id && <Icon icon={Check} size={12} />}
-                                            </ContextMenu.Item>
-                                        </Tooltip>
-                                    ))}
-                                </ContextMenu.Popup>
-                            </ContextMenu.Positioner>
-                        </ContextMenu.Portal>
+                        <ContextMenu.Popup className="min-w-40">
+                            {NOTE_COLORS.map((color) => (
+                                <ContextMenu.Item key={color.id} onClick={() => colorNoteAction(viewId, id, color.id)}>
+                                    <ContextMenu.Check kind="radio" checked={(node.color ?? DEFAULT_NOTE_COLOR) === color.id} />
+                                    <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} /> {t(`noteColors.${color.id}`)}
+                                </ContextMenu.Item>
+                            ))}
+                        </ContextMenu.Popup>
                     </ContextMenu.SubmenuRoot>
-                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                    <ContextMenu.Item className="menu-item text-status-error" onClick={remove}>
-                        <Icon icon={Trash} size={14} /> {t('common:action.delete')} <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
-                    </ContextMenu.Item>
+                </>
+            )}
+            <FlagSubmenu id={id} />
+            <ContextMenu.SubmenuRoot>
+                <ContextMenu.SubmenuTrigger>
+                    <Icon icon={Palette} size={14} /> {t('menu.color')}
+                </ContextMenu.SubmenuTrigger>
+                {/* Every hue at once, so the labels give way to a grid the eye
+                    reads in one pass; the name of a color lives in its tooltip. */}
+                <ContextMenu.Popup className="grid min-w-0 grid-cols-6 gap-1 p-2">
+                    <Tooltip label={t('menu.noAccent')}>
+                        <ColorSwatch
+                            render={<ContextMenu.Item />}
+                            aria-label={t('menu.noAccent')}
+                            picked={!node.accent}
+                            className="p-0"
+                            onClick={() => canvasStore.getState().setNodeAccent(id, null)}
+                        />
+                    </Tooltip>
+                    {NODE_ACCENTS.map((accent) => (
+                        <Tooltip key={accent.id} label={accentLabel(accent.id)}>
+                            <ColorSwatch
+                                render={<ContextMenu.Item />}
+                                aria-label={accentLabel(accent.id)}
+                                color={accent.color}
+                                picked={node.accent === accent.id}
+                                on="popup"
+                                className="p-0"
+                                onClick={() => canvasStore.getState().setNodeAccent(id, accent.id)}
+                            />
+                        </Tooltip>
+                    ))}
                 </ContextMenu.Popup>
-            </ContextMenu.Positioner>
-        </ContextMenu.Portal>
+            </ContextMenu.SubmenuRoot>
+            <ContextMenu.Separator />
+            <ContextMenu.Item className="text-status-error" onClick={remove}>
+                <Icon icon={Trash} size={14} /> {t('common:action.delete')} <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
+            </ContextMenu.Item>
+        </ContextMenu.Popup>
     );
 }
 
@@ -347,18 +305,14 @@ function UnknownNodeMenuPopup({ id, onDelete }: { id: string; onDelete(): void }
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     return (
-        <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-(--z-popup)">
-                <ContextMenu.Popup className="menu-popup">
-                    <ContextMenu.Item className="menu-item" onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
-                        <Icon icon={Maximize2} size={14} /> {t('node.zoomTo')}
-                    </ContextMenu.Item>
-                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                    <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
-                        <Icon icon={Trash} size={14} /> {t('common:action.delete')} <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
-                    </ContextMenu.Item>
-                </ContextMenu.Popup>
-            </ContextMenu.Positioner>
-        </ContextMenu.Portal>
+        <ContextMenu.Popup>
+            <ContextMenu.Item onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
+                <Icon icon={Maximize2} size={14} /> {t('node.zoomTo')}
+            </ContextMenu.Item>
+            <ContextMenu.Separator />
+            <ContextMenu.Item className="text-status-error" onClick={onDelete}>
+                <Icon icon={Trash} size={14} /> {t('common:action.delete')} <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
+            </ContextMenu.Item>
+        </ContextMenu.Popup>
     );
 }

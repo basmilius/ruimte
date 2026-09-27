@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useShallow } from 'zustand/react/shallow';
 import type { DrawingElement } from '@ruimte/contracts';
 import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@ruimte/drawing';
@@ -31,10 +30,7 @@ import { nextId } from '@/state/canvas';
 import { isWritten, newSeed, useDrawing, useDrawingStore } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
-import { TOOLTIP_KBD } from '@ruimte/ui/classes';
-import { isInFloatingLayer } from '@ruimte/ui/floating';
-import { Kbd } from '@ruimte/ui/Kbd';
-import { isModHeld } from '@ruimte/ui/shortcut';
+import { isInFloatingLayer, Kbd, isModHeld, ContextMenu } from '@basmilius/react-ui';
 import { isApplePlatform } from '@/desktop/bridge';
 
 /*
@@ -82,11 +78,11 @@ function EmptyDrawing({ id }: { id: string }) {
                 Nothing drawn yet. Pick a tool with{' '}
                 {FIRST_TOOLS.map((tool, at) => (
                     <span key={tool.key}>
-                        <kbd className={TOOLTIP_KBD}>{tool.key}</kbd> {tool.name}
+                        <Kbd variant="inline">{tool.key}</Kbd> {tool.name}
                         {at < FIRST_TOOLS.length - 1 ? ', ' : ''}
                     </span>
                 ))}
-                , or paste shapes copied from another drawing with <Kbd shortcut={DRAWING_SHORTCUTS.paste} className={TOOLTIP_KBD} />.
+                , or paste shapes copied from another drawing with <Kbd shortcut={DRAWING_SHORTCUTS.paste} variant="inline" />.
             </p>
         </div>
     );

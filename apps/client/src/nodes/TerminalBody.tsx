@@ -2,7 +2,6 @@ import { TerminalDictation } from '@/dictation/TerminalDictation';
 import { clearTerminalAction, restartTerminalAction, resumeTerminalAgentAction } from '@/actions/client-actions';
 import { useEffect, useRef, useState } from 'react';
 import i18next from 'i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import clsx from 'clsx';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -24,10 +23,7 @@ import { webglBudget } from '@/terminal/webgl-budget';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { closeHost, readNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { Button } from '@ruimte/ui/Button';
-import { MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { copyText, readClipboardText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
+import { Button, copyText, readClipboardText, Icon, ContextMenu } from '@basmilius/react-ui';
 
 const RESIZE_DEBOUNCE_MS = 50;
 /* ESC CR: what agent CLIs read as "newline, do not submit". Harmless in a plain shell. */
@@ -371,23 +367,19 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                     />
                 </div>
             </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        {/* xterm keeps its selection to itself, so this asks the terminal instead of the document. */}
-                        <ContextMenu.Item className="menu-item" disabled={!selected} onClick={() => copyText(termRef.current?.getSelection() ?? '')}>
-                            <Icon icon={Copy} size={14} /> {t('common:action.copy')}
-                        </ContextMenu.Item>
-                        <ContextMenu.Item className="menu-item" onClick={() => void paste()}>
-                            <Icon icon={ClipboardPaste} size={14} /> {t('edit.paste')}
-                        </ContextMenu.Item>
-                        <ContextMenu.Separator className={MENU_SEPARATOR} />
-                        <ContextMenu.Item className="menu-item" onClick={() => termRef.current?.selectAll()}>
-                            <Icon icon={Scan} size={14} /> {t('common:action.selectAll')}
-                        </ContextMenu.Item>
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <ContextMenu.Popup>
+                {/* xterm keeps its selection to itself, so this asks the terminal instead of the document. */}
+                <ContextMenu.Item disabled={!selected} onClick={() => copyText(termRef.current?.getSelection() ?? '')}>
+                    <Icon icon={Copy} size={14} /> {t('common:action.copy')}
+                </ContextMenu.Item>
+                <ContextMenu.Item onClick={() => void paste()}>
+                    <Icon icon={ClipboardPaste} size={14} /> {t('edit.paste')}
+                </ContextMenu.Item>
+                <ContextMenu.Separator />
+                <ContextMenu.Item onClick={() => termRef.current?.selectAll()}>
+                    <Icon icon={Scan} size={14} /> {t('common:action.selectAll')}
+                </ContextMenu.Item>
+            </ContextMenu.Popup>
         </ContextMenu.Root>
     );
 }

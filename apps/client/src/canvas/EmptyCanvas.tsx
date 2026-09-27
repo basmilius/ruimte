@@ -12,12 +12,8 @@ import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useUi } from '@/state/ui';
-import { SECTION_LABEL, TOOLTIP_KBD } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Kbd } from '@ruimte/ui/Kbd';
-import type { Shortcut } from '@ruimte/ui/shortcut';
-import { Tile } from '@ruimte/ui/Tile';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Icon, IconButton, Kbd, SectionLabel, Tile } from '@basmilius/react-ui';
+import type { Shortcut } from '@basmilius/react-ui';
 
 interface TileLook {
     icon: ReactNode;
@@ -129,7 +125,7 @@ export function EmptyCanvas() {
 
     const hint = (
         <p className="text-center text-xs text-text-muted">
-            <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} className={TOOLTIP_KBD} /> }} />
+            <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> }} />
         </p>
     );
 
@@ -143,11 +139,16 @@ export function EmptyCanvas() {
                         {SECTIONS.flatMap((key) => sections[key]).map((tile) => {
                             const look = lookOf(tile);
                             return (
-                                <Tooltip key={tile.id} label={look.description ? `${look.title}: ${look.description}` : look.title} kbd={look.shortcut}>
-                                    <button className="icon-btn" aria-label={look.title} disabled={look.disabled} onClick={look.run}>
-                                        {look.icon}
-                                    </button>
-                                </Tooltip>
+                                <IconButton
+                                    key={tile.id}
+                                    label={look.title}
+                                    tooltip={look.description ? `${look.title}: ${look.description}` : undefined}
+                                    kbd={look.shortcut}
+                                    disabled={look.disabled}
+                                    onClick={look.run}
+                                >
+                                    {look.icon}
+                                </IconButton>
                             );
                         })}
                     </div>
@@ -158,7 +159,9 @@ export function EmptyCanvas() {
                 <div className="pointer-events-auto flex max-h-full w-full max-w-3xl flex-col gap-5 overflow-auto">
                     {SECTIONS.filter((key) => sections[key].length > 0).map((key) => (
                         <section key={key} className="flex flex-col gap-2">
-                            <h2 className={`${SECTION_LABEL} px-1`}>{t(`empty.sections.${key}`)}</h2>
+                            <SectionLabel render={<h2 />} className="px-1">
+                                {t(`empty.sections.${key}`)}
+                            </SectionLabel>
                             <div className="grid grid-cols-3 gap-2">
                                 {sections[key].map((tile) => {
                                     const look = lookOf(tile);

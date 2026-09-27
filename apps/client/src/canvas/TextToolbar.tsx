@@ -1,18 +1,13 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { Menu } from '@base-ui-components/react/menu';
-import { AlignCenter, AlignLeft, AlignRight, Bold, Check, ChevronDown, Italic, Palette, Strikethrough, Underline } from 'lucide-react';
+import { AlignCenter, AlignLeft, AlignRight, Bold, ChevronDown, Italic, Palette, Strikethrough, Underline } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { DrawingFont } from '@ruimte/contracts';
-import clsx from 'clsx';
 import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { textRect } from '@/canvas/edge-lines';
 import { FONT_STACK } from '@/canvas/text-font';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, BTN_GROUP, FLOAT } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuCheck } from '@ruimte/ui/MenuCheck';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Surface, Tooltip } from '@basmilius/react-ui';
 
 const FONTS: readonly DrawingFont[] = ['sans', 'hand', 'mono'];
 
@@ -79,11 +74,11 @@ export function TextToolbar() {
     const font = text.font ?? 'sans';
 
     return (
-        <div
+        <Surface
             ref={toolbarRef}
             role="toolbar"
             aria-label={t('text.format')}
-            className={`pointer-events-auto absolute z-10 flex h-10 items-center gap-1 rounded-xl px-1.5 ${FLOAT}`}
+            className="pointer-events-auto absolute z-10 flex h-10 items-center gap-1 rounded-xl px-1.5"
             style={{
                 left,
                 top: Math.max(GAP, Math.min(above < GAP ? below : above, viewport.h - BAR_HEIGHT - GAP)),
@@ -96,144 +91,104 @@ export function TextToolbar() {
             onMouseDown={(e) => e.preventDefault()}
         >
             <Menu.Root>
-                <Tooltip label={t('text.font')} name>
-                    <Menu.Trigger className="icon-btn w-auto gap-1 px-2">
-                        <span className="text-xs" style={{ fontFamily: FONT_STACK[font] }}>
-                            {t(`text.fonts.${font}`)}
-                        </span>
-                    </Menu.Trigger>
-                </Tooltip>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
-                        <Menu.Popup className="menu-popup">
-                            <Menu.RadioGroup value={font} onValueChange={(value: DrawingFont) => style({ font: value })}>
-                                {FONTS.map((value) => (
-                                    <Menu.RadioItem key={value} value={value} className="menu-item">
-                                        <MenuCheck kind="radio" />
-                                        <span style={{ fontFamily: FONT_STACK[value] }}>{t(`text.fonts.${value}`)}</span>
-                                    </Menu.RadioItem>
-                                ))}
-                            </Menu.RadioGroup>
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
+                <IconButton render={<Menu.Trigger />} label={t('text.font')} className="w-auto gap-1 px-2">
+                    <span className="text-xs" style={{ fontFamily: FONT_STACK[font] }}>
+                        {t(`text.fonts.${font}`)}
+                    </span>
+                </IconButton>
+                <Menu.Popup side="top" sideOffset={8}>
+                    <Menu.RadioGroup value={font} onValueChange={(value: DrawingFont) => style({ font: value })}>
+                        {FONTS.map((value) => (
+                            <Menu.RadioItem key={value} value={value}>
+                                <span style={{ fontFamily: FONT_STACK[value] }}>{t(`text.fonts.${value}`)}</span>
+                            </Menu.RadioItem>
+                        ))}
+                    </Menu.RadioGroup>
+                </Menu.Popup>
             </Menu.Root>
 
             <span className="mx-0.5 h-4 w-px bg-border-soft" />
             <Menu.Root>
-                <Tooltip label={t('text.size')} name>
-                    <Menu.Trigger className="icon-btn w-auto gap-1 px-2 text-xs tabular-nums">
-                        {text.size}
-                        <Icon icon={ChevronDown} size={12} />
-                    </Menu.Trigger>
-                </Tooltip>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
-                        <Menu.Popup className="menu-popup">
-                            <Menu.RadioGroup value={text.size} onValueChange={(value: number) => style({ size: value })}>
-                                {SIZES.map((size) => (
-                                    <Menu.RadioItem key={size} value={size} className="menu-item">
-                                        <MenuCheck kind="radio" />
-                                        <span>{size} px</span>
-                                    </Menu.RadioItem>
-                                ))}
-                            </Menu.RadioGroup>
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
+                <IconButton render={<Menu.Trigger />} label={t('text.size')} className="w-auto gap-1 px-2 text-xs tabular-nums">
+                    {text.size}
+                    <Icon icon={ChevronDown} size={12} />
+                </IconButton>
+                <Menu.Popup side="top" sideOffset={8}>
+                    <Menu.RadioGroup value={text.size} onValueChange={(value: number) => style({ size: value })}>
+                        {SIZES.map((size) => (
+                            <Menu.RadioItem key={size} value={size}>
+                                <span>{size} px</span>
+                            </Menu.RadioItem>
+                        ))}
+                    </Menu.RadioGroup>
+                </Menu.Popup>
             </Menu.Root>
 
             <span className="mx-0.5 h-4 w-px bg-border-soft" />
-            <div className={BTN_GROUP}>
-                <Tooltip label={t('text.bold')} name>
-                    <button className="icon-btn" aria-pressed={text.bold === true} onClick={() => style({ bold: !text.bold })}>
-                        <Icon icon={Bold} size={16} />
-                    </button>
-                </Tooltip>
-                <Tooltip label={t('text.italic')} name>
-                    <button className="icon-btn" aria-pressed={text.italic === true} onClick={() => style({ italic: !text.italic })}>
-                        <Icon icon={Italic} size={16} />
-                    </button>
-                </Tooltip>
+            <ButtonGroup>
+                <IconButton icon={Bold} label={t('text.bold')} aria-pressed={text.bold === true} onClick={() => style({ bold: !text.bold })} />
+                <IconButton icon={Italic} label={t('text.italic')} aria-pressed={text.italic === true} onClick={() => style({ italic: !text.italic })} />
                 {(
                     [
                         { key: 'underline', icon: Underline },
                         { key: 'strikethrough', icon: Strikethrough }
                     ] as const
                 ).map(({ key, icon }) => (
-                    <Tooltip key={key} label={t(`text.${key}`)} name>
-                        <button className="icon-btn" aria-pressed={text[key] === true} onClick={() => style({ [key]: !text[key] })}>
-                            <Icon icon={icon} size={16} />
-                        </button>
-                    </Tooltip>
+                    <IconButton key={key} icon={icon} label={t(`text.${key}`)} aria-pressed={text[key] === true} onClick={() => style({ [key]: !text[key] })} />
                 ))}
-            </div>
+            </ButtonGroup>
 
             <span className="mx-0.5 h-4 w-px bg-border-soft" />
             <Menu.Root>
-                <Tooltip label={t('text.alignment')} name>
-                    <Menu.Trigger className="icon-btn">
-                        <Icon icon={text.align === 'center' ? AlignCenter : text.align === 'right' ? AlignRight : AlignLeft} size={16} />
-                    </Menu.Trigger>
-                </Tooltip>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
-                        <Menu.Popup className="menu-popup">
-                            <Menu.RadioGroup value={text.align ?? 'left'} onValueChange={(align: 'left' | 'center' | 'right') => style({ align })}>
-                                {(
-                                    [
-                                        { value: 'left', icon: AlignLeft },
-                                        { value: 'center', icon: AlignCenter },
-                                        { value: 'right', icon: AlignRight }
-                                    ] as const
-                                ).map(({ value, icon }) => (
-                                    <Menu.RadioItem key={value} value={value} className="menu-item" closeOnClick={false}>
-                                        <MenuCheck kind="radio" />
-                                        <Icon icon={icon} size={16} />
-                                        {t(`text.align.${value}`)}
-                                    </Menu.RadioItem>
-                                ))}
-                            </Menu.RadioGroup>
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
+                <IconButton
+                    render={<Menu.Trigger />}
+                    icon={text.align === 'center' ? AlignCenter : text.align === 'right' ? AlignRight : AlignLeft}
+                    label={t('text.alignment')}
+                />
+                <Menu.Popup side="top" sideOffset={8}>
+                    <Menu.RadioGroup value={text.align ?? 'left'} onValueChange={(align: 'left' | 'center' | 'right') => style({ align })}>
+                        {(
+                            [
+                                { value: 'left', icon: AlignLeft },
+                                { value: 'center', icon: AlignCenter },
+                                { value: 'right', icon: AlignRight }
+                            ] as const
+                        ).map(({ value, icon }) => (
+                            <Menu.RadioItem key={value} value={value} closeOnClick={false}>
+                                <Icon icon={icon} size={16} />
+                                {t(`text.align.${value}`)}
+                            </Menu.RadioItem>
+                        ))}
+                    </Menu.RadioGroup>
+                </Menu.Popup>
             </Menu.Root>
             <Menu.Root>
-                <Tooltip label={t('text.color')} name>
-                    <Menu.Trigger className="icon-btn" style={{ color: accentColor(text.color) }}>
-                        <Icon icon={Palette} size={16} />
-                    </Menu.Trigger>
-                </Tooltip>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="end">
-                        <Menu.Popup className="menu-popup grid min-w-0 grid-cols-6 gap-1 p-2">
-                            <Tooltip label={t('text.defaultColor')}>
-                                <Menu.Item
-                                    closeOnClick={false}
-                                    aria-label={t('text.defaultColor')}
-                                    className={clsx(ACCENT_SWATCH, 'border border-border-strong text-text-muted')}
-                                    onClick={() => style({ color: undefined })}
-                                >
-                                    {!text.color && <Icon icon={Check} size={12} />}
-                                </Menu.Item>
-                            </Tooltip>
-                            {NODE_ACCENTS.map((accent) => (
-                                <Tooltip key={accent.id} label={accentLabel(accent.id)}>
-                                    <Menu.Item
-                                        closeOnClick={false}
-                                        aria-label={accentLabel(accent.id)}
-                                        className={clsx(ACCENT_SWATCH, text.color === accent.id && ACCENT_SWATCH_PICKED)}
-                                        style={{ background: accent.color }}
-                                        onClick={() => style({ color: accent.id })}
-                                    >
-                                        {text.color === accent.id && <Icon icon={Check} size={12} />}
-                                    </Menu.Item>
-                                </Tooltip>
-                            ))}
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
+                <IconButton render={<Menu.Trigger />} icon={Palette} label={t('text.color')} style={{ color: accentColor(text.color) }} />
+                <Menu.Popup side="top" sideOffset={8} align="end" className="grid min-w-0 grid-cols-6 gap-1 p-2">
+                    <Tooltip label={t('text.defaultColor')}>
+                        <ColorSwatch
+                            render={<Menu.Item closeOnClick={false} />}
+                            aria-label={t('text.defaultColor')}
+                            picked={!text.color}
+                            className="p-0"
+                            onClick={() => style({ color: undefined })}
+                        />
+                    </Tooltip>
+                    {NODE_ACCENTS.map((accent) => (
+                        <Tooltip key={accent.id} label={accentLabel(accent.id)}>
+                            <ColorSwatch
+                                render={<Menu.Item closeOnClick={false} />}
+                                aria-label={accentLabel(accent.id)}
+                                color={accent.color}
+                                picked={text.color === accent.id}
+                                on="popup"
+                                className="p-0"
+                                onClick={() => style({ color: accent.id })}
+                            />
+                        </Tooltip>
+                    ))}
+                </Menu.Popup>
             </Menu.Root>
-        </div>
+        </Surface>
     );
 }

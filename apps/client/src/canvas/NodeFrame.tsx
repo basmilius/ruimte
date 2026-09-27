@@ -3,7 +3,6 @@ import type { CanvasNodeKind } from '@ruimte/contracts';
 import { memo, useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import {
     ChevronDown,
     ChevronRight,
@@ -45,10 +44,7 @@ import { useEndpointId } from '@/state/keys';
 import { useCellHasFocus } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Pill } from '@ruimte/ui/Pill';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { ButtonGroup, ErrorBoundary, Pill, Tooltip, FileIcon, Icon, IconButton, Input, ContextMenu } from '@basmilius/react-ui';
 import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canvas/culling';
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
@@ -68,11 +64,9 @@ import { UnknownNodePlate } from '@/canvas/nodes/UnknownNode';
 import { noteColorClass } from '@/canvas/note-colors';
 import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
-import { FileIcon } from '@ruimte/ui/FileIcon';
 import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { useUnsavedStoredPath } from '@/shell/panels/use-unsaved';
 import { resetTitle } from '@/nodes/node-host';
-import { Icon } from '@ruimte/ui/Icon';
 
 const ICONS: Record<CanvasNodeKind, ReactNode> = {
     terminal: <Icon icon={Terminal} size={14} />,
@@ -139,11 +133,12 @@ function Title({ id, title, editing, muted, onDone }: { id: string; title: strin
         return <span className={clsx('truncate text-xs font-medium', muted ? 'text-text-muted hover:text-text' : 'text-text')}>{title}</span>;
     }
     return (
-        <input
+        <Input
             autoFocus
             defaultValue={title}
             maxLength={MAX_TITLE_LENGTH}
-            className="field field-sm min-w-0 grow font-medium"
+            size="sm"
+            className="min-w-0 grow font-medium"
             onPointerDown={(e) => e.stopPropagation()}
             onFocus={(e) => e.currentTarget.select()}
             onBlur={(e) => {
@@ -289,11 +284,12 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     )}
                 >
                     {isGroup && (
-                        <Tooltip label={collapsed ? t('group.expand') : t('group.collapse')} name>
-                            <button className="icon-btn icon-btn-sm" onClick={() => canvasStore.getState().toggleGroupCollapse(id)}>
-                                {collapsed ? <Icon icon={ChevronRight} size={14} /> : <Icon icon={ChevronDown} size={14} />}
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon={collapsed ? ChevronRight : ChevronDown}
+                            size="sm"
+                            label={collapsed ? t('group.expand') : t('group.collapse')}
+                            onClick={() => canvasStore.getState().toggleGroupCollapse(id)}
+                        />
                     )}
                     {accent && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: accent }} />}
                     <span className="flex shrink-0 items-center text-text-muted">
@@ -365,20 +361,12 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted" />
                         </Tooltip>
                     )}
-                    {node.kind === 'file' && <span ref={setFileControls} className={`${BTN_GROUP} shrink-0`} />}
+                    {node.kind === 'file' && <ButtonGroup ref={setFileControls} render={<span />} className="shrink-0" />}
                     {node.kind === 'device' && <DeviceToolbar id={id} />}
-                    <div className={`${BTN_GROUP} shrink-0`}>
-                        <Tooltip label={t('node.zoomTo')} name>
-                            <button className="icon-btn icon-btn-sm" onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
-                                <Icon icon={Maximize2} size={14} />
-                            </button>
-                        </Tooltip>
-                        <Tooltip label={t('node.close')} name>
-                            <button className="icon-btn icon-btn-sm" onClick={remove}>
-                                <Icon icon={X} size={14} />
-                            </button>
-                        </Tooltip>
-                    </div>
+                    <ButtonGroup className="shrink-0">
+                        <IconButton icon={Maximize2} size="sm" label={t('node.zoomTo')} onClick={() => focusNodeAction(canvasStore.getState().viewId, id)} />
+                        <IconButton icon={X} size="sm" label={t('node.close')} onClick={remove} />
+                    </ButtonGroup>
                 </header>
                 {node.kind === 'device' && !collapsed && <DeviceOperatedStrip id={id} />}
                 {isGroup ? (

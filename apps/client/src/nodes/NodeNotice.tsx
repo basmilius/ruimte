@@ -1,12 +1,8 @@
 import { useRef, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { copyText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
-import { TextMenu } from '@ruimte/ui/TextMenu';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { copyText, Icon, IconButton, TextMenu, ContextMenu } from '@basmilius/react-ui';
 
 interface NodeNoticeProps {
     tone?: 'muted' | 'error';
@@ -33,13 +29,7 @@ export function NodeNotice({ tone = 'muted', children, onRetry, retryLabel }: No
             <span ref={message} className="grow select-text">
                 {children}
             </span>
-            {onRetry && (
-                <Tooltip label={retryLabel ?? t('common:action.retry')} name>
-                    <button className="icon-btn icon-btn-sm" onClick={onRetry}>
-                        <Icon icon={RotateCw} size={14} />
-                    </button>
-                </Tooltip>
-            )}
+            {onRetry && <IconButton icon={RotateCw} size="sm" label={retryLabel ?? t('common:action.retry')} onClick={onRetry} />}
         </>
     );
     if (tone !== 'error') {
@@ -55,7 +45,7 @@ export function NodeNotice({ tone = 'muted', children, onRetry, retryLabel }: No
             className={className}
             role="alert"
             items={
-                <ContextMenu.Item className="menu-item" onClick={() => copyText(message.current?.textContent ?? '')}>
+                <ContextMenu.Item onClick={() => copyText(message.current?.textContent ?? '')}>
                     <Icon icon={Copy} size={14} /> {t('common:action.copyError')}
                 </ContextMenu.Item>
             }

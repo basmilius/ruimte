@@ -1,16 +1,13 @@
 import { memo, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, Pencil, Trash } from 'lucide-react';
 import { deleteNodesAction } from '@/actions/client-actions';
 import { accentColor } from '@/canvas/accents';
 import { FONT_STACK } from '@/canvas/text-font';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { copyText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
+import { copyText, Icon, ContextMenu } from '@basmilius/react-ui';
 
 export const TextElementView = memo(function TextElementView({ id }: { id: string }) {
     const { t } = useTranslation('canvas');
@@ -116,22 +113,18 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
                         />
                     ))}
             </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        <ContextMenu.Item className="menu-item" disabled={editing} onClick={() => canvasStore.getState().setEditingText(id)}>
-                            <Icon icon={Pencil} size={14} /> {t('common:action.edit')} <span className={MENU_HINT}>{t('menu.doubleClick')}</span>
-                        </ContextMenu.Item>
-                        <ContextMenu.Item className="menu-item" disabled={text.text === ''} onClick={() => copyText(text.text)}>
-                            <Icon icon={Copy} size={14} /> {t('text.copy')}
-                        </ContextMenu.Item>
-                        <ContextMenu.Separator className={MENU_SEPARATOR} />
-                        <ContextMenu.Item className="menu-item" onClick={() => deleteNodesAction(canvasStore, [id])}>
-                            <Icon icon={Trash} size={14} /> {t('common:action.delete')}
-                        </ContextMenu.Item>
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <ContextMenu.Popup>
+                <ContextMenu.Item disabled={editing} onClick={() => canvasStore.getState().setEditingText(id)}>
+                    <Icon icon={Pencil} size={14} /> {t('common:action.edit')} <ContextMenu.Hint>{t('menu.doubleClick')}</ContextMenu.Hint>
+                </ContextMenu.Item>
+                <ContextMenu.Item disabled={text.text === ''} onClick={() => copyText(text.text)}>
+                    <Icon icon={Copy} size={14} /> {t('text.copy')}
+                </ContextMenu.Item>
+                <ContextMenu.Separator />
+                <ContextMenu.Item onClick={() => deleteNodesAction(canvasStore, [id])}>
+                    <Icon icon={Trash} size={14} /> {t('common:action.delete')}
+                </ContextMenu.Item>
+            </ContextMenu.Popup>
         </ContextMenu.Root>
     );
 });

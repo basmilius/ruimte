@@ -1,8 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Menu } from '@base-ui-components/react/menu';
 import { Bot, Braces, FileJson, MoreHorizontal, Pencil, RotateCcw, Sparkles } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import type { ActionInput } from '@ruimte/actions';
@@ -19,11 +17,7 @@ import { Swatches } from '@/drawing/DrawingDock';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useProject } from '@/state/project';
-import { MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { isInFloatingLayer } from '@ruimte/ui/floating';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tile } from '@ruimte/ui/Tile';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { isInFloatingLayer, Icon, IconButton, Input, Tile, ContextMenu, Menu } from '@basmilius/react-ui';
 
 const isChrome = (target: EventTarget | null): boolean =>
     isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-diagram-chrome]') !== null);
@@ -56,23 +50,15 @@ function DiagramControls({ viewId }: { viewId: string }) {
     const hasFolder = useProject((s) => s.current?.folder != null);
     return (
         <Menu.Root>
-            <Tooltip label={t('common:action.more')} name>
-                <Menu.Trigger className="icon-btn icon-btn-sm">
-                    <Icon icon={MoreHorizontal} size={14} />
-                </Menu.Trigger>
-            </Tooltip>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
-                    <Menu.Popup className="menu-popup min-w-52">
-                        <Menu.Item className="menu-item" disabled={!hasFolder || !written} onClick={() => openDiagramJson(viewId)}>
-                            <Icon icon={FileJson} size={14} /> {t('diagram.openJson')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => copyDiagram(store, 'json')}>
-                            <Icon icon={Braces} size={14} /> {t('diagram.copyJson')}
-                        </Menu.Item>
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+            <IconButton render={<Menu.Trigger />} icon={MoreHorizontal} size="sm" label={t('common:action.more')} />
+            <Menu.Popup align="end" className="min-w-52">
+                <Menu.Item disabled={!hasFolder || !written} onClick={() => openDiagramJson(viewId)}>
+                    <Icon icon={FileJson} size={14} /> {t('diagram.openJson')}
+                </Menu.Item>
+                <Menu.Item onClick={() => copyDiagram(store, 'json')}>
+                    <Icon icon={Braces} size={14} /> {t('diagram.copyJson')}
+                </Menu.Item>
+            </Menu.Popup>
         </Menu.Root>
     );
 }
@@ -102,12 +88,13 @@ function RenameField({ id, onDone }: { id: string; onDone: () => void }) {
     };
     const width = Math.max(Math.round(box.w * camera.zoom), 120);
     return (
-        <input
+        <Input
             data-diagram-chrome
             autoFocus
             defaultValue={label}
             aria-label={t('diagram.nodeLabel')}
-            className="field field-sm absolute text-center text-sm font-medium"
+            size="sm"
+            className="absolute text-center text-sm font-medium"
             style={{
                 left: Math.round(camera.x + (box.x + box.w / 2) * camera.zoom - width / 2),
                 top: Math.round(camera.y + (box.y + box.h / 2) * camera.zoom - 14),
@@ -144,26 +131,18 @@ function NodeMenuPopup({ id, onRename }: { id: string; onRename: () => void }) {
         }
     };
     return (
-        <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-(--z-popup)">
-                <ContextMenu.Popup className="menu-popup">
-                    <ContextMenu.Item className="menu-item" onClick={onRename}>
-                        <Icon icon={Pencil} size={14} /> {t('common:action.rename')}
-                    </ContextMenu.Item>
-                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                    <div className={MENU_LABEL}>{t('diagram.tone')}</div>
-                    <Swatches
-                        value={node.tone ?? DEFAULT_NODE_TONE}
-                        onPick={(tone) => run('diagram.updateNode', { diagramNodeId: id, label: null, tone })}
-                        paper
-                    />
-                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                    <ContextMenu.Item className="menu-item" disabled={!node.pos} onClick={() => run('diagram.resetPosition', { diagramNodeId: id })}>
-                        <Icon icon={RotateCcw} size={14} /> {t('diagram.resetPosition')}
-                    </ContextMenu.Item>
-                </ContextMenu.Popup>
-            </ContextMenu.Positioner>
-        </ContextMenu.Portal>
+        <ContextMenu.Popup>
+            <ContextMenu.Item onClick={onRename}>
+                <Icon icon={Pencil} size={14} /> {t('common:action.rename')}
+            </ContextMenu.Item>
+            <ContextMenu.Separator />
+            <ContextMenu.Label>{t('diagram.tone')}</ContextMenu.Label>
+            <Swatches value={node.tone ?? DEFAULT_NODE_TONE} onPick={(tone) => run('diagram.updateNode', { diagramNodeId: id, label: null, tone })} paper />
+            <ContextMenu.Separator />
+            <ContextMenu.Item disabled={!node.pos} onClick={() => run('diagram.resetPosition', { diagramNodeId: id })}>
+                <Icon icon={RotateCcw} size={14} /> {t('diagram.resetPosition')}
+            </ContextMenu.Item>
+        </ContextMenu.Popup>
     );
 }
 

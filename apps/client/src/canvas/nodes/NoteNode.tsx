@@ -1,16 +1,11 @@
 import { DictationControl } from '@/dictation/DictationControl';
 import { DictationError } from '@/dictation/engine';
 import { useEffect, useRef, useState } from 'react';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { ClipboardPaste, Copy, Scan, Scissors } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { copyText, readClipboardText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
-import { EDIT_SHORTCUTS } from '@ruimte/ui/shortcut';
-import { Kbd } from '@ruimte/ui/Kbd';
+import { copyText, readClipboardText, Icon, EDIT_SHORTCUTS, Kbd, ContextMenu } from '@basmilius/react-ui';
 
 /*
  * A sticky note: rendered markdown on the canvas, a textarea while the node has focus. The text
@@ -92,32 +87,27 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
                         />
                     </div>
                 </ContextMenu.Trigger>
-                <ContextMenu.Portal>
-                    <ContextMenu.Positioner className="z-(--z-popup)">
-                        <ContextMenu.Popup className="menu-popup">
-                            <ContextMenu.Item className="menu-item" disabled={selected === ''} onClick={() => copyText(selected)}>
-                                <Icon icon={Copy} size={14} /> {t('common:action.copy')} <Kbd shortcut={EDIT_SHORTCUTS.copy} />
-                            </ContextMenu.Item>
-                            <ContextMenu.Item
-                                className="menu-item"
-                                disabled={selected === ''}
-                                onClick={() => {
-                                    copyText(selected);
-                                    replaceSelection('');
-                                }}
-                            >
-                                <Icon icon={Scissors} size={14} /> {t('edit.cut')} <Kbd shortcut={EDIT_SHORTCUTS.cut} />
-                            </ContextMenu.Item>
-                            <ContextMenu.Item className="menu-item" onClick={() => void paste()}>
-                                <Icon icon={ClipboardPaste} size={14} /> {t('edit.paste')} <Kbd shortcut={EDIT_SHORTCUTS.paste} />
-                            </ContextMenu.Item>
-                            <ContextMenu.Separator className={MENU_SEPARATOR} />
-                            <ContextMenu.Item className="menu-item" onClick={() => ref.current?.select()}>
-                                <Icon icon={Scan} size={14} /> {t('common:action.selectAll')} <Kbd shortcut={EDIT_SHORTCUTS.selectAll} />
-                            </ContextMenu.Item>
-                        </ContextMenu.Popup>
-                    </ContextMenu.Positioner>
-                </ContextMenu.Portal>
+                <ContextMenu.Popup>
+                    <ContextMenu.Item disabled={selected === ''} onClick={() => copyText(selected)}>
+                        <Icon icon={Copy} size={14} /> {t('common:action.copy')} <Kbd shortcut={EDIT_SHORTCUTS.copy} />
+                    </ContextMenu.Item>
+                    <ContextMenu.Item
+                        disabled={selected === ''}
+                        onClick={() => {
+                            copyText(selected);
+                            replaceSelection('');
+                        }}
+                    >
+                        <Icon icon={Scissors} size={14} /> {t('edit.cut')} <Kbd shortcut={EDIT_SHORTCUTS.cut} />
+                    </ContextMenu.Item>
+                    <ContextMenu.Item onClick={() => void paste()}>
+                        <Icon icon={ClipboardPaste} size={14} /> {t('edit.paste')} <Kbd shortcut={EDIT_SHORTCUTS.paste} />
+                    </ContextMenu.Item>
+                    <ContextMenu.Separator />
+                    <ContextMenu.Item onClick={() => ref.current?.select()}>
+                        <Icon icon={Scan} size={14} /> {t('common:action.selectAll')} <Kbd shortcut={EDIT_SHORTCUTS.selectAll} />
+                    </ContextMenu.Item>
+                </ContextMenu.Popup>
             </ContextMenu.Root>
         );
     }

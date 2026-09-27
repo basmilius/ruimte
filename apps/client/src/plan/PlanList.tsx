@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Menu } from '@base-ui-components/react/menu';
 import {
     CheckCheck,
     ChevronDown,
@@ -26,7 +24,8 @@ import {
 import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { effectiveChecks, planProgress } from '@ruimte/plan';
 import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
-import { formatMoment } from '@ruimte/ui/format/datetime';
+import { formatMoment } from '@basmilius/react-ui/format';
+import { copyText, EmptyState, Icon, IconButton, Menu, TextArea, TextMenu, Tooltip, ContextMenu } from '@basmilius/react-ui';
 import {
     collapsedOf,
     copyPlanMarkdown,
@@ -52,13 +51,6 @@ import {
 } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
-import { MENU_LABEL, MENU_SEPARATOR, MULTILINE_FIELD } from '@ruimte/ui/classes';
-import { copyText } from '@ruimte/ui/clipboard';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuCheck } from '@ruimte/ui/MenuCheck';
-import { TextMenu } from '@ruimte/ui/TextMenu';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 
 const STATE_ICON: Record<PlanStepState, LucideIcon> = {
     open: Circle,
@@ -303,7 +295,7 @@ function PlanTextMenu({ plan, className, children }: { plan: Plan; className: st
         <TextMenu
             className={className}
             items={
-                <ContextMenu.Item className="menu-item" onClick={() => copyPlanMarkdown(plan)}>
+                <ContextMenu.Item onClick={() => copyPlanMarkdown(plan)}>
                     <Icon icon={FileText} size={14} /> {t('menu.copyPlan')}
                 </ContextMenu.Item>
             }
@@ -378,45 +370,40 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                 </div>
                 <StepAside row={row} context={context} locked={locked} setBy={setBy} />
             </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup min-w-48">
-                        {!parent && !locked && (
-                            <>
-                                <div className={MENU_LABEL}>{t('step.menu.status')}</div>
-                                {PERSON_STATES.map((state) => (
-                                    <ContextMenu.Item
-                                        key={state}
-                                        className="menu-item"
-                                        onClick={() => {
-                                            context.setState([step.id], state);
-                                            if (asksForNote(state)) {
-                                                context.setEditingNote(step.id);
-                                            }
-                                        }}
-                                    >
-                                        <MenuCheck kind="radio" checked={row.state === state} />
-                                        <Icon icon={STATE_ICON[state]} size={14} className={STATE_TONE[state]} />
-                                        {stateLabel(plan.meta.kind, state)}
-                                    </ContextMenu.Item>
-                                ))}
-                                <ContextMenu.Separator className={MENU_SEPARATOR} />
-                            </>
-                        )}
-                        <ContextMenu.Item className="menu-item" onClick={() => context.setEditingNote(step.id)}>
-                            <Icon icon={StickyNote} size={14} /> {step.note ? t('step.menu.editNote') : t('step.menu.addNote')}
-                        </ContextMenu.Item>
-                        {locked && (
-                            <ContextMenu.Item className="menu-item" onClick={() => context.unlock(step.id)}>
-                                <Icon icon={LockOpen} size={14} /> {t('step.menu.unlock')}
+            <ContextMenu.Popup className="min-w-48">
+                {!parent && !locked && (
+                    <>
+                        <ContextMenu.Label>{t('step.menu.status')}</ContextMenu.Label>
+                        {PERSON_STATES.map((state) => (
+                            <ContextMenu.Item
+                                key={state}
+                                onClick={() => {
+                                    context.setState([step.id], state);
+                                    if (asksForNote(state)) {
+                                        context.setEditingNote(step.id);
+                                    }
+                                }}
+                            >
+                                <ContextMenu.Check kind="radio" checked={row.state === state} />
+                                <Icon icon={STATE_ICON[state]} size={14} className={STATE_TONE[state]} />
+                                {stateLabel(plan.meta.kind, state)}
                             </ContextMenu.Item>
-                        )}
-                        <ContextMenu.Item className="menu-item" onClick={() => copyText(stepMarkdown(plan.meta.kind, step))}>
-                            <Icon icon={Copy} size={14} /> {t('common:action.copy')}
-                        </ContextMenu.Item>
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+                        ))}
+                        <ContextMenu.Separator />
+                    </>
+                )}
+                <ContextMenu.Item onClick={() => context.setEditingNote(step.id)}>
+                    <Icon icon={StickyNote} size={14} /> {step.note ? t('step.menu.editNote') : t('step.menu.addNote')}
+                </ContextMenu.Item>
+                {locked && (
+                    <ContextMenu.Item onClick={() => context.unlock(step.id)}>
+                        <Icon icon={LockOpen} size={14} /> {t('step.menu.unlock')}
+                    </ContextMenu.Item>
+                )}
+                <ContextMenu.Item onClick={() => copyText(stepMarkdown(plan.meta.kind, step))}>
+                    <Icon icon={Copy} size={14} /> {t('common:action.copy')}
+                </ContextMenu.Item>
+            </ContextMenu.Popup>
         </ContextMenu.Root>
     );
 }
@@ -488,48 +475,48 @@ function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { typ
     if (plan.meta.kind === 'steps') {
         const next = toggledState(state);
         return (
-            <Tooltip
-                label={
+            <IconButton
+                size="2xs"
+                label={label}
+                tooltip={
                     stopped
                         ? t('agent.stoppedHere', { agent: context.agent })
                         : [setBy, t('step.markAs', { state: stateLabel('steps', next).toLowerCase() })].filter(Boolean).join('. ')
                 }
+                onClick={() => context.setState([row.item.id], next)}
             >
-                <button type="button" aria-label={label} className="icon-btn icon-btn-2xs" onClick={() => context.setState([row.item.id], next)}>
-                    {glyph}
-                </button>
-            </Tooltip>
+                {glyph}
+            </IconButton>
         );
     }
     return (
         <Menu.Root>
-            <Tooltip label={stopped ? t('agent.stoppedHere', { agent: context.agent }) : [label, setBy].filter(Boolean).join('. ')}>
-                <Menu.Trigger aria-label={label} className="icon-btn icon-btn-2xs data-[popup-open]:bg-surface-active">
-                    {glyph}
-                </Menu.Trigger>
-            </Tooltip>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={4} align="start">
-                    <Menu.Popup className="menu-popup min-w-40">
-                        {TEST_OUTCOMES.map((outcome) => (
-                            <Menu.Item
-                                key={outcome}
-                                className="menu-item"
-                                onClick={() => {
-                                    context.setState([row.item.id], outcome);
-                                    if (asksForNote(outcome)) {
-                                        context.setEditingNote(row.item.id);
-                                    }
-                                }}
-                            >
-                                <MenuCheck kind="radio" checked={state === outcome} />
-                                <Icon icon={STATE_ICON[outcome]} size={14} className={STATE_TONE[outcome]} />
-                                {stateLabel('test', outcome)}
-                            </Menu.Item>
-                        ))}
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+            <IconButton
+                render={<Menu.Trigger />}
+                size="2xs"
+                label={label}
+                tooltip={stopped ? t('agent.stoppedHere', { agent: context.agent }) : [label, setBy].filter(Boolean).join('. ')}
+                className="data-[popup-open]:bg-surface-active"
+            >
+                {glyph}
+            </IconButton>
+            <Menu.Popup sideOffset={4} className="min-w-40">
+                {TEST_OUTCOMES.map((outcome) => (
+                    <Menu.Item
+                        key={outcome}
+                        onClick={() => {
+                            context.setState([row.item.id], outcome);
+                            if (asksForNote(outcome)) {
+                                context.setEditingNote(row.item.id);
+                            }
+                        }}
+                    >
+                        <Menu.Check kind="radio" checked={state === outcome} />
+                        <Icon icon={STATE_ICON[outcome]} size={14} className={STATE_TONE[outcome]} />
+                        {stateLabel('test', outcome)}
+                    </Menu.Item>
+                ))}
+            </Menu.Popup>
         </Menu.Root>
     );
 }
@@ -557,7 +544,7 @@ function NoteEditor({ initial, onDone }: { initial: string; onDone: (text: strin
         }
     };
     return (
-        <textarea
+        <TextArea
             // A note field that just opened is where the person is about to type, from a Failed as much as from the menu.
             autoFocus
             rows={2}
@@ -565,7 +552,7 @@ function NoteEditor({ initial, onDone }: { initial: string; onDone: (text: strin
             value={text}
             placeholder={t('note.placeholder')}
             aria-label={t('note.label')}
-            className={clsx(MULTILINE_FIELD, 'mt-1 block select-text')}
+            className="mt-1 block select-text"
             onChange={(event) => setText(event.target.value)}
             onKeyDown={onKeyDown}
             onBlur={() => end(text.trim())}

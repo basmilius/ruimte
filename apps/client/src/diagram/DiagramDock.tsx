@@ -1,16 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
 import { Copy, Download, MoreHorizontal, Redo2, Undo2 } from 'lucide-react';
 import { fitAction, historyAction } from '@/actions/client-actions';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { copyDiagram, exportDiagram } from '@/diagram/diagram-actions';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { DockShell } from '@/ui/DockShell';
-import { Icon } from '@ruimte/ui/Icon';
-import { Separator } from '@ruimte/ui/Separator';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { ZoomControls } from '@/ui/ZoomControls';
+import { ButtonGroup, Icon, IconButton, Separator, Menu, DockShell, ZoomControls } from '@basmilius/react-ui';
+import { useSettings } from '@/state/settings';
 
 /*
  * The diagram's dock: the zoom, the exports and the way back in the same place and the same shape as
@@ -24,63 +19,58 @@ export function DiagramDock() {
     const empty = useDiagram((s) => s.content.nodes.length === 0);
     const canUndo = useDiagram((s) => s.past.length > 0);
     const canRedo = useDiagram((s) => s.future.length > 0);
+    const dockAutoHide = useSettings((s) => s.dockAutoHide);
 
     return (
-        <DockShell data-diagram-chrome className="px-4">
+        <DockShell data-diagram-chrome autoHide={dockAutoHide} className="px-4">
             {/* A diagram has nothing to select, so it offers no zoom to a selection. */}
             <ZoomControls
                 zoom={zoom}
                 labels={{
-                    out: t('zoom.out'),
-                    in: t('zoom.in'),
                     presets: t('zoom.presets'),
                     fit: t('zoom.fit'),
                     fitEverything: t('zoom.fitEverything')
                 }}
                 shortcuts={CANVAS_SHORTCUTS}
-                onZoomTo={(next) => store.getState().zoomTo(next)}
+                onZoomChange={(next) => store.getState().zoomTo(next)}
                 onFitAll={() => fitAction(viewId)}
             />
 
             <Separator />
 
-            <div className={BTN_GROUP}>
+            <ButtonGroup>
                 <Menu.Root>
-                    <Tooltip label={t('export.label')} name>
-                        <Menu.Trigger className="icon-btn">
-                            <Icon icon={MoreHorizontal} size={16} />
-                        </Menu.Trigger>
-                    </Tooltip>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
-                            <Menu.Popup className="menu-popup min-w-52">
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => copyDiagram(store, 'png')}>
-                                    <Icon icon={Copy} size={14} /> {t('export.copyPng')}
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => exportDiagram(store, 'png')}>
-                                    <Icon icon={Download} size={14} /> {t('export.savePng')}
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => copyDiagram(store, 'svg')}>
-                                    <Icon icon={Copy} size={14} /> {t('export.copySvg')}
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => exportDiagram(store, 'svg')}>
-                                    <Icon icon={Download} size={14} /> {t('export.saveSvg')}
-                                </Menu.Item>
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
+                    <IconButton render={<Menu.Trigger />} icon={MoreHorizontal} label={t('export.label')} />
+                    <Menu.Popup side="top" sideOffset={10} align="end" className="min-w-52">
+                        <Menu.Item disabled={empty} onClick={() => copyDiagram(store, 'png')}>
+                            <Icon icon={Copy} size={14} /> {t('export.copyPng')}
+                        </Menu.Item>
+                        <Menu.Item disabled={empty} onClick={() => exportDiagram(store, 'png')}>
+                            <Icon icon={Download} size={14} /> {t('export.savePng')}
+                        </Menu.Item>
+                        <Menu.Item disabled={empty} onClick={() => copyDiagram(store, 'svg')}>
+                            <Icon icon={Copy} size={14} /> {t('export.copySvg')}
+                        </Menu.Item>
+                        <Menu.Item disabled={empty} onClick={() => exportDiagram(store, 'svg')}>
+                            <Icon icon={Download} size={14} /> {t('export.saveSvg')}
+                        </Menu.Item>
+                    </Menu.Popup>
                 </Menu.Root>
-                <Tooltip label={t('common:action.undo')} kbd={CANVAS_SHORTCUTS.undo} name>
-                    <button className="icon-btn" disabled={!canUndo} onClick={() => historyAction('undo', viewId)}>
-                        <Icon icon={Undo2} size={16} />
-                    </button>
-                </Tooltip>
-                <Tooltip label={t('common:action.redo')} kbd={CANVAS_SHORTCUTS.redo} name>
-                    <button className="icon-btn" disabled={!canRedo} onClick={() => historyAction('redo', viewId)}>
-                        <Icon icon={Redo2} size={16} />
-                    </button>
-                </Tooltip>
-            </div>
+                <IconButton
+                    icon={Undo2}
+                    label={t('common:action.undo')}
+                    kbd={CANVAS_SHORTCUTS.undo}
+                    disabled={!canUndo}
+                    onClick={() => historyAction('undo', viewId)}
+                />
+                <IconButton
+                    icon={Redo2}
+                    label={t('common:action.redo')}
+                    kbd={CANVAS_SHORTCUTS.redo}
+                    disabled={!canRedo}
+                    onClick={() => historyAction('redo', viewId)}
+                />
+            </ButtonGroup>
         </DockShell>
     );
 }
