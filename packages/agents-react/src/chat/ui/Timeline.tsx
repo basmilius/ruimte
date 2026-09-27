@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
 import type { ChatBookmark } from '@ruimte/agent-contracts';
@@ -40,9 +39,7 @@ import { useChatScope } from '../../scope';
 import { FileLinkContext } from './file-links';
 import { AgentIcon } from '../../agents/AgentIcon';
 import { useModelName } from '../../agents/model-name';
-import { SECTION_LABEL } from '@ruimte/ui/classes';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { ContextMenu, EmptyState, ErrorBoundary, SectionLabel } from '@basmilius/react-ui';
 
 const ESTIMATED_ROW_PX = 56;
 
@@ -63,13 +60,13 @@ function EmptyThread({ chatId }: { chatId: string }) {
                 </EmptyState>
                 {sources.length > 0 && (
                     <div className="flex max-w-full flex-col items-center gap-1">
-                        <span className={SECTION_LABEL}>{t('timeline.empty.canRead')}</span>
+                        <SectionLabel>{t('timeline.empty.canRead')}</SectionLabel>
                         <span className="max-w-full text-xs text-text-muted">{sources.map((source) => source.title).join(', ')}</span>
                     </div>
                 )}
                 {info?.cwd && (
                     <div className="flex max-w-full flex-col items-center gap-1">
-                        <span className={SECTION_LABEL}>{t('timeline.empty.worksIn')}</span>
+                        <SectionLabel>{t('timeline.empty.worksIn')}</SectionLabel>
                         <span className="max-w-full font-mono text-xs break-all text-text-muted">{info.cwd}</span>
                     </div>
                 )}

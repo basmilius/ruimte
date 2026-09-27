@@ -1,15 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Popover } from '@base-ui-components/react/popover';
 import { Bookmark, ChevronDown, ChevronRight, Search, Trash2 } from 'lucide-react';
 import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo } from '@ruimte/agent-contracts';
 import { AgentIcon } from '../../agents/AgentIcon';
 import { modelName } from '../../agents/model-name';
 import { forgetStashed, STASH_SHORTCUT, useStash, type StashedPrompt } from '../stash';
-import { MENU_LABEL } from '@ruimte/ui/classes';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuCheck } from '@ruimte/ui/MenuCheck';
+import { Icon, IconButton, Menu, Popover, Tooltip } from '@basmilius/react-ui';
 
 const triggerClass =
     'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text';
@@ -117,80 +113,75 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                     <Icon icon={ChevronDown} size={12} className="text-text-faint" />
                 </Popover.Trigger>
             </Tooltip>
-            <Popover.Portal>
-                <Popover.Positioner className="z-(--z-popup)" side={side} sideOffset={8} align="start">
-                    <Popover.Popup className="picker-popup" initialFocus={inputRef}>
-                        <div className="flex items-center gap-2 border-b border-border px-2.5">
-                            <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
-                            <input
-                                ref={inputRef}
-                                className="h-8 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
-                                placeholder={t('pickers.model.search')}
-                                spellCheck={false}
-                                value={query}
-                                onChange={(e) => {
-                                    setQuery(e.target.value);
-                                    setIndex(0);
-                                }}
-                                onKeyDown={onKeyDown}
-                            />
+            <Popover.Popup variant="picker" side={side} initialFocus={inputRef}>
+                <div className="flex items-center gap-2 border-b border-border px-2.5">
+                    <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
+                    <input
+                        ref={inputRef}
+                        className="h-8 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
+                        placeholder={t('pickers.model.search')}
+                        spellCheck={false}
+                        value={query}
+                        onChange={(e) => {
+                            setQuery(e.target.value);
+                            setIndex(0);
+                        }}
+                        onKeyDown={onKeyDown}
+                    />
+                </div>
+                <div ref={listRef} className="max-h-72 overflow-auto p-1" role="listbox">
+                    {entries.length === 0 && (
+                        <div className="px-3 py-6 text-center text-xs text-text-faint">
+                            {providers.length === 0 ? t('pickers.model.noProvider') : t('pickers.model.noMatch')}
                         </div>
-                        <div ref={listRef} className="max-h-72 overflow-auto p-1" role="listbox">
-                            {entries.length === 0 && (
-                                <div className="px-3 py-6 text-center text-xs text-text-faint">
-                                    {providers.length === 0 ? t('pickers.model.noProvider') : t('pickers.model.noMatch')}
-                                </div>
-                            )}
-                            {entries.map((entry, i) => {
-                                if (entry.kind === 'legacy') {
-                                    return (
-                                        <button
-                                            key="legacy"
-                                            data-active={i === index}
-                                            className="cursor-row flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs text-text-faint"
-                                            onMouseEnter={() => setIndex(i)}
-                                            onClick={() => choose(entry)}
-                                        >
-                                            <Icon icon={legacyOpen ? ChevronDown : ChevronRight} size={12} />
-                                            {t('pickers.model.legacyGroup', { count: entry.count })}
-                                        </button>
-                                    );
-                                }
-                                const previous = entries[i - 1];
-                                const first =
-                                    grouped && (previous === undefined || previous.kind !== 'model' || previous.provider.kind !== entry.provider.kind);
-                                const chosen = entry.provider.kind === provider && entry.model.slug === selection.model;
-                                return (
-                                    <div key={`${entry.provider.kind}/${entry.model.slug}`}>
-                                        {first && (
-                                            <div className={`${MENU_LABEL} flex items-center gap-1.5`}>
-                                                <AgentIcon kind={entry.provider.kind} size={12} />
-                                                {entry.provider.name}
-                                            </div>
-                                        )}
-                                        <button
-                                            role="option"
-                                            aria-selected={chosen}
-                                            data-active={i === index}
-                                            className="cursor-row flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-text-muted"
-                                            onMouseEnter={() => setIndex(i)}
-                                            onClick={() => choose(entry)}
-                                        >
-                                            <MenuCheck kind="radio" checked={chosen} />
-                                            <span className="min-w-0 truncate">{entry.model.name}</span>
-                                            {entry.model.badge && (
-                                                <span className="rounded bg-accent-soft px-1 text-xs font-medium text-accent">{entry.model.badge}</span>
-                                            )}
-                                            <span className="grow" />
-                                            {entry.model.legacy && <span className="text-xs text-text-faint">{t('pickers.model.legacy')}</span>}
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </Popover.Popup>
-                </Popover.Positioner>
-            </Popover.Portal>
+                    )}
+                    {entries.map((entry, i) => {
+                        if (entry.kind === 'legacy') {
+                            return (
+                                <button
+                                    key="legacy"
+                                    data-active={i === index}
+                                    className="cursor-row flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs text-text-faint"
+                                    onMouseEnter={() => setIndex(i)}
+                                    onClick={() => choose(entry)}
+                                >
+                                    <Icon icon={legacyOpen ? ChevronDown : ChevronRight} size={12} />
+                                    {t('pickers.model.legacyGroup', { count: entry.count })}
+                                </button>
+                            );
+                        }
+                        const previous = entries[i - 1];
+                        const first = grouped && (previous === undefined || previous.kind !== 'model' || previous.provider.kind !== entry.provider.kind);
+                        const chosen = entry.provider.kind === provider && entry.model.slug === selection.model;
+                        return (
+                            <div key={`${entry.provider.kind}/${entry.model.slug}`}>
+                                {first && (
+                                    <Menu.Label className="flex items-center gap-1.5">
+                                        <AgentIcon kind={entry.provider.kind} size={12} />
+                                        {entry.provider.name}
+                                    </Menu.Label>
+                                )}
+                                <button
+                                    role="option"
+                                    aria-selected={chosen}
+                                    data-active={i === index}
+                                    className="cursor-row flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-text-muted"
+                                    onMouseEnter={() => setIndex(i)}
+                                    onClick={() => choose(entry)}
+                                >
+                                    <Menu.Check kind="radio" checked={chosen} />
+                                    <span className="min-w-0 truncate">{entry.model.name}</span>
+                                    {entry.model.badge && (
+                                        <span className="rounded bg-accent-soft px-1 text-xs font-medium text-accent">{entry.model.badge}</span>
+                                    )}
+                                    <span className="grow" />
+                                    {entry.model.legacy && <span className="text-xs text-text-faint">{t('pickers.model.legacy')}</span>}
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+            </Popover.Popup>
         </Popover.Root>
     );
 }
@@ -215,35 +206,30 @@ export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): v
                     <span className="tabular-nums">{prompts.length}</span>
                 </Popover.Trigger>
             </Tooltip>
-            <Popover.Portal>
-                <Popover.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
-                    <Popover.Popup className="picker-popup w-80">
-                        <div className="max-h-72 overflow-auto p-1">
-                            {prompts.map((prompt) => (
-                                <div key={prompt.id} className="group/stash flex items-start gap-1">
-                                    <Popover.Close
-                                        className="flex min-w-0 grow flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text"
-                                        onClick={() => onRestore(prompt)}
-                                    >
-                                        <span className="line-clamp-2 whitespace-pre-wrap">{prompt.text || t('pickers.stash.noText')}</span>
-                                        {prompt.attachments.length > 0 && (
-                                            <span className="text-text-faint">{t('pickers.stash.files', { count: prompt.attachments.length })}</span>
-                                        )}
-                                    </Popover.Close>
-                                    <Tooltip label={t('common.action.delete')} name>
-                                        <button
-                                            className="icon-btn icon-btn-xs mt-1 opacity-0 group-hover/stash:opacity-100 focus-visible:opacity-100"
-                                            onClick={() => forgetStashed(prompt.id)}
-                                        >
-                                            <Icon icon={Trash2} size={12} />
-                                        </button>
-                                    </Tooltip>
-                                </div>
-                            ))}
+            <Popover.Popup variant="picker" side="top" className="w-80">
+                <div className="max-h-72 overflow-auto p-1">
+                    {prompts.map((prompt) => (
+                        <div key={prompt.id} className="group/stash flex items-start gap-1">
+                            <Popover.Close
+                                className="flex min-w-0 grow flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text"
+                                onClick={() => onRestore(prompt)}
+                            >
+                                <span className="line-clamp-2 whitespace-pre-wrap">{prompt.text || t('pickers.stash.noText')}</span>
+                                {prompt.attachments.length > 0 && (
+                                    <span className="text-text-faint">{t('pickers.stash.files', { count: prompt.attachments.length })}</span>
+                                )}
+                            </Popover.Close>
+                            <IconButton
+                                icon={Trash2}
+                                size="xs"
+                                label={t('common.action.delete')}
+                                className="mt-1 opacity-0 group-hover/stash:opacity-100 focus-visible:opacity-100"
+                                onClick={() => forgetStashed(prompt.id)}
+                            />
                         </div>
-                    </Popover.Popup>
-                </Popover.Positioner>
-            </Popover.Portal>
+                    ))}
+                </div>
+            </Popover.Popup>
         </Popover.Root>
     );
 }

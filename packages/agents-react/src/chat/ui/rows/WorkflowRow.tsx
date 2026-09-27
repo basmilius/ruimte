@@ -7,7 +7,7 @@ import type { SubagentStep } from '../../subagent-view';
 import { ROW_GUTTER } from '../icons';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from './WorkRows';
 import { useChatScope } from '../../../scope';
-import { Icon } from '@ruimte/ui/Icon';
+import { Icon } from '@basmilius/react-ui';
 
 function AgentLine({ view, onOpen }: { view: WorkflowAgentView; onOpen?(step: SubagentStep): void }) {
     const { agent, state } = view;

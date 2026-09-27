@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { formatMoment } from '@ruimte/ui/format/datetime';
+import { formatMoment } from '@basmilius/react-ui/format';
 import { limitView } from './limit';
 
 const NOW = new Date(2026, 8, 24, 12, 0).getTime();

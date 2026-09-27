@@ -8,7 +8,7 @@ import {
     type ChatAttachment,
     type ChatAttachmentUpload
 } from '@ruimte/agent-contracts';
-import { formatBytes as bytesOf } from '@ruimte/ui/format/number';
+import { formatBytes as bytesOf } from '@basmilius/react-ui/format';
 
 interface IncomingFile {
     name: string;

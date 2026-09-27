@@ -1,6 +1,5 @@
 import type { RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { BookmarkPlus, BookmarkX, Braces, Copy, Eye, FileText, GitFork, MessageSquare, Pencil, Scan } from 'lucide-react';
 import { placeBookmark, removeBookmark, useBookmarkNaming } from '../bookmarks';
 import { forkRefusal, turnIdOfRow } from '../logic/fork';
@@ -10,13 +9,7 @@ import { chatHost } from '../../host';
 import { useChatScope } from '../../scope';
 import { useChatRow } from '../../state/chats';
 import { openFileLink, useFileLinkCwd } from './file-links';
-import { MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { DisabledReason } from '@ruimte/ui/DisabledReason';
-import { copyText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
-import { selectAllWithin } from '@ruimte/ui/selection';
-import { EDIT_SHORTCUTS } from '@ruimte/ui/shortcut';
-import { Kbd } from '@ruimte/ui/Kbd';
+import { ContextMenu, copyText, DisabledReason, EDIT_SHORTCUTS, Icon, Kbd, selectAllWithin } from '@basmilius/react-ui';
 
 /*
  * The menu behind a right-click in a thread. Copy is the reason it exists. Everything in a thread
@@ -48,50 +41,46 @@ export function TimelineMenuPopup({
         }
     };
     return (
-        <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-(--z-popup)">
-                <ContextMenu.Popup className="menu-popup">
-                    <ContextMenu.Item className="menu-item" disabled={target.selection === ''} onClick={() => copyText(target.selection)}>
-                        <Icon icon={Copy} size={14} /> {t('common.action.copy')} <Kbd shortcut={EDIT_SHORTCUTS.copy} />
+        <ContextMenu.Popup>
+            <ContextMenu.Item disabled={target.selection === ''} onClick={() => copyText(target.selection)}>
+                <Icon icon={Copy} size={14} /> {t('common.action.copy')} <Kbd shortcut={EDIT_SHORTCUTS.copy} />
+            </ContextMenu.Item>
+            {message !== null && (
+                <ContextMenu.Item onClick={() => copyText(message)}>
+                    <Icon icon={MessageSquare} size={14} /> {t('timeline.menu.copyMessage')}
+                </ContextMenu.Item>
+            )}
+            {target.code !== null && (
+                <ContextMenu.Item onClick={() => copyText(target.code ?? '')}>
+                    <Icon icon={Braces} size={14} /> {t('timeline.menu.copyCode')}
+                </ContextMenu.Item>
+            )}
+            {markdown !== null && (
+                <ContextMenu.Item onClick={() => copyText(markdown)}>
+                    <Icon icon={FileText} size={14} /> {t('timeline.menu.copyMarkdown')}
+                </ContextMenu.Item>
+            )}
+            {chatId !== null && turnId !== null && fork !== null && (
+                <DisabledReason reason={forkBlocked}>
+                    <ContextMenu.Item disabled={forkBlocked !== null} onClick={() => fork(chatId, turnId)}>
+                        <Icon icon={GitFork} size={14} /> {t('timeline.menu.forkFromHere')}
                     </ContextMenu.Item>
-                    {message !== null && (
-                        <ContextMenu.Item className="menu-item" onClick={() => copyText(message)}>
-                            <Icon icon={MessageSquare} size={14} /> {t('timeline.menu.copyMessage')}
-                        </ContextMenu.Item>
-                    )}
-                    {target.code !== null && (
-                        <ContextMenu.Item className="menu-item" onClick={() => copyText(target.code ?? '')}>
-                            <Icon icon={Braces} size={14} /> {t('timeline.menu.copyCode')}
-                        </ContextMenu.Item>
-                    )}
-                    {markdown !== null && (
-                        <ContextMenu.Item className="menu-item" onClick={() => copyText(markdown)}>
-                            <Icon icon={FileText} size={14} /> {t('timeline.menu.copyMarkdown')}
-                        </ContextMenu.Item>
-                    )}
-                    {chatId !== null && turnId !== null && fork !== null && (
-                        <DisabledReason reason={forkBlocked}>
-                            <ContextMenu.Item className="menu-item" disabled={forkBlocked !== null} onClick={() => fork(chatId, turnId)}>
-                                <Icon icon={GitFork} size={14} /> {t('timeline.menu.forkFromHere')}
-                            </ContextMenu.Item>
-                        </DisabledReason>
-                    )}
-                    {chatId !== null && markable !== null && <BookmarkMenuItems chatId={chatId} itemId={markable} />}
-                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                    <ContextMenu.Item className="menu-item" onClick={() => selectAllWithin(thread.current)}>
-                        <Icon icon={Scan} size={14} /> {t('common.action.selectAll')}
+                </DisabledReason>
+            )}
+            {chatId !== null && markable !== null && <BookmarkMenuItems chatId={chatId} itemId={markable} />}
+            <ContextMenu.Separator />
+            <ContextMenu.Item onClick={() => selectAllWithin(thread.current)}>
+                <Icon icon={Scan} size={14} /> {t('common.action.selectAll')}
+            </ContextMenu.Item>
+            {target.path !== null && fileLinks !== null && (
+                <>
+                    <ContextMenu.Separator />
+                    <ContextMenu.Item onClick={openInPreview}>
+                        <Icon icon={Eye} size={14} /> {t('timeline.menu.openInPreview')}
                     </ContextMenu.Item>
-                    {target.path !== null && fileLinks !== null && (
-                        <>
-                            <ContextMenu.Separator className={MENU_SEPARATOR} />
-                            <ContextMenu.Item className="menu-item" onClick={openInPreview}>
-                                <Icon icon={Eye} size={14} /> {t('timeline.menu.openInPreview')}
-                            </ContextMenu.Item>
-                        </>
-                    )}
-                </ContextMenu.Popup>
-            </ContextMenu.Positioner>
-        </ContextMenu.Portal>
+                </>
+            )}
+        </ContextMenu.Popup>
     );
 }
 
@@ -108,7 +97,6 @@ export function BookmarkMenuItems({ chatId, itemId, onName }: { chatId: string; 
     if (bookmark === null) {
         return (
             <ContextMenu.Item
-                className="menu-item"
                 onClick={() => {
                     void placeBookmark(scope, chatId, itemId);
                     onName?.();
@@ -121,7 +109,6 @@ export function BookmarkMenuItems({ chatId, itemId, onName }: { chatId: string; 
     return (
         <>
             <ContextMenu.Item
-                className="menu-item"
                 onClick={() => {
                     useBookmarkNaming.getState().open(scope.keyOf(chatId), bookmark.itemId);
                     onName?.();
@@ -129,7 +116,7 @@ export function BookmarkMenuItems({ chatId, itemId, onName }: { chatId: string; 
             >
                 <Icon icon={Pencil} size={14} /> {t('bookmarks.rename')}
             </ContextMenu.Item>
-            <ContextMenu.Item className="menu-item" onClick={() => void removeBookmark(scope, chatId, bookmark)}>
+            <ContextMenu.Item onClick={() => void removeBookmark(scope, chatId, bookmark)}>
                 <Icon icon={BookmarkX} size={14} /> {t('bookmarks.remove')}
             </ContextMenu.Item>
         </>

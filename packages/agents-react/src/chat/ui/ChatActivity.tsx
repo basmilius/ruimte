@@ -1,5 +1,4 @@
 import { useMemo, type ReactNode } from 'react';
-import { Popover } from '@base-ui-components/react/popover';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Activity, Square, SquareTerminal } from 'lucide-react';
@@ -9,22 +8,17 @@ import { badgeCountOf, entryTimeOf, flyoutSubagents, statusWordOf, subagentTitle
 import { useSubagentSupport } from '../subagent-support';
 import { canOpenSubagent, crumbOf, openFromMain, useSubagentTrail } from '../subagent-view';
 import { SubagentStopButton } from './SubagentStopButton';
-import { formatElapsedShort } from '@ruimte/ui/format/duration';
+import { formatElapsedShort } from '@basmilius/react-ui/format';
+import { Icon, IconButton, Popover, Surface, useNow } from '@basmilius/react-ui';
 import { useChatRow } from '../../state/chats';
 import { chatHost } from '../../host';
 import { useChatScope } from '../../scope';
 import { useChatActions } from '../actions';
-import { FLOAT } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
 import { statusLookOf, type StatusWord } from '../../agents/status-look';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { useNow } from '@ruimte/ui/useNow';
 
 const NO_TASKS: readonly ChatBackgroundTask[] = [];
 
 const NO_ITEMS: readonly string[] = [];
-
-const CHIP = `${FLOAT} pointer-events-auto inline-flex h-7.5 items-center gap-1.5 rounded-full px-3 text-xs text-text-muted hover:text-text`;
 
 const ROW_BODY = 'flex min-h-9 min-w-0 grow items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left';
 
@@ -83,18 +77,17 @@ function StatusIcon({ word }: { word: StatusWord }) {
 function Flyout({ icon, label, heading = label, children }: { icon: ReactNode; label: string; heading?: string; children: ReactNode }) {
     return (
         <Popover.Root>
-            <Popover.Trigger className={CHIP}>
+            <Surface
+                render={<Popover.Trigger />}
+                className="pointer-events-auto inline-flex h-7.5 items-center gap-1.5 rounded-full px-3 text-xs text-text-muted hover:text-text"
+            >
                 {icon}
                 {label}
-            </Popover.Trigger>
-            <Popover.Portal>
-                <Popover.Positioner side="top" sideOffset={8} align="start" className="z-(--z-popup)">
-                    <Popover.Popup className="menu-popup w-80">
-                        <div className="px-2.5 pt-1.5 pb-1 text-xs text-text-faint">{heading}</div>
-                        {children}
-                    </Popover.Popup>
-                </Popover.Positioner>
-            </Popover.Portal>
+            </Surface>
+            <Popover.Popup side="top" className="w-80">
+                <div className="px-2.5 pt-1.5 pb-1 text-xs text-text-faint">{heading}</div>
+                {children}
+            </Popover.Popup>
         </Popover.Root>
     );
 }
@@ -195,11 +188,7 @@ function BackgroundTaskRows({ chatId, tasks }: { chatId: string; tasks: readonly
             detail={task.description ? task.command : null}
             time={formatElapsedShort(now - task.startedAt)}
         >
-            <Tooltip label={t('activity.stop')} name>
-                <button type="button" className="icon-btn icon-btn-xs mr-1.5" onClick={() => stop(task.id)}>
-                    <Icon icon={Square} size={12} />
-                </button>
-            </Tooltip>
+            <IconButton icon={Square} size="xs" label={t('activity.stop')} className="mr-1.5" onClick={() => stop(task.id)} />
         </ActivityRow>
     ));
 }

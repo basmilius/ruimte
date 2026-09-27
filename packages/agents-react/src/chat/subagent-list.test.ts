@@ -13,7 +13,7 @@ import {
     summaryWordOf,
     taskIdOf
 } from './subagent-list';
-import { formatMoment } from '@ruimte/ui/format/datetime';
+import { formatMoment } from '@basmilius/react-ui/format';
 
 const subagent = (id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem => ({
     id,

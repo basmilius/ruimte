@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
+import { Menu as BaseMenu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
 import {
     Activity,
@@ -24,15 +24,10 @@ import type { AccountChoice } from '../account-choice';
 import { modelName, shortModelName } from '../../agents/model-name';
 import { CONTEXT_OPTION, contextFraction, contextSegments, orderOptions, type ContextPart } from '../logic/context-usage';
 import { RUNTIME_MODES } from '../runtime-modes';
-import { formatClock, formatWeekdayClock, isSameDay } from '@ruimte/ui/format/datetime';
-import { formatPercent, formatTokens } from '@ruimte/ui/format/number';
+import { formatClock, formatWeekdayClock, isSameDay, formatPercent, formatTokens } from '@basmilius/react-ui/format';
+import { Icon, Menu, Tooltip, useNow } from '@basmilius/react-ui';
 import { chatHost } from '../../host';
 import { useUsageLimits } from '../../usage/limits';
-import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuCheck } from '@ruimte/ui/MenuCheck';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { useNow } from '@ruimte/ui/useNow';
 
 const MINUTE_MS = 60_000;
 
@@ -55,8 +50,6 @@ const PART_COLORS: Record<ContextPart, string> = {
 
 const RING_RADIUS = 5;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-
-const SUBMENU_POSITIONER = { sideOffset: 4, alignOffset: -4 } as const;
 
 interface RunSettingsProps {
     /* Whose models may be picked: every installed chat CLI before the first message, the chat's own after it. */
@@ -153,14 +146,13 @@ export function RunSettings({
         groups.map(({ entry, models }) => (
             <Menu.Group key={entry.kind}>
                 {grouped && (
-                    <Menu.GroupLabel className={`${MENU_LABEL} flex items-center gap-1.5`}>
+                    <Menu.GroupLabel className="flex items-center gap-1.5">
                         <AgentIcon kind={entry.kind} size={12} />
                         {entry.name}
                     </Menu.GroupLabel>
                 )}
                 {models.map((row) => (
-                    <Menu.RadioItem key={row.slug} value={modelValue(entry.kind, row.slug)} closeOnClick className="menu-item">
-                        <MenuCheck kind="radio" />
+                    <Menu.RadioItem key={row.slug} value={modelValue(entry.kind, row.slug)} closeOnClick>
                         <AgentIcon kind={entry.kind} size={14} className="shrink-0" />
                         <span className="min-w-0 truncate">{row.name}</span>
                         {row.badge && <span className="rounded bg-accent-soft px-1 text-xs font-medium text-accent">{row.badge}</span>}
@@ -213,84 +205,65 @@ export function RunSettings({
                     <Icon icon={open ? ChevronUp : ChevronDown} size={12} className="shrink-0 @max-sm/composer:hidden" />
                 </Menu.Trigger>
             </Tooltip>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
-                    <Menu.Popup className="menu-popup w-80">
-                        {providers.length === 0 && <div className="px-2.5 py-3 text-xs text-text-faint">{t('pickers.model.noProvider')}</div>}
-                        <Menu.RadioGroup value={chosenModel} onValueChange={chooseModel}>
-                            {modelGroups(live)}
-                        </Menu.RadioGroup>
-                        {legacy.length > 0 && (
-                            <Menu.SubmenuRoot>
-                                <Menu.SubmenuTrigger className="menu-item text-text-muted">
-                                    <span className="min-w-0 grow truncate">
-                                        {t('pickers.model.legacyGroup', { count: legacy.reduce((count, group) => count + group.models.length, 0) })}
+            <Menu.Popup side="top" sideOffset={8} align="start" className="w-80">
+                {providers.length === 0 && <div className="px-2.5 py-3 text-xs text-text-faint">{t('pickers.model.noProvider')}</div>}
+                <Menu.RadioGroup value={chosenModel} onValueChange={chooseModel}>
+                    {modelGroups(live)}
+                </Menu.RadioGroup>
+                {legacy.length > 0 && (
+                    <Menu.SubmenuRoot>
+                        <Menu.SubmenuTrigger className="text-text-muted">
+                            <span className="min-w-0 grow truncate">
+                                {t('pickers.model.legacyGroup', { count: legacy.reduce((count, group) => count + group.models.length, 0) })}
+                            </span>
+                            {chosenLegacy && <Menu.Hint className="truncate">{chosenLegacy.name}</Menu.Hint>}
+                        </Menu.SubmenuTrigger>
+                        <Menu.Popup className="min-w-56">
+                            <Menu.RadioGroup value={chosenModel} onValueChange={chooseModel}>
+                                {modelGroups(legacy)}
+                            </Menu.RadioGroup>
+                        </Menu.Popup>
+                    </Menu.SubmenuRoot>
+                )}
+                <Menu.Separator />
+                {account !== null && <AccountSubmenu provider={provider} account={account} />}
+                <Menu.SubmenuRoot>
+                    <Menu.SubmenuTrigger className="text-text-muted">
+                        <Icon icon={MODE_ICONS[runtimeMode]} size={14} className={clsx('shrink-0', fullAccess ? 'text-status-needs-you' : 'text-text-faint')} />
+                        <span className="min-w-0 grow truncate">{t('pickers.mode.label')}</span>
+                        <Menu.Hint className="truncate">{t(`modes.${runtimeMode}.label`)}</Menu.Hint>
+                    </Menu.SubmenuTrigger>
+                    <Menu.Popup className="w-72">
+                        <Menu.RadioGroup value={runtimeMode} onValueChange={(mode: RuntimeMode) => onMode(mode)}>
+                            {RUNTIME_MODES.map((mode) => (
+                                <Menu.RadioItem key={mode} value={mode} className="items-start">
+                                    {/* The hint makes the row two lines high; the box keeps the icon on the label's line. */}
+                                    <span className="grid h-lh w-4 shrink-0 place-items-center">
+                                        <Icon
+                                            icon={MODE_ICONS[mode]}
+                                            size={14}
+                                            className={mode === 'full-access' ? 'text-status-needs-you' : 'text-text-faint'}
+                                        />
                                     </span>
-                                    {chosenLegacy && <span className={`${MENU_HINT} truncate`}>{chosenLegacy.name}</span>}
-                                    <Icon icon={ChevronRight} size={14} className="shrink-0 text-text-faint" />
-                                </Menu.SubmenuTrigger>
-                                <Menu.Portal>
-                                    <Menu.Positioner className="z-(--z-popup)" {...SUBMENU_POSITIONER}>
-                                        <Menu.Popup className="menu-popup min-w-56">
-                                            <Menu.RadioGroup value={chosenModel} onValueChange={chooseModel}>
-                                                {modelGroups(legacy)}
-                                            </Menu.RadioGroup>
-                                        </Menu.Popup>
-                                    </Menu.Positioner>
-                                </Menu.Portal>
-                            </Menu.SubmenuRoot>
-                        )}
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        {account !== null && <AccountSubmenu provider={provider} account={account} />}
-                        <Menu.SubmenuRoot>
-                            <Menu.SubmenuTrigger className="menu-item text-text-muted">
-                                <Icon
-                                    icon={MODE_ICONS[runtimeMode]}
-                                    size={14}
-                                    className={clsx('shrink-0', fullAccess ? 'text-status-needs-you' : 'text-text-faint')}
-                                />
-                                <span className="min-w-0 grow truncate">{t('pickers.mode.label')}</span>
-                                <span className={`${MENU_HINT} truncate`}>{t(`modes.${runtimeMode}.label`)}</span>
-                                <Icon icon={ChevronRight} size={14} className="shrink-0 text-text-faint" />
-                            </Menu.SubmenuTrigger>
-                            <Menu.Portal>
-                                <Menu.Positioner className="z-(--z-popup)" {...SUBMENU_POSITIONER}>
-                                    <Menu.Popup className="menu-popup w-72">
-                                        <Menu.RadioGroup value={runtimeMode} onValueChange={(mode: RuntimeMode) => onMode(mode)}>
-                                            {RUNTIME_MODES.map((mode) => (
-                                                <Menu.RadioItem key={mode} value={mode} className="menu-item items-start">
-                                                    <MenuCheck kind="radio" />
-                                                    {/* The hint makes the row two lines high; the box keeps the icon on the label's line. */}
-                                                    <span className="grid h-lh w-4 shrink-0 place-items-center">
-                                                        <Icon
-                                                            icon={MODE_ICONS[mode]}
-                                                            size={14}
-                                                            className={mode === 'full-access' ? 'text-status-needs-you' : 'text-text-faint'}
-                                                        />
-                                                    </span>
-                                                    <span className="flex min-w-0 grow flex-col">
-                                                        {t(`modes.${mode}.label`)}
-                                                        <span className="text-xs text-text-faint">{t(`modes.${mode}.hint`)}</span>
-                                                    </span>
-                                                </Menu.RadioItem>
-                                            ))}
-                                        </Menu.RadioGroup>
-                                    </Menu.Popup>
-                                </Menu.Positioner>
-                            </Menu.Portal>
-                        </Menu.SubmenuRoot>
-                        {options.map((option) => (
-                            <OptionRow key={option.id} option={option} selection={selection} onChange={(value) => onOption(option.id, value)} />
-                        ))}
-                        {(hasContextOption || standaloneContext) && (
-                            <>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <ContextUsage usage={usage} disabled={compactDisabled} onCompact={onCompact} />
-                            </>
-                        )}
+                                    <span className="flex min-w-0 grow flex-col">
+                                        {t(`modes.${mode}.label`)}
+                                        <span className="text-xs text-text-faint">{t(`modes.${mode}.hint`)}</span>
+                                    </span>
+                                </Menu.RadioItem>
+                            ))}
+                        </Menu.RadioGroup>
                     </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+                </Menu.SubmenuRoot>
+                {options.map((option) => (
+                    <OptionRow key={option.id} option={option} selection={selection} onChange={(value) => onOption(option.id, value)} />
+                ))}
+                {(hasContextOption || standaloneContext) && (
+                    <>
+                        <Menu.Separator />
+                        <ContextUsage usage={usage} disabled={compactDisabled} onCompact={onCompact} />
+                    </>
+                )}
+            </Menu.Popup>
         </Menu.Root>
     );
 }
@@ -313,34 +286,29 @@ function AccountSubmenu({ provider, account }: { provider: AgentKind; account: A
     const { choice, started, onPick } = account;
     return (
         <Menu.SubmenuRoot>
-            <Menu.SubmenuTrigger className="menu-item text-text-muted">
+            <Menu.SubmenuTrigger className="text-text-muted">
                 <span className="grid w-3.5 shrink-0 place-items-center">
                     <AccountDot color={choice.current?.account.color} />
                 </span>
                 <span className="min-w-0 grow truncate">{t('pickers.account.label')}</span>
-                <span className={`${MENU_HINT} truncate`}>{choice.current === null ? choice.currentId : choice.nameOf(choice.current)}</span>
-                <Icon icon={ChevronRight} size={14} className="shrink-0 text-text-faint" />
+                <Menu.Hint className="truncate">{choice.current === null ? choice.currentId : choice.nameOf(choice.current)}</Menu.Hint>
             </Menu.SubmenuTrigger>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" {...SUBMENU_POSITIONER}>
-                    <Menu.Popup className="menu-popup min-w-64">
-                        <Menu.Group>
-                            <Menu.GroupLabel className={`${MENU_LABEL} flex items-center gap-1.5`}>
-                                <AgentIcon kind={provider} size={12} />
-                                {choice.providerName}
-                            </Menu.GroupLabel>
-                            <Menu.RadioGroup value={choice.currentId} onValueChange={(id: string) => onPick(id)}>
-                                <AccountRows choice={choice} locked={(id) => started && !canContinueOn(choice.accounts, provider, choice.currentId, id)} />
-                            </Menu.RadioGroup>
-                        </Menu.Group>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item className="menu-item text-text-muted" onClick={() => chatHost().openSettings('providers')}>
-                            <Icon icon={Settings} size={14} className="shrink-0 text-text-faint" />
-                            {t('pickers.account.manage')}
-                        </Menu.Item>
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+            <Menu.Popup className="min-w-64">
+                <Menu.Group>
+                    <Menu.GroupLabel className="flex items-center gap-1.5">
+                        <AgentIcon kind={provider} size={12} />
+                        {choice.providerName}
+                    </Menu.GroupLabel>
+                    <Menu.RadioGroup value={choice.currentId} onValueChange={(id: string) => onPick(id)}>
+                        <AccountRows choice={choice} locked={(id) => started && !canContinueOn(choice.accounts, provider, choice.currentId, id)} />
+                    </Menu.RadioGroup>
+                </Menu.Group>
+                <Menu.Separator />
+                <Menu.Item className="text-text-muted" onClick={() => chatHost().openSettings('providers')}>
+                    <Icon icon={Settings} size={14} className="shrink-0 text-text-faint" />
+                    {t('pickers.account.manage')}
+                </Menu.Item>
+            </Menu.Popup>
         </Menu.SubmenuRoot>
     );
 }
@@ -354,8 +322,7 @@ function AccountRows({ choice, locked }: { choice: AccountChoice; locked(id: str
         const session = sessionWindow(limitsOfAccount(limits, entry.id));
         const disabled = locked(entry.id);
         const row = (
-            <Menu.RadioItem key={entry.id} value={entry.id} disabled={disabled} closeOnClick className="menu-item items-start data-disabled:opacity-50">
-                <MenuCheck kind="radio" />
+            <Menu.RadioItem key={entry.id} value={entry.id} disabled={disabled} closeOnClick className="items-start data-disabled:opacity-50">
                 <span className="flex min-w-0 grow flex-col">
                     <span className="flex min-w-0 items-center gap-2">
                         <AccountDot color={entry.account.color} />
@@ -425,7 +392,7 @@ function ContextUsage({ usage, disabled, onCompact }: { usage: ChatUsage; disabl
     return (
         <Menu.Group className="flex flex-col gap-2 px-2.5 py-1.5">
             <div className="flex items-center gap-2">
-                <Menu.GroupLabel className="min-w-0 grow truncate text-sm font-medium text-text">{t('contextMeter.title')}</Menu.GroupLabel>
+                <BaseMenu.GroupLabel className="min-w-0 grow truncate text-sm font-medium text-text">{t('contextMeter.title')}</BaseMenu.GroupLabel>
                 <span className={clsx('shrink-0 text-xs tabular-nums', fraction >= 0.7 ? contextTone(fraction) : 'text-text-faint')}>
                     {usage.contextWindow ? t('contextMeter.of', { used, window: formatTokens(usage.contextWindow) }) : t('contextMeter.used', { tokens: used })}
                 </span>
@@ -469,14 +436,14 @@ function ContextUsage({ usage, disabled, onCompact }: { usage: ChatUsage; disabl
                 <span className="min-w-0 grow truncate">
                     {usage.contextWindow ? t('contextMeter.percentUsed', { percent: formatPercent(fraction * 100) }) : null}
                 </span>
-                <Menu.Item
+                <BaseMenu.Item
                     className="flex shrink-0 cursor-default items-center gap-0.5 rounded font-medium text-accent outline-none data-disabled:opacity-50 data-highlighted:underline"
                     disabled={disabled || usage.contextTokens === 0}
                     onClick={onCompact}
                 >
                     {t('contextMeter.compactNow')}
                     <Icon icon={ChevronRight} size={12} />
-                </Menu.Item>
+                </BaseMenu.Item>
             </div>
         </Menu.Group>
     );
@@ -491,12 +458,12 @@ function OptionRow({ option, selection, onChange }: { option: ModelOptionDescrip
     if (option.type === 'boolean') {
         const checked = (selection.options[option.id] ?? option.defaultValue) === true;
         const item = (
-            <Menu.CheckboxItem className="menu-item text-text-muted" checked={checked} onCheckedChange={onChange} closeOnClick={false}>
+            <BaseMenu.CheckboxItem className="menu-item text-text-muted" checked={checked} onCheckedChange={onChange} closeOnClick={false}>
                 {icon}
                 <span className="min-w-0 grow truncate">{option.label}</span>
-                {/* At the end of the row, where the other knobs of this group keep their control. */}
-                <MenuCheck kind="checkbox" />
-            </Menu.CheckboxItem>
+                {/* At the end of the row, where the other knobs of this group keep their control. The library's item puts it first. */}
+                <Menu.Check kind="checkbox" />
+            </BaseMenu.CheckboxItem>
         );
         return option.description ? (
             <Tooltip label={option.description} side="right" sideOffset={12}>
@@ -510,29 +477,23 @@ function OptionRow({ option, selection, onChange }: { option: ModelOptionDescrip
     if (option.choices.length > INLINE_CHOICES) {
         return (
             <Menu.SubmenuRoot>
-                <Menu.SubmenuTrigger className="menu-item text-text-muted">
+                <Menu.SubmenuTrigger className="text-text-muted">
                     {icon}
                     <span className="min-w-0 grow truncate">{option.label}</span>
-                    <span className={MENU_HINT}>{option.choices.find((choice) => choice.id === value)?.label}</span>
-                    <Icon icon={ChevronRight} size={14} className="shrink-0 text-text-faint" />
+                    <Menu.Hint>{option.choices.find((choice) => choice.id === value)?.label}</Menu.Hint>
                 </Menu.SubmenuTrigger>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" {...SUBMENU_POSITIONER}>
-                        <Menu.Popup className="menu-popup min-w-56">
-                            <Menu.RadioGroup value={value} onValueChange={(next: string) => onChange(next)}>
-                                {option.choices.map((choice) => (
-                                    <Menu.RadioItem key={choice.id} value={choice.id} className={clsx('menu-item', choice.description && 'items-start')}>
-                                        <MenuCheck kind="radio" />
-                                        <span className="flex min-w-0 grow flex-col">
-                                            {choice.label}
-                                            {choice.description && <span className="text-xs text-text-faint">{choice.description}</span>}
-                                        </span>
-                                    </Menu.RadioItem>
-                                ))}
-                            </Menu.RadioGroup>
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
+                <Menu.Popup className="min-w-56">
+                    <Menu.RadioGroup value={value} onValueChange={(next: string) => onChange(next)}>
+                        {option.choices.map((choice) => (
+                            <Menu.RadioItem key={choice.id} value={choice.id} className={choice.description ? 'items-start' : undefined}>
+                                <span className="flex min-w-0 grow flex-col">
+                                    {choice.label}
+                                    {choice.description && <span className="text-xs text-text-faint">{choice.description}</span>}
+                                </span>
+                            </Menu.RadioItem>
+                        ))}
+                    </Menu.RadioGroup>
+                </Menu.Popup>
             </Menu.SubmenuRoot>
         );
     }
@@ -547,7 +508,7 @@ function OptionRow({ option, selection, onChange }: { option: ModelOptionDescrip
                 className="flex gap-0.5 rounded-md bg-surface-sunken p-0.5"
             >
                 {option.choices.map((choice) => (
-                    <Menu.RadioItem
+                    <BaseMenu.RadioItem
                         key={choice.id}
                         value={choice.id}
                         className={clsx(
@@ -556,7 +517,7 @@ function OptionRow({ option, selection, onChange }: { option: ModelOptionDescrip
                         )}
                     >
                         {choice.label}
-                    </Menu.RadioItem>
+                    </BaseMenu.RadioItem>
                 ))}
             </Menu.RadioGroup>
         </div>

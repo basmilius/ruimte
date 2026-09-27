@@ -1,17 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
-import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import { ChartNoAxesColumn, RefreshCw } from 'lucide-react';
 import { USAGE_PROVIDERS, type UsageAccount } from '@ruimte/agent-contracts';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR } from '@ruimte/ui/classes';
-import { CloseButton } from '@ruimte/ui/CloseButton';
-import { Segmented, Skeleton } from '@ruimte/ui/controls';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Icon } from '@ruimte/ui/Icon';
-import { Select } from '@ruimte/ui/Select';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Button, CloseButton, Dialog, EmptyState, FormError, IconButton, Segmented, Select, Skeleton } from '@basmilius/react-ui';
 import { AccountDot } from '../agents/AccountDot';
 import { chatHost } from '../host';
 import { useChatScope } from '../scope';
@@ -126,11 +117,7 @@ function Provenance() {
     const currency = useUsage((s) => s.currency);
     const failed = useUsage((s) => s.failed);
     if (failed) {
-        return (
-            <p className={`${FORM_ERROR} mt-auto text-center`} role="alert">
-                {t('provenance.failed')}
-            </p>
-        );
+        return <FormError className="mt-auto text-center">{t('provenance.failed')}</FormError>;
     }
     if (summary === null) {
         return null;
@@ -229,27 +216,23 @@ export function UsagePage({ pickers, notice }: UsagePageProps) {
     return (
         <div className="flex min-h-0 grow flex-col">
             <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border py-3 pr-3 pl-6 max-[960px]:pl-4">
-                <Dialog.Title className="text-base font-semibold text-text">{t('dialog.title')}</Dialog.Title>
+                <Dialog.Title>{t('dialog.title')}</Dialog.Title>
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                     {pickers}
                     <AccountPicker accounts={summary?.accounts ?? []} value={account} onChange={setAccount} />
                     <Segmented
                         value={period}
                         options={USAGE_PERIODS.map((entry) => ({ id: entry.id, label: t(`dialog.periods.${entry.id}`) }))}
-                        onChange={(id) => useUsageStore.getState().setPeriod(id)}
+                        onValueChange={(id) => useUsageStore.getState().setPeriod(id)}
                         label={t('dialog.period')}
                     />
                     <Segmented
                         value={metric}
                         options={METRICS.map((id) => ({ id, label: t(`dialog.metrics.${id}`) }))}
-                        onChange={(id) => useUsageStore.getState().setMetric(id)}
+                        onValueChange={(id) => useUsageStore.getState().setMetric(id)}
                         label={t('dialog.metric')}
                     />
-                    <Tooltip label={t('dialog.rescan')} name>
-                        <button className="icon-btn" onClick={reload} disabled={loading || !answering}>
-                            <Icon icon={RefreshCw} size={16} className={clsx(loading && 'animate-spin')} />
-                        </button>
-                    </Tooltip>
+                    <IconButton icon={RefreshCw} label={t('dialog.rescan')} spin={loading} onClick={reload} disabled={loading || !answering} />
                     <CloseButton label={t('dialog.close')} dialog />
                 </div>
             </header>

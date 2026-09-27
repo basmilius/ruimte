@@ -9,10 +9,7 @@ import { markdownOf, messageTextOf } from '../logic/timeline-copy';
 import { chatHost } from '../../host';
 import { useChatScope } from '../../scope';
 import { useChatRow, useChats } from '../../state/chats';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { copyText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { ButtonGroup, copyText, IconButton } from '@basmilius/react-ui';
 
 const COPIED_MS = 1500;
 
@@ -69,29 +66,22 @@ export function MessageActions({ chatId, row }: { chatId: string; row: MessageRo
             )}
         >
             {!streaming && (
-                <span className={BTN_GROUP}>
+                <ButtonGroup render={<span />}>
                     {bookmark === null && (
-                        <Tooltip label={t('bookmarks.add')} name>
-                            <button type="button" className="icon-btn icon-btn-sm" onClick={() => void placeBookmark(scope, chatId, row.id)}>
-                                <Icon icon={Bookmark} size={14} />
-                            </button>
-                        </Tooltip>
+                        <IconButton icon={Bookmark} size="sm" label={t('bookmarks.add')} onClick={() => void placeBookmark(scope, chatId, row.id)} />
                     )}
                     {canFork && turnId !== null && fork !== null && (
-                        <Tooltip label={t('timeline.menu.forkFromHere')} name>
-                            <button type="button" className="icon-btn icon-btn-sm" onClick={() => fork(chatId, turnId)}>
-                                <Icon icon={GitFork} size={14} />
-                            </button>
-                        </Tooltip>
+                        <IconButton icon={GitFork} size="sm" label={t('timeline.menu.forkFromHere')} onClick={() => fork(chatId, turnId)} />
                     )}
                     {hasText && (
-                        <Tooltip label={copied ? t('timeline.actions.copied') : t('timeline.menu.copyMessage')} name>
-                            <button type="button" className="icon-btn icon-btn-sm" onClick={(e) => copy(e.shiftKey)}>
-                                <Icon icon={copied ? Check : Copy} size={14} />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon={copied ? Check : Copy}
+                            size="sm"
+                            label={copied ? t('timeline.actions.copied') : t('timeline.menu.copyMessage')}
+                            onClick={(e) => copy(e.shiftKey)}
+                        />
                     )}
-                </span>
+                </ButtonGroup>
             )}
         </div>
     );

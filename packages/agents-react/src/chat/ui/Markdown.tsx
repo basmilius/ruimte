@@ -13,8 +13,7 @@ import { rehypeFadeWords } from './rehype-fade';
 import { remarkHtmlAsText } from './remark-html-as-text';
 import type { FileRef } from '../../host';
 import { openFileLink, useFileLinkCwd, useFileLinkTarget } from './file-links';
-import { FileIcon } from '@ruimte/ui/FileIcon';
-import { Icon } from '@ruimte/ui/Icon';
+import { FileIcon, Icon } from '@basmilius/react-ui';
 
 const languageOf = (className: string | undefined): string => /language-([\w-]+)/.exec(className ?? '')?.[1] ?? 'text';
 

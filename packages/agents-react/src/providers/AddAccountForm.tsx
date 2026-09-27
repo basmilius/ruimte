@@ -8,14 +8,10 @@ import { chatHost } from '../host';
 import { useChatScope } from '../scope';
 import { createAccount, linkAccount } from './account-actions';
 import { AccountColors } from './AccountColors';
-import { DetailHeader } from '@ruimte/ui/settings/DetailHeader';
+import { DetailHeader, SettingsRow, SettingsSection } from '@basmilius/react-ui/settings';
+import { Button, FormError, Icon, Input } from '@basmilius/react-ui';
 import { CliTile } from './parts';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
-import { SettingsSection } from '@ruimte/ui/settings/SettingsSection';
 import { providerAccountsOf } from '../state/provider-accounts';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
 
 interface AddAccountFormProps {
     provider: ProviderInfo;
@@ -70,8 +66,8 @@ export function AddAccountForm({ provider, entries, onCancel, onAdded }: AddAcco
                 <SettingsRow
                     label={t('add.name')}
                     control={
-                        <input
-                            className="field w-55 max-w-full"
+                        <Input
+                            className="w-55 max-w-full"
                             value={name}
                             maxLength={80}
                             autoFocus
@@ -96,8 +92,8 @@ export function AddAccountForm({ provider, entries, onCancel, onAdded }: AddAcco
                 {advanced && (
                     <SettingsSection>
                         <SettingsRow label={t('add.link.label')} description={t('add.link.description')}>
-                            <input
-                                className="field font-mono text-code"
+                            <Input
+                                mono
                                 value={folder}
                                 spellCheck={false}
                                 autoComplete="off"
@@ -111,9 +107,9 @@ export function AddAccountForm({ provider, entries, onCancel, onAdded }: AddAcco
             </div>
             <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
                 {error !== null && (
-                    <span className={clsx(FORM_ERROR, 'mr-auto break-words')} role="alert">
+                    <FormError render={<span />} className="mr-auto break-words">
                         {error || t('add.failed')}
-                    </span>
+                    </FormError>
                 )}
                 <Button onClick={onCancel}>{t('common.cancel')}</Button>
                 <Button type="submit" variant="primary" disabled={label === '' || busy}>

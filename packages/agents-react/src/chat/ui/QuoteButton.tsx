@@ -2,9 +2,7 @@ import { useEffect, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Quote } from 'lucide-react';
 import { selectedAnswerQuote, type QuoteTaker } from './quote-selection';
-import { Button } from '@ruimte/ui/Button';
-import { FLOAT } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
+import { Button, Icon, Surface } from '@basmilius/react-ui';
 
 const GAP_PX = 6;
 // Keeps the button's middle far enough from the edges that it never sticks out of the thread.
@@ -86,9 +84,9 @@ export function QuoteButton({
     }
 
     return (
-        <Button
-            size="sm"
-            className={`${FLOAT} absolute z-10 -translate-x-1/2 select-none`}
+        <Surface
+            render={<Button size="sm" />}
+            className="absolute z-10 -translate-x-1/2 select-none"
             style={{ left: offer.x, top: offer.y }}
             // Pressing a button moves the selection, and the selection is what it quotes.
             onMouseDown={(e) => e.preventDefault()}
@@ -100,6 +98,6 @@ export function QuoteButton({
         >
             <Icon icon={Quote} size={12} />
             {t('composer.quote.add')}
-        </Button>
+        </Surface>
     );
 }

@@ -1,4 +1,3 @@
-import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Square } from 'lucide-react';
 import type { ChatSubagentItem } from '@ruimte/agent-contracts';
@@ -7,8 +6,7 @@ import { useChatScope } from '../../scope';
 import { useChatRow } from '../../state/chats';
 import { useChatActions } from '../actions';
 import { stopLabel, stopOf, subagentTitle } from '../subagent-list';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { IconButton } from '@basmilius/react-ui';
 
 /* Stops one active sub-agent of a chat, or says nothing when stopping it is not on offer. */
 export function SubagentStopButton({
@@ -43,11 +41,5 @@ export function SubagentStopButton({
         }
         send();
     };
-    return (
-        <Tooltip label={stopLabel(stop)} name>
-            <button type="button" className={clsx('icon-btn', size === 'sm' ? 'icon-btn-sm' : 'icon-btn-xs', className)} onClick={run}>
-                <Icon icon={Square} size={size === 'sm' ? 14 : 12} />
-            </button>
-        </Tooltip>
-    );
+    return <IconButton icon={Square} size={size} label={stopLabel(stop)} className={className} onClick={run} />;
 }

@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Bot, ChevronDown } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
 import type { SubagentBranch } from '../../logic/timeline';
-import { formatElapsedShort } from '@ruimte/ui/format/duration';
+import { formatElapsedShort } from '@basmilius/react-ui/format';
+import { Icon, useNow } from '@basmilius/react-ui';
 import { useOpenForFind } from '../find-reveal';
 import { Markdown } from '../Markdown';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from './WorkRows';
@@ -13,8 +14,6 @@ import { useSubagentSupport } from '../../subagent-support';
 import { canOpenSubagent, crumbOf, type SubagentStep } from '../../subagent-view';
 import { chatHost, type SubagentTask } from '../../../host';
 import { useChatScope } from '../../../scope';
-import { Icon } from '@ruimte/ui/Icon';
-import { useNow } from '@ruimte/ui/useNow';
 
 // The work of a long-running agent scrolls inside its row instead of pushing the thread away.
 const CHILDREN_MAX_PX = 320;

@@ -6,9 +6,7 @@ import { CHAT_BOOKMARK_LIMITS, type ChatBookmark } from '@ruimte/agent-contracts
 import { nameBookmark, removeBookmark, useBookmarkNaming } from '../bookmarks';
 import { bookmarkLabel } from '../logic/bookmarks';
 import { useChatScope } from '../../scope';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { ButtonGroup, Icon, IconButton, Input } from '@basmilius/react-ui';
 
 interface BookmarkMarkerProps {
     chatId: string;
@@ -51,23 +49,13 @@ export function BookmarkMarker({ chatId, itemId, bookmark }: BookmarkMarkerProps
             )}
             <span className="min-w-6 grow border-t border-border" />
             {bookmark !== null && !naming && (
-                <span
-                    className={clsx(
-                        BTN_GROUP,
-                        '-ml-2 max-w-0 shrink-0 overflow-hidden opacity-0 group-hover/bookmark:ml-0 group-hover/bookmark:max-w-none group-hover/bookmark:opacity-100 group-has-focus-visible/bookmark:ml-0 group-has-focus-visible/bookmark:max-w-none group-has-focus-visible/bookmark:opacity-100'
-                    )}
+                <ButtonGroup
+                    render={<span />}
+                    className="-ml-2 max-w-0 shrink-0 overflow-hidden opacity-0 group-hover/bookmark:ml-0 group-hover/bookmark:max-w-none group-hover/bookmark:opacity-100 group-has-focus-visible/bookmark:ml-0 group-has-focus-visible/bookmark:max-w-none group-has-focus-visible/bookmark:opacity-100"
                 >
-                    <Tooltip label={t('bookmarks.rename')} name>
-                        <button type="button" className="icon-btn icon-btn-xs" onClick={() => useBookmarkNaming.getState().open(chatKey, itemId)}>
-                            <Icon icon={Pencil} size={12} />
-                        </button>
-                    </Tooltip>
-                    <Tooltip label={t('bookmarks.remove')} name>
-                        <button type="button" className="icon-btn icon-btn-xs" onClick={() => void removeBookmark(scope, chatId, bookmark)}>
-                            <Icon icon={X} size={12} />
-                        </button>
-                    </Tooltip>
-                </span>
+                    <IconButton icon={Pencil} size="xs" label={t('bookmarks.rename')} onClick={() => useBookmarkNaming.getState().open(chatKey, itemId)} />
+                    <IconButton icon={X} size="xs" label={t('bookmarks.remove')} onClick={() => void removeBookmark(scope, chatId, bookmark)} />
+                </ButtonGroup>
             )}
         </div>
     );
@@ -95,13 +83,14 @@ function NameField({ initial, onDone }: { initial: string; onDone: (name: string
     };
 
     return (
-        <input
+        <Input
             ref={ref}
+            size="sm"
             defaultValue={initial}
             maxLength={CHAT_BOOKMARK_LIMITS.name}
             placeholder={t('bookmarks.namePlaceholder')}
             aria-label={t('bookmarks.nameLabel')}
-            className="field field-sm w-64 max-w-full min-w-0 select-text"
+            className="w-64 max-w-full min-w-0 select-text"
             onPointerDown={(e) => e.stopPropagation()}
             onFocus={(e) => e.currentTarget.select()}
             onBlur={(e) => settle(e.currentTarget.value)}

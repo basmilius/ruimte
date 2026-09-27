@@ -15,14 +15,11 @@ import { FadingWords } from '../FadingWords';
 import { settledBlocksText } from '../markdown-blocks';
 import { WHOLE_FADE_CLASS } from '../rehype-fade';
 import { useRevealedText } from '../reveal';
-import { formatAgo, formatElapsedShort } from '@ruimte/ui/format/duration';
-import { formatTokens } from '@ruimte/ui/format/number';
+import { formatAgo, formatElapsedShort, formatTokens } from '@basmilius/react-ui/format';
+import { Icon, Tooltip, useTickingText } from '@basmilius/react-ui';
 import { toolSummary } from '../../logic/tools';
 import { ROW_GUTTER } from '../icons';
 import { useOpenForFind } from '../find-reveal';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { useTickingText } from '@ruimte/ui/useNow';
 
 // A long prompt folds so the answer stays in view; the reader can open it.
 const USER_FOLD_LINES = 8;

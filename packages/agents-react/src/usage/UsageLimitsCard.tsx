@@ -1,10 +1,9 @@
 import i18next from 'i18next';
 import { useState, type ReactElement } from 'react';
-import { PreviewCard } from '@base-ui-components/react/preview-card';
 import { hasSeveralAccounts } from './limit-groups';
 import { AccountLimitsList, LimitsList } from './LimitsList';
 import { useLimitGroups, useUsageLimits } from './limits';
-import { useNow } from '@ruimte/ui/useNow';
+import { useNow, PreviewCard } from '@basmilius/react-ui';
 
 const MINUTE_MS = 60_000;
 
@@ -29,11 +28,9 @@ export function UsageLimitsCard({ children }: { children: ReactElement<Record<st
     return (
         <PreviewCard.Root onOpenChange={(open) => open && setOpened(true)}>
             <PreviewCard.Trigger render={children} delay={500} />
-            <PreviewCard.Portal>
-                <PreviewCard.Positioner side="top" align="end" sideOffset={8} className="z-(--z-popup)">
-                    <PreviewCard.Popup className="menu-popup w-64 p-3">{opened && <CardBody />}</PreviewCard.Popup>
-                </PreviewCard.Positioner>
-            </PreviewCard.Portal>
+            <PreviewCard.Popup side="top" align="end" className="w-64 p-3">
+                {opened && <CardBody />}
+            </PreviewCard.Popup>
         </PreviewCard.Root>
     );
 }

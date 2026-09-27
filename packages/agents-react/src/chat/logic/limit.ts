@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { ChatInfo } from '@ruimte/agent-contracts';
-import { formatMoment } from '@ruimte/ui/format/datetime';
+import { formatMoment } from '@basmilius/react-ui/format';
 
 export interface LimitView {
     /* The state in a word or two with its time, for a pill in a header. */

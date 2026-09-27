@@ -1,11 +1,9 @@
-import { Menu } from '@base-ui-components/react/menu';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, GitFork } from 'lucide-react';
 import { useForkIdsAfter } from '../../forks';
 import { ROW_GUTTER } from '../icons';
 import { chatHost } from '../../../host';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
+import { Icon, Menu } from '@basmilius/react-ui';
 
 const LINE = '-mx-1 mb-0.5 flex h-7 items-center gap-2 rounded-md px-1 text-xs text-text-muted';
 const LINK = `${LINE} hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-hover data-[popup-open]:text-text`;
@@ -30,11 +28,11 @@ export function ForksRow({ chatId, turnId }: { chatId: string; turnId: string })
                 <Menu.Trigger className={LINK}>
                     <ForksLabel label={label} />
                 </Menu.Trigger>
-                <MenuPopup className="min-w-48">
+                <Menu.Popup className="min-w-48">
                     {forks.map((forkId) => (
                         <ForkItem key={forkId} forkId={forkId} />
                     ))}
-                </MenuPopup>
+                </Menu.Popup>
             </Menu.Root>
         </div>
     );
@@ -74,7 +72,7 @@ function ForkItem({ forkId }: { forkId: string }) {
     const { t } = useTranslation('agent-chat');
     const place = chatHost().useChatPlace(forkId);
     return (
-        <Menu.Item className="menu-item" disabled={place.title === null} onClick={place.go}>
+        <Menu.Item disabled={place.title === null} onClick={place.go}>
             <Icon icon={GitFork} size={14} /> <span className="truncate">{place.title ?? t('fork.pill.label')}</span>
         </Menu.Item>
     );

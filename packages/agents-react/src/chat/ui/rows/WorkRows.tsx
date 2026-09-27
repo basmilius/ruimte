@@ -9,10 +9,9 @@ import { useOpenForFind } from '../find-reveal';
 import { chatHost } from '../../../host';
 import { lazyNamed } from '../../../lazy';
 import { useChatActions } from '../../actions';
-import { formatClockDuration, formatElapsedShort } from '@ruimte/ui/format/duration';
+import { formatClockDuration, formatElapsedShort } from '@basmilius/react-ui/format';
+import { Icon, useTickingText } from '@basmilius/react-ui';
 import { ROW_GUTTER, toolIcon } from '../icons';
-import { Icon } from '@ruimte/ui/Icon';
-import { useTickingText } from '@ruimte/ui/useNow';
 
 // The diff renderers carry shiki; they only load once a thread shows a file change.
 const EditDiff = lazyNamed(() => import('../EditDiff'), 'default');

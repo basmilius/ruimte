@@ -1,16 +1,13 @@
 import { useMemo, type MouseEvent } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
-import { Bookmark, ChevronRight, Pencil, X } from 'lucide-react';
+import { Bookmark, Pencil, X } from 'lucide-react';
 import { goToBookmark, removeBookmark } from '../bookmarks';
 import { bookmarkLabel, bookmarksInThreadOrder } from '../logic/bookmarks';
 import { chatHost } from '../../host';
 import { useChatScope } from '../../scope';
 import { useChatRow } from '../../state/chats';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { ButtonGroup, Icon, IconButton, Menu } from '@basmilius/react-ui';
 
 type RowAction = 'rename' | 'remove';
 
@@ -36,49 +33,34 @@ export function BookmarkSubmenu({ chatId }: { chatId: string }) {
     }
     return (
         <Menu.SubmenuRoot>
-            <Menu.SubmenuTrigger className="menu-item">
+            <Menu.SubmenuTrigger>
                 <Icon icon={Bookmark} size={14} /> {t('bookmarks.menu')}
-                <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
             </Menu.SubmenuTrigger>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
-                    <Menu.Popup className="menu-popup max-w-80 min-w-56">
-                        {sorted.map((bookmark) => (
-                            <Menu.Item
-                                key={bookmark.itemId}
-                                className="menu-item group/bookmark"
-                                onClick={(e) => {
-                                    const action = actionOf(e);
-                                    if (action === 'remove') {
-                                        void removeBookmark(scope, chatId, bookmark);
-                                        return;
-                                    }
-                                    if (!goToBookmark(scope, chatId, bookmark.itemId, action === 'rename')) {
-                                        place.go();
-                                    }
-                                }}
-                            >
-                                <Icon icon={Bookmark} size={14} className="shrink-0 text-accent" />
-                                <span className={clsx('min-w-0 grow truncate', bookmark.name === undefined && 'text-text-muted')}>
-                                    {bookmarkLabel(bookmark)}
-                                </span>
-                                <span className={`${BTN_GROUP} -my-1 ml-2 shrink-0 opacity-0 group-data-[highlighted]/bookmark:opacity-100`}>
-                                    <Tooltip label={t('bookmarks.rename')} name>
-                                        <button type="button" tabIndex={-1} data-bookmark-action="rename" className="icon-btn icon-btn-xs">
-                                            <Icon icon={Pencil} size={12} />
-                                        </button>
-                                    </Tooltip>
-                                    <Tooltip label={t('bookmarks.remove')} name>
-                                        <button type="button" tabIndex={-1} data-bookmark-action="remove" className="icon-btn icon-btn-xs">
-                                            <Icon icon={X} size={12} />
-                                        </button>
-                                    </Tooltip>
-                                </span>
-                            </Menu.Item>
-                        ))}
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+            <Menu.Popup className="max-w-80 min-w-56">
+                {sorted.map((bookmark) => (
+                    <Menu.Item
+                        key={bookmark.itemId}
+                        className="group/bookmark"
+                        onClick={(e) => {
+                            const action = actionOf(e);
+                            if (action === 'remove') {
+                                void removeBookmark(scope, chatId, bookmark);
+                                return;
+                            }
+                            if (!goToBookmark(scope, chatId, bookmark.itemId, action === 'rename')) {
+                                place.go();
+                            }
+                        }}
+                    >
+                        <Icon icon={Bookmark} size={14} className="shrink-0 text-accent" />
+                        <span className={clsx('min-w-0 grow truncate', bookmark.name === undefined && 'text-text-muted')}>{bookmarkLabel(bookmark)}</span>
+                        <ButtonGroup render={<span />} className="-my-1 ml-2 shrink-0 opacity-0 group-data-[highlighted]/bookmark:opacity-100">
+                            <IconButton icon={Pencil} size="xs" label={t('bookmarks.rename')} tabIndex={-1} data-bookmark-action="rename" />
+                            <IconButton icon={X} size="xs" label={t('bookmarks.remove')} tabIndex={-1} data-bookmark-action="remove" />
+                        </ButtonGroup>
+                    </Menu.Item>
+                ))}
+            </Menu.Popup>
         </Menu.SubmenuRoot>
     );
 }

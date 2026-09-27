@@ -4,21 +4,14 @@ import { LogIn } from 'lucide-react';
 import type { ProviderInfo } from '@ruimte/agent-contracts';
 import { AccountDot } from '../agents/AccountDot';
 import { accountName, FOLDER_VARIABLES, type AccountEntry } from '../agents/accounts';
-import { ConfirmDialog } from '@ruimte/ui/settings/ConfirmDialog';
+import { ConfirmDialog, DetailHeader, SettingsRow, SettingsSection } from '@basmilius/react-ui/settings';
+import { Button, copyText, Icon, Input, Switch, Tooltip } from '@basmilius/react-ui';
 import { chatHost } from '../host';
 import { useChatScope } from '../scope';
 import { removeAccount, saveAccount } from './account-actions';
 import { AccountVariables } from './AccountVariables';
 import { AccountColors } from './AccountColors';
-import { Toggle } from '@ruimte/ui/controls';
-import { DetailHeader, REMOVE_BUTTON } from '@ruimte/ui/settings/DetailHeader';
 import { CliMark } from './parts';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
-import { SettingsSection } from '@ruimte/ui/settings/SettingsSection';
-import { Button } from '@ruimte/ui/Button';
-import { copyText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 
 // The states in which the machine's own sentence says more than the usual line under the login.
 const TROUBLE = new Set(['folder-missing', 'unavailable', 'failed']);
@@ -46,8 +39,8 @@ function NameField({ value, label, onSave }: { value: string; label: string; onS
         onSave(name);
     };
     return (
-        <input
-            className="field w-55 max-w-full"
+        <Input
+            className="w-55 max-w-full"
             value={draft}
             maxLength={80}
             aria-label={label}
@@ -123,10 +116,10 @@ export function AccountDetail({ provider, entry, canLogIn, loginBlocked, secrets
                     label={t('account.enabled.label')}
                     description={t('account.enabled.description')}
                     control={
-                        <Toggle
+                        <Switch
                             checked={account.enabled !== false}
                             label={t('account.enabled.label')}
-                            onChange={(checked) => {
+                            onCheckedChange={(checked) => {
                                 const { enabled: _enabled, ...rest } = account;
                                 void saveAccount(scope, id, checked ? rest : { ...rest, enabled: false });
                             }}
@@ -172,7 +165,7 @@ export function AccountDetail({ provider, entry, canLogIn, loginBlocked, secrets
                         }
                     />
                     <SettingsRow label={t('account.folder.label')}>
-                        <input className="field h-8.5 font-mono text-code" value={folder} readOnly aria-label={t('account.folder.label')} />
+                        <Input mono className="h-8.5" value={folder} readOnly aria-label={t('account.folder.label')} />
                         <p className="-mt-1 text-xs text-text-muted">
                             {variable ? (
                                 <Trans
@@ -194,9 +187,9 @@ export function AccountDetail({ provider, entry, canLogIn, loginBlocked, secrets
                     label={t('account.remove.label')}
                     description={isDefault ? t('account.remove.defaultNote') : t('account.remove.description')}
                     control={
-                        <button type="button" className={REMOVE_BUTTON} disabled={isDefault} onClick={() => setConfirming(true)}>
+                        <Button variant="danger-outline" disabled={isDefault} onClick={() => setConfirming(true)}>
                             {t('account.remove.button')}
-                        </button>
+                        </Button>
                     }
                 />
             </SettingsSection>

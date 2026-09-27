@@ -1,13 +1,9 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { ImageOff, Minus, Plus, RotateCcw } from 'lucide-react';
 import type { ResourceUrl } from '../../host';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { CloseButton } from '@ruimte/ui/CloseButton';
-import { Icon } from '@ruimte/ui/Icon';
+import { ButtonGroup, CloseButton, Dialog, Icon, IconButton, Tooltip } from '@basmilius/react-ui';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 8;
@@ -64,75 +60,72 @@ function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; 
 
     return (
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
-            <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop lightbox-backdrop" />
-                {/* Nothing here sets a size. The picture takes the room `.lightbox-frame` allows it, and the popup follows. */}
-                <Dialog.Popup className="dialog-popup flex min-w-72 flex-col">
-                    <Dialog.Title className="sr-only">{alt}</Dialog.Title>
-                    <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border pr-2 pl-3">
-                        {name === alt ? title : <Tooltip label={alt}>{title}</Tooltip>}
-                        <span className="grow" />
-                        <span className="tabular-nums text-xs text-text-faint">{Math.round(view.scale * 100)}%</span>
-                        <span className={BTN_GROUP}>
-                            <Tooltip label={t('image.zoomOut')} name>
-                                <button className="icon-btn icon-btn-sm" disabled={view.scale <= MIN_SCALE} onClick={() => zoomButton(1 / BUTTON_STEP)}>
-                                    <Icon icon={Minus} size={14} />
-                                </button>
-                            </Tooltip>
-                            <Tooltip label={t('image.zoomIn')} name>
-                                <button className="icon-btn icon-btn-sm" disabled={view.scale >= MAX_SCALE} onClick={() => zoomButton(BUTTON_STEP)}>
-                                    <Icon icon={Plus} size={14} />
-                                </button>
-                            </Tooltip>
-                            <Tooltip label={t('image.reset')} name>
-                                <button className="icon-btn icon-btn-sm" disabled={view.scale === MIN_SCALE} onClick={() => setView(START)}>
-                                    <Icon icon={RotateCcw} size={14} />
-                                </button>
-                            </Tooltip>
-                        </span>
-                        <CloseButton label={t('common.action.close')} kbd="esc" className="ml-1" dialog />
-                    </div>
-                    <div
-                        ref={frameRef}
-                        className={clsx('lightbox-frame grid place-items-center overflow-hidden bg-surface-sunken', view.scale > MIN_SCALE && 'cursor-grab')}
-                        onWheel={(e) => {
-                            const point = pointIn(e);
-                            setView((current) => zoomed(current, WHEEL_STEP ** -e.deltaY, point.x, point.y));
-                        }}
-                        onDoubleClick={(e) => {
-                            const point = pointIn(e);
-                            setView((current) => (current.scale > MIN_SCALE ? START : zoomed(current, 2, point.x, point.y)));
-                        }}
-                        onPointerDown={(e) => {
-                            if (view.scale <= MIN_SCALE) {
-                                return;
-                            }
-                            e.currentTarget.setPointerCapture(e.pointerId);
-                            dragRef.current = { pointerId: e.pointerId, x: e.clientX - view.x, y: e.clientY - view.y };
-                        }}
-                        onPointerMove={(e) => {
-                            const drag = dragRef.current;
-                            if (drag?.pointerId === e.pointerId) {
-                                setView((current) => ({ ...current, x: e.clientX - drag.x, y: e.clientY - drag.y }));
-                            }
-                        }}
-                        onPointerUp={() => {
-                            dragRef.current = null;
-                        }}
-                        onPointerCancel={() => {
-                            dragRef.current = null;
-                        }}
-                    >
-                        <img
-                            src={src}
-                            alt={alt}
-                            draggable={false}
-                            className="select-none"
-                            style={{ transform: `translate(${Math.round(view.x)}px, ${Math.round(view.y)}px) scale(${view.scale})` }}
+            {/* Nothing here sets a size. The picture takes the room `.lightbox-frame` allows it, and the popup follows. */}
+            <Dialog.Popup backdropClassName="lightbox-backdrop" className="flex min-w-72 flex-col">
+                <Dialog.Title className="sr-only">{alt}</Dialog.Title>
+                <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border pr-2 pl-3">
+                    {name === alt ? title : <Tooltip label={alt}>{title}</Tooltip>}
+                    <span className="grow" />
+                    <span className="tabular-nums text-xs text-text-faint">{Math.round(view.scale * 100)}%</span>
+                    <ButtonGroup render={<span />}>
+                        <IconButton
+                            icon={Minus}
+                            size="sm"
+                            label={t('image.zoomOut')}
+                            disabled={view.scale <= MIN_SCALE}
+                            onClick={() => zoomButton(1 / BUTTON_STEP)}
                         />
-                    </div>
-                </Dialog.Popup>
-            </Dialog.Portal>
+                        <IconButton
+                            icon={Plus}
+                            size="sm"
+                            label={t('image.zoomIn')}
+                            disabled={view.scale >= MAX_SCALE}
+                            onClick={() => zoomButton(BUTTON_STEP)}
+                        />
+                        <IconButton icon={RotateCcw} size="sm" label={t('image.reset')} disabled={view.scale === MIN_SCALE} onClick={() => setView(START)} />
+                    </ButtonGroup>
+                    <CloseButton label={t('common.action.close')} kbd="esc" className="ml-1" dialog />
+                </div>
+                <div
+                    ref={frameRef}
+                    className={clsx('lightbox-frame grid place-items-center overflow-hidden bg-surface-sunken', view.scale > MIN_SCALE && 'cursor-grab')}
+                    onWheel={(e) => {
+                        const point = pointIn(e);
+                        setView((current) => zoomed(current, WHEEL_STEP ** -e.deltaY, point.x, point.y));
+                    }}
+                    onDoubleClick={(e) => {
+                        const point = pointIn(e);
+                        setView((current) => (current.scale > MIN_SCALE ? START : zoomed(current, 2, point.x, point.y)));
+                    }}
+                    onPointerDown={(e) => {
+                        if (view.scale <= MIN_SCALE) {
+                            return;
+                        }
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                        dragRef.current = { pointerId: e.pointerId, x: e.clientX - view.x, y: e.clientY - view.y };
+                    }}
+                    onPointerMove={(e) => {
+                        const drag = dragRef.current;
+                        if (drag?.pointerId === e.pointerId) {
+                            setView((current) => ({ ...current, x: e.clientX - drag.x, y: e.clientY - drag.y }));
+                        }
+                    }}
+                    onPointerUp={() => {
+                        dragRef.current = null;
+                    }}
+                    onPointerCancel={() => {
+                        dragRef.current = null;
+                    }}
+                >
+                    <img
+                        src={src}
+                        alt={alt}
+                        draggable={false}
+                        className="select-none"
+                        style={{ transform: `translate(${Math.round(view.x)}px, ${Math.round(view.y)}px) scale(${view.scale})` }}
+                    />
+                </div>
+            </Dialog.Popup>
         </Dialog.Root>
     );
 }

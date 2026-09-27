@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight, X } from 'lucide-react';
 import { breadcrumbOf, MAIN_AGENT, trailTo, useOpenableSubagents, useSubagentTrail } from '../subagent-view';
 import { SubagentStopButton } from './SubagentStopButton';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Icon, IconButton } from '@basmilius/react-ui';
 
 const CRUMB_LINK = 'truncate text-text-muted hover:text-text';
 
@@ -61,11 +60,7 @@ export function SubagentBreadcrumb({ chatId, title, className }: { chatId: strin
                 </Fragment>
             ))}
             {shown !== undefined && <SubagentStopButton chatId={chatId} item={shown} size="sm" />}
-            <Tooltip label={t('subagents.backToMain')} name>
-                <button type="button" className="icon-btn icon-btn-sm" onClick={() => show(MAIN_AGENT)}>
-                    <Icon icon={X} size={14} />
-                </button>
-            </Tooltip>
+            <IconButton icon={X} size="sm" label={t('subagents.backToMain')} onClick={() => show(MAIN_AGENT)} />
         </nav>
     );
 }

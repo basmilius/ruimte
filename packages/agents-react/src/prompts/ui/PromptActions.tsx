@@ -1,8 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowUp, CircleCheck } from 'lucide-react';
-import { Button } from '@ruimte/ui/Button';
-import { Icon } from '@ruimte/ui/Icon';
+import { Button, Icon } from '@basmilius/react-ui';
 
 /* The one button Mod+Enter presses and ArrowDown from the heading lands on, when the body has nothing to choose. */
 export function PromptPrimary(props: ButtonHTMLAttributes<HTMLButtonElement>) {

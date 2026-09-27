@@ -5,8 +5,8 @@ import { Plus, Terminal } from 'lucide-react';
 import type { AgentKind, ProviderInfo } from '@ruimte/agent-contracts';
 import { AccountDot } from '../agents/AccountDot';
 import { ACCOUNT_TONE_CLASSES, accountName, accountsOfKind, accountStatusLine, type AccountEntry } from '../agents/accounts';
-import { Skeleton } from '@ruimte/ui/controls';
-import { MasterDetail } from '@ruimte/ui/settings/MasterDetail';
+import { ErrorBoundary, Icon, IconButton, SectionLabel, Skeleton } from '@basmilius/react-ui';
+import { MasterDetail } from '@basmilius/react-ui/settings';
 import { chatHost } from '../host';
 import { useChatScope } from '../scope';
 import { AccountDetail } from './AccountDetail';
@@ -15,10 +15,6 @@ import { CliDetail } from './CliDetail';
 import { CliMark } from './parts';
 import { useProviderAccounts } from '../state/provider-accounts';
 import { useProviders } from '../state/providers';
-import { SECTION_LABEL } from '@ruimte/ui/classes';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 
 type Picked = { kind: 'cli'; cli: AgentKind } | { kind: 'account'; id: string } | { kind: 'add'; cli: AgentKind };
 
@@ -112,11 +108,12 @@ export function ProvidersPane({ target = null, detailOf, defaults = true }: Prov
                     className="pr-1"
                     trailing={
                         canAddAccount(cli.kind) && (
-                            <Tooltip label={t('list.addAccount', { provider: cli.name })} name>
-                                <button type="button" className="icon-btn icon-btn-sm" onClick={() => setPicked({ kind: 'add', cli: cli.kind })}>
-                                    <Icon icon={Plus} size={14} />
-                                </button>
-                            </Tooltip>
+                            <IconButton
+                                icon={Plus}
+                                size="sm"
+                                label={t('list.addAccount', { provider: cli.name })}
+                                onClick={() => setPicked({ kind: 'add', cli: cli.kind })}
+                            />
                         )
                     }
                 >
@@ -163,7 +160,7 @@ export function ProvidersPane({ target = null, detailOf, defaults = true }: Prov
             {installed.length === 0 && <p className="px-3 py-2 text-xs text-text-muted">{t('list.none')}</p>}
             {missing.length > 0 && (
                 <div className="mt-1.5 flex min-w-0 shrink-0 flex-col border-t border-border pt-2.5 pb-2">
-                    <span className={clsx(SECTION_LABEL, 'px-3 pt-1 pb-1.5')}>{t('list.notInstalled')}</span>
+                    <SectionLabel className="px-3 pt-1 pb-1.5">{t('list.notInstalled')}</SectionLabel>
                     {missing.map((cli) => (
                         <div key={cli.kind} className="flex h-10 min-w-0 items-center gap-3 px-3 text-sm text-text-muted">
                             <Icon icon={Terminal} size={14} className="shrink-0" />

@@ -6,19 +6,14 @@ import { AccountDot } from '../../agents/AccountDot';
 import { continueTarget, hasUnreadAccount } from '../../agents/account-limits';
 import { useAccountChoice, type AccountChoice } from '../account-choice';
 import { limitView } from '../logic/limit';
-import { useFormatLocale } from '@ruimte/ui/format/locale';
-import { Toggle } from '@ruimte/ui/controls';
+import { useFormatLocale } from '@basmilius/react-ui/format';
+import { Switch, Button, Icon, Pill, Tooltip, useNow } from '@basmilius/react-ui';
 import { useUsageLimits } from '../../usage/limits';
 import { useChats } from '../../state/chats';
 import { chatHost } from '../../host';
 import { useChatScope, type ChatScope } from '../../scope';
 import { useChatActions } from '../actions';
 import { useUsageStore } from '../../state/usage';
-import { Button } from '@ruimte/ui/Button';
-import { Icon } from '@ruimte/ui/Icon';
-import { Pill } from '@ruimte/ui/Pill';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { useNow } from '@ruimte/ui/useNow';
 
 // A time a limit names reads as a clock today and with its day after that, so the words follow the minute.
 const MINUTE_MS = 60_000;
@@ -59,7 +54,7 @@ function ResumeAtResetToggle({ chatId, info }: { chatId: string; info: ChatInfo 
         <Tooltip label={machineAllows ? t('limit.toggle') : t('limit.machineOff')}>
             {/* A disabled switch does not take the pointer, so the tooltip hangs on a wrapper. */}
             <span className="inline-flex shrink-0">
-                <Toggle checked={machineAllows && info.resumeAtReset !== false} onChange={set} label={t('limit.toggle')} disabled={!machineAllows} />
+                <Switch checked={machineAllows && info.resumeAtReset !== false} onCheckedChange={set} label={t('limit.toggle')} disabled={!machineAllows} />
             </span>
         </Tooltip>
     );

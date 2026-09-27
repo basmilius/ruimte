@@ -1,6 +1,5 @@
 import { useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { indentLess, indentMore, insertNewline } from '@codemirror/commands';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
@@ -61,18 +60,26 @@ import { ResumeCompactionDock } from './ResumeCompactionDock';
 import { StashPicker } from './Pickers';
 import { RunSettings } from './RunSettings';
 import { UploadThumb } from './UploadThumb';
-import { formatNumber } from '@ruimte/ui/format/number';
+import { formatNumber } from '@basmilius/react-ui/format';
+import {
+    ButtonGroup,
+    ContextMenu,
+    copyText,
+    ErrorBoundary,
+    FileIcon,
+    Icon,
+    IconButton,
+    isModHeld,
+    KEY_SHORTCUTS,
+    matchesShortcut,
+    Menu,
+    PromptDialog,
+    Surface,
+    Tooltip,
+    useNow
+} from '@basmilius/react-ui';
 import { useChatRow } from '../../state/chats';
 import { useProviders } from '../../state/providers';
-import { BTN_GROUP, FLOAT, MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { copyText } from '@ruimte/ui/clipboard';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { FileIcon } from '@ruimte/ui/FileIcon';
-import { Icon } from '@ruimte/ui/Icon';
-import { PromptDialog } from '@ruimte/ui/PromptDialog';
-import { KEY_SHORTCUTS, isModHeld, matchesShortcut } from '@ruimte/ui/shortcut';
-import { useNow } from '@ruimte/ui/useNow';
 
 const SEARCH_DEBOUNCE_MS = 80;
 // What fits above the composer without turning the picker into a file tree.
@@ -897,12 +904,12 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
             {!atEnd && (
                 <div className="absolute inset-x-0 bottom-full mb-2 flex justify-center">
                     <Tooltip label={t('composer.jumpToEnd')} name>
-                        <button
-                            className={`${FLOAT} pointer-events-auto grid h-8 w-8 place-items-center rounded-full text-text-muted hover:text-text`}
-                            onClick={() => scrollTimelineToEnd(chatId)}
+                        <Surface
+                            render={<button onClick={() => scrollTimelineToEnd(chatId)} />}
+                            className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full text-text-muted hover:text-text"
                         >
                             <Icon icon={ChevronDown} size={16} />
-                        </button>
+                        </Surface>
                     </Tooltip>
                 </div>
             )}
@@ -1008,7 +1015,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                     )}
                     {mentionMenuOpen && (
                         <div className="border-b border-border px-1.5 py-1.5">
-                            {chatMatches.length > 0 && <div className={MENU_LABEL}>{t('composer.mentions.chats')}</div>}
+                            {chatMatches.length > 0 && <Menu.Label>{t('composer.mentions.chats')}</Menu.Label>}
                             {chatMatches.map((chat, index) => (
                                 <button
                                     key={chat.id}
@@ -1023,7 +1030,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                                 </button>
                             ))}
                             {files.length > 0 && (mention.query === '' || chatMatches.length > 0) && (
-                                <div className={MENU_LABEL}>{mention.query === '' ? t('composer.mentions.here') : t('composer.mentions.files')}</div>
+                                <Menu.Label>{mention.query === '' ? t('composer.mentions.here') : t('composer.mentions.files')}</Menu.Label>
                             )}
                             {mentionCount === 0 && (
                                 <div className="px-2 py-1 text-xs text-text-faint">
@@ -1062,49 +1069,36 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                                             <span className="min-w-0 grow truncate">
                                                 {message.text || t('composer.queue.attachments', { count: message.attachments?.length ?? 0 })}
                                             </span>
-                                            <span
-                                                className={`${BTN_GROUP} opacity-0 transition-opacity group-hover/queued:opacity-100 focus-within:opacity-100`}
+                                            <ButtonGroup
+                                                render={<span />}
+                                                className="opacity-0 transition-opacity group-hover/queued:opacity-100 focus-within:opacity-100"
                                             >
-                                                <Tooltip label={t('composer.queue.sendNow')} name>
-                                                    <button className="icon-btn icon-btn-2xs" onClick={sendNow}>
-                                                        <Icon icon={FastForward} size={12} />
-                                                    </button>
-                                                </Tooltip>
-                                                <Tooltip label={t('common.action.edit')} name>
-                                                    <button className="icon-btn icon-btn-2xs" disabled={takingBack !== null} onClick={edit}>
-                                                        <Icon icon={Pencil} size={12} />
-                                                    </button>
-                                                </Tooltip>
-                                                <Tooltip label={t('common.action.remove')} name>
-                                                    <button className="icon-btn icon-btn-2xs" onClick={unqueue}>
-                                                        <Icon icon={X} size={12} />
-                                                    </button>
-                                                </Tooltip>
-                                            </span>
+                                                <IconButton icon={FastForward} size="2xs" label={t('composer.queue.sendNow')} onClick={sendNow} />
+                                                <IconButton
+                                                    icon={Pencil}
+                                                    size="2xs"
+                                                    label={t('common.action.edit')}
+                                                    disabled={takingBack !== null}
+                                                    onClick={edit}
+                                                />
+                                                <IconButton icon={X} size="2xs" label={t('common.action.remove')} onClick={unqueue} />
+                                            </ButtonGroup>
                                         </ContextMenu.Trigger>
-                                        <ContextMenu.Portal>
-                                            <ContextMenu.Positioner className="z-(--z-popup)">
-                                                <ContextMenu.Popup className="menu-popup">
-                                                    <ContextMenu.Item className="menu-item" onClick={sendNow}>
-                                                        <Icon icon={FastForward} size={14} /> {t('composer.queue.sendNow')}
-                                                    </ContextMenu.Item>
-                                                    <ContextMenu.Item className="menu-item" disabled={takingBack !== null} onClick={edit}>
-                                                        <Icon icon={Pencil} size={14} /> {t('common.action.edit')}
-                                                    </ContextMenu.Item>
-                                                    <ContextMenu.Item
-                                                        className="menu-item"
-                                                        disabled={message.text === ''}
-                                                        onClick={() => copyText(message.text)}
-                                                    >
-                                                        <Icon icon={Copy} size={14} /> {t('common.action.copy')}
-                                                    </ContextMenu.Item>
-                                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                                                    <ContextMenu.Item className="menu-item text-status-error" onClick={unqueue}>
-                                                        <Icon icon={X} size={14} /> {t('common.action.remove')}
-                                                    </ContextMenu.Item>
-                                                </ContextMenu.Popup>
-                                            </ContextMenu.Positioner>
-                                        </ContextMenu.Portal>
+                                        <ContextMenu.Popup>
+                                            <ContextMenu.Item onClick={sendNow}>
+                                                <Icon icon={FastForward} size={14} /> {t('composer.queue.sendNow')}
+                                            </ContextMenu.Item>
+                                            <ContextMenu.Item disabled={takingBack !== null} onClick={edit}>
+                                                <Icon icon={Pencil} size={14} /> {t('common.action.edit')}
+                                            </ContextMenu.Item>
+                                            <ContextMenu.Item disabled={message.text === ''} onClick={() => copyText(message.text)}>
+                                                <Icon icon={Copy} size={14} /> {t('common.action.copy')}
+                                            </ContextMenu.Item>
+                                            <ContextMenu.Separator />
+                                            <ContextMenu.Item className="text-status-error" onClick={unqueue}>
+                                                <Icon icon={X} size={14} /> {t('common.action.remove')}
+                                            </ContextMenu.Item>
+                                        </ContextMenu.Popup>
                                     </ContextMenu.Root>
                                 );
                             })}
@@ -1113,11 +1107,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                     {quote !== '' && (
                         <div className="flex items-center gap-2 px-5 pt-4 @max-md/composer:px-3.5 @max-md/composer:pt-3">
                             <span className="min-w-0 grow truncate border-l-2 border-border-strong pl-2.5 text-xs text-text-muted">{quote}</span>
-                            <Tooltip label={t('composer.quote.remove')} name>
-                                <button className="icon-btn icon-btn-2xs" onClick={removeQuote}>
-                                    <Icon icon={X} size={12} />
-                                </button>
-                            </Tooltip>
+                            <IconButton icon={X} size="2xs" label={t('composer.quote.remove')} onClick={removeQuote} />
                         </div>
                     )}
                     {draft.chats.length > 0 && (
@@ -1142,14 +1132,13 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                                             <span className="pl-5 text-xs text-text-faint">{formatBytes(uploadBytes(attachment))}</span>
                                         </span>
                                     )}
-                                    <Tooltip label={t('composer.removeAttachment', { name: attachment.name })}>
-                                        <button
-                                            className="icon-btn icon-btn-2xs absolute -top-1.5 -right-1.5 border border-border bg-surface-raised opacity-0 transition-opacity group-hover/thumb:opacity-100 focus-visible:opacity-100"
-                                            onClick={() => removeAttachment(index)}
-                                        >
-                                            <Icon icon={X} size={12} />
-                                        </button>
-                                    </Tooltip>
+                                    <IconButton
+                                        icon={X}
+                                        size="2xs"
+                                        label={t('composer.removeAttachment', { name: attachment.name })}
+                                        className="absolute -top-1.5 -right-1.5 border border-border bg-surface-raised opacity-0 transition-opacity group-hover/thumb:opacity-100 focus-visible:opacity-100"
+                                        onClick={() => removeAttachment(index)}
+                                    />
                                 </div>
                             ))}
                         </div>
@@ -1279,7 +1268,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                 danger
                 fallbackMessage={t('composer.notice.clearFailed')}
                 onConfirm={forceClearThread}
-                onClose={() => setConfirmClear(false)}
+                onOpenChange={() => setConfirmClear(false)}
             />
         </div>
     );

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useTranslation } from 'react-i18next';
 import { Bot } from 'lucide-react';
 import { deriveTimelineRows } from '../logic/timeline';
@@ -14,8 +13,7 @@ import { useToggleSet } from './useToggleSet';
 import { FileLinkContext } from './file-links';
 import { useChatRow } from '../../state/chats';
 import { useChatScope } from '../../scope';
-import { Button } from '@ruimte/ui/Button';
-import { EmptyState } from '@ruimte/ui/EmptyState';
+import { Button, EmptyState, ContextMenu } from '@basmilius/react-ui';
 
 const NO_TURNS = new Set<string>();
 

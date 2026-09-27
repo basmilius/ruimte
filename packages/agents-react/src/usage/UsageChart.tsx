@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { UsageProvider } from '@ruimte/agent-contracts';
-import { FLOAT } from '@ruimte/ui/classes';
-import { useMeasuredWidth } from '@ruimte/ui/useMeasuredWidth';
+import { Surface, useMeasuredWidth } from '@basmilius/react-ui';
 import { PROVIDER_COLORS, PROVIDER_LABELS, slotAxisLabel, slotLabel } from './format';
 import { niceScale, type ChartSlot } from './summary';
 
@@ -81,10 +79,7 @@ export function UsageChart({ slots, providers, format, labelEvery }: UsageChartP
                     )}
                 </svg>
                 {active && (
-                    <div
-                        className={clsx(FLOAT, 'pointer-events-none absolute top-2 rounded-lg p-2 text-xs')}
-                        style={{ left: tooltipLeft, width: TOOLTIP_WIDTH }}
-                    >
+                    <Surface className="pointer-events-none absolute top-2 rounded-lg p-2 text-xs" style={{ left: tooltipLeft, width: TOOLTIP_WIDTH }}>
                         <p className="mb-1 font-medium">{slotLabel(active.slot)}</p>
                         {providers.map((provider) => (
                             <p key={provider} className="flex items-center gap-1.5 text-text-muted">
@@ -97,7 +92,7 @@ export function UsageChart({ slots, providers, format, labelEvery }: UsageChartP
                             {t('chart.total')}
                             <span className="ml-auto tabular-nums">{format(active.total)}</span>
                         </p>
-                    </div>
+                    </Surface>
                 )}
             </div>
             <div className="relative mt-2 h-4">

@@ -1,6 +1,6 @@
 import type { UsageLimitsSnapshot, UsageSummaryPayload, UsageSummaryResult } from '@ruimte/agent-contracts';
 import { create } from 'zustand';
-import { localTimeZone } from '@ruimte/ui/format/time-zone';
+import { localTimeZone } from '@basmilius/react-ui/format';
 import { useChatScope } from '../scope';
 import type { UsageCurrency } from '../usage/format';
 

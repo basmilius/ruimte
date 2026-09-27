@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { LogIn } from 'lucide-react';
 import type { UsageProvider } from '@ruimte/agent-contracts';
 import { AccountDot } from '../agents/AccountDot';
-import { Segmented } from '@ruimte/ui/controls';
+import { Button, Icon, SectionLabel, Segmented, Tooltip, useNow } from '@basmilius/react-ui';
 import { chatHost } from '../host';
 import { PROVIDER_COLORS, PROVIDER_LABELS } from './format';
 import { accountNote, checkedLabel, hasSeveralAccounts, isSignedOut, type LimitAccount } from './limit-groups';
@@ -11,12 +11,7 @@ import { WindowBar } from './LimitsList';
 import { useLimitGroups, useUsageLimits } from './limits';
 import { useProviderAccountsStore } from '../state/provider-accounts';
 import { useChatScope } from '../scope';
-import { Button } from '@ruimte/ui/Button';
-import { SECTION_LABEL } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
 import { ProviderLogo } from '../agents/ProviderLogo';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { useNow } from '@ruimte/ui/useNow';
 
 const MINUTE_MS = 60_000;
 
@@ -122,7 +117,9 @@ export function UsageLimits() {
     return (
         <section className="flex flex-col gap-3">
             <div className="flex min-h-8 items-center gap-3">
-                <h2 className={`${SECTION_LABEL} grow`}>{t('limits.title')}</h2>
+                <SectionLabel render={<h2 />} className="grow">
+                    {t('limits.title')}
+                </SectionLabel>
                 {filterable && (
                     <Segmented<Filter>
                         value={current}
@@ -130,7 +127,7 @@ export function UsageLimits() {
                             { id: 'all', label: t('dialog.accounts.all') },
                             ...groups.map((group) => ({ id: group.kind, label: PROVIDER_LABELS[group.kind] }))
                         ]}
-                        onChange={setFilter}
+                        onValueChange={setFilter}
                         label={t('limits.filter')}
                     />
                 )}

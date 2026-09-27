@@ -4,8 +4,7 @@ import { AccountDot } from '../../agents/AccountDot';
 import { useAccountChoice } from '../account-choice';
 import { useChats } from '../../state/chats';
 import { useChatScope } from '../../scope';
-import { Pill } from '@ruimte/ui/Pill';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Pill, Tooltip } from '@basmilius/react-ui';
 
 function AccountPillOf({ provider, account }: { provider: AgentKind; account: string | undefined }) {
     const { t } = useTranslation('agent-chat');

@@ -3,14 +3,10 @@ import clsx from 'clsx';
 import { CircleHelp, Folder, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { UsageModel, UsageProject, UsageProvider, UsageSummaryResult } from '@ruimte/agent-contracts';
-import { Segmented } from '@ruimte/ui/controls';
+import { EmptyState, Icon, SectionLabel, Segmented, Tooltip } from '@basmilius/react-ui';
 import { useChatScope } from '../scope';
 import { chatHost } from '../host';
 import type { UsageMetric } from '../state/usage';
-import { SECTION_LABEL } from '@ruimte/ui/classes';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { Icon } from '@ruimte/ui/Icon';
 import { ProviderLogo } from '../agents/ProviderLogo';
 import { USAGE_PROVIDERS, totalTokensOf } from '@ruimte/agent-contracts';
 import { modelNameFromSlug } from '../agents/model-name';
@@ -194,12 +190,12 @@ export function UsageBreakdown({ summary, metric, providers }: UsageBreakdownPro
     return (
         <section className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
-                <h2 className={SECTION_LABEL}>{t('breakdown.title')}</h2>
+                <SectionLabel render={<h2 />}>{t('breakdown.title')}</SectionLabel>
                 <div className="ml-auto">
                     <Segmented
                         value={tab}
                         options={TABS.map((id) => ({ id, label: t(`breakdown.tabs.${id}`) }))}
-                        onChange={(id) => setTab(id)}
+                        onValueChange={(id) => setTab(id)}
                         label={t('breakdown.title')}
                     />
                 </div>

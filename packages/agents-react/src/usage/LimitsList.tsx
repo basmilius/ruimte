@@ -4,11 +4,9 @@ import { useTranslation } from 'react-i18next';
 import type { UsageLimitsSnapshot, UsageWindow } from '@ruimte/agent-contracts';
 import { limitsAccountId } from '../agents/account-limits';
 import { AccountDot } from '../agents/AccountDot';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Tooltip } from '@basmilius/react-ui';
+import { formatClock, formatWeekdayClock, isSameDay, formatCountdown, formatPercent } from '@basmilius/react-ui/format';
 import { ProviderLogo } from '../agents/ProviderLogo';
-import { formatClock, formatWeekdayClock, isSameDay } from '@ruimte/ui/format/datetime';
-import { formatCountdown } from '@ruimte/ui/format/duration';
-import { formatPercent } from '@ruimte/ui/format/number';
 import { PROVIDER_COLORS, PROVIDER_LABELS } from './format';
 import { accountNote, explain, isSignedOut, nextReset, type LimitAccount, type LimitGroup } from './limit-groups';
 

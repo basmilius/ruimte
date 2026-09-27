@@ -1,16 +1,11 @@
-import { Fragment, memo, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { PreviewCard } from '@base-ui-components/react/preview-card';
+import { Fragment, memo, useEffect, useMemo, useState, type ComponentProps, type MouseEvent as ReactMouseEvent } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Bookmark, Copy, GitFork, type LucideIcon } from 'lucide-react';
 import { layoutTicks, messageAt, slotInView, slotOf, tickWidth, TICK_HEIGHT_PX, type ScrubberTick } from '../logic/scrubber';
 import { BookmarkMenuItems } from './TimelineMenu';
-import { formatMoment } from '@ruimte/ui/format/datetime';
-import { MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { copyText } from '@ruimte/ui/clipboard';
-import { cameThroughPortal } from '@ruimte/ui/floating';
-import { Icon } from '@ruimte/ui/Icon';
+import { formatMoment } from '@basmilius/react-ui/format';
+import { cameThroughPortal, ContextMenu, copyText, Icon, Menu, PreviewCard } from '@basmilius/react-ui';
 
 const PREVIEW_CHARS = 280;
 
@@ -142,7 +137,7 @@ export const Scrubber = memo(function Scrubber({
     const menuTick = menuIndex === null ? null : (ticks[menuIndex] ?? null);
     const menuMarkable = markableOf(menuTick);
 
-    const onContextMenu: NonNullable<ContextMenu.Trigger.Props['onContextMenu']> = (e) => {
+    const onContextMenu: NonNullable<ComponentProps<typeof ContextMenu.Trigger>['onContextMenu']> = (e) => {
         // The hover card is a child here as well, and a click in it is about no tick.
         const index = strip === null || cameThroughPortal(e) ? null : messageAt(layout, e.clientY - strip.getBoundingClientRect().top);
         const tick = index === null ? null : (ticks[index] ?? null);
@@ -212,65 +207,57 @@ export const Scrubber = memo(function Scrubber({
                             );
                         })}
                     </PreviewCard.Trigger>
-                    <PreviewCard.Portal>
-                        <PreviewCard.Positioner anchor={anchor} side="right" align="center" sideOffset={4} className="z-(--z-popup)">
-                            <PreviewCard.Popup className="menu-popup w-72">
-                                {hoveredTick !== null && (
-                                    <>
-                                        <div className="px-2.5 pt-1.5 pb-2">
-                                            <div className="flex items-baseline justify-between gap-3 text-xs text-text-faint">
-                                                {hoveredTick.bookmark === null ? (
-                                                    <span>{hoveredTick.kind === 'person' ? t('rows.user.heading') : t('scrubber.tasks')}</span>
-                                                ) : (
-                                                    <span className="flex min-w-0 items-center gap-1 self-center text-text-muted">
-                                                        <Icon icon={Bookmark} size={12} className="shrink-0 text-accent" />
-                                                        <span className="truncate">{hoveredTick.bookmark.name ?? t('bookmarks.unnamed')}</span>
-                                                    </span>
-                                                )}
-                                                <time className="tabular-nums">{timeOf(hoveredTick.createdAt)}</time>
-                                            </div>
-                                            <p className="mt-1 line-clamp-4 text-sm break-words whitespace-pre-line text-text">
-                                                {hoveredTick.text.slice(0, PREVIEW_CHARS) || t('pickers.stash.noText')}
-                                            </p>
-                                        </div>
-                                        {actions.length > 0 && (
-                                            <>
-                                                <div className={MENU_SEPARATOR} />
-                                                {actions.map((action) => (
-                                                    <button
-                                                        key={action.label}
-                                                        type="button"
-                                                        className="menu-item w-full hover:bg-surface-hover"
-                                                        onClick={() => action.run(hoveredTick, chat)}
-                                                    >
-                                                        <Icon icon={action.icon} size={14} /> {t(action.label)}
-                                                    </button>
-                                                ))}
-                                            </>
+                    <PreviewCard.Popup anchor={anchor} side="right" align="center" sideOffset={4} className="w-72">
+                        {hoveredTick !== null && (
+                            <>
+                                <div className="px-2.5 pt-1.5 pb-2">
+                                    <div className="flex items-baseline justify-between gap-3 text-xs text-text-faint">
+                                        {hoveredTick.bookmark === null ? (
+                                            <span>{hoveredTick.kind === 'person' ? t('rows.user.heading') : t('scrubber.tasks')}</span>
+                                        ) : (
+                                            <span className="flex min-w-0 items-center gap-1 self-center text-text-muted">
+                                                <Icon icon={Bookmark} size={12} className="shrink-0 text-accent" />
+                                                <span className="truncate">{hoveredTick.bookmark.name ?? t('bookmarks.unnamed')}</span>
+                                            </span>
                                         )}
+                                        <time className="tabular-nums">{timeOf(hoveredTick.createdAt)}</time>
+                                    </div>
+                                    <p className="mt-1 line-clamp-4 text-sm break-words whitespace-pre-line text-text">
+                                        {hoveredTick.text.slice(0, PREVIEW_CHARS) || t('pickers.stash.noText')}
+                                    </p>
+                                </div>
+                                {actions.length > 0 && (
+                                    <>
+                                        <Menu.Separator />
+                                        {actions.map((action) => (
+                                            <button
+                                                key={action.label}
+                                                type="button"
+                                                className="menu-item w-full hover:bg-surface-hover"
+                                                onClick={() => action.run(hoveredTick, chat)}
+                                            >
+                                                <Icon icon={action.icon} size={14} /> {t(action.label)}
+                                            </button>
+                                        ))}
                                     </>
                                 )}
-                            </PreviewCard.Popup>
-                        </PreviewCard.Positioner>
-                    </PreviewCard.Portal>
+                            </>
+                        )}
+                    </PreviewCard.Popup>
                 </PreviewCard.Root>
             </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        {menuTick !== null &&
-                            actionsFor(menuTick).map((action) => (
-                                <ContextMenu.Item key={action.label} className="menu-item" onClick={() => action.run(menuTick, chat)}>
-                                    <Icon icon={action.icon} size={14} /> {t(action.label)}
-                                </ContextMenu.Item>
-                            ))}
-                        {menuTick !== null && actionsFor(menuTick).length > 0 && menuMarkable !== null && <ContextMenu.Separator className={MENU_SEPARATOR} />}
-                        {chat !== null && menuIndex !== null && menuMarkable !== null && (
-                            <BookmarkMenuItems chatId={chat.chatId} itemId={menuMarkable} onName={() => onPick(menuIndex)} />
-                        )}
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <ContextMenu.Popup>
+                {menuTick !== null &&
+                    actionsFor(menuTick).map((action) => (
+                        <ContextMenu.Item key={action.label} onClick={() => action.run(menuTick, chat)}>
+                            <Icon icon={action.icon} size={14} /> {t(action.label)}
+                        </ContextMenu.Item>
+                    ))}
+                {menuTick !== null && actionsFor(menuTick).length > 0 && menuMarkable !== null && <ContextMenu.Separator />}
+                {chat !== null && menuIndex !== null && menuMarkable !== null && (
+                    <BookmarkMenuItems chatId={chat.chatId} itemId={menuMarkable} onName={() => onPick(menuIndex)} />
+                )}
+            </ContextMenu.Popup>
         </ContextMenu.Root>
     );
 });

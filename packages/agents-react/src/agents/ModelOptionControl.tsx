@@ -1,6 +1,5 @@
 import type { ModelOptionDescriptor, ModelSelection } from '@ruimte/agent-contracts';
-import { Segmented, Toggle } from '@ruimte/ui/controls';
-import { Select } from '@ruimte/ui/Select';
+import { Segmented, Switch, Select } from '@basmilius/react-ui';
 import { optionValue } from './model-options';
 
 // Up to this many choices read at a glance side by side; more go into a menu.
@@ -29,7 +28,7 @@ type ModelOptionControlProps = {
 export function ModelOptionControl(props: ModelOptionControlProps) {
     const { option, options, layout = 'compact', disabled } = props;
     if (option.type === 'boolean') {
-        return <Toggle checked={optionValue(option, options) === true} label={option.label} disabled={disabled} onChange={props.onChange} />;
+        return <Switch checked={optionValue(option, options) === true} label={option.label} disabled={disabled} onCheckedChange={props.onChange} />;
     }
     const picked = props.defaultLabel !== undefined && options[option.id] === undefined ? MODEL_DEFAULT : String(optionValue(option, options));
     const choices = [
@@ -50,7 +49,7 @@ export function ModelOptionControl(props: ModelOptionControlProps) {
                 label={option.label}
                 disabled={disabled}
                 options={choices.map((choice) => ({ id: choice.id, label: choice.label }))}
-                onChange={choose}
+                onValueChange={choose}
             />
         );
     }

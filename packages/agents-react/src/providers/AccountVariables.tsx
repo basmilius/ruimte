@@ -1,17 +1,12 @@
 import { useState } from 'react';
-import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Lock, LockOpen, Plus, X } from 'lucide-react';
 import type { ProviderAccount } from '@ruimte/agent-contracts';
 import { useChatScope } from '../scope';
 import { saveAccount } from './account-actions';
 import { draftsOf, emptyDraft, variablesChanged, variablesOf, variablesProblem, type VariableDraft } from './variables';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
-import { SettingsSection } from '@ruimte/ui/settings/SettingsSection';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { SettingsRow, SettingsSection } from '@basmilius/react-ui/settings';
+import { Button, FormError, Icon, IconButton, Input, Tooltip } from '@basmilius/react-ui';
 
 interface AccountVariablesProps {
     id: string;
@@ -68,8 +63,9 @@ export function AccountVariables({ id, account, secretsAvailable }: AccountVaria
                 const lockDisabled = !secretsAvailable && !draft.sensitive;
                 return (
                     <div key={draft.key} className="flex min-w-0 items-center gap-2 px-3.5 py-3 font-mono text-code">
-                        <input
-                            className="field h-7.5 w-47.5 shrink-0 font-mono text-code max-[640px]:w-32"
+                        <Input
+                            mono
+                            className="h-7.5 w-47.5 shrink-0 max-[640px]:w-32"
                             value={draft.name}
                             spellCheck={false}
                             autoComplete="off"
@@ -78,8 +74,9 @@ export function AccountVariables({ id, account, secretsAvailable }: AccountVaria
                             onChange={(event) => update(draft.key, { name: event.target.value })}
                         />
                         <span className="text-text-faint">=</span>
-                        <input
-                            className="field h-7.5 min-w-0 grow font-mono text-code"
+                        <Input
+                            mono
+                            className="h-7.5 min-w-0 grow"
                             type={draft.sensitive ? 'password' : 'text'}
                             value={draft.value}
                             spellCheck={false}
@@ -90,36 +87,33 @@ export function AccountVariables({ id, account, secretsAvailable }: AccountVaria
                         />
                         <Tooltip label={lockDisabled ? t('account.variables.noKeychain') : lockLabel}>
                             <span className="inline-flex">
-                                <button
-                                    type="button"
-                                    className={clsx('icon-btn icon-btn-sm', draft.sensitive && 'text-text')}
-                                    aria-label={lockLabel}
+                                <IconButton
+                                    icon={draft.sensitive ? Lock : LockOpen}
+                                    size="sm"
+                                    label={lockLabel}
+                                    tooltip={false}
+                                    className={draft.sensitive ? 'text-text' : undefined}
                                     aria-pressed={draft.sensitive}
                                     disabled={lockDisabled}
                                     onClick={() => update(draft.key, { sensitive: !draft.sensitive })}
-                                >
-                                    <Icon icon={draft.sensitive ? Lock : LockOpen} size={14} />
-                                </button>
+                                />
                             </span>
                         </Tooltip>
-                        <Tooltip label={t('account.variables.remove', { name })} name>
-                            <button
-                                type="button"
-                                className="icon-btn icon-btn-sm"
-                                onClick={() => setDrafts((current) => current.filter((other) => other.key !== draft.key))}
-                            >
-                                <Icon icon={X} size={14} />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon={X}
+                            size="sm"
+                            label={t('account.variables.remove', { name })}
+                            onClick={() => setDrafts((current) => current.filter((other) => other.key !== draft.key))}
+                        />
                     </div>
                 );
             })}
             {changed && (
                 <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 px-4.5 py-3">
                     {problem !== null && (
-                        <span className={clsx(FORM_ERROR, 'mr-auto')} role="alert">
+                        <FormError render={<span />} className="mr-auto">
                             {problem}
-                        </span>
+                        </FormError>
                     )}
                     <Button onClick={() => setDrafts(draftsOf(account.env))}>{t('account.variables.discard')}</Button>
                     <Button variant="primary" disabled={problem !== null || saving} onClick={() => void save()}>

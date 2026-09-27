@@ -1,12 +1,9 @@
 import { ChartNoAxesColumn } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
-import { SettingsSection } from '@ruimte/ui/settings/SettingsSection';
-import { Segmented } from '@ruimte/ui/controls';
+import { SettingsRow, SettingsSection } from '@basmilius/react-ui/settings';
+import { Segmented, Button, Icon } from '@basmilius/react-ui';
 import { useUsage, useUsageStore } from '../state/usage';
 import type { UsageCurrency } from './format';
-import { Button } from '@ruimte/ui/Button';
-import { Icon } from '@ruimte/ui/Icon';
 
 const CURRENCIES: readonly UsageCurrency[] = ['USD', 'EUR'];
 
@@ -35,7 +32,7 @@ export function UsagePane({ onOpenPage }: { onOpenPage(): void }) {
                     <Segmented
                         value={currency}
                         options={CURRENCIES.map((id) => ({ id, label: t(`settings.currency.options.${id}`) }))}
-                        onChange={(id) => useUsageStore.getState().setCurrency(id)}
+                        onValueChange={(id) => useUsageStore.getState().setCurrency(id)}
                         label={t('settings.currency.label')}
                     />
                 }

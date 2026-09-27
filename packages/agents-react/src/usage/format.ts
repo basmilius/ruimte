@@ -1,6 +1,6 @@
 import type { UsageProvider, UsageRate } from '@ruimte/agent-contracts';
-import { formatDay, formatHour, formatWeekdayDay } from '@ruimte/ui/format/datetime';
-import { formatMoney, formatNumber, formatTokens } from '@ruimte/ui/format/number';
+import { formatDay, formatHour, formatWeekdayDay, formatMoney, formatNumber, formatTokens } from '@basmilius/react-ui/format';
+export { formatClock } from '@basmilius/react-ui/format';
 
 /* Dollars are what a price table is in; euros are what the page can be set to. */
 export type UsageCurrency = 'USD' | 'EUR';
@@ -55,8 +55,6 @@ export const slotAxisLabel = (slot: string): string => {
     const hour = hourOfSlot(slot);
     return hour === null ? formatDay(dateOfSlot(slot)) : formatHour(atHour(slot, hour));
 };
-
-export { formatClock } from '@ruimte/ui/format/datetime';
 
 export const formatDate = (at: number): string => formatDay(at);
 
