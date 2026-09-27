@@ -101,7 +101,8 @@ struct FileContentPage: View {
     var initialLine: Int? = nil
     @State private var state = RemotePageState()
     @State private var image: UIImage?
-    @State private var movie: URL?
+    // The player's asset holds its loader weakly, so the page keeps it.
+    @State private var media: MachineMediaLoader?
     @State private var player: AVPlayer?
     @State private var showSource = false
     @State private var svg: Data?
@@ -214,8 +215,8 @@ struct FileContentPage: View {
     private func cleanMedia() {
         player?.pause()
         player = nil
-        if let movie { try? FileManager.default.removeItem(at: movie) }
-        movie = nil
+        media?.cancel()
+        media = nil
         image = nil
         svg = nil
     }
@@ -224,18 +225,15 @@ struct FileContentPage: View {
             let result = try await client.request("fs.read", payload: .object(["path": .string(path)]))
             cleanMedia()
             let mime = result.text("mime")
-            if result.text("kind") == "binary", mime.hasPrefix("image/") || mime.hasPrefix("video/") {
+            if result.text("kind") == "binary", mime.hasPrefix("video/") {
+                // In the ranges the player asks for, so it starts at once and a video of any size plays.
+                let loader = MachineMediaLoader(client: client, path: path)
+                media = loader
+                player = AVPlayer(playerItem: AVPlayerItem(asset: loader.asset()))
+            } else if result.text("kind") == "binary", mime.hasPrefix("image/") {
                 let resource = try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]))
                 try Task.checkCancellation()
-                if mime.hasPrefix("image/") {
-                    if mime == "image/svg+xml" { svg = resource.data } else { image = UIImage(data: resource.data) }
-                } else {
-                    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-                        .appendingPathExtension(URL(fileURLWithPath: path).pathExtension)
-                    try resource.data.write(to: url, options: [.atomic, .completeFileProtection])
-                    movie = url
-                    player = AVPlayer(url: url)
-                }
+                if mime == "image/svg+xml" { svg = resource.data } else { image = UIImage(data: resource.data) }
             }
             return result
         }
