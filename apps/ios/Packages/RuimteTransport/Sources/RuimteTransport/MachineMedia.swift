@@ -119,7 +119,11 @@ public struct MachineMediaInfo: Sendable, Equatable {
     public static let scheme = "ruimte-media"
     private let source: MachineMediaSource
     private let name: String
+    // Off the main queue, which AVFoundation may itself be waiting on while an asset loads.
+    private let queue = DispatchQueue(label: "app.ruimte.media-loader")
     private var loads: [ObjectIdentifier: Task<Void, Never>] = [:]
+    /// What the machine last refused, which says more than the error AVFoundation wraps it in.
+    public private(set) var failure: (any Error)?
 
     public init(client: any MachineRequesting, path: String) {
         source = MachineMediaSource(client: client, path: path)
@@ -129,7 +133,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
     public func asset() -> AVURLAsset {
         let url = URL(string: "\(Self.scheme)://file/")!.appending(path: name.isEmpty ? "media" : name)
         let asset = AVURLAsset(url: url)
-        asset.resourceLoader.setDelegate(self, queue: .main)
+        asset.resourceLoader.setDelegate(self, queue: queue)
         return asset
     }
 
@@ -142,7 +146,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
         _ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest
     ) -> Bool {
         let request = LoadingRequest(value: loadingRequest)
-        MainActor.assumeIsolated { start(request) }
+        Task { @MainActor in self.start(request) }
         return true
     }
 
@@ -150,10 +154,12 @@ public struct MachineMediaInfo: Sendable, Equatable {
         _ resourceLoader: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest
     ) {
         let key = ObjectIdentifier(loadingRequest)
-        MainActor.assumeIsolated { loads.removeValue(forKey: key)?.cancel() }
+        Task { @MainActor in self.loads.removeValue(forKey: key)?.cancel() }
     }
 
     private func start(_ request: LoadingRequest) {
+        // A cancel can overtake the hop to the main actor.
+        guard !request.value.isCancelled else { return }
         let key = ObjectIdentifier(request.value)
         loads[key] = Task { [source] in
             let loading = request.value
@@ -174,14 +180,17 @@ public struct MachineMediaInfo: Sendable, Equatable {
                 }
                 if !Task.isCancelled { loading.finishLoading() }
             } catch {
-                if !Task.isCancelled { loading.finishLoading(with: error) }
+                if !Task.isCancelled {
+                    failure = error
+                    loading.finishLoading(with: error)
+                }
             }
             loads.removeValue(forKey: key)
         }
     }
 }
 
-/// A loading request only ever touched on the main queue, which is where the loader asks AVFoundation to call it.
+/// A loading request handed from the loader's queue to the main actor, which alone answers it from then on.
 private struct LoadingRequest: @unchecked Sendable {
     let value: AVAssetResourceLoadingRequest
 }

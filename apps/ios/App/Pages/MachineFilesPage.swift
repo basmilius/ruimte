@@ -104,6 +104,9 @@ struct FileContentPage: View {
     // The player's asset holds its loader weakly, so the page keeps it.
     @State private var media: MachineMediaLoader?
     @State private var player: AVPlayer?
+    // The version of the file the player plays, as mtime and size.
+    @State private var playerKey: String?
+    @State private var mediaProblem: String?
     @State private var showSource = false
     @State private var svg: Data?
     var body: some View {
@@ -118,6 +121,12 @@ struct FileContentPage: View {
                             HTMLFilePreview(html: value.text("text"), viewportInsets: insets)
                         }
                     }
+                } else if let value = state.value, isVideo(value) {
+                    VStack(spacing: 0) {
+                        RemotePageStatus(state: state) { Task { await load() } }
+                        videoContents
+                    }
+                    .task(id: videoKey(value)) { await startPlayer(for: videoKey(value)) }
                 } else {
                     fileContents
                 }
@@ -188,10 +197,6 @@ struct FileContentPage: View {
                             URL(fileURLWithPath: path).lastPathComponent)
                     } else if let svg {
                         SafeSVGPreview(data: svg).frame(minHeight: 360)
-                    } else if isVideo(value) {
-                        VideoPlayer(player: player).frame(minHeight: 300).onAppear {
-                            if player == nil { startPlayer() }
-                        }
                     } else if value.text("kind") == "too-large" {
                         ContentUnavailableView(
                             "File too large", lucideIcon: "file-text",
@@ -219,11 +224,46 @@ struct FileContentPage: View {
         value.text("kind") == "binary" && value.text("mime").hasPrefix("video/")
     }
 
-    /// In the ranges the player asks for, so it starts at once and a video of any size plays.
-    private func startPlayer() {
+    @ViewBuilder private var videoContents: some View {
+        if let player {
+            VideoPlayer(player: player)
+        } else if let mediaProblem {
+            ContentUnavailableView("Cannot play this video", lucideIcon: "file-video", description: Text(mediaProblem))
+        } else {
+            MobileLoadingRow("Loading video").frame(maxHeight: .infinity)
+        }
+    }
+
+    private func videoKey(_ value: JSONValue) -> String {
+        "\(value["mtime"]?.numberValue ?? 0)-\(value["size"]?.numberValue ?? 0)"
+    }
+
+    /// In the ranges the player asks for, so it starts at once and a video of any size plays. The asset is loaded
+    /// before AVKit sees it: given one still loading, AVKit left its play button without effect.
+    private func startPlayer(for key: String) async {
+        guard key != playerKey else { return }
+        cleanMedia()
+        playerKey = key
         let loader = MachineMediaLoader(client: client, path: path)
         media = loader
-        player = AVPlayer(playerItem: AVPlayerItem(asset: loader.asset()))
+        let asset = loader.asset()
+        do {
+            let playable = try await asset.load(.isPlayable, .duration).0
+            guard playerKey == key else { return }
+            if playable {
+                player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+            } else {
+                mediaProblem = "This device cannot play this video."
+            }
+        } catch {
+            guard playerKey == key else { return }
+            if Task.isCancelled {
+                // The page went before the video loaded; it starts over when the page is back.
+                cleanMedia()
+            } else {
+                mediaProblem = (loader.failure ?? error).localizedDescription
+            }
+        }
     }
 
     private func cleanMedia() {
@@ -231,21 +271,19 @@ struct FileContentPage: View {
         player = nil
         media?.cancel()
         media = nil
+        playerKey = nil
+        mediaProblem = nil
         image = nil
         svg = nil
     }
     private func load() async {
         await state.load {
             let result = try await client.request("fs.read", payload: .object(["path": .string(path)]))
-            // A change elsewhere in the folder reads this file again; the same video keeps playing.
-            if isVideo(result), player != nil, result["mtime"] == state.value?["mtime"], result["size"] == state.value?["size"] {
-                return result
-            }
+            // A video starts with its page and keeps playing through a change elsewhere in the folder.
+            if isVideo(result) { return result }
             cleanMedia()
             let mime = result.text("mime")
-            if isVideo(result) {
-                startPlayer()
-            } else if result.text("kind") == "binary", mime.hasPrefix("image/") {
+            if result.text("kind") == "binary", mime.hasPrefix("image/") {
                 let resource = try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]))
                 try Task.checkCancellation()
                 if mime == "image/svg+xml" { svg = resource.data } else { image = UIImage(data: resource.data) }
