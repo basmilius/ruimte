@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { Mic } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { IconButton } from '@basmilius/react-ui';
 import { closeVoicePanel } from '@/voice/controller';
 import { refreshVoiceCredential, useVoice } from '@/voice/state';
 
@@ -21,15 +20,13 @@ export function VoiceButton() {
         return null;
     }
     return (
-        <Tooltip label={t('shortcut')} kbd={CANVAS_SHORTCUTS.voiceControl} name>
-            <button
-                className="icon-btn"
-                aria-pressed={open}
-                data-active={active || undefined}
-                onClick={() => (open ? closeVoicePanel() : useVoice.getState().setOpen(true))}
-            >
-                <Icon icon={Mic} size={16} />
-            </button>
-        </Tooltip>
+        <IconButton
+            icon={Mic}
+            label={t('shortcut')}
+            kbd={CANVAS_SHORTCUTS.voiceControl}
+            aria-pressed={open}
+            active={active}
+            onClick={() => (open ? closeVoicePanel() : useVoice.getState().setOpen(true))}
+        />
     );
 }

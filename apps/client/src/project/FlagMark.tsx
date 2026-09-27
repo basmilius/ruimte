@@ -3,8 +3,7 @@ import { Flag } from 'lucide-react';
 import { flagOf, isFlagColor } from '@ruimte/contracts';
 import { accentColor, accentLabel } from '@/canvas/accents';
 import { useDocument } from '@/state/document';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Icon, Tooltip } from '@basmilius/react-ui';
 
 /* The flag a person put on a view or a node, in its own color; nothing for none, or for a color a newer Ruimte picked. */
 export function FlagMark({ color }: { color: string | null | undefined }) {

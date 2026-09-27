@@ -6,16 +6,10 @@ import { parseSync, Visitor, type ImportExpression, type JSXElement, type JSXEle
 
 const HERE = new URL('.', import.meta.url).pathname;
 
-/* The components the client draws with, held to the same rules; their files read as `@ruimte/ui/<file>`. */
-const UI_PREFIX = '@ruimte/ui/';
-
 /* The chat, its providers and its usage, which the client draws as its own; their files read as `@ruimte/agents-react/<file>`. */
 const AGENTS_PREFIX = '@ruimte/agents-react/';
 
-const PACKAGES: ReadonlyArray<{ prefix: string; source: string }> = [
-    { prefix: UI_PREFIX, source: join(HERE, '../../../packages/ui/src') },
-    { prefix: AGENTS_PREFIX, source: join(HERE, '../../../packages/agents-react/src') }
-];
+const PACKAGES: ReadonlyArray<{ prefix: string; source: string }> = [{ prefix: AGENTS_PREFIX, source: join(HERE, '../../../packages/agents-react/src') }];
 
 const fileOf = (path: string): string => {
     const owner = PACKAGES.find(({ prefix }) => path.startsWith(prefix));
@@ -50,17 +44,15 @@ const lineOf = (text: string, offset: number): number => text.slice(0, offset).s
 const KEY_LISTENERS: Record<string, string> = {
     'shell/app-shortcuts.ts': "the window's own shortcuts, bound once",
     'canvas/canvas-shortcuts.ts': 'what acts on the project, bound once by the workspace',
-    'drawing/use-drawing-keys.ts': "a drawing view's bare tool keys, the one exception the product rules allow, and only while that drawing has the keyboard",
-    '@ruimte/ui/ShortcutHints.tsx': 'mounted once, and only watches a modifier held on its own; it binds no shortcut',
-    '@ruimte/ui/modality.ts': 'started once, and only notes that the keyboard is in use; it binds no shortcut'
+    'drawing/use-drawing-keys.ts': "a drawing view's bare tool keys, the one exception the product rules allow, and only while that drawing has the keyboard"
 };
 
-/* Where `Intl` may be used outside `@ruimte/ui/format`, and why there. */
+/* Where the app may build on `Intl` itself rather than on `@basmilius/react-ui/format`, and why there. */
 const INTL_OUTSIDE_FORMAT: Record<string, string> = {
     'voice/controller.ts': 'the date told to the speech model, fixed to en-GB so the model always reads one format; no person reads it'
 };
 
-/* Where text may be set in capitals, and why there. A label anywhere else is a sentence, through `SECTION_LABEL`. */
+/* Where text may be set in capitals, and why there. A label anywhere else is a sentence, through `SectionLabel`. */
 const UPPERCASE: Record<string, string> = {
     'shell/LinkMachineDialog.tsx': 'the pairing code, which reads in capitals on the screen it is copied from, whatever case is typed'
 };
@@ -310,7 +302,7 @@ describe('the conventions of the client', () => {
 
     test('a button with a word in it is a Button, never a height, a padding and a radius of its own', () => {
         const built = sources()
-            .filter(({ path }) => path.endsWith('.tsx') && path !== '@ruimte/ui/Button.tsx')
+            .filter(({ path }) => path.endsWith('.tsx'))
             .flatMap(({ path, text }) => {
                 const found: string[] = [];
                 new Visitor({
@@ -403,9 +395,9 @@ describe('the conventions of the client', () => {
         expect(between).toEqual([]);
     });
 
-    test('only @ruimte/ui/format builds a formatter out of Intl', () => {
+    test('only @basmilius/react-ui/format builds a formatter out of Intl', () => {
         const building = sources()
-            .filter(({ path }) => !path.startsWith(`${UI_PREFIX}format/`) && !(path in INTL_OUTSIDE_FORMAT))
+            .filter(({ path }) => !(path in INTL_OUTSIDE_FORMAT))
             .flatMap(({ path, text }) => {
                 const found: string[] = [];
                 new Visitor({

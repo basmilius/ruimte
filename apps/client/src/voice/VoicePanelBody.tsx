@@ -19,14 +19,8 @@ import {
 } from 'lucide-react';
 import { FadingWords } from '@ruimte/agents-react/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
-import { formatClockDuration } from '@ruimte/ui/format/duration';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR, PANEL_HEADER, SECTION_LABEL } from '@ruimte/ui/classes';
-import { CloseButton } from '@ruimte/ui/CloseButton';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { useNow } from '@ruimte/ui/useNow';
+import { formatClockDuration } from '@basmilius/react-ui/format';
+import { Button, CloseButton, EmptyState, FormError, Icon, IconButton, PanelHeader, SectionLabel, useNow } from '@basmilius/react-ui';
 import { closeVoicePanel, startVoice, stopVoice, undoVoiceAction, undoVoiceActions } from '@/voice/controller';
 import { VoiceWaveform } from '@/voice/VoiceWaveform';
 import { useVoice, type VoiceAction, type VoiceActionKind, type VoicePhase, type VoiceUtterance } from '@/voice/state';
@@ -75,14 +69,13 @@ function ActionEvent({ action }: { action: VoiceAction }) {
                             size={14}
                             className="col-start-1 row-start-1 text-positive transition-opacity group-hover/action:opacity-0 group-focus-within/action:opacity-0"
                         />
-                        <Tooltip label={t('actions.undo')} name>
-                            <button
-                                className="icon-btn icon-btn-sm col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action:pointer-events-auto group-hover/action:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
-                                onClick={() => undoVoiceAction(action.id)}
-                            >
-                                <Icon icon={RotateCcw} size={14} />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon={RotateCcw}
+                            size="sm"
+                            label={t('actions.undo')}
+                            className="col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action:pointer-events-auto group-hover/action:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                            onClick={() => undoVoiceAction(action.id)}
+                        />
                     </>
                 ) : completed ? (
                     <Icon icon={Check} size={14} className="text-positive" />
@@ -111,10 +104,11 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
     return (
         <div className="group/action-group rounded-lg border border-border bg-surface-raised px-3 py-1.5">
             <div className="flex min-h-8 items-center gap-2.5">
-                <button
-                    className="icon-btn icon-btn-sm -m-1.5 grid place-items-center"
-                    type="button"
-                    aria-label={open ? t('actions.collapse') : t('actions.expand')}
+                <IconButton
+                    size="sm"
+                    label={open ? t('actions.collapse') : t('actions.expand')}
+                    tooltip={false}
+                    className="-m-1.5 grid place-items-center"
                     aria-expanded={open}
                     onClick={() => setOpen(!open)}
                 >
@@ -131,7 +125,7 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
                             open && 'rotate-90'
                         )}
                     />
-                </button>
+                </IconButton>
                 <button className="min-w-0 grow text-left" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
                     <span className="min-w-0 grow truncate text-xs text-text">
                         <span className="font-medium">{t('actions.notesAdded', { count: actions.length })}</span>
@@ -146,14 +140,13 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
                                 size={14}
                                 className="col-start-1 row-start-1 text-positive transition-opacity group-hover/action-group:opacity-0 group-focus-within/action-group:opacity-0"
                             />
-                            <Tooltip label={t('actions.undoGroup', { count: actions.length })} name>
-                                <button
-                                    className="icon-btn icon-btn-sm col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action-group:pointer-events-auto group-hover/action-group:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
-                                    onClick={() => undoVoiceActions(undoableIds)}
-                                >
-                                    <Icon icon={RotateCcw} size={14} />
-                                </button>
-                            </Tooltip>
+                            <IconButton
+                                icon={RotateCcw}
+                                size="sm"
+                                label={t('actions.undoGroup', { count: actions.length })}
+                                className="col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action-group:pointer-events-auto group-hover/action-group:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                                onClick={() => undoVoiceActions(undoableIds)}
+                            />
                         </>
                     ) : completed ? (
                         <Icon icon={Check} size={14} className="text-positive" />
@@ -214,11 +207,11 @@ export function VoicePanelBody() {
 
     return (
         <>
-            <header className={clsx(PANEL_HEADER, 'app-drag', hasOverlayControls() && 'toolbar-overlay-inset')}>
-                <span className={`${SECTION_LABEL} grow`}>{t('title')}</span>
+            <PanelHeader className={clsx('app-drag', hasOverlayControls() && 'toolbar-overlay-inset')}>
+                <SectionLabel className="grow">{t('title')}</SectionLabel>
                 <VoiceStatus elapsedMs={elapsedMs} phase={phase} />
                 <CloseButton label={t('close')} onClick={closeVoicePanel} />
-            </header>
+            </PanelHeader>
             <VoiceWaveform phase={phase} />
             <div className="min-h-0 grow overflow-y-auto px-4 py-5" role="log" aria-live="polite">
                 {timeline.length === 0 &&
@@ -248,11 +241,7 @@ export function VoicePanelBody() {
                 <div ref={bottom} className="h-5" aria-hidden="true" />
             </div>
             <footer className="shrink-0 border-t border-border p-3">
-                {error && (
-                    <p className={`${FORM_ERROR} mb-2`} role="alert">
-                        {error}
-                    </p>
-                )}
+                {error && <FormError className="mb-2">{error}</FormError>}
                 <Button
                     className="w-full"
                     variant={active ? 'secondary' : 'primary'}

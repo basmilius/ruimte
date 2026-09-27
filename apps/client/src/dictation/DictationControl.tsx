@@ -2,11 +2,8 @@ import { useEffect, useId, useLayoutEffect, useRef, type RefObject } from 'react
 import { Mic, Square, X, LoaderCircle, CircleAlert } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
+import { ButtonGroup, ErrorBoundary, IconButton } from '@basmilius/react-ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { BTN_GROUP } from '@ruimte/ui/classes';
 import { cancelDictation, observeSpeech, registerDictationTarget, toggleDictation, useDictation, type DictationInsertion } from './controller';
 
 const EMPTY_BANDS: number[] = [];
@@ -60,31 +57,27 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
             <>
                 {buttonContainer &&
                     createPortal(
-                        <Tooltip label={tooltip} kbd={CANVAS_SHORTCUTS.dictation} name>
-                            <button
-                                type="button"
-                                aria-pressed={recording}
-                                aria-busy={working}
-                                className={`icon-btn icon-btn-sm ${error ? 'text-status-error' : recording ? 'text-accent' : ''}`}
-                                disabled={active && phase === 'finishing'}
-                                onPointerDown={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                }}
-                                onClick={() => {
-                                    const element = targetRef.current;
-                                    if (element) {
-                                        toggleDictation({ id, element, capture: () => latest.current() });
-                                    }
-                                }}
-                            >
-                                <Icon
-                                    icon={working ? LoaderCircle : recording ? Square : error ? CircleAlert : Mic}
-                                    size={14}
-                                    className={working ? 'animate-spin motion-reduce:animate-none' : undefined}
-                                />
-                            </button>
-                        </Tooltip>,
+                        <IconButton
+                            icon={working ? LoaderCircle : recording ? Square : error ? CircleAlert : Mic}
+                            spin={working}
+                            size="sm"
+                            label={tooltip}
+                            kbd={CANVAS_SHORTCUTS.dictation}
+                            aria-pressed={recording}
+                            aria-busy={working}
+                            className={error ? 'text-status-error' : recording ? 'text-accent' : undefined}
+                            disabled={active && phase === 'finishing'}
+                            onPointerDown={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                            }}
+                            onClick={() => {
+                                const element = targetRef.current;
+                                if (element) {
+                                    toggleDictation({ id, element, capture: () => latest.current() });
+                                }
+                            }}
+                        />,
                         buttonContainer
                     )}
                 {!inlinePreview && active && text && phase !== 'error' && (
@@ -106,32 +99,23 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
     return (
         <div className="flex min-w-0 flex-col gap-2 px-2 py-1" onPointerDown={(event) => event.stopPropagation()}>
             <div className="flex items-center gap-2">
-                <div className={BTN_GROUP}>
-                    <Tooltip label={label} kbd={CANVAS_SHORTCUTS.dictation} name>
-                        <button
-                            type="button"
-                            aria-pressed={active && phase !== 'error'}
-                            className="icon-btn"
-                            disabled={active && phase === 'finishing'}
-                            onPointerDown={(event) => event.preventDefault()}
-                            onClick={() => {
-                                const element = targetRef.current;
-                                if (element) {
-                                    toggleDictation({ id, element, capture: () => latest.current() });
-                                }
-                            }}
-                        >
-                            <Icon icon={active && phase !== 'error' ? Square : Mic} size={16} />
-                        </button>
-                    </Tooltip>
-                    {active && (
-                        <Tooltip label={t('dictation.cancel')} name>
-                            <button type="button" className="icon-btn" onClick={cancelDictation}>
-                                <Icon icon={X} size={16} />
-                            </button>
-                        </Tooltip>
-                    )}
-                </div>
+                <ButtonGroup>
+                    <IconButton
+                        icon={active && phase !== 'error' ? Square : Mic}
+                        label={label}
+                        kbd={CANVAS_SHORTCUTS.dictation}
+                        aria-pressed={active && phase !== 'error'}
+                        disabled={active && phase === 'finishing'}
+                        onPointerDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                            const element = targetRef.current;
+                            if (element) {
+                                toggleDictation({ id, element, capture: () => latest.current() });
+                            }
+                        }}
+                    />
+                    {active && <IconButton icon={X} label={t('dictation.cancel')} onClick={cancelDictation} />}
+                </ButtonGroup>
                 {active && (
                     <span role="status" className="text-xs text-text-muted">
                         {t(`dictation.${phase}`)}

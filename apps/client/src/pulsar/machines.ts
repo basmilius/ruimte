@@ -4,7 +4,7 @@ import type { Machine } from '@ruimte/pulsar';
 import { hasLocalMachine, listedEndpoints } from '@/state/local-machine';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { pool, transportFor } from '@/transport';
-import { messageOf } from '@ruimte/ui/error-message';
+import { messageOf } from '@basmilius/react-ui';
 import { usePulsarAccount, withAccessToken } from './account';
 import { reclaimPairedMachine } from './removal';
 

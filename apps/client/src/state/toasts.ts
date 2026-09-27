@@ -1,4 +1,4 @@
-import { createToastStore, type Toast as UiToast } from '@ruimte/ui/toast-store';
+import { createToastStore, type Toast as UiToast } from '@basmilius/react-ui';
 
 export interface Toast extends UiToast {
     /* Everything the command wrote, behind the copy button of a failure. */

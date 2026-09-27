@@ -6,12 +6,8 @@ import { isApplePlatform } from '@/desktop/bridge';
 import type { FindOptions } from '@/find/query';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
-import { formatNumber } from '@ruimte/ui/format/number';
-import { BTN_GROUP, FLOAT } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Separator } from '@ruimte/ui/Separator';
-import { matchesShortcut, type Shortcut } from '@ruimte/ui/shortcut';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { formatNumber } from '@basmilius/react-ui/format';
+import { ButtonGroup, Icon, IconButton, Separator, Surface, matchesShortcut, type Shortcut, Tooltip } from '@basmilius/react-ui';
 
 const OPTIONS: readonly { key: keyof FindOptions; icon: LucideIcon; label: string }[] = [
     { key: 'caseSensitive', icon: CaseSensitive, label: 'find.caseSensitive' },
@@ -98,55 +94,55 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
     );
 
     return (
-        <div
+        <Surface
             data-find-bar
             role="search"
-            className={clsx(FLOAT, 'absolute top-2 right-3 z-20 flex h-10 max-w-[calc(100%-24px)] items-center gap-2 rounded-lg pr-1 pl-3', className)}
+            className={clsx('absolute top-2 right-3 z-20 flex h-10 max-w-[calc(100%-24px)] items-center gap-2 rounded-lg pr-1 pl-3', className)}
         >
             <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
             {disabled ? <Tooltip label={disabledReason}>{field}</Tooltip> : field}
             {count !== null && <span className="shrink-0 text-xs whitespace-nowrap text-text-muted tabular-nums">{count}</span>}
-            <div className={BTN_GROUP}>
+            <ButtonGroup>
                 {OPTIONS.map((option) => {
                     const reason = disabled ? disabledReason : (unsupported[option.key] ?? null);
                     return (
-                        <Tooltip key={option.key} label={reason ?? t(option.label)} name={reason === null}>
-                            <button
-                                type="button"
-                                aria-label={reason === null ? undefined : t(option.label)}
-                                aria-pressed={reason === null && query[option.key]}
-                                aria-disabled={reason !== null}
-                                className="icon-btn icon-btn-sm"
-                                onClick={() => {
-                                    if (reason === null) {
-                                        setQuery({ ...query, [option.key]: !query[option.key] });
-                                    }
-                                }}
-                            >
-                                <Icon icon={option.icon} size={14} />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            key={option.key}
+                            icon={option.icon}
+                            size="sm"
+                            label={t(option.label)}
+                            tooltip={reason ?? undefined}
+                            aria-pressed={reason === null && query[option.key]}
+                            aria-disabled={reason !== null}
+                            onClick={() => {
+                                if (reason === null) {
+                                    setQuery({ ...query, [option.key]: !query[option.key] });
+                                }
+                            }}
+                        />
                     );
                 })}
-            </div>
+            </ButtonGroup>
             <Separator />
-            <div className={BTN_GROUP}>
-                <Tooltip label={t('find.previous')} kbd={FIND_SHORTCUTS.previous} name>
-                    <button type="button" className="icon-btn icon-btn-sm" disabled={disabled || total === 0} onClick={() => onStep(-1)}>
-                        <Icon icon={ChevronUp} size={14} />
-                    </button>
-                </Tooltip>
-                <Tooltip label={t('find.next')} kbd={FIND_SHORTCUTS.next} name>
-                    <button type="button" className="icon-btn icon-btn-sm" disabled={disabled || total === 0} onClick={() => onStep(1)}>
-                        <Icon icon={ChevronDown} size={14} />
-                    </button>
-                </Tooltip>
-                <Tooltip label={t('find.close')} kbd={FIND_SHORTCUTS.close} name>
-                    <button type="button" className="icon-btn icon-btn-sm" onClick={find.close}>
-                        <Icon icon={X} size={14} />
-                    </button>
-                </Tooltip>
-            </div>
-        </div>
+            <ButtonGroup>
+                <IconButton
+                    icon={ChevronUp}
+                    size="sm"
+                    label={t('find.previous')}
+                    kbd={FIND_SHORTCUTS.previous}
+                    disabled={disabled || total === 0}
+                    onClick={() => onStep(-1)}
+                />
+                <IconButton
+                    icon={ChevronDown}
+                    size="sm"
+                    label={t('find.next')}
+                    kbd={FIND_SHORTCUTS.next}
+                    disabled={disabled || total === 0}
+                    onClick={() => onStep(1)}
+                />
+                <IconButton icon={X} size="sm" label={t('find.close')} kbd={FIND_SHORTCUTS.close} onClick={find.close} />
+            </ButtonGroup>
+        </Surface>
     );
 }

@@ -10,7 +10,7 @@ import {
     type IdentityLinkCompletePayload,
     type ProviderId
 } from '@ruimte/pulsar';
-import { messageOf } from '@ruimte/ui/error-message';
+import { messageOf } from '@basmilius/react-ui';
 import { currentClientLabel } from '@/endpoint/client-label';
 import { useUi } from '@/state/ui';
 import { offeredProviders } from './account-name';

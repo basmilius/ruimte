@@ -1,4 +1,3 @@
-import { Menu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { Pause, Play, Square, type LucideIcon } from 'lucide-react';
@@ -10,9 +9,7 @@ import { localEndpointLabel, useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Icon, IconButton, Menu } from '@basmilius/react-ui';
 
 const ACTION_ICONS: Record<ComputerControlAction, LucideIcon> = {
     pause: Pause,
@@ -60,24 +57,22 @@ export function ComputerIndicator({ nodeId }: { nodeId: string }) {
     const look = indicatorLook(mode, machine);
     return (
         <Menu.Root>
-            <Tooltip label={look.label} name>
-                <Menu.Trigger
-                    className={clsx(
-                        'icon-btn icon-btn-sm data-[popup-open]:bg-surface-active',
-                        look.tone === 'accent' ? 'text-accent hover:text-accent' : 'text-text-muted'
-                    )}
-                >
-                    <CursorMark />
-                </Menu.Trigger>
-            </Tooltip>
-            <MenuPopup align="end">
+            <IconButton
+                render={<Menu.Trigger />}
+                label={look.label}
+                size="sm"
+                className={clsx('data-[popup-open]:bg-surface-active', look.tone === 'accent' ? 'text-accent hover:text-accent' : 'text-text-muted')}
+            >
+                <CursorMark />
+            </IconButton>
+            <Menu.Popup align="end">
                 {look.actions.map((action) => (
-                    <Menu.Item key={action} className="menu-item" onClick={() => press(endpointId, action)}>
+                    <Menu.Item key={action} onClick={() => press(endpointId, action)}>
                         <Icon icon={ACTION_ICONS[action]} size={14} />
                         {t(`indicator.${action}`)}
                     </Menu.Item>
                 ))}
-            </MenuPopup>
+            </Menu.Popup>
         </Menu.Root>
     );
 }

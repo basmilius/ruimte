@@ -1,7 +1,7 @@
 import type { WebglAddon } from '@xterm/addon-webgl';
 import type { Terminal } from '@xterm/xterm';
 import { DEFAULT_WEBGL_CONTEXTS, WebglSlots, type SlotChange } from '@/terminal/webgl-slots';
-import { prefetcher } from '@/ui/prefetch';
+import { prefetcher } from '@basmilius/react-ui';
 
 /* Flip to true while debugging the budget; false logs nothing. */
 const DEBUG: boolean = false;

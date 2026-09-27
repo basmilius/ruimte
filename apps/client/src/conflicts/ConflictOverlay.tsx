@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { Ban, Check, ChevronDown, ChevronUp, FileWarning, LoaderCircle, Sparkles, Wand2 } from 'lucide-react';
 import type { GitConflictFile, GitConflictsResult, GitOperation } from '@ruimte/contracts';
@@ -16,12 +15,7 @@ import { useGitStatus } from '@/state/git-watch';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { Button } from '@ruimte/ui/Button';
-import { BTN_GROUP, FORM_ERROR } from '@ruimte/ui/classes';
-import { CloseButton } from '@ruimte/ui/CloseButton';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Button, ButtonGroup, CloseButton, Dialog, EmptyState, FormError, Icon, IconButton } from '@basmilius/react-ui';
 
 type Reading = { cwd: string; answer: GitConflictsResult } | { cwd: string; failure: string };
 
@@ -346,173 +340,152 @@ export function ConflictOverlay() {
 
     return (
         <Dialog.Root open={request !== null} onOpenChange={(next) => !next && close()}>
-            <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup
-                    className="dialog-popup flex h-[760px] w-[min(1180px,94vw)] flex-col overflow-hidden p-0"
-                    onKeyDown={(event) => {
-                        // Walking the conflicts from the keyboard, with a modifier, while the caret is in the file.
-                        if (event.altKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
-                            event.preventDefault();
-                            go(event.key === 'ArrowDown' ? 1 : -1);
-                        }
-                    }}
-                >
-                    <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3">
-                        <Dialog.Title className="text-base font-semibold text-text">
-                            {operation === null ? t('title.plain') : t(`title.${operation}`)}
-                        </Dialog.Title>
-                        {answer !== null && (
-                            <span className="truncate text-xs text-text-muted">{t('sides', { ours: answer.ours, theirs: answer.theirs })}</span>
-                        )}
-                        <span className="grow" />
-                        {run !== null && (
-                            <span className="flex items-center gap-2 text-xs text-text-muted">
-                                <Icon icon={LoaderCircle} size={12} className="animate-spin" />
-                                {t('ai.working', { path: basenameOf(run.path), done: run.done + 1, total: run.total })}
-                                <Button size="xs" onClick={() => cancelGitRunAction(run.actionId)}>
-                                    {t('common:action.cancel')}
-                                </Button>
-                            </span>
-                        )}
-                        <span className={BTN_GROUP}>
-                            <Tooltip label={t('nav.previous')} name>
-                                <button className="icon-btn icon-btn-sm" disabled={conflicts.length === 0} onClick={() => go(-1)}>
-                                    <Icon icon={ChevronUp} size={14} />
-                                </button>
-                            </Tooltip>
-                            <Tooltip label={t('nav.next')} name>
-                                <button className="icon-btn icon-btn-sm" disabled={conflicts.length === 0} onClick={() => go(1)}>
-                                    <Icon icon={ChevronDown} size={14} />
-                                </button>
-                            </Tooltip>
+            <Dialog.Popup
+                className="flex h-[760px] w-[min(1180px,94vw)] flex-col overflow-hidden p-0"
+                onKeyDown={(event) => {
+                    // Walking the conflicts from the keyboard, with a modifier, while the caret is in the file.
+                    if (event.altKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+                        event.preventDefault();
+                        go(event.key === 'ArrowDown' ? 1 : -1);
+                    }
+                }}
+            >
+                <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3">
+                    <Dialog.Title>{operation === null ? t('title.plain') : t(`title.${operation}`)}</Dialog.Title>
+                    {answer !== null && <span className="truncate text-xs text-text-muted">{t('sides', { ours: answer.ours, theirs: answer.theirs })}</span>}
+                    <span className="grow" />
+                    {run !== null && (
+                        <span className="flex items-center gap-2 text-xs text-text-muted">
+                            <Icon icon={LoaderCircle} size={12} className="animate-spin" />
+                            {t('ai.working', { path: basenameOf(run.path), done: run.done + 1, total: run.total })}
+                            <Button size="xs" onClick={() => cancelGitRunAction(run.actionId)}>
+                                {t('common:action.cancel')}
+                            </Button>
                         </span>
-                        <Tooltip label={wandable === 0 ? t('wand.nothing') : t('wand.tip', { count: wandable })} name>
-                            <button className="icon-btn icon-btn-sm" disabled={wandable === 0 || busy} onClick={wand}>
-                                <Icon icon={Wand2} size={14} />
-                            </button>
-                        </Tooltip>
-                        <Tooltip label={t('ai.file')} name>
-                            <button
-                                className="icon-btn icon-btn-sm"
-                                disabled={busy || file === null || file.whole}
-                                onClick={() => void ask(activeFile === null ? [] : [activeFile])}
-                            >
-                                <Icon icon={Sparkles} size={14} />
-                            </button>
-                        </Tooltip>
-                        <Button size="sm" disabled={busy || textFiles.length === 0} onClick={() => void ask(textFiles)}>
-                            {t('ai.all', { count: textFiles.length })}
-                        </Button>
-                        <CloseButton label={t('common:action.close')} onClick={close} />
-                    </header>
+                    )}
+                    <ButtonGroup render={<span />}>
+                        <IconButton icon={ChevronUp} size="sm" label={t('nav.previous')} disabled={conflicts.length === 0} onClick={() => go(-1)} />
+                        <IconButton icon={ChevronDown} size="sm" label={t('nav.next')} disabled={conflicts.length === 0} onClick={() => go(1)} />
+                    </ButtonGroup>
+                    <IconButton
+                        icon={Wand2}
+                        size="sm"
+                        label={wandable === 0 ? t('wand.nothing') : t('wand.tip', { count: wandable })}
+                        disabled={wandable === 0 || busy}
+                        onClick={wand}
+                    />
+                    <IconButton
+                        icon={Sparkles}
+                        size="sm"
+                        label={t('ai.file')}
+                        disabled={busy || file === null || file.whole}
+                        onClick={() => void ask(activeFile === null ? [] : [activeFile])}
+                    />
+                    <Button size="sm" disabled={busy || textFiles.length === 0} onClick={() => void ask(textFiles)}>
+                        {t('ai.all', { count: textFiles.length })}
+                    </Button>
+                    <CloseButton label={t('common:action.close')} onClick={close} />
+                </header>
 
-                    <div className="flex min-h-0 grow">
-                        <nav className="w-64 shrink-0 overflow-y-auto border-r border-border py-1">
-                            {list.length === 0 && <EmptyState>{t('list.none')}</EmptyState>}
-                            {list.map((entry) => {
-                                const remaining = open[entry.path];
-                                return (
-                                    <button
-                                        key={entry.path}
-                                        className={clsx(
-                                            'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-hover',
-                                            entry.path === activeFile && 'bg-surface-active'
-                                        )}
-                                        disabled={busy}
-                                        onClick={() => setActivePath(entry.path)}
-                                    >
-                                        <Icon
-                                            icon={remaining === 0 ? Check : FileWarning}
-                                            size={14}
-                                            className={remaining === 0 ? 'shrink-0 text-status-idle' : 'shrink-0 text-status-needs-you'}
-                                        />
-                                        <span className="min-w-0 grow">
-                                            <span className="block truncate text-xs text-text">{basenameOf(entry.path)}</span>
-                                            <span className="block truncate text-xs text-text-faint">{entry.path}</span>
-                                        </span>
-                                        {remaining !== undefined && remaining > 0 && (
-                                            <span className="shrink-0 text-xs text-text-faint tabular-nums">{remaining}</span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </nav>
+                <div className="flex min-h-0 grow">
+                    <nav className="w-64 shrink-0 overflow-y-auto border-r border-border py-1">
+                        {list.length === 0 && <EmptyState>{t('list.none')}</EmptyState>}
+                        {list.map((entry) => {
+                            const remaining = open[entry.path];
+                            return (
+                                <button
+                                    key={entry.path}
+                                    className={clsx(
+                                        'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-hover',
+                                        entry.path === activeFile && 'bg-surface-active'
+                                    )}
+                                    disabled={busy}
+                                    onClick={() => setActivePath(entry.path)}
+                                >
+                                    <Icon
+                                        icon={remaining === 0 ? Check : FileWarning}
+                                        size={14}
+                                        className={remaining === 0 ? 'shrink-0 text-status-idle' : 'shrink-0 text-status-needs-you'}
+                                    />
+                                    <span className="min-w-0 grow">
+                                        <span className="block truncate text-xs text-text">{basenameOf(entry.path)}</span>
+                                        <span className="block truncate text-xs text-text-faint">{entry.path}</span>
+                                    </span>
+                                    {remaining !== undefined && remaining > 0 && (
+                                        <span className="shrink-0 text-xs text-text-faint tabular-nums">{remaining}</span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </nav>
 
-                        <div className="flex min-w-0 grow flex-col">
-                            {failure !== null && (
-                                <p className={clsx(FORM_ERROR, 'border-b border-border px-3 py-2')} role="alert">
-                                    {failure}
-                                </p>
-                            )}
-                            {list.length === 0 ? (
-                                <EmptyState className="grow" icon={Check} title={t('empty.title')}>
-                                    {operation === null ? t('empty.plain') : t(`empty.${operation}`)}
-                                </EmptyState>
-                            ) : file === null ? (
-                                <EmptyState className="grow" icon={loading ? LoaderCircle : undefined} spin>
-                                    {loading ? t('loading') : t('list.pick')}
-                                </EmptyState>
-                            ) : file.whole ? (
-                                <WholeFile
-                                    file={file}
-                                    ours={answer?.ours ?? ''}
-                                    theirs={answer?.theirs ?? ''}
-                                    busy={busy}
-                                    onTake={(side) => void take(file.path, side)}
-                                />
-                            ) : (
-                                <>
-                                    <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-3">
-                                        <span className="truncate text-xs text-text-muted">{file.path}</span>
-                                        <span className="grow" />
-                                        <span className="text-xs text-text-faint tabular-nums">
-                                            {t('counter', { open: openHere, total: conflicts.length })}
-                                        </span>
-                                    </div>
-                                    <ConflictEditor file={file} held={() => drafts.current.get(file.path) ?? null} onChange={onDraft} onReady={onReady} />
-                                    <div className="h-52 shrink-0 border-t border-border">
-                                        <ConflictSides
-                                            block={block}
-                                            ours={answer?.ours ?? ''}
-                                            theirs={answer?.theirs ?? ''}
-                                            settled={settled}
-                                            onTake={(side: MergeSide) => current !== null && block !== null && apply(current, sideLines(block, side))}
-                                            onBoth={(first: MergeSide) => current !== null && block !== null && apply(current, bothLines(block, first))}
-                                        />
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                    <div className="flex min-w-0 grow flex-col">
+                        {failure !== null && <FormError className="border-b border-border px-3 py-2">{failure}</FormError>}
+                        {list.length === 0 ? (
+                            <EmptyState className="grow" icon={Check} title={t('empty.title')}>
+                                {operation === null ? t('empty.plain') : t(`empty.${operation}`)}
+                            </EmptyState>
+                        ) : file === null ? (
+                            <EmptyState className="grow" icon={loading ? LoaderCircle : undefined} spin>
+                                {loading ? t('loading') : t('list.pick')}
+                            </EmptyState>
+                        ) : file.whole ? (
+                            <WholeFile
+                                file={file}
+                                ours={answer?.ours ?? ''}
+                                theirs={answer?.theirs ?? ''}
+                                busy={busy}
+                                onTake={(side) => void take(file.path, side)}
+                            />
+                        ) : (
+                            <>
+                                <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-3">
+                                    <span className="truncate text-xs text-text-muted">{file.path}</span>
+                                    <span className="grow" />
+                                    <span className="text-xs text-text-faint tabular-nums">{t('counter', { open: openHere, total: conflicts.length })}</span>
+                                </div>
+                                <ConflictEditor file={file} held={() => drafts.current.get(file.path) ?? null} onChange={onDraft} onReady={onReady} />
+                                <div className="h-52 shrink-0 border-t border-border">
+                                    <ConflictSides
+                                        block={block}
+                                        ours={answer?.ours ?? ''}
+                                        theirs={answer?.theirs ?? ''}
+                                        settled={settled}
+                                        onTake={(side: MergeSide) => current !== null && block !== null && apply(current, sideLines(block, side))}
+                                        onBoth={(first: MergeSide) => current !== null && block !== null && apply(current, bothLines(block, first))}
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
+                </div>
 
-                    <footer className="flex h-12 shrink-0 items-center gap-2 border-t border-border px-3">
-                        <span className="text-xs text-text-muted">{left === 0 ? t('footer.done') : t('footer.left', { count: left })}</span>
-                        <span className="grow" />
-                        {operation !== null && (
-                            <Button variant="ghost" disabled={busy} onClick={() => void finish('abort', operation)}>
-                                <Icon icon={Ban} size={14} />
-                                {t(`footer.abort.${operation}`)}
-                            </Button>
-                        )}
-                        {ready.length > 1 && (
-                            <Button variant="secondary" disabled={busy} onClick={() => void save(ready)}>
-                                {t('footer.resolveAll', { count: ready.length })}
-                            </Button>
-                        )}
-                        {file !== null && !file.whole && (
-                            <Button variant="secondary" disabled={busy || openHere > 0} onClick={() => void save([file.path])}>
-                                {t('footer.resolve')}
-                            </Button>
-                        )}
-                        {operation !== null && (
-                            <Button variant="primary" disabled={busy || left > 0} onClick={() => void finish('continue', operation)}>
-                                {t(`footer.continue.${operation}`)}
-                            </Button>
-                        )}
-                    </footer>
-                </Dialog.Popup>
-            </Dialog.Portal>
+                <footer className="flex h-12 shrink-0 items-center gap-2 border-t border-border px-3">
+                    <span className="text-xs text-text-muted">{left === 0 ? t('footer.done') : t('footer.left', { count: left })}</span>
+                    <span className="grow" />
+                    {operation !== null && (
+                        <Button variant="ghost" disabled={busy} onClick={() => void finish('abort', operation)}>
+                            <Icon icon={Ban} size={14} />
+                            {t(`footer.abort.${operation}`)}
+                        </Button>
+                    )}
+                    {ready.length > 1 && (
+                        <Button variant="secondary" disabled={busy} onClick={() => void save(ready)}>
+                            {t('footer.resolveAll', { count: ready.length })}
+                        </Button>
+                    )}
+                    {file !== null && !file.whole && (
+                        <Button variant="secondary" disabled={busy || openHere > 0} onClick={() => void save([file.path])}>
+                            {t('footer.resolve')}
+                        </Button>
+                    )}
+                    {operation !== null && (
+                        <Button variant="primary" disabled={busy || left > 0} onClick={() => void finish('continue', operation)}>
+                            {t(`footer.continue.${operation}`)}
+                        </Button>
+                    )}
+                </footer>
+            </Dialog.Popup>
         </Dialog.Root>
     );
 }

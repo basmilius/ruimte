@@ -6,7 +6,7 @@ import { ImageThumb } from '@ruimte/agents-react/chat/ui/ImageView';
 import { useEndpointId } from '@/state/keys';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
-import { Icon } from '@ruimte/ui/Icon';
+import { Icon } from '@basmilius/react-ui';
 
 /*
  * The image an agent looked at with `Read`. The thread only carries the path, so the daemon is

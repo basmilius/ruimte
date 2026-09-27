@@ -6,9 +6,7 @@ import type { DevServer } from '@ruimte/contracts';
 import { DEV_SERVER_PROBE_PORTS, devServerTiles, type DevServerTile } from '@/browser/dev-servers';
 import { openPage } from '@/browser/open-page';
 import { useOptionalConnection } from '@/transport/context';
-import { SECTION_LABEL } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tile } from '@ruimte/ui/Tile';
+import { Icon, SectionLabel, Tile } from '@basmilius/react-ui';
 
 /* How often the machine is asked again, so a server started after this node was opened shows up. */
 const REFRESH_MS = 5_000;
@@ -52,7 +50,9 @@ export function BrowserSplash({ id, className }: { id: string; className?: strin
 
     const section = (label: string, list: DevServerTile[]): ReactNode => (
         <section className="flex flex-col gap-2">
-            <h2 className={`${SECTION_LABEL} px-1`}>{label}</h2>
+            <SectionLabel render={<h2 />} className="px-1">
+                {label}
+            </SectionLabel>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2">
                 {list.map((tile) => (
                     <Tile

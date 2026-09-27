@@ -1,18 +1,14 @@
 import { useState } from 'react';
-import { Dialog } from '@base-ui-components/react/dialog';
 import i18next from 'i18next';
 import { Square, Trash } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { performAsPerson } from '@/actions/client-actions';
 import { endsAgentsWarning, stopsSubagentsWarning, stopsTaskWarning, useEndingAgents, type PendingEnd } from '@/agents/end-children';
 import { hasWork, leftBehindLine, removedToast } from '@/shell/panels/worktree-rows';
-import { Toggle } from '@ruimte/ui/controls';
+import { Switch, Button, Icon, Dialog } from '@basmilius/react-ui';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { worktreeLists } from '@/state/worktrees';
-import { Button } from '@ruimte/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, SMALL_DIALOG } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
 
 const warningOf = (pending: PendingEnd | null): string | null => {
     const agents = pending?.agents ?? 0;
@@ -48,41 +44,40 @@ export function EndChildrenDialog() {
 
     return (
         <Dialog.Root open={pending !== null} onOpenChange={(next) => !next && close()}>
-            <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className={SMALL_DIALOG}>
-                    <Dialog.Title className="text-base font-semibold text-text">
-                        {stop ? t('dialog.stopTitle', { what: pending?.what }) : t('dialog.deleteTitle', { what: pending?.what })}
-                    </Dialog.Title>
-                    {warning !== null && <p className={`${DIALOG_DESCRIPTION} mt-1`}>{warning}</p>}
-                    {offered?.worktrees.map((worktree) => (
-                        <p key={worktree.path} className={`${DIALOG_DESCRIPTION} mt-1`}>
-                            {leftBehindLine(worktree)}
-                        </p>
-                    ))}
-                    {clean.length > 0 && (
-                        <label className="mt-3 flex items-center justify-between gap-3">
-                            <span className="text-sm text-text">{t('dialog.removeWorktree', { count: clean.length })}</span>
-                            <Toggle label={t('dialog.removeWorktreeToggle')} checked={removal.remove} onChange={(remove) => setRemoval({ pending, remove })} />
-                        </label>
-                    )}
-                    <div className={DIALOG_FOOTER}>
-                        <Button onClick={close}>{common('action.cancel')}</Button>
-                        <Button
-                            variant="danger"
-                            onClick={() => {
-                                pending?.run();
-                                if (offered !== undefined && removal.remove) {
-                                    void removeClean(clean).finally(() => worktreeLists.reload(endpointId, offered.folder));
-                                }
-                                close();
-                            }}
-                        >
-                            <Icon icon={stop ? Square : Trash} size={12} /> {stop ? t('dialog.stop') : t('dialog.delete')}
-                        </Button>
-                    </div>
-                </Dialog.Popup>
-            </Dialog.Portal>
+            <Dialog.Popup size="sm">
+                <Dialog.Title>{stop ? t('dialog.stopTitle', { what: pending?.what }) : t('dialog.deleteTitle', { what: pending?.what })}</Dialog.Title>
+                {warning !== null && <Dialog.Text className="mt-1">{warning}</Dialog.Text>}
+                {offered?.worktrees.map((worktree) => (
+                    <Dialog.Text key={worktree.path} className="mt-1">
+                        {leftBehindLine(worktree)}
+                    </Dialog.Text>
+                ))}
+                {clean.length > 0 && (
+                    <label className="mt-3 flex items-center justify-between gap-3">
+                        <span className="text-sm text-text">{t('dialog.removeWorktree', { count: clean.length })}</span>
+                        <Switch
+                            label={t('dialog.removeWorktreeToggle')}
+                            checked={removal.remove}
+                            onCheckedChange={(remove) => setRemoval({ pending, remove })}
+                        />
+                    </label>
+                )}
+                <Dialog.Footer>
+                    <Button onClick={close}>{common('action.cancel')}</Button>
+                    <Button
+                        variant="danger"
+                        onClick={() => {
+                            pending?.run();
+                            if (offered !== undefined && removal.remove) {
+                                void removeClean(clean).finally(() => worktreeLists.reload(endpointId, offered.folder));
+                            }
+                            close();
+                        }}
+                    >
+                        <Icon icon={stop ? Square : Trash} size={12} /> {stop ? t('dialog.stop') : t('dialog.delete')}
+                    </Button>
+                </Dialog.Footer>
+            </Dialog.Popup>
         </Dialog.Root>
     );
 }

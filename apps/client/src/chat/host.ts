@@ -20,7 +20,7 @@ import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { useMachineUrl } from '@/transport/machine-url';
-import { prefetcher } from '@/ui/prefetch';
+import { prefetcher } from '@basmilius/react-ui';
 
 /* Every action goes through the registry as the person who clicked, the same door Voice uses. */
 const PERSON_CHAT_ACTIONS: ChatActions = {

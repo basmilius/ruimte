@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { GitFork, MessageSquareShare, Undo2 } from 'lucide-react';
 import { performAsPerson } from '@/actions/client-actions';
 import { forkRefusal, lastSettledTurn, summaryRefusal } from '@ruimte/agents-react/chat/logic/fork';
@@ -7,8 +6,7 @@ import { useChatPlace } from '@/chat/use-chat-place';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { DisabledReason } from '@ruimte/ui/DisabledReason';
-import { Icon } from '@ruimte/ui/Icon';
+import { DisabledReason, Icon, ContextMenu } from '@basmilius/react-ui';
 
 /*
  * "Fork conversation…" in the menu of a chat node or a chat view, offered as a fork after the last
@@ -24,7 +22,7 @@ export function ForkMenuItem({ chatId }: { chatId: string }) {
         <>
             {turnId !== null && (
                 <DisabledReason reason={refusal}>
-                    <ContextMenu.Item className="menu-item" disabled={refusal !== null} onClick={() => useUi.getState().setForkDialog({ chatId, turnId })}>
+                    <ContextMenu.Item disabled={refusal !== null} onClick={() => useUi.getState().setForkDialog({ chatId, turnId })}>
                         <Icon icon={GitFork} size={14} /> {t('fork.menu.fork')}
                     </ContextMenu.Item>
                 </DisabledReason>
@@ -48,13 +46,13 @@ function ForkBackItems({ chatId }: { chatId: string }) {
     return (
         <>
             <DisabledReason reason={refusal}>
-                <ContextMenu.Item className="menu-item" disabled={refusal !== null} onClick={summarize}>
+                <ContextMenu.Item disabled={refusal !== null} onClick={summarize}>
                     <Icon icon={MessageSquareShare} size={14} />{' '}
                     {original.title === null ? t('fork.menu.summarize') : t('fork.menu.summarizeFor', { title: original.title })}
                 </ContextMenu.Item>
             </DisabledReason>
             <DisabledReason reason={original.title === null ? t('fork.refusal.originalGone') : null}>
-                <ContextMenu.Item className="menu-item" disabled={original.title === null} onClick={original.go}>
+                <ContextMenu.Item disabled={original.title === null} onClick={original.go}>
                     <Icon icon={Undo2} size={14} /> {t('fork.menu.showOriginal')}
                 </ContextMenu.Item>
             </DisabledReason>

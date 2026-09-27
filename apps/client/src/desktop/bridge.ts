@@ -9,7 +9,7 @@ import type {
     UpdateState
 } from '@ruimte/desktop-bridge';
 import type { SessionLoginCode } from '@ruimte/pulsar';
-import { isApplePlatform as isApplePlatformFromNavigator } from '@ruimte/ui/platform';
+import { isApplePlatform as isApplePlatformFromNavigator } from '@basmilius/react-ui';
 
 /* The shapes the preload and the page both hold, passed on so the client reads the whole bridge here. */
 export type {

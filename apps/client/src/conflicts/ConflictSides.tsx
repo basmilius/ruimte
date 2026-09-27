@@ -1,9 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight, Check } from 'lucide-react';
 import { bothLines, sideLines, type MergeBlock, type MergeSide } from '@ruimte/merge';
-import { Button } from '@ruimte/ui/Button';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Icon } from '@ruimte/ui/Icon';
+import { Button, EmptyState, Icon } from '@basmilius/react-ui';
 
 interface SideProps {
     readonly label: string;

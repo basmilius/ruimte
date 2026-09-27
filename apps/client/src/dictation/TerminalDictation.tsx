@@ -1,7 +1,6 @@
 import { useEffect, useId, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Button } from '@ruimte/ui/Button';
+import { Button, ErrorBoundary, TextArea } from '@basmilius/react-ui';
 import { observeSpeech, registerDictationTarget, useDictation } from './controller';
 import { registerTerminalDictationTarget, terminalTargetKey } from './terminal-targets';
 import { useEndpointId } from '@/state/keys';
@@ -52,8 +51,8 @@ function TerminalControl({
             )}
             {draft !== null && (
                 <div className="flex flex-col gap-2 border-t border-border p-2">
-                    <textarea
-                        className="field min-h-16 w-full resize-y text-sm"
+                    <TextArea
+                        className="w-full"
                         aria-label={t('dictation.terminalDraft')}
                         value={draft}
                         onChange={(event) => setDraft(event.target.value)}

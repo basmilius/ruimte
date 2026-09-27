@@ -1,7 +1,5 @@
 import { Suspense } from 'react';
-import { SlidingColumn } from '@/shell/SlidingColumn';
-import { clampColumnSize } from '@ruimte/ui/useColumnResize';
-import { lazyNamed } from '@/ui/lazy';
+import { clampColumnSize, SlidingColumn, lazyNamed } from '@basmilius/react-ui';
 import { useVoice } from '@/voice/state';
 
 const VoicePanelBody = lazyNamed(() => import('@/voice/VoicePanelBody'), 'VoicePanelBody');
@@ -19,10 +17,9 @@ export function VoicePanel() {
     return (
         <SlidingColumn
             open={open}
-            restoreWithProject={false}
             width={width}
             bounds={{ min: MIN_WIDTH, max: () => window.innerWidth - MIN_WORKSPACE_WIDTH }}
-            onWidth={(next) => useVoice.getState().setWidth(next)}
+            onWidthChange={(next) => useVoice.getState().setWidth(next)}
         >
             <Suspense fallback={null}>
                 <VoicePanelBody />

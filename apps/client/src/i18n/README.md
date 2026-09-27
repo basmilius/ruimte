@@ -12,7 +12,9 @@ in the same file, and a window only downloads the words of the screens it draws.
 
 The chat, its prompt cards, the providers pane and the usage page carry their words in
 `@ruimte/agents-react` (`agent-chat`, `agent-prompts`, `agent-providers`, `agent-usage`), and the
-components of `@ruimte/ui` in `ui`; both are loaded beside these files. The same rules hold there.
+components of `@basmilius/react-ui` in `ui`, which `UIProvider` adds in every language the library
+ships. Both are loaded beside these files. The same rules hold in the chat's words; the library's
+change in its own repository.
 
 `common` holds what several surfaces say the same way: Cancel, Close, Delete, Try again. Read from
 it freely, add to it only when a word is genuinely shared, never to park a string that has a home.

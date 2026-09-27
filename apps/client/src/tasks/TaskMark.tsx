@@ -1,9 +1,8 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { Task } from '@ruimte/contracts';
-import { Icon } from '@ruimte/ui/Icon';
+import { Icon, Tooltip } from '@basmilius/react-ui';
 import { statusLookOf, taskStatusWord } from '@ruimte/agents-react/agents/status-look';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /*
  * The mark a node wears when another agent opened it with a task: the line into it says so on the

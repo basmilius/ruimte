@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { buildBrowserMenu, buildPreviewMenu, type BrowserMenuAction, type BrowserMenuItem } from '@/browser/browser-menu';
 import { menuPointFor } from '@/browser/menu-point';
 import { openLinkBeside } from '@/browser/open-beside';
@@ -8,9 +7,7 @@ import { previewGuestOf } from '@/browser/preview-guests';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { desktop, type BrowserContextAction } from '@/desktop/bridge';
 import { splitKey } from '@/state/keys';
-import { MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { copyText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
+import { copyText, Icon, ContextMenu } from '@basmilius/react-ui';
 
 interface MenuTarget {
     webContentsId: number;
@@ -120,22 +117,18 @@ export function BrowserContextMenu() {
         <ContextMenu.Root>
             <ContextMenu.Trigger ref={trigger} className="fixed top-0 left-0 h-0 w-0" aria-hidden />
             {groups !== null && (
-                <ContextMenu.Portal>
-                    <ContextMenu.Positioner className="z-(--z-popup)">
-                        <ContextMenu.Popup className="menu-popup">
-                            {groups.map((group, index) => (
-                                <Fragment key={group[0]?.id ?? index}>
-                                    {index > 0 && <ContextMenu.Separator className={MENU_SEPARATOR} />}
-                                    {group.map((item) => (
-                                        <ContextMenu.Item key={item.id} className="menu-item" disabled={item.disabled} onClick={() => run(item.action)}>
-                                            <Icon icon={item.icon} size={14} /> {item.label}
-                                        </ContextMenu.Item>
-                                    ))}
-                                </Fragment>
+                <ContextMenu.Popup>
+                    {groups.map((group, index) => (
+                        <Fragment key={group[0]?.id ?? index}>
+                            {index > 0 && <ContextMenu.Separator />}
+                            {group.map((item) => (
+                                <ContextMenu.Item key={item.id} disabled={item.disabled} onClick={() => run(item.action)}>
+                                    <Icon icon={item.icon} size={14} /> {item.label}
+                                </ContextMenu.Item>
                             ))}
-                        </ContextMenu.Popup>
-                    </ContextMenu.Positioner>
-                </ContextMenu.Portal>
+                        </Fragment>
+                    ))}
+                </ContextMenu.Popup>
             )}
         </ContextMenu.Root>
     );
