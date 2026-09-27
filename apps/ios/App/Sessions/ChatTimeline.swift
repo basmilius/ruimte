@@ -11,6 +11,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
     var bottomInset: CGFloat = 0
     var composer: AnyView?
     var latestButton: AnyView?
+    var status: AnyView?
     var onViewportHeightChanged: (CGFloat) -> Void = { _ in }
     var dismissKeyboard: () -> Void = {}
     var scrollToLatest = 0
@@ -28,6 +29,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
         controller.onNearTop = onNearTop
         controller.onViewportHeightChanged = onViewportHeightChanged
         controller.setComposer(composer, latestButton: latestButton)
+        controller.setStatus(status)
         context.animate {
             controller.setViewportInsets(top: topInset, bottom: bottomInset)
         }
@@ -304,6 +306,10 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     private var applyingSnapshot = false
     private var composerHost: UIHostingController<AnyView>?
     private var latestButtonHost: UIHostingController<AnyView>?
+    private var statusHost: UIHostingController<AnyView>?
+    private var statusContainer: UIView?
+    private var statusTopConstraint: NSLayoutConstraint?
+    private var statusBottomConstraint: NSLayoutConstraint?
     private var viewportInsets = UIEdgeInsets.zero
     private var reportedViewportHeight: CGFloat = 0
     private var fullHeightConstraint: NSLayoutConstraint!
@@ -426,6 +432,8 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     private func updateViewportInsets() {
         var insets = viewportInsets
         if let composerHost { insets.bottom = composerHost.view.bounds.height }
+        statusTopConstraint?.constant = insets.top
+        statusBottomConstraint?.constant = -insets.bottom
         guard collection.contentInset != insets else { return }
         collection.prepareForContentChange()
         collection.contentInset = insets
@@ -476,7 +484,46 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         }
     }
 
-    private func addHost(_ content: AnyView) -> UIHostingController<AnyView> {
+    func setStatus(_ content: AnyView?) {
+        loadViewIfNeeded()
+        guard let content else {
+            removeHost(&statusHost)
+            statusContainer?.removeFromSuperview()
+            statusContainer = nil
+            statusTopConstraint = nil
+            statusBottomConstraint = nil
+            return
+        }
+        // Keep SwiftUI at its intrinsic height so UIKit animates its position with the keyboard.
+        let sizedContent = AnyView(content.fixedSize(horizontal: false, vertical: true))
+        if let statusHost {
+            statusHost.rootView = sizedContent
+        } else {
+            let container = UIView()
+            container.translatesAutoresizingMaskIntoConstraints = false
+            container.isUserInteractionEnabled = false
+            container.clipsToBounds = true
+            view.addSubview(container)
+            statusContainer = container
+            let top = container.topAnchor.constraint(equalTo: collection.topAnchor)
+            let bottom = container.bottomAnchor.constraint(equalTo: collection.bottomAnchor)
+            statusTopConstraint = top
+            statusBottomConstraint = bottom
+            let host = addHost(sizedContent, in: container)
+            statusHost = host
+            NSLayoutConstraint.activate([
+                container.leadingAnchor.constraint(equalTo: collection.leadingAnchor),
+                container.trailingAnchor.constraint(equalTo: collection.trailingAnchor),
+                top, bottom,
+                host.view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                host.view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                host.view.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            ])
+        }
+        updateViewportInsets()
+    }
+
+    private func addHost(_ content: AnyView, in container: UIView? = nil) -> UIHostingController<AnyView> {
         let host = UIHostingController(rootView: content)
         host.safeAreaRegions = []
         host.sizingOptions = [.intrinsicContentSize]
@@ -484,7 +531,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         host.view.tintColor = MobileStyle.accentColor
         host.view.translatesAutoresizingMaskIntoConstraints = false
         addChild(host)
-        view.addSubview(host.view)
+        (container ?? view).addSubview(host.view)
         host.didMove(toParent: self)
         return host
     }

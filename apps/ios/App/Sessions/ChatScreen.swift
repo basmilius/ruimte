@@ -57,23 +57,11 @@ struct ChatScreen: View {
                     presentation: model.presentation, client: model.client, chatID: model.chatID,
                     topInset: insets.top, composer: AnyView(composerDock),
                     latestButton: showScrollButton && !scrollButtonBesideComposer ? AnyView(scrollToBottomButton) : nil,
+                    status: timelineStatus,
                     onViewportHeightChanged: { viewportHeight = $0 }, dismissKeyboard: { composerFocused = false },
                     scrollToLatest: scrollToLatest, onMessagesBelowChanged: { messagesBelow = $0 },
                     onNearTop: { model.loadOlderIfIdle() }
                 )
-            }
-            .overlay {
-                if !isPrepared || model.loading {
-                    MobileLoadingRow("Loading conversation…")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .allowsHitTesting(false)
-                } else if model.messageCount == 0 {
-                    ContentUnavailableView(
-                        "Start a conversation", lucideIcon: "messages-square",
-                        description: Text("Messages and agent work appear here.")
-                    )
-                    .allowsHitTesting(false)
-                }
             }
             .overlay(alignment: .top) {
                 if model.loadingHistory {
@@ -238,6 +226,19 @@ struct ChatScreen: View {
         } message: {
             Text("This removes the conversation history and stops any active turn on every client.")
         }
+    }
+
+    private var timelineStatus: AnyView? {
+        if !isPrepared || model.loading {
+            return AnyView(MobileLoadingRow("Loading conversation…"))
+        }
+        if model.messageCount == 0 {
+            return AnyView(
+                ContentUnavailableView(
+                    "Start a conversation", lucideIcon: "messages-square",
+                    description: Text("Messages and agent work appear here.")))
+        }
+        return nil
     }
 
     private func start() {
