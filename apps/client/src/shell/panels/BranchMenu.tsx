@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Menu as BaseMenu } from '@base-ui-components/react/menu';
 import { ChevronDown, Copy, GitBranch, Plus, Search } from 'lucide-react';
 import type { GitRef } from '@ruimte/contracts';
 import { basenameOf } from '@/shell/panels/files-tree';
@@ -281,9 +280,8 @@ function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProp
                         }}
                     />
                 </span>
-                {/* An item and not a plain button, so it keeps the keyboard and the closing a menu row has. Base UI's
-                    own item, since the library's draws a menu row around it. */}
-                <IconButton icon={Plus} label={t('git.branchMenu.create')} render={<BaseMenu.Item />} onClick={() => onCreate(cwd)} />
+                {/* An item and not a plain button, so it keeps the keyboard and the closing a menu row has. */}
+                <IconButton icon={Plus} label={t('git.branchMenu.create')} render={<Menu.Item unstyled />} onClick={() => onCreate(cwd)} />
             </div>
             {loading && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.loading')}</p>}
             {!loading && shown.length === 0 && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.noMatch')}</p>}

@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { Menu as BaseMenu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
 import {
     Activity,
@@ -392,7 +391,9 @@ function ContextUsage({ usage, disabled, onCompact }: { usage: ChatUsage; disabl
     return (
         <Menu.Group className="flex flex-col gap-2 px-2.5 py-1.5">
             <div className="flex items-center gap-2">
-                <BaseMenu.GroupLabel className="min-w-0 grow truncate text-sm font-medium text-text">{t('contextMeter.title')}</BaseMenu.GroupLabel>
+                <Menu.GroupLabel unstyled className="min-w-0 grow truncate text-sm font-medium text-text">
+                    {t('contextMeter.title')}
+                </Menu.GroupLabel>
                 <span className={clsx('shrink-0 text-xs tabular-nums', fraction >= 0.7 ? contextTone(fraction) : 'text-text-faint')}>
                     {usage.contextWindow ? t('contextMeter.of', { used, window: formatTokens(usage.contextWindow) }) : t('contextMeter.used', { tokens: used })}
                 </span>
@@ -436,14 +437,15 @@ function ContextUsage({ usage, disabled, onCompact }: { usage: ChatUsage; disabl
                 <span className="min-w-0 grow truncate">
                     {usage.contextWindow ? t('contextMeter.percentUsed', { percent: formatPercent(fraction * 100) }) : null}
                 </span>
-                <BaseMenu.Item
+                <Menu.Item
+                    unstyled
                     className="flex shrink-0 cursor-default items-center gap-0.5 rounded font-medium text-accent outline-none data-disabled:opacity-50 data-highlighted:underline"
                     disabled={disabled || usage.contextTokens === 0}
                     onClick={onCompact}
                 >
                     {t('contextMeter.compactNow')}
                     <Icon icon={ChevronRight} size={12} />
-                </BaseMenu.Item>
+                </Menu.Item>
             </div>
         </Menu.Group>
     );
@@ -458,12 +460,10 @@ function OptionRow({ option, selection, onChange }: { option: ModelOptionDescrip
     if (option.type === 'boolean') {
         const checked = (selection.options[option.id] ?? option.defaultValue) === true;
         const item = (
-            <BaseMenu.CheckboxItem className="menu-item text-text-muted" checked={checked} onCheckedChange={onChange} closeOnClick={false}>
+            <Menu.CheckboxItem indicator="end" className="text-text-muted" checked={checked} onCheckedChange={onChange} closeOnClick={false}>
                 {icon}
                 <span className="min-w-0 grow truncate">{option.label}</span>
-                {/* At the end of the row, where the other knobs of this group keep their control. The library's item puts it first. */}
-                <Menu.Check kind="checkbox" />
-            </BaseMenu.CheckboxItem>
+            </Menu.CheckboxItem>
         );
         return option.description ? (
             <Tooltip label={option.description} side="right" sideOffset={12}>
@@ -508,7 +508,8 @@ function OptionRow({ option, selection, onChange }: { option: ModelOptionDescrip
                 className="flex gap-0.5 rounded-md bg-surface-sunken p-0.5"
             >
                 {option.choices.map((choice) => (
-                    <BaseMenu.RadioItem
+                    <Menu.RadioItem
+                        unstyled
                         key={choice.id}
                         value={choice.id}
                         className={clsx(
@@ -517,7 +518,7 @@ function OptionRow({ option, selection, onChange }: { option: ModelOptionDescrip
                         )}
                     >
                         {choice.label}
-                    </BaseMenu.RadioItem>
+                    </Menu.RadioItem>
                 ))}
             </Menu.RadioGroup>
         </div>
