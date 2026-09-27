@@ -22,7 +22,7 @@ import {
     type MergeRun
 } from '@/shell/panels/worktree-merge';
 import { nodesInWorktree } from '@/shell/panels/worktree-rows';
-import { Segmented, Switch, Button, Dialog, Field, FieldHint, Input, SectionLabel } from '@basmilius/react-ui';
+import { Segmented, Switch, Button, Dialog, Field, FieldHint, Input } from '@basmilius/react-ui';
 import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@ruimte/agents-react/state/chats';
 import { useEndpointId, endpointKey } from '@/state/keys';
@@ -203,16 +203,14 @@ export function MergeWorktreeDialog() {
                                 <Input mono spellCheck={false} value={subject} onChange={(event) => setDraft({ ...draft, subject: event.target.value })} />
                             </Field>
                         )}
-                        <div className="mt-4 flex flex-col gap-1.5">
-                            <SectionLabel>{t('merge.strategy')}</SectionLabel>
+                        <Field group label={t('merge.strategy')} hint={mergeStrategyLine(strategy)} className="mt-4">
                             <Segmented
                                 label={t('merge.strategy')}
                                 value={strategy}
                                 options={MERGE_STRATEGIES.map((value) => ({ id: value, label: mergeStrategyLabel(value) }))}
                                 onValueChange={(value: WorktreeMergeStrategy) => useSettings.getState().update({ worktreeMergeStrategy: value })}
                             />
-                        </div>
-                        <FieldHint>{mergeStrategyLine(strategy)}</FieldHint>
+                        </Field>
                         <label className="mt-4 flex items-center justify-between gap-3">
                             <span className="text-sm text-text">{t('merge.removeAfterwards', { count: worktrees.length })}</span>
                             <Switch
