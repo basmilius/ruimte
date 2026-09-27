@@ -28,6 +28,10 @@ interface ModelPickerProps {
     open: boolean;
     onOpenChange(open: boolean): void;
     onChange(provider: AgentKind, model: string): void;
+    /* The composer's `/model`; `null` for a picker outside a chat, where that command does nothing. */
+    kbd?: string | null;
+    /* Where the popup opens: over the composer by default, below the trigger in a form. */
+    side?: 'top' | 'bottom';
 }
 
 /*
@@ -37,7 +41,7 @@ interface ModelPickerProps {
  * another provider's model is also how a chat picks its provider. A chat bound to one CLI passes
  * only that CLI, which drops the group headers and leaves its own catalog to choose from.
  */
-export function ModelPicker({ providers, provider, selection, open, onOpenChange, onChange }: ModelPickerProps) {
+export function ModelPicker({ providers, provider, selection, open, onOpenChange, onChange, kbd = '/model', side = 'top' }: ModelPickerProps) {
     const { t } = useTranslation('agent-chat');
     const [query, setQuery] = useState('');
     const [legacyOpen, setLegacyOpen] = useState(false);
@@ -106,7 +110,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
 
     return (
         <Popover.Root open={open} onOpenChange={setOpen}>
-            <Tooltip label={owner ? `${owner.name} · ${current}` : t('pickers.model.choose')} kbd="/model">
+            <Tooltip label={owner ? `${owner.name} · ${current}` : t('pickers.model.choose')} kbd={kbd ?? undefined}>
                 <Popover.Trigger className={triggerClass}>
                     <AgentIcon kind={provider} size={12} />
                     <span className="max-w-40 truncate">{current}</span>
@@ -114,7 +118,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                 </Popover.Trigger>
             </Tooltip>
             <Popover.Portal>
-                <Popover.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
+                <Popover.Positioner className="z-(--z-popup)" side={side} sideOffset={8} align="start">
                     <Popover.Popup className="picker-popup" initialFocus={inputRef}>
                         <div className="flex items-center gap-2 border-b border-border px-2.5">
                             <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
