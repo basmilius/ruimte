@@ -2,9 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight, Plus } from 'lucide-react';
 import type { AgentKind, ModelInfo, ProviderInfo } from '@ruimte/agent-contracts';
 import { AccountDot } from '../agents/AccountDot';
+import { ModelOptionControl } from '../agents/ModelOptionControl';
+import { carryOptions } from '../agents/model-options';
 import { ACCOUNT_TONE_CLASSES, accountName, accountStatusLine, type AccountEntry } from '../agents/accounts';
 import { accountFor, forgetChatSelection, rememberChatAccount, rememberChatSelection, selectionFor, useChatPreferences } from '../chat/preferences';
-import { Segmented, Toggle } from '@ruimte/ui/controls';
 import { useChatScope } from '../scope';
 import { providerAbilities } from './provider-abilities';
 import { DetailHeader } from '@ruimte/ui/settings/DetailHeader';
@@ -18,9 +19,6 @@ import { Select } from '@ruimte/ui/Select';
 
 const PROVIDER_DEFAULT = '';
 
-// Up to this many choices read at a glance side by side; more go into a menu.
-const MAX_SEGMENTS = 3;
-
 /* One row per knob the chosen model exposes; the composer's option picker shows the same descriptors. */
 function ModelOptionRows({ provider, model, options }: { provider: AgentKind; model: ModelInfo; options: Record<string, string | boolean> }) {
     const setOption = (id: string, value: string | boolean): void => {
@@ -28,48 +26,15 @@ function ModelOptionRows({ provider, model, options }: { provider: AgentKind; mo
     };
     return (
         <>
-            {model.options.map((option) => {
-                if (option.type !== 'select') {
-                    return (
-                        <SettingsRow
-                            key={option.id}
-                            indent
-                            muted
-                            label={option.label}
-                            control={
-                                <Toggle checked={options[option.id] === true} label={option.label} onChange={(checked) => setOption(option.id, checked)} />
-                            }
-                        />
-                    );
-                }
-                const value = String(options[option.id] ?? option.defaultChoice);
-                return (
-                    <SettingsRow
-                        key={option.id}
-                        indent
-                        muted
-                        label={option.label}
-                        control={
-                            option.choices.length <= MAX_SEGMENTS ? (
-                                <Segmented
-                                    value={value}
-                                    label={option.label}
-                                    options={option.choices.map((choice) => ({ id: choice.id, label: choice.label }))}
-                                    onChange={(id) => setOption(option.id, id)}
-                                />
-                            ) : (
-                                <Select
-                                    value={value}
-                                    label={option.label}
-                                    align="end"
-                                    items={option.choices.map((choice) => ({ value: choice.id, label: choice.label, description: choice.description }))}
-                                    onValueChange={(id) => setOption(option.id, id)}
-                                />
-                            )
-                        }
-                    />
-                );
-            })}
+            {model.options.map((option) => (
+                <SettingsRow
+                    key={option.id}
+                    indent
+                    muted
+                    label={option.label}
+                    control={<ModelOptionControl option={option} options={options} layout="row" onChange={(value) => setOption(option.id, value)} />}
+                />
+            ))}
         </>
     );
 }
@@ -153,7 +118,13 @@ export function CliDetail({ provider, entries, defaults, canAddAccount, onAddAcc
                                     onValueChange={(value) =>
                                         value === PROVIDER_DEFAULT
                                             ? forgetChatSelection(provider.kind)
-                                            : rememberChatSelection(provider.kind, { model: value, options: {} })
+                                            : rememberChatSelection(provider.kind, {
+                                                  model: value,
+                                                  options: carryOptions(
+                                                      selection?.options ?? {},
+                                                      provider.models.find((entry) => entry.slug === value)
+                                                  )
+                                              })
                                     }
                                 />
                             }

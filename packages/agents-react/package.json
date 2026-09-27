@@ -6,10 +6,12 @@
   "exports": {
     "./agents/AccountDot": "./src/agents/AccountDot.tsx",
     "./agents/AgentIcon": "./src/agents/AgentIcon.tsx",
+    "./agents/ModelOptionControl": "./src/agents/ModelOptionControl.tsx",
     "./agents/ProviderLogo": "./src/agents/ProviderLogo.tsx",
     "./agents/account-limits": "./src/agents/account-limits.ts",
     "./agents/accounts": "./src/agents/accounts.ts",
     "./agents/model-name": "./src/agents/model-name.ts",
+    "./agents/model-options": "./src/agents/model-options.ts",
     "./agents/provider-paths": "./src/agents/provider-paths.ts",
     "./agents/status-look": "./src/agents/status-look.ts",
     "./chat/account-choice": "./src/chat/account-choice.ts",
