@@ -107,6 +107,7 @@ struct FileContentPage: View {
     // The version of the file the player plays, as mtime and size.
     @State private var playerKey: String?
     @State private var mediaProblem: String?
+    @State private var fullScreen = false
     @State private var showSource = false
     @State private var svg: Data?
     var body: some View {
@@ -152,7 +153,8 @@ struct FileContentPage: View {
                     }, load: load)
             }
             // Only a pause: the page may come back (from full screen too) without reading the file again.
-            .onDisappear { player?.pause() }
+            // Only a pause, and not on the way into full screen: the page comes back without reading the file again.
+            .onDisappear { if !fullScreen { player?.pause() } }
             .onChange(of: state.value) { _, _ in
                 if let initialLine { reader.scrollTo(initialLine, anchor: .center) }
             }
@@ -226,7 +228,7 @@ struct FileContentPage: View {
 
     @ViewBuilder private var videoContents: some View {
         if let player {
-            VideoPlayer(player: player)
+            FilePlayerView(player: player, fullScreen: $fullScreen)
         } else if let mediaProblem {
             ContentUnavailableView("Cannot play this video", lucideIcon: "file-video", description: Text(mediaProblem))
         } else {
@@ -251,6 +253,8 @@ struct FileContentPage: View {
             let playable = try await asset.load(.isPlayable, .duration).0
             guard playerKey == key else { return }
             if playable {
+                // Sound through the silent switch, as a video does anywhere else on the phone.
+                try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
                 player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             } else {
                 mediaProblem = "This device cannot play this video."
@@ -289,6 +293,49 @@ struct FileContentPage: View {
                 if mime == "image/svg+xml" { svg = resource.data } else { image = UIImage(data: resource.data) }
             }
             return result
+        }
+    }
+}
+
+/// AVKit's own player, with full screen, AirPlay and the playback speed that SwiftUI's `VideoPlayer` leaves out.
+private struct FilePlayerView: UIViewControllerRepresentable {
+    let player: AVPlayer
+    @Binding var fullScreen: Bool
+
+    func makeCoordinator() -> Coordinator { Coordinator(fullScreen: $fullScreen) }
+
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
+        controller.player = player
+        controller.delegate = context.coordinator
+        // Picture in picture needs the audio background mode, which the app does not have.
+        controller.allowsPictureInPicturePlayback = false
+        return controller
+    }
+
+    func updateUIViewController(_ controller: AVPlayerViewController, context: Context) {
+        if controller.player !== player { controller.player = player }
+        context.coordinator.fullScreen = $fullScreen
+    }
+
+    @MainActor final class Coordinator: NSObject, @preconcurrency AVPlayerViewControllerDelegate {
+        var fullScreen: Binding<Bool>
+        init(fullScreen: Binding<Bool>) { self.fullScreen = fullScreen }
+
+        func playerViewController(
+            _ controller: AVPlayerViewController,
+            willBeginFullScreenPresentationWithAnimationCoordinator coordinator: any UIViewControllerTransitionCoordinator
+        ) {
+            fullScreen.wrappedValue = true
+        }
+
+        func playerViewController(
+            _ controller: AVPlayerViewController,
+            willEndFullScreenPresentationWithAnimationCoordinator coordinator: any UIViewControllerTransitionCoordinator
+        ) {
+            coordinator.animate(alongsideTransition: nil) { context in
+                if !context.isCancelled { self.fullScreen.wrappedValue = false }
+            }
         }
     }
 }

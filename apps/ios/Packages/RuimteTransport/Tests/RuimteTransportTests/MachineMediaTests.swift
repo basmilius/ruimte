@@ -49,11 +49,11 @@ import Testing
         #expect(machine.asked.map(\.length) == [8, 8, 4])
     }
 
-    @Test func aReadToTheEndStopsAtTheWindow() async throws {
+    @Test func aReadToTheEndReadsTheRestOfTheFile() async throws {
         let machine = MediaMachine(size: 100)
-        let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8, windowBytes: 24)
+        let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8)
         let result = try await read(source, offset: 50, length: nil)
-        #expect(result.data == machine.bytes.subdata(in: 50..<74))
+        #expect(result.data == machine.bytes.subdata(in: 50..<100))
     }
 
     @Test func aRangeEndsWithTheFile() async throws {

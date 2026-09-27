@@ -17,31 +17,29 @@ public struct MachineMediaInfo: Sendable, Equatable {
     private let path: String
     private let chunkBytes: Int
     private let ahead: Int
-    private let windowBytes: Int
     public private(set) var info: MachineMediaInfo?
 
-    /// `windowBytes` bounds a read to the end of the file; the player asks for what follows itself.
+    /// `ahead` pieces on their way at once: two stay under the daemon's output gate of 1 MB, above which a terminal on
+    /// the same connection loses output until it resyncs.
     public init(
-        client: any MachineRequesting, path: String, chunkBytes: Int = Int(WireConstants.bytesChunkMax), ahead: Int = 2,
-        windowBytes: Int = 8 * 1_024 * 1_024
+        client: any MachineRequesting, path: String, chunkBytes: Int = Int(WireConstants.bytesChunkMax), ahead: Int = 2
     ) {
         self.client = client
         self.path = path
         self.chunkBytes = min(max(chunkBytes, 1), Int(WireConstants.bytesChunkMax))
         self.ahead = max(ahead, 1)
-        self.windowBytes = max(windowBytes, 1)
     }
 
-    /// Hands over at most `length` bytes from `offset`, or the window when `length` is nil, piece by piece as they
-    /// arrive. What the machine said about the file comes first, with the first piece.
+    /// Hands over at most `length` bytes from `offset`, or the rest of the file when `length` is nil, piece by piece as
+    /// they arrive, until the file ends or the task is cancelled. What the machine said about the file comes first.
     public func read(offset: Int, length: Int?, info onInfo: (MachineMediaInfo) -> Void, deliver: (Data) -> Void)
         async throws
     {
-        let wanted = min(length.map { max($0, 1) } ?? windowBytes, windowBytes)
+        let wanted = length.map { max($0, 1) } ?? Int.max
         let first = try await piece(at: offset, length: min(chunkBytes, wanted))
         let info = try pin(first)
         onInfo(info)
-        let last = min(info.size, offset + wanted) - 1
+        let last = offset + min(info.size - offset, wanted) - 1
         guard offset <= last else { return }
 
         var pending: [Task<JSONValue, any Error>] = []
