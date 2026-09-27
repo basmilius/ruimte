@@ -1,4 +1,5 @@
 import type { AgentLineageStore } from '@ruimte/agents/lineage';
+import { endChildren } from '@ruimte/agents/tasks/end-children';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionManager } from '../sessions/manager.ts';
@@ -8,66 +9,8 @@ import type { EndChildrenEntry, OutboxEntry, OutboxStore, OutboxWork } from './o
 /* What a chat child's thread and a cancelled task say about why they ended. */
 export const ENDED_REASON = 'the agent that opened this chat was stopped';
 
-export interface EndChildrenDeps {
-    /* The agents a node opened and the ones those opened, nearest first, leaving out what a cascade already ended. */
-    descendants(nodeId: string): string[];
-    /* The project a node was made in, read from its lineage because the node that opened it may be gone. */
-    projectOf(nodeId: string): string | null;
-    markEnded(nodeIds: readonly string[]): Promise<void>;
-    entries(): OutboxEntry[];
-    enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
-    remove(entryId: string): Promise<void>;
-    cancelTasks(childIds: ReadonlySet<string>): Promise<void>;
-    /* Ends whatever runs for the node, a chat or a terminal, and keeps what a person can still read. */
-    stop(nodeId: string): Promise<void>;
-}
-
-/* The work that would start or wake an agent again; an agent that was ended has none of it left. */
-const REVIVING: ReadonlySet<OutboxEntry['kind']> = new Set(['start-agent', 'resume-run', 'wake-parent', 'deliver-message', 'give-task']);
-
-/*
- * Owes ending the agents a node opened, before the node itself is stopped or once it is deleted. Written
- * to disk first, so a restart between a person's confirmation and the children ending still ends them.
- * A second call for a node whose entry is still owed adds nothing. A delete from a client both kills the
- * node's session and removes it from the document, and each says so.
- */
-export const oweEndChildren =
-    (deps: EndChildrenDeps) =>
-    async (nodeId: string): Promise<number> => {
-        const nodeIds = deps.descendants(nodeId);
-        const projectId = nodeIds.map((id) => deps.projectOf(id)).find((id) => id !== null) ?? null;
-        if (nodeIds.length === 0 || projectId === null) {
-            return 0;
-        }
-        const owed = deps.entries().some((entry) => entry.kind === 'end-children' && entry.target === nodeId);
-        if (!owed) {
-            await deps.enqueue(projectId, nodeId, { kind: 'end-children', payload: { nodeIds } });
-        }
-        return nodeIds.length;
-    };
-
-/*
- * Ends every agent below a stopped node. Marked first, so a restart halfway through finishes the same
- * way; then the work that would bring one back goes, the open tasks are cancelled before any turn is
- * aborted (so no parent is woken by an agent that was stopped), and the leaves stop before the nodes
- * that opened them. Every step is safe to run twice.
- */
-export const endChildrenHandler =
-    (deps: EndChildrenDeps) =>
-    async (entry: EndChildrenEntry): Promise<void> => {
-        const nodeIds = [...new Set([...entry.payload.nodeIds, ...deps.descendants(entry.target)])];
-        await deps.markEnded(nodeIds);
-        const ended = new Set(nodeIds);
-        for (const owed of deps.entries()) {
-            if (REVIVING.has(owed.kind) && ended.has(owed.target)) {
-                await deps.remove(owed.id);
-            }
-        }
-        await deps.cancelTasks(ended);
-        for (const nodeId of [...nodeIds].reverse()) {
-            await deps.stop(nodeId);
-        }
-    };
+/* Ruimte's work that would start or wake an agent again, beside what tasks owe. */
+const REVIVING: readonly OutboxEntry['kind'][] = ['start-agent', 'resume-run', 'deliver-message'];
 
 export interface EndChildrenWiringDeps {
     lineage: AgentLineageStore;
@@ -108,30 +51,23 @@ export const wireEndChildren = ({
     now = Date.now,
     log = console.error
 }: EndChildrenWiringDeps): EndChildrenWiring => {
-    const deps: EndChildrenDeps = {
-        descendants: (nodeId) => lineage.descendants(nodeId),
-        projectOf: (nodeId) => lineage.projectOf(nodeId),
-        markEnded: (nodeIds) => lineage.markEnded(nodeIds),
-        entries: () => outbox.list(),
-        enqueue,
-        remove: (entryId) => outbox.remove(entryId),
-        cancelTasks: async (childIds) => {
-            await tasks.cancelOpen(childIds, ENDED_REASON, now());
-            // A stopped chat that gave tasks of its own is not woken about them either.
-            for (const childId of childIds) {
-                await tasks.dropWake(childId);
-            }
-        },
-        stop: async (nodeId) => {
-            await chats.stop(nodeId, ENDED_REASON);
+    const ending = endChildren({
+        lineage,
+        tasks,
+        outbox: { list: () => outbox.list(), enqueue, remove: (entryId) => outbox.remove(entryId) },
+        reviving: REVIVING,
+        reason: ENDED_REASON,
+        stop: async (nodeId, reason) => {
+            await chats.stop(nodeId, reason);
             await sessions.end(nodeId);
-        }
-    };
+        },
+        now
+    });
     const live = (nodeId: string): boolean => {
         const chat = chats.get(nodeId);
         return chat ? chat.running || chat.info.activeTurnId !== null : sessions.get(nodeId)?.exited === false;
     };
-    const owe = oweEndChildren(deps);
+    const owe = (nodeId: string): Promise<number> => ending.owe(nodeId);
     // The index is warmed before the outbox can take work, so what it says until then waits here.
     let early: Map<string, ReadonlySet<string>> | null = new Map();
     const places = (projectId: string, ids: ReadonlySet<string>): void => {
@@ -145,21 +81,12 @@ export const wireEndChildren = ({
     };
     const stopNode = async (nodeId: string, reason: string): Promise<void> => {
         await owe(nodeId);
-        await deps.markEnded([nodeId]);
-        for (const owed of outbox.list()) {
-            if (REVIVING.has(owed.kind) && owed.target === nodeId) {
-                await outbox.remove(owed.id);
-            }
-        }
-        await tasks.cancelOpen(new Set([nodeId]), reason, now());
-        await tasks.dropWake(nodeId);
-        await chats.stop(nodeId, reason);
-        await sessions.end(nodeId);
+        await ending.end([nodeId], reason);
     };
     return {
         owe,
         stopNode,
-        handler: endChildrenHandler(deps),
+        handler: ending.handler,
         children: (nodeId) => lineage.descendants(nodeId).filter(live),
         places,
         start: () => {

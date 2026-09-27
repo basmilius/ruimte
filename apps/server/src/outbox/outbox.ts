@@ -1,4 +1,5 @@
 import { OutboxStore as BaseOutboxStore, type OutboxEntryOf } from '@ruimte/agents/outbox/outbox';
+import { EndChildrenWorkSchema } from '@ruimte/agents/tasks/end-children';
 import { BackgroundLimitWorkSchema, DeliverWaitingWorkSchema, GiveTaskWorkSchema, WakeParentWorkSchema } from '@ruimte/agents/tasks/task-work';
 import { AgentKindSchema, ModelSelectionSchema, ProviderAccountIdSchema, RuntimeModeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
@@ -38,19 +39,13 @@ const DeliverMessageSchema = z.object({
     payload: z.object({ from: z.string().min(1) })
 });
 
-const EndChildrenSchema = z.object({
-    kind: z.literal('end-children'),
-    // The target is the node that was stopped or deleted; these are the agents it had opened when that was owed.
-    payload: z.object({ nodeIds: z.array(z.string().min(1)) })
-});
-
 const DeliverSummarySchema = z.object({
     kind: z.literal('deliver-summary'),
     // The target is the chat the summary is for; the fork wrote it in this turn.
     payload: z.object({ forkId: z.string().min(1), turnId: z.string().min(1), text: z.string() })
 });
 
-// The kinds a task owes are @ruimte/agents' own (`tasks/task-work.ts`), each at the place it always had.
+// The kinds a task owes and ending children are @ruimte/agents' own (`tasks/task-work.ts`, `tasks/end-children.ts`), each at the place it always had.
 const OutboxWorkSchema = z.discriminatedUnion('kind', [
     StartAgentSchema,
     ResumeRunSchema,
@@ -59,7 +54,7 @@ const OutboxWorkSchema = z.discriminatedUnion('kind', [
     WakeParentWorkSchema,
     GiveTaskWorkSchema,
     DeliverMessageSchema,
-    EndChildrenSchema,
+    EndChildrenWorkSchema,
     DeliverSummarySchema,
     DeliverWaitingWorkSchema
 ]);

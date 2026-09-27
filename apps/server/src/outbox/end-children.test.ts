@@ -8,10 +8,9 @@ import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.t
 import { AgentLineageStore } from '@ruimte/agents/lineage';
 import { STOPPED_TASK_REASON } from '../chat/chat-manager.ts';
 import { TaskStore } from '@ruimte/agents/tasks/task-store';
-import { ENDED_REASON, endChildrenHandler, oweEndChildren, wireEndChildren, type EndChildrenDeps } from './end-children.ts';
+import { ENDED_REASON, wireEndChildren } from './end-children.ts';
 import { OutboxStore } from './outbox.ts';
 import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
-import type { EndChildrenEntry, OutboxEntry } from './outbox.ts';
 
 const content = (): ProjectContent => ({
     name: 'repo',
@@ -393,99 +392,6 @@ describe('stopping one task from the list of the chat that gave it', () => {
         await daemon.until(() => daemon.chats.get('chat-lead')?.info.activeTurnId === null);
         await daemon.worker.settled();
         expect(turnsOf(daemon, 'chat-lead').filter((turn) => turn.taskIds !== undefined)).toEqual([]);
-    });
-});
-
-describe('the handler on its own', () => {
-    const fakeDeps = (tree: Record<string, string[]>, entries: OutboxEntry[] = []) => {
-        const calls: string[] = [];
-        const ended = new Set<string>();
-        const descendants = (nodeId: string): string[] => {
-            const found: string[] = [];
-            const walk = (id: string): void => {
-                for (const child of tree[id] ?? []) {
-                    if (!ended.has(child)) {
-                        found.push(child);
-                    }
-                }
-                for (const child of tree[id] ?? []) {
-                    walk(child);
-                }
-            };
-            walk(nodeId);
-            return found.filter((id) => !ended.has(id));
-        };
-        const deps: EndChildrenDeps = {
-            descendants,
-            projectOf: () => 'project',
-            markEnded: async (ids) => {
-                calls.push(`mark ${ids.join(',')}`);
-                ids.forEach((id) => ended.add(id));
-            },
-            entries: () => entries,
-            enqueue: async (_projectId, target, work) => {
-                calls.push(`owe ${target} ${JSON.stringify(work.payload)}`);
-            },
-            remove: async (id) => {
-                calls.push(`remove ${id}`);
-            },
-            cancelTasks: async (ids) => {
-                calls.push(`cancel ${[...ids].join(',')}`);
-            },
-            stop: async (id) => {
-                calls.push(`stop ${id}`);
-            }
-        };
-        return { calls, deps };
-    };
-
-    const entry = (nodeIds: string[]): EndChildrenEntry => ({
-        kind: 'end-children',
-        id: 'end-children-1',
-        projectId: 'project',
-        target: 'lead',
-        createdAt: 1,
-        attempts: 0,
-        notBefore: 1,
-        payload: { nodeIds }
-    });
-
-    test('marks first, takes away what would revive a child, cancels, then stops the leaves before their parents', async () => {
-        const resume: OutboxEntry = {
-            kind: 'resume-run',
-            id: 'resume-1',
-            projectId: 'project',
-            target: 'child',
-            createdAt: 0,
-            attempts: 0,
-            notBefore: 0,
-            payload: { turnId: 't', attempt: 2 }
-        };
-        const other: OutboxEntry = { ...resume, id: 'resume-2', target: 'stranger' };
-        // A message or a task that reached the outbox before the stop would start the CLI again on its own.
-        const message: OutboxEntry = { ...resume, kind: 'deliver-message', id: 'message-1', target: 'grandchild', payload: { from: 'lead' } };
-        const task: OutboxEntry = { ...resume, kind: 'give-task', id: 'task-1', target: 'child', payload: { taskId: 'task-a' } };
-        const { calls, deps } = fakeDeps({ lead: ['child'], child: ['grandchild'] }, [resume, other, message, task]);
-        await endChildrenHandler(deps)(entry(['child']));
-        expect(calls).toEqual([
-            'mark child,grandchild',
-            'remove resume-1',
-            'remove message-1',
-            'remove task-1',
-            'cancel child,grandchild',
-            'stop grandchild',
-            'stop child'
-        ]);
-        // Run again after a restart halfway, it ends the same nodes out of what the entry held.
-        calls.length = 0;
-        await endChildrenHandler(deps)(entry(['child']));
-        expect(calls).toEqual(['mark child', 'remove resume-1', 'remove task-1', 'cancel child', 'stop child']);
-    });
-
-    test('owes nothing for a node that opened no agents', async () => {
-        const { calls, deps } = fakeDeps({});
-        expect(await oweEndChildren(deps)('lead')).toBe(0);
-        expect(calls).toEqual([]);
     });
 });
 
