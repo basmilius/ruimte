@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CornerUpRight, FileVideo } from 'lucide-react';
+import { CornerUpRight, FileAudio } from 'lucide-react';
 import type { FsReadBinary } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
 import { formatBytes } from '@/shell/panels/file-size';
@@ -9,19 +9,16 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
 import { Button, EmptyState, Icon } from '@basmilius/react-ui';
+import { formatClockDuration } from '@basmilius/react-ui/format';
 
-/*
- * Whether there is any point in drawing a player. The mime names the container, and a container the
- * runtime knows is not a promise about the codecs inside it, so `canPlayType` answers "maybe" more
- * often than "probably"; an empty answer is the only certain no, and the one this asks about.
- */
-const canPlay = (mime: string): boolean => typeof document !== 'undefined' && document.createElement('video').canPlayType(mime) !== '';
+// An empty answer is the only certain no; see `VideoFile`.
+const canPlay = (mime: string): boolean => typeof document !== 'undefined' && document.createElement('audio').canPlayType(mime) !== '';
 
-/* A video in ranges, so the scrubber works: from the daemon's own route, or over a direct connection through the bytes worker. */
-export function VideoFile({ path, name, read }: { path: string; name: string; read: FsReadBinary }) {
+/* Sound in ranges, the way `VideoFile` plays a video. */
+export function AudioFile({ path, name, read }: { path: string; name: string; read: FsReadBinary }) {
     const { t } = useTranslation('panels');
     const platform = useServer((s) => s.platform);
-    const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+    const [duration, setDuration] = useState<number | null>(null);
     const [failed, setFailed] = useState(!canPlay(read.mime));
     const transport = useTransport();
     const endpointId = useEndpointId();
@@ -38,35 +35,31 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
                 {failed || bytes.failure !== null ? (
                     <EmptyState
                         className="select-text"
-                        icon={FileVideo}
+                        icon={FileAudio}
                         action={
                             <Button variant="secondary" size="sm" onClick={reveal}>
                                 <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
                             </Button>
                         }
                     >
-                        {t('file.video.cannotPlay', { name, mime: read.mime, size: formatBytes(read.size) })}
+                        {t('file.audio.cannotPlay', { name, mime: read.mime, size: formatBytes(read.size) })}
                         {bytes.failure !== null && ` ${bytes.failure}.`}
                     </EmptyState>
                 ) : (
                     bytes.url !== null && (
-                        <video
+                        <audio
                             controls
                             preload="metadata"
                             src={bytes.url}
-                            className="max-h-full max-w-full"
-                            onLoadedMetadata={(event) => setSize({ width: event.currentTarget.videoWidth, height: event.currentTarget.videoHeight })}
+                            className="w-full max-w-xl"
+                            onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
                             onError={() => setFailed(true)}
                         />
                     )
                 )}
             </FileContextMenu>
             <div className="flex h-7 shrink-0 items-center gap-3 border-t border-border px-2 text-xs text-text-muted select-text">
-                {size !== null && size.width > 0 && (
-                    <span>
-                        {size.width} x {size.height}
-                    </span>
-                )}
+                {duration !== null && Number.isFinite(duration) && <span>{formatClockDuration(duration * 1000)}</span>}
                 <span>{formatBytes(read.size)}</span>
                 <span>{read.mime}</span>
             </div>

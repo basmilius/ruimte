@@ -126,6 +126,9 @@
       "unstage": "Unstage this file"
     },
     "tooLarge": "{{name}} is {{size}}. Files over {{limit}} do not open here.",
+    "audio": {
+      "cannotPlay": "{{name}} ({{mime}}, {{size}}) cannot be played here."
+    },
     "video": {
       "cannotPlay": "{{name}} ({{mime}}, {{size}}) cannot be played here."
     },

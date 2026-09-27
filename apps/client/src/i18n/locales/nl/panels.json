@@ -126,6 +126,9 @@
       "unstage": "Dit bestand unstagen"
     },
     "tooLarge": "{{name}} is {{size}}. Bestanden boven {{limit}} openen hier niet.",
+    "audio": {
+      "cannotPlay": "{{name}} ({{mime}}, {{size}}) kan hier niet afgespeeld worden."
+    },
     "video": {
       "cannotPlay": "{{name}} ({{mime}}, {{size}}) kan hier niet afgespeeld worden."
     },

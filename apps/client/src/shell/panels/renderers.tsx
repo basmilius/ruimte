@@ -1,4 +1,5 @@
-import { isImageMime, isVideoMime, type FsReadResult, type FsReadText } from '@ruimte/contracts';
+import { isAudioMime, isImageMime, isVideoMime, type FsReadResult, type FsReadText } from '@ruimte/contracts';
+import { AudioFile } from '@/shell/panels/AudioFile';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { isHtmlName, isMarkdownName } from '@/shell/panels/file-kind';
 import { HtmlFile } from '@/shell/panels/HtmlFile';
@@ -49,6 +50,9 @@ export const renderFile = ({ path, name, read }: FileRendererProps): React.JSX.E
     }
     if (read.kind === 'binary' && isVideoMime(read.mime)) {
         return <VideoFile path={path} name={name} read={read} />;
+    }
+    if (read.kind === 'binary' && isAudioMime(read.mime)) {
+        return <AudioFile path={path} name={name} read={read} />;
     }
     return <UnsupportedFile path={path} name={name} read={read} />;
 };

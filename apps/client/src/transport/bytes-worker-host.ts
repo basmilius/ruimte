@@ -10,7 +10,7 @@ let started = false;
 /*
  * The page's half of a video over a direct connection: the worker asks for a piece of a file, and the
  * page asks the machine over the channel only it holds. Only a machine this page reaches directly is
- * asked, and only for a file, which the daemon serves only as an image or a video.
+ * asked, and only for a file, which the daemon serves only as an image, a video or sound.
  */
 const answer = (event: MessageEvent<unknown>): void => {
     const port = event.ports[0];
