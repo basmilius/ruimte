@@ -18,6 +18,7 @@ Import per file: `@ruimte/agents/<path under src>`, without the extension.
 - `context/`: the registry behind a context CLI such as `ruimte-context`, the verbs an agent runs to act on its app. `context/argv.ts` splits the words, `context/verb.ts` defines verbs and nouns and renders `help` from them, `context/refusal.ts` writes and reads a refusal.
 - `outbox/`: work a host owes that has to outlive the process, such as starting an agent a verb opened, and the worker that does it. `lineage.ts` keeps who opened whom and how deep, `modes.ts` the order of the runtime modes and the ceiling an opener hands down.
 - `tasks/`: what one chat asks of another, the coordinator that settles it from what the child does, and the wake, the limit on background commands and the note about a waiting child that the outbox owes for it. `tasks/end-children.ts` ends a node and the agents it opened.
+- `messages/`: what one agent tells another without a task, the queue it waits in and the turn it earns a chat.
 
 ## A host of its own
 
@@ -189,6 +190,14 @@ worker.start();
 Stopping or deleting a node ends the agents it opened, and the ones those opened. `endChildren` in `tasks/end-children.ts` does it from the host's lineage, tasks and outbox. `owe(target)` writes an `end-children` entry for the descendants of a node first, so a restart before they end still ends them; `owe(target, nodeIds)` names the nodes for a target that did not open them itself, such as a document whose chats go with it. The entry's `handler` marks them ended in the lineage, drops the work that would start or wake one again, cancels their open tasks, drops the wakes owed to them, and stops them deepest first. `end(nodeIds, reason)` does the same at once for nodes given nearest first. The host hands in `stop(nodeId, reason)`, which ends whatever runs for a node, `reason`, what a thread and a cancelled task say, and `reviving`, its own kinds of work that bring an agent back beside `wake-parent` and `give-task`. `ended(nodeIds)` runs after, for the host's own clean-up; like every step it may run twice. The outbox's union takes `EndChildrenWorkSchema` beside the host's own kinds, and Ruimte binds it in `apps/server/src/outbox/end-children.ts`.
 
 `AgentHost` offers no tasks of its own. A task is given and reported through the verbs of a context CLI, and the host needs to know which chat ran a verb. A plain host has neither. An app that wants tasks extends `ChatCore` for its CLI, as it does for its verbs, hands it to `AgentHost` or `wireAgents` as `core`, and wires tasks as above. The core of an `AgentHost` (`host.chats`) works as `chats` too, which `tasks/wiring.test.ts` does.
+
+### Messages
+
+An agent can also leave another a message that asks nothing back. `NoticeStore` (`messages/notice-store.ts`) keeps what waits for each node under `<dataDir>/notices`: at most ten per node, the oldest dropped, and none older than six hours. It has two readers. The model takes a message once, in front of its next prompt (`take`); a person is shown it once, in the thread (`show`), which takes nothing from the model.
+
+`deliverToChat` in `messages/deliver-notice.ts` puts a message in the queue and says what the chat owes for it. A chat between turns is owed a turn (`wake`), which the host opens through a `deliver-message` entry. A chat in a turn, a node that runs nothing yet, and a sender whose own turn a message opened leave it waiting. That last one is the stop: a turn a message opened wakes nobody, so two agents that read each other never wake each other on and on. `chatNoticeTargets(core)` reads the chats of a core for it, and `showNotices` writes the lines a person reads as a message lands. Who may message whom, and anything that is not a chat, such as a terminal, stay the host's. The host checks both before it calls this.
+
+The chat side is `NoticeNotes`, a `PromptNotes` over the queue for `promptNotesFor`. `unshownNotes` returns the lines a chat that just loaded owes a person, for the host to add in `opened`. The outbox's union takes `DeliverMessageWorkSchema` from `messages/deliver-message.ts`, and `deliverMessageHandler` opens the turn with every message that still waits. The words are the host's, as `MessageWords`: what the agent hears (`heard`), what a person reads (`shown`), and the prompt and label of a woken turn. Ruimte's are in `apps/server/src/context/notices.ts`, beside the terminal side of `ruimte-context notify`.
 
 ## Wiring it into an Electron app
 

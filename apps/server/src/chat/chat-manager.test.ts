@@ -5,7 +5,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ChatBookmark, ChatCheckpointDiff, ChatInfo, ChatItem, ChatSubagentItem, ContextSource } from '@ruimte/contracts';
 import { chatPrompt, verbsNote } from '../context/context-note.ts';
-import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from '../context/notices.ts';
+import { showNotices } from '@ruimte/agents/messages/deliver-notice';
+import { NoticeNotes, unshownNotes } from '@ruimte/agents/messages/notice-notes';
+import { NoticeStore, type Notice } from '@ruimte/agents/messages/notice-store';
+import { deliverNotice, MESSAGE_WORDS } from '../context/notices.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
@@ -1237,8 +1240,8 @@ describe('a message another node left', () => {
 
     const withNotices = (): ChatManager =>
         makeManager({
-            messages: (chatId) => notices.take(chatId).map(renderNotice),
-            unshownMessages: async (chatId) => (await notices.show(chatId)).map(noticeNote)
+            messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),
+            unshownMessages: (chatId) => unshownNotes(notices, chatId, MESSAGE_WORDS)
         });
 
     const notify = async (targetId: string, text: string): Promise<void> => {
@@ -1253,7 +1256,7 @@ describe('a message another node left', () => {
             },
             notice
         );
-        await showNotices(notices, { has: (id) => manager.hasStored(id), note: (id, line) => manager.addNote(id, 'info', line) }, targetId);
+        await showNotices(notices, { has: (id) => manager.hasStored(id), note: (id, line) => manager.addNote(id, 'info', line) }, MESSAGE_WORDS, targetId);
     };
 
     const heard = 'Ruimte: node term-1 ("dev server") sent you a message: the build is green';

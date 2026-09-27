@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { MAX_NOTICE_LENGTH, MAX_NOTICES, NO_REPLY_NOTICE, NOTICE_MAX_AGE_MS } from '../context/notices.ts';
+import { MAX_NOTICES, NOTICE_MAX_AGE_MS } from '@ruimte/agents/messages/notice-store';
+import { MAX_NOTICE_LENGTH, NO_REPLY_NOTICE } from '../context/notices.ts';
 import { defineStandaloneActionVerb, runAction } from './action-verb.ts';
 import { unescapeText } from './text-escapes.ts';
 import { lengthOf } from './verb.ts';

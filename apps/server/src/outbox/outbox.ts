@@ -1,4 +1,5 @@
 import { OutboxStore as BaseOutboxStore, type OutboxEntryOf } from '@ruimte/agents/outbox/outbox';
+import { DeliverMessageWorkSchema } from '@ruimte/agents/messages/deliver-message';
 import { EndChildrenWorkSchema } from '@ruimte/agents/tasks/end-children';
 import { BackgroundLimitWorkSchema, DeliverWaitingWorkSchema, GiveTaskWorkSchema, WakeParentWorkSchema } from '@ruimte/agents/tasks/task-work';
 import { AgentKindSchema, ModelSelectionSchema, ProviderAccountIdSchema, RuntimeModeSchema } from '@ruimte/contracts';
@@ -33,19 +34,13 @@ const ResumeLimitSchema = z.object({
     payload: z.object({ turnId: z.string().min(1) })
 });
 
-const DeliverMessageSchema = z.object({
-    kind: z.literal('deliver-message'),
-    // The target is the chat the message was left for; the message itself waits in the notice store, with any that came in beside it.
-    payload: z.object({ from: z.string().min(1) })
-});
-
 const DeliverSummarySchema = z.object({
     kind: z.literal('deliver-summary'),
     // The target is the chat the summary is for; the fork wrote it in this turn.
     payload: z.object({ forkId: z.string().min(1), turnId: z.string().min(1), text: z.string() })
 });
 
-// The kinds a task owes and ending children are @ruimte/agents' own (`tasks/task-work.ts`, `tasks/end-children.ts`), each at the place it always had.
+// The kinds a task owes, ending children and delivering a message are @ruimte/agents' own (`tasks/task-work.ts`, `tasks/end-children.ts`, `messages/deliver-message.ts`), each at the place it always had.
 const OutboxWorkSchema = z.discriminatedUnion('kind', [
     StartAgentSchema,
     ResumeRunSchema,
@@ -53,7 +48,7 @@ const OutboxWorkSchema = z.discriminatedUnion('kind', [
     BackgroundLimitWorkSchema,
     WakeParentWorkSchema,
     GiveTaskWorkSchema,
-    DeliverMessageSchema,
+    DeliverMessageWorkSchema,
     EndChildrenWorkSchema,
     DeliverSummarySchema,
     DeliverWaitingWorkSchema

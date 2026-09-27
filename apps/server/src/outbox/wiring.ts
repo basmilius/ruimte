@@ -4,8 +4,9 @@ import type { ChatManager } from '../chat/chat-manager.ts';
 import { limitResumeAt } from '@ruimte/agents/chat/limit-resume';
 import { wireSummaries, type SummaryWiring } from '../chat/summary.ts';
 import { chatOpener } from '@ruimte/agents/chat/wake-chat';
-import { deliverMessageHandler } from '../context/deliver-message.ts';
-import type { NoticeStore } from '../context/notices.ts';
+import { deliverMessageHandler } from '@ruimte/agents/messages/deliver-message';
+import type { NoticeStore } from '@ruimte/agents/messages/notice-store';
+import { MESSAGE_WORDS } from '../context/notices.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 import type { TaskStore } from '@ruimte/agents/tasks/task-store';
@@ -208,7 +209,8 @@ export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
             'deliver-message': deliverMessageHandler({
                 notices,
                 chat: chatOpener({ chats, placed }),
-                placed
+                placed,
+                words: MESSAGE_WORDS
             }),
             'end-children': endChildren.handler,
             'deliver-summary': summaries.handler,

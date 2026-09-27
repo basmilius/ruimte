@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { MAX_NOTICE_LENGTH, MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
 import type { ProjectContent, ProjectNode, Task } from '@ruimte/contracts';
 import { SubagentUnreadable } from '../context/context-store.ts';
-import type { Notice } from '../context/notices.ts';
+import type { Notice } from '@ruimte/agents/messages/notice-store';
 import type { AgentState, CanvasHost } from '../canvas/verb.ts';
 import { PlanStore } from '../plans/plan-store.ts';
 import { ProjectError } from '../projects/project-store.ts';

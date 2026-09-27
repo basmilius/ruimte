@@ -14,8 +14,10 @@ import { chatForkDeps, forkChat, readForkInfo } from '../chat/fork.ts';
 import { fakeClaude } from '@ruimte/agents/chat/fake-claude';
 import { fakeCodex } from '@ruimte/agents/chat/fake-codex';
 import { inProcess, type FakeCli, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
-import { turnFromMessage } from '../context/deliver-message.ts';
-import { deliverNotice, NoticeStore, renderNotice, showNotices } from '../context/notices.ts';
+import { chatNoticeTargets, showNotices } from '@ruimte/agents/messages/deliver-notice';
+import { NoticeNotes } from '@ruimte/agents/messages/notice-notes';
+import { NoticeStore } from '@ruimte/agents/messages/notice-store';
+import { deliverNotice, MESSAGE_WORDS } from '../context/notices.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { Checkpoints, type CheckpointService } from '../git/checkpoints.ts';
 import { worktreeAgents } from '../git/worktree-agents.ts';
@@ -159,7 +161,7 @@ export const bootTestDaemon = async ({
         ...(onLimits ? { onLimits } : {}),
         firstPrompt: (id) => prompts.take(id),
         onInterruptedRun: outboxLink.onInterruptedRun,
-        messages: (chatId) => notices.take(chatId).map(renderNotice),
+        messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),
         taskRows: (chatId) => tasks.ofParent(chatId),
         dropWakes: (chatId) => tasks.dropWake(chatId),
         endedAt: (chatId) => lineage.endedAt(chatId),
@@ -276,21 +278,16 @@ export const bootTestDaemon = async ({
                         const session = sessions.get(id);
                         return session && !session.exited ? { agent: session.agent, notice: (text: string) => session.notice(text) } : null;
                     },
-                    chat: async (id) => {
-                        const session = chats.get(id);
-                        if (session) {
-                            return session.info.activeTurnId === null ? 'idle' : 'running';
-                        }
-                        return (await chats.hasStored(id)) ? 'idle' : 'none';
-                    },
-                    fromMessage: (id) => {
-                        const session = chats.get(id);
-                        return session !== undefined && turnFromMessage(session.thread.list(), session.info.activeTurnId);
-                    }
+                    ...chatNoticeTargets(chats)
                 },
                 notice
             );
-            await showNotices(notices, { has: (id) => chats.hasStored(id), note: (id, text) => chats.addNote(id, 'info', text) }, notice.targetId);
+            await showNotices(
+                notices,
+                { has: (id) => chats.hasStored(id), note: (id, text) => chats.addNote(id, 'info', text) },
+                MESSAGE_WORDS,
+                notice.targetId
+            );
             if (delivery.wake) {
                 await outboxLink.enqueue(notice.projectId, notice.targetId, { kind: 'deliver-message', payload: { from: notice.from } });
             }

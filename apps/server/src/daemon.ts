@@ -66,8 +66,10 @@ import { ChatManager } from './chat/chat-manager.ts';
 import { hookContext } from './context/context-note.ts';
 import { handleContextRequest } from './context/context-route.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
-import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from './context/notices.ts';
-import { turnFromMessage } from './context/deliver-message.ts';
+import { chatNoticeTargets, showNotices } from '@ruimte/agents/messages/deliver-notice';
+import { NoticeNotes, unshownNotes } from '@ruimte/agents/messages/notice-notes';
+import { NoticeStore, type Notice } from '@ruimte/agents/messages/notice-store';
+import { deliverNotice, MESSAGE_WORDS, renderNotice } from './context/notices.ts';
 import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import { BookmarkStore } from '@ruimte/agents/chat/bookmark-store';
 import type { ServerConfig } from './config.ts';
@@ -238,11 +240,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         folderOf,
         worktreePaths: (folder) => canvasHost.worktreePaths(folder)
     });
-    /* What a node hears the moment it can: taken here, so whichever channel gets there first is the
-       only one that delivers it. */
+    /* What a terminal's agent hears the moment it can: taken here, so whichever channel gets there first
+       is the only one that delivers it. */
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
-    /* The other reader: what a chat has to show a person in its thread, which is never taken from the model. */
-    const unshownFor = async (chatId: string): Promise<string[]> => (await notices.show(chatId)).map(noticeNote);
     const providers = new ProviderRegistry({ appleEnabled: () => identity.appleFoundationEnabled });
     // Before the managers, which start every CLI under the account its node or chat names.
     const providerAccounts = new ProviderAccountsService({
@@ -346,8 +346,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             const entry = outbox.list().find((entry) => entry.kind === 'start-agent' && entry.target === chatId);
             return entry?.kind === 'start-agent' && entry.payload.provider === provider ? entry.payload.selection : undefined;
         },
-        messages: messagesFor,
-        unshownMessages: unshownFor,
+        messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),
+        // The other reader: what a chat has to show a person in its thread, which is never taken from the model.
+        unshownMessages: (chatId) => unshownNotes(notices, chatId, MESSAGE_WORDS),
         firstPrompt: (chatId) => prompts.take(chatId),
         // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
         onLimits: (update) => limits.applyLive(update),
@@ -583,24 +584,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         const session = manager.get(id);
                         return session && !session.exited ? { agent: session.agent, notice: (text: string) => session.notice(text) } : null;
                     },
-                    chat: async (id) => {
-                        const session = chats.get(id);
-                        if (session) {
-                            return session.info.activeTurnId === null ? 'idle' : 'running';
-                        }
-                        // A chat nobody has loaded is idle: the turn opens on the thread the daemon reads back from disk.
-                        return (await chats.hasStored(id)) ? 'idle' : 'none';
-                    },
-                    fromMessage: (id) => {
-                        const session = chats.get(id);
-                        return session !== undefined && turnFromMessage(session.thread.list(), session.info.activeTurnId);
-                    }
+                    ...chatNoticeTargets(chats)
                 },
                 notice
             );
             /* A chat shows it to a person the moment it lands. Never in the way of the answer to the
                sender: the message is in the queue by now, so the model hears it whatever a thread does. */
-            await showNotices(notices, noticeChat, notice.targetId).catch((e) =>
+            await showNotices(notices, noticeChat, MESSAGE_WORDS, notice.targetId).catch((e) =>
                 console.error(`Showing a message in chat ${notice.targetId} failed:`, errorText(e))
             );
             /* After the line in the thread, so a person sees the message itself above the turn it opens. */

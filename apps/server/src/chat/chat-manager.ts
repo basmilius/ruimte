@@ -63,8 +63,8 @@ interface ChatManagerOptions extends ChatCoreOptions {
     contextSources?: (chatId: string) => ContextSource[];
     // The name of a chat of the same project, for a message a person attached it to; null for any other id.
     chatTitle?: (chatId: string, id: string) => string | null;
-    // What another node left for this chat, taken once and put in front of the next prompt.
-    messages?: (chatId: string) => string[];
+    // What another node left for this chat, taken once and put in front of the next prompt (`NoticeNotes`).
+    messageNotes?: (chatId: string) => PromptNotes;
     // The same messages, as the lines a person reads in the thread; asked once, when the chat is loaded.
     unshownMessages?: (chatId: string) => Promise<string[]>;
     // The prompt an agent node was made with, taken once; it becomes the thread's first message.
@@ -100,29 +100,27 @@ const chatEnvOf = (env: Record<string, string | undefined>, binDir: string | und
 /* What a chat hears about its links in front of a prompt: a link made or removed since the last one, and what another node left for it. */
 class ContextNotes implements PromptNotes {
     private readonly sources: () => ContextSource[];
-    private readonly messages: () => string[];
+    private readonly messages: PromptNotes | null;
     // The links at the previous prompt; null before the first, whose CLI hears about them at launch.
     private last: ContextSource[] | null = null;
 
-    constructor(sources: () => ContextSource[], messages: () => string[]) {
+    constructor(sources: () => ContextSource[], messages: PromptNotes | null) {
         this.sources = sources;
         this.messages = messages;
     }
 
-    /*
-     * A message is written in the thread as it lands, by whichever channel got it first, so repeating it
-     * above the turn it opened tells a person the same thing twice; a change of links nobody has read yet.
-     */
     next(): { shown: string[]; heard: string[] } {
         const current = this.sources();
         const previous = this.last;
         this.last = current;
         const change = previous === null ? null : contextChangeNote(previous, current);
-        return { shown: change === null ? [] : [change], heard: this.messages() };
+        const messages = this.messages?.next() ?? { shown: [], heard: [] };
+        return { shown: [...(change === null ? [] : [change]), ...messages.shown], heard: messages.heard };
     }
 
     reset(): void {
         this.last = null;
+        this.messages?.reset();
     }
 }
 
@@ -191,7 +189,7 @@ export class ChatManager extends ChatCore {
     private readonly opening: NonNullable<ChatManagerOptions['openingSelection']>;
     private readonly contextSources: (chatId: string) => ContextSource[];
     private readonly chatTitle: (chatId: string, id: string) => string | null;
-    private readonly messages: (chatId: string) => string[];
+    private readonly messageNotes: ((chatId: string) => PromptNotes) | null;
     private readonly unshownMessages: (chatId: string) => Promise<string[]>;
     private readonly firstPrompt: (chatId: string) => Promise<string | null>;
     private readonly modeCeiling: (chatId: string) => RuntimeMode | null;
@@ -215,7 +213,7 @@ export class ChatManager extends ChatCore {
         this.opening = options.openingSelection ?? (() => undefined);
         this.contextSources = options.contextSources ?? (() => []);
         this.chatTitle = options.chatTitle ?? (() => null);
-        this.messages = options.messages ?? (() => []);
+        this.messageNotes = options.messageNotes ?? null;
         this.unshownMessages = options.unshownMessages ?? (() => Promise.resolve([]));
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.modeCeiling = options.modeCeiling ?? (() => null);
@@ -420,10 +418,7 @@ export class ChatManager extends ChatCore {
     }
 
     protected override promptNotesFor(chatId: string): PromptNotes {
-        return new ContextNotes(
-            () => this.contextSources(chatId),
-            () => this.messages(chatId)
-        );
+        return new ContextNotes(() => this.contextSources(chatId), this.messageNotes?.(chatId) ?? null);
     }
 
     protected override referencesFor(chatId: string): ChatReferences {
