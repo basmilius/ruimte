@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Grote video's over een directe verbinding</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.prompt pre { white-space: pre-wrap; font-size: 13px; line-height: 1.6; }
+.prompt-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#kort">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">Ruimte / Plan / 27 september 2026</p>
+  <h1>Grote video's over een directe verbinding</h1>
+  <p class="intro">Een webserver op de daemon helpt niet: over een directe verbinding is geen TCP-poort bereikbaar. Wat wel werkt is een Service Worker in de client die zich voordoet als webserver. Hij vertaalt de range-requests van <code>&lt;video&gt;</code> naar <code>bytes.read</code> over het DataChannel dat er al is. Dan kan het plafond van 32 MB voor video weg, zonder wijziging aan de wire.</p>
+  <p class="status">Gebouwd, stap 1 tot en met 4 op main. Nog niet in de app geverifieerd; stap 5 is niet gemeten.</p>
+  <p class="caption">Gebaseerd op main op <code>d3775609</code>. Scope: de desktopclient en de station. De iPhone-app valt erbuiten.</p>
+  <nav aria-label="Inhoud">
+    <a href="#resultaat">Resultaat</a>
+    <a href="#kort">Kort</a>
+    <a href="#nu">Hoe het nu werkt</a>
+    <a href="#webserver">Waarom geen webserver</a>
+    <a href="#ontwerp">Ontwerp</a>
+    <a href="#grenzen">Grenzen</a>
+    <a href="#stappen">Stappen</a>
+    <a href="#open">Open vragen</a>
+    <a href="#startprompt">Startprompt</a>
+  </nav>
+</header>
+<main>
+  <section id="resultaat" class="recommendation">
+    <h2>Resultaat</h2>
+    <p class="caption">27 september 2026, op main na <code>dd6e4782</code>. Wat hieronder staat, vervangt het plan niet. Het plan blijft eronder staan zoals het was.</p>
+    <p>Een video over een directe verbinding speelt nu via een Service Worker op de eigen origin. De speler begint na het eerste stuk en kan zoeken. Afbeeldingen, projecticonen en bijlagen blijven op de blob-route met het plafond van 32 MB. De wire is niet veranderd. Wat nog ontbreekt, is een test in de app tegen een echte directe machine, en de meting van stap 5.</p>
+
+    <div class="stats">
+      <div><strong>28 ms</strong><span>tot metadata, video van 120 MB met moov vooraan</span></div>
+      <div><strong>86 ms</strong><span>tot metadata, dezelfde video met moov achteraan</span></div>
+      <div><strong>~70 ms</strong><span>zoeken naar 3 s voor het einde</span></div>
+      <div><strong>3 KB</strong><span>worker-script, geminificeerd</span></div>
+    </div>
+    <p class="caption">Gemeten in een losse Electron 44 (de versie uit <code>apps/desktop</code>) op <code>http://127.0.0.1</code>, met een lokale server die <code>bytes.read</code> nabootst: base64 in JSON, 20 ms vertraging per stuk. Geen echte directe verbinding, dus deze tijden zeggen niets over doorvoer.</p>
+
+    <h3>Per stap</h3>
+    <div class="table">
+      <table class="wide">
+        <caption>Wat er gebouwd is</caption>
+        <thead><tr><th scope="col">Stap</th><th scope="col">Uitkomst</th><th scope="col">Commit</th></tr></thead>
+        <tbody>
+          <tr><td>1. Spike</td><td><span class="badge confirmed">Geslaagd</span> Chromium speelt en zoekt op begrensde <code>206</code>-antwoorden van een worker. Een antwoord van 8 MiB op <code>bytes=X-</code> neemt het aan, en daarna vraagt het zelf <code>bytes=X+8MiB-</code>. Breekt de speler een request af, dan roept Chromium <code>cancel</code> op de stream aan. Gedaan in een wegwerpmap buiten de repo, daarna opnieuw met de gebouwde worker uit stap 4.</td><td>geen</td></tr>
+          <tr><td>2. Daemon</td><td><span class="badge confirmed">Klaar</span> <code>readBytes</code> weigert geen bestand meer op grootte, en <code>too-large</code> is weg. De unittest leest een stuk op 90 MB uit een sparse bestand van 100 MB. De Docker-integratietest leest nu een stuk uit het bestand van 40 MB in plaats van een weigering te verwachten; die test heb ik niet gedraaid.</td><td><code>4bd978f5</code></td></tr>
+          <tr><td>3. Pure module</td><td><span class="badge confirmed">Klaar</span> <code>apps/client/src/transport/bytes-stream.ts</code>: ranges parsen, het venster van 8 MiB, de headers, en een stream die twee stukken vooruit vraagt en stopt bij <code>cancel</code>. Veertien tests, zonder klok. <code>blobTypeFor</code> en het base64-decoderen staan nu in <code>piece.ts</code>, zodat de worker geen i18next meeneemt.</td><td><code>39f2ee84</code></td></tr>
+          <tr><td>4. Worker en pagina</td><td><span class="badge warning">Niet in de app geverifieerd</span> Het worker-script, een Vite-plugin die het als eigen build op <code>/bytes-worker.js</code> zet (dev, de build die de daemon serveert, en de station), de kant van de pagina en de keuze in <code>useMachineUrl</code>. Check en tests zijn groen.</td><td><code>dd6e4782</code></td></tr>
+          <tr><td>5. Doorvoer</td><td><span class="badge danger">Niet gemeten</span> Er was geen directe machine in de dev-app, en <code>bun dev</code> draaide niet. De standaard staat op twee stukken onderweg.</td><td>geen</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Afwijkingen van het plan</h3>
+    <ul>
+      <li><strong>Een eigen soort in <code>MachineResource</code>.</strong> <code>useMachineUrl</code> kent het mime-type niet, dus <code>VideoFile</code> vraagt nu <code>{ kind: 'video' }</code> in plaats van <code>{ kind: 'file' }</code>. Op de wire blijft het <code>file</code>. Dat is de enige wijziging bij een draw-site.</li>
+      <li><strong>De versie vergelijkt met 1 ms speling.</strong> De bestandsviewer rondt de mtime af (<code>Math.round</code>), <code>bytes.read</code> kapt hem af (<code>Math.trunc</code>). Een letterlijke vergelijking met <code>v</code> zou bij ongeveer de helft van de bestanden falen. De grootte moet exact kloppen.</li>
+      <li><strong>De worker vraagt het eerste stuk vóór hij antwoordt.</strong> Een verdwenen bestand wordt zo een <code>502</code> en een gewijzigd bestand een <code>412</code>, in plaats van een stream die halverwege breekt. Het type komt uit dat eerste stuk.</li>
+      <li><strong>Static routing.</strong> Bij de installatie roept de worker <code>addRoutes</code> aan, zodat elk ander request (chunks, afbeeldingen over een socket) meteen naar het netwerk gaat en de worker er niet voor hoeft te starten. Een browser zonder die API slaat het over.</li>
+      <li><strong>De stukgrootte staat in de module zelf.</strong> <code>BYTES_CHUNK_MAX</code> importeren trok alle zod-schema's de worker in (155 KB). Nu staat er <code>STREAM_PIECE_BYTES</code>, en een test houdt die gelijk aan <code>BYTES_CHUNK_MAX</code>.</li>
+    </ul>
+
+    <h3>De open vragen die de spike beslist</h3>
+    <ul>
+      <li><strong>Leeft een Service Worker in Electron op deze origin?</strong> Ja, in Electron 44 op <code>http://127.0.0.1:&lt;poort&gt;</code>. De registratie duurde 40 tot 55 ms, en <code>clients.claim</code> nam de pagina meteen over. De Vite-origin (<code>http://localhost:5173</code>) is ook een secure context. Dat de worker daar geserveerd wordt, is getest met een tijdelijke Vite-server; afspelen in het echte dev-venster niet.</li>
+      <li><strong>Houdt Chromium een worker in leven zolang een stream loopt?</strong> Niet getest over minuten. Met antwoorden van 8 MiB duurt één stream kort, dus de vraag doet er minder toe. Of 8 MiB de juiste grens is, blijft open tot stap 5.</li>
+    </ul>
+
+    <h3>Wat nog moet</h3>
+    <ol>
+      <li>Open in de dev-app een video van ruim 32 MB op een machine met een directe verbinding. Controleer dat hij meteen start en dat zoeken werkt. Na de eerste keer registreert de worker zich; de eerste video in een nieuw venster kan nog via de blob-route gaan.</li>
+      <li>Meet stap 5 over een echte directe verbinding, met en zonder relay, met <code>ahead</code> op 1, 2 en 3 (<code>StreamOptions</code> in <code>bytes-stream.ts</code>). Houd daarbij een terminal op dezelfde verbinding in de gaten. Bij twee stukken onderweg is dat ongeveer 684 KB base64, onder de gate van 1 MB. Bij drie zit het er net boven.</li>
+    </ol>
+  </section>
+
+  <section id="kort">
+    <h2>Kort</h2>
+    <p>Over een directe verbinding haalt de client een video in zijn geheel op en zet hem als Blob in het geheugen. Pas daarna kan de speler beginnen. Daarom weigeren zowel de client als de daemon alles boven 32 MB.</p>
+    <p>Het voorstel: een Service Worker beantwoordt een URL op de eigen origin van de pagina. Een range-request van de speler wordt een paar <code>bytes.read</code>-requests via de pagina, en het antwoord een gestreamde <code>206</code>. De speler begint meteen, kan zoeken en houdt alleen zijn eigen buffer in het geheugen. Afbeeldingen, projecticonen en bijlagen blijven op de huidige blob-route met cache.</p>
+    <p><strong>Advies:</strong> begin met een spike in de Electron-dev-app die aantoont dat Chromium een video speelt en laat zoeken op antwoorden van een Service Worker. Slaagt die, dan zijn er daarna vier kleine stappen. Faalt hij, dan is <code>protocol.handle</code> in het main process het alternatief, voor de desktop alleen.</p>
+  </section>
+
+  <section id="nu">
+    <h2>Hoe het nu werkt</h2>
+    <p><code>useMachineUrl</code> (<code>apps/client/src/transport/machine-url.ts</code>) is de enige plek die bytes op een machine omzet in een URL. Over een socket is dat de HTTP-route van de daemon (<code>/fs/file</code>), die ranges serveert. Over een directe verbinding vraagt <code>readResource</code> (<code>apps/client/src/transport/byte-transfer.ts</code>) het bestand stuk voor stuk op en maakt er één Blob van.</p>
+    <div class="table">
+      <table class="wide">
+        <caption>Wat de huidige route begrenst</caption>
+        <thead><tr><th scope="col">Waar</th><th scope="col">Wat</th><th scope="col">Gevolg</th></tr></thead>
+        <tbody>
+          <tr><td><code>packages/contracts/src/bytes.ts:23</code></td><td><code>BYTES_READ_MAX_BYTES</code> = 32 MiB</td><td>Het plafond zelf, in de client en de daemon.</td></tr>
+          <tr><td><code>apps/server/src/bytes/read-bytes.ts</code></td><td>Weigert met <code>too-large</code> als het hele bestand groter is</td><td>Ook een enkel stuk van een groot bestand is onbereikbaar, terwijl de daemon per stuk maar een slice leest.</td></tr>
+          <tr><td><code>byte-transfer.ts</code></td><td>Eén stuk van 256 KiB per round trip, als base64 in JSON</td><td>De doorvoer hangt aan de RTT: bij 50 ms ongeveer 5 MB/s. Base64 kost 33% extra.</td></tr>
+          <tr><td><code>blob-cache.ts</code></td><td>Houdt Blobs vast tot 64 MB niemand ze meer tekent</td><td>Een grote video zou in zijn geheel in het geheugen staan.</td></tr>
+          <tr><td><code>VideoFile.tsx</code></td><td>Tekent <code>&lt;video src={blob-url}&gt;</code></td><td>Afspelen begint pas als het laatste stuk binnen is.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>De wire heeft alles al wat nodig is: <code>bytes.read</code> kent <code>offset</code> en <code>length</code>, en elk antwoord draagt <code>size</code>, <code>mime</code> en <code>version</code>.</p>
+  </section>
+
+  <section id="webserver">
+    <h2>Waarom geen webserver op de daemon</h2>
+    <p>De daemon heeft die webserver al. Over een socket gebruikt de client hem ook. Een directe verbinding bestaat juist omdat de twee kanten elkaar niet via TCP bereiken: WebRTC gaat met ICE door NAT heen, en valt anders terug op TURN. TURN stuurt alleen WebRTC door, geen willekeurige TCP. Een HTTP-poort op de daemon is vanaf een ander netwerk alleen bereikbaar met port forwarding of een tunnel. Dat is precies wat de directe verbinding overbodig maakt.</p>
+    <p>Daar komt bij dat zo'n poort een tweede deur naar de daemon zou zijn, met de credential in de URL. De directe verbinding is al geauthenticeerd. Alles wat erover gaat, erft dat.</p>
+  </section>
+
+  <section id="ontwerp">
+    <h2>Ontwerp</h2>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Diagram, scrolt horizontaal" tabindex="0">
+        <svg class="diagram plot" width="900" viewBox="0 0 900 170" role="img" aria-labelledby="flow-title flow-description">
+          <title id="flow-title">Een range-request van de speler naar de daemon</title>
+          <desc id="flow-description">De video-tag vraagt een range aan de Service Worker. Die geeft het request door aan de pagina die het request deed. De pagina stuurt bytes.read over het DataChannel naar de daemon, en de stukken stromen terug als een 206-antwoord.</desc>
+          <defs><marker id="flow-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+          <rect class="node" x="10" y="50" width="150" height="70" rx="12"/>
+          <rect class="node" x="225" y="50" width="170" height="70" rx="12"/>
+          <rect class="node" x="470" y="50" width="160" height="70" rx="12"/>
+          <rect class="node" x="720" y="50" width="170" height="70" rx="12"/>
+          <path class="edge" d="M160 85 H213" marker-end="url(#flow-arrow)"/>
+          <path class="edge" d="M395 85 H458" marker-end="url(#flow-arrow)"/>
+          <path class="edge" d="M630 85 H708" marker-end="url(#flow-arrow)"/>
+          <text x="85" y="91" text-anchor="middle">&lt;video&gt;</text>
+          <text x="310" y="91" text-anchor="middle">Service Worker</text>
+          <text x="550" y="91" text-anchor="middle">Pagina</text>
+          <text x="805" y="91" text-anchor="middle">Daemon</text>
+          <text class="label" x="187" y="36" text-anchor="middle">Range</text>
+          <text class="label" x="427" y="36" text-anchor="middle">MessagePort</text>
+          <text class="label" x="669" y="36" text-anchor="middle">bytes.read</text>
+          <text class="label" x="187" y="150" text-anchor="middle">206, gestreamd</text>
+          <text class="label" x="427" y="150" text-anchor="middle">stukken</text>
+          <text class="label" x="669" y="150" text-anchor="middle">DataChannel</text>
+        </svg>
+      </div>
+      <figcaption>De speler praat HTTP met de Service Worker. Alleen de pagina kent het DataChannel, dus de worker vraagt elk stuk aan de pagina die het request deed.</figcaption>
+    </figure>
+
+    <h3>De route</h3>
+    <ul>
+      <li><code>useMachineUrl</code> geeft voor een video over een directe verbinding een URL op de eigen origin terug, bijvoorbeeld <code>/machine-bytes/file?machine=…&amp;path=…&amp;v=&lt;mtime&gt;-&lt;size&gt;</code>. Dat gebeurt alleen als de pagina onder controle van de worker staat (<code>navigator.serviceWorker.controller</code>). Anders blijft de blob-route met het plafond staan, zoals na een harde reload.</li>
+      <li>De worker onderschept alleen dat pad. Elk ander request laat hij met rust, zonder <code>respondWith</code>.</li>
+      <li>Hij vindt de pagina via <code>FetchEvent.clientId</code> en geeft haar het request met een <code>MessageChannel</code>. Dat werkt ook met meerdere vensters op dezelfde origin.</li>
+      <li>De pagina zoekt de transport van die machine op en doet <code>bytes.read</code>. Een pagina zonder directe verbinding naar die machine weigert.</li>
+    </ul>
+
+    <h3>Het antwoord</h3>
+    <ul>
+      <li>De worker leest <code>Range: bytes=X-</code> of <code>bytes=X-Y</code> en antwoordt met <code>206</code>, <code>Content-Range</code>, <code>Content-Length</code>, <code>Accept-Ranges: bytes</code> en een <code>Content-Type</code> via <code>blobTypeFor</code>.</li>
+      <li>Een open range krijgt een begrensd antwoord, bijvoorbeeld 8 MiB. HTTP staat dat toe, en Chromium vraagt daarna de volgende range. Zo blijft geen worker minutenlang aan één stream hangen, en kost een zoekactie weinig.</li>
+      <li>De body is een <code>ReadableStream</code> die met <code>pull</code> een paar stukken vooruit vraagt. Breekt de speler het request af, dan stopt <code>cancel</code> het vragen.</li>
+      <li>Wijkt de <code>version</code> van een stuk af van <code>v</code> in de URL, dan faalt de stream. <code>VideoFile</code> toont dan wat het nu bij een fout toont.</li>
+    </ul>
+
+    <h3>Wat blijft zoals het is</h3>
+    <p>Afbeeldingen, projecticonen en bijlagen zijn klein en hebben baat bij de gedeelde blob-cache. Die blijven op <code>readResource</code> met het plafond. Over een socket verandert niets. Na deze wijziging betekent <code>BYTES_READ_MAX_BYTES</code> alleen nog het plafond van de blob-route in de client.</p>
+  </section>
+
+  <section id="grenzen">
+    <h2>Grenzen</h2>
+    <h3>Beveiliging</h3>
+    <p>De URL ligt op de origin van de app. Een antwoord dat de browser als HTML zou uitvoeren, draait dus met de rechten van de app. Het huidige <code>blobTypeFor</code> bestaat om die reden. De worker neemt drie maatregelen:</p>
+    <ul>
+      <li>Hij weigert elk request met <code>mode === 'navigate'</code>. Een link naar deze URL opent dus nooit een document.</li>
+      <li>Het type komt uit <code>blobTypeFor</code>, en elk antwoord krijgt <code>X-Content-Type-Options: nosniff</code> en <code>Content-Security-Policy: sandbox</code>.</li>
+      <li>Hij dient alleen de <code>file</code>-resource, en de daemon dient daarvan alleen afbeeldingen en video's (<code>ByteSources.media</code>).</li>
+    </ul>
+    <p>Er staat geen credential in de URL. Toegang is al beslist toen de directe verbinding binnenkwam.</p>
+
+    <h3>Compatibiliteit</h3>
+    <div class="table">
+      <table class="wide">
+        <caption>Combinaties van versies</caption>
+        <thead><tr><th scope="col">Client</th><th scope="col">Daemon</th><th scope="col">Resultaat</th></tr></thead>
+        <tbody>
+          <tr><td>Nieuw</td><td>Oud</td><td>De oude daemon weigert een bestand boven 32 MB met <code>too-large</code>. De speler faalt en de gebruiker ziet de melding die er nu ook staat. Onder 32 MB werkt streamen gewoon.</td></tr>
+          <tr><td>Oud</td><td>Nieuw</td><td>De oude client houdt zijn eigen plafond aan op <code>size</code> van het eerste stuk. Niets verandert.</td></tr>
+          <tr><td>iPhone</td><td>Nieuw</td><td>Leest via <code>MachineClient.swift</code> zoals nu. De wire verandert niet, dus de app merkt niets.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Plaats in de build</h3>
+    <p>Een worker bestuurt alleen pagina's binnen zijn scope, en die scope is standaard de map van het script. Het script moet dus op de root staan (of met <code>Service-Worker-Allowed</code>) in de Vite-dev-server, de build die de daemon serveert, en de station. De CSP staat het al toe: <code>worker-src 'self' blob:</code> in <code>packages/csp/src/index.ts</code>. De station-Worker zet zijn headers over elk antwoord (<code>run_worker_first</code>), dus controleer daar het type en de caching van het script.</p>
+  </section>
+
+  <section id="stappen">
+    <h2>Stappen</h2>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Spike: speelt Chromium een video uit een Service Worker?</h3>
+        <p>Een wegwerpbranch of worktree, niets op main. Een worker die een lokaal testbestand in begrensde <code>206</code>-antwoorden serveert, in de Electron-dev-app. Controleer of hij registreert op de origin die Electron laadt, of de video start voordat alles binnen is, en of zoeken naar het einde werkt. Controleer ook wat Chromium doet met een antwoord dat korter is dan de gevraagde open range.</p>
+        <p><span class="badge info">Klaar als</span> een video van ruim 100 MB meteen start en zoekt, of als vaststaat waarom dat niet kan. Faalt het, stop dan en rapporteer. Bouw niet door op <code>protocol.handle</code> zonder besluit van Bas.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Daemon: geen plafond meer op het hele bestand</h3>
+        <p><code>readBytes</code> leest per stuk alleen een slice, dus een plafond op de bestandsgrootte beschermt niets. Haal de <code>too-large</code>-controle voor <code>file</code> weg, of laat de parameter <code>maxBytes</code> alleen nog in tests bestaan. Werk <code>read-bytes.test.ts</code> bij.</p>
+        <p><span class="badge info">Klaar als</span> een stuk van een bestand van 100 MB te lezen is, en de test dat vasthoudt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De logica van de worker, als pure module</h3>
+        <p>Het parsen van ranges, het begrenzen van het antwoord, de headers en een planner die met een geïnjecteerde <code>read</code> een paar stukken vooruit vraagt en bij <code>cancel</code> stopt. Zonder DOM of worker-API's, zodat <code>bun test</code> het zonder klok test.</p>
+        <p><span class="badge info">Klaar als</span> tests de gevallen dekken: open en gesloten range, een range voorbij het einde (<code>416</code>), een afwijkende <code>version</code>, afbreken halverwege, een navigatie-request, en een mime die geen video is.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Worker, pagina en <code>useMachineUrl</code></h3>
+        <p>Het worker-script als dunne laag over de module, de registratie bij het opstarten van de client, de kant van de pagina die op de <code>MessagePort</code> antwoordt, en de keuze in <code>useMachineUrl</code>. Die kiest de nieuwe route alleen voor video, alleen over een directe verbinding en alleen als de worker de pagina bestuurt. Bij de draw-sites verandert niets. Werk de comments in <code>bytes.ts</code> en <code>machine-url.ts</code> bij, en <code>apps/client/src/transport/CLAUDE.md</code> als daar iets over bytes staat. Houd de worker buiten de startchunk als dat kan: de registratie mag pas lopen als een workspace opent.</p>
+        <p><span class="badge info">Klaar als</span> <code>bun run check</code> en <code>bun run test</code> groen zijn, de station-build het script op de root zet, en een video van ruim 32 MB over een directe verbinding in de dev-app speelt en zoekt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Doorvoer meten en afstellen</h3>
+        <p>Meet met een video van ruim 100 MB over een echte directe verbinding hoe snel hij binnenkomt met één, twee en drie stukken tegelijk onderweg. Let op de output-gate van de daemon. Een stuk van 256 KiB is als base64 ongeveer 342 KiB, en de gate pauzeert een verbinding boven 1 MB. Drie stukken zitten daar net boven, en dan wacht een terminal op dezelfde verbinding. Kies het aantal dat de terminal niet laat haperen.</p>
+        <p><span class="badge info">Klaar als</span> de keuze met meetwaarden en voorwaarden (RTT, relay of niet) in het rapport staat.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="open">
+    <h2>Open vragen</h2>
+    <ul>
+      <li><strong>Leeft een Service Worker in Electron op deze origin?</strong> De verpakte app laadt de client van <code>http://127.0.0.1:&lt;poort&gt;</code>, en dev van de Vite-server. Beide zijn secure contexts. Ik verwacht dat het werkt, maar heb het niet getest. De spike beslist.</li>
+      <li><strong>Houdt Chromium een worker in leven zolang een stream loopt?</strong> Daarom is elk antwoord begrensd. Of 8 MiB de juiste grens is, blijkt uit de spike.</li>
+      <li><strong>Zijn binaire frames de moeite waard?</strong> Base64 in JSON kost een derde extra. Binaire frames op het DataChannel zijn een wijziging in het protocol, met de iPhone-app erbij. Dat hoort in een eigen plan, na de meting in stap 5.</li>
+      <li><strong>Wanneer komt de iPhone?</strong> <code>AVAssetResourceLoaderDelegate</code> met een eigen scheme doet voor <code>AVPlayer</code> wat de worker hier doet, over dezelfde <code>bytes.read</code>. Dat kan los van dit plan.</li>
+      <li><strong>Moet een PDF mee?</strong> De viewer van Chromium kan ook ranges lezen. Dat valt buiten dit plan totdat het nodig is.</li>
+    </ul>
+  </section>
+
+  <section id="startprompt" class="prompt">
+    <h2>Startprompt</h2>
+    <p>Voor een schone sessie in de map van Ruimte.</p>
+    <pre><code id="start-prompt">Je werkt in de Ruimte-monorepo (/Users/bas/Development/Projects/ruimte), op main. Lees eerst helemaal: CLAUDE.md, apps/client/src/transport/CLAUDE.md en docs/reports/2026-09-27-direct-media-streaming.html. Het rapport is het plan. Deze prompt zegt hoe je het uitvoert.
+
+Doel
+Over een directe verbinding (WebRTC) laadt de client een video nu helemaal als Blob, met een plafond van 32 MB. Maak dat een Service Worker de range-requests van &lt;video&gt; vertaalt naar bytes.read over het DataChannel, zodat een video van elke grootte meteen start en kan zoeken. Afbeeldingen, projecticonen en bijlagen blijven op de blob-route. Over een socket verandert niets.
+
+Volgorde
+1. Spike, niet op main: bewijs in de Electron-dev-app dat Chromium een video speelt en laat zoeken op begrensde 206-antwoorden van een Service Worker, op de origin die Electron laadt. Werk in een eigen worktree en ruim hem daarna op. Lukt het niet, stop dan en rapporteer waarom. Bouw geen alternatief (protocol.handle in het main process) zonder besluit van Bas.
+2. Daemon: haal in apps/server/src/bytes/read-bytes.ts het plafond op de hele bestandsgrootte weg voor file-resources en werk de test bij.
+3. De logica van de worker als pure module zonder DOM of worker-API's: ranges parsen, het antwoord begrenzen (begin met 8 MiB), headers, en een planner die met een geïnjecteerde read een paar stukken vooruit vraagt en stopt bij cancel. Tests zoals stap 3 van het rapport ze noemt.
+4. Het worker-script, de registratie, de kant van de pagina (MessageChannel, de pagina zoekt via FetchEvent.clientId) en de keuze in useMachineUrl: alleen video, alleen direct, alleen als navigator.serviceWorker.controller er is, anders de blob-route. Het script moet op de root staan in Vite-dev, in de build die de daemon serveert en in de station.
+5. Meet de doorvoer met één, twee en drie stukken tegelijk onderweg en kies, met oog op de output-gate van 1 MB van de daemon.
+
+Grenzen die altijd gelden
+- De wire verandert niet. bytes.read heeft offset en length al; er komt geen veld, request of event bij.
+- useMachineUrl blijft de enige plek die van bytes op een machine een URL maakt. Bij de draw-sites verandert niets.
+- De worker weigert navigatie-requests, typeert elk antwoord via blobTypeFor, en zet X-Content-Type-Options: nosniff en Content-Security-Policy: sandbox. Hij onderschept alleen zijn eigen pad en laat al het andere met rust.
+- Er staat nooit een credential in de URL van de worker.
+- De startchunk blijft vrij van workspacecode. Registreer de worker pas als er een workspace opent, als dat kan.
+- Geen test hangt af van de klok, een echte shell of een watcher. Test de logica van de worker met een fake read.
+
+Werkwijze
+- Onderzoek en implementatie mogen via subagents. Subagents die committen, werken na elkaar of elk in een eigen worktree die je daarna op main zet. Geef elke subagent de grenzen hierboven mee.
+- Gebruik nooit git stash, reset, restore of clean, en herschrijf geen commits.
+- Commit op main, één onderwerp per commit, conventional commits in het Engels, zonder Co-Authored-By. Noem in commits, code, comments en docs geen ander product.
+- Voor elke commit moeten bun run format, bun run check en bun run test groen zijn. Na een groene check mag je pushen.
+- bun dev draait al; start zelf niets. Heb je geen machine met een directe verbinding in de dev-app, vraag Bas dan om een video van ruim 32 MB te openen, en meld stap 4 en 5 tot die tijd als niet geverifieerd.
+- Werk docs/NEXT.md bij met wat gebouwd is en wat open blijft.
+
+Rapport aan het eind
+Voeg met de html-report-skill een sectie "Resultaat" toe aan docs/reports/2026-09-27-direct-media-streaming.html: per stap wat er gebouwd is met de commits, de uitkomst van de spike, en de meetwaarden van stap 5 met RTT en of de verbinding via een relay liep. Beantwoord de open vragen die de spike beslist.
+
+Klaar is: stap 1 tot en met 5 zijn af of gestopt met een reden, format, check en test zijn groen op main, en het rapport is bijgewerkt en gecommit. Geef in je eindbericht per stap twee zinnen, en zeg wat je niet hebt kunnen verifiëren.</code></pre>
+    <div class="prompt-actions interactive-only" hidden>
+      <button type="button" data-copy="start-prompt">Kopieer prompt</button>
+      <span class="caption" role="status" aria-live="polite"></span>
+    </div>
+  </section>
+</main>
+<footer><p>Het plan is gebaseerd op het lezen van de code op <code>d3775609</code>; de sectie Resultaat op het werk tot en met <code>dd6e4782</code>. De spike bevestigde in een losse Electron dat een worker daar werkt en dat Chromium media op zijn antwoorden afspeelt; in de app zelf is dat nog niet gezien. Het getal van ongeveer 5 MB/s is berekend (256 KiB per round trip van 50 ms), niet gemeten.</p></footer>
+<script>
+{
+  if (navigator.clipboard) {
+    for (const actions of document.querySelectorAll('.prompt-actions')) {
+      const button = actions.querySelector('button');
+      const state = actions.querySelector('[role="status"]');
+      const prompt = document.getElementById(button.dataset.copy);
+      actions.hidden = false;
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(prompt.textContent);
+          state.textContent = 'Gekopieerd';
+        } catch {
+          state.textContent = 'Kopiëren lukte niet; selecteer de tekst hierboven';
+        }
+      });
+    }
+  }
+}
+</script>
+</body>
+</html>

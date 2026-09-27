@@ -78,7 +78,11 @@ larger ones becomes a GitHub issue when it starts.
     versions instead of only the same one (`docs/reports/2026-09-15-protocol-versions.html`, not
     decided); the desktop app overwriting a service `ruimte service install` set up (only the CLI
     checks who owns it); an expired login on station showing an error on the start screen,
-    unverified.
+    unverified. A video over a direct connection streams through a service worker
+    (`apps/client/src/worker/bytes-worker.ts`, `docs/reports/2026-09-27-direct-media-streaming.html`),
+    verified in a bare Electron but not yet in the app against a real direct machine; its throughput
+    with one, two or three pieces on their way is unmeasured, and so is what that does to a terminal
+    on the same connection. The iPhone still loads a video whole, under the 32 MB ceiling.
 13. **Devices** (`docs/reports/2026-09-13-devices.html`): the iOS Simulator, physical iPhones and
     iPads, and Android emulators and phones run as a panel, a view and a node, and an agent operates
     them with `ruimte-context device`. Left: typing on a physical iPhone (the simulator and Android
