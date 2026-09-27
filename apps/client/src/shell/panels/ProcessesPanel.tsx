@@ -394,14 +394,14 @@ export function ProcessesPanel() {
                     const groupRow = (
                         <ListRow variant="flat" className="gap-1.5 pr-3 pl-1 hover:bg-surface-hover">
                             <IconButton
+                                icon={ChevronRight}
                                 size="xs"
+                                iconClassName={clsx(open && 'rotate-90')}
                                 label={open ? t('processes.collapse', { name: title }) : t('processes.expand', { name: title })}
                                 tooltip={false}
                                 aria-expanded={open}
                                 onClick={() => toggle(group.id)}
-                            >
-                                <Icon icon={ChevronRight} size={12} className={clsx(open && 'rotate-90')} />
-                            </IconButton>
+                            />
                             <Icon icon={GROUP_ICONS[group.kind]} size={14} className="shrink-0 text-text-muted" />
                             {reveal !== null ? (
                                 <button className="min-w-0 truncate text-left text-sm text-text hover:underline" onClick={() => revealNode(reveal)}>

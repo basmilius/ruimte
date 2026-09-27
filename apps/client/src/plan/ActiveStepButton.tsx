@@ -8,7 +8,7 @@ import { usePlanAgent } from '@/plan/plan-agent';
 import { activeSteps, activeStepsLabel, nextActiveTarget, sameActiveSteps } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
-import { Icon, IconButton } from '@basmilius/react-ui';
+import { IconButton } from '@basmilius/react-ui';
 
 // Long enough to bridge an agent closing one step before it opens the next, short enough that a stop still shows soon.
 export const ACTIVE_HOLD_MS = 1500;
@@ -48,12 +48,12 @@ export function ActiveStepButton({ chatId, plan, planKey }: { chatId: string; pl
     };
 
     return (
-        <IconButton label={label} onClick={go}>
-            {working ? (
-                <Icon icon={LoaderCircle} size={16} className="animate-spin text-accent" />
-            ) : (
-                <Icon icon={CirclePause} size={16} className="text-text-muted" />
-            )}
-        </IconButton>
+        <IconButton
+            label={label}
+            onClick={go}
+            icon={working ? LoaderCircle : CirclePause}
+            spin={working}
+            iconClassName={working ? 'text-accent' : 'text-text-muted'}
+        />
     );
 }
