@@ -270,22 +270,20 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
                 <ContextMenu.Popup className="grid min-w-0 grid-cols-6 gap-1 p-2">
                     <Tooltip label={t('menu.noAccent')}>
                         <ColorSwatch
-                            render={<ContextMenu.Item />}
+                            render={<ContextMenu.Item unstyled />}
                             aria-label={t('menu.noAccent')}
                             picked={!node.accent}
-                            className="p-0"
                             onClick={() => canvasStore.getState().setNodeAccent(id, null)}
                         />
                     </Tooltip>
                     {NODE_ACCENTS.map((accent) => (
                         <Tooltip key={accent.id} label={accentLabel(accent.id)}>
                             <ColorSwatch
-                                render={<ContextMenu.Item />}
+                                render={<ContextMenu.Item unstyled />}
                                 aria-label={accentLabel(accent.id)}
                                 color={accent.color}
                                 picked={node.accent === accent.id}
                                 on="popup"
-                                className="p-0"
                                 onClick={() => canvasStore.getState().setNodeAccent(id, accent.id)}
                             />
                         </Tooltip>

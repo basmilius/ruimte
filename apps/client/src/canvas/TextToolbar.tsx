@@ -167,22 +167,20 @@ export function TextToolbar() {
                 <Menu.Popup side="top" sideOffset={8} align="end" className="grid min-w-0 grid-cols-6 gap-1 p-2">
                     <Tooltip label={t('text.defaultColor')}>
                         <ColorSwatch
-                            render={<Menu.Item closeOnClick={false} />}
+                            render={<Menu.Item unstyled closeOnClick={false} />}
                             aria-label={t('text.defaultColor')}
                             picked={!text.color}
-                            className="p-0"
                             onClick={() => style({ color: undefined })}
                         />
                     </Tooltip>
                     {NODE_ACCENTS.map((accent) => (
                         <Tooltip key={accent.id} label={accentLabel(accent.id)}>
                             <ColorSwatch
-                                render={<Menu.Item closeOnClick={false} />}
+                                render={<Menu.Item unstyled closeOnClick={false} />}
                                 aria-label={accentLabel(accent.id)}
                                 color={accent.color}
                                 picked={text.color === accent.id}
                                 on="popup"
-                                className="p-0"
                                 onClick={() => style({ color: accent.id })}
                             />
                         </Tooltip>
