@@ -2,8 +2,7 @@ import { useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import type { FsGrepMatch } from '@ruimte/contracts';
 import { firstContextLine, groupByFile } from '@/shell/palette-grep';
-import { SECTION_LABEL } from '@ruimte/ui/classes';
-import { FileIcon } from '@ruimte/ui/FileIcon';
+import { FileIcon, SectionLabel } from '@basmilius/react-ui';
 
 interface LineProps {
     number: number;
@@ -90,11 +89,11 @@ export function PaletteGrepResults({ matches, active, optionId, onHover, onRun }
         <>
             {groupByFile(matches).map((group) => (
                 <div key={group.path}>
-                    <div className={`${SECTION_LABEL} flex items-center gap-1.5 px-2.5 pt-1.5 pb-1`}>
+                    <SectionLabel render={<div />} className="flex items-center gap-1.5 px-2.5 pt-1.5 pb-1">
                         <FileIcon path={group.path} size={14} />
                         <span className="min-w-0 truncate normal-case">{group.path}</span>
                         <span className="text-text-faint">{group.matches.length}</span>
-                    </div>
+                    </SectionLabel>
                     {group.matches.map((match, index) => {
                         const at = group.offset + index;
                         return (

@@ -2,12 +2,10 @@ import type { ReactNode } from 'react';
 import { AppWindow, Clock, SquareTerminal, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ComputerAppEntry, ComputerAppGrants as Grants, ComputerRevokePayload } from '@ruimte/contracts';
-import { formatDayWithYear } from '@ruimte/ui/format/datetime';
-import { useFormatLocale } from '@ruimte/ui/format/locale';
-import { SettingsRow, TopIcon } from '@ruimte/ui/settings/SettingsRow';
+import { formatDayWithYear, useFormatLocale } from '@basmilius/react-ui/format';
+import { SettingsRow, TopIcon } from '@basmilius/react-ui/settings';
+import { Button, Tooltip } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Button } from '@ruimte/ui/Button';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 
 interface ComputerAppGrantsProps {
     readonly grants: Grants;

@@ -1,12 +1,10 @@
 import { Globe, PenTool } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
+import { SettingsRow } from '@basmilius/react-ui/settings';
+import { Switch, Keys, shortcut } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@ruimte/ui/controls';
-import { Keys } from '@ruimte/ui/Kbd';
 import { useSettings } from '@/state/settings';
-import { shortcut } from '@ruimte/ui/shortcut';
 
 const MOD_HELD = shortcut('Mod');
 
@@ -27,7 +25,11 @@ export function ViewsPane() {
                     control={
                         <>
                             <Keys shortcut={MOD_HELD} then={t('gesture.drag')} />
-                            <Toggle checked={drawingSnap} onChange={(checked) => update({ drawingSnap: checked })} label={t('views.drawing.snap.label')} />
+                            <Switch
+                                checked={drawingSnap}
+                                onCheckedChange={(checked) => update({ drawingSnap: checked })}
+                                label={t('views.drawing.snap.label')}
+                            />
                         </>
                     }
                 />
@@ -39,7 +41,11 @@ export function ViewsPane() {
                         label={t('views.browser.swipe.label')}
                         description={t('views.browser.swipe.description')}
                         control={
-                            <Toggle checked={browserSwipe} onChange={(checked) => update({ browserSwipe: checked })} label={t('views.browser.swipe.label')} />
+                            <Switch
+                                checked={browserSwipe}
+                                onCheckedChange={(checked) => update({ browserSwipe: checked })}
+                                label={t('views.browser.swipe.label')}
+                            />
                         }
                     />
                 </SettingsSection>

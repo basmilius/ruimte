@@ -276,12 +276,8 @@
     "dock": {
         "add": "Toevoegen",
         "doubleClick": "dubbelklik",
-        "zoomOut": "Uitzoomen",
-        "zoomIn": "Inzoomen",
-        "zoomPresets": "Zoomstanden",
         "zoomToFit": "Zoomen tot alles past",
         "zoomToSelection": "Zoomen naar de selectie",
-        "fitEverything": "Alles laten passen",
         "lock": "Vergrendelen",
         "refuseGestures": "Gebaren weigeren",
         "unlockEverything": "Alles ontgrendelen",

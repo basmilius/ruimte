@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type WheelEvent as ReactWheelEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { GitCommitHorizontal, GitCompare, Pin, X } from 'lucide-react';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
@@ -10,9 +9,7 @@ import { isCheckoutDiff, useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { isUnsavedDraft, useTextDrafts } from '@/state/text-drafts';
-import { FileIcon } from '@ruimte/ui/FileIcon';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { FileIcon, Icon, IconButton, Tooltip, ContextMenu } from '@basmilius/react-ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 /* A tab lifts on hover instead of sinking (`surface-raised` is the step above the panel's ground),
@@ -27,7 +24,7 @@ const TAB_OPEN =
 
 /* The close button is the tab's own: it shows while the pointer is on the tab, while the tab is the
    open one, and while it has focus. */
-const TAB_CLOSE = 'icon-btn icon-btn-2xs opacity-0 group-hover:opacity-100 focus-visible:opacity-100 group-data-[active=true]:opacity-100';
+const TAB_CLOSE = 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 group-data-[active=true]:opacity-100';
 
 /*
  * The open files as a strip of tabs, inside the preview panel's own header. A double-click pins a
@@ -146,19 +143,18 @@ export function FileTabs() {
                                 </button>
                             </Tooltip>
                             {tab.pinned && <Icon icon={Pin} size={12} className="shrink-0 text-text-muted" />}
-                            <Tooltip label={t('file.tab.closeNamed', { name: label })} kbd={CANVAS_SHORTCUTS.closeCell} name>
-                                <button className={TAB_CLOSE} onClick={() => useFiles.getState().close(tab.key)}>
-                                    <Icon icon={X} size={12} />
-                                </button>
-                            </Tooltip>
+                            <IconButton
+                                icon={X}
+                                size="2xs"
+                                label={t('file.tab.closeNamed', { name: label })}
+                                kbd={CANVAS_SHORTCUTS.closeCell}
+                                className={TAB_CLOSE}
+                                onClick={() => useFiles.getState().close(tab.key)}
+                            />
                         </ContextMenu.Trigger>
-                        <ContextMenu.Portal>
-                            <ContextMenu.Positioner className="z-(--z-popup)">
-                                <ContextMenu.Popup className="menu-popup">
-                                    <FileMenuItems tabKey={tab.key} />
-                                </ContextMenu.Popup>
-                            </ContextMenu.Positioner>
-                        </ContextMenu.Portal>
+                        <ContextMenu.Popup>
+                            <FileMenuItems tabKey={tab.key} />
+                        </ContextMenu.Popup>
                     </ContextMenu.Root>
                 );
             })}

@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
 import {
     ArrowRightToLine,
     Copy,
@@ -37,10 +36,7 @@ import { useSessionRow } from '@/state/sessions';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Kbd } from '@ruimte/ui/Kbd';
-import { KEY_SHORTCUTS } from '@ruimte/ui/shortcut';
+import { Icon, Kbd, KEY_SHORTCUTS, Menu } from '@basmilius/react-ui';
 
 interface ViewMenuItemsProps {
     viewId: string;
@@ -106,38 +102,38 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     const place = offerPut || offerShow || filePath !== null || workingFolder !== null;
     return (
         <>
-            <Menu.Item className="menu-item" onClick={() => askViewSettings(viewId)}>
+            <Menu.Item onClick={() => askViewSettings(viewId)}>
                 <Icon icon={Settings2} size={14} /> {t('viewMenu.viewSettings')} {onSidebar && <Kbd shortcut={KEY_SHORTCUTS.rename} />}
             </Menu.Item>
             <FlagSubmenu id={viewId} />
             {kind === 'chat' && <BookmarkSubmenu chatId={viewId} />}
 
-            {copies && <Menu.Separator className={MENU_SEPARATOR} />}
+            {copies && <Menu.Separator />}
             {drawn && (
-                <Menu.Item className="menu-item" onClick={() => duplicateViewAction(viewId)}>
+                <Menu.Item onClick={() => duplicateViewAction(viewId)}>
                     <Icon icon={Copy} size={14} /> {t('sidebar.duplicate')}
                 </Menu.Item>
             )}
             {asChat !== null && (
-                <Menu.Item className="menu-item" onClick={() => void openSessionInKind(viewId, 'chat', asChat)}>
+                <Menu.Item onClick={() => void openSessionInKind(viewId, 'chat', asChat)}>
                     <Icon icon={MessageSquare} size={14} /> {t('viewMenu.openInChat')}
                 </Menu.Item>
             )}
             {asTerminal !== null && (
-                <Menu.Item className="menu-item" onClick={() => void openSessionInKind(viewId, 'terminal', asTerminal)}>
+                <Menu.Item onClick={() => void openSessionInKind(viewId, 'terminal', asTerminal)}>
                     <Icon icon={Terminal} size={14} /> {t('viewMenu.openInTerminal')}
                 </Menu.Item>
             )}
             {offerFork && <ForkMenuItem chatId={viewId} />}
 
-            {place && <Menu.Separator className={MENU_SEPARATOR} />}
+            {place && <Menu.Separator />}
             {offerPut && (
-                <Menu.Item className="menu-item" onClick={() => placeViewOnCanvasAction(viewId)}>
+                <Menu.Item onClick={() => placeViewOnCanvasAction(viewId)}>
                     <Icon icon={Frame} size={14} /> {t('viewMenu.putOnCanvas')}
                 </Menu.Item>
             )}
             {offerShow && (
-                <Menu.Item className="menu-item" onClick={() => void showViewOnCanvasAction(viewId)}>
+                <Menu.Item onClick={() => void showViewOnCanvasAction(viewId)}>
                     <Icon icon={Frame} size={14} /> {t('viewMenu.showOnCanvas')}
                 </Menu.Item>
             )}
@@ -145,22 +141,22 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
                 of it says: show it, reveal it, copy its path. */}
             {filePath !== null && <FileActionItems path={filePath} on="view" />}
             {workingFolder !== null && (
-                <Menu.Item className="menu-item" onClick={() => void transport.request('fs.reveal', { path: workingFolder }).catch(() => undefined)}>
+                <Menu.Item onClick={() => void transport.request('fs.reveal', { path: workingFolder }).catch(() => undefined)}>
                     <Icon icon={CornerUpRight} size={14} /> {t('viewMenu.reveal', { app: fileManagerName(platform) })}
                 </Menu.Item>
             )}
 
             {offerShare && (
                 <>
-                    <Menu.Separator className={MENU_SEPARATOR} />
-                    <Menu.Item className="menu-item" onClick={() => void setViewShared(viewId, !shared)}>
+                    <Menu.Separator />
+                    <Menu.Item onClick={() => void setViewShared(viewId, !shared)}>
                         <Icon icon={shared ? UserRoundMinus : Users} size={14} /> {t(shared ? 'share.stop' : 'share.start')}
                     </Menu.Item>
                 </>
             )}
 
-            <Menu.Separator className={MENU_SEPARATOR} />
-            <Menu.Item className="menu-item text-status-error" onClick={() => askDeleteView(viewId)}>
+            <Menu.Separator />
+            <Menu.Item className="text-status-error" onClick={() => askDeleteView(viewId)}>
                 <Icon icon={Trash} size={14} /> {t('common:action.delete')}
             </Menu.Item>
         </>
@@ -203,39 +199,39 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
     return (
         <>
             {room('right') && (
-                <Menu.Item className="menu-item" onClick={() => split('right')}>
+                <Menu.Item onClick={() => split('right')}>
                     <Icon icon={PanelRight} size={14} /> {t('viewMenu.splitRight')} <Kbd shortcut={CANVAS_SHORTCUTS.splitRight} />
                 </Menu.Item>
             )}
             {room('down') && (
-                <Menu.Item className="menu-item" onClick={() => split('down')}>
+                <Menu.Item onClick={() => split('down')}>
                     <Icon icon={PanelBottom} size={14} /> {t('viewMenu.splitDown')} <Kbd shortcut={CANVAS_SHORTCUTS.splitDown} />
                 </Menu.Item>
             )}
             {closable && standing !== null && (
-                <Menu.Item className="menu-item" onClick={toggleMaximized}>
+                <Menu.Item onClick={toggleMaximized}>
                     <Icon icon={filling ? Shrink : Expand} size={14} /> {t(filling ? 'viewMenu.restoreSplit' : 'viewMenu.maximizeCell')}{' '}
                     <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} />
                 </Menu.Item>
             )}
             {closable && standing !== null && (
-                <Menu.Item className="menu-item" onClick={() => closeCellAction(standing)}>
+                <Menu.Item onClick={() => closeCellAction(standing)}>
                     <Icon icon={X} size={14} /> {t('cellToolbar.closeCell')} <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
                 </Menu.Item>
             )}
             {closable && cell !== null && standing !== null && (
-                <Menu.Item className="menu-item" onClick={() => useDocument.getState().closeOtherCells(cell)}>
+                <Menu.Item onClick={() => useDocument.getState().closeOtherCells(cell)}>
                     <Icon icon={ListX} size={14} /> {t('viewMenu.closeOthers')}
                 </Menu.Item>
             )}
             {closesRight && cell !== null && (
-                <Menu.Item className="menu-item" onClick={() => useDocument.getState().closeCellsRightOf(cell)}>
+                <Menu.Item onClick={() => useDocument.getState().closeCellsRightOf(cell)}>
                     <Icon icon={ArrowRightToLine} size={14} /> {t('viewMenu.closeToRight')}
                 </Menu.Item>
             )}
             {/* The line under the group, drawn here rather than by the caller: with nothing to split
                 these rows are gone, and a line the caller drew would sit against the next one. */}
-            {separated && <Menu.Separator className={MENU_SEPARATOR} />}
+            {separated && <Menu.Separator />}
         </>
     );
 }

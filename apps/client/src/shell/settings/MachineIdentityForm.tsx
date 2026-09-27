@@ -1,16 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type ProjectIconChoice } from '@ruimte/contracts';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
+import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { SettingsRow } from '@basmilius/react-ui/settings';
+import { Button, useAsyncAction, Tooltip, IconPicker, FormError, Input } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
 import { adoptMachineName } from '@/transport/server-info';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR } from '@ruimte/ui/classes';
-import { IconPicker } from '@/ui/IconPicker';
-import { useAsyncAction } from '@ruimte/ui/useAsyncAction';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 
 interface MachineIdentityFormProps {
     endpointId: string;
@@ -68,8 +65,8 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
                 label={t('identity.name')}
                 description={t('identity.nameHint')}
                 control={
-                    <input
-                        className="field w-55"
+                    <Input
+                        className="w-55"
                         aria-label={t('identity.nameLabel')}
                         placeholder={label}
                         value={name}
@@ -85,12 +82,15 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
                 }
             />
             <div className="flex min-w-0 flex-col px-4.5 pb-3.5">
-                <IconPicker value={icon} disabled={disabled} onChange={setIcon} onClear={() => setIcon(null)} />
-                {failure && (
-                    <p className={`${FORM_ERROR} mt-3 break-words`} role="alert">
-                        {failure}
-                    </p>
-                )}
+                <IconPicker
+                    icons={PROJECT_ICON_GLYPHS}
+                    value={icon?.value ?? null}
+                    disabled={disabled}
+                    className="mt-4"
+                    onValueChange={(name) => setIcon({ kind: 'lucide', value: name as ProjectIconChoice['value'] })}
+                    onClear={() => setIcon(null)}
+                />
+                {failure && <FormError className="mt-3 break-words">{failure}</FormError>}
                 <div className="mt-3 flex justify-end">
                     {disabled ? (
                         <Tooltip label={disabledReason}>

@@ -14,9 +14,8 @@ import {
 } from '@/shell/settings/sections';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useUi, type SettingsSectionId } from '@/state/ui';
-import { lazyNamed } from '@/ui/lazy';
-import { SettingsDialog as Dialog, type SettingsSectionEntry } from '@ruimte/ui/settings/SettingsDialog';
-import { formatShortcut } from '@ruimte/ui/shortcut';
+import { SettingsDialog as Dialog, type SettingsSectionEntry } from '@basmilius/react-ui/settings';
+import { formatShortcut, lazyNamed } from '@basmilius/react-ui';
 
 // Each pane is a chunk of its own, loaded when it is opened; the search index in `search.ts` never imports one.
 const PANES: Record<SettingsSectionId, ComponentType> = {
@@ -49,7 +48,7 @@ const entryOf = (meta: SettingsSectionMeta): SettingsSectionEntry => ({
     split: meta.split
 });
 
-/* Ruimte's sections, search and account in the settings dialog of @ruimte/ui. Opens on the section the caller asked for, or the last one. */
+/* Ruimte's sections, search and account in the settings dialog of @basmilius/react-ui. Opens on the section the caller asked for, or the last one. */
 export function SettingsDialog() {
     const open = useUi((s) => s.settings.open);
     const section = useUi((s) => s.settings.section);

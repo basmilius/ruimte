@@ -2,9 +2,6 @@ import { Suspense, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Menu } from '@base-ui-components/react/menu';
-import { Popover } from '@base-ui-components/react/popover';
 import {
     ArrowLeft,
     ChevronRight,
@@ -32,14 +29,8 @@ import { useServer } from '@/state/server';
 import { deviceClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
 import { EMPTY_DEVICE_LIST, useDevices } from '@/devices/state';
-import { BTN_GROUP, INSET_ROW, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
+import { ButtonGroup, Icon, IconButton, ListRow, PanelEmpty, Menu, ErrorBoundary, ContextMenu, Popover, lazyNamed } from '@basmilius/react-ui';
 import { SignInMark } from '@/ui/SignInMark';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { PanelEmpty } from '@ruimte/ui/PanelEmpty';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { lazyNamed } from '@/ui/lazy';
 import { failed } from '@/shell/surface-failure';
 
 const DeviceToolsPanel = lazyNamed(() => import('@/devices/DeviceToolsPanel'), 'DeviceToolsPanel');
@@ -133,30 +124,30 @@ function DeviceMenuItems({ device, onOpen }: { device: DeviceInfo; onOpen?: (dev
         <>
             {onOpen !== undefined && device.capabilities.stream && (
                 <>
-                    <Menu.Item className="menu-item" onClick={() => onOpen(device)}>
+                    <Menu.Item onClick={() => onOpen(device)}>
                         <Icon icon={ChevronRight} size={14} /> {device.capabilities.input ? t('devices.openInPanel') : t('devices.openPreview')}
                     </Menu.Item>
-                    <Menu.Separator className={MENU_SEPARATOR} />
+                    <Menu.Separator />
                 </>
             )}
-            <Menu.Item className="menu-item" onClick={() => openDeviceView(device)}>
+            <Menu.Item onClick={() => openDeviceView(device)}>
                 <Icon icon={ExternalLink} size={14} /> {t('devices.openAsView')}
             </Menu.Item>
-            <Menu.Item className="menu-item" onClick={() => void addDeviceToCanvas(device)}>
+            <Menu.Item onClick={() => void addDeviceToCanvas(device)}>
                 <Icon icon={Frame} size={14} /> {t('devices.addToCanvas')}
             </Menu.Item>
             {device.state === 'shutdown' && device.capabilities.boot && (
                 <>
-                    <Menu.Separator className={MENU_SEPARATOR} />
-                    <Menu.Item className="menu-item" onClick={() => control('boot')}>
+                    <Menu.Separator />
+                    <Menu.Item onClick={() => control('boot')}>
                         <Icon icon={Power} size={14} /> {t('devices.start')}
                     </Menu.Item>
                 </>
             )}
             {device.state === 'booted' && device.capabilities.shutdown && (
                 <>
-                    <Menu.Separator className={MENU_SEPARATOR} />
-                    <Menu.Item className="menu-item" onClick={() => control('shutdown')}>
+                    <Menu.Separator />
+                    <Menu.Item onClick={() => control('shutdown')}>
                         <Icon icon={PowerOff} size={14} /> {t('devices.shutdown')}
                     </Menu.Item>
                 </>
@@ -190,28 +181,26 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                         {displayRuntime(device)} · {deviceStateText(device)}
                     </p>
                 </div>
-                <div className={BTN_GROUP}>
+                <ButtonGroup>
                     {device.state === 'shutdown' && device.capabilities.boot && (
-                        <Tooltip label={changing === 'boot' ? t('devices.starting') : t('devices.start')} name>
-                            <button className="icon-btn icon-btn-sm" disabled={changing !== null} onClick={() => control('boot')}>
-                                <Icon
-                                    icon={changing === 'boot' ? LoaderCircle : Power}
-                                    size={14}
-                                    className={changing === 'boot' ? 'animate-spin' : undefined}
-                                />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon={changing === 'boot' ? LoaderCircle : Power}
+                            spin={changing === 'boot'}
+                            size="sm"
+                            label={changing === 'boot' ? t('devices.starting') : t('devices.start')}
+                            disabled={changing !== null}
+                            onClick={() => control('boot')}
+                        />
                     )}
                     {device.state === 'booted' && device.capabilities.shutdown && (
-                        <Tooltip label={t('devices.shutdown')} name>
-                            <button className="icon-btn icon-btn-sm" disabled={changing !== null} onClick={() => control('shutdown')}>
-                                <Icon
-                                    icon={changing === 'shutdown' ? LoaderCircle : PowerOff}
-                                    size={14}
-                                    className={changing === 'shutdown' ? 'animate-spin' : undefined}
-                                />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon={changing === 'shutdown' ? LoaderCircle : PowerOff}
+                            spin={changing === 'shutdown'}
+                            size="sm"
+                            label={t('devices.shutdown')}
+                            disabled={changing !== null}
+                            onClick={() => control('shutdown')}
+                        />
                     )}
                     {device.state === 'transitioning' && (
                         <span className="grid size-7 place-items-center text-text-muted">
@@ -219,21 +208,19 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                         </span>
                     )}
                     {canOpen && (
-                        <Tooltip label={device.capabilities.input ? t('devices.openInPanel') : t('devices.openPreview')} name>
-                            <button className="icon-btn icon-btn-sm" disabled={changing !== null} onClick={() => onOpen(device)}>
-                                <Icon icon={ChevronRight} size={14} />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon={ChevronRight}
+                            size="sm"
+                            label={device.capabilities.input ? t('devices.openInPanel') : t('devices.openPreview')}
+                            disabled={changing !== null}
+                            onClick={() => onOpen(device)}
+                        />
                     )}
-                </div>
+                </ButtonGroup>
             </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        <DeviceMenuItems device={device} onOpen={onOpen} />
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <ContextMenu.Popup>
+                <DeviceMenuItems device={device} onOpen={onOpen} />
+            </ContextMenu.Popup>
         </ContextMenu.Root>
     );
 }
@@ -252,11 +239,12 @@ function DeviceSection({
     return (
         <section>
             <h2 className={clsx('-mx-1 flex', !collapsed && 'mb-1')}>
-                <button
-                    type="button"
+                <ListRow
+                    variant="inset"
+                    render={<button type="button" />}
                     aria-expanded={!collapsed}
                     onClick={() => onCollapse(!collapsed)}
-                    className={`${INSET_ROW} group w-full min-w-0 gap-2 text-left text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-accent`}
+                    className={`group w-full min-w-0 gap-2 text-left text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-accent`}
                 >
                     <span className="grid size-4 shrink-0 place-items-center">
                         <span className="col-start-1 row-start-1 grid place-items-center group-hover:hidden group-focus-visible:hidden">
@@ -269,7 +257,7 @@ function DeviceSection({
                         />
                     </span>
                     <span className="truncate">{group.title}</span>
-                </button>
+                </ListRow>
             </h2>
             {!collapsed && (
                 <div className="min-w-0 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
@@ -314,11 +302,7 @@ function DeviceDetailHeader({ device, onClose }: { device: DeviceInfo; onClose: 
         <>
             <PanelHeaderTitleHidden />
             <PanelHeaderLeadingSlot>
-                <Tooltip label={t('devices.back')} name>
-                    <button className="icon-btn" onClick={onClose}>
-                        <Icon icon={ArrowLeft} size={16} />
-                    </button>
-                </Tooltip>
+                <IconButton icon={ArrowLeft} label={t('devices.back')} onClick={onClose} />
             </PanelHeaderLeadingSlot>
             <PanelHeaderSlot>
                 <span className="min-w-0 truncate text-xs text-text-muted">
@@ -333,14 +317,10 @@ function DevicePlacementMenu({ device }: { device: DeviceInfo }) {
     const { t } = useTranslation('panels');
     return (
         <Menu.Root>
-            <Tooltip label={t('devices.openElsewhere')} name>
-                <Menu.Trigger className="icon-btn">
-                    <Icon icon={PictureInPicture2} size={16} />
-                </Menu.Trigger>
-            </Tooltip>
-            <MenuPopup align="end">
+            <IconButton icon={PictureInPicture2} label={t('devices.openElsewhere')} render={<Menu.Trigger />} />
+            <Menu.Popup align="end">
                 <DeviceMenuItems device={device} />
-            </MenuPopup>
+            </Menu.Popup>
         </Menu.Root>
     );
 }
@@ -363,18 +343,20 @@ function DevicePanelToolbar({ device, onClose }: { device: DeviceInfo; onClose: 
     };
     return (
         <div className="flex h-12 shrink-0 items-center justify-center border-t border-border bg-surface px-2">
-            <div className={BTN_GROUP}>
+            <ButtonGroup>
                 <DeviceControls device={device} />
                 <DeviceToolsFlyout device={device} />
                 <DevicePlacementMenu device={device} />
                 {device.state === 'booted' && device.capabilities.shutdown && (
-                    <Tooltip label={t('devices.shutdown')} name>
-                        <button className="icon-btn" disabled={shuttingDown} onClick={shutDown}>
-                            <Icon icon={shuttingDown ? LoaderCircle : Power} size={16} className={shuttingDown ? 'animate-spin' : undefined} />
-                        </button>
-                    </Tooltip>
+                    <IconButton
+                        icon={shuttingDown ? LoaderCircle : Power}
+                        spin={shuttingDown}
+                        label={t('devices.shutdown')}
+                        disabled={shuttingDown}
+                        onClick={shutDown}
+                    />
                 )}
-            </div>
+            </ButtonGroup>
         </div>
     );
 }
@@ -384,22 +366,25 @@ function DeviceToolsFlyout({ device }: { device: DeviceInfo }) {
     const [open, setOpen] = useState(false);
     return (
         <Popover.Root open={open} onOpenChange={setOpen}>
-            <Tooltip label={t('devices.tools')} name>
-                <Popover.Trigger className="icon-btn" aria-pressed={open} disabled={device.state !== 'booted' || deviceTools(device).length === 0}>
-                    <Icon icon={SlidersHorizontal} size={16} />
-                </Popover.Trigger>
-            </Tooltip>
-            <Popover.Portal>
-                <Popover.Positioner side="left" align="start" sideOffset={8} collisionPadding={16} className="z-(--z-popup)">
-                    <Popover.Popup className="h-[min(720px,calc(100dvh-32px))] w-80 max-w-[calc(100vw-32px)] overflow-hidden rounded-xl border border-border bg-surface shadow-float outline-none">
-                        <ErrorBoundary label={failed('deviceTools')} resetKeys={[device.deviceId]} compact className="h-full">
-                            <Suspense fallback={null}>
-                                <DeviceToolsPanel device={device} onClose={() => setOpen(false)} />
-                            </Suspense>
-                        </ErrorBoundary>
-                    </Popover.Popup>
-                </Popover.Positioner>
-            </Popover.Portal>
+            <IconButton
+                icon={SlidersHorizontal}
+                label={t('devices.tools')}
+                render={<Popover.Trigger />}
+                aria-pressed={open}
+                disabled={device.state !== 'booted' || deviceTools(device).length === 0}
+            />
+            <Popover.Popup
+                variant="plain"
+                side="left"
+                collisionPadding={16}
+                className="h-[min(720px,calc(100dvh-32px))] w-80 max-w-[calc(100vw-32px)] overflow-hidden rounded-xl border border-border bg-surface shadow-float outline-none"
+            >
+                <ErrorBoundary label={failed('deviceTools')} resetKeys={[device.deviceId]} compact className="h-full">
+                    <Suspense fallback={null}>
+                        <DeviceToolsPanel device={device} onClose={() => setOpen(false)} />
+                    </Suspense>
+                </ErrorBoundary>
+            </Popover.Popup>
         </Popover.Root>
     );
 }
@@ -429,19 +414,17 @@ export function DevicesPanel() {
         <PanelHeaderSlot>
             <span className="min-w-0 truncate text-xs text-text-muted">{machineName}</span>
             <span className="grow" />
-            <Tooltip label={t('devices.refresh')} name>
-                <button
-                    className="icon-btn"
-                    disabled={row.loading}
-                    onClick={() =>
-                        void deviceClientFor(endpointId)
-                            ?.refresh()
-                            .catch(() => undefined)
-                    }
-                >
-                    <Icon icon={row.loading ? LoaderCircle : RefreshCw} size={16} className={row.loading ? 'animate-spin' : undefined} />
-                </button>
-            </Tooltip>
+            <IconButton
+                icon={row.loading ? LoaderCircle : RefreshCw}
+                spin={row.loading}
+                label={t('devices.refresh')}
+                disabled={row.loading}
+                onClick={() =>
+                    void deviceClientFor(endpointId)
+                        ?.refresh()
+                        .catch(() => undefined)
+                }
+            />
         </PanelHeaderSlot>
     );
 

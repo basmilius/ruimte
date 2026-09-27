@@ -11,10 +11,7 @@ import { useDocument } from '@/state/document';
 import { CellViewContext } from '@/state/workspace-stores';
 import { canSplit, cellCount, isSameCell, locateView, draggedSizes, maximizedCell, type CellAt, type SplitZone } from '@/shell/split';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Button } from '@ruimte/ui/Button';
-import { FLOAT } from '@ruimte/ui/classes';
-import { Kbd } from '@ruimte/ui/Kbd';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Button, Kbd, Surface, Tooltip } from '@basmilius/react-ui';
 import { carriesView, draggedViewId, dragging, edgeZoneAt, isNowhereDrop, setGridTakesPath, shapeOf, zoneAt } from '@/shell/view-drag';
 import { ViewSurface } from '@/shell/ViewHost';
 import { CellToolbar } from '@/shell/CellToolbar';
@@ -318,7 +315,7 @@ function MaximizedIndicator({ at }: { at: CellAt }) {
     return (
         <div className="pointer-events-none absolute bottom-4 left-4 flex">
             <Tooltip label={t('cellToolbar.restore')} name>
-                <Button size="sm" className={clsx(FLOAT, 'pointer-events-auto')} onClick={() => useDocument.getState().toggleMaximized()}>
+                <Surface render={<Button size="sm" onClick={() => useDocument.getState().toggleMaximized()} />} className="pointer-events-auto">
                     {/* Whole pixels for one, two or three of either, with a pixel between them. */}
                     <span aria-hidden className="flex h-2.75 w-4.25 gap-px">
                         {layout.columns.map((column, columnIndex) => (
@@ -338,7 +335,7 @@ function MaximizedIndicator({ at }: { at: CellAt }) {
                     {t('cellToolbar.hidden', { count: cellCount(layout) - 1 })}
                     <span aria-hidden>·</span>
                     <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} className="font-sans" />
-                </Button>
+                </Surface>
             </Tooltip>
         </div>
     );

@@ -1,13 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
 import { ArrowUp, ChevronDown } from 'lucide-react';
 import type { GitActionKind } from '@ruimte/contracts';
 import { pushAllButton, type PushButton, type PushEntry } from '@/shell/panels/git-actions';
-import { Button } from '@ruimte/ui/Button';
-import { BTN_GROUP, MENU_HINT } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Button, ButtonGroup, Icon, Menu, Tooltip } from '@basmilius/react-ui';
 
 interface PushMenuProps {
     /* What a folder with a single repository pushes; with more than one the button pushes them all. */
@@ -47,7 +42,7 @@ export function PushMenu({ button, active, entries, busy, onPush, onPushAll }: P
     const all = pushAllButton(entries);
 
     return (
-        <span className={BTN_GROUP}>
+        <ButtonGroup render={<span />}>
             <Tooltip label={all.reason}>
                 <Button size="sm" variant="primary" className="rounded-r-none" disabled={all.disabled || busy} onClick={onPushAll}>
                     {all.label}
@@ -59,17 +54,17 @@ export function PushMenu({ button, active, entries, busy, onPush, onPushAll }: P
                         <Icon icon={ChevronDown} size={14} />
                     </Menu.Trigger>
                 </Tooltip>
-                <MenuPopup className="w-72" align="end">
+                <Menu.Popup className="w-72" align="end">
                     {entries.map((entry) => (
                         <Menu.Item
                             key={entry.cwd}
-                            className="menu-item"
+
                             disabled={busy || entry.button.disabled}
                             onClick={() => onPush(entry.cwd, entry.button.kind)}
                         >
                             <span className="truncate">{entry.label}</span>
                             <span className="grow" />
-                            <span className={`${MENU_HINT} truncate`}>{entry.button.disabled ? entry.button.reason : entry.button.label}</span>
+                            <Menu.Hint className="truncate">{entry.button.disabled ? entry.button.reason : entry.button.label}</Menu.Hint>
                             {entry.ahead > 0 && (
                                 <span className="flex shrink-0 items-center text-text-faint">
                                     <Icon icon={ArrowUp} size={12} />
@@ -78,8 +73,8 @@ export function PushMenu({ button, active, entries, busy, onPush, onPushAll }: P
                             )}
                         </Menu.Item>
                     ))}
-                </MenuPopup>
+                </Menu.Popup>
             </Menu.Root>
-        </span>
+        </ButtonGroup>
     );
 }

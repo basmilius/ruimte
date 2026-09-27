@@ -1,17 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import { ExternalLink } from 'lucide-react';
 import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
-import { formatDay, formatDayWithYear } from '@ruimte/ui/format/datetime';
+import { formatDay, formatDayWithYear } from '@basmilius/react-ui/format';
+import { Button, ErrorBoundary, CloseButton, Icon, Pill, Dialog } from '@basmilius/react-ui';
 import { UpdateAction } from '@/shell/settings/panes/AboutPane';
 import { closeReleaseNotes, missingNotesNotice, notesView, RELEASES_PAGE, useReleaseNotes, type NoteEntry } from '@/state/release-notes';
 import { useUpdates } from '@/state/updates';
-import { Button } from '@ruimte/ui/Button';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { CloseButton } from '@ruimte/ui/CloseButton';
-import { Icon } from '@ruimte/ui/Icon';
-import { Pill } from '@ruimte/ui/Pill';
 
 const dateOf = (iso: string): string => {
     const date = new Date(iso);
@@ -52,7 +47,7 @@ function ReleaseEntry({ entry }: { entry: NoteEntry }) {
 /*
  * The notes of the last releases, newest first, opened from About or from the toast after an update.
  * Mounted once beside the toasts rather than inside the settings, so the toast can open it on its
- * own; the nested classes still put it over the settings when those are open.
+ * own; `nested` still puts it over the settings when those are open.
  */
 export function ReleaseNotesDialog() {
     const { t } = useTranslation('shell');
@@ -88,59 +83,55 @@ export function ReleaseNotesDialog() {
 
     return (
         <Dialog.Root open={open} onOpenChange={(next) => (next ? undefined : closeReleaseNotes())}>
-            <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
-                <Dialog.Popup
-                    className="dialog-popup dialog-popup-nested flex h-[640px] w-[520px] flex-col"
-                    onKeyDown={(e) => {
-                        // Every open dialog root listens for Escape on the document, and this one is not
-                        // nested in the settings' tree, so without this one press would close both.
-                        if (e.key === 'Escape') {
-                            e.stopPropagation();
-                            closeReleaseNotes();
-                        }
-                    }}
-                >
-                    <div className="flex items-center gap-4 border-b border-border px-5 py-4">
-                        <Dialog.Title className="grow text-base font-semibold text-text">{t('releaseNotes.title')}</Dialog.Title>
-                        <CloseButton label={t('releaseNotes.close')} dialog />
-                    </div>
-                    <div ref={listRef} className="relative min-h-0 grow overflow-y-auto">
-                        <ErrorBoundary label={t('releaseNotes.failed')} resetKeys={[notes]}>
-                            {missing && (
-                                <p className="border-b border-border px-5 py-3 text-xs text-text-muted">
-                                    {missing.text}.{' '}
-                                    <a className="text-accent hover:underline" href={missing.url} target="_blank" rel="noreferrer">
-                                        {t('releaseNotes.viewOnGitHub')}
-                                    </a>
-                                </p>
-                            )}
-                            {releases.length === 0 && notes?.error && (
-                                <p className="px-5 py-3 text-xs text-text-muted">
-                                    {t('releaseNotes.loadFailed', { reason: notes.error })}{' '}
-                                    <a className="text-accent hover:underline" href={RELEASES_PAGE} target="_blank" rel="noreferrer">
-                                        {t('releaseNotes.openOnGitHub')}
-                                    </a>
-                                </p>
-                            )}
-                            {releases.length === 0 && !notes?.error && loading && (
-                                <p className="px-5 py-3 text-xs text-text-muted">{t('releaseNotes.loading')}</p>
-                            )}
-                            {view.entries.map((entry) => (
-                                <ReleaseEntry key={entry.release.version} entry={entry} />
-                            ))}
-                        </ErrorBoundary>
-                    </div>
-                    <div className="flex items-center gap-2 border-t border-border px-5 py-3">
-                        <Button variant="ghost" href={RELEASES_PAGE}>
-                            {t('releaseNotes.allReleases')} <Icon icon={ExternalLink} size={12} />
-                        </Button>
-                        <span className="grow" />
-                        {updates.supported && <UpdateAction />}
-                    </div>
-                    <Dialog.Description className="sr-only">{t('releaseNotes.dialogDescription')}</Dialog.Description>
-                </Dialog.Popup>
-            </Dialog.Portal>
+            <Dialog.Popup
+                nested
+                className="flex h-[640px] w-[520px] flex-col"
+                onKeyDown={(e) => {
+                    // Every open dialog root listens for Escape on the document, and this one is not
+                    // nested in the settings' tree, so without this one press would close both.
+                    if (e.key === 'Escape') {
+                        e.stopPropagation();
+                        closeReleaseNotes();
+                    }
+                }}
+            >
+                <div className="flex items-center gap-4 border-b border-border px-5 py-4">
+                    <Dialog.Title className="grow">{t('releaseNotes.title')}</Dialog.Title>
+                    <CloseButton label={t('releaseNotes.close')} dialog />
+                </div>
+                <div ref={listRef} className="relative min-h-0 grow overflow-y-auto">
+                    <ErrorBoundary label={t('releaseNotes.failed')} resetKeys={[notes]}>
+                        {missing && (
+                            <p className="border-b border-border px-5 py-3 text-xs text-text-muted">
+                                {missing.text}.{' '}
+                                <a className="text-accent hover:underline" href={missing.url} target="_blank" rel="noreferrer">
+                                    {t('releaseNotes.viewOnGitHub')}
+                                </a>
+                            </p>
+                        )}
+                        {releases.length === 0 && notes?.error && (
+                            <p className="px-5 py-3 text-xs text-text-muted">
+                                {t('releaseNotes.loadFailed', { reason: notes.error })}{' '}
+                                <a className="text-accent hover:underline" href={RELEASES_PAGE} target="_blank" rel="noreferrer">
+                                    {t('releaseNotes.openOnGitHub')}
+                                </a>
+                            </p>
+                        )}
+                        {releases.length === 0 && !notes?.error && loading && <p className="px-5 py-3 text-xs text-text-muted">{t('releaseNotes.loading')}</p>}
+                        {view.entries.map((entry) => (
+                            <ReleaseEntry key={entry.release.version} entry={entry} />
+                        ))}
+                    </ErrorBoundary>
+                </div>
+                <div className="flex items-center gap-2 border-t border-border px-5 py-3">
+                    <Button variant="ghost" href={RELEASES_PAGE}>
+                        {t('releaseNotes.allReleases')} <Icon icon={ExternalLink} size={12} />
+                    </Button>
+                    <span className="grow" />
+                    {updates.supported && <UpdateAction />}
+                </div>
+                <Dialog.Description className="sr-only">{t('releaseNotes.dialogDescription')}</Dialog.Description>
+            </Dialog.Popup>
         </Dialog.Root>
     );
 }

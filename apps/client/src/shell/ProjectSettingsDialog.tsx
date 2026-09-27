@@ -1,16 +1,12 @@
 import { useRef, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import { FolderSearch, ImageUp } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR, SECTION_LABEL, SMALL_DIALOG } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { IconPicker } from '@/ui/IconPicker';
-import { useAsyncAction } from '@ruimte/ui/useAsyncAction';
+import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { Button, Icon, useAsyncAction, Dialog, Field, FormError, IconPicker, Input, SectionLabel } from '@basmilius/react-ui';
 
 // The daemon rejects larger files, so the picker catches them before sending the bytes.
 const MAX_BYTES = 256 * 1024;
@@ -80,23 +76,25 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
 
     return (
         <>
-            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>{t('projectSettings.name')}</div>
-            <input
-                autoFocus
-                className="field"
-                maxLength={MAX_TITLE_LENGTH}
-                aria-label={t('projectName.label')}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                onKeyDown={(event) => {
-                    event.stopPropagation();
-                    if (event.key === 'Enter') {
-                        void save();
-                    }
-                }}
-            />
+            <Field label={t('projectSettings.name')} className="mt-4">
+                <Input
+                    autoFocus
+                    maxLength={MAX_TITLE_LENGTH}
+                    aria-label={t('projectName.label')}
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    onKeyDown={(event) => {
+                        event.stopPropagation();
+                        if (event.key === 'Enter') {
+                            void save();
+                        }
+                    }}
+                />
+            </Field>
 
-            <div className={`${SECTION_LABEL} mt-5 mb-1.5`}>{t('common:icon.label')}</div>
+            <SectionLabel render={<div />} className="mt-5 mb-1.5">
+                {t('common:icon.label')}
+            </SectionLabel>
             <div className="flex items-center gap-3">
                 <ProjectGlyph projectId={project.projectId} endpointId={endpointId} icon={project.icon} color={project.color} size={32} />
                 <div className="flex min-w-0 flex-col">
@@ -111,13 +109,16 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
                 </div>
             </div>
 
-            <IconPicker value={chosen} disabled={busy} gridLabel={t('common:icon.symbol')} onChange={(icon) => void run(() => actions.setChosenIcon(icon))} />
+            <IconPicker
+                icons={PROJECT_ICON_GLYPHS}
+                value={chosen?.value ?? null}
+                disabled={busy}
+                label={t('common:icon.symbol')}
+                className="mt-4"
+                onValueChange={(icon) => void run(() => actions.setChosenIcon({ kind: 'lucide', value: icon as ProjectIconChoice['value'] }))}
+            />
 
-            {failure && (
-                <p className={`${FORM_ERROR} mt-3 break-words`} role="alert">
-                    {failure}
-                </p>
-            )}
+            {failure && <FormError className="mt-3 break-words">{failure}</FormError>}
 
             <input
                 ref={fileRef}
@@ -152,13 +153,10 @@ export function ProjectSettingsDialog({ subject, open, onOpenChange, onOpenChang
     const { t } = useTranslation('shell');
     return (
         <Dialog.Root open={open} onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
-            <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className={SMALL_DIALOG}>
-                    <Dialog.Title className="text-base font-semibold text-text">{t('projectSettings.title')}</Dialog.Title>
-                    {subject !== null && <ProjectSettingsForm {...subject} onOpenChange={onOpenChange} />}
-                </Dialog.Popup>
-            </Dialog.Portal>
+            <Dialog.Popup size="sm">
+                <Dialog.Title>{t('projectSettings.title')}</Dialog.Title>
+                {subject !== null && <ProjectSettingsForm {...subject} onOpenChange={onOpenChange} />}
+            </Dialog.Popup>
         </Dialog.Root>
     );
 }

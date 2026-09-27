@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
 import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send } from 'lucide-react';
 import type { Plan } from '@ruimte/contracts';
 import { allSteps, effectiveChecks } from '@ruimte/plan';
@@ -21,19 +20,24 @@ import {
 import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/plan/plan-panel-watch';
 import { PlanList } from '@/plan/PlanList';
 import { resultsText, type PlanFilter } from '@/plan/plan-view';
-import { SlidingColumn } from '@/shell/SlidingColumn';
-import { clampColumnSize } from '@ruimte/ui/useColumnResize';
+import {
+    clampColumnSize,
+    ErrorBoundary,
+    CloseButton,
+    Icon,
+    Menu,
+    Tooltip,
+    SlidingColumn,
+    ButtonGroup,
+    IconButton,
+    PanelHeader,
+    SectionLabel
+} from '@basmilius/react-ui';
+import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
 import { useChatPlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
-import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR, PANEL_HEADER, SECTION_LABEL } from '@ruimte/ui/classes';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { CloseButton } from '@ruimte/ui/CloseButton';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuCheck } from '@ruimte/ui/MenuCheck';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
 
 // The grid beside the panel keeps at least this much, whatever the drag asks for.
 const MIN_GRID_WIDTH = 360;
@@ -74,9 +78,10 @@ export function PlanPanel() {
     };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
     const width = clampColumnSize({ min: PLAN_MIN_WIDTH, max: () => window.innerWidth - MIN_GRID_WIDTH }, stored ?? PLAN_DEFAULT_WIDTH);
+    const instant = useInstantWidth();
 
     return (
-        <SlidingColumn open={open} width={width} bounds={bounds} columnRef={ref} onWidth={(next) => useUi.getState().setPlanWidth(next)}>
+        <SlidingColumn open={open} width={width} bounds={bounds} instant={instant} ref={ref} onWidthChange={(next) => useUi.getState().setPlanWidth(next)}>
             {shown !== null && (
                 <>
                     <PlanHeader
@@ -106,11 +111,11 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
     const planKey = planViewKey(endpointId, chatId, plan.id);
 
     return (
-        <header className={clsx(PANEL_HEADER, 'app-drag', inset && 'toolbar-overlay-inset')}>
+        <PanelHeader className={clsx('app-drag', inset && 'toolbar-overlay-inset')}>
             <Tooltip label={t('planPanel.showChat')}>
-                <button type="button" className={`${SECTION_LABEL} min-w-0 truncate rounded-md hover:text-text`} onClick={() => focusChat(chatId)}>
+                <SectionLabel render={<button type="button" onClick={() => focusChat(chatId)} />} className="min-w-0 truncate rounded-md hover:text-text">
                     {title ?? t('planPanel.chat')}
-                </button>
+                </SectionLabel>
             </Tooltip>
             {plans.length > 1 && index >= 0 && (
                 <Menu.Root>
@@ -118,64 +123,54 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                         {t('planPanel.planOf', { number: plans.length - index, total: plans.length })}
                         <Icon icon={ChevronDown} size={12} />
                     </Menu.Trigger>
-                    <MenuPopup className="min-w-56">
+                    <Menu.Popup className="min-w-56">
                         {plans.map((entry) => (
-                            <Menu.Item key={entry.id} className="menu-item" onClick={() => pickPlan(entry.id)}>
-                                <MenuCheck kind="radio" checked={entry.id === plan.id} />
+                            <Menu.Item key={entry.id} onClick={() => pickPlan(entry.id)}>
+                                <Menu.Check kind="radio" checked={entry.id === plan.id} />
                                 <span className="min-w-0 truncate">{entry.meta.title}</span>
                             </Menu.Item>
                         ))}
-                    </MenuPopup>
+                    </Menu.Popup>
                 </Menu.Root>
             )}
-            <div className={clsx(BTN_GROUP, 'ml-auto shrink-0')}>
+            <ButtonGroup className="ml-auto shrink-0">
                 <ActiveStepButton chatId={chatId} plan={plan} planKey={planKey} />
                 <Menu.Root>
-                    <Tooltip label={t('planPanel.actions')} name>
-                        <Menu.Trigger className="icon-btn">
-                            <Icon icon={MoreHorizontal} size={16} />
-                        </Menu.Trigger>
-                    </Tooltip>
-                    <MenuPopup align="end" className="min-w-56">
-                        <div className={MENU_LABEL}>{t('planPanel.show')}</div>
+                    <IconButton icon={MoreHorizontal} label={t('planPanel.actions')} render={<Menu.Trigger />} />
+                    <Menu.Popup align="end" className="min-w-56">
+                        <Menu.Label>{t('planPanel.show')}</Menu.Label>
                         <Menu.RadioGroup value={filter} onValueChange={(value: PlanFilter) => usePlanViewPrefs.getState().setFilter(value)}>
                             {FILTERS.map((id) => (
-                                <Menu.RadioItem key={id} value={id} className="menu-item">
-                                    <MenuCheck kind="radio" />
+                                <Menu.RadioItem key={id} value={id}>
                                     {t(`planPanel.filters.${id}`)}
                                 </Menu.RadioItem>
                             ))}
                         </Menu.RadioGroup>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.CheckboxItem
-                            className="menu-item"
-                            checked={collapseDone}
-                            onCheckedChange={(checked) => usePlanViewPrefs.getState().setCollapseDone(checked)}
-                        >
-                            <MenuCheck kind="checkbox" />
+                        <Menu.Separator />
+                        <Menu.CheckboxItem checked={collapseDone} onCheckedChange={(checked) => usePlanViewPrefs.getState().setCollapseDone(checked)}>
                             {t('planPanel.collapseDone')}
                         </Menu.CheckboxItem>
-                        <Menu.Item className="menu-item" onClick={() => expandAll(planKey)}>
+                        <Menu.Item onClick={() => expandAll(planKey)}>
                             <Icon icon={ChevronsUpDown} size={14} /> {t('planPanel.expandAll')}
                         </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => collapseAll(planKey, plan)}>
+                        <Menu.Item onClick={() => collapseAll(planKey, plan)}>
                             <Icon icon={ChevronsDownUp} size={14} /> {t('planPanel.collapseAll')}
                         </Menu.Item>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item className="menu-item" onClick={() => copyPlanMarkdown(plan)}>
+                        <Menu.Separator />
+                        <Menu.Item onClick={() => copyPlanMarkdown(plan)}>
                             <Icon icon={Copy} size={14} /> {t('planPanel.copyMarkdown')}
                         </Menu.Item>
-                        <Menu.Item className="menu-item" disabled={results === null} onClick={() => sendResultsToChat(chatId, plan)}>
+                        <Menu.Item disabled={results === null} onClick={() => sendResultsToChat(chatId, plan)}>
                             <Icon icon={Send} size={14} /> {t('planPanel.sendResults')}
                         </Menu.Item>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item className="menu-item" disabled={!hasLockedStep(plan)} onClick={() => unlockPlanStepsAction(chatId, plan.id, null)}>
+                        <Menu.Separator />
+                        <Menu.Item disabled={!hasLockedStep(plan)} onClick={() => unlockPlanStepsAction(chatId, plan.id, null)}>
                             <Icon icon={LockOpen} size={14} /> {t('planPanel.unlockAll')}
                         </Menu.Item>
-                    </MenuPopup>
+                    </Menu.Popup>
                 </Menu.Root>
                 <CloseButton label={t('planPanel.close')} onClick={closePlanPanel} />
-            </div>
-        </header>
+            </ButtonGroup>
+        </PanelHeader>
     );
 }

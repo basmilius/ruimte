@@ -1,7 +1,7 @@
 import { Laptop, MonitorSmartphone, Server, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Icon } from '@ruimte/ui/Icon';
-import { SettingsSection as Section, type SettingsSectionProps as SectionProps } from '@ruimte/ui/settings/SettingsSection';
+import { Icon } from '@basmilius/react-ui';
+import { SettingsSection as Section, type SettingsSectionProps as SectionProps } from '@basmilius/react-ui/settings';
 
 /* Where a setting applies: this window's client, the computer it runs on, or the machine that acts on it. */
 type SettingsScope = 'client' | 'computer' | 'machine';
@@ -20,7 +20,7 @@ function ScopeTag({ scope }: { scope: SettingsScope }) {
 
 type SettingsSectionProps = Omit<SectionProps, 'tag'> & { scope?: SettingsScope };
 
-/* The card of @ruimte/ui with the tag that says where its settings apply. */
+/* The card of @basmilius/react-ui with the tag that says where its settings apply. */
 export function SettingsSection({ scope, ...props }: SettingsSectionProps) {
     return <Section {...props} tag={scope && <ScopeTag scope={scope} />} />;
 }

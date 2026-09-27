@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
-import { Menu } from '@base-ui-components/react/menu';
-import { ChevronRight, Menu as MenuGlyph } from 'lucide-react';
+import { Menu as MenuGlyph } from 'lucide-react';
 import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
 import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { runMenuCommand } from '@/shell/menu/actions';
@@ -10,11 +8,7 @@ import { menuContext } from '@/shell/menu/context';
 import { menuIconOf } from '@/shell/menu/icons';
 import { menuModel } from '@/shell/menu/model';
 import { Brand } from '@/ui/Brand';
-import { MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuCheck } from '@ruimte/ui/MenuCheck';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Icon, IconButton, Menu, Tooltip } from '@basmilius/react-ui';
 
 /* A fixed box in front of every row, the empty one included, so every label starts on the same line. */
 function RowIcon({ id }: { id: string }) {
@@ -29,18 +23,13 @@ function RowIcon({ id }: { id: string }) {
 function Submenu({ id, label, items, disabled = false }: { id: string; label: string; items: MenuNode[]; disabled?: boolean }) {
     return (
         <Menu.SubmenuRoot disabled={disabled}>
-            <Menu.SubmenuTrigger className="menu-item">
+            <Menu.SubmenuTrigger>
                 <RowIcon id={id} />
                 <span className="min-w-0 grow truncate">{label}</span>
-                <Icon icon={ChevronRight} size={14} className="shrink-0 text-text-faint" />
             </Menu.SubmenuTrigger>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
-                    <Menu.Popup className="menu-popup min-w-56">
-                        <MenuRows items={items} />
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+            <Menu.Popup className="min-w-56">
+                <MenuRows items={items} />
+            </Menu.Popup>
         </Menu.SubmenuRoot>
     );
 }
@@ -49,20 +38,20 @@ function MenuRows({ items }: { items: MenuNode[] }) {
     return items.map((node, index) => {
         switch (node.kind) {
             case 'separator':
-                return <Menu.Separator key={`separator-${index}`} className={MENU_SEPARATOR} />;
+                return <Menu.Separator key={`separator-${index}`} />;
             case 'submenu':
                 return <Submenu key={node.id} id={node.id} label={node.label} items={node.items} disabled={node.enabled === false} />;
             case 'command':
                 return (
                     <Menu.Item
                         key={node.id}
-                        className={clsx('menu-item', node.id === 'view-delete' && 'text-status-error')}
+                        className={node.id === 'view-delete' ? 'text-status-error' : undefined}
                         disabled={node.enabled === false}
                         onClick={() => runMenuCommand(node.id)}
                     >
-                        {node.checked === undefined ? <RowIcon id={node.id} /> : <MenuCheck kind={node.radio ? 'radio' : 'checkbox'} checked={node.checked} />}
+                        {node.checked === undefined ? <RowIcon id={node.id} /> : <Menu.Check kind={node.radio ? 'radio' : 'checkbox'} checked={node.checked} />}
                         <span className="min-w-0 grow truncate">{node.label}</span>
-                        {node.keys && <span className={MENU_HINT}>{node.keys}</span>}
+                        {node.keys && <Menu.Hint>{node.keys}</Menu.Hint>}
                     </Menu.Item>
                 );
             default:
@@ -82,24 +71,24 @@ export function StationMenu({ variant }: { variant: 'wordmark' | 'symbol' }) {
     const [spec, setSpec] = useState<MenuSpec | null>(null);
     return (
         <Menu.Root onOpenChange={(open) => open && setSpec(menuModel(menuContext('station')))}>
-            <Tooltip label={t('menu.open')}>
-                <Menu.Trigger
-                    className={
-                        variant === 'wordmark'
-                            ? '-ml-2 flex h-8 items-center gap-2 rounded-md px-2 text-text-faint hover:bg-surface-hover data-[popup-open]:bg-surface-active'
-                            : 'icon-btn shrink-0'
-                    }
-                    aria-label={t('menu.open')}
-                >
-                    <Icon icon={MenuGlyph} size={16} />
-                    {variant === 'wordmark' && <Brand />}
-                </Menu.Trigger>
-            </Tooltip>
-            <MenuPopup className="min-w-48">
+            {variant === 'wordmark' ? (
+                <Tooltip label={t('menu.open')}>
+                    <Menu.Trigger
+                        className="-ml-2 flex h-8 items-center gap-2 rounded-md px-2 text-text-faint hover:bg-surface-hover data-[popup-open]:bg-surface-active"
+                        aria-label={t('menu.open')}
+                    >
+                        <Icon icon={MenuGlyph} size={16} />
+                        <Brand />
+                    </Menu.Trigger>
+                </Tooltip>
+            ) : (
+                <IconButton icon={MenuGlyph} label={t('menu.open')} className="shrink-0" render={<Menu.Trigger />} />
+            )}
+            <Menu.Popup className="min-w-48">
                 {spec?.menus.map((menu) => (
                     <Submenu key={menu.id} id={menu.id} label={menu.label} items={menu.items} />
                 ))}
-            </MenuPopup>
+            </Menu.Popup>
         </Menu.Root>
     );
 }

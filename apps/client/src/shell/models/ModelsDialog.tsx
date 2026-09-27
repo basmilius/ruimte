@@ -1,22 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import { ChartSpline } from 'lucide-react';
 import { AddressBookRequestError, type ModelBenchmarksResult } from '@ruimte/pulsar';
-import { formatNumber } from '@ruimte/ui/format/number';
+import { formatNumber } from '@basmilius/react-ui/format';
+import { Segmented, Skeleton, Button, EmptyState, ErrorBoundary, CloseButton, Dialog } from '@basmilius/react-ui';
 import { publicAddressBook } from '@/pulsar/account';
 import { chartModels, modelMarks, type CostScale } from '@/shell/models/chart';
 import { ModelsChart } from '@/shell/models/ModelsChart';
 import { ModelsLegend } from '@/shell/models/ModelsLegend';
-import { Segmented, Skeleton } from '@ruimte/ui/controls';
 import { useUi } from '@/state/ui';
-import { Button } from '@ruimte/ui/Button';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { CloseButton } from '@ruimte/ui/CloseButton';
-import { useDialogLayer } from '@ruimte/ui/dialog-layer';
 
 const SCALES: readonly CostScale[] = ['log', 'linear'];
 
@@ -127,14 +120,14 @@ function Body() {
         <div className="flex h-full min-h-0 flex-col">
             <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border py-3 pr-3 pl-6 max-[960px]:pl-4">
                 <div className="flex min-w-0 flex-col">
-                    <Dialog.Title className="text-base font-semibold text-text">{t('dialog.title')}</Dialog.Title>
+                    <Dialog.Title>{t('dialog.title')}</Dialog.Title>
                     <p className="text-xs text-text-muted">{t('dialog.subtitle')}</p>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
                     <Segmented<CostScale>
                         value={scale}
                         options={SCALES.map((id) => ({ id, label: t(`dialog.scales.${id}`) }))}
-                        onChange={setScale}
+                        onValueChange={setScale}
                         label={t('dialog.scale')}
                         disabled={load.status !== 'ready'}
                     />
@@ -172,18 +165,14 @@ function Body() {
 /* Beside the usage dialog and outside any workspace: the numbers belong to no project and no machine. The body mounts only while open. */
 export function ModelsDialog() {
     const open = useUi((s) => s.modelsOpen);
-    const stacked = useDialogLayer(open);
     return (
         <Dialog.Root open={open} onOpenChange={(next) => useUi.getState().setModelsOpen(next)}>
-            <Dialog.Portal>
-                <Dialog.Backdrop className={clsx('dialog-backdrop', stacked && 'dialog-backdrop-nested')} forceRender={stacked} />
-                <Dialog.Popup className={clsx('dialog-popup flex h-[600px] w-[1080px] flex-col', stacked && 'dialog-popup-nested')}>
-                    <ErrorBoundary label={i18next.t('models:dialog.failed')} className="grow">
-                        <Body />
-                    </ErrorBoundary>
-                    <Dialog.Description className="sr-only">{i18next.t('models:dialog.description')}</Dialog.Description>
-                </Dialog.Popup>
-            </Dialog.Portal>
+            <Dialog.Popup className="flex h-[600px] w-[1080px] flex-col">
+                <ErrorBoundary label={i18next.t('models:dialog.failed')} className="grow">
+                    <Body />
+                </ErrorBoundary>
+                <Dialog.Description className="sr-only">{i18next.t('models:dialog.description')}</Dialog.Description>
+            </Dialog.Popup>
         </Dialog.Root>
     );
 }

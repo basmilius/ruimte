@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import type { FileTree as FileTreeModel, FileTreeRowDecoration, FileTreeRowDecorationContext, FileTreeVisibleRow } from '@pierre/trees';
 import { FileTree, useFileTree, useFileTreeSelector } from '@pierre/trees/react';
 import {
@@ -42,12 +41,7 @@ import type { GitCheckout } from '@/state/git-repos';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { MENU_SEPARATOR, SECTION_LABEL } from '@ruimte/ui/classes';
-import { copyText } from '@ruimte/ui/clipboard';
-import { FILE_TREE_ICONS } from '@ruimte/ui/file-icon';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { PanelEmpty } from '@ruimte/ui/PanelEmpty';
+import { copyText, FILE_TREE_ICONS, Icon, IconButton, PanelEmpty, SectionLabel, ContextMenu } from '@basmilius/react-ui';
 
 /* The groups in the order a person acts on them; each one reads its heading out of `git.group`. */
 const GROUPS: readonly GitFileState[] = ['conflicted', 'staged', 'unstaged', 'untracked'];
@@ -174,27 +168,25 @@ export function GitFileList({ checkouts, collapsed, reading, reposTruncated, bus
                 return (
                     <section key={state}>
                         <header className={GIT_GROUP}>
-                            <span className={SECTION_LABEL}>{label}</span>
+                            <SectionLabel>{label}</SectionLabel>
                             <span className="tabular-nums text-text-faint">{count}</span>
                             <span className="grow" />
                             {state !== 'conflicted' && (
-                                <Tooltip label={staged ? t('git.list.unstageGroup', { group: label }) : t('git.list.stageGroup', { group: label })} name>
-                                    <button
-                                        className="icon-btn icon-btn-xs"
-                                        disabled={busy}
-                                        onClick={() => {
-                                            for (const section of sections) {
-                                                onStage(
-                                                    section.checkout.path,
-                                                    section.files.map((file) => file.path),
-                                                    !staged
-                                                );
-                                            }
-                                        }}
-                                    >
-                                        <Icon icon={staged ? Minus : Plus} size={12} />
-                                    </button>
-                                </Tooltip>
+                                <IconButton
+                                    icon={staged ? Minus : Plus}
+                                    size="xs"
+                                    label={staged ? t('git.list.unstageGroup', { group: label }) : t('git.list.stageGroup', { group: label })}
+                                    disabled={busy}
+                                    onClick={() => {
+                                        for (const section of sections) {
+                                            onStage(
+                                                section.checkout.path,
+                                                section.files.map((file) => file.path),
+                                                !staged
+                                            );
+                                        }
+                                    }}
+                                />
                             )}
                         </header>
                         {sections.map(({ checkout, files }) => (
@@ -404,35 +396,29 @@ function GitRepoTree({ state, checkout, files, named, folder, platform, collapse
                                 </span>
                             }
                         />
-                        <ContextMenu.Portal>
-                            <ContextMenu.Positioner className="z-(--z-popup)">
-                                <ContextMenu.Popup className="menu-popup">
-                                    <ContextMenu.Item className="menu-item" onClick={() => useGit.getState().toggleRepo(checkout.label)}>
-                                        <Icon icon={EyeOff} size={14} /> {t('git.repo.hide')}
-                                    </ContextMenu.Item>
-                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                                    <RowPathItems absolute={root} relative={checkout.label} folder={folder} platform={platform} gone={false} />
-                                </ContextMenu.Popup>
-                            </ContextMenu.Positioner>
-                        </ContextMenu.Portal>
+                        <ContextMenu.Popup>
+                            <ContextMenu.Item onClick={() => useGit.getState().toggleRepo(checkout.label)}>
+                                <Icon icon={EyeOff} size={14} /> {t('git.repo.hide')}
+                            </ContextMenu.Item>
+                            <ContextMenu.Separator />
+                            <RowPathItems absolute={root} relative={checkout.label} folder={folder} platform={platform} gone={false} />
+                        </ContextMenu.Popup>
                     </ContextMenu.Root>
                     <span className="grow" />
                     <span className="tabular-nums text-text-faint">{files.length}</span>
                     {!conflicted && (
-                        <Tooltip label={staged ? t('git.repo.unstageAll', { repo: checkout.label }) : t('git.repo.stageAll', { repo: checkout.label })} name>
-                            <button
-                                className="icon-btn icon-btn-2xs"
-                                disabled={busy}
-                                onClick={() =>
-                                    onStage(
-                                        files.map((file) => file.path),
-                                        !staged
-                                    )
-                                }
-                            >
-                                <Icon icon={staged ? Minus : Plus} size={12} />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon={staged ? Minus : Plus}
+                            size="2xs"
+                            label={staged ? t('git.repo.unstageAll', { repo: checkout.label }) : t('git.repo.stageAll', { repo: checkout.label })}
+                            disabled={busy}
+                            onClick={() =>
+                                onStage(
+                                    files.map((file) => file.path),
+                                    !staged
+                                )
+                            }
+                        />
                     )}
                 </div>
             )}
@@ -440,65 +426,55 @@ function GitRepoTree({ state, checkout, files, named, folder, platform, collapse
                 <ContextMenu.Trigger render={<div />} style={{ height }} onContextMenu={(event) => setMenuPath(rowPathOf(event))}>
                     <FileTree model={model} className={clsx('panel-tree', named && 'panel-tree-indented')} onClick={onClick} />
                 </ContextMenu.Trigger>
-                <ContextMenu.Portal>
-                    <ContextMenu.Positioner className="z-(--z-popup)">
-                        <ContextMenu.Popup className="menu-popup">
-                            {menuFile !== undefined && (
-                                <>
-                                    <ContextMenu.Item className="menu-item" onClick={() => onOpen(menuFile)}>
-                                        <Icon icon={FileDiff} size={14} /> {t('git.list.openChanges')}
-                                    </ContextMenu.Item>
-                                    <ContextMenu.Item className="menu-item" disabled={isGone(menuFile)} onClick={() => onOpenFile(menuFile)}>
-                                        <Icon icon={FileText} size={14} /> {t('file.tab.openItself')}
-                                    </ContextMenu.Item>
-                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                                    <ContextMenu.Item className="menu-item" disabled={busy} onClick={() => onStage([menuFile.path], !staged)}>
-                                        <Icon icon={staged ? Minus : Plus} size={14} />
-                                        {staged ? t('git.list.unstage') : conflicted ? t('git.list.stageResolved') : t('git.list.stage')}
-                                    </ContextMenu.Item>
-                                    {/* A conflict is resolved by staging it or by a merge tool; discarding one side of it
+                <ContextMenu.Popup>
+                    {menuFile !== undefined && (
+                        <>
+                            <ContextMenu.Item onClick={() => onOpen(menuFile)}>
+                                <Icon icon={FileDiff} size={14} /> {t('git.list.openChanges')}
+                            </ContextMenu.Item>
+                            <ContextMenu.Item disabled={isGone(menuFile)} onClick={() => onOpenFile(menuFile)}>
+                                <Icon icon={FileText} size={14} /> {t('file.tab.openItself')}
+                            </ContextMenu.Item>
+                            <ContextMenu.Separator />
+                            <ContextMenu.Item disabled={busy} onClick={() => onStage([menuFile.path], !staged)}>
+                                <Icon icon={staged ? Minus : Plus} size={14} />
+                                {staged ? t('git.list.unstage') : conflicted ? t('git.list.stageResolved') : t('git.list.stage')}
+                            </ContextMenu.Item>
+                            {/* A conflict is resolved by staging it or by a merge tool; discarding one side of it
                                         silently is the one way out that loses work nobody can name afterwards. */}
-                                    {!conflicted && (
-                                        <ContextMenu.Item className="menu-item" disabled={busy} onClick={() => onDiscard(menuFile)}>
-                                            <Icon icon={Trash2} size={14} /> {t('git.list.discard')}
-                                        </ContextMenu.Item>
-                                    )}
-                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                                    <RowPathItems
-                                        absolute={absolutePathOf(root, menuFile.path)}
-                                        relative={menuFile.path}
-                                        folder={folder}
-                                        platform={platform}
-                                        gone={isGone(menuFile)}
-                                    />
-                                </>
+                            {!conflicted && (
+                                <ContextMenu.Item disabled={busy} onClick={() => onDiscard(menuFile)}>
+                                    <Icon icon={Trash2} size={14} /> {t('git.list.discard')}
+                                </ContextMenu.Item>
                             )}
-                            {menuDir !== null && menuDirKey !== null && (
-                                <>
-                                    <ContextMenu.Item className="menu-item" onClick={() => useGit.getState().toggleDir(menuDirKey)}>
-                                        <Icon icon={collapsed.includes(menuDirKey) ? ChevronsUpDown : ChevronsDownUp} size={14} />
-                                        {collapsed.includes(menuDirKey) ? t('git.list.expandFolder') : t('git.list.collapseFolder')}
-                                    </ContextMenu.Item>
-                                    {/* A conflict is staged file by file, after it has been looked at; a whole
+                            <ContextMenu.Separator />
+                            <RowPathItems
+                                absolute={absolutePathOf(root, menuFile.path)}
+                                relative={menuFile.path}
+                                folder={folder}
+                                platform={platform}
+                                gone={isGone(menuFile)}
+                            />
+                        </>
+                    )}
+                    {menuDir !== null && menuDirKey !== null && (
+                        <>
+                            <ContextMenu.Item onClick={() => useGit.getState().toggleDir(menuDirKey)}>
+                                <Icon icon={collapsed.includes(menuDirKey) ? ChevronsUpDown : ChevronsDownUp} size={14} />
+                                {collapsed.includes(menuDirKey) ? t('git.list.expandFolder') : t('git.list.collapseFolder')}
+                            </ContextMenu.Item>
+                            {/* A conflict is staged file by file, after it has been looked at; a whole
                                         folder of them at once is not a thing to offer behind one click. */}
-                                    {!conflicted && (
-                                        <ContextMenu.Item className="menu-item" disabled={busy} onClick={() => onStage(pathsUnder(files, menuDir), !staged)}>
-                                            <Icon icon={staged ? Minus : Plus} size={14} /> {staged ? t('git.list.unstageHere') : t('git.list.stageHere')}
-                                        </ContextMenu.Item>
-                                    )}
-                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                                    <RowPathItems
-                                        absolute={absolutePathOf(root, menuDir)}
-                                        relative={menuDir}
-                                        folder={folder}
-                                        platform={platform}
-                                        gone={false}
-                                    />
-                                </>
+                            {!conflicted && (
+                                <ContextMenu.Item disabled={busy} onClick={() => onStage(pathsUnder(files, menuDir), !staged)}>
+                                    <Icon icon={staged ? Minus : Plus} size={14} /> {staged ? t('git.list.unstageHere') : t('git.list.stageHere')}
+                                </ContextMenu.Item>
                             )}
-                        </ContextMenu.Popup>
-                    </ContextMenu.Positioner>
-                </ContextMenu.Portal>
+                            <ContextMenu.Separator />
+                            <RowPathItems absolute={absolutePathOf(root, menuDir)} relative={menuDir} folder={folder} platform={platform} gone={false} />
+                        </>
+                    )}
+                </ContextMenu.Popup>
             </ContextMenu.Root>
         </>
     );
@@ -524,15 +500,10 @@ function RowPathItems({
     const mention = gone ? null : mentionOf(folder, absolute);
     return (
         <>
-            <ContextMenu.Item
-                className="menu-item"
-                disabled={gone || !revealableInFiles(folder, absolute)}
-                onClick={() => useFiles.getState().revealInFiles(absolute)}
-            >
+            <ContextMenu.Item disabled={gone || !revealableInFiles(folder, absolute)} onClick={() => useFiles.getState().revealInFiles(absolute)}>
                 <Icon icon={Folder} size={14} /> {t('file.menu.revealInFiles')}
             </ContextMenu.Item>
             <ContextMenu.Item
-                className="menu-item"
                 disabled={gone}
                 onClick={() => {
                     void transport.request('fs.reveal', { path: absolute }).catch(() => undefined);
@@ -540,15 +511,15 @@ function RowPathItems({
             >
                 <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
             </ContextMenu.Item>
-            <ContextMenu.Separator className={MENU_SEPARATOR} />
-            <ContextMenu.Item className="menu-item" onClick={() => copyText(absolute)}>
+            <ContextMenu.Separator />
+            <ContextMenu.Item onClick={() => copyText(absolute)}>
                 <Icon icon={Copy} size={14} /> {t('file.menu.copyPath')}
             </ContextMenu.Item>
-            <ContextMenu.Item className="menu-item" onClick={() => copyText(relative)}>
+            <ContextMenu.Item onClick={() => copyText(relative)}>
                 <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
             </ContextMenu.Item>
             {mention !== null && (
-                <ContextMenu.Item className="menu-item" onClick={() => copyText(mention)}>
+                <ContextMenu.Item onClick={() => copyText(mention)}>
                     <Icon icon={AtSign} size={14} /> {t('file.menu.copyMention')}
                 </ContextMenu.Item>
             )}

@@ -1,8 +1,8 @@
 import { Folder, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
+import { SettingsRow } from '@basmilius/react-ui/settings';
+import { Input, Segmented, Stepper, Switch } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Segmented, Stepper, Toggle } from '@ruimte/ui/controls';
 import { FILES_TAB_LIMIT_RANGE, useSettings } from '@/state/settings';
 
 /* The two panels beside the canvas, what the Files panel shows and keeps open, and how the Git panel lists what changed. */
@@ -29,7 +29,7 @@ export function FilesPane() {
                             max={FILES_TAB_LIMIT_RANGE.max}
                             step={FILES_TAB_LIMIT_RANGE.step}
                             label={t('files.files.openFiles.label')}
-                            onChange={(value) => update({ filesTabLimit: value })}
+                            onValueChange={(value) => update({ filesTabLimit: value })}
                         />
                     }
                 />
@@ -38,7 +38,11 @@ export function FilesPane() {
                     label={t('files.files.hidden.label')}
                     description={t('files.files.hidden.description')}
                     control={
-                        <Toggle checked={filesShowHidden} onChange={(checked) => update({ filesShowHidden: checked })} label={t('files.files.hidden.label')} />
+                        <Switch
+                            checked={filesShowHidden}
+                            onCheckedChange={(checked) => update({ filesShowHidden: checked })}
+                            label={t('files.files.hidden.label')}
+                        />
                     }
                 />
                 <SettingsRow
@@ -46,8 +50,9 @@ export function FilesPane() {
                     label={t('files.files.browseStart.label')}
                     description={t('files.files.browseStart.description')}
                 >
-                    <input
-                        className="field bg-surface-sunken font-mono text-code"
+                    <Input
+                        mono
+                        className="bg-surface-sunken"
                         aria-label={t('files.files.browseStart.label')}
                         placeholder="~/projects"
                         value={browseStartFolder}
@@ -70,7 +75,7 @@ export function FilesPane() {
                                 { id: 'split', label: t('files.git.layout.options.split') }
                             ]}
                             label={t('files.git.layout.label')}
-                            onChange={(value) => update({ diffLayout: value })}
+                            onValueChange={(value) => update({ diffLayout: value })}
                         />
                     }
                 />
@@ -79,7 +84,11 @@ export function FilesPane() {
                     label={t('files.git.whitespace.label')}
                     description={t('files.git.whitespace.description')}
                     control={
-                        <Toggle checked={diffWhitespace} onChange={(checked) => update({ diffWhitespace: checked })} label={t('files.git.whitespace.label')} />
+                        <Switch
+                            checked={diffWhitespace}
+                            onCheckedChange={(checked) => update({ diffWhitespace: checked })}
+                            label={t('files.git.whitespace.label')}
+                        />
                     }
                 />
             </SettingsSection>

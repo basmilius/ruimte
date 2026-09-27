@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ActionRefusal } from '@ruimte/actions';
 import type { Worktree } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
-import { PromptDialog } from '@ruimte/ui/PromptDialog';
+import { PromptDialog } from '@basmilius/react-ui';
 import { removeAllQuestion, removedToast } from '@/shell/panels/worktree-rows';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
@@ -133,7 +133,7 @@ export function RemoveWorktreeDialog() {
                     : undefined
             }
             onConfirm={() => void confirm()}
-            onClose={close}
+            onOpenChange={close}
         />
     );
 }

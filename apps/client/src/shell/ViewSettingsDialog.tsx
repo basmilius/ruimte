@@ -1,16 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import { RotateCcw } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { type ProjectIconChoice, type ProjectView, viewIconOf } from '@ruimte/contracts';
 import { renameViewAction, setViewIconAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { resetTitle } from '@/nodes/node-host';
-import { Button } from '@ruimte/ui/Button';
-import { FIELD_HINT, SECTION_LABEL } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { IconPicker } from '@/ui/IconPicker';
+import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { Button, Icon, Dialog, Field, IconPicker, Input, SectionLabel } from '@basmilius/react-ui';
 
 /*
  * What one view is called and what it wears, the two together the way a project holds them. The mark
@@ -41,26 +38,27 @@ export function ViewSettingsDialog({ view, onClose }: { view: ProjectView; onClo
 
     return (
         <>
-            <Dialog.Title className="text-base font-semibold text-text">{t('viewSettings.title')}</Dialog.Title>
+            <Dialog.Title>{t('viewSettings.title')}</Dialog.Title>
 
-            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>{t('viewSettings.name')}</div>
-            <input
-                autoFocus
-                className="field"
-                aria-label={t('viewSettings.nameLabel')}
-                maxLength={MAX_TITLE_LENGTH}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                onKeyDown={(event) => {
-                    event.stopPropagation();
-                    if (event.key === 'Enter') {
-                        save();
-                    }
-                }}
-            />
-            <p className={FIELD_HINT}>{t('viewSettings.nameHint')}</p>
+            <Field label={t('viewSettings.name')} hint={t('viewSettings.nameHint')} className="mt-4">
+                <Input
+                    autoFocus
+                    aria-label={t('viewSettings.nameLabel')}
+                    maxLength={MAX_TITLE_LENGTH}
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    onKeyDown={(event) => {
+                        event.stopPropagation();
+                        if (event.key === 'Enter') {
+                            save();
+                        }
+                    }}
+                />
+            </Field>
 
-            <div className={`${SECTION_LABEL} mt-5 mb-1.5`}>{t('common:icon.label')}</div>
+            <SectionLabel render={<div />} className="mt-5 mb-1.5">
+                {t('common:icon.label')}
+            </SectionLabel>
             <div className="flex items-center gap-3">
                 <ViewGlyph id={view.id} kind={view.kind} icon={chosen} provider={provider} path={view.kind === 'file' ? view.path : null} size={20} />
                 <div className="flex min-w-0 flex-col">
@@ -69,7 +67,13 @@ export function ViewSettingsDialog({ view, onClose }: { view: ProjectView; onClo
                 </div>
             </div>
 
-            <IconPicker value={chosen} gridLabel={t('common:icon.symbol')} onChange={pick} />
+            <IconPicker
+                icons={PROJECT_ICON_GLYPHS}
+                value={chosen?.value ?? null}
+                label={t('common:icon.symbol')}
+                className="mt-4"
+                onValueChange={(icon) => pick({ kind: 'lucide', value: icon as ProjectIconChoice['value'] })}
+            />
 
             <div className="mt-4 flex items-center gap-2">
                 <Button disabled={!chosen} onClick={() => pick(null)}>

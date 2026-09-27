@@ -1,20 +1,15 @@
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { runAsPerson } from '@/actions/client-actions';
 import { FileText, Search } from 'lucide-react';
 import { DiffFile } from '@/shell/panels/DiffFile';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { FileBody } from '@/shell/panels/FileBody';
-import { FileIcon } from '@ruimte/ui/FileIcon';
+import { FileIcon, EmptyState, Icon, ListRow, SectionLabel, Tile, ContextMenu } from '@basmilius/react-ui';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { INSET_ROW, SECTION_LABEL } from '@ruimte/ui/classes';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tile } from '@ruimte/ui/Tile';
 
 /* The preview with no tab up: a file to open, a search through the folder, and what was closed a moment ago. */
 function EmptyPreview() {
@@ -50,25 +45,23 @@ function EmptyPreview() {
                 )}
                 {recent.length > 0 && (
                     <section className="flex flex-col gap-1">
-                        <h2 className={`${SECTION_LABEL} px-2`}>{t('file.empty.recent')}</h2>
+                        <SectionLabel render={<h2 />} className="px-2">
+                            {t('file.empty.recent')}
+                        </SectionLabel>
                         {recent.map((path) => (
                             <ContextMenu.Root key={path}>
                                 <ContextMenu.Trigger
-                                    render={<button type="button" />}
-                                    className={`${INSET_ROW} min-w-0 gap-2 text-left text-sm text-text hover:bg-surface-hover`}
+                                    render={<ListRow variant="inset" render={<button type="button" />} />}
+                                    className={`min-w-0 gap-2 text-left text-sm text-text hover:bg-surface-hover`}
                                     onClick={() => void runAsPerson('file.preview', { path, line: null })}
                                 >
                                     <FileIcon path={path} size={14} />
                                     <span className="min-w-0 truncate">{basenameOf(path)}</span>
                                 </ContextMenu.Trigger>
-                                <ContextMenu.Portal>
-                                    <ContextMenu.Positioner className="z-(--z-popup)">
-                                        {/* Closed, so no tab to name: the items a preview tab offers about its file. */}
-                                        <ContextMenu.Popup className="menu-popup">
-                                            <FileActionItems path={path} on="tab" />
-                                        </ContextMenu.Popup>
-                                    </ContextMenu.Positioner>
-                                </ContextMenu.Portal>
+                                {/* Closed, so no tab to name: the items a preview tab offers about its file. */}
+                                <ContextMenu.Popup>
+                                    <FileActionItems path={path} on="tab" />
+                                </ContextMenu.Popup>
                             </ContextMenu.Root>
                         ))}
                     </section>

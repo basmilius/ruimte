@@ -6,8 +6,7 @@ import { useEndpointId } from '@/state/keys';
 import { useMachineUrl } from '@/transport/machine-url';
 import { formatBytes } from '@/shell/panels/file-size';
 import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { EmptyState } from '@ruimte/ui/EmptyState';
+import { ButtonGroup, EmptyState } from '@basmilius/react-ui';
 
 type Zoom = 'fit' | 'full';
 
@@ -24,10 +23,10 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar>
-                <div className={BTN_GROUP}>
+                <ButtonGroup>
                     <FileToolbarToggle icon={Maximize} label={t('file.image.fit')} active={zoom === 'fit'} onClick={() => setZoom('fit')} />
                     <FileToolbarToggle icon={Scan} label={t('file.image.actual')} active={zoom === 'full'} onClick={() => setZoom('full')} />
-                </div>
+                </ButtonGroup>
             </FileToolbar>
             <FileContextMenu className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
                 {failed || bytes.failure !== null ? (

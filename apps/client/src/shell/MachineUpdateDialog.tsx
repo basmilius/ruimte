@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
-import clsx from 'clsx';
 import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
 import { machineUpdateAnswer, machineUpdatePrompt, type MachineUpdateAnswer } from '@/shell/machine-update';
-import { Button } from '@ruimte/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, SMALL_DIALOG } from '@ruimte/ui/classes';
+import { Button, Dialog } from '@basmilius/react-ui';
 
 /*
  * Asked after an update when the background service still runs the older build, because a restart
@@ -61,22 +58,19 @@ export function MachineUpdateDialog() {
                 }
             }}
         >
-            <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
-                <Dialog.Popup className={clsx(SMALL_DIALOG, 'dialog-popup-nested')}>
-                    <Dialog.Title className="text-base font-semibold break-words text-text">{prompt.title}</Dialog.Title>
-                    <Dialog.Description className={clsx(DIALOG_DESCRIPTION, 'mt-1 break-words')}>{prompt.description}</Dialog.Description>
-                    <div className={DIALOG_FOOTER}>
-                        {/* The calm choice keeps the focus, so an Enter never ends the sessions on the machine. */}
-                        <Button autoFocus disabled={busy} onClick={() => void answer(machineUpdateAnswer('idle'))}>
-                            {t('machineUpdate.whenIdle')}
-                        </Button>
-                        <Button variant="danger" disabled={busy} onClick={() => void answer(machineUpdateAnswer('restart'))}>
-                            {t('machineUpdate.restartNow')}
-                        </Button>
-                    </div>
-                </Dialog.Popup>
-            </Dialog.Portal>
+            <Dialog.Popup size="sm" nested>
+                <Dialog.Title className="break-words">{prompt.title}</Dialog.Title>
+                <Dialog.Description className="mt-1 break-words">{prompt.description}</Dialog.Description>
+                <Dialog.Footer>
+                    {/* The calm choice keeps the focus, so an Enter never ends the sessions on the machine. */}
+                    <Button autoFocus disabled={busy} onClick={() => void answer(machineUpdateAnswer('idle'))}>
+                        {t('machineUpdate.whenIdle')}
+                    </Button>
+                    <Button variant="danger" disabled={busy} onClick={() => void answer(machineUpdateAnswer('restart'))}>
+                        {t('machineUpdate.restartNow')}
+                    </Button>
+                </Dialog.Footer>
+            </Dialog.Popup>
         </Dialog.Root>
     );
 }

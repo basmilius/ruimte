@@ -4,12 +4,11 @@ import { rememberChatPreferences, useChatPreferences } from '@ruimte/agents-reac
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@ruimte/agents-react/chat/runtime-modes';
 import { canKeepAwake } from '@/desktop/bridge';
 import { MachineSwitchSections } from '@/shell/settings/MachineSwitchSection';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
+import { SettingsRow } from '@basmilius/react-ui/settings';
+import { Switch, Select, type SelectItem } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@ruimte/ui/controls';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { Select, type SelectItem } from '@ruimte/ui/Select';
 
 /* Both mode rows offer the same choices, and each one explains itself in the popup. Built while the
    pane draws, so the words are the ones the interface is in right now. */
@@ -109,9 +108,9 @@ export function AgentsPane() {
                     label={t('agents.chats.showViews.label')}
                     description={t('agents.chats.showViews.description')}
                     control={
-                        <Toggle
+                        <Switch
                             checked={agentsShowViews}
-                            onChange={(checked) => update({ agentsShowViews: checked })}
+                            onCheckedChange={(checked) => update({ agentsShowViews: checked })}
                             label={t('agents.chats.showViews.label')}
                         />
                     }
@@ -124,9 +123,9 @@ export function AgentsPane() {
                     label={t('agents.working.sound.label')}
                     description={t('agents.working.sound.description')}
                     control={
-                        <Toggle
+                        <Switch
                             checked={agentsTurnSound}
-                            onChange={(checked) => update({ agentsTurnSound: checked })}
+                            onCheckedChange={(checked) => update({ agentsTurnSound: checked })}
                             label={t('agents.working.sound.label')}
                         />
                     }
@@ -165,9 +164,9 @@ export function AgentsPane() {
                         label={t('agents.keepAwake.battery.label')}
                         description={t('agents.keepAwake.battery.description')}
                         control={
-                            <Toggle
+                            <Switch
                                 checked={keepAwakeOnBattery}
-                                onChange={(checked) => update({ keepAwakeOnBattery: checked })}
+                                onCheckedChange={(checked) => update({ keepAwakeOnBattery: checked })}
                                 label={t('agents.keepAwake.battery.label')}
                             />
                         }
@@ -179,9 +178,9 @@ export function AgentsPane() {
                         label={t('agents.keepAwake.display.label')}
                         description={t('agents.keepAwake.display.description')}
                         control={
-                            <Toggle
+                            <Switch
                                 checked={keepAwakeDisplay}
-                                onChange={(checked) => update({ keepAwakeDisplay: checked })}
+                                onCheckedChange={(checked) => update({ keepAwakeDisplay: checked })}
                                 label={t('agents.keepAwake.display.label')}
                             />
                         }

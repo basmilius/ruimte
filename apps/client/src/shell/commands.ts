@@ -38,7 +38,7 @@ import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { runAppShortcut } from '@/shell/app-shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { cellCount, cellsRightOf, maximizedCell } from '@/shell/split';
-import type { Shortcut } from '@ruimte/ui/shortcut';
+import type { Shortcut } from '@basmilius/react-ui';
 
 export interface Command {
     id: string;

@@ -52,8 +52,7 @@
     },
     "icon": {
         "label": "Icoon",
-        "symbol": "Symbool",
-        "none": "Geen icoon"
+        "symbol": "Symbool"
     },
     "status": {
         "running": "bezig",

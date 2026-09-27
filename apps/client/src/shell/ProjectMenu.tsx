@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ActionInput } from '@ruimte/actions';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
-import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Settings2, X } from 'lucide-react';
+import { ChevronDown, ExternalLink, FolderOpen, History, MoreHorizontal, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
 import { openProjectAction, performAsPerson, runAsPerson } from '@/actions/client-actions';
@@ -20,11 +19,7 @@ import { fileManagerName, useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { useMachineHold, useOpenEndpoints } from '@/transport/status';
-import { MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { PromptDialog } from '@ruimte/ui/PromptDialog';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
+import { Icon, Tooltip, PromptDialog, Menu } from '@basmilius/react-ui';
 
 interface ProjectRowProps {
     row: ProjectMenuRow;
@@ -52,7 +47,7 @@ function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
 
     const project = (
         <Menu.Item
-            className={clsx('menu-item min-w-0 flex-1', (!summary.available || !row.connected) && 'opacity-50')}
+            className={clsx('min-w-0 flex-1', (!summary.available || !row.connected) && 'opacity-50')}
             disabled={!summary.available}
             onClick={() => openProjectAction(row.endpointId, summary.projectId)}
         >
@@ -86,30 +81,27 @@ function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
             </Tooltip>
             <Menu.SubmenuRoot>
                 <Menu.SubmenuTrigger
-                    className="menu-item project-menu-actions shrink-0"
+                    className="project-menu-actions shrink-0"
+                    chevron={false}
                     aria-label={t('projectMenu.actionsFor', { name: summary.name })}
                     label={t('projectMenu.actionsFor', { name: summary.name })}
                 >
                     <Icon icon={MoreHorizontal} size={14} />
                 </Menu.SubmenuTrigger>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
-                        <Menu.Popup className="menu-popup min-w-52">
-                            {summary.folder && (
-                                <Menu.Item className="menu-item" onClick={() => void reveal()}>
-                                    <Icon icon={ExternalLink} size={14} /> {t('projectMenu.openIn', { app: fileManagerName(actions.platform) })}
-                                </Menu.Item>
-                            )}
-                            <Menu.Item className="menu-item" onClick={actions.onSettings}>
-                                <Icon icon={Settings2} size={14} /> {t('projectMenu.projectSettings')}
-                            </Menu.Item>
-                            <Menu.Separator className={MENU_SEPARATOR} />
-                            <Menu.Item className="menu-item" onClick={actions.onClose}>
-                                <Icon icon={X} size={14} /> {t('projectMenu.closeProject')}
-                            </Menu.Item>
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
+                <Menu.Popup className="min-w-52">
+                    {summary.folder && (
+                        <Menu.Item onClick={() => void reveal()}>
+                            <Icon icon={ExternalLink} size={14} /> {t('projectMenu.openIn', { app: fileManagerName(actions.platform) })}
+                        </Menu.Item>
+                    )}
+                    <Menu.Item onClick={actions.onSettings}>
+                        <Icon icon={Settings2} size={14} /> {t('projectMenu.projectSettings')}
+                    </Menu.Item>
+                    <Menu.Separator />
+                    <Menu.Item onClick={actions.onClose}>
+                        <Icon icon={X} size={14} /> {t('projectMenu.closeProject')}
+                    </Menu.Item>
+                </Menu.Popup>
             </Menu.SubmenuRoot>
         </div>
     );
@@ -248,7 +240,7 @@ export function ProjectMenu() {
                     <span className="truncate text-sm font-medium text-text">{current?.name}</span>
                     <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
-                <MenuPopup className="min-w-60">
+                <Menu.Popup className="min-w-60">
                     {open.map((row) => (
                         <ProjectRow
                             key={`${row.endpointId}:${row.summary.projectId}`}
@@ -263,29 +255,24 @@ export function ProjectMenu() {
                     ))}
                     {recent.length > 0 && (
                         <>
-                            {open.length > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
+                            {open.length > 0 && <Menu.Separator />}
                             <Menu.SubmenuRoot>
-                                <Menu.SubmenuTrigger className="menu-item">
+                                <Menu.SubmenuTrigger>
                                     <Icon icon={History} size={14} /> {t('projectMenu.recent')}
-                                    <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
                                 </Menu.SubmenuTrigger>
-                                <Menu.Portal>
-                                    <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
-                                        <Menu.Popup className="menu-popup min-w-60">
-                                            {recent.map((row) => (
-                                                <ProjectRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} showMachine={showMachine} />
-                                            ))}
-                                        </Menu.Popup>
-                                    </Menu.Positioner>
-                                </Menu.Portal>
+                                <Menu.Popup className="min-w-60">
+                                    {recent.map((row) => (
+                                        <ProjectRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} showMachine={showMachine} />
+                                    ))}
+                                </Menu.Popup>
                             </Menu.SubmenuRoot>
                         </>
                     )}
-                    {(open.length > 0 || recent.length > 0) && <Menu.Separator className={MENU_SEPARATOR} />}
-                    <Menu.Item className="menu-item" onClick={() => useUi.getState().openFolderBrowser()}>
+                    {(open.length > 0 || recent.length > 0) && <Menu.Separator />}
+                    <Menu.Item onClick={() => useUi.getState().openFolderBrowser()}>
                         <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
                     </Menu.Item>
-                </MenuPopup>
+                </Menu.Popup>
             </Menu.Root>
 
             <ProjectSettingsDialog
@@ -303,7 +290,7 @@ export function ProjectMenu() {
                 confirmIcon={X}
                 danger={closing !== null && closing.otherClients === 0 && closing.sessions > 0}
                 onConfirm={() => void close()}
-                onClose={() => setClosing(null)}
+                onOpenChange={() => setClosing(null)}
             />
         </>
     );

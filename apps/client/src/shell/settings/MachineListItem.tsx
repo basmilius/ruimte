@@ -3,7 +3,8 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { describeConnection, describeLastSeen, describePing, reachabilityLabel } from '@/shell/connection-info';
-import { MasterItem } from '@ruimte/ui/settings/MasterDetail';
+import { MasterItem } from '@basmilius/react-ui/settings';
+import { Tooltip, useNow } from '@basmilius/react-ui';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';
 import { brokerRouteOf, useEndpoints, type Endpoint } from '@/state/endpoints';
@@ -11,8 +12,6 @@ import { useServers } from '@/state/server';
 import type { TransportStatus } from '@/transport';
 import { useLatency } from '@/transport/ping';
 import { useEndpointConnection, useLastSeenAt } from '@/transport/status';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { useNow } from '@ruimte/ui/useNow';
 
 const MINUTE_MS = 60_000;
 

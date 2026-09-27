@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import {
     Activity,
     AppWindow,
@@ -33,9 +32,21 @@ import {
     type AlertAction
 } from '@/processes/format';
 import { performAsPerson, performConfirmedAsPerson, runAsPerson } from '@/actions/client-actions';
-import { messageOf } from '@ruimte/ui/error-message';
+import {
+    messageOf,
+    Segmented,
+    Button,
+    Icon,
+    IconButton,
+    ListRow,
+    Menu,
+    Tooltip,
+    PanelEmpty,
+    PromptDialog,
+    SectionLabel,
+    ContextMenu
+} from '@basmilius/react-ui';
 import { projectNodes, revealNode } from '@/project/views';
-import { Segmented } from '@ruimte/ui/controls';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { ProcessChart } from '@/shell/panels/ProcessChart';
 import { niceScale } from '@ruimte/agents-react/usage/summary';
@@ -48,12 +59,6 @@ import { useServer } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
 import { useEndpointConnection } from '@/transport/status';
-import { Button } from '@ruimte/ui/Button';
-import { FLAT_ROW, MENU_HINT, MENU_LABEL, SECTION_LABEL } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { PanelEmpty } from '@ruimte/ui/PanelEmpty';
-import { PromptDialog } from '@ruimte/ui/PromptDialog';
 
 /* The two scopes and the three sortable columns as ids; their words come from `panels:processes`. */
 const SCOPES = ['ruimte', 'all'] as const;
@@ -137,24 +142,20 @@ function Numbers({ row }: { row: { cpu: number | null; memory: number | null; di
 function SignalMenu({ target, onSignal, onForce }: { target: Target; onSignal(target: Target, signal: ProcessSignal): void; onForce(target: Target): void }) {
     const { t } = useTranslation('panels');
     return (
-        <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-(--z-popup)">
-                <ContextMenu.Popup className="menu-popup">
-                    <div className={MENU_LABEL}>
-                        {target.name} ({target.pid})
-                    </div>
-                    <ContextMenu.Item className="menu-item" onClick={() => onSignal(target, 'SIGINT')}>
-                        <Icon icon={Pause} size={14} /> {t('processes.signal.interrupt')} <span className={MENU_HINT}>SIGINT</span>
-                    </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={() => onSignal(target, 'SIGTERM')}>
-                        <Icon icon={CircleStop} size={14} /> {t('processes.signal.terminate')} <span className={MENU_HINT}>SIGTERM</span>
-                    </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item text-status-error" onClick={() => onForce(target)}>
-                        <Icon icon={OctagonX} size={14} /> {t('processes.signal.forceQuit')} <span className={MENU_HINT}>SIGKILL</span>
-                    </ContextMenu.Item>
-                </ContextMenu.Popup>
-            </ContextMenu.Positioner>
-        </ContextMenu.Portal>
+        <ContextMenu.Popup>
+            <Menu.Label>
+                {target.name} ({target.pid})
+            </Menu.Label>
+            <ContextMenu.Item onClick={() => onSignal(target, 'SIGINT')}>
+                <Icon icon={Pause} size={14} /> {t('processes.signal.interrupt')} <Menu.Hint>SIGINT</Menu.Hint>
+            </ContextMenu.Item>
+            <ContextMenu.Item onClick={() => onSignal(target, 'SIGTERM')}>
+                <Icon icon={CircleStop} size={14} /> {t('processes.signal.terminate')} <Menu.Hint>SIGTERM</Menu.Hint>
+            </ContextMenu.Item>
+            <ContextMenu.Item className="text-status-error" onClick={() => onForce(target)}>
+                <Icon icon={OctagonX} size={14} /> {t('processes.signal.forceQuit')} <Menu.Hint>SIGKILL</Menu.Hint>
+            </ContextMenu.Item>
+        </ContextMenu.Popup>
     );
 }
 
@@ -165,11 +166,7 @@ function AlertLine({ alert, now, onAction, onDismiss }: { alert: ProcessAlert; n
             <div className="flex items-start gap-1.5">
                 <Icon icon={TriangleAlert} size={12} className="mt-0.5 text-status-needs-you" />
                 <p className="grow text-xs text-text">{alertText(alert, now)}</p>
-                <Tooltip label={t('action.dismiss')} name>
-                    <button className="icon-btn icon-btn-xs -my-1" onClick={onDismiss}>
-                        <Icon icon={X} size={12} />
-                    </button>
-                </Tooltip>
+                <IconButton icon={X} size="xs" label={t('action.dismiss')} className="-my-1" onClick={onDismiss} />
             </div>
             <div className="flex flex-wrap gap-1.5 pl-[18px]">
                 {alertActions(alert).map((action) => (
@@ -211,7 +208,7 @@ export function ProcessesPanel() {
         <PanelHeaderSlot>
             {machineName !== null && <span className="min-w-0 truncate text-xs text-text-muted">{machineName}</span>}
             <span className="grow" />
-            <Segmented value={scope} options={scopes} label={t('processes.scopeLabel')} onChange={(next) => useProcesses.getState().setScope(next)} />
+            <Segmented value={scope} options={scopes} label={t('processes.scopeLabel')} onValueChange={(next) => useProcesses.getState().setScope(next)} />
         </PanelHeaderSlot>
     );
 
@@ -363,13 +360,13 @@ export function ProcessesPanel() {
                 />
             </div>
             <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-border pr-3 pl-3">
-                <span className={clsx(SECTION_LABEL, 'grow')}>{t('processes.column.node')}</span>
+                <SectionLabel className="grow">{t('processes.column.node')}</SectionLabel>
                 {COLUMNS.map((column) => (
                     <Tooltip key={column.sort} label={t(`processes.sortBy.${column.sort}`)}>
-                        <button
+                        <SectionLabel
+                            render={<button type="button" />}
                             aria-pressed={sort === column.sort}
                             className={clsx(
-                                SECTION_LABEL,
                                 column.width,
                                 'group inline-flex shrink-0 items-center justify-end gap-0.5 hover:text-text',
                                 sort === column.sort && 'text-text'
@@ -380,7 +377,7 @@ export function ProcessesPanel() {
                                 other columns it shows under the pointer to say they sort as well. */}
                             <Icon icon={ArrowDown} size={12} className={clsx('shrink-0', sort !== column.sort && 'opacity-0 group-hover:opacity-100')} />
                             {t(`processes.column.${column.sort}`)}
-                        </button>
+                        </SectionLabel>
                     </Tooltip>
                 ))}
             </div>
@@ -395,15 +392,16 @@ export function ProcessesPanel() {
                     const reveal = group.nodeId !== null && known ? group.nodeId : null;
                     const here = placed.get(group.id) ?? [];
                     const groupRow = (
-                        <div className={`${FLAT_ROW} gap-1.5 pr-3 pl-1 hover:bg-surface-hover`}>
-                            <button
-                                className="icon-btn icon-btn-xs"
+                        <ListRow variant="flat" className="gap-1.5 pr-3 pl-1 hover:bg-surface-hover">
+                            <IconButton
+                                size="xs"
+                                label={open ? t('processes.collapse', { name: title }) : t('processes.expand', { name: title })}
+                                tooltip={false}
                                 aria-expanded={open}
-                                aria-label={open ? t('processes.collapse', { name: title }) : t('processes.expand', { name: title })}
                                 onClick={() => toggle(group.id)}
                             >
                                 <Icon icon={ChevronRight} size={12} className={clsx(open && 'rotate-90')} />
-                            </button>
+                            </IconButton>
                             <Icon icon={GROUP_ICONS[group.kind]} size={14} className="shrink-0 text-text-muted" />
                             {reveal !== null ? (
                                 <button className="min-w-0 truncate text-left text-sm text-text hover:underline" onClick={() => revealNode(reveal)}>
@@ -417,7 +415,7 @@ export function ProcessesPanel() {
                             {here.length > 0 && <Icon icon={TriangleAlert} size={12} className="shrink-0 text-status-needs-you" />}
                             <span className="grow" />
                             <Numbers row={group} />
-                        </div>
+                        </ListRow>
                     );
                     return (
                         <div key={group.id} className="border-b border-border-soft">
@@ -435,9 +433,9 @@ export function ProcessesPanel() {
                             {open &&
                                 group.processes.map((process) => {
                                     const line = (
-                                        <div
+                                        <ListRow
+                                            variant="flat"
                                             className={clsx(
-                                                FLAT_ROW,
                                                 'gap-1.5 pr-3 hover:bg-surface-hover',
                                                 highlight?.pid === process.pid && highlight.startTime === process.startTime && 'bg-surface-active'
                                             )}
@@ -450,7 +448,7 @@ export function ProcessesPanel() {
                                             {process.family !== null && <span className="shrink-0 text-xs text-text-faint">{process.family}</span>}
                                             <span className="grow" />
                                             <Numbers row={process} />
-                                        </div>
+                                        </ListRow>
                                     );
                                     const key = `${process.pid}:${process.startTime}`;
                                     return signalable(process) ? (
@@ -480,7 +478,7 @@ export function ProcessesPanel() {
                     }
                     setForcing(null);
                 }}
-                onClose={() => setForcing(null)}
+                onOpenChange={() => setForcing(null)}
             />
         </div>
     );

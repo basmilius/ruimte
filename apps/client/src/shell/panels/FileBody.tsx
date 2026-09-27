@@ -6,8 +6,7 @@ import { FileActionsContext } from '@/shell/panels/file-actions';
 import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { renderFile } from '@/shell/panels/renderers';
 import { useFileRead } from '@/shell/panels/use-file-read';
-import { Button } from '@ruimte/ui/Button';
-import { EmptyState } from '@ruimte/ui/EmptyState';
+import { Button, EmptyState } from '@basmilius/react-ui';
 
 /* The two states no renderer draws still carry the bar, so a file that will not read can be
    revealed, copied or put somewhere else, which is exactly what a path that went missing needs. */

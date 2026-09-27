@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
 import { AtSign, Columns2, Copy, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
 import { createNodeAction, createViewAction, runAsPerson } from '@/actions/client-actions';
 import { showFileOnCanvas } from '@/project/views';
@@ -10,9 +9,7 @@ import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { copyText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
+import { copyText, Icon, Menu } from '@basmilius/react-ui';
 
 /* Which of the three surfaces these items are on, since a file already on one does not offer to go
    there again: a node is not shown on the canvas twice and a view is not opened as one. */
@@ -48,11 +45,10 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
 
     return (
         <>
-            <Menu.Item className="menu-item" disabled={!revealableInFiles(folder, path)} onClick={() => void runAsPerson('file.reveal', { path })}>
+            <Menu.Item disabled={!revealableInFiles(folder, path)} onClick={() => void runAsPerson('file.reveal', { path })}>
                 <Icon icon={Folder} size={14} /> {t('file.menu.revealInFiles')}
             </Menu.Item>
             <Menu.Item
-                className="menu-item"
                 onClick={() => {
                     void transport.request('fs.reveal', { path }).catch(() => undefined);
                 }}
@@ -60,37 +56,37 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
                 <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
             </Menu.Item>
             {isHtmlName(name) && (
-                <Menu.Item className="menu-item" onClick={openInBrowserNode}>
+                <Menu.Item onClick={openInBrowserNode}>
                     <Icon icon={Globe} size={14} /> {t('file.menu.openInBrowser')}
                 </Menu.Item>
             )}
-            {(offerShow || offerView) && <Menu.Separator className={MENU_SEPARATOR} />}
+            {(offerShow || offerView) && <Menu.Separator />}
             {offerShow && (
-                <Menu.Item className="menu-item" onClick={() => void showFileOnCanvas(path)}>
+                <Menu.Item onClick={() => void showFileOnCanvas(path)}>
                     <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
                 </Menu.Item>
             )}
             {offerView && (
-                <Menu.Item className="menu-item" onClick={() => void createViewAction('file', { path })}>
+                <Menu.Item onClick={() => void createViewAction('file', { path })}>
                     <Icon icon={Columns2} size={14} /> {t('file.menu.openAsView')}
                 </Menu.Item>
             )}
-            <Menu.Separator className={MENU_SEPARATOR} />
-            <Menu.Item className="menu-item" onClick={() => void runAsPerson('file.copyPath', { path, relative: false })}>
+            <Menu.Separator />
+            <Menu.Item onClick={() => void runAsPerson('file.copyPath', { path, relative: false })}>
                 <Icon icon={Copy} size={14} /> {t('file.menu.copyPath')}
             </Menu.Item>
-            <Menu.Item className="menu-item" disabled={folder === null} onClick={() => void runAsPerson('file.copyPath', { path, relative: true })}>
+            <Menu.Item disabled={folder === null} onClick={() => void runAsPerson('file.copyPath', { path, relative: true })}>
                 <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
             </Menu.Item>
             {mention !== null && (
-                <Menu.Item className="menu-item" onClick={() => copyText(mention)}>
+                <Menu.Item onClick={() => copyText(mention)}>
                     <Icon icon={AtSign} size={14} /> {t('file.menu.copyMention')}
                 </Menu.Item>
             )}
             {onRefresh !== undefined && (
                 <>
-                    <Menu.Separator className={MENU_SEPARATOR} />
-                    <Menu.Item className="menu-item" onClick={onRefresh}>
+                    <Menu.Separator />
+                    <Menu.Item onClick={onRefresh}>
                         <Icon icon={RefreshCw} size={14} /> {t('file.menu.refresh')}
                     </Menu.Item>
                 </>

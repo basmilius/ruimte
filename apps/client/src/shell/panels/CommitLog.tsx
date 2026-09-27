@@ -1,18 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, GitCommitHorizontal } from 'lucide-react';
 import { GIT_GROUP } from '@/shell/panels/classes';
 import { performAsPerson } from '@/actions/client-actions';
 import { groupCommits, mergeLogs, relativeTime, type LoadedLog, type LogRow } from '@/shell/panels/commit-log';
 import { useTransport } from '@/transport/context';
-import { Button } from '@ruimte/ui/Button';
-import { FLAT_ROW, MENU_SEPARATOR, SECTION_LABEL } from '@ruimte/ui/classes';
-import { copyText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
-import { Pill } from '@ruimte/ui/Pill';
-import { PanelEmpty } from '@ruimte/ui/PanelEmpty';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Button, copyText, Icon, ListRow, Pill, PanelEmpty, SectionLabel, Tooltip, ContextMenu } from '@basmilius/react-ui';
 
 // One screen of rows at a time; the button at the end asks for the next.
 const PAGE = 30;
@@ -21,7 +14,7 @@ const PAGE = 30;
 const REFS_SHOWN = 2;
 
 /* A commit row is its own open button: the row's states with the columns of a row that opens. */
-const LOG_ROW = `${FLAT_ROW} group w-full min-w-0 gap-1.5 pr-1 pl-3 text-xs text-inherit hover:bg-surface-hover hover:text-text data-[selected]:bg-surface-active data-[selected]:text-text`;
+const LOG_ROW = `group w-full min-w-0 gap-1.5 pr-1 pl-3 text-xs text-inherit hover:bg-surface-hover hover:text-text data-[selected]:bg-surface-active data-[selected]:text-text`;
 
 /* The checkouts the log is read from, named so a row can say which one it came out of. The panel hands
    this list over memoized: a new one of the same checkouts would read every log again. */
@@ -122,12 +115,12 @@ export function CommitLog({ sources, reading, onOpen }: CommitLogProps) {
             {groupCommits(commits, now).map((section) => (
                 <section key={section.label}>
                     <header className={GIT_GROUP}>
-                        <span className={SECTION_LABEL}>{section.label}</span>
+                        <SectionLabel>{section.label}</SectionLabel>
                     </header>
                     {section.commits.map((commit) => (
                         <ContextMenu.Root key={`${commit.cwd}\u0000${commit.hash}`}>
                             <ContextMenu.Trigger
-                                render={<button />}
+                                render={<ListRow variant="flat" render={<button />} />}
                                 className={LOG_ROW}
                                 aria-current={commit.hash === reading}
                                 data-selected={commit.hash === reading || undefined}
@@ -151,22 +144,18 @@ export function CommitLog({ sources, reading, onOpen }: CommitLogProps) {
                                 <span className="truncate text-text-faint">{commit.author}</span>
                                 <span className="shrink-0 text-text-faint">{relativeTime(commit.at, now)}</span>
                             </ContextMenu.Trigger>
-                            <ContextMenu.Portal>
-                                <ContextMenu.Positioner className="z-(--z-popup)">
-                                    <ContextMenu.Popup className="menu-popup">
-                                        <ContextMenu.Item className="menu-item" onClick={() => onOpen(commit.cwd, commit)}>
-                                            <Icon icon={GitCommitHorizontal} size={14} /> {t('git.log.open')}
-                                        </ContextMenu.Item>
-                                        <ContextMenu.Separator className={MENU_SEPARATOR} />
-                                        <ContextMenu.Item className="menu-item" onClick={() => copyText(commit.hash)}>
-                                            <Icon icon={Copy} size={14} /> {t('file.tab.copyCommit')}
-                                        </ContextMenu.Item>
-                                        <ContextMenu.Item className="menu-item" onClick={() => copyText(commit.subject)}>
-                                            <Icon icon={Copy} size={14} /> {t('git.log.copySubject')}
-                                        </ContextMenu.Item>
-                                    </ContextMenu.Popup>
-                                </ContextMenu.Positioner>
-                            </ContextMenu.Portal>
+                            <ContextMenu.Popup>
+                                <ContextMenu.Item onClick={() => onOpen(commit.cwd, commit)}>
+                                    <Icon icon={GitCommitHorizontal} size={14} /> {t('git.log.open')}
+                                </ContextMenu.Item>
+                                <ContextMenu.Separator />
+                                <ContextMenu.Item onClick={() => copyText(commit.hash)}>
+                                    <Icon icon={Copy} size={14} /> {t('file.tab.copyCommit')}
+                                </ContextMenu.Item>
+                                <ContextMenu.Item onClick={() => copyText(commit.subject)}>
+                                    <Icon icon={Copy} size={14} /> {t('git.log.copySubject')}
+                                </ContextMenu.Item>
+                            </ContextMenu.Popup>
                         </ContextMenu.Root>
                     ))}
                 </section>

@@ -18,9 +18,7 @@ import { useEndpointId } from '@/state/keys';
 import { useUnsaved } from '@/state/text-drafts';
 import { CellViewContext } from '@/state/workspace-stores';
 import { useTransport } from '@/transport/context';
-import { Button } from '@ruimte/ui/Button';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { EmptyState } from '@ruimte/ui/EmptyState';
+import { Button, ButtonGroup, EmptyState } from '@basmilius/react-ui';
 
 type HtmlView = 'preview' | 'source';
 
@@ -168,7 +166,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
     }, []);
 
     const controls = (
-        <div className={BTN_GROUP}>
+        <ButtonGroup>
             <FileToolbarToggle
                 icon={Eye}
                 label={unsaved ? t('file.view.previewAfterSave') : t('file.view.preview')}
@@ -177,7 +175,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
                 onClick={() => setView('preview')}
             />
             <FileToolbarToggle icon={Code} label={t('file.view.source')} active={view === 'source'} onClick={() => setView('source')} />
-        </div>
+        </ButtonGroup>
     );
 
     return (

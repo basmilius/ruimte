@@ -7,13 +7,9 @@ import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
 import { DevicesPanel } from '@/shell/panels/DevicesPanel';
-import { SlidingColumn } from '@/shell/SlidingColumn';
-import { clampColumnSize } from '@ruimte/ui/useColumnResize';
+import { clampColumnSize, ErrorBoundary, CloseButton, SlidingColumn, lazyNamed, PanelHeader, SectionLabel } from '@basmilius/react-ui';
+import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useUi, type PanelKind } from '@/state/ui';
-import { PANEL_HEADER, SECTION_LABEL } from '@ruimte/ui/classes';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { lazyNamed } from '@/ui/lazy';
-import { CloseButton } from '@ruimte/ui/CloseButton';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 const GitPanel = lazyNamed(() => import('@/shell/panels/GitPanel'), 'GitPanel');
@@ -49,16 +45,18 @@ export function Panel() {
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
     const width = clampColumnSize(bounds, stored ?? DEFAULT_WIDTH);
 
+    const instant = useInstantWidth();
+
     const label = entry === undefined ? t('panel.fallback') : t(`panel.names.${entry.kind}`);
 
     return (
-        <SlidingColumn open={open} width={width} bounds={bounds} onWidth={(next) => useUi.getState().setPanelWidth(next)}>
+        <SlidingColumn open={open} width={width} bounds={bounds} instant={instant} onWidthChange={(next) => useUi.getState().setPanelWidth(next)}>
             {/* An open panel is the rightmost column, so on Windows and Linux the close button
                         would land under the native window controls; the inset keeps their width free. */}
-            <header className={clsx(PANEL_HEADER, 'app-drag', open && hasOverlayControls() && 'toolbar-overlay-inset')}>
+            <PanelHeader className={clsx('app-drag', open && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <div ref={setLeadingHeaderSlot} className="contents" />
                 <div ref={setTitleSignal} className="panel-title-signal hidden" />
-                <span className={`${SECTION_LABEL} panel-title shrink-0`}>{label}</span>
+                <SectionLabel className="panel-title shrink-0">{label}</SectionLabel>
                 {/* The panel's own controls, between its name and the close button. */}
                 <div ref={setHeaderSlot} className="flex min-w-0 grow items-center gap-2" />
                 <CloseButton
@@ -66,7 +64,7 @@ export function Panel() {
                     kbd={CANVAS_SHORTCUTS.togglePanel}
                     onClick={() => useUi.getState().setPanel({ open: false })}
                 />
-            </header>
+            </PanelHeader>
             <PanelHeaderProvider hosts={{ leading: leadingHeaderSlot, titleSignal, trailing: headerSlot }}>
                 <ErrorBoundary label={t('panel.failed')} resetKeys={[panel.kind]} className="min-h-0 grow">
                     <Suspense fallback={<div className="min-h-0 grow" />}>

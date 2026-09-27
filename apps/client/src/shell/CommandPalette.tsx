@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import {
     ArrowLeft,
     CaseSensitive,
@@ -61,7 +60,20 @@ import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-rece
 import { absoluteOf, basenameOf } from '@/shell/panels/files-tree';
 import { iconOfEntry } from '@/shell/settings/machine-icon';
 import { mergeMachines } from '@/shell/settings/machine-list';
-import { messageOf } from '@ruimte/ui/error-message';
+import {
+    messageOf,
+    Button,
+    ButtonGroup,
+    FileIcon,
+    Icon,
+    IconButton,
+    SectionLabel,
+    Tooltip,
+    Kbd,
+    KEY_SHORTCUTS,
+    matchesShortcut,
+    Dialog
+} from '@basmilius/react-ui';
 import { usePulsarAccount } from '@/pulsar/account';
 import { refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { useCanvas } from '@/state/canvas';
@@ -78,14 +90,7 @@ import { useFocusedMachine } from '@/transport/connections';
 import type { Transport } from '@/transport/transport';
 import { useConnections, useOpenEndpoints } from '@/transport/status';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
-import { Button } from '@ruimte/ui/Button';
-import { BTN_GROUP, SECTION_LABEL, TOOLTIP_KBD } from '@ruimte/ui/classes';
-import { FileIcon } from '@ruimte/ui/FileIcon';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 import { viewShortcut } from '@/canvas/shortcuts';
-import { Kbd } from '@ruimte/ui/Kbd';
-import { KEY_SHORTCUTS, matchesShortcut } from '@ruimte/ui/shortcut';
 
 const KIND_ICON: Record<CanvasNodeKind, React.ReactNode> = {
     terminal: <Icon icon={Terminal} size={14} />,
@@ -163,17 +168,15 @@ const matches = (query: string, text: string): boolean => {
    other toggle in the app uses. */
 function SearchToggle({ icon, label, active, onClick }: { icon: LucideIcon; label: string; active: boolean; onClick: () => void }) {
     return (
-        <Tooltip label={label} name>
-            <button
-                className="icon-btn icon-btn-sm"
-                aria-pressed={active}
-                // The field keeps the keys; a toggle that takes focus would swallow the next arrow.
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={onClick}
-            >
-                <Icon icon={icon} size={14} />
-            </button>
-        </Tooltip>
+        <IconButton
+            icon={icon}
+            size="sm"
+            label={label}
+            aria-pressed={active}
+            // The field keeps the keys; a toggle that takes focus would swallow the next arrow.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onClick}
+        />
     );
 }
 
@@ -820,298 +823,299 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
 
     return (
         <Dialog.Root open={open && entered} onOpenChange={setOpen} onOpenChangeComplete={(isOpen) => !isOpen && onClosed()}>
-            <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup
-                    /* Wider while searching in files, since a hit is read in the lines around it and those
+            <Dialog.Popup
+                /* Wider while searching in files, since a hit is read in the lines around it and those
                        lines are source, which does not fold. Never centered either: the popup grows and
                        shrinks with every keystroke, and a centered list would walk up the screen as you type. */
-                    className={clsx('dialog-popup top-[18vh] [translate:-50%_0]', grepping ? 'w-[760px]' : 'w-[576px]')}
-                    initialFocus={inputRef}
-                >
-                    <div className="flex items-center gap-2 border-b border-border px-3">
-                        {/* The leading slot is the way one step back, and on the folders of a machine
+                className={clsx('top-[18vh] [translate:-50%_0]', grepping ? 'w-[760px]' : 'w-[576px]')}
+                initialFocus={inputRef}
+            >
+                <div className="flex items-center gap-2 border-b border-border px-3">
+                    {/* The leading slot is the way one step back, and on the folders of a machine
                             it says which machine that is. With one machine there is nothing to name,
                             so it is the plain arrow that leaves browsing. */}
-                        {browsing && (
-                            <Tooltip label={backLabel} kbd={KEY_SHORTCUTS.backspace}>
-                                <Button
-                                    size="xs"
-                                    // The field keeps the keys; a control that takes focus would swallow the next arrow.
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    onClick={stepBack}
-                                    aria-label={backLabel}
-                                >
-                                    {backTo !== 'machines' ? (
-                                        <Icon icon={ArrowLeft} size={14} />
-                                    ) : (
-                                        <>
-                                            {/* The icon, not a dot: it is the machine's own mark, the rows
+                    {browsing && (
+                        <Tooltip label={backLabel} kbd={KEY_SHORTCUTS.backspace}>
+                            <Button
+                                size="xs"
+                                // The field keeps the keys; a control that takes focus would swallow the next arrow.
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={stepBack}
+                                aria-label={backLabel}
+                            >
+                                {backTo !== 'machines' ? (
+                                    <Icon icon={ArrowLeft} size={14} />
+                                ) : (
+                                    <>
+                                        {/* The icon, not a dot: it is the machine's own mark, the rows
                                                 behind this button carry the same one, and a machine whose
                                                 folders are on screen is answering by definition. */}
-                                            <MachineGlyph icon={browseIcon} size={14} />
-                                            <span className="max-w-32 truncate">{browseLabel}</span>
-                                        </>
-                                    )}
-                                </Button>
-                            </Tooltip>
-                        )}
-                        {grepping && <Icon icon={FileSearch} size={14} className="shrink-0 text-accent" />}
-                        {picking && <Icon icon={FileText} size={14} className="shrink-0 text-accent" />}
-                        {!browsing && !grepping && !picking && <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />}
-                        <input
-                            ref={inputRef}
-                            role="combobox"
-                            aria-expanded
-                            aria-controls={LIST_ID}
-                            aria-autocomplete="list"
-                            aria-activedescendant={
-                                grepping ? (activeHit >= 0 ? optionId(activeHit) : undefined) : active ? optionId(entries.indexOf(active)) : undefined
-                            }
-                            aria-label={grepping ? t('palette.searchFiles') : picking ? t('palette.pickFile') : t('palette.inputLabel')}
-                            /* A path stays in the same sans font as everything else: monospace makes
+                                        <MachineGlyph icon={browseIcon} size={14} />
+                                        <span className="max-w-32 truncate">{browseLabel}</span>
+                                    </>
+                                )}
+                            </Button>
+                        </Tooltip>
+                    )}
+                    {grepping && <Icon icon={FileSearch} size={14} className="shrink-0 text-accent" />}
+                    {picking && <Icon icon={FileText} size={14} className="shrink-0 text-accent" />}
+                    {!browsing && !grepping && !picking && <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />}
+                    <input
+                        ref={inputRef}
+                        role="combobox"
+                        aria-expanded
+                        aria-controls={LIST_ID}
+                        aria-autocomplete="list"
+                        aria-activedescendant={
+                            grepping ? (activeHit >= 0 ? optionId(activeHit) : undefined) : active ? optionId(entries.indexOf(active)) : undefined
+                        }
+                        aria-label={grepping ? t('palette.searchFiles') : picking ? t('palette.pickFile') : t('palette.inputLabel')}
+                        /* A path stays in the same sans font as everything else: monospace makes
                                it read as something to be read rather than something to be typed. */
-                            className={clsx(
-                                'h-11 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint',
-                                grepping && 'font-mono text-code'
-                            )}
-                            placeholder={
-                                grepping
-                                    ? t('palette.searchFiles')
-                                    : picking
-                                      ? t('palette.pickFile')
-                                      : machineStep
-                                        ? t('palette.searchMachines')
-                                        : browsing
-                                          ? t('palette.pathPlaceholder')
-                                          : t('palette.placeholder')
-                            }
-                            value={query}
-                            spellCheck={false}
-                            onChange={(e) => reset(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'ArrowDown') {
-                                    e.preventDefault();
-                                    setIndex((i) => (count === 0 ? 0 : (i + 1) % count));
-                                } else if (e.key === 'ArrowUp') {
-                                    e.preventDefault();
-                                    setIndex((i) => (count === 0 ? 0 : (i - 1 + count) % count));
-                                } else if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    if (grepping) {
-                                        runHit(activeHit);
-                                    } else if (linkWait !== null) {
-                                        if (linkWait.state === 'failed') {
-                                            retry();
-                                        }
-                                    } else if (
-                                        browsing &&
-                                        !machineStep &&
-                                        (active === undefined || matchesShortcut(KEY_SHORTCUTS.modEnter, e, isApplePlatform()))
-                                    ) {
-                                        void submitPath(query);
-                                    } else {
-                                        run(active);
+                        className={clsx(
+                            'h-11 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint',
+                            grepping && 'font-mono text-code'
+                        )}
+                        placeholder={
+                            grepping
+                                ? t('palette.searchFiles')
+                                : picking
+                                  ? t('palette.pickFile')
+                                  : machineStep
+                                    ? t('palette.searchMachines')
+                                    : browsing
+                                      ? t('palette.pathPlaceholder')
+                                      : t('palette.placeholder')
+                        }
+                        value={query}
+                        spellCheck={false}
+                        onChange={(e) => reset(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                setIndex((i) => (count === 0 ? 0 : (i + 1) % count));
+                            } else if (e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                setIndex((i) => (count === 0 ? 0 : (i - 1 + count) % count));
+                            } else if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (grepping) {
+                                    runHit(activeHit);
+                                } else if (linkWait !== null) {
+                                    if (linkWait.state === 'failed') {
+                                        retry();
                                     }
-                                } else if (e.key === 'Tab' && browsing && !machineStep && active?.browsePath) {
-                                    // Completes the field to the folder under the highlight, without stepping into it.
-                                    e.preventDefault();
-                                    setQuery(active.browsePath);
-                                    setIndex(0);
-                                } else if (e.key === 'Backspace' && query === '') {
-                                    if (grepping) {
-                                        // The mode leaves the way it was entered: one key, nothing typed.
-                                        e.preventDefault();
-                                        useUi.getState().setPaletteMode('default');
-                                    } else if (browsing) {
-                                        e.preventDefault();
-                                        stepBack();
-                                    }
+                                } else if (
+                                    browsing &&
+                                    !machineStep &&
+                                    (active === undefined || matchesShortcut(KEY_SHORTCUTS.modEnter, e, isApplePlatform()))
+                                ) {
+                                    void submitPath(query);
+                                } else {
+                                    run(active);
                                 }
-                            }}
-                        />
-                        {grepping && (
-                            <span className={BTN_GROUP}>
-                                <SearchToggle
-                                    icon={CaseSensitive}
-                                    label={t('palette.matchCase')}
-                                    active={grepOptions.caseSensitive}
-                                    onClick={() => setGrepOptions((current) => ({ ...current, caseSensitive: !current.caseSensitive }))}
-                                />
-                                <SearchToggle
-                                    icon={WholeWord}
-                                    label={t('palette.wholeWords')}
-                                    active={grepOptions.wholeWord}
-                                    onClick={() => setGrepOptions((current) => ({ ...current, wholeWord: !current.wholeWord }))}
-                                />
-                                <SearchToggle
-                                    icon={Regex}
-                                    label={t('palette.regex')}
-                                    active={grepOptions.regex}
-                                    onClick={() => setGrepOptions((current) => ({ ...current, regex: !current.regex }))}
-                                />
-                            </span>
-                        )}
-                        {/* The button that opens what was typed sits in the field, at its right end,
-                            carrying the one shortcut that does the same thing. */}
-                        {browsing && !machineStep && linkWait === null && (
-                            <Tooltip label={submitLabel} kbd={submitShortcut}>
-                                <Button size="sm" variant="secondary" disabled={query.trim() === ''} onClick={() => submitPath(query)}>
-                                    {submitLabel}
-                                    <Kbd shortcut={submitShortcut} variant="inline" />
-                                </Button>
-                            </Tooltip>
-                        )}
-                        {!browsing && <Kbd shortcut={KEY_SHORTCUTS.escape} variant="inline" />}
-                    </div>
-                    <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label={t('palette.results')}>
-                        <div aria-live="polite">
-                            {entries.length === 0 && !browsing && !grepping && !picking && (
-                                <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.noMatch')}</div>
-                            )}
-                            {picking && entries.length === 0 && (
-                                <div className="px-3 py-6 text-center text-xs text-text-faint">
-                                    {folder === null ? t('palette.noProjectFolder') : t('palette.noFileMatch')}
-                                </div>
-                            )}
-                            {grepping && query.trim() !== '' && !grep.busy && grep.failure === null && grep.matches.length === 0 && (
-                                <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.noLineMatch')}</div>
-                            )}
-                            {grepping && query.trim() === '' && (
-                                <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.typeToSearch')}</div>
-                            )}
-                            {machineStep && entries.length === 0 && (
-                                <div className="px-3 py-6 text-center text-xs text-text-faint">
-                                    {machines.length === 0 ? t('palette.noMachineYet') : t('palette.noMachineMatch')}
-                                </div>
-                            )}
-                            {/* The machine whose folders were asked for, while its link comes up or after it did not. */}
-                            {linkWait !== null && (
-                                <div className="flex flex-col items-center gap-2 px-3 py-6 text-center text-xs text-text-faint">
-                                    <MachineGlyph icon={browseIcon} size={20} className="text-text-muted" />
-                                    {linkWait.state === 'connecting' ? (
-                                        <span role="status">
-                                            {browseRow?.entry.endpoint?.pairedBy === 'statement' || browseRow?.entry.endpoint === null
-                                                ? t('palette.connectingThroughAccount', { machine: browseLabel })
-                                                : t('switch.connecting', { machine: browseLabel })}
-                                        </span>
-                                    ) : (
-                                        <>
-                                            <span className="text-text-muted">{t('palette.notReachable', { machine: browseLabel })}</span>
-                                            <span className="max-w-md text-status-error" role="alert">
-                                                {linkWait.reason}
-                                            </span>
-                                            <Button size="sm" variant="secondary" onClick={retry}>
-                                                {t('common:action.retry')}
-                                                <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" />
-                                            </Button>
-                                        </>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        {grepping && (
-                            <PaletteGrepResults
-                                matches={grep.matches}
-                                active={activeHit}
-                                optionId={optionId}
-                                onHover={(at) => setIndex(at)}
-                                onRun={(at) => runHit(at)}
+                            } else if (e.key === 'Tab' && browsing && !machineStep && active?.browsePath) {
+                                // Completes the field to the folder under the highlight, without stepping into it.
+                                e.preventDefault();
+                                setQuery(active.browsePath);
+                                setIndex(0);
+                            } else if (e.key === 'Backspace' && query === '') {
+                                if (grepping) {
+                                    // The mode leaves the way it was entered: one key, nothing typed.
+                                    e.preventDefault();
+                                    useUi.getState().setPaletteMode('default');
+                                } else if (browsing) {
+                                    e.preventDefault();
+                                    stepBack();
+                                }
+                            }
+                        }}
+                    />
+                    {grepping && (
+                        <ButtonGroup render={<span />}>
+                            <SearchToggle
+                                icon={CaseSensitive}
+                                label={t('palette.matchCase')}
+                                active={grepOptions.caseSensitive}
+                                onClick={() => setGrepOptions((current) => ({ ...current, caseSensitive: !current.caseSensitive }))}
                             />
+                            <SearchToggle
+                                icon={WholeWord}
+                                label={t('palette.wholeWords')}
+                                active={grepOptions.wholeWord}
+                                onClick={() => setGrepOptions((current) => ({ ...current, wholeWord: !current.wholeWord }))}
+                            />
+                            <SearchToggle
+                                icon={Regex}
+                                label={t('palette.regex')}
+                                active={grepOptions.regex}
+                                onClick={() => setGrepOptions((current) => ({ ...current, regex: !current.regex }))}
+                            />
+                        </ButtonGroup>
+                    )}
+                    {/* The button that opens what was typed sits in the field, at its right end,
+                            carrying the one shortcut that does the same thing. */}
+                    {browsing && !machineStep && linkWait === null && (
+                        <Tooltip label={submitLabel} kbd={submitShortcut}>
+                            <Button size="sm" variant="secondary" disabled={query.trim() === ''} onClick={() => submitPath(query)}>
+                                {submitLabel}
+                                <Kbd shortcut={submitShortcut} variant="inline" />
+                            </Button>
+                        </Tooltip>
+                    )}
+                    {!browsing && <Kbd shortcut={KEY_SHORTCUTS.escape} variant="inline" />}
+                </div>
+                <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label={t('palette.results')}>
+                    <div aria-live="polite">
+                        {entries.length === 0 && !browsing && !grepping && !picking && (
+                            <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.noMatch')}</div>
                         )}
-                        {/* An empty folder is the label with nothing under it: no spinner, no message,
-                            and the previous listing stays up until the next one lands. */}
-                        {browsing && !machineStep && linkWait === null && entries.length === 0 && (
-                            <div className={`${SECTION_LABEL} px-2.5 pt-1.5 pb-1`}>{t('palette.sections.folders')}</div>
+                        {picking && entries.length === 0 && (
+                            <div className="px-3 py-6 text-center text-xs text-text-faint">
+                                {folder === null ? t('palette.noProjectFolder') : t('palette.noFileMatch')}
+                            </div>
                         )}
-                        {entries.map((entry, i) => {
-                            const first = i === 0 || entries[i - 1]!.section !== entry.section;
-                            return (
-                                <div key={entry.id}>
-                                    {first && <div className={`${SECTION_LABEL} px-2.5 pt-1.5 pb-1`}>{t(`palette.sections.${entry.section}`)}</div>}
-                                    <button
-                                        id={optionId(i)}
-                                        role="option"
-                                        aria-selected={entry === active}
-                                        data-active={entry === active}
-                                        className="cursor-row flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-text-muted"
-                                        onMouseEnter={() => setIndex(i)}
-                                        onClick={() => run(entry)}
-                                    >
-                                        <span className="shrink-0 text-text-faint">{entry.icon}</span>
-                                        <span className="min-w-0 truncate">{entry.label}</span>
-                                        {entry.hint && <span className="text-xs text-text-faint">{entry.hint}</span>}
-                                        <span className="grow" />
-                                        {entry.trailing}
-                                        {entry.shortcut && <Kbd shortcut={entry.shortcut} variant="inline" />}
-                                    </button>
-                                </div>
-                            );
-                        })}
-                        {/* fs.browse says whether the typed folder exists, so a missing one can be offered for creation. */}
-                        {presence === 'missing' && <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.createHint')}</div>}
+                        {grepping && query.trim() !== '' && !grep.busy && grep.failure === null && grep.matches.length === 0 && (
+                            <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.noLineMatch')}</div>
+                        )}
+                        {grepping && query.trim() === '' && <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.typeToSearch')}</div>}
+                        {machineStep && entries.length === 0 && (
+                            <div className="px-3 py-6 text-center text-xs text-text-faint">
+                                {machines.length === 0 ? t('palette.noMachineYet') : t('palette.noMachineMatch')}
+                            </div>
+                        )}
+                        {/* The machine whose folders were asked for, while its link comes up or after it did not. */}
+                        {linkWait !== null && (
+                            <div className="flex flex-col items-center gap-2 px-3 py-6 text-center text-xs text-text-faint">
+                                <MachineGlyph icon={browseIcon} size={20} className="text-text-muted" />
+                                {linkWait.state === 'connecting' ? (
+                                    <span role="status">
+                                        {browseRow?.entry.endpoint?.pairedBy === 'statement' || browseRow?.entry.endpoint === null
+                                            ? t('palette.connectingThroughAccount', { machine: browseLabel })
+                                            : t('switch.connecting', { machine: browseLabel })}
+                                    </span>
+                                ) : (
+                                    <>
+                                        <span className="text-text-muted">{t('palette.notReachable', { machine: browseLabel })}</span>
+                                        <span className="max-w-md text-status-error" role="alert">
+                                            {linkWait.reason}
+                                        </span>
+                                        <Button size="sm" variant="secondary" onClick={retry}>
+                                            {t('common:action.retry')}
+                                            <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" />
+                                        </Button>
+                                    </>
+                                )}
+                            </div>
+                        )}
                     </div>
                     {grepping && (
-                        <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
-                            {grep.failure !== null ? (
-                                <span className="text-status-error" role="alert">
-                                    {grep.failure}
-                                </span>
-                            ) : (
-                                <span>
-                                    {grep.matches.length === 0
-                                        ? t('palette.nothingYet')
-                                        : t('palette.grepCount', { count: grep.files, hits: `${grep.matches.length}${grep.truncated ? '+' : ''}` })}
-                                </span>
-                            )}
-                            <span className="grow" />
-                            <span>
-                                <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" /> {t('palette.grepEnterHint')}{' '}
-                                <Kbd shortcut={KEY_SHORTCUTS.backspace} variant="inline" /> {t('palette.grepBackHint')}
-                            </span>
-                        </div>
+                        <PaletteGrepResults
+                            matches={grep.matches}
+                            active={activeHit}
+                            optionId={optionId}
+                            onHover={(at) => setIndex(at)}
+                            onRun={(at) => runHit(at)}
+                        />
                     )}
-                    {browsing && (
-                        <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
-                            <span className="flex shrink-0 items-center gap-1.5">
-                                <kbd className={TOOLTIP_KBD}>↑</kbd>
-                                <kbd className={TOOLTIP_KBD}>↓</kbd> {t('palette.navigate')}
-                            </span>
-                            {/* The Enter hint is left out once the typed path can be opened, because
-                                the button in the field is already saying so. */}
-                            {linkWait === null && (active !== undefined || query.trim() === '') && (
-                                <span className="flex shrink-0 items-center gap-1.5">
-                                    <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" /> {t('common:action.select')}
-                                </span>
-                            )}
-                            <span className="flex shrink-0 items-center gap-1.5">
-                                <Kbd shortcut={KEY_SHORTCUTS.backspace} variant="inline" /> {t('projectBanner.back')}
-                            </span>
-                            <span className="flex shrink-0 items-center gap-1.5">
-                                <Kbd shortcut={KEY_SHORTCUTS.escape} variant="inline" /> {t('common:action.close')}
-                            </span>
-                            <span className="grow" />
-                            {failure && (
-                                <span className="truncate text-status-error" role="alert">
-                                    {failure}
-                                </span>
-                            )}
-                            {/* A native dialog can only see the file system of the machine it runs on. */}
-                            {!machineStep && linkWait === null && nativeDialog !== null && (
-                                <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() =>
-                                        void nativeDialog.pickFolder(listing?.result?.parentPath).then((picked) => (picked ? submitPath(picked) : undefined))
-                                    }
+                    {/* An empty folder is the label with nothing under it: no spinner, no message,
+                            and the previous listing stays up until the next one lands. */}
+                    {browsing && !machineStep && linkWait === null && entries.length === 0 && (
+                        <SectionLabel render={<div />} className="px-2.5 pt-1.5 pb-1">
+                            {t('palette.sections.folders')}
+                        </SectionLabel>
+                    )}
+                    {entries.map((entry, i) => {
+                        const first = i === 0 || entries[i - 1]!.section !== entry.section;
+                        return (
+                            <div key={entry.id}>
+                                {first && (
+                                    <SectionLabel render={<div />} className="px-2.5 pt-1.5 pb-1">
+                                        {t(`palette.sections.${entry.section}`)}
+                                    </SectionLabel>
+                                )}
+                                <button
+                                    id={optionId(i)}
+                                    role="option"
+                                    aria-selected={entry === active}
+                                    data-active={entry === active}
+                                    className="cursor-row flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-text-muted"
+                                    onMouseEnter={() => setIndex(i)}
+                                    onClick={() => run(entry)}
                                 >
-                                    {t('palette.browseIn', { app: fileManagerName(nativeDialog.platform) })}
-                                </Button>
-                            )}
-                        </div>
-                    )}
-                </Dialog.Popup>
-            </Dialog.Portal>
+                                    <span className="shrink-0 text-text-faint">{entry.icon}</span>
+                                    <span className="min-w-0 truncate">{entry.label}</span>
+                                    {entry.hint && <span className="text-xs text-text-faint">{entry.hint}</span>}
+                                    <span className="grow" />
+                                    {entry.trailing}
+                                    {entry.shortcut && <Kbd shortcut={entry.shortcut} variant="inline" />}
+                                </button>
+                            </div>
+                        );
+                    })}
+                    {/* fs.browse says whether the typed folder exists, so a missing one can be offered for creation. */}
+                    {presence === 'missing' && <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.createHint')}</div>}
+                </div>
+                {grepping && (
+                    <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
+                        {grep.failure !== null ? (
+                            <span className="text-status-error" role="alert">
+                                {grep.failure}
+                            </span>
+                        ) : (
+                            <span>
+                                {grep.matches.length === 0
+                                    ? t('palette.nothingYet')
+                                    : t('palette.grepCount', { count: grep.files, hits: `${grep.matches.length}${grep.truncated ? '+' : ''}` })}
+                            </span>
+                        )}
+                        <span className="grow" />
+                        <span>
+                            <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" /> {t('palette.grepEnterHint')}{' '}
+                            <Kbd shortcut={KEY_SHORTCUTS.backspace} variant="inline" /> {t('palette.grepBackHint')}
+                        </span>
+                    </div>
+                )}
+                {browsing && (
+                    <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
+                        <span className="flex shrink-0 items-center gap-1.5">
+                            <Kbd variant="inline">↑</Kbd>
+                            <Kbd variant="inline">↓</Kbd> {t('palette.navigate')}
+                        </span>
+                        {/* The Enter hint is left out once the typed path can be opened, because
+                                the button in the field is already saying so. */}
+                        {linkWait === null && (active !== undefined || query.trim() === '') && (
+                            <span className="flex shrink-0 items-center gap-1.5">
+                                <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" /> {t('common:action.select')}
+                            </span>
+                        )}
+                        <span className="flex shrink-0 items-center gap-1.5">
+                            <Kbd shortcut={KEY_SHORTCUTS.backspace} variant="inline" /> {t('projectBanner.back')}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-1.5">
+                            <Kbd shortcut={KEY_SHORTCUTS.escape} variant="inline" /> {t('common:action.close')}
+                        </span>
+                        <span className="grow" />
+                        {failure && (
+                            <span className="truncate text-status-error" role="alert">
+                                {failure}
+                            </span>
+                        )}
+                        {/* A native dialog can only see the file system of the machine it runs on. */}
+                        {!machineStep && linkWait === null && nativeDialog !== null && (
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() =>
+                                    void nativeDialog.pickFolder(listing?.result?.parentPath).then((picked) => (picked ? submitPath(picked) : undefined))
+                                }
+                            >
+                                {t('palette.browseIn', { app: fileManagerName(nativeDialog.platform) })}
+                            </Button>
+                        )}
+                    </div>
+                )}
+            </Dialog.Popup>
         </Dialog.Root>
     );
 }

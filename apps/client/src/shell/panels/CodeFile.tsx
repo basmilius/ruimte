@@ -4,7 +4,8 @@ import type { FsReadText } from '@ruimte/contracts';
 import type { Editor } from '@ruimte/editor';
 import { FindBar } from '@/find/FindBar';
 import { useFind } from '@/find/use-find';
-import { formatNumber } from '@ruimte/ui/format/number';
+import { formatNumber } from '@basmilius/react-ui/format';
+import { Button, ErrorBoundary, Pill, Tooltip } from '@basmilius/react-ui';
 import { DraftBar, EditorNotice } from '@/shell/panels/DraftBar';
 import type { EditBlock } from '@/shell/panels/edit-gate';
 import { useFileActions } from '@/shell/panels/file-actions';
@@ -17,10 +18,6 @@ import { useFileEditing } from '@/shell/panels/use-file-editing';
 import { useCodeTheme } from '@/state/code-theme';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
-import { Button } from '@ruimte/ui/Button';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Pill } from '@ruimte/ui/Pill';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 
 // One screen of code, near enough. Small enough to highlight without a stutter, large enough that a
 // long file is a handful of blocks instead of thousands.

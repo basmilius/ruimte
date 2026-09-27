@@ -4,7 +4,7 @@ import { performAsPerson } from '@/actions/client-actions';
 import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { PromptDialog } from '@ruimte/ui/PromptDialog';
+import { PromptDialog } from '@basmilius/react-ui';
 
 // A group's title, as a branch name git accepts.
 const branchFromTitle = (title: string): string =>
@@ -51,7 +51,7 @@ export function WorktreeDialog() {
             confirmDisabled={!folder}
             fallbackMessage={t('worktreeDialog.failed')}
             onConfirm={submit}
-            onClose={() => close(null)}
+            onOpenChange={() => close(null)}
         />
     );
 }

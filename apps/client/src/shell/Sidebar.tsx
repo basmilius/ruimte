@@ -1,6 +1,4 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactElement, type ReactNode } from 'react';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Menu } from '@base-ui-components/react/menu';
 import {
     ChartNoAxesColumn,
     ChevronRight,
@@ -66,8 +64,7 @@ import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { FlagMark } from '@/project/FlagMark';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { Brand } from '@/ui/Brand';
-import { INSET_ROW, MENU_HINT, SECTION_LABEL } from '@ruimte/ui/classes';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Tooltip, Icon, IconButton, Input, ListRow, Menu, ContextMenu, SectionLabel } from '@basmilius/react-ui';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';
@@ -78,8 +75,6 @@ import { UsageLimitsCard } from '@ruimte/agents-react/usage/UsageLimitsCard';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { FolderMenuItems } from '@/shell/FolderMenuItems';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useSettings } from '@/state/settings';
 import { useProject } from '@/state/project';
@@ -111,7 +106,7 @@ const ROW_ICON: Record<CanvasNodeKind, typeof Terminal> = {
     unknown: CircleQuestionMark
 };
 
-const ROW = `${INSET_ROW} w-full gap-2 text-left text-sm`;
+const ROW = 'w-full gap-2 text-left text-sm';
 /* Where a dragged row would land. It sits in the gap, so the rows around it do not move while
    the pointer travels. */
 const INSERT_LINE = 'pointer-events-none -my-px h-0.5 shrink-0 rounded-full bg-accent';
@@ -170,11 +165,12 @@ function MaybeTooltip({ label, children }: { label: string | null | undefined; c
 
 function RenameField({ value, onDone }: { value: string; onDone(next: string | null): void }) {
     return (
-        <input
+        <Input
             autoFocus
             defaultValue={value}
             maxLength={MAX_TITLE_LENGTH}
-            className="field field-sm min-w-0 grow text-sm"
+            size="sm"
+            className="min-w-0 grow text-sm"
             onFocus={(e) => e.currentTarget.select()}
             onBlur={(e) => onDone(e.currentTarget.value.trim() || null)}
             onKeyDown={(e) => {
@@ -233,7 +229,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow, snoozable }: RowProps & { ro
     const [renaming, setRenaming] = useState(false);
     if (renaming) {
         return (
-            <div className={`${ROW} pl-6`}>
+            <ListRow variant="inset" className={`${ROW} pl-6`}>
                 <span className={ICON_SLOT}>
                     <RowIcon id={node.id} kind={node.kind} provider={node.provider} className="text-text-muted" />
                 </span>
@@ -248,14 +244,14 @@ function NodeRow({ row, tabbable, onFocus, onArrow, snoozable }: RowProps & { ro
                         setRenaming(false);
                     }}
                 />
-            </div>
+            </ListRow>
         );
     }
     const menu = (
         <ContextMenu.Root>
             <MaybeTooltip label={row.location}>
                 <ContextMenu.Trigger
-                    render={<button />}
+                    render={<ListRow variant="inset" render={<button />} />}
                     data-sidebar-row={row.rowId}
                     aria-current={selected ? 'true' : undefined}
                     tabIndex={tabbable ? 0 : -1}
@@ -334,15 +330,11 @@ const arrowStep = (event: ReactKeyboardEvent<HTMLElement>, onArrow: (delta: 1 | 
 function DeleteRowMenu({ onDelete }: { onDelete(): void }) {
     const { t } = useTranslation('common');
     return (
-        <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-(--z-popup)">
-                <ContextMenu.Popup className="menu-popup">
-                    <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
-                        <Icon icon={Trash} size={14} /> {t('action.delete')}
-                    </ContextMenu.Item>
-                </ContextMenu.Popup>
-            </ContextMenu.Positioner>
-        </ContextMenu.Portal>
+        <ContextMenu.Popup>
+            <ContextMenu.Item className="text-status-error" onClick={onDelete}>
+                <Icon icon={Trash} size={14} /> {t('action.delete')}
+            </ContextMenu.Item>
+        </ContextMenu.Popup>
     );
 }
 
@@ -412,14 +404,14 @@ function SubheaderRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
-                render={<div />}
+                render={<SectionLabel render={<div />} />}
                 draggable
                 role="heading"
                 aria-level={3}
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
                 tabIndex={tabbable ? 0 : -1}
-                className={clsx(SECTION_LABEL, 'focus-ring flex h-8 w-full cursor-default items-center px-2')}
+                className="focus-ring flex h-8 w-full cursor-default items-center px-2"
                 onFocus={onFocus}
                 onDoubleClick={() => rename(true)}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
@@ -434,18 +426,14 @@ function SubheaderRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
             >
                 <span className="min-w-0 truncate">{view.name}</span>
             </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        <ContextMenu.Item className="menu-item" onClick={() => rename(true)}>
-                            <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <span className={MENU_HINT}>{t('sidebar.doubleClick')}</span>
-                        </ContextMenu.Item>
-                        <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
-                            <Icon icon={Trash} size={14} /> {t('common:action.delete')}
-                        </ContextMenu.Item>
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <ContextMenu.Popup>
+                <ContextMenu.Item onClick={() => rename(true)}>
+                    <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <ContextMenu.Hint>{t('sidebar.doubleClick')}</ContextMenu.Hint>
+                </ContextMenu.Item>
+                <ContextMenu.Item className="text-status-error" onClick={onDelete}>
+                    <Icon icon={Trash} size={14} /> {t('common:action.delete')}
+                </ContextMenu.Item>
+            </ContextMenu.Popup>
         </ContextMenu.Root>
     );
 }
@@ -461,7 +449,7 @@ function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<View
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
-                render={<div />}
+                render={<ListRow variant="inset" />}
                 aria-disabled="true"
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
@@ -493,7 +481,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
     const [renaming, setRenaming] = useState(false);
     if (renaming) {
         return (
-            <div className={ROW}>
+            <ListRow variant="inset" className={ROW}>
                 <span className={ICON_SLOT}>
                     <ViewGlyph id={view.id} kind={view.kind} icon={view.icon} provider={view.provider} path={view.path} className="text-text-muted" />
                 </span>
@@ -508,13 +496,13 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                         setRenaming(false);
                     }}
                 />
-            </div>
+            </ListRow>
         );
     }
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
-                render={<button />}
+                render={<ListRow variant="inset" render={<button />} />}
                 draggable
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
@@ -600,14 +588,10 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                     </Tooltip>
                 )}
             </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        {view.self && <SnoozeMenuItems endpointId={endpointId} nodeId={view.self.id} needsYou={view.self.status === 'needs-you'} />}
-                        <ViewMenuItems viewId={view.id} kind={view.kind} onSidebar />
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <ContextMenu.Popup>
+                {view.self && <SnoozeMenuItems endpointId={endpointId} nodeId={view.self.id} needsYou={view.self.status === 'needs-you'} />}
+                <ViewMenuItems viewId={view.id} kind={view.kind} onSidebar />
+            </ContextMenu.Popup>
         </ContextMenu.Root>
     );
 }
@@ -621,7 +605,7 @@ function ProjectHeading({ group, tabbable, onFocus, onArrow }: RowProps & { grou
         <ContextMenu.Root>
             <MaybeTooltip label={`${group.summary.name} · ${group.machineLabel}`}>
                 <ContextMenu.Trigger
-                    render={<button type="button" />}
+                    render={<ListRow variant="inset" render={<button type="button" />} />}
                     data-sidebar-row={`project:${group.key}`}
                     tabIndex={tabbable ? 0 : -1}
                     aria-expanded={!group.collapsed}
@@ -665,13 +649,9 @@ function ProjectHeading({ group, tabbable, onFocus, onArrow }: RowProps & { grou
                     )}
                 </ContextMenu.Trigger>
             </MaybeTooltip>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        <FolderMenuItems endpointId={group.endpointId} folder={group.summary.folder} connected={group.state !== 'offline'} />
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <ContextMenu.Popup>
+                <FolderMenuItems endpointId={group.endpointId} folder={group.summary.folder} connected={group.state !== 'offline'} />
+            </ContextMenu.Popup>
         </ContextMenu.Root>
     );
 }
@@ -690,8 +670,9 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: Ro
     const status = row.type === 'view' ? row.status : row.node.status;
     const button = (
         <MaybeTooltip label={row.type === 'node' ? row.location : label}>
-            <button
-                type="button"
+            <ListRow
+                variant="inset"
+                render={<button type="button" />}
                 data-sidebar-row={row.rowId}
                 tabIndex={tabbable ? 0 : -1}
                 aria-disabled={inert || undefined}
@@ -756,7 +737,7 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: Ro
                         </span>
                     </>
                 )}
-            </button>
+            </ListRow>
         </MaybeTooltip>
     );
     return snoozable && item ? (
@@ -917,7 +898,7 @@ export function Sidebar() {
             id="app-sidebar"
             inert={!open}
             data-instant={instant ? '' : undefined}
-            className="panel-shell h-full shrink-0 overflow-hidden"
+            className="sliding-column h-full shrink-0 overflow-hidden"
             style={{ width: open ? SIDEBAR_WIDTH_PX : 0 }}
         >
             <div className="flex h-full flex-col border-r border-border bg-surface" style={{ width: SIDEBAR_WIDTH_PX }}>
@@ -1027,11 +1008,11 @@ export function Sidebar() {
                                         </p>
                                     )}
                                     {section.label !== null && (
-                                        <div className={`${SECTION_LABEL} flex items-center gap-1.5 px-2 py-1`}>
+                                        <SectionLabel render={<div />} className="flex items-center gap-1.5 px-2 py-1">
                                             {section.kind === 'needs-you' && <StatusDot status="needs-you" plain />}
                                             {section.label}
                                             <span className="ml-auto tabular-nums">{section.rows.length}</span>
-                                        </div>
+                                        </SectionLabel>
                                     )}
                                     {section.rows.map((row) => {
                                         const owner = row.target
@@ -1113,21 +1094,20 @@ export function Sidebar() {
                                 <Icon icon={Plus} size={14} /> {t('viewMenu.newView')}
                             </Menu.Trigger>
                         </MaybeTooltip>
-                        <MenuPopup side="top" className="min-w-52">
+                        <Menu.Popup side="top" className="min-w-52">
                             <NewViewItems />
-                        </MenuPopup>
+                        </Menu.Popup>
                     </Menu.Root>
                     <ConnectionDot />
                     <UsageLimitsCard>
-                        <button className="icon-btn" aria-label={t('sidebar.usage')} onClick={() => useUi.getState().setUsageOpen(true)}>
-                            <Icon icon={ChartNoAxesColumn} size={16} />
-                        </button>
+                        <IconButton icon={ChartNoAxesColumn} label={t('sidebar.usage')} tooltip={false} onClick={() => useUi.getState().setUsageOpen(true)} />
                     </UsageLimitsCard>
-                    <Tooltip label={t('settingsDialog.title')} kbd={APP_SHORTCUTS.settings} name>
-                        <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
-                            <Icon icon={Settings} size={16} />
-                        </button>
-                    </Tooltip>
+                    <IconButton
+                        icon={Settings}
+                        label={t('settingsDialog.title')}
+                        kbd={APP_SHORTCUTS.settings}
+                        onClick={() => useUi.getState().setSettings({ open: true })}
+                    />
                 </div>
             </div>
         </aside>

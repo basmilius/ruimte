@@ -3,14 +3,10 @@ import { Power } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
 import { pendingRestartLine } from '@/shell/machine-update';
-import { ConfirmDialog } from '@ruimte/ui/settings/ConfirmDialog';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
+import { ConfirmDialog, SettingsRow } from '@basmilius/react-ui/settings';
+import { Switch, Button, Icon, FormError } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { backgroundServiceRow } from '@/shell/settings/background-service';
-import { Toggle } from '@ruimte/ui/controls';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
 
 type Confirming = 'stop' | 'linger' | 'restart' | null;
 
@@ -66,10 +62,10 @@ export function BackgroundServiceSection() {
                 muted={row.toggle === null}
                 control={
                     row.toggle && (
-                        <Toggle
+                        <Switch
                             checked={row.toggle.checked}
                             disabled={busy}
-                            onChange={(checked) => void setKeepRunning(checked)}
+                            onCheckedChange={(checked) => void setKeepRunning(checked)}
                             label={t('backgroundService.keepRunning.label')}
                         />
                     )
@@ -87,11 +83,7 @@ export function BackgroundServiceSection() {
                     }
                 />
             )}
-            {row.failure && (
-                <p className={`${FORM_ERROR} px-4.5 pb-3 break-words`} role="alert">
-                    {t('backgroundService.failure', { reason: row.failure })}
-                </p>
-            )}
+            {row.failure && <FormError className="px-4.5 pb-3 break-words">{t('backgroundService.failure', { reason: row.failure })}</FormError>}
             {(row.offerLinger || row.lingerOn) && (
                 <SettingsRow
                     label={t('backgroundService.linger.label')}

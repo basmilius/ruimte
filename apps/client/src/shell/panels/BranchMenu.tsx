@@ -1,18 +1,11 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Menu } from '@base-ui-components/react/menu';
-import { ChevronDown, ChevronRight, Copy, GitBranch, Plus, Search } from 'lucide-react';
+import { Menu as BaseMenu } from '@base-ui-components/react/menu';
+import { ChevronDown, Copy, GitBranch, Plus, Search } from 'lucide-react';
 import type { GitRef } from '@ruimte/contracts';
 import { basenameOf } from '@/shell/panels/files-tree';
 import type { GitTarget } from '@/state/git-target';
-import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { copyText } from '@ruimte/ui/clipboard';
-import { cameThroughPortal } from '@ruimte/ui/floating';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuCheck } from '@ruimte/ui/MenuCheck';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
+import { copyText, cameThroughPortal, Icon, IconButton, Input, Menu, Tooltip, ContextMenu } from '@basmilius/react-ui';
 
 // The keys the menu itself owns while the field has focus; every other key is the field's.
 const MENU_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Escape', 'Tab', 'Enter']);
@@ -132,15 +125,11 @@ export function BranchMenu({
                             <Icon icon={ChevronDown} size={12} className="shrink-0" />
                         </Menu.Trigger>
                     </Tooltip>
-                    <MenuPopup className={nested ? 'max-h-[32rem] w-80 overflow-y-auto' : 'max-h-96 w-80 overflow-y-auto'}>
-                        {targets.length === 0 && (
-                            <Menu.Item className="menu-item" disabled>
-                                {t('git.branchMenu.noCheckouts')}
-                            </Menu.Item>
-                        )}
+                    <Menu.Popup className={nested ? 'max-h-[32rem] w-80 overflow-y-auto' : 'max-h-96 w-80 overflow-y-auto'}>
+                        {targets.length === 0 && <Menu.Item disabled>{t('git.branchMenu.noCheckouts')}</Menu.Item>}
                         {nested ? (
                             <>
-                                <div className={MENU_LABEL}>{t('git.branchMenu.repositories')}</div>
+                                <Menu.Label>{t('git.branchMenu.repositories')}</Menu.Label>
                                 {repos.map((entry) => (
                                     <CheckoutLevel
                                         key={entry.cwd ?? entry.label}
@@ -155,11 +144,11 @@ export function BranchMenu({
                             </>
                         ) : (
                             <>
-                                <div className={MENU_LABEL}>{t('git.branchMenu.checkout')}</div>
+                                <Menu.Label>{t('git.branchMenu.checkout')}</Menu.Label>
                                 <CheckoutChoice targets={targets} target={target} onPickTarget={onPickTarget} />
                                 {target.cwd !== null && (
                                     <>
-                                        <Menu.Separator className={MENU_SEPARATOR} />
+                                        <Menu.Separator />
                                         <BranchList cwd={target.cwd} state={refsOf(target.cwd)} branch={branch} onCheckout={onCheckout} onCreate={onCreate} />
                                     </>
                                 )}
@@ -167,25 +156,21 @@ export function BranchMenu({
                         )}
                         {nested && worktrees.length > 0 && (
                             <>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>{t('git.branchMenu.worktrees')}</div>
+                                <Menu.Separator />
+                                <Menu.Label>{t('git.branchMenu.worktrees')}</Menu.Label>
                                 {/* A worktree takes the panel over whole, the way it always did: its repositories
                             step aside until the canvas or this menu points somewhere else. */}
                                 <CheckoutChoice targets={worktrees} target={target} onPickTarget={onPickTarget} />
                             </>
                         )}
-                    </MenuPopup>
+                    </Menu.Popup>
                 </Menu.Root>
             </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        <ContextMenu.Item className="menu-item" onClick={() => copyText(copyable ?? '')}>
-                            <Icon icon={Copy} size={14} /> {t('git.branchMenu.copyName')}
-                        </ContextMenu.Item>
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <ContextMenu.Popup>
+                <ContextMenu.Item onClick={() => copyText(copyable ?? '')}>
+                    <Icon icon={Copy} size={14} /> {t('git.branchMenu.copyName')}
+                </ContextMenu.Item>
+            </ContextMenu.Popup>
         </ContextMenu.Root>
     );
 }
@@ -203,10 +188,9 @@ function CheckoutChoice({ targets, target, onPickTarget }: { targets: readonly G
             }}
         >
             {targets.map((entry) => (
-                <Menu.RadioItem key={entry.cwd ?? entry.label} value={entry.cwd ?? ''} className="menu-item">
-                    <MenuCheck kind="radio" />
+                <Menu.RadioItem key={entry.cwd ?? entry.label} value={entry.cwd ?? ''}>
                     <span className="truncate">{entry.label}</span>
-                    {entry.group !== undefined && <span className={`${MENU_HINT} truncate`}>{entry.group}</span>}
+                    {entry.group !== undefined && <Menu.Hint className="truncate">{entry.group}</Menu.Hint>}
                 </Menu.RadioItem>
             ))}
         </Menu.RadioGroup>
@@ -234,24 +218,19 @@ function CheckoutLevel({ entry, refs, renderActions, onOpen, onCheckout, onCreat
     }
     return (
         <Menu.SubmenuRoot onOpenChange={(open) => open && onOpen(cwd)}>
-            <Menu.SubmenuTrigger className="menu-item">
+            <Menu.SubmenuTrigger>
                 {/* The name keeps its width and the branch beside it gives way: a repository cut to two
                     letters is no longer a name, while a branch cut short still reads as one. */}
                 <span className="max-w-40 shrink-0 truncate">{entry.label}</span>
                 <span className="grow" />
-                {entry.group !== undefined && <span className={`${MENU_HINT} truncate`}>{entry.group}</span>}
+                {entry.group !== undefined && <Menu.Hint className="truncate">{entry.group}</Menu.Hint>}
                 {refs.branch !== null && <span className="min-w-0 truncate pl-3 font-mono text-code text-text-faint">{refs.branch}</span>}
-                <Icon icon={ChevronRight} size={14} className="shrink-0 text-text-faint" />
             </Menu.SubmenuTrigger>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
-                    <Menu.Popup className="menu-popup max-h-[28rem] w-80 overflow-y-auto">
-                        {renderActions(cwd)}
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <BranchList cwd={cwd} state={refs} branch={refs.branch} onCheckout={onCheckout} onCreate={onCreate} />
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+            <Menu.Popup className="max-h-[28rem] w-80 overflow-y-auto">
+                {renderActions(cwd)}
+                <Menu.Separator />
+                <BranchList cwd={cwd} state={refs} branch={refs.branch} onCheckout={onCheckout} onCreate={onCreate} />
+            </Menu.Popup>
         </Menu.SubmenuRoot>
     );
 }
@@ -286,9 +265,9 @@ function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProp
             <div className="mx-1 my-1 flex items-center gap-1">
                 <span className="relative min-w-0 grow">
                     <Icon icon={Search} size={14} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-text-faint" aria-hidden />
-                    <input
+                    <Input
                         ref={inputRef}
-                        className="field pl-8"
+                        className="pl-8"
                         placeholder={t('git.branchMenu.search')}
                         spellCheck={false}
                         value={query}
@@ -302,12 +281,9 @@ function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProp
                         }}
                     />
                 </span>
-                {/* An item and not a plain button, so it keeps the keyboard and the closing a menu row has. */}
-                <Tooltip label={t('git.branchMenu.create')} name>
-                    <Menu.Item className="icon-btn" onClick={() => onCreate(cwd)}>
-                        <Icon icon={Plus} size={16} />
-                    </Menu.Item>
-                </Tooltip>
+                {/* An item and not a plain button, so it keeps the keyboard and the closing a menu row has. Base UI's
+                    own item, since the library's draws a menu row around it. */}
+                <IconButton icon={Plus} label={t('git.branchMenu.create')} render={<BaseMenu.Item />} onClick={() => onCreate(cwd)} />
             </div>
             {loading && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.loading')}</p>}
             {!loading && shown.length === 0 && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.noMatch')}</p>}
@@ -321,11 +297,10 @@ function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProp
                 }}
             >
                 {shown.map((ref) => (
-                    <Menu.RadioItem key={`${ref.kind}:${ref.name}`} value={ref.name} disabled={ref.worktree !== undefined} className="menu-item">
-                        <MenuCheck kind="radio" />
+                    <Menu.RadioItem key={`${ref.kind}:${ref.name}`} value={ref.name} disabled={ref.worktree !== undefined}>
                         <span className="truncate font-mono text-xs">{ref.name}</span>
-                        {ref.isDefault && <span className={MENU_HINT}>{t('git.branchMenu.default')}</span>}
-                        {ref.worktree !== undefined && <span className={`${MENU_HINT} truncate`}>{t('git.branchMenu.inWorktree')}</span>}
+                        {ref.isDefault && <Menu.Hint>{t('git.branchMenu.default')}</Menu.Hint>}
+                        {ref.worktree !== undefined && <Menu.Hint className="truncate">{t('git.branchMenu.inWorktree')}</Menu.Hint>}
                     </Menu.RadioItem>
                 ))}
             </Menu.RadioGroup>

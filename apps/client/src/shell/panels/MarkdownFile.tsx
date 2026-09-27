@@ -14,7 +14,7 @@ import { dirnameOf } from '@/shell/panels/files-tree';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { useEndpointId } from '@/state/keys';
 import { useUnsaved } from '@/state/text-drafts';
-import { BTN_GROUP } from '@ruimte/ui/classes';
+import { ButtonGroup } from '@basmilius/react-ui';
 
 type MarkdownView = 'preview' | 'source';
 
@@ -34,7 +34,7 @@ export function MarkdownFile({ path, read }: { path: string; read: FsReadText })
     const find = useFind(surface, view === 'preview');
     const domFind = useDomFind(find, content);
     const toggle = (
-        <div className={BTN_GROUP}>
+        <ButtonGroup>
             <FileToolbarToggle
                 icon={Eye}
                 label={unsaved ? t('file.view.previewAfterSave') : t('file.view.preview')}
@@ -43,7 +43,7 @@ export function MarkdownFile({ path, read }: { path: string; read: FsReadText })
                 onClick={() => setView('preview')}
             />
             <FileToolbarToggle icon={Code} label={t('file.view.source')} active={view === 'source'} onClick={() => setView('source')} />
-        </div>
+        </ButtonGroup>
     );
 
     if (view === 'source') {

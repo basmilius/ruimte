@@ -1,14 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Menu } from '@base-ui-components/react/menu';
-import { AlarmClock, AlarmClockOff, ChevronRight } from 'lucide-react';
-import { formatClock, formatMoment, formatWeekdayClock } from '@ruimte/ui/format/datetime';
+import { AlarmClock, AlarmClockOff } from 'lucide-react';
+import { formatClock, formatMoment, formatWeekdayClock } from '@basmilius/react-ui/format';
+import { Icon, IconButton, Menu, Tooltip, ContextMenu } from '@basmilius/react-ui';
 import { SNOOZE_CHOICES, snoozeUntil, useSnoozedUntil, useSnoozes, type SnoozeChoice } from '@/state/snooze';
-import { MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /* The moment a choice lands on, beside its name: a clock today, a weekday for tomorrow. */
 const choiceHint = (choice: SnoozeChoice, now: number): string => {
@@ -37,19 +32,22 @@ export function SnoozeButton({ endpointId, nodeId, tabIndex }: { endpointId: str
     const [openedAt, onOpenChange] = useOpenedAt();
     return (
         <Menu.Root onOpenChange={onOpenChange}>
-            <Tooltip label={t('snooze.action')} name>
-                <Menu.Trigger className="icon-btn icon-btn-xs hover:bg-surface-active" tabIndex={tabIndex}>
-                    <Icon icon={AlarmClock} size={12} />
-                </Menu.Trigger>
-            </Tooltip>
-            <MenuPopup align="end" className="min-w-44">
+            <IconButton
+                icon={AlarmClock}
+                size="xs"
+                label={t('snooze.action')}
+                className="hover:bg-surface-active"
+                tabIndex={tabIndex}
+                render={<Menu.Trigger />}
+            />
+            <Menu.Popup align="end" className="min-w-44">
                 {SNOOZE_CHOICES.map((choice) => (
-                    <Menu.Item key={choice} className="menu-item" onClick={() => snooze(endpointId, nodeId, choice)}>
+                    <Menu.Item key={choice} onClick={() => snooze(endpointId, nodeId, choice)}>
                         {t(`snooze.choices.${choice}`)}
-                        <span className={MENU_HINT}>{choiceHint(choice, openedAt)}</span>
+                        <Menu.Hint>{choiceHint(choice, openedAt)}</Menu.Hint>
                     </Menu.Item>
                 ))}
-            </MenuPopup>
+            </Menu.Popup>
         </Menu.Root>
     );
 }
@@ -65,11 +63,11 @@ export function SnoozeMenuItems({ endpointId, nodeId, needsYou }: { endpointId: 
     if (until !== null) {
         return (
             <>
-                <ContextMenu.Item className="menu-item" onClick={() => useSnoozes.getState().unsnooze(endpointId, nodeId)}>
+                <ContextMenu.Item onClick={() => useSnoozes.getState().unsnooze(endpointId, nodeId)}>
                     <Icon icon={AlarmClockOff} size={14} /> {t('snooze.unsnooze')}
-                    <span className={MENU_HINT}>{formatMoment(until)}</span>
+                    <ContextMenu.Hint>{formatMoment(until)}</ContextMenu.Hint>
                 </ContextMenu.Item>
-                <ContextMenu.Separator className={MENU_SEPARATOR} />
+                <ContextMenu.Separator />
             </>
         );
     }
@@ -79,24 +77,19 @@ export function SnoozeMenuItems({ endpointId, nodeId, needsYou }: { endpointId: 
     return (
         <>
             <ContextMenu.SubmenuRoot onOpenChange={onOpenChange}>
-                <ContextMenu.SubmenuTrigger className="menu-item">
+                <ContextMenu.SubmenuTrigger>
                     <Icon icon={AlarmClock} size={14} /> {t('snooze.action')}
-                    <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
                 </ContextMenu.SubmenuTrigger>
-                <ContextMenu.Portal>
-                    <ContextMenu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
-                        <ContextMenu.Popup className="menu-popup min-w-44">
-                            {SNOOZE_CHOICES.map((choice) => (
-                                <ContextMenu.Item key={choice} className="menu-item" onClick={() => snooze(endpointId, nodeId, choice)}>
-                                    {t(`snooze.choices.${choice}`)}
-                                    <span className={MENU_HINT}>{choiceHint(choice, openedAt)}</span>
-                                </ContextMenu.Item>
-                            ))}
-                        </ContextMenu.Popup>
-                    </ContextMenu.Positioner>
-                </ContextMenu.Portal>
+                <ContextMenu.Popup className="min-w-44">
+                    {SNOOZE_CHOICES.map((choice) => (
+                        <ContextMenu.Item key={choice} onClick={() => snooze(endpointId, nodeId, choice)}>
+                            {t(`snooze.choices.${choice}`)}
+                            <ContextMenu.Hint>{choiceHint(choice, openedAt)}</ContextMenu.Hint>
+                        </ContextMenu.Item>
+                    ))}
+                </ContextMenu.Popup>
             </ContextMenu.SubmenuRoot>
-            <ContextMenu.Separator className={MENU_SEPARATOR} />
+            <ContextMenu.Separator />
         </>
     );
 }

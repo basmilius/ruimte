@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { UsageProvider } from '@ruimte/contracts';
-import { Toggle } from '@ruimte/ui/controls';
+import { Switch } from '@basmilius/react-ui';
 import { markPath, type ChartModel, type ModelMark } from '@/shell/models/chart';
 import { PROVIDER_LABELS } from '@ruimte/agents-react/usage/format';
 import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
@@ -78,7 +78,7 @@ export function ModelsLegend({ models, marks, hidden, showLegacy, onToggle, onHi
             </p>
             <div className="mt-auto flex items-center justify-between gap-2 px-2 text-xs text-text-muted">
                 {t('legend.legacy')}
-                <Toggle checked={showLegacy} onChange={onShowLegacy} label={t('legend.legacy')} />
+                <Switch checked={showLegacy} onCheckedChange={onShowLegacy} label={t('legend.legacy')} />
             </div>
         </div>
     );

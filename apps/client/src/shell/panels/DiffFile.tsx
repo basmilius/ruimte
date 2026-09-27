@@ -15,10 +15,7 @@ import { useGit } from '@/state/git';
 import { useGitSignal } from '@/state/git-watch';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Separator } from '@ruimte/ui/Separator';
-import { lazyNamed } from '@/ui/lazy';
+import { ButtonGroup, EmptyState, Separator, lazyNamed } from '@basmilius/react-ui';
 
 const UnifiedDiff = lazyNamed(() => import('@ruimte/agents-react/chat/ui/UnifiedDiff'), 'default');
 
@@ -101,7 +98,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
         <FileActionsContext.Provider value={actions}>
             <div className="flex min-h-0 min-w-0 grow flex-col">
                 <FileToolbar>
-                    <span className={BTN_GROUP}>
+                    <ButtonGroup render={<span />}>
                         <FileToolbarToggle
                             icon={FileDiff}
                             label={t('diff.scope.worktree')}
@@ -109,9 +106,9 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
                             onClick={() => setScope('worktree')}
                         />
                         <FileToolbarToggle icon={GitBranch} label={t('diff.scope.base')} active={view.scope === 'base'} onClick={() => setScope('base')} />
-                    </span>
+                    </ButtonGroup>
                     <Separator />
-                    <span className={BTN_GROUP}>
+                    <ButtonGroup render={<span />}>
                         <FileToolbarToggle
                             icon={Rows2}
                             label={t('diff.layout.stacked')}
@@ -124,7 +121,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
                             active={layout === 'split'}
                             onClick={() => useSettings.getState().update({ diffLayout: 'split' })}
                         />
-                    </span>
+                    </ButtonGroup>
                     <Separator />
                     <FileToolbarToggle
                         icon={Space}
@@ -254,7 +251,7 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
                         <Separator />
                     </>
                 )}
-                <span className={BTN_GROUP}>
+                <ButtonGroup render={<span />}>
                     <FileToolbarToggle
                         icon={Rows2}
                         label={t('diff.layout.stacked')}
@@ -267,7 +264,7 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
                         active={layout === 'split'}
                         onClick={() => useSettings.getState().update({ diffLayout: 'split' })}
                     />
-                </span>
+                </ButtonGroup>
                 <Separator />
                 <FileToolbarToggle icon={WrapText} label={wrap ? t('file.code.unwrap') : t('file.code.wrap')} active={wrap} onClick={() => setWrap(!wrap)} />
             </div>

@@ -16,9 +16,7 @@ import { useUi } from '@/state/ui';
 import { chatScopeOf } from '@/transport/chat-scope';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import { usageEndpointFor } from '@/shell/usage/picker';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Icon } from '@ruimte/ui/Icon';
-import { Select } from '@ruimte/ui/Select';
+import { ErrorBoundary, Icon, Select } from '@basmilius/react-ui';
 
 /*
  * A machine that is not answering says so, rather than leaving the page on a skeleton that never

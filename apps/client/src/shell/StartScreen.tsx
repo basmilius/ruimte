@@ -1,7 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { isRecentProject } from '@ruimte/contracts';
 import { FolderOpen, LogIn, MonitorSmartphone, RotateCw } from 'lucide-react';
 import { isDesktop } from '@/desktop/bridge';
@@ -32,19 +31,16 @@ import { useUpdates } from '@/state/updates';
 import { useWindow, type BootFailure } from '@/state/window';
 import { useEndpointConnection, useOpenEndpoints } from '@/transport/status';
 import { BrandIntro } from '@/ui/Brand';
-import { Button } from '@ruimte/ui/Button';
-import { MENU_SEPARATOR, SECTION_LABEL } from '@ruimte/ui/classes';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Icon } from '@ruimte/ui/Icon';
-import { Kbd } from '@ruimte/ui/Kbd';
-import { Tile } from '@ruimte/ui/Tile';
+import { Button, ErrorBoundary, Icon, Kbd, SectionLabel, Tile, ContextMenu } from '@basmilius/react-ui';
 
 const ROW = 'flex min-h-10 w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-hover disabled:opacity-50';
 
 function Section({ label, children }: { label: string; children: ReactNode }) {
     return (
         <section className="flex min-w-0 flex-col gap-2">
-            <h2 className={`${SECTION_LABEL} px-2`}>{label}</h2>
+            <SectionLabel render={<h2 />} className="px-2">
+                {label}
+            </SectionLabel>
             {children}
         </section>
     );
@@ -100,21 +96,17 @@ function RecentRowMenu({ row }: { row: ProjectMenuRow }) {
     const { summary } = row;
     const folder = summary.folder ?? null;
     return (
-        <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-(--z-popup)">
-                <ContextMenu.Popup className="menu-popup">
-                    <ContextMenu.Item className="menu-item" onClick={() => openProjectAction(row.endpointId, summary.projectId)}>
-                        <Icon icon={FolderOpen} size={14} /> {t('common:action.open')}
-                    </ContextMenu.Item>
-                    {folder !== null && (
-                        <>
-                            <ContextMenu.Separator className={MENU_SEPARATOR} />
-                            <FolderMenuItems endpointId={row.endpointId} folder={folder} connected={row.connected} />
-                        </>
-                    )}
-                </ContextMenu.Popup>
-            </ContextMenu.Positioner>
-        </ContextMenu.Portal>
+        <ContextMenu.Popup>
+            <ContextMenu.Item onClick={() => openProjectAction(row.endpointId, summary.projectId)}>
+                <Icon icon={FolderOpen} size={14} /> {t('common:action.open')}
+            </ContextMenu.Item>
+            {folder !== null && (
+                <>
+                    <ContextMenu.Separator />
+                    <FolderMenuItems endpointId={row.endpointId} folder={folder} connected={row.connected} />
+                </>
+            )}
+        </ContextMenu.Popup>
     );
 }
 

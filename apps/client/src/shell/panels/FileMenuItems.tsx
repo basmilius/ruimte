@@ -1,16 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { runAsPerson } from '@/actions/client-actions';
-import { Menu } from '@base-ui-components/react/menu';
 import { Copy, FileText, ListX, Minus, Pin, PinOff, Plus, RefreshCw, SquareX, X } from 'lucide-react';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { isCheckoutDiff, useFiles } from '@/state/files';
-import { MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { copyText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
+import { copyText, Icon, Kbd, Menu } from '@basmilius/react-ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Kbd } from '@ruimte/ui/Kbd';
 
 /*
  * Everything an open tab can be asked, as menu items. The toolbar's overflow menu and the right
@@ -52,49 +48,49 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
             {aboutFile && (
                 <>
                     {view !== undefined && (
-                        <Menu.Item className="menu-item" onClick={() => void runAsPerson('file.preview', { path, line: null })}>
+                        <Menu.Item onClick={() => void runAsPerson('file.preview', { path, line: null })}>
                             <Icon icon={FileText} size={14} /> {t('file.tab.openItself')}
                         </Menu.Item>
                     )}
                     {/* A diff tab is about a comparison, so it never offers to refresh the file itself. */}
                     <FileActionItems path={path} on="tab" onRefresh={view === undefined ? onRefresh : undefined} />
-                    <Menu.Separator className={MENU_SEPARATOR} />
+                    <Menu.Separator />
                 </>
             )}
             {stageable && (
                 <>
-                    <Menu.Item className="menu-item" onClick={stage}>
+                    <Menu.Item onClick={stage}>
                         <Icon icon={view.staged ? Minus : Plus} size={14} /> {view.staged ? t('file.tab.unstage') : t('file.tab.stage')}
                     </Menu.Item>
-                    <Menu.Separator className={MENU_SEPARATOR} />
+                    <Menu.Separator />
                 </>
             )}
             {commit !== undefined && (
                 <>
-                    <Menu.Item className="menu-item" onClick={() => copyText(commit)}>
+                    <Menu.Item onClick={() => copyText(commit)}>
                         <Icon icon={Copy} size={14} /> {t('file.tab.copyCommit')}
                     </Menu.Item>
-                    <Menu.Separator className={MENU_SEPARATOR} />
+                    <Menu.Separator />
                 </>
             )}
             {!aboutFile && onRefresh !== undefined && (
                 <>
-                    <Menu.Item className="menu-item" onClick={onRefresh}>
+                    <Menu.Item onClick={onRefresh}>
                         <Icon icon={RefreshCw} size={14} /> {t('file.menu.refresh')}
                     </Menu.Item>
-                    <Menu.Separator className={MENU_SEPARATOR} />
+                    <Menu.Separator />
                 </>
             )}
-            <Menu.Item className="menu-item" onClick={() => useFiles.getState().setPinned(tabKey, !pinned)}>
+            <Menu.Item onClick={() => useFiles.getState().setPinned(tabKey, !pinned)}>
                 <Icon icon={pinned ? PinOff : Pin} size={14} /> {pinned ? t('file.tab.unpin') : t('file.tab.pin')}
             </Menu.Item>
-            <Menu.Item className="menu-item" onClick={() => useFiles.getState().close(tabKey)}>
+            <Menu.Item onClick={() => useFiles.getState().close(tabKey)}>
                 <Icon icon={X} size={14} /> {t('file.tab.close')} <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
             </Menu.Item>
-            <Menu.Item className="menu-item" disabled={!hasOthers} onClick={() => useFiles.getState().closeOthers(tabKey)}>
+            <Menu.Item disabled={!hasOthers} onClick={() => useFiles.getState().closeOthers(tabKey)}>
                 <Icon icon={ListX} size={14} /> {t('file.tab.closeOthers')}
             </Menu.Item>
-            <Menu.Item className="menu-item" onClick={() => useFiles.getState().closeAll()}>
+            <Menu.Item onClick={() => useFiles.getState().closeAll()}>
                 <Icon icon={SquareX} size={14} /> {t('file.tab.closeAll')}
             </Menu.Item>
         </>

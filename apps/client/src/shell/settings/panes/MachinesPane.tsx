@@ -1,24 +1,19 @@
 import { useEffect, useState } from 'react';
-import clsx from 'clsx';
 import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePulsarAccount } from '@/pulsar/account';
 import { accountName } from '@/pulsar/account-name';
 import { forgetAccountMachines, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { AccountAvatar } from '@/shell/settings/AccountAvatar';
-import { Skeleton } from '@ruimte/ui/controls';
+import { Skeleton, Button, ErrorBoundary, Icon, SectionLabel } from '@basmilius/react-ui';
+import { MasterDetail, MasterItem } from '@basmilius/react-ui/settings';
 import { MachineDetail } from '@/shell/settings/MachineDetail';
 import { MachineListItem } from '@/shell/settings/MachineListItem';
-import { MasterDetail, MasterItem } from '@ruimte/ui/settings/MasterDetail';
 import { currentPick, mergeMachines, pickForTarget, type MachinePick } from '@/shell/settings/machine-list';
 import { RuimteAccountDetail } from '@/shell/settings/RuimteAccountDetail';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useUi } from '@/state/ui';
-import { Button } from '@ruimte/ui/Button';
-import { SECTION_LABEL } from '@ruimte/ui/classes';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Icon } from '@ruimte/ui/Icon';
 
 /*
  * The Ruimte account and one list of machines beside the detail of what is picked. The list joins the
@@ -78,7 +73,7 @@ export function MachinesPane() {
                 </span>
             </MasterItem>
             <div className="mt-2 flex min-w-0 shrink-0 items-center gap-2 border-t border-border pt-2.5 pl-3">
-                <span className={clsx(SECTION_LABEL, 'grow')}>{t('machines.title')}</span>
+                <SectionLabel className="grow">{t('machines.title')}</SectionLabel>
                 <Button size="sm" onClick={addMachine}>
                     <Icon icon={Plus} size={14} />
                     {t('machines.add.short')}

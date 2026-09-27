@@ -2,13 +2,10 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop } from '@/desktop/bridge';
 import { cancelDictation, observeSpeech, useDictation } from '@/dictation/controller';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
+import { SettingsRow } from '@basmilius/react-ui/settings';
+import { Switch, Button, ErrorBoundary, FormError } from '@basmilius/react-ui';
+import { formatBytes, formatNumber } from '@basmilius/react-ui/format';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@ruimte/ui/controls';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR } from '@ruimte/ui/classes';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { formatBytes, formatNumber } from '@ruimte/ui/format/number';
 
 export function DictationSection() {
     const { t } = useTranslation('voice');
@@ -44,11 +41,11 @@ function Section() {
                     !bridge?.state ? t('dictation.desktopOnly') : model?.phase === 'unavailable' ? t('dictation.unavailable') : t('dictation.downloadHint')
                 }
                 control={
-                    <Toggle
+                    <Switch
                         checked={model?.enabled === true || busy}
                         disabled={!bridge?.state || !model || model.phase === 'unavailable' || removing}
                         label={t('dictation.enable')}
-                        onChange={(enabled) => {
+                        onCheckedChange={(enabled) => {
                             if (bridge) {
                                 if (!enabled) {
                                     cancelDictation();
@@ -99,11 +96,7 @@ function Section() {
                         </Button>
                     </div>
                 )}
-                {(error || model?.error) && (
-                    <p role="alert" className={FORM_ERROR}>
-                        {error || model?.error}
-                    </p>
-                )}
+                {(error || model?.error) && <FormError>{error || model?.error}</FormError>}
                 {model?.phase === 'error' && (
                     <Button
                         variant="secondary"

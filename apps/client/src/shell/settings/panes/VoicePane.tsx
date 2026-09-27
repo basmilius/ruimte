@@ -4,18 +4,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import i18next from 'i18next';
 import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { messageOf } from '@ruimte/ui/error-message';
+import { messageOf, Skeleton, Switch, Pill, Button, IconButton, Input, Select } from '@basmilius/react-ui';
+import { SettingsRow } from '@basmilius/react-ui/settings';
 import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Skeleton, Toggle } from '@ruimte/ui/controls';
-import { Pill } from '@ruimte/ui/Pill';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { Button } from '@ruimte/ui/Button';
-import { Icon } from '@ruimte/ui/Icon';
-import { Select } from '@ruimte/ui/Select';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 import { useVoice } from '@/voice/state';
 import { closeVoicePanel, stopVoice } from '@/voice/controller';
 import { VoiceInputSection } from './VoiceInputSection';
@@ -151,9 +145,10 @@ export function VoicePane() {
                         <label className="sr-only" htmlFor="openai-api-key">
                             {t('voice.key.fieldLabel')}
                         </label>
-                        <input
+                        <Input
                             id="openai-api-key"
-                            className="field min-w-0 flex-1 basis-64 font-mono text-code"
+                            mono
+                            className="min-w-0 flex-1 basis-64"
                             type="password"
                             autoComplete="off"
                             placeholder={displayStatus?.configured ? t('voice.key.replacePlaceholder') : 'sk-…'}
@@ -167,11 +162,7 @@ export function VoicePane() {
                             {t('common:action.save')}
                         </Button>
                         {displayStatus?.configured && (
-                            <Tooltip label={t('voice.key.remove')} name>
-                                <button type="button" className="icon-btn shrink-0" disabled={busy} onClick={() => void remove()}>
-                                    <Icon icon={Trash2} size={16} />
-                                </button>
-                            </Tooltip>
+                            <IconButton icon={Trash2} label={t('voice.key.remove')} className="shrink-0" disabled={busy} onClick={() => void remove()} />
                         )}
                     </form>
                 </SettingsRow>
@@ -204,10 +195,10 @@ export function VoicePane() {
                     label={t('voice.conversation.confirm.label')}
                     description={t('voice.conversation.confirm.description')}
                     control={
-                        <Toggle
+                        <Switch
                             checked={confirmDestructiveActions}
                             label={t('voice.conversation.confirm.toggle')}
-                            onChange={(voiceConfirmDestructiveActions) => updateSettings({ voiceConfirmDestructiveActions })}
+                            onCheckedChange={(voiceConfirmDestructiveActions) => updateSettings({ voiceConfirmDestructiveActions })}
                         />
                     }
                 />

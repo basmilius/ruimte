@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui-components/react/menu';
 import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Eye, Folder, GitMerge, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
 import { type GitActionKind, type GitCapabilitiesResult, type GitFile, type GitRef, type GitStash, type Worktree } from '@ruimte/contracts';
 import { performAsPerson, runAsPerson } from '@/actions/client-actions';
@@ -12,7 +11,7 @@ import { CommitBox } from '@/shell/panels/CommitBox';
 import { CommitLog, type LogSource } from '@/shell/panels/CommitLog';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { GitChoice, GitDiverged, type Choice } from '@/shell/panels/GitDialogs';
-import { PromptDialog } from '@ruimte/ui/PromptDialog';
+import { PromptDialog, useColumnResize, Button, ButtonGroup, FormError, Icon, IconButton, Pill, Separator, PanelEmpty, Menu } from '@basmilius/react-ui';
 import { GitFileList } from '@/shell/panels/GitFileList';
 import { isUnmergedRefusal, pushButton, pushable, pushEntries, type CommitCandidate } from '@/shell/panels/git-actions';
 import { PushMenu } from '@/shell/panels/PushMenu';
@@ -22,7 +21,6 @@ import { useGitActions, type ActionOutcome } from '@/shell/panels/use-git-action
 import { WorktreeSection } from '@/shell/panels/WorktreeSection';
 import { worktreeBase, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
-import { useColumnResize } from '@ruimte/ui/useColumnResize';
 import { revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
@@ -36,14 +34,6 @@ import { useUi } from '@/state/ui';
 import { useToasts } from '@/state/toasts';
 import { useProjectNodes, useWorktrees, worktreeLists } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
-import { Button } from '@ruimte/ui/Button';
-import { BTN_GROUP, FORM_ERROR, MENU_HINT, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Pill } from '@ruimte/ui/Pill';
-import { Separator } from '@ruimte/ui/Separator';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { PanelEmpty } from '@ruimte/ui/PanelEmpty';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
 
 // Under this the header has no room for the counts, and the chips need what there is.
 const PILLS_FROM_WIDTH = 320;
@@ -449,44 +439,39 @@ export function GitPanel() {
             {(checkouts.length > 0 || hiddenRepos.length > 0) && (
                 <div className={FILE_TOOLBAR}>
                     {changes > 0 && (
-                        <span className={BTN_GROUP}>
-                            <Tooltip label={t('git.panel.expandAll')} name>
-                                <button className="icon-btn icon-btn-sm" onClick={() => useGit.getState().setCollapsedDirs([])}>
-                                    <Icon icon={ChevronsUpDown} size={14} />
-                                </button>
-                            </Tooltip>
-                            <Tooltip label={t('git.panel.collapseAll')} name>
-                                <button
-                                    className="icon-btn icon-btn-sm"
-                                    onClick={() =>
-                                        useGit
-                                            .getState()
-                                            .setCollapsedDirs(
-                                                checkouts.flatMap((checkout) => allDirs(checkout.status?.files ?? [], named ? checkout.label : ''))
-                                            )
-                                    }
-                                >
-                                    <Icon icon={ChevronsDownUp} size={14} />
-                                </button>
-                            </Tooltip>
-                        </span>
+                        <ButtonGroup render={<span />}>
+                            <IconButton
+                                icon={ChevronsUpDown}
+                                size="sm"
+                                label={t('git.panel.expandAll')}
+                                onClick={() => useGit.getState().setCollapsedDirs([])}
+                            />
+                            <IconButton
+                                icon={ChevronsDownUp}
+                                size="sm"
+                                label={t('git.panel.collapseAll')}
+                                onClick={() =>
+                                    useGit
+                                        .getState()
+                                        .setCollapsedDirs(checkouts.flatMap((checkout) => allDirs(checkout.status?.files ?? [], named ? checkout.label : '')))
+                                }
+                            />
+                        </ButtonGroup>
                     )}
                     <span className="grow" />
-                    <Tooltip label={t('file.menu.refresh')} name>
-                        <button
-                            className="icon-btn icon-btn-sm"
-                            disabled={busy}
-                            onClick={() => {
-                                void refresh();
-                                reloadRepos();
-                                if (folder !== null) {
-                                    worktreeLists.reload(endpointId, folder);
-                                }
-                            }}
-                        >
-                            <Icon icon={RefreshCw} size={14} />
-                        </button>
-                    </Tooltip>
+                    <IconButton
+                        icon={RefreshCw}
+                        size="sm"
+                        label={t('file.menu.refresh')}
+                        disabled={busy}
+                        onClick={() => {
+                            void refresh();
+                            reloadRepos();
+                            if (folder !== null) {
+                                worktreeLists.reload(endpointId, folder);
+                            }
+                        }}
+                    />
                     <Separator />
                     <ActionsMenu
                         busy={busy}
@@ -502,9 +487,9 @@ export function GitPanel() {
                 </div>
             )}
             {failures.map((checkout) => (
-                <p key={checkout.path} className={`${FORM_ERROR} border-b border-border px-3 py-2`} role="alert">
+                <FormError key={checkout.path} className="border-b border-border px-3 py-2">
                     {named ? `${checkout.label}: ${checkout.failure}` : checkout.failure}
-                </p>
+                </FormError>
             ))}
             {/* A checkout that stopped halfway says so until it is finished or taken back, however
                 the panel is left and come back to. */}
@@ -581,7 +566,7 @@ export function GitPanel() {
                         void actOn(dialog.cwd, 'create-branch', { name });
                     }
                 }}
-                onClose={() => setDialog(null)}
+                onOpenChange={() => setDialog(null)}
             />
             <PromptDialog
                 open={dialog?.kind === 'rename-branch'}
@@ -595,7 +580,7 @@ export function GitPanel() {
                         void act(dialog.cwd, 'rename-branch', { name });
                     }
                 }}
-                onClose={() => setDialog(null)}
+                onOpenChange={() => setDialog(null)}
             />
             <PromptDialog
                 open={dialog?.kind === 'stash'}
@@ -609,7 +594,7 @@ export function GitPanel() {
                         void act(dialog.cwd, 'stash', { subject });
                     }
                 }}
-                onClose={() => setDialog(null)}
+                onOpenChange={() => setDialog(null)}
             />
             <PromptDialog
                 open={dialog?.kind === 'force-push'}
@@ -623,7 +608,7 @@ export function GitPanel() {
                         void act(dialog.cwd, 'force-push');
                     }
                 }}
-                onClose={() => setDialog(null)}
+                onOpenChange={() => setDialog(null)}
             />
             <PromptDialog
                 open={dialog?.kind === 'switch'}
@@ -636,7 +621,7 @@ export function GitPanel() {
                         void actOn(dialog.cwd, 'checkout', { ref: dialog.ref.name, stash: true });
                     }
                 }}
-                onClose={() => setDialog(null)}
+                onOpenChange={() => setDialog(null)}
             />
             <PromptDialog
                 open={dialog?.kind === 'confirm-delete'}
@@ -652,7 +637,7 @@ export function GitPanel() {
                         void act(dialog.cwd, 'delete-branch', { ref: dialog.ref, ...(dialog.force ? { force: true } : {}) });
                     }
                 }}
-                onClose={() => setDialog(null)}
+                onOpenChange={() => setDialog(null)}
             />
             <PromptDialog
                 open={dialog?.kind === 'discard'}
@@ -666,7 +651,7 @@ export function GitPanel() {
                         discard(dialog.cwd, dialog.file);
                     }
                 }}
-                onClose={() => setDialog(null)}
+                onOpenChange={() => setDialog(null)}
             />
             <PromptDialog
                 open={dialog?.kind === 'pull-request'}
@@ -689,7 +674,7 @@ export function GitPanel() {
                         );
                     }
                 }}
-                onClose={() => setDialog(null)}
+                onOpenChange={() => setDialog(null)}
             />
             <GitDiverged
                 open={dialog?.kind === 'diverged'}
@@ -790,36 +775,28 @@ function ActionsMenu({ busy, hidden, onOpen, onAll, onShowRepos, children }: Act
     const { t } = useTranslation('panels');
     return (
         <Menu.Root onOpenChange={(open) => open && onOpen()}>
-            <Tooltip label={t('git.actions.more')} name>
-                <Menu.Trigger className="icon-btn icon-btn-sm" disabled={busy}>
-                    <Icon icon={MoreHorizontal} size={14} />
-                </Menu.Trigger>
-            </Tooltip>
-            <MenuPopup align="end">
+            <IconButton icon={MoreHorizontal} size="sm" label={t('git.actions.more')} render={<Menu.Trigger />} disabled={busy} />
+            <Menu.Popup align="end">
                 {children ?? (
                     <>
-                        <Menu.Item className="menu-item" onClick={() => onAll('pull')}>
-                            {t('git.actions.pullAll')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => onAll('sync')}>
+                        <Menu.Item onClick={() => onAll('pull')}>{t('git.actions.pullAll')}</Menu.Item>
+                        <Menu.Item onClick={() => onAll('sync')}>
                             {t('git.actions.syncAll')}
-                            <span className={MENU_HINT}>{t('git.actions.syncHint')}</span>
+                            <Menu.Hint>{t('git.actions.syncHint')}</Menu.Hint>
                         </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => onAll('fetch')}>
-                            {t('git.actions.fetchAll')}
-                        </Menu.Item>
+                        <Menu.Item onClick={() => onAll('fetch')}>{t('git.actions.fetchAll')}</Menu.Item>
                     </>
                 )}
                 {hidden > 0 && (
                     <>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item className="menu-item" onClick={onShowRepos}>
+                        <Menu.Separator />
+                        <Menu.Item onClick={onShowRepos}>
                             <Icon icon={Eye} size={14} />
                             {t('git.repo.showAll', { count: hidden })}
                         </Menu.Item>
                     </>
                 )}
-            </MenuPopup>
+            </Menu.Popup>
         </Menu.Root>
     );
 }
@@ -841,52 +818,51 @@ function RepoActionItems({ cwd, busy, canPullRequest, stashes, branch, onAction,
     const { t } = useTranslation('panels');
     return (
         <>
-            <Menu.Item className="menu-item" disabled={busy} onClick={() => onAction('pull')}>
+            <Menu.Item disabled={busy} onClick={() => onAction('pull')}>
                 {t('git.actions.pull')}
             </Menu.Item>
-            <Menu.Item className="menu-item" disabled={busy} onClick={() => onAction('push')}>
+            <Menu.Item disabled={busy} onClick={() => onAction('push')}>
                 {t('git.actions.push')}
             </Menu.Item>
-            <Menu.Item className="menu-item" disabled={busy} onClick={() => onAction('sync')}>
+            <Menu.Item disabled={busy} onClick={() => onAction('sync')}>
                 {t('git.actions.sync')}
-                <span className={MENU_HINT}>{t('git.actions.syncHint')}</span>
+                <Menu.Hint>{t('git.actions.syncHint')}</Menu.Hint>
             </Menu.Item>
-            <Menu.Separator className={MENU_SEPARATOR} />
-            <Menu.Item className="menu-item" disabled={busy} onClick={() => onAction('fetch')}>
+            <Menu.Separator />
+            <Menu.Item disabled={busy} onClick={() => onAction('fetch')}>
                 {t('git.actions.fetch')}
             </Menu.Item>
-            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'force-push', cwd })}>
+            <Menu.Item disabled={busy} onClick={() => onDialog({ kind: 'force-push', cwd })}>
                 {t('git.actions.forcePush')}
             </Menu.Item>
-            <Menu.Separator className={MENU_SEPARATOR} />
-            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'pick-branch', cwd, action: 'merge' })}>
+            <Menu.Separator />
+            <Menu.Item disabled={busy} onClick={() => onDialog({ kind: 'pick-branch', cwd, action: 'merge' })}>
                 {t('git.actions.merge')}
             </Menu.Item>
-            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'pick-branch', cwd, action: 'rebase' })}>
+            <Menu.Item disabled={busy} onClick={() => onDialog({ kind: 'pick-branch', cwd, action: 'rebase' })}>
                 {t('git.actions.rebase')}
             </Menu.Item>
-            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'rename-branch', cwd, branch })}>
+            <Menu.Item disabled={busy} onClick={() => onDialog({ kind: 'rename-branch', cwd, branch })}>
                 {t('git.actions.renameBranch')}
             </Menu.Item>
-            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'pick-branch', cwd, action: 'delete-branch' })}>
+            <Menu.Item disabled={busy} onClick={() => onDialog({ kind: 'pick-branch', cwd, action: 'delete-branch' })}>
                 {t('git.actions.deleteBranch')}
             </Menu.Item>
-            <Menu.Separator className={MENU_SEPARATOR} />
-            <Menu.Item className="menu-item" disabled={busy} onClick={() => onDialog({ kind: 'stash', cwd })}>
+            <Menu.Separator />
+            <Menu.Item disabled={busy} onClick={() => onDialog({ kind: 'stash', cwd })}>
                 {t('git.actions.stash')}
             </Menu.Item>
             <Menu.Item
-                className="menu-item"
                 disabled={busy || stashes.length === 0}
                 onClick={() => (stashes.length > 1 ? onDialog({ kind: 'pick-stash', cwd }) : onAction('stash-pop'))}
             >
                 {t('git.actions.popStash')}
-                {stashes.length > 1 && <span className={MENU_HINT}>{stashes.length}</span>}
+                {stashes.length > 1 && <Menu.Hint>{stashes.length}</Menu.Hint>}
             </Menu.Item>
             {canPullRequest && (
                 <>
-                    <Menu.Separator className={MENU_SEPARATOR} />
-                    <Menu.Item className="menu-item" disabled={busy} onClick={onPullRequest}>
+                    <Menu.Separator />
+                    <Menu.Item disabled={busy} onClick={onPullRequest}>
                         <Icon icon={GitPullRequest} size={14} />
                         {t('git.actions.pullRequest')}
                     </Menu.Item>

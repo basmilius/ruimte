@@ -72,8 +72,6 @@
     "unlockAll": "Alles ontgrendelen"
   },
   "zoom": {
-    "out": "Uitzoomen",
-    "in": "Inzoomen",
     "presets": "Zoomniveaus",
     "fit": "Passend zoomen",
     "selection": "Zoomen naar selectie",

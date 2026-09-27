@@ -1,12 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import { createViewAction, promoteNodeAction } from '@/actions/client-actions';
 import { ViewSettingsDialog } from '@/shell/ViewSettingsDialog';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
-import { SMALL_DIALOG } from '@ruimte/ui/classes';
-import { PromptDialog } from '@ruimte/ui/PromptDialog';
+import { PromptDialog, Dialog } from '@basmilius/react-ui';
 
 /* Settings, promoting and a new page: everything a view asks before it happens. */
 export function ViewDialogs() {
@@ -33,7 +31,7 @@ export function ViewDialogs() {
                     void createViewAction('browser', { url });
                     close();
                 }}
-                onClose={close}
+                onOpenChange={close}
             />
 
             <PromptDialog
@@ -47,15 +45,12 @@ export function ViewDialogs() {
                     }
                     close();
                 }}
-                onClose={close}
+                onOpenChange={close}
             />
 
             {/* Not a question: the settings dialog writes as it goes and carries its own way out. */}
             <Dialog.Root open={present && dialog.kind === 'settings'} onOpenChange={(next) => !next && close()}>
-                <Dialog.Portal>
-                    <Dialog.Backdrop className="dialog-backdrop" />
-                    <Dialog.Popup className={SMALL_DIALOG}>{view && <ViewSettingsDialog view={view} onClose={close} />}</Dialog.Popup>
-                </Dialog.Portal>
+                <Dialog.Popup size="sm">{view && <ViewSettingsDialog view={view} onClose={close} />}</Dialog.Popup>
             </Dialog.Root>
         </>
     );

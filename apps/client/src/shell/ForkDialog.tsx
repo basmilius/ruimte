@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import { GitFork } from 'lucide-react';
 import { CHAT_FORK_TITLE_MAX, type ChatForkInfoResult } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
@@ -22,7 +21,7 @@ import { accountFor, readChatPreferences, selectionFor } from '@ruimte/agents-re
 import { forkOriginIn } from '@/chat/fork-origin';
 import { ModelPicker } from '@ruimte/agents-react/chat/ui/Pickers';
 import { useProviders } from '@ruimte/agents-react/state/providers';
-import { Toggle } from '@ruimte/ui/controls';
+import { Switch, Button, ErrorBoundary, FieldHint, FormError, Icon, Input, Select, Dialog } from '@basmilius/react-ui';
 import { canvasOfNode } from '@/state/canvas';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useDocument } from '@/state/document';
@@ -30,11 +29,6 @@ import { useEndpointId } from '@/state/keys';
 import { knownAccounts, providerAccountsOf } from '@ruimte/agents-react/state/provider-accounts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { Button } from '@ruimte/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SMALL_DIALOG } from '@ruimte/ui/classes';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Icon } from '@ruimte/ui/Icon';
-import { Select } from '@ruimte/ui/Select';
 
 /*
  * Forks a chat after one of its turns, with the history up to and including that turn: a chat view
@@ -54,17 +48,14 @@ export function ForkDialog() {
                 }
             }}
         >
-            <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className={SMALL_DIALOG}>
-                    <Dialog.Title className="flex items-center gap-2 text-base font-semibold text-text">
-                        <Icon icon={GitFork} size={16} /> {t('fork.title')}
-                    </Dialog.Title>
-                    <ErrorBoundary label={t('fork.failedToRender')} resetKeys={[fork?.chatId, fork?.turnId]}>
-                        {fork !== null && <ForkForm key={`${fork.chatId}:${fork.turnId}`} chatId={fork.chatId} turnId={fork.turnId} onDone={close} />}
-                    </ErrorBoundary>
-                </Dialog.Popup>
-            </Dialog.Portal>
+            <Dialog.Popup size="sm">
+                <Dialog.Title className="flex items-center gap-2">
+                    <Icon icon={GitFork} size={16} /> {t('fork.title')}
+                </Dialog.Title>
+                <ErrorBoundary label={t('fork.failedToRender')} resetKeys={[fork?.chatId, fork?.turnId]}>
+                    {fork !== null && <ForkForm key={`${fork.chatId}:${fork.turnId}`} chatId={fork.chatId} turnId={fork.turnId} onDone={close} />}
+                </ErrorBoundary>
+            </Dialog.Popup>
         </Dialog.Root>
     );
 }
@@ -179,10 +170,10 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
 
     return (
         <>
-            <p className={`${DIALOG_DESCRIPTION} mt-1`}>{point ? forkPointLabel(point) : t('fork.turnGone')}</p>
-            <p className={`${DIALOG_DESCRIPTION} mt-2`}>
+            <Dialog.Text className="mt-1">{point ? forkPointLabel(point) : t('fork.turnGone')}</Dialog.Text>
+            <Dialog.Text className="mt-2">
                 {shape === 'view' ? t('fork.intoView', { after: origin === 'view' ? t('fork.theOriginal') : t('fork.itsCanvas') }) : t('fork.intoNode')}
-            </p>
+            </Dialog.Text>
             {chosenCli !== null && pickable.length > 0 && (
                 <>
                     <div className="mt-3 flex items-center justify-between gap-3">
@@ -212,16 +203,16 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                             />
                         </div>
                     )}
-                    {handoff && <p className={FIELD_HINT}>{t('fork.handoffNote')}</p>}
+                    {handoff && <FieldHint>{t('fork.handoffNote')}</FieldHint>}
                 </>
             )}
             <label className="mt-3 block text-xs text-text-muted" htmlFor="fork-title">
                 {t('fork.titleLabel')}
             </label>
-            <input
+            <Input
                 id="fork-title"
                 autoFocus
-                className="field mt-1"
+                className="mt-1"
                 value={title}
                 maxLength={CHAT_FORK_TITLE_MAX}
                 spellCheck={false}
@@ -258,17 +249,13 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                 onSubmit={() => void submit()}
             />
             {refusal !== null && <p className="mt-2 text-sm text-text-muted">{refusal}.</p>}
-            {failure && (
-                <p className={`${FORM_ERROR} mt-2`} role="alert">
-                    {failure}
-                </p>
-            )}
-            <div className={DIALOG_FOOTER}>
+            {failure && <FormError className="mt-2">{failure}</FormError>}
+            <Dialog.Footer>
                 <Button onClick={onDone}>{t('common:action.cancel')}</Button>
                 <Button variant="primary" disabled={busy || !ready} onClick={() => void submit()}>
                     {busy ? t('fork.forking') : t('fork.fork')}
                 </Button>
-            </div>
+            </Dialog.Footer>
         </>
     );
 }
@@ -308,16 +295,17 @@ function ForkFolder({ folder, last, inWorktree, onInWorktree, branch, onBranch, 
         <>
             <div className="mt-3 flex items-center justify-between gap-3">
                 <span className="text-sm text-text">{t('fork.useWorktree')}</span>
-                <Toggle label={t('fork.useWorktree')} checked={inWorktree} onChange={onInWorktree} />
+                <Switch label={t('fork.useWorktree')} checked={inWorktree} onCheckedChange={onInWorktree} />
             </div>
             {inWorktree ? (
                 <>
                     <label className="mt-2 block text-xs text-text-muted" htmlFor="fork-branch">
                         {t('fork.branch')}
                     </label>
-                    <input
+                    <Input
                         id="fork-branch"
-                        className="field mt-1 font-mono text-code"
+                        mono
+                        className="mt-1"
                         value={branch}
                         spellCheck={false}
                         onChange={(e) => onBranch(e.target.value)}
@@ -328,21 +316,17 @@ function ForkFolder({ folder, last, inWorktree, onInWorktree, branch, onBranch, 
                             }
                         }}
                     />
-                    {branchProblem !== null && (
-                        <p className={`${FORM_ERROR} mt-1`} role="alert">
-                            {branchProblem}
-                        </p>
-                    )}
+                    {branchProblem !== null && <FormError className="mt-1">{branchProblem}</FormError>}
                     <div className="mt-3 flex items-center justify-between gap-3">
                         <span className="text-sm text-text">{last ? t('fork.takeFiles') : t('fork.undoAfterTurn')}</span>
-                        <Toggle
+                        <Switch
                             label={last ? t('fork.takeFiles') : t('fork.undoAfterTurn')}
                             checked={filesAfterTurn && folder.filesAfterTurn}
                             disabled={!folder.filesAfterTurn}
-                            onChange={onFilesAfterTurn}
+                            onCheckedChange={onFilesAfterTurn}
                         />
                     </div>
-                    <p className={FIELD_HINT}>{!folder.filesAfterTurn ? t('fork.filesGone') : filesAfterTurn ? t('fork.fromTurnFiles') : t('fork.fromHead')}</p>
+                    <FieldHint>{!folder.filesAfterTurn ? t('fork.filesGone') : filesAfterTurn ? t('fork.fromTurnFiles') : t('fork.fromHead')}</FieldHint>
                 </>
             ) : (
                 sharedNote !== null && <p className="mt-2 text-sm text-text-muted">{sharedNote}</p>

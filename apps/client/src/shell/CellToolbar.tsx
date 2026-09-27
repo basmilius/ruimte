@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Popover } from '@base-ui-components/react/popover';
-import { Files, MoreHorizontal, X } from 'lucide-react';
+import { Files, MoreHorizontal } from 'lucide-react';
 import { viewIconOf } from '@ruimte/contracts';
 import { closeCellAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
@@ -16,9 +14,7 @@ import { useHasViewToolbar, useShowsSubagents, useViewToolbarLeads } from '@/she
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import { type CellAt } from '@/shell/split';
-import { Icon } from '@ruimte/ui/Icon';
-import { Separator } from '@ruimte/ui/Separator';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { CloseButton, Icon, IconButton, Separator, ContextMenu, Popover } from '@basmilius/react-ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
 /* What the bar holds that is not the bar: a press on one of these is not the start of a drag. */
@@ -165,18 +161,18 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                     )}
                     {hasViewToolbar && folded && (
                         <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
-                            <Tooltip label={t('cellToolbar.moreActions')}>
-                                <Popover.Trigger className="icon-btn icon-btn-sm cursor-default" aria-label={t('cellToolbar.moreActions')}>
-                                    <Icon icon={MoreHorizontal} size={14} />
-                                </Popover.Trigger>
-                            </Tooltip>
-                            <Popover.Portal>
-                                <Popover.Positioner side="bottom" sideOffset={6} align="end" className="z-(--z-popup)">
-                                    {/* A popover and not a menu: a browser's address field is among these,
-                                    and a menu would take its keys for moving between items. */}
-                                    <Popover.Popup className="menu-popup flex min-w-72 items-center gap-2 p-2 text-xs">{controls}</Popover.Popup>
-                                </Popover.Positioner>
-                            </Popover.Portal>
+                            <IconButton
+                                icon={MoreHorizontal}
+                                size="sm"
+                                label={t('cellToolbar.moreActions')}
+                                className="cursor-default"
+                                render={<Popover.Trigger />}
+                            />
+                            {/* A popover and not a menu: a browser's address field is among these,
+                            and a menu would take its keys for moving between items. */}
+                            <Popover.Popup sideOffset={6} align="end" className="flex min-w-72 items-center gap-2 p-2 text-xs">
+                                {controls}
+                            </Popover.Popup>
                         </Popover.Root>
                     )}
                     {/* Folded and closed, the controls still have to be mounted somewhere: a file's
@@ -187,21 +183,13 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                             {controls}
                         </span>
                     )}
-                    <Tooltip label={t('cellToolbar.closeCell')} name>
-                        <button type="button" className="icon-btn icon-btn-sm cursor-default" onClick={() => closeCellAction(view.id)}>
-                            <Icon icon={X} size={14} />
-                        </button>
-                    </Tooltip>
+                    <CloseButton label={t('cellToolbar.closeCell')} size="sm" className="cursor-default" onClick={() => closeCellAction(view.id)} />
                 </ContextMenu.Trigger>
-                <ContextMenu.Portal>
-                    <ContextMenu.Positioner className="z-(--z-popup)">
-                        <ContextMenu.Popup className="menu-popup">
-                            <SplitItems at={at} separated />
-                            {/* The files are no view of the project: nothing to rename, share or delete. */}
-                            {!files && <ViewMenuItems viewId={view.id} kind={view.kind} />}
-                        </ContextMenu.Popup>
-                    </ContextMenu.Positioner>
-                </ContextMenu.Portal>
+                <ContextMenu.Popup>
+                    <SplitItems at={at} separated />
+                    {/* The files are no view of the project: nothing to rename, share or delete. */}
+                    {!files && <ViewMenuItems viewId={view.id} kind={view.kind} />}
+                </ContextMenu.Popup>
             </ContextMenu.Root>
             {children}
         </FileToolbarSlotProvider>

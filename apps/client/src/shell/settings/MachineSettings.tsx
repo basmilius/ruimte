@@ -4,23 +4,16 @@ import { Check, Copy, Link2, Trash } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { brokerHostOf, brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
 import type { AuthSession } from '@ruimte/contracts';
-import { messageOf } from '@ruimte/ui/error-message';
+import { messageOf, Segmented, Skeleton, Switch, Button, Icon, IconButton, Tooltip, FormError, Input } from '@basmilius/react-ui';
+import { formatNumericDate, formatAgo } from '@basmilius/react-ui/format';
+import { ConfirmDialog, SettingsRow } from '@basmilius/react-ui/settings';
 import { forgetEndpoint } from '@/endpoint';
-import { formatNumericDate } from '@ruimte/ui/format/datetime';
-import { formatAgo } from '@ruimte/ui/format/duration';
-import { ConfirmDialog } from '@ruimte/ui/settings/ConfirmDialog';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Segmented, Skeleton, Toggle } from '@ruimte/ui/controls';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { pool, transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /* A disabled control does not take the pointer, so the reason sits on a wrapper around it. */
 export function WithReason({ reason, children }: { reason: string | null; children: ReactElement }) {
@@ -110,7 +103,7 @@ export function DirectRow({ endpoint, available }: { endpoint: Endpoint; availab
                     t('machine.direct.description')
                 )
             }
-            control={<Toggle checked={endpoint.direct === true} onChange={toggle} label={t('machine.direct.toggle', { machine: endpoint.label })} />}
+            control={<Switch checked={endpoint.direct === true} onCheckedChange={toggle} label={t('machine.direct.toggle', { machine: endpoint.label })} />}
         />
     );
 }
@@ -184,7 +177,7 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
                     <Segmented
                         value={mode}
                         options={MODES.map((id) => ({ id, label: t(`machine.broker.modes.${id}`) }))}
-                        onChange={pick}
+                        onValueChange={pick}
                         label={t('machine.broker.selectLabel', { machine: endpoint.label })}
                         disabled={busy || reason !== null || setting === null}
                     />
@@ -194,8 +187,8 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
             {mode === 'custom' && reason === null && setting !== null && (
                 <div className="flex min-w-0 flex-col gap-1">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
-                        <input
-                            className="field min-w-0 flex-1 basis-48"
+                        <Input
+                            className="min-w-0 flex-1 basis-48"
                             aria-label={t('machine.broker.urlLabel', { machine: endpoint.label })}
                             placeholder="wss://broker.example.com"
                             value={draft}
@@ -216,11 +209,7 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
                             {t('common:action.save')}
                         </Button>
                     </div>
-                    {problem && (
-                        <p className={`${FORM_ERROR} break-words`} role="alert">
-                            {problem}
-                        </p>
-                    )}
+                    {problem && <FormError className="break-words">{problem}</FormError>}
                 </div>
             )}
         </SettingsRow>
@@ -246,9 +235,9 @@ export function RefuseStatementsRow({ endpoint, reason }: { endpoint: Endpoint; 
             description={reason === null ? t('machine.refuse.description') : t('machine.notAnswering')}
             control={
                 <WithReason reason={reason}>
-                    <Toggle
+                    <Switch
                         checked={refuses}
-                        onChange={(checked) => void set(checked)}
+                        onCheckedChange={(checked) => void set(checked)}
                         label={t('machine.refuse.toggle', { machine: endpoint.label })}
                         disabled={busy || reason !== null}
                     />
@@ -278,9 +267,9 @@ export function StreamingRow({ endpoint, reason }: { endpoint: Endpoint; reason:
             description={reason !== null ? t('machine.notAnswering') : allowed === null ? t('machine.unsupported') : t('machine.streaming.description')}
             control={
                 <WithReason reason={unavailable}>
-                    <Toggle
+                    <Switch
                         checked={allowed !== false}
-                        onChange={(checked) => void set(checked)}
+                        onCheckedChange={(checked) => void set(checked)}
                         label={t('machine.streaming.toggle', { machine: endpoint.label })}
                         disabled={busy || unavailable !== null}
                     />
@@ -401,11 +390,12 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
                 >
                     <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface-sunken p-2.5">
                         <code className="min-w-0 grow truncate font-mono text-code text-text select-text">{link}</code>
-                        <Tooltip label={copied ? t('machine.access.link.copied') : t('machine.access.link.copy')} name>
-                            <button className="icon-btn icon-btn-sm" onClick={copyLink}>
-                                {copied ? <Icon icon={Check} size={14} /> : <Icon icon={Copy} size={14} />}
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon={copied ? Check : Copy}
+                            size="sm"
+                            label={copied ? t('machine.access.link.copied') : t('machine.access.link.copy')}
+                            onClick={copyLink}
+                        />
                     </div>
                 </SettingsRow>
             )}
@@ -431,15 +421,13 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
                         ago: ago(session.lastSeenAt)
                     })}
                     control={
-                        <Tooltip label={t('machine.access.revoke')}>
-                            <button
-                                className="icon-btn shrink-0"
-                                aria-label={t('machine.access.revokeOne', { label: session.label })}
-                                onClick={() => setTarget(session)}
-                            >
-                                <Icon icon={Trash} size={16} />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon={Trash}
+                            label={t('machine.access.revokeOne', { label: session.label })}
+                            tooltip={t('machine.access.revoke')}
+                            className="shrink-0"
+                            onClick={() => setTarget(session)}
+                        />
                     }
                 />
             ))}

@@ -2,7 +2,8 @@ import { useId, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { BenchmarkPoint } from '@ruimte/pulsar';
-import { formatDecimal, formatUsdSignificant } from '@ruimte/ui/format/number';
+import { formatDecimal, formatUsdSignificant } from '@basmilius/react-ui/format';
+import { EmptyState, useMeasuredWidth } from '@basmilius/react-ui';
 import {
     boxOf,
     costAxis,
@@ -19,8 +20,6 @@ import {
     type ModelMark,
     type PointAt
 } from '@/shell/models/chart';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { useMeasuredWidth } from '@ruimte/ui/useMeasuredWidth';
 
 interface ModelsChartProps {
     /* The models that are switched on and measured, in the order of the list beside the chart. */

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { highlightCode } from '@/shell/panels/highlight';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
+import { SettingsRow } from '@basmilius/react-ui/settings';
+import { Switch, Select } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@ruimte/ui/controls';
 import { codeThemesOf, useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
-import { Select } from '@ruimte/ui/Select';
 
 const PREVIEW_CODE = [
     '// Greets a visitor by name.',
@@ -117,7 +116,7 @@ export function CodeSection() {
                 searchId="appearance.code.wrap"
                 label={t('appearance.code.wrap.label')}
                 description={t('appearance.code.wrap.description')}
-                control={<Toggle checked={codeWrap} onChange={(checked) => update({ codeWrap: checked })} label={t('appearance.code.wrap.label')} />}
+                control={<Switch checked={codeWrap} onCheckedChange={(checked) => update({ codeWrap: checked })} label={t('appearance.code.wrap.label')} />}
             />
         </SettingsSection>
     );

@@ -1,8 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { ProcessPoint } from '@ruimte/contracts';
 import { formatClock } from '@ruimte/agents-react/usage/format';
-import { SECTION_LABEL } from '@ruimte/ui/classes';
-import { useMeasuredWidth } from '@ruimte/ui/useMeasuredWidth';
+import { SectionLabel, useMeasuredWidth } from '@basmilius/react-ui';
 
 const HEIGHT = 44;
 
@@ -73,7 +72,7 @@ export function ProcessChart({ label, headline, points, windowMs, end, max, mach
     return (
         <div className="flex flex-col gap-1">
             <div className="flex items-baseline gap-2">
-                <span className={SECTION_LABEL}>{label}</span>
+                <SectionLabel>{label}</SectionLabel>
                 <span className="grow" />
                 <span className="truncate text-xs text-text tabular-nums">{hovered === null ? headline : readout(hovered)}</span>
             </div>

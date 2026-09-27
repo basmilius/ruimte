@@ -4,14 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { keyboardGroups } from '@/shell/settings/keyboard-groups';
-import { MasterDetail, MasterItem } from '@ruimte/ui/settings/MasterDetail';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
+import { MasterDetail, MasterItem, SettingsRow } from '@basmilius/react-ui/settings';
+import { Icon, IconButton, Input, Keys, formatShortcut } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { filterShortcuts, shortcutGroupOf, shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { useUi } from '@/state/ui';
-import { Icon } from '@ruimte/ui/Icon';
-import { Keys } from '@ruimte/ui/Kbd';
-import { formatShortcut } from '@ruimte/ui/shortcut';
 
 function GroupCard({ group, footer }: { group: ShortcutGroup; footer?: ReactNode }) {
     return (
@@ -69,8 +66,8 @@ export function KeyboardPane() {
         <>
             <div className="relative mb-1.5 shrink-0">
                 <Icon icon={Search} size={14} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-text-faint" aria-hidden />
-                <input
-                    className="field bg-surface-sunken px-8 text-xs"
+                <Input
+                    className="bg-surface-sunken px-8 text-xs"
                     placeholder={t('keyboard.search')}
                     aria-label={t('keyboard.search')}
                     value={query}
@@ -86,14 +83,14 @@ export function KeyboardPane() {
                     }}
                 />
                 {query && (
-                    <button
-                        type="button"
-                        className="icon-btn icon-btn-sm absolute top-1/2 right-1 -translate-y-1/2"
-                        aria-label={t('keyboard.clearSearch')}
+                    <IconButton
+                        icon={X}
+                        size="sm"
+                        label={t('keyboard.clearSearch')}
+                        tooltip={false}
+                        className="absolute top-1/2 right-1 -translate-y-1/2"
                         onClick={() => setQuery('')}
-                    >
-                        <Icon icon={X} size={14} />
-                    </button>
+                    />
                 )}
             </div>
             {groups.map((group) => {

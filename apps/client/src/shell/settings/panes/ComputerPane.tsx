@@ -16,9 +16,9 @@ import {
 } from '@/computer/setup';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
+import { SettingsRow } from '@basmilius/react-ui/settings';
+import { Switch, Button, ErrorBoundary, Pill, FormError } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@ruimte/ui/controls';
 import { ComputerAppGrants } from '@/shell/settings/panes/ComputerAppGrants';
 import { useComputer } from '@/state/computer';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
@@ -27,10 +27,6 @@ import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
 import type { Transport } from '@/transport/transport';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR } from '@ruimte/ui/classes';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { Pill } from '@ruimte/ui/Pill';
 
 /* Accessibility shows up in a running helper, so while one is missing the row asks again this often. */
 const POLL_MS = 2_000;
@@ -164,19 +160,15 @@ function ComputerMachine({ endpoint, first }: { endpoint: Endpoint; first: boole
                     label={t('computer.enable', { machine: endpoint.label })}
                     description={connected ? <SetupLine setup={setup} /> : t('computer.machine.notConnected')}
                     control={
-                        <Toggle
+                        <Switch
                             checked={status?.enabled === true}
                             label={t('computer.enable', { machine: endpoint.label })}
                             disabled={!connected || busy || !canSwitch(setup)}
-                            onChange={(enabled) => void run((link) => link.request('computer.setEnabled', { enabled, language: activeLanguage() }))}
+                            onCheckedChange={(enabled) => void run((link) => link.request('computer.setEnabled', { enabled, language: activeLanguage() }))}
                         />
                     }
                 >
-                    {(error ?? status?.problem) && (
-                        <p role="alert" className={FORM_ERROR}>
-                            {error ?? status?.problem}
-                        </p>
-                    )}
+                    {(error ?? status?.problem) && <FormError>{error ?? status?.problem}</FormError>}
                 </SettingsRow>
             </SettingsSection>
             {connected && showsGrants(setup) && (

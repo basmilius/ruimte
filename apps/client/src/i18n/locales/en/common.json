@@ -52,8 +52,7 @@
     },
     "icon": {
         "label": "Icon",
-        "symbol": "Symbol",
-        "none": "No icon"
+        "symbol": "Symbol"
     },
     "status": {
         "running": "running",

@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Menu } from '@base-ui-components/react/menu';
 import { ArrowDown, ArrowUp, CircleAlert, Eye, FilePen, FilePlus, FolderX, GitBranch, GitMerge, LocateFixed, Lock, MoreHorizontal, Trash } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Worktree } from '@ruimte/contracts';
@@ -14,10 +12,7 @@ import { useChats } from '@ruimte/agents-react/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { worktreeLists, type WorktreeNode } from '@/state/worktrees';
-import { FLAT_ROW, MENU_SEPARATOR, SECTION_LABEL } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
+import { Icon, IconButton, ListRow, SectionLabel, Tooltip, Menu, ContextMenu } from '@basmilius/react-ui';
 
 /* The mark per kind of work. The number beside it carries the amount; the tooltip carries the words. */
 const BADGE_MARKS: Record<WorkBadgeKind, LucideIcon> = {
@@ -78,7 +73,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
     return (
         <section ref={sectionRef} className="flex max-h-48 shrink-0 flex-col border-t border-border">
             <div className="flex h-8 shrink-0 items-center gap-2 px-3">
-                <span className={SECTION_LABEL}>{t('worktree.section.title')}</span>
+                <SectionLabel>{t('worktree.section.title')}</SectionLabel>
                 <span className="text-xs text-text-faint tabular-nums">{worktrees.length}</span>
             </div>
             <ul className="min-h-0 overflow-y-auto pb-1">
@@ -93,8 +88,8 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                     return (
                         <ContextMenu.Root key={worktree.path}>
                             <ContextMenu.Trigger
-                                render={<li />}
-                                className={`${FLAT_ROW} group gap-2 pr-1 pl-3 hover:bg-surface-hover`}
+                                render={<ListRow variant="flat" render={<li />} />}
+                                className="group gap-2 pr-1 pl-3 hover:bg-surface-hover"
                                 aria-current={worktree.path === current ? 'true' : undefined}
                             >
                                 <Icon icon={worktree.missing ? FolderX : GitBranch} size={14} className="shrink-0 text-text-muted" />
@@ -144,12 +139,14 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                                     </Tooltip>
                                 )}
                                 <Menu.Root>
-                                    <Tooltip label={t('worktree.section.actions')} name>
-                                        <Menu.Trigger className="icon-btn icon-btn-sm" disabled={busy}>
-                                            <Icon icon={MoreHorizontal} size={14} />
-                                        </Menu.Trigger>
-                                    </Tooltip>
-                                    <MenuPopup align="end">
+                                    <IconButton
+                                        icon={MoreHorizontal}
+                                        size="sm"
+                                        label={t('worktree.section.actions')}
+                                        render={<Menu.Trigger />}
+                                        disabled={busy}
+                                    />
+                                    <Menu.Popup align="end">
                                         <WorktreeMenuItems
                                             worktree={worktree}
                                             reveal={reveal}
@@ -158,23 +155,19 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                                             onRemove={onRemove}
                                             onReveal={onReveal}
                                         />
-                                    </MenuPopup>
+                                    </Menu.Popup>
                                 </Menu.Root>
                             </ContextMenu.Trigger>
-                            <ContextMenu.Portal>
-                                <ContextMenu.Positioner className="z-(--z-popup)">
-                                    <ContextMenu.Popup className="menu-popup">
-                                        <WorktreeMenuItems
-                                            worktree={worktree}
-                                            reveal={reveal}
-                                            onView={onView}
-                                            onMerge={onMerge}
-                                            onRemove={onRemove}
-                                            onReveal={onReveal}
-                                        />
-                                    </ContextMenu.Popup>
-                                </ContextMenu.Positioner>
-                            </ContextMenu.Portal>
+                            <ContextMenu.Popup>
+                                <WorktreeMenuItems
+                                    worktree={worktree}
+                                    reveal={reveal}
+                                    onView={onView}
+                                    onMerge={onMerge}
+                                    onRemove={onRemove}
+                                    onReveal={onReveal}
+                                />
+                            </ContextMenu.Popup>
                         </ContextMenu.Root>
                     );
                 })}
@@ -201,21 +194,21 @@ function WorktreeMenuItems({ worktree, reveal, onView, onMerge, onRemove, onReve
         <>
             {!worktree.missing && (
                 <>
-                    <Menu.Item className="menu-item" onClick={() => onView(worktree)}>
+                    <Menu.Item onClick={() => onView(worktree)}>
                         <Icon icon={Eye} size={14} /> {t('worktree.section.view')}
                     </Menu.Item>
-                    <Menu.Item className="menu-item" onClick={() => onMerge(worktree)}>
+                    <Menu.Item onClick={() => onMerge(worktree)}>
                         <Icon icon={GitMerge} size={14} /> {t('worktree.section.merge')}
                     </Menu.Item>
                 </>
             )}
             {offerReveal && (
-                <Menu.Item className="menu-item" onClick={() => onReveal(reveal)}>
+                <Menu.Item onClick={() => onReveal(reveal)}>
                     <Icon icon={LocateFixed} size={14} /> {t('file.menu.showOnCanvas')}
                 </Menu.Item>
             )}
-            {(!worktree.missing || offerReveal) && <Menu.Separator className={MENU_SEPARATOR} />}
-            <Menu.Item className="menu-item text-status-error" onClick={() => onRemove(worktree)}>
+            {(!worktree.missing || offerReveal) && <Menu.Separator />}
+            <Menu.Item className="text-status-error" onClick={() => onRemove(worktree)}>
                 <Icon icon={Trash} size={14} /> {t('worktree.section.remove')}
             </Menu.Item>
         </>

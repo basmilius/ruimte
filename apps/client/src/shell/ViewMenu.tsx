@@ -1,7 +1,5 @@
 import { Fragment, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Menu } from '@base-ui-components/react/menu';
 import { ChevronDown, FileText, Frame, Globe, Heading, Minus, PenTool, Workflow, Terminal } from 'lucide-react';
 import { isOpenableView, viewIconOf, type ProjectView, type ProviderInfo } from '@ruimte/contracts';
 import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
@@ -14,16 +12,10 @@ import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProviders } from '@ruimte/agents-react/state/providers';
-import { Tile } from '@ruimte/ui/Tile';
+import { Tile, cameThroughPortal, Icon, Menu, Kbd, ContextMenu } from '@basmilius/react-ui';
+import { labelCollator } from '@basmilius/react-ui/format';
 import { useUi } from '@/state/ui';
-import { labelCollator } from '@ruimte/ui/format/locale';
-import { MENU_LABEL, MENU_SEPARATOR } from '@ruimte/ui/classes';
-import { cameThroughPortal } from '@ruimte/ui/floating';
-import { Icon } from '@ruimte/ui/Icon';
-import { MenuCheck } from '@ruimte/ui/MenuCheck';
 import { CANVAS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
-import { Kbd } from '@ruimte/ui/Kbd';
-import { MenuPopup } from '@ruimte/ui/MenuPopup';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
 function ViewName({ view, className }: { view: ProjectView; className: string }) {
@@ -168,7 +160,7 @@ export function NewViewItems() {
                     id: 'canvas',
                     label: t('viewKinds.canvas'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => void createViewAction('canvas')}>
+                        <Menu.Item onClick={() => void createViewAction('canvas')}>
                             <Icon icon={Frame} size={14} /> {t('viewKinds.canvas')} <Kbd shortcut={CANVAS_SHORTCUTS.newView} />
                         </Menu.Item>
                     )
@@ -177,7 +169,7 @@ export function NewViewItems() {
                     id: 'drawing',
                     label: t('viewKinds.drawing'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => void createViewAction('drawing')}>
+                        <Menu.Item onClick={() => void createViewAction('drawing')}>
                             <Icon icon={PenTool} size={14} /> {t('viewKinds.drawing')}
                         </Menu.Item>
                     )
@@ -186,7 +178,7 @@ export function NewViewItems() {
                     id: 'diagram',
                     label: t('viewKinds.diagram'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => void createViewAction('diagram')}>
+                        <Menu.Item onClick={() => void createViewAction('diagram')}>
                             <Icon icon={Workflow} size={14} /> {t('viewKinds.diagram')}
                         </Menu.Item>
                     )
@@ -195,7 +187,7 @@ export function NewViewItems() {
                     id: 'terminal',
                     label: t('viewKinds.terminal'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => void createViewAction('terminal')}>
+                        <Menu.Item onClick={() => void createViewAction('terminal')}>
                             <Icon icon={Terminal} size={14} /> {t('viewKinds.terminal')}
                         </Menu.Item>
                     )
@@ -206,7 +198,7 @@ export function NewViewItems() {
                     id: 'browser',
                     label: t('viewKinds.browser'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => useUi.getState().setViewDialog({ kind: 'new-browser' })}>
+                        <Menu.Item onClick={() => useUi.getState().setViewDialog({ kind: 'new-browser' })}>
                             <Icon icon={Globe} size={14} /> {t('viewKinds.browser')}
                         </Menu.Item>
                     )
@@ -215,19 +207,19 @@ export function NewViewItems() {
                     id: 'file',
                     label: t('viewMenu.filePick'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => useUi.getState().openFilePicker({ kind: 'view' })}>
+                        <Menu.Item onClick={() => useUi.getState().openFilePicker({ kind: 'view' })}>
                             <Icon icon={FileText} size={14} /> {t('viewMenu.filePick')}
                         </Menu.Item>
                     )
                 }
             ])}
-            <Menu.Separator className={MENU_SEPARATOR} />
+            <Menu.Separator />
             {inOrder([
                 {
                     id: 'separator',
                     label: t('viewKinds.separator'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => void createViewAction('separator')}>
+                        <Menu.Item onClick={() => void createViewAction('separator')}>
                             <Icon icon={Minus} size={14} /> {t('viewKinds.separator')}
                         </Menu.Item>
                     )
@@ -236,7 +228,7 @@ export function NewViewItems() {
                     id: 'subheader',
                     label: t('viewKinds.subheader'),
                     node: (
-                        <Menu.Item className="menu-item" onClick={() => void newSubheaderView()}>
+                        <Menu.Item onClick={() => void newSubheaderView()}>
                             <Icon icon={Heading} size={14} /> {t('viewKinds.subheader')}
                         </Menu.Item>
                     )
@@ -278,11 +270,11 @@ export function ViewMenu() {
                         <ViewName view={active} className="truncate text-sm text-text" />
                         <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                     </Menu.Trigger>
-                    <MenuPopup className="min-w-52">
-                        <div className={MENU_LABEL}>{t('viewMenu.views')}</div>
+                    <Menu.Popup className="min-w-52">
+                        <Menu.Label>{t('viewMenu.views')}</Menu.Label>
                         {views.filter(isOpenableView).map((view, index) => (
-                            <Menu.Item key={view.id} className="menu-item" onClick={() => showView(view.id)}>
-                                <MenuCheck kind="radio" checked={view.id === activeViewId} />
+                            <Menu.Item key={view.id} onClick={() => showView(view.id)}>
+                                <Menu.Check kind="radio" checked={view.id === activeViewId} />
                                 <ViewGlyph
                                     id={view.id}
                                     kind={view.kind}
@@ -295,25 +287,21 @@ export function ViewMenu() {
                                 {index < 9 && <Kbd shortcut={viewShortcut(index)!} />}
                             </Menu.Item>
                         ))}
-                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.Separator />
                         {/* Here the items follow the list of views, so they say what they are; under
                             the sidebar's plus they would repeat what the plus already says. */}
-                        <div className={MENU_LABEL}>{t('viewMenu.newView')}</div>
+                        <Menu.Label>{t('viewMenu.newView')}</Menu.Label>
                         <NewViewItems />
-                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.Separator />
                         <SplitItems separated />
                         <ViewMenuItems viewId={active.id} kind={active.kind} />
-                    </MenuPopup>
+                    </Menu.Popup>
                 </Menu.Root>
             </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup min-w-52">
-                        <SplitItems separated />
-                        <ViewMenuItems viewId={active.id} kind={active.kind} />
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <ContextMenu.Popup className="min-w-52">
+                <SplitItems separated />
+                <ViewMenuItems viewId={active.id} kind={active.kind} />
+            </ContextMenu.Popup>
         </ContextMenu.Root>
     );
 }

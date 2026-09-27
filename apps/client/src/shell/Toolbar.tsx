@@ -19,10 +19,7 @@ import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { hasUpdate, useUpdates } from '@/state/updates';
-import { BTN_GROUP } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Separator } from '@ruimte/ui/Separator';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { ButtonGroup, IconButton, Separator } from '@basmilius/react-ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { VoiceButton } from '@/voice/VoiceButton';
 import { useVoice } from '@/voice/state';
@@ -90,22 +87,18 @@ export function Toolbar() {
             {leads && !inSubagents && <Separator />}
             {!split && <ViewToolbar view={view} focused={bodyFocused} chatTitle={sidebarOpen ? (view?.name ?? undefined) : undefined} />}
             {hasViewToolbar && <Separator />}
-            <div className={BTN_GROUP}>
+            <ButtonGroup>
                 <PanelControls />
-            </div>
+            </ButtonGroup>
             <Separator />
             {/* The palette keeps the toolbar's right end, so with no panel beside it the search icon
                 is what sits under the window controls on Windows and Linux and the inset lands here.
                 An open panel reaches the window's edge instead and its header takes the inset over. */}
-            <div className={clsx(BTN_GROUP, !panel.open && !voiceOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
+            <ButtonGroup className={clsx(!panel.open && !voiceOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <UpdateButton />
                 <VoiceButton />
-                <Tooltip label={t('toolbar.search')} kbd={APP_SHORTCUTS.palette} name>
-                    <button className="icon-btn" onClick={() => useUi.getState().setPaletteOpen(true)}>
-                        <Icon icon={Search} size={16} />
-                    </button>
-                </Tooltip>
-            </div>
+                <IconButton icon={Search} label={t('toolbar.search')} kbd={APP_SHORTCUTS.palette} onClick={() => useUi.getState().setPaletteOpen(true)} />
+            </ButtonGroup>
             {/* Opening another project takes a round trip to the daemon; the line says the wait is the app's. */}
             {switching && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label={t('toolbar.opening')} />}
         </header>
@@ -122,10 +115,11 @@ function UpdateButton() {
     }
     const label = state.status === 'ready' ? t('toolbar.updateReady', { version: state.version ?? '' }).trim() : t('toolbar.updateOnTheWay');
     return (
-        <Tooltip label={label} name>
-            <button className="icon-btn text-positive hover:text-positive" onClick={() => useUi.getState().setSettings({ open: true, section: 'about' })}>
-                <Icon icon={ArrowDownToLine} size={16} />
-            </button>
-        </Tooltip>
+        <IconButton
+            icon={ArrowDownToLine}
+            label={label}
+            className="text-positive hover:text-positive"
+            onClick={() => useUi.getState().setSettings({ open: true, section: 'about' })}
+        />
     );
 }

@@ -1,20 +1,15 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentColor, accentLabel } from '@/canvas/accents';
-import { formatDayClock } from '@ruimte/ui/format/datetime';
-import { useFormatLocale } from '@ruimte/ui/format/locale';
-import { formatMoney } from '@ruimte/ui/format/number';
-import { FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@ruimte/ui/format/regions';
+import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@basmilius/react-ui/format';
+import { AccentSwatches, Stepper, Switch, Select } from '@basmilius/react-ui';
+import { SettingsRow } from '@basmilius/react-ui/settings';
 import { chooseLanguage, chooseRegion } from '@/i18n';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
-import { AccentSwatches } from '@ruimte/ui/AccentSwatches';
 import { CodeSection } from '@/shell/settings/panes/CodeSection';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Stepper, Toggle } from '@ruimte/ui/controls';
 import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
-import { Select } from '@ruimte/ui/Select';
 
 /* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */
 const EXAMPLE_MOMENT = new Date(2026, 8, 19, 14, 30);
@@ -91,7 +86,7 @@ function AccentRow() {
             accents={NODE_ACCENTS}
             featured={FEATURED_ACCENTS}
             labelOf={accentLabel}
-            onChange={(id) => update({ accent: id })}
+            onValueChange={(id) => update({ accent: id })}
         />
     );
 }
@@ -212,7 +207,7 @@ export function AppearancePane() {
                             step={INTERFACE_FONT_SIZE_RANGE.step}
                             unit=" px"
                             label={t('appearance.interface.fontSize.label')}
-                            onChange={(value) => update({ interfaceFontSize: value })}
+                            onValueChange={(value) => update({ interfaceFontSize: value })}
                         />
                     }
                 />
@@ -221,7 +216,11 @@ export function AppearancePane() {
                     label={t('appearance.interface.dock.label')}
                     description={t('appearance.interface.dock.description')}
                     control={
-                        <Toggle checked={dockAutoHide} onChange={(checked) => update({ dockAutoHide: checked })} label={t('appearance.interface.dock.label')} />
+                        <Switch
+                            checked={dockAutoHide}
+                            onCheckedChange={(checked) => update({ dockAutoHide: checked })}
+                            label={t('appearance.interface.dock.label')}
+                        />
                     }
                 />
                 <SettingsRow
@@ -267,7 +266,7 @@ export function AppearancePane() {
                                 step={FONT_SIZE_RANGE.step}
                                 unit=" px"
                                 label={t('appearance.terminal.fontSize.label')}
-                                onChange={(value) => update({ fontSize: value })}
+                                onValueChange={(value) => update({ fontSize: value })}
                             />
                         </>
                     }

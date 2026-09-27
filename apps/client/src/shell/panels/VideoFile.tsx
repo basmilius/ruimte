@@ -8,9 +8,7 @@ import { FileContextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
-import { Button } from '@ruimte/ui/Button';
-import { EmptyState } from '@ruimte/ui/EmptyState';
-import { Icon } from '@ruimte/ui/Icon';
+import { Button, EmptyState, Icon } from '@basmilius/react-ui';
 
 /*
  * Whether there is any point in drawing a player. The mime names the container, and a container the

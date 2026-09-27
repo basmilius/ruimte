@@ -3,22 +3,17 @@ import i18next from 'i18next';
 import { ArrowDown, ArrowRight, ArrowUpRight, CircleAlert, CircleCheck, Copy, LoaderCircle, RefreshCw, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { desktop, isDesktop, type Release, type UpdateState } from '@/desktop/bridge';
-import { formatDayWithYear } from '@ruimte/ui/format/datetime';
-import { useFormatLocale } from '@ruimte/ui/format/locale';
-import { SettingsRow, TopIcon } from '@ruimte/ui/settings/SettingsRow';
+import { formatDayWithYear, useFormatLocale } from '@basmilius/react-ui/format';
+import { SettingsRow, TopIcon } from '@basmilius/react-ui/settings';
+import { Segmented, Switch, Button, copyText, Icon, Pill } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Segmented, Toggle } from '@ruimte/ui/controls';
 import { useServers, type ServerInfo } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, useReleaseNotes } from '@/state/release-notes';
 import { previewUpdate, type UpdatePreview } from '@/state/update-preview';
 import { describeUpdate, hasUpdate, setAutoDownload, useUpdates } from '@/state/updates';
 import { useFocusedMachine } from '@/transport/connections';
-import { Button } from '@ruimte/ui/Button';
 import { BrandSymbol } from '@/ui/Brand';
-import { copyText } from '@ruimte/ui/clipboard';
-import { Icon } from '@ruimte/ui/Icon';
-import { Pill } from '@ruimte/ui/Pill';
 
 /* The three links, each with its words under `about.links.<id>`. */
 const LINKS = [
@@ -142,7 +137,7 @@ export function AboutPane() {
                         searchId="about.updates.auto"
                         label={t('about.updates.auto.label')}
                         description={t('about.updates.auto.description')}
-                        control={<Toggle checked={autoDownload} onChange={setAuto} label={t('about.updates.auto.label')} />}
+                        control={<Switch checked={autoDownload} onCheckedChange={setAuto} label={t('about.updates.auto.label')} />}
                     />
                 </SettingsSection>
             )}
@@ -295,7 +290,7 @@ function UpdatePreviewBar() {
     return (
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border-strong px-4 py-2.5">
             <span className="text-xs text-text-muted">Preview update state (dev only)</span>
-            <Segmented value={preview} options={PREVIEWS} onChange={choose} label="Preview update state" />
+            <Segmented value={preview} options={PREVIEWS} onValueChange={choose} label="Preview update state" />
         </div>
     );
 }

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import type { Worktree, WorktreeMergeResult, WorktreeMergeStrategy } from '@ruimte/contracts';
 import { cancelGitRunAction, performAsPerson } from '@/actions/client-actions';
 import { agentsEndedWith } from '@/agents/end-children';
@@ -23,7 +22,7 @@ import {
     type MergeRun
 } from '@/shell/panels/worktree-merge';
 import { nodesInWorktree } from '@/shell/panels/worktree-rows';
-import { Segmented, Toggle } from '@ruimte/ui/controls';
+import { Segmented, Switch, Button, Dialog, Field, FieldHint, Input, SectionLabel } from '@basmilius/react-ui';
 import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@ruimte/agents-react/state/chats';
 import { useEndpointId, endpointKey } from '@/state/keys';
@@ -34,8 +33,6 @@ import { useUi, type WorktreeMergeRequest } from '@/state/ui';
 import { useProjectNodes, worktreeLists, type WorktreeNode } from '@/state/worktrees';
 import type { Transport } from '@/transport/transport';
 import { useTransport } from '@/transport/context';
-import { Button } from '@ruimte/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, SECTION_LABEL, SMALL_DIALOG } from '@ruimte/ui/classes';
 
 type Reading = { request: WorktreeMergeRequest; worktrees: Worktree[]; error: { message: string | null } | null };
 
@@ -180,64 +177,59 @@ export function MergeWorktreeDialog() {
 
     return (
         <Dialog.Root open={request !== null} onOpenChange={(next) => !next && close()}>
-            <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className={SMALL_DIALOG}>
-                    <Dialog.Title className="text-base font-semibold text-text">{worktrees.length > 0 ? mergeTitle(worktrees) : t('merge.title')}</Dialog.Title>
-                    <p className={`${DIALOG_DESCRIPTION} mt-1`}>
-                        {shown === null ? t('removeWorktree.counting') : (failure ?? t('merge.holds', { contents: mergeContents(worktrees) }))}
-                    </p>
-                    {agentLine !== null && <p className="mt-2 text-sm text-status-warning">{agentLine}</p>}
-                    {shown !== null && failure === null && (
-                        <>
-                            {loose && (
-                                <div className="mt-4">
-                                    <label className="flex items-center justify-between gap-3">
-                                        <span className="text-sm text-text">{t('merge.commitFirst')}</span>
-                                        <Toggle
-                                            label={t('merge.commitFirst')}
-                                            checked={draft.commitFirst}
-                                            onChange={(commitFirst) => setDraft({ ...draft, commitFirst })}
-                                        />
-                                    </label>
-                                    {!draft.commitFirst && <p className={FIELD_HINT}>{t('merge.commitFirstHint')}</p>}
-                                </div>
-                            )}
-                            {single !== undefined && ((loose && draft.commitFirst) || strategy === 'squash') && (
-                                <label className="mt-3 flex flex-col gap-1.5">
-                                    <span className={SECTION_LABEL}>{t('merge.commitMessage')}</span>
-                                    <input
-                                        className="field font-mono text-code"
-                                        spellCheck={false}
-                                        value={subject}
-                                        onChange={(event) => setDraft({ ...draft, subject: event.target.value })}
+            <Dialog.Popup size="sm">
+                <Dialog.Title>{worktrees.length > 0 ? mergeTitle(worktrees) : t('merge.title')}</Dialog.Title>
+                <Dialog.Text className="mt-1">
+                    {shown === null ? t('removeWorktree.counting') : (failure ?? t('merge.holds', { contents: mergeContents(worktrees) }))}
+                </Dialog.Text>
+                {agentLine !== null && <p className="mt-2 text-sm text-status-warning">{agentLine}</p>}
+                {shown !== null && failure === null && (
+                    <>
+                        {loose && (
+                            <div className="mt-4">
+                                <label className="flex items-center justify-between gap-3">
+                                    <span className="text-sm text-text">{t('merge.commitFirst')}</span>
+                                    <Switch
+                                        label={t('merge.commitFirst')}
+                                        checked={draft.commitFirst}
+                                        onCheckedChange={(commitFirst) => setDraft({ ...draft, commitFirst })}
                                     />
                                 </label>
-                            )}
-                            <div className="mt-4 flex flex-col gap-1.5">
-                                <span className={SECTION_LABEL}>{t('merge.strategy')}</span>
-                                <Segmented
-                                    label={t('merge.strategy')}
-                                    value={strategy}
-                                    options={MERGE_STRATEGIES.map((value) => ({ id: value, label: mergeStrategyLabel(value) }))}
-                                    onChange={(value: WorktreeMergeStrategy) => useSettings.getState().update({ worktreeMergeStrategy: value })}
-                                />
+                                {!draft.commitFirst && <FieldHint>{t('merge.commitFirstHint')}</FieldHint>}
                             </div>
-                            <p className={FIELD_HINT}>{mergeStrategyLine(strategy)}</p>
-                            <label className="mt-4 flex items-center justify-between gap-3">
-                                <span className="text-sm text-text">{t('merge.removeAfterwards', { count: worktrees.length })}</span>
-                                <Toggle label={t('merge.removeAfterwardsShort')} checked={draft.remove} onChange={(remove) => setDraft({ ...draft, remove })} />
-                            </label>
-                        </>
-                    )}
-                    <div className={DIALOG_FOOTER}>
-                        <Button onClick={close}>{t('common:action.cancel')}</Button>
-                        <Button variant="primary" disabled={blocked} onClick={confirm}>
-                            {stopAgent ? t('merge.stopAndMerge') : t('merge.merge')}
-                        </Button>
-                    </div>
-                </Dialog.Popup>
-            </Dialog.Portal>
+                        )}
+                        {single !== undefined && ((loose && draft.commitFirst) || strategy === 'squash') && (
+                            <Field label={t('merge.commitMessage')} className="mt-3">
+                                <Input mono spellCheck={false} value={subject} onChange={(event) => setDraft({ ...draft, subject: event.target.value })} />
+                            </Field>
+                        )}
+                        <div className="mt-4 flex flex-col gap-1.5">
+                            <SectionLabel>{t('merge.strategy')}</SectionLabel>
+                            <Segmented
+                                label={t('merge.strategy')}
+                                value={strategy}
+                                options={MERGE_STRATEGIES.map((value) => ({ id: value, label: mergeStrategyLabel(value) }))}
+                                onValueChange={(value: WorktreeMergeStrategy) => useSettings.getState().update({ worktreeMergeStrategy: value })}
+                            />
+                        </div>
+                        <FieldHint>{mergeStrategyLine(strategy)}</FieldHint>
+                        <label className="mt-4 flex items-center justify-between gap-3">
+                            <span className="text-sm text-text">{t('merge.removeAfterwards', { count: worktrees.length })}</span>
+                            <Switch
+                                label={t('merge.removeAfterwardsShort')}
+                                checked={draft.remove}
+                                onCheckedChange={(remove) => setDraft({ ...draft, remove })}
+                            />
+                        </label>
+                    </>
+                )}
+                <Dialog.Footer>
+                    <Button onClick={close}>{t('common:action.cancel')}</Button>
+                    <Button variant="primary" disabled={blocked} onClick={confirm}>
+                        {stopAgent ? t('merge.stopAndMerge') : t('merge.merge')}
+                    </Button>
+                </Dialog.Footer>
+            </Dialog.Popup>
         </Dialog.Root>
     );
 }

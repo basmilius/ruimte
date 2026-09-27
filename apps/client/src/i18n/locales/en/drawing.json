@@ -72,8 +72,6 @@
     "unlockAll": "Unlock all"
   },
   "zoom": {
-    "out": "Zoom out",
-    "in": "Zoom in",
     "presets": "Zoom presets",
     "fit": "Zoom to fit",
     "selection": "Zoom to selection",

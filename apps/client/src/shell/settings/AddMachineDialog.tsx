@@ -1,12 +1,7 @@
-import clsx from 'clsx';
-import { Dialog } from '@base-ui-components/react/dialog';
 import { KeyRound, Link2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PAIRING_PLACEHOLDER, usePairMachine } from '@/shell/settings/pair-machine';
-import { Button } from '@ruimte/ui/Button';
-import { DIALOG_DESCRIPTION, DIALOG_FOOTER, FIELD_HINT, FORM_ERROR, SMALL_DIALOG } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
-import { Tooltip } from '@ruimte/ui/Tooltip';
+import { Button, FieldHint, FormError, Icon, Input, Tooltip, Dialog } from '@basmilius/react-ui';
 
 /*
  * Adding a machine from the start screen, which has no Account pane to do it in. The dialog is about
@@ -18,45 +13,39 @@ export function AddMachineDialog({ open, onOpenChange, onLinkWithCode }: { open:
 
     return (
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
-            <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" forceRender />
-                <Dialog.Popup className={SMALL_DIALOG}>
-                    <Dialog.Title className="text-base font-semibold text-text">{t('machines.add.title')}</Dialog.Title>
-                    <Dialog.Description className={clsx(DIALOG_DESCRIPTION, 'mt-1')}>{t('machines.add.description')}</Dialog.Description>
-                    <input
-                        autoFocus
-                        className="field mt-3 min-w-0 font-mono text-code"
-                        aria-label={t('machines.add.linkLabel')}
-                        placeholder={PAIRING_PLACEHOLDER}
-                        value={link}
-                        spellCheck={false}
-                        onChange={(e) => setLink(e.target.value)}
-                        onKeyDown={(e) => {
-                            e.stopPropagation();
-                            if (e.key === 'Enter' && canPair) {
-                                void pair();
-                            }
-                        }}
-                    />
-                    <p className={clsx(FIELD_HINT, 'break-words')}>{t('machines.add.hint')}</p>
-                    {failure && (
-                        <p className={clsx(FORM_ERROR, 'mt-2 break-words')} role="alert">
-                            {failure}
-                        </p>
-                    )}
-                    <div className={DIALOG_FOOTER}>
-                        <Tooltip label={t('machines.add.codeHint')}>
-                            <Button className="mr-auto" onClick={onLinkWithCode}>
-                                <Icon icon={KeyRound} size={12} /> {t('machines.add.withCode')}
-                            </Button>
-                        </Tooltip>
-                        <Button onClick={() => onOpenChange(false)}>{t('common:action.cancel')}</Button>
-                        <Button variant="primary" disabled={!canPair} onClick={() => void pair()}>
-                            <Icon icon={Link2} size={12} /> {t('machines.add.pair')}
+            <Dialog.Popup size="sm">
+                <Dialog.Title>{t('machines.add.title')}</Dialog.Title>
+                <Dialog.Description className="mt-1">{t('machines.add.description')}</Dialog.Description>
+                <Input
+                    autoFocus
+                    mono
+                    className="mt-3 min-w-0"
+                    aria-label={t('machines.add.linkLabel')}
+                    placeholder={PAIRING_PLACEHOLDER}
+                    value={link}
+                    spellCheck={false}
+                    onChange={(e) => setLink(e.target.value)}
+                    onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter' && canPair) {
+                            void pair();
+                        }
+                    }}
+                />
+                <FieldHint className="break-words">{t('machines.add.hint')}</FieldHint>
+                {failure && <FormError className="mt-2 break-words">{failure}</FormError>}
+                <Dialog.Footer>
+                    <Tooltip label={t('machines.add.codeHint')}>
+                        <Button className="mr-auto" onClick={onLinkWithCode}>
+                            <Icon icon={KeyRound} size={12} /> {t('machines.add.withCode')}
                         </Button>
-                    </div>
-                </Dialog.Popup>
-            </Dialog.Portal>
+                    </Tooltip>
+                    <Button onClick={() => onOpenChange(false)}>{t('common:action.cancel')}</Button>
+                    <Button variant="primary" disabled={!canPair} onClick={() => void pair()}>
+                        <Icon icon={Link2} size={12} /> {t('machines.add.pair')}
+                    </Button>
+                </Dialog.Footer>
+            </Dialog.Popup>
         </Dialog.Root>
     );
 }

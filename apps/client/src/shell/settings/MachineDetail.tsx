@@ -3,16 +3,14 @@ import { CloudUpload, Plug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { forgetEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { messageOf } from '@ruimte/ui/error-message';
+import { messageOf, Button, Icon, FormError } from '@basmilius/react-ui';
+import { ConfirmDialog, DetailHeader, SettingsRow } from '@basmilius/react-ui/settings';
 import { usePulsarAccount, withAccessToken } from '@/pulsar/account';
 import { useRegistrationFailures } from '@/pulsar/auto-register-watch';
 import { addMachineToAccount, openAccountMachine, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { BackgroundServiceSection } from '@/shell/settings/BackgroundServiceSection';
-import { ConfirmDialog } from '@ruimte/ui/settings/ConfirmDialog';
 import { MachineIdentityForm } from '@/shell/settings/MachineIdentityForm';
 import { BrokerRow, DirectRow, MachineAccess, RefuseStatementsRow, StreamingRow, WithReason } from '@/shell/settings/MachineSettings';
-import { DetailHeader, REMOVE_BUTTON } from '@ruimte/ui/settings/DetailHeader';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps } from '@/shell/settings/machine-actions';
@@ -20,9 +18,6 @@ import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
 
 const ACTION_DEPS: MachineActionDeps = {
     forgetEndpoint,
@@ -120,9 +115,9 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                     {(registrationFailure !== null || model.canAddToAccountAgain) && (
                         <SettingsSection title={t('machineDialog.account.title')}>
                             {registrationFailure && (
-                                <p className={`${FORM_ERROR} px-4.5 py-3 break-words`} role="alert">
+                                <FormError className="px-4.5 py-3 break-words">
                                     {t('machineDialog.account.registrationFailure', { reason: registrationFailure })}
-                                </p>
+                                </FormError>
                             )}
                             {model.canAddToAccountAgain && (
                                 <SettingsRow
@@ -150,9 +145,9 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                             label={t('machineDialog.remove.forget.label')}
                             description={t('machineDialog.remove.forget.description')}
                             control={
-                                <button type="button" className={REMOVE_BUTTON} onClick={() => setConfirming('forget')}>
+                                <Button variant="danger-outline" onClick={() => setConfirming('forget')}>
                                     {t('machineDialog.remove.forget.action')}
-                                </button>
+                                </Button>
                             }
                         />
                     )}
@@ -161,9 +156,9 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                             label={t('machineDialog.remove.account.label')}
                             description={entry.local ? t('machineDialog.remove.account.local') : t('machineDialog.remove.account.description')}
                             control={
-                                <button type="button" className={REMOVE_BUTTON} onClick={() => setConfirming('remove')}>
+                                <Button variant="danger-outline" onClick={() => setConfirming('remove')}>
                                     {t('machineDialog.remove.account.action')}
-                                </button>
+                                </Button>
                             }
                         />
                     )}

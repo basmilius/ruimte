@@ -1,1 +1,1 @@
-export { formatBytes } from '@ruimte/ui/format/number';
+export { formatBytes } from '@basmilius/react-ui/format';

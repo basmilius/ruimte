@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
+import { SettingsRow } from '@basmilius/react-ui/settings';
+import { Switch } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Toggle } from '@ruimte/ui/controls';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 import { useServers } from '@/state/server';
@@ -68,9 +68,9 @@ function MachineSwitchRow({ endpoint, setting, searchId }: { endpoint: Endpoint;
             label={t(`${words}.label`)}
             description={connected ? t(`${words}.description`) : connection.noLink === true ? t(`${words}.notConnected`) : t('machine.notAnswering')}
             control={
-                <Toggle
+                <Switch
                     checked={info?.[setting] === true}
-                    onChange={(checked) => void set(checked)}
+                    onCheckedChange={(checked) => void set(checked)}
                     // The section names the machine, a screen reader reading the switch alone does not.
                     label={t(`${words}.rowLabel`, { machine: endpoint.label })}
                     disabled={busy || !connected}

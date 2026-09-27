@@ -276,12 +276,8 @@
     "dock": {
         "add": "Add",
         "doubleClick": "dbl-click",
-        "zoomOut": "Zoom out",
-        "zoomIn": "Zoom in",
-        "zoomPresets": "Zoom presets",
         "zoomToFit": "Zoom to fit",
         "zoomToSelection": "Zoom to selection",
-        "fitEverything": "Fit everything",
         "lock": "Lock",
         "refuseGestures": "Refuse gestures",
         "unlockEverything": "Unlock everything",

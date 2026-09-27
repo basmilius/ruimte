@@ -8,15 +8,11 @@ import { cancelPulsarSignIn, linkPulsarProvider, refreshPulsarIdentities, signOu
 import { PROVIDER_ORDER, identityDetail, signedInLabel, takeoverWarning } from '@/pulsar/account-name';
 import { dismissAccountConfirmation, useAccountConfirmation } from '@/pulsar/confirmation';
 import { PAIRING_PLACEHOLDER, usePairMachine } from '@/shell/settings/pair-machine';
-import { Skeleton } from '@ruimte/ui/controls';
-import { SettingsRow } from '@ruimte/ui/settings/SettingsRow';
+import { Skeleton, Button, Icon, IconButton, Tooltip, FormError, Input } from '@basmilius/react-ui';
+import { SettingsRow } from '@basmilius/react-ui/settings';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { ProviderButton, SignInButtons } from '@/shell/SignInButtons';
-import { Button } from '@ruimte/ui/Button';
-import { FORM_ERROR } from '@ruimte/ui/classes';
-import { Icon } from '@ruimte/ui/Icon';
 import { SignInMark } from '@/ui/SignInMark';
-import { Tooltip } from '@ruimte/ui/Tooltip';
 
 /* One way to sign in to the account. Remove it while another remains, or add it when the address book offers it. */
 function IdentityRow({ provider }: { provider: ProviderId }) {
@@ -89,14 +85,13 @@ function AccountOutcome() {
                 <Icon icon={failed ? CircleAlert : Check} size={16} className={failed ? 'text-status-error' : 'text-status-idle'} />
             </span>
             <span className={clsx('min-w-0 grow text-sm break-words', failed ? 'text-status-error' : 'text-text')}>{text}</span>
-            <Tooltip label={t('common:action.dismiss')} name>
-                <button
-                    className="icon-btn icon-btn-xs -my-0.5"
-                    onClick={() => (failed ? usePulsarAccount.setState({ error: null }) : dismissAccountConfirmation())}
-                >
-                    <Icon icon={X} size={12} />
-                </button>
-            </Tooltip>
+            <IconButton
+                icon={X}
+                size="xs"
+                label={t('common:action.dismiss')}
+                className="-my-0.5"
+                onClick={() => (failed ? usePulsarAccount.setState({ error: null }) : dismissAccountConfirmation())}
+            />
         </div>
     );
 }
@@ -181,9 +176,10 @@ function AddMachineSection({ focusAt }: { focusAt: number }) {
             <SettingsRow searchId="machines.add" label={t('machines.add.linkLabel')} description={t('machines.add.hint')}>
                 <div className="flex min-w-0 flex-col gap-2">
                     <div className="flex min-w-0 items-center gap-2">
-                        <input
+                        <Input
                             ref={input}
-                            className="field min-w-0 grow font-mono text-code"
+                            mono
+                            className="min-w-0 grow"
                             aria-label={t('machines.add.linkLabel')}
                             placeholder={PAIRING_PLACEHOLDER}
                             value={link}
@@ -200,11 +196,7 @@ function AddMachineSection({ focusAt }: { focusAt: number }) {
                             <Icon icon={Link2} size={12} /> {t('machines.add.pair')}
                         </Button>
                     </div>
-                    {failure && (
-                        <p className={clsx(FORM_ERROR, 'break-words')} role="alert">
-                            {failure}
-                        </p>
-                    )}
+                    {failure && <FormError className="break-words">{failure}</FormError>}
                     <Tooltip label={t('machines.add.codeHint')}>
                         <Button className="-ml-2 self-start" onClick={() => setLinkOpen(true)}>
                             <Icon icon={KeyRound} size={12} /> {t('machines.add.withCode')}
