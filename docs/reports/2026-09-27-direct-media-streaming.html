@@ -244,12 +244,30 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
     </ul>
 
     <h3>De iPhone</h3>
-    <p>De app laadt een video niet meer in zijn geheel. <code>MachineMediaLoader</code> in <code>RuimteTransport</code> is de delegate van een <code>AVAssetResourceLoader</code> op een eigen scheme (<code>ruimte-media://</code>), en beantwoordt de ranges van <code>AVPlayer</code> met <code>bytes.read</code>: twee stukken vooruit, begrensd op 8 MiB per request, en de versie vastgepind op het eerste stuk. Dat geldt over elke verbinding, want de app gebruikt altijd <code>bytes.read</code>. Het tijdelijke bestand en het plafond van 32 MB voor video zijn weg. Afbeeldingen blijven op <code>readResource</code>. Acht tests dekken de opdeling, het venster, het vooruit vragen, een gewijzigd bestand, afbreken en een weigering. De app bouwt voor het toestel. Of <code>AVPlayer</code> soepel zoekt op requests die korter worden afgesloten dan gevraagd, is nog niet gezien.</p>
+    <p>De app laadt een video of een geluidsbestand niet meer in zijn geheel. <code>MachineMediaLoader</code> in <code>RuimteTransport</code> is de delegate van een <code>AVAssetResourceLoader</code> op een eigen scheme (<code>ruimte-media://</code>), en beantwoordt de ranges van <code>AVPlayer</code> met <code>bytes.read</code>. De versie ligt vast op het eerste stuk. Dat geldt over elke verbinding, want de app gebruikt altijd <code>bytes.read</code>. Het plafond van 32 MB en het tijdelijke bestand zijn weg. De speler is <code>AVPlayerViewController</code>, met volledig scherm.</p>
+    <p>Op de iPhone van Bas gecontroleerd, met een video van 213 MB (30 s, H.264 op 56,7 Mbit/s, dus ongeveer 7,1 MB/s):</p>
+    <ul>
+      <li><strong>De delegate-methode had de verkeerde naam</strong> (<code>12026f88</code>). Een optionele Objective-C-methode met een andere naam compileert en wordt nooit aangeroepen. Een test laat nu een videootje van 4 KB via de loader door AVFoundation lezen.</li>
+      <li><strong>De play-knop van AVKit deed niets</strong> (<code>62b78610</code>). <code>play()</code> vanuit code werkte wel, en een eigen SwiftUI-knop ook. Sinds de pagina het asset eerst laadt (<code>isPlayable</code>, <code>duration</code>) en daarna pas een speler maakt, werkt de knop. Waarom AVKit hem uitschakelde, is niet vastgesteld.</li>
+      <li><strong>Geen venster op iOS</strong> (<code>a0191def</code>). Elk request naar het einde van het bestand leest door tot AVFoundation annuleert. Met een venster van 8 MiB zat er tussen twee blokken een rondreis zonder overlap.</li>
+    </ul>
+    <div class="table">
+      <table class="wide">
+        <caption>Doorvoer op de iPhone, stukken van 256 KiB, verbinding naar de dev-daemon (of die direct of via een socket liep, is niet vastgelegd)</caption>
+        <thead><tr><th scope="col">Stukken onderweg</th><th scope="col">Gemeten</th><th scope="col">Afspelen</th></tr></thead>
+        <tbody>
+          <tr><td>2 (met venster van 8 MiB)</td><td>ongeveer 8,4 MB/s per blok</td><td>hapert</td></tr>
+          <tr><td>3</td><td>pieken van 12 à 13 MB/s; één lang request 135 MB in 20,4 s (6,6 MB/s)</td><td>hapert nog wat</td></tr>
+          <tr><td>5</td><td>pieken van 8 à 10 MB/s, veel requests van 64 KB</td><td>slechter: speelt terug en door elkaar</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Drie is gekozen. Daarmee zit er ongeveer 1 MB base64 in de buffer van de daemon, net boven de gate, dus een terminal op dezelfde verbinding kan kort output verliezen. Deze video zit aan de grens van wat base64 in JSON haalt; een gewone telefoonvideo vraagt 1 à 3 MB/s. Binaire frames zouden een derde van de bytes schelen. Dat is een wijziging van het protocol, met de iPhone-app erbij, en hoort in een eigen plan.</p>
 
     <h3>Wat nog moet</h3>
     <ol>
       <li>Open in de dev-app een video van ruim 32 MB op een machine met een directe verbinding. Controleer dat hij meteen start en dat zoeken werkt. Na de eerste keer registreert de worker zich; de eerste video in een nieuw venster kan nog via de blob-route gaan.</li>
-      <li>Speel op de iPhone een video van ruim 100 MB af, over een directe verbinding en over een socket, en zoek naar het einde.</li>
+      <li>Leg vast of de iPhone-meting over een directe verbinding of een socket liep, en meet dezelfde video over de andere.</li>
       <li>Meet stap 5 over een echte directe verbinding, met en zonder relay, met <code>ahead</code> op 1, 2 en 3 (<code>StreamOptions</code> in <code>bytes-stream.ts</code>). Houd daarbij een terminal op dezelfde verbinding in de gaten. Bij twee stukken onderweg is dat ongeveer 684 KB base64, onder de gate van 1 MB. Bij drie zit het er net boven.</li>
     </ol>
   </section>
