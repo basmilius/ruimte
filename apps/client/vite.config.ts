@@ -1,10 +1,14 @@
+import { realpathSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig, type Plugin } from 'vite';
+import { defaultClientConditions, defineConfig, searchForWorkspaceRoot, type Plugin } from 'vite';
 
 // The dev daemon sits on 4211 so an installed Ruimte can keep 4210.
 const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
+
+// Where @basmilius/react-ui really lives: a linked checkout sits outside this repository.
+const reactUi = realpathSync(fileURLToPath(new URL('./node_modules/@basmilius/react-ui', import.meta.url)));
 
 /*
  * The web client at `station.ruimte.app` (`vite build --mode station`). It is the same page, plus what
@@ -34,9 +38,20 @@ export default defineConfig(({ mode }) => ({
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))
-        }
+        },
+        // The library's `source` export is its TypeScript, compiled here like the app's own.
+        conditions: ['source', ...defaultClientConditions],
+        // A linked checkout has its own node_modules; a second React or i18next breaks every hook and every word.
+        dedupe: ['react', 'react-dom', 'i18next', 'react-i18next', '@base-ui-components/react']
+    },
+    optimizeDeps: {
+        exclude: ['@basmilius/react-ui'],
+        include: ['@base-ui-components/react/menu', '@base-ui-components/react/dialog', 'lucide-react', 'clsx']
     },
     server: {
+        fs: {
+            allow: [searchForWorkspaceRoot(process.cwd()), reactUi]
+        },
         // Vite compiles a module on its first request; this does all of them while `bun dev` starts, so the first open is not the slow one.
         warmup: {
             clientFiles: ['./src/**/*.{ts,tsx}', '!./src/**/*.test.{ts,tsx}']

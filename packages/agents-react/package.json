@@ -175,7 +175,6 @@
     "@lezer/markdown": "^1.7.2",
     "@pierre/diffs": "^1.4.3",
     "@ruimte/agent-contracts": "workspace:*",
-    "@ruimte/ui": "workspace:*",
     "@tanstack/react-virtual": "^3.14.13",
     "clsx": "^2.1.1",
     "lucide-react": "^1.47.0",
@@ -188,12 +187,19 @@
     "zustand": "^5.0.15"
   },
   "peerDependencies": {
+    "@basmilius/react-ui": "^0.1.0",
     "i18next": "^26.4.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-i18next": "^17.0.15"
   },
+  "peerDependenciesMeta": {
+    "@basmilius/react-ui": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@basmilius/react-ui": "link:@basmilius/react-ui",
     "i18next": "^26.4.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

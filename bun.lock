@@ -15,6 +15,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@base-ui-components/react": "^1.0.0-rc.0",
+        "@basmilius/react-ui": "link:@basmilius/react-ui",
         "@codemirror/commands": "^6.11.1",
         "@codemirror/language": "^6.12.4",
         "@codemirror/state": "^6.7.6",
@@ -36,7 +37,6 @@
         "@ruimte/merge": "workspace:*",
         "@ruimte/plan": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
-        "@ruimte/ui": "workspace:*",
         "@tanstack/react-virtual": "^3.14.13",
         "@xterm/addon-fit": "^0.11.0",
         "@xterm/addon-web-links": "^0.12.0",
@@ -232,7 +232,6 @@
         "@lezer/markdown": "^1.7.2",
         "@pierre/diffs": "^1.4.3",
         "@ruimte/agent-contracts": "workspace:*",
-        "@ruimte/ui": "workspace:*",
         "@tanstack/react-virtual": "^3.14.13",
         "clsx": "^2.1.1",
         "lucide-react": "^1.47.0",
@@ -245,6 +244,7 @@
         "zustand": "^5.0.15",
       },
       "devDependencies": {
+        "@basmilius/react-ui": "link:@basmilius/react-ui",
         "@types/bun": "^1.4.2",
         "@types/react": "^19.3.0",
         "@types/react-dom": "^19.3.0",
@@ -255,11 +255,15 @@
         "typescript": "^7.0.2",
       },
       "peerDependencies": {
+        "@basmilius/react-ui": "^0.1.0",
         "i18next": "^26.4.2",
         "react": "^19.3.0",
         "react-dom": "^19.3.0",
         "react-i18next": "^17.0.15",
       },
+      "optionalPeers": [
+        "@basmilius/react-ui",
+      ],
     },
     "packages/contracts": {
       "name": "@ruimte/contracts",
@@ -376,33 +380,6 @@
       "devDependencies": {
         "@types/bun": "^1.4.2",
         "typescript": "^7.0.2",
-      },
-    },
-    "packages/ui": {
-      "name": "@ruimte/ui",
-      "version": "0.0.0",
-      "dependencies": {
-        "@base-ui-components/react": "^1.0.0-rc.0",
-        "@pierre/trees": "1.0.0-beta.6",
-        "clsx": "^2.1.1",
-        "lucide-react": "^1.47.0",
-        "zustand": "^5.0.15",
-      },
-      "devDependencies": {
-        "@types/bun": "^1.4.2",
-        "@types/react": "^19.3.0",
-        "@types/react-dom": "^19.3.0",
-        "i18next": "^26.4.2",
-        "react": "^19.3.0",
-        "react-dom": "^19.3.0",
-        "react-i18next": "^17.0.15",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "i18next": "^26.4.2",
-        "react": "^19.3.0",
-        "react-dom": "^19.3.0",
-        "react-i18next": "^17.0.15",
       },
     },
   },
@@ -527,6 +504,8 @@
     "@base-ui-components/react": ["@base-ui-components/react@1.0.0-rc.0", "", { "dependencies": { "@babel/runtime": "^7.28.4", "@base-ui-components/utils": "0.2.2", "@floating-ui/react-dom": "^2.1.6", "@floating-ui/utils": "^0.2.10", "reselect": "^5.1.1", "tabbable": "^6.3.0", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "@types/react": "^17 || ^18 || ^19", "react": "^17 || ^18 || ^19", "react-dom": "^17 || ^18 || ^19" }, "optionalPeers": ["@types/react"] }, "sha512-9lhUFbJcbXvc9KulLev1WTFxS/alJRBWDH/ibKSQaNvmDwMFS2gKp1sTeeldYSfKuS/KC1w2MZutc0wHu2hRHQ=="],
 
     "@base-ui-components/utils": ["@base-ui-components/utils@0.2.2", "", { "dependencies": { "@babel/runtime": "^7.28.4", "@floating-ui/utils": "^0.2.10", "reselect": "^5.1.1", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "@types/react": "^17 || ^18 || ^19", "react": "^17 || ^18 || ^19", "react-dom": "^17 || ^18 || ^19" }, "optionalPeers": ["@types/react"] }, "sha512-rNJCD6TFy3OSRDKVHJDzLpxO3esTV1/drRtWNUpe7rCpPN9HZVHUCuP+6rdDYDGWfXnQHbqi05xOyRP2iZAlkw=="],
+
+    "@basmilius/react-ui": ["@basmilius/react-ui@link:@basmilius/react-ui", {}],
 
     "@cloudflare/kv-asset-handler": ["@cloudflare/kv-asset-handler@0.5.0", "", {}, "sha512-jxQYkj8dSIzc0cD6cMMNdOc1UVjqSqu8BZdor5s8cGjW2I8BjODt/kWPVdY+u9zj3ms75Q5qaZgnxUad83+eAg=="],
 
@@ -1003,8 +982,6 @@
     "@ruimte/site": ["@ruimte/site@workspace:apps/site"],
 
     "@ruimte/station": ["@ruimte/station@workspace:apps/station"],
-
-    "@ruimte/ui": ["@ruimte/ui@workspace:packages/ui"],
 
     "@shikijs/core": ["@shikijs/core@4.4.3", "", { "dependencies": { "@shikijs/primitive": "4.4.3", "@shikijs/types": "4.4.3", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.5", "hast-util-to-html": "^9.0.5" } }, "sha512-QCR4q2ZO/ILJEuwiBMel4wdcTDb1JGwfjKTxPDF6x8ixOaluPrVqIn06C99AcRPhmYlBR56d/Fb+GN58GzExpg=="],
 

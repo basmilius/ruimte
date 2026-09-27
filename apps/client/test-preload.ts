@@ -1,8 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import i18next from 'i18next';
-import { UI_NAMESPACE } from '@ruimte/ui/locales';
-import uiWords from '@ruimte/ui/locales/en.json';
+import { UI_NAMESPACE, UI_RESOURCES } from '@basmilius/react-ui';
 import { connectFormat } from './src/format/source';
 import { FALLBACK_LANGUAGE } from './src/i18n/languages';
 
@@ -37,8 +36,8 @@ await i18next.init({
     fallbackLng: FALLBACK_LANGUAGE,
     defaultNS: 'common',
     interpolation: { escapeValue: false },
-    resources: { [FALLBACK_LANGUAGE]: { ...resources, ...agentsWords, [UI_NAMESPACE]: uiWords } }
+    resources: { [FALLBACK_LANGUAGE]: { ...resources, ...agentsWords, [UI_NAMESPACE]: UI_RESOURCES.en } }
 });
 
-// The formatters of @ruimte/ui read the client's settings, which the tests set.
+// The formatters of @basmilius/react-ui read the client's settings, which the tests set.
 connectFormat();

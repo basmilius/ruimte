@@ -4,4 +4,4 @@
 pathIgnorePatterns = ["**/*.integration.test.ts"]
 # The client's English words, so a pure function that reads one off i18next is testable
 # without every test file initializing it first.
-preload = ["./apps/client/test-preload.ts"]
+preload = ["./apps/client/test-dedupe.ts", "./apps/client/test-preload.ts"]

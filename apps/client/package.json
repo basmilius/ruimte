@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-rc.0",
+    "@basmilius/react-ui": "link:@basmilius/react-ui",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/language": "^6.12.4",
     "@codemirror/state": "^6.7.6",
@@ -33,7 +34,6 @@
     "@ruimte/merge": "workspace:*",
     "@ruimte/plan": "workspace:*",
     "@ruimte/pulsar": "workspace:*",
-    "@ruimte/ui": "workspace:*",
     "@tanstack/react-virtual": "^3.14.13",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-web-links": "^0.12.0",
