@@ -45,7 +45,6 @@ export default defineConfig(({ mode }) => ({
         dedupe: ['react', 'react-dom', 'i18next', 'react-i18next', '@base-ui-components/react']
     },
     optimizeDeps: {
-        exclude: ['@basmilius/react-ui'],
         include: ['@base-ui-components/react/menu', '@base-ui-components/react/dialog', 'lucide-react', 'clsx']
     },
     server: {
