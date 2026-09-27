@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { AGENTS_LOCALES, AGENTS_NAMESPACES } from '@ruimte/agents-react/locales';
-import { UI_LOCALES, UI_NAMESPACE } from '@ruimte/ui/locales';
+import { UI_NAMESPACE } from '@basmilius/react-ui';
 import { activeLanguage } from '@/i18n/active';
 import { FALLBACK_LANGUAGE, type AppLanguage } from '@/i18n/languages';
 import { NAMESPACES } from '@/i18n/namespaces';
@@ -22,10 +22,6 @@ const load = async (language: AppLanguage): Promise<void> => {
                 i18next.addResourceBundle(language, namespace, resource.default, true, true);
             })
     );
-    const ui = UI_LOCALES[language];
-    if (ui) {
-        i18next.addResourceBundle(language, UI_NAMESPACE, (await ui()).default, true, true);
-    }
     const agents = AGENTS_LOCALES[language];
     if (agents) {
         for (const [namespace, resource] of Object.entries(await agents())) {

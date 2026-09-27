@@ -19,11 +19,8 @@ import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
 import { useWindow } from '@/state/window';
 import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
-import { ErrorBoundary } from '@ruimte/ui/ErrorBoundary';
-import { lazyDialog, lazyNamed } from '@/ui/lazy';
-import { prefetcher } from '@/ui/prefetch';
-import { ShortcutHints } from '@ruimte/ui/ShortcutHints';
-import { TooltipProvider } from '@ruimte/ui/Tooltip';
+import { ErrorBoundary, ShortcutHints, UIProvider, lazyDialog, lazyNamed, prefetcher } from '@basmilius/react-ui';
+import { formatSource } from '@/format/source';
 
 const loadWorkspaceShell = () => import('@/shell/WorkspaceShell');
 const WorkspaceShell = lazyNamed(loadWorkspaceShell, 'WorkspaceShell');
@@ -119,7 +116,7 @@ export function App() {
     );
 
     return (
-        <TooltipProvider>
+        <UIProvider i18n={i18next} formatSource={formatSource}>
             <ChatScopeProvider>
                 {/* The last resort, for a failure outside every view, node and panel. It unmounts the
                 parked browser pages as well, which is why everything below carries a boundary of its own. */}
@@ -148,6 +145,6 @@ export function App() {
                     </ErrorBoundary>
                 </ErrorBoundary>
             </ChatScopeProvider>
-        </TooltipProvider>
+        </UIProvider>
     );
 }
