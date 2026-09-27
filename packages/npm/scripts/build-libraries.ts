@@ -59,6 +59,8 @@ const build = async (library: Library): Promise<void> => {
             rewriteRelativeImportExtensions: true,
             rootDir: join(source, 'src'),
             outDir: dist,
+            // A library outside this repository compiles against its published declarations, never its `source` export.
+            customConditions: [],
             paths: declarationPaths()
         },
         include: [join(source, 'src')],

@@ -4,7 +4,7 @@ import type { Manifest } from './manifest';
  * The workspace packages another app builds on, published beside `ruimte` with the version of the
  * release. In dependency order, so a package is on the registry before the one that names it.
  */
-export const LIBRARIES = ['agent-contracts', 'ui', 'agents', 'agents-react'] as const;
+export const LIBRARIES = ['agent-contracts', 'agents', 'agents-react'] as const;
 
 export type Library = (typeof LIBRARIES)[number];
 

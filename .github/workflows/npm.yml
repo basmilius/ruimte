@@ -1,7 +1,7 @@
 name: npm
 
 # Publishes `ruimte`, its three `@ruimte/<os>-<cpu>` binary packages (Apple silicon only on macOS) and the libraries
-# `@ruimte/agent-contracts`, `@ruimte/ui`, `@ruimte/agents` and `@ruimte/agents-react` with the version of a release.
+# `@ruimte/agent-contracts`, `@ruimte/agents` and `@ruimte/agents-react` with the version of a release.
 # A tag `libraries-v1.2.3` publishes the libraries alone, on a version Ruimte itself skips.
 # npm trusts this workflow through OIDC (Trusted Publishing, configured per package on npmjs.com for
 # `npm.yml` and the `npm` environment), so there is no token anywhere. A version that is already on
