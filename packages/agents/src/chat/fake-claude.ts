@@ -209,7 +209,8 @@ export const fakeClaude: FakeCli = (io) => {
          * A background agent that asks to run a command while the turn that launched it ends, framed the way Claude
          * Code 2.1.282 sends it: the request names the agent's own call and its `agent_id`, the result of the turn
          * comes anyway, and the request stays open until it is answered or the CLI takes it back. A line `slow`
-         * under it keeps the turn open instead, for a person to stop it.
+         * under it keeps the turn open instead, for a person to stop it; a line `late` holds the agent's command
+         * and its request until after the result, when the CLI runs no turn.
          */
         if (text.startsWith('background approval:')) {
             const [first = '', ...rest] = text.split('\n');
@@ -247,32 +248,41 @@ export const fakeClaude: FakeCli = (io) => {
                 },
                 session_id: sessionId
             });
-            out({
-                type: 'assistant',
-                message: {
-                    id: `msg_${nonce}_${++messageCounter}`,
-                    model,
-                    role: 'assistant',
-                    content: [{ type: 'tool_use', id: `${toolUseId}_bash`, name: 'Bash', input: { command } }],
-                    usage
-                },
-                parent_tool_use_id: toolUseId,
-                session_id: sessionId
-            });
-            backgroundAsk = { requestId: 'req-bg', command };
-            out({
-                type: 'control_request',
-                request_id: 'req-bg',
-                request: {
-                    subtype: 'can_use_tool',
-                    tool_name: 'Bash',
-                    display_name: 'Bash',
-                    input: { command },
-                    description: `Run ${command}`,
-                    tool_use_id: `${toolUseId}_bash`,
-                    agent_id: 'a-bgask'
-                }
-            });
+            const ask = (): void => {
+                out({
+                    type: 'assistant',
+                    message: {
+                        id: `msg_${nonce}_${++messageCounter}`,
+                        model,
+                        role: 'assistant',
+                        content: [{ type: 'tool_use', id: `${toolUseId}_bash`, name: 'Bash', input: { command } }],
+                        usage
+                    },
+                    parent_tool_use_id: toolUseId,
+                    session_id: sessionId
+                });
+                backgroundAsk = { requestId: 'req-bg', command };
+                out({
+                    type: 'control_request',
+                    request_id: 'req-bg',
+                    request: {
+                        subtype: 'can_use_tool',
+                        tool_name: 'Bash',
+                        display_name: 'Bash',
+                        input: { command },
+                        description: `Run ${command}`,
+                        tool_use_id: `${toolUseId}_bash`,
+                        agent_id: 'a-bgask'
+                    }
+                });
+            };
+            if (rest.includes('late')) {
+                assistantText('the agent runs');
+                result();
+                io.later(ask);
+                return;
+            }
+            ask();
             if (rest.includes('slow')) {
                 slow = true;
                 return;

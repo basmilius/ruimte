@@ -20,7 +20,7 @@ import type { SpawnChatProcess } from './chat-process.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
 import { limitedTurn, limitResumeAt, limitResumeWake } from './limit-resume.ts';
-import { ThreadProjector } from './projector.ts';
+import { isMainAgentOutput, ThreadProjector } from './projector.ts';
 import type { SubagentSettlement } from './subagent-settlement.ts';
 import { ChatThread } from './thread.ts';
 import { errorText } from '../error-text.ts';
@@ -138,6 +138,8 @@ export class ChatSession {
     private turnReady: Promise<void> = Promise.resolve();
     // Turns we settled ourselves whose `result` is still on its way; it may not close the turn after them.
     private staleResults = 0;
+    // The last turn the main agent spoke in; a turn opened only for a subagent's request gets no `result`.
+    private spokenTurnId: string | null = null;
     private titleTimer: ReturnType<typeof setTimeout> | null = null;
     // A name is asked for once per chat this host holds; the turn count keeps it once across restarts.
     private naming = false;
@@ -930,7 +932,7 @@ export class ChatSession {
 
     /*
      * A turn the CLI opened itself is closed the moment the person types: they are steering now, and
-     * the `result` still coming for that turn must not settle the one they just started.
+     * a `result` still coming for that turn must not settle the one they just started.
      */
     private settleAgentTurn(): void {
         const turnId = this.thread.info.activeTurnId;
@@ -938,7 +940,9 @@ export class ChatSession {
         if (turn?.kind !== 'turn' || turn.origin !== 'agent') {
             return;
         }
-        this.staleResults += 1;
+        if (this.spokenTurnId === turn.id) {
+            this.staleResults += 1;
+        }
         this.emit([this.thread.upsert({ ...turn, state: 'done', endedAt: Date.now() }), this.thread.patchInfo({ status: 'idle', activeTurnId: null })]);
         this.settleCheckpoint(turn.id);
     }
@@ -1147,6 +1151,9 @@ export class ChatSession {
             }
         }
         this.emit(this.projector.project(generation, event));
+        if (isMainAgentOutput(event)) {
+            this.spokenTurnId = this.thread.info.activeTurnId;
+        }
         if (orphaned.length > 0) {
             void this.settleFromTranscripts(orphaned.flatMap((row) => this.thread.get(row.id) ?? []).filter((item) => item.kind === 'subagent'));
         }

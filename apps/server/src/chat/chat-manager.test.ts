@@ -551,6 +551,23 @@ describe('ChatManager', () => {
         expect(subagentWork().find((item) => item.kind === 'tool')).toMatchObject({ output: 'ran: ls', state: 'done' });
     });
 
+    test("a message after a background agent asked between turns settles on the CLI's own result", async () => {
+        await manager.create({ chatId: 'chat-late-ask', cwd: home });
+        manager.attach('chat-late-ask', 'c1');
+        await manager.send('chat-late-ask', 'background approval: ls\nlate');
+        await recorder.until(() => recorder.ofKind('turn')[0]?.state === 'done' && idle());
+
+        // The request comes while the CLI runs no turn, so the thread opens one the CLI never sends a result for.
+        claude.started[0]!.runLater();
+        await recorder.until(() => recorder.items.get('approval-req-bg') !== undefined);
+        expect(recorder.ofKind('turn')[1]).toMatchObject({ origin: 'agent', state: 'running' });
+
+        expect(await manager.send('chat-late-ask', 'hello')).toMatchObject({ queued: false });
+        await recorder.until(() => recorder.ofKind('turn')[2]?.state === 'done');
+        expect(recorder.ofKind('turn')[1]).toMatchObject({ state: 'done' });
+        expect(recorder.info).toMatchObject({ status: 'needs-you', activeTurnId: null });
+    });
+
     test("stopping the turn cancels a background agent's approval and turns it down for the CLI", async () => {
         await manager.create({ chatId: 'chat-stop-ask', cwd: home });
         manager.attach('chat-stop-ask', 'c1');

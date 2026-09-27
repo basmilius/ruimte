@@ -13,19 +13,16 @@ import { estimateContextBreakdown } from './context-breakdown.ts';
 import type { ChatThread } from './thread.ts';
 
 /*
- * What a turn of the agent's own begins with: content that belongs to the main conversation. A frame
- * that carries a parent tool call is a subagent talking inside its own row and never opens a turn,
- * and a note or a usage line is not the agent starting to work.
+ * Content of the main conversation, which the CLI only writes inside a turn it closes with a `result`.
+ * A frame that carries a parent tool call is a subagent talking inside its own row.
  */
-const startsAgentTurn = (event: BackendEvent): boolean => {
+export const isMainAgentOutput = (event: BackendEvent): boolean => {
     switch (event.type) {
         case 'text.done':
             return !event.parentRef;
         case 'text.delta':
         case 'thinking.delta':
         case 'thinking.done':
-        case 'approval.requested':
-        case 'question.requested':
             return true;
         case 'tool.started':
             return event.parentRef === null;
@@ -33,6 +30,13 @@ const startsAgentTurn = (event: BackendEvent): boolean => {
             return false;
     }
 };
+
+/*
+ * What a turn of the agent's own begins with. A request may come from a background subagent while
+ * the CLI runs no turn at all, and a note or a usage line is not the agent starting to work.
+ */
+const startsAgentTurn = (event: BackendEvent): boolean =>
+    isMainAgentOutput(event) || event.type === 'approval.requested' || event.type === 'question.requested';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
