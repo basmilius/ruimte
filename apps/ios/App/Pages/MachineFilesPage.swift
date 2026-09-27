@@ -142,7 +142,8 @@ struct FileContentPage: View {
                             start: "fs.watch", stop: "fs.unwatch", payload: payload, stopPayload: payload)
                     }, load: load)
             }
-            .onDisappear { cleanMedia() }
+            // Only a pause: the page may come back (from full screen too) without reading the file again.
+            .onDisappear { player?.pause() }
             .onChange(of: state.value) { _, _ in
                 if let initialLine { reader.scrollTo(initialLine, anchor: .center) }
             }
@@ -187,8 +188,10 @@ struct FileContentPage: View {
                             URL(fileURLWithPath: path).lastPathComponent)
                     } else if let svg {
                         SafeSVGPreview(data: svg).frame(minHeight: 360)
-                    } else if let player {
-                        VideoPlayer(player: player).frame(minHeight: 300)
+                    } else if isVideo(value) {
+                        VideoPlayer(player: player).frame(minHeight: 300).onAppear {
+                            if player == nil { startPlayer() }
+                        }
                     } else if value.text("kind") == "too-large" {
                         ContentUnavailableView(
                             "File too large", lucideIcon: "file-text",
@@ -212,6 +215,17 @@ struct FileContentPage: View {
         ][ext] ?? ext
     }
 
+    private func isVideo(_ value: JSONValue) -> Bool {
+        value.text("kind") == "binary" && value.text("mime").hasPrefix("video/")
+    }
+
+    /// In the ranges the player asks for, so it starts at once and a video of any size plays.
+    private func startPlayer() {
+        let loader = MachineMediaLoader(client: client, path: path)
+        media = loader
+        player = AVPlayer(playerItem: AVPlayerItem(asset: loader.asset()))
+    }
+
     private func cleanMedia() {
         player?.pause()
         player = nil
@@ -223,13 +237,14 @@ struct FileContentPage: View {
     private func load() async {
         await state.load {
             let result = try await client.request("fs.read", payload: .object(["path": .string(path)]))
+            // A change elsewhere in the folder reads this file again; the same video keeps playing.
+            if isVideo(result), player != nil, result["mtime"] == state.value?["mtime"], result["size"] == state.value?["size"] {
+                return result
+            }
             cleanMedia()
             let mime = result.text("mime")
-            if result.text("kind") == "binary", mime.hasPrefix("video/") {
-                // In the ranges the player asks for, so it starts at once and a video of any size plays.
-                let loader = MachineMediaLoader(client: client, path: path)
-                media = loader
-                player = AVPlayer(playerItem: AVPlayerItem(asset: loader.asset()))
+            if isVideo(result) {
+                startPlayer()
             } else if result.text("kind") == "binary", mime.hasPrefix("image/") {
                 let resource = try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]))
                 try Task.checkCancellation()
