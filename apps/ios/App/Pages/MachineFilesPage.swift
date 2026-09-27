@@ -122,12 +122,12 @@ struct FileContentPage: View {
                             HTMLFilePreview(html: value.text("text"), viewportInsets: insets)
                         }
                     }
-                } else if let value = state.value, isVideo(value) {
+                } else if let value = state.value, isMedia(value) {
                     VStack(spacing: 0) {
                         RemotePageStatus(state: state) { Task { await load() } }
-                        videoContents
+                        mediaContents
                     }
-                    .task(id: videoKey(value)) { await startPlayer(for: videoKey(value)) }
+                    .task(id: mediaKey(value)) { await startPlayer(for: mediaKey(value)) }
                 } else {
                     fileContents
                 }
@@ -222,21 +222,22 @@ struct FileContentPage: View {
         ][ext] ?? ext
     }
 
-    private func isVideo(_ value: JSONValue) -> Bool {
-        value.text("kind") == "binary" && value.text("mime").hasPrefix("video/")
+    private func isMedia(_ value: JSONValue) -> Bool {
+        let mime = value.text("mime")
+        return value.text("kind") == "binary" && (mime.hasPrefix("video/") || mime.hasPrefix("audio/"))
     }
 
-    @ViewBuilder private var videoContents: some View {
+    @ViewBuilder private var mediaContents: some View {
         if let player {
             FilePlayerView(player: player, fullScreen: $fullScreen)
         } else if let mediaProblem {
-            ContentUnavailableView("Cannot play this video", lucideIcon: "file-video", description: Text(mediaProblem))
+            ContentUnavailableView("Cannot play this file", lucideIcon: "file-play", description: Text(mediaProblem))
         } else {
-            MobileLoadingRow("Loading video").frame(maxHeight: .infinity)
+            MobileLoadingRow("Loading").frame(maxHeight: .infinity)
         }
     }
 
-    private func videoKey(_ value: JSONValue) -> String {
+    private func mediaKey(_ value: JSONValue) -> String {
         "\(value["mtime"]?.numberValue ?? 0)-\(value["size"]?.numberValue ?? 0)"
     }
 
@@ -257,7 +258,7 @@ struct FileContentPage: View {
                 try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
                 player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             } else {
-                mediaProblem = "This device cannot play this video."
+                mediaProblem = "This device cannot play this file."
             }
         } catch {
             guard playerKey == key else { return }
@@ -283,8 +284,8 @@ struct FileContentPage: View {
     private func load() async {
         await state.load {
             let result = try await client.request("fs.read", payload: .object(["path": .string(path)]))
-            // A video starts with its page and keeps playing through a change elsewhere in the folder.
-            if isVideo(result) { return result }
+            // A player starts with its page and keeps playing through a change elsewhere in the folder.
+            if isMedia(result) { return result }
             cleanMedia()
             let mime = result.text("mime")
             if result.text("kind") == "binary", mime.hasPrefix("image/") {
