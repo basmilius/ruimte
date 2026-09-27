@@ -12,7 +12,8 @@ struct ChatTimeline: UIViewControllerRepresentable {
     var dismissKeyboard: () -> Void = {}
     var scrollToLatest = 0
     var onMessagesBelowChanged: (Bool) -> Void = { _ in }
-    var onAtTopChanged: (Bool) -> Void = { _ in }
+    /// Called on every pass that finds the reader near the top with nothing waiting to go in.
+    var onNearTop: () -> Void = {}
 
     func makeUIViewController(context: Context) -> ChatTimelineController {
         ChatTimelineController(client: client, chatID: chatID, presentation: presentation)
@@ -21,9 +22,10 @@ struct ChatTimeline: UIViewControllerRepresentable {
         controller.bind(presentation)
         controller.dismissKeyboard = dismissKeyboard
         controller.onMessagesBelowChanged = onMessagesBelowChanged
-        controller.onAtTopChanged = onAtTopChanged
+        controller.onNearTop = onNearTop
         controller.setViewportInsets(top: topInset, bottom: bottomInset)
         controller.update(entries: presentation.entries, revision: presentation.revision)
+        controller.askForEarlierNearTop()
         controller.scrollToLatest(command: scrollToLatest)
         controller.scrollToItem(presentation.requestedItemID, command: presentation.scrollRequest)
     }
@@ -37,7 +39,8 @@ struct ChatViewportGeometry: Equatable {
 
     var bottom: CGFloat { max(-topInset, contentHeight - height + bottomInset) }
     func clamped(_ offset: CGFloat) -> CGFloat { min(bottom, max(-topInset, offset)) }
-    func isAtTop(_ offset: CGFloat) -> Bool { offset <= -topInset + 1 }
+    /// Within one and a half screens of the top, so the page before is there before the reader reaches the edge.
+    func isNearTop(_ offset: CGFloat) -> Bool { offset + topInset < height * 1.5 }
     func isNearBottom(_ offset: CGFloat) -> Bool { bottom - offset <= 80 }
 
     func revealing(_ frame: CGRect, from offset: CGFloat) -> CGFloat {
@@ -255,12 +258,11 @@ final class ChatTimelineCollection: UICollectionView {
 final class ChatTimelineController: UIViewController, UICollectionViewDelegate, UIGestureRecognizerDelegate {
     var dismissKeyboard: () -> Void = {}
     var onMessagesBelowChanged: (Bool) -> Void = { _ in }
-    var onAtTopChanged: (Bool) -> Void = { _ in }
+    var onNearTop: () -> Void = {}
     private var lastScrollCommand = 0
     private var lastItemScrollCommand = 0
     private var requestedItem: String?
     private var messagesBelow = false
-    private var atTop = false
     private let client: any MachineRequesting
     private let chatID: String
     private var presentation: ChatPresentation
@@ -421,15 +423,16 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         collection.finishUserScroll()
     }
 
-    private func reportViewportPosition() {
-        let top = collection.geometry.isAtTop(collection.contentOffset.y)
-        if top != atTop {
-            atTop = top
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                self.onAtTopChanged(self.atTop)
-            }
+    /// A page that waits to go in has not moved the reader away from the top yet, so it asks for none.
+    func askForEarlierNearTop() {
+        guard pendingUpdate == nil, !applyingSnapshot, collection.geometry.isNearTop(collection.contentOffset.y) else {
+            return
         }
+        DispatchQueue.main.async { [weak self] in self?.onNearTop() }
+    }
+
+    private func reportViewportPosition() {
+        askForEarlierNearTop()
         let below = !collection.geometry.isNearBottom(collection.contentOffset.y)
         guard below != messagesBelow else { return }
         messagesBelow = below
@@ -553,31 +556,6 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         super.viewDidDisappear(animated)
         displayLink?.invalidate()
         displayLink = nil
-    }
-}
-
-struct ChatOlderMessagesButton: View {
-    let loading: Bool
-    let disabled: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Group {
-                if loading {
-                    ProgressView()
-                } else {
-                    Label("Load older messages", lucideIcon: "arrow-up", iconSize: 14)
-                }
-            }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 44)
-            .contentShape(Capsule())
-            .glassEffect(.regular.interactive(), in: .capsule)
-        }
-        .buttonStyle(.plain)
-        .disabled(disabled)
-        .accessibilityLabel(loading ? "Loading older messages" : "Load older messages")
     }
 }
 

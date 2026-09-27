@@ -30,6 +30,7 @@
     },
     "point": {
       "afterLast": "After the last turn",
+      "afterThis": "After this turn",
       "afterTurn": "After turn {{number}} of {{total}}",
       "about": "{{where}}: \"{{prompt}}\""
     },
@@ -164,6 +165,7 @@
       "canRead": "It can read",
       "worksIn": "It works in"
     },
+    "loadingEarlier": "Loading earlier messages",
     "stripFailed": "The message strip failed to render",
     "cardFailed": "This card failed to render",
     "actions": {
@@ -313,8 +315,6 @@
     "title": "Sub-agents",
     "backToMain": "Back to the main agent",
     "loading": "Loading the conversation…",
-    "loadEarlier": "Load earlier",
-    "loadingEarlier": "Loading…",
     "working": "Working…",
     "unsupported": "This machine cannot open a sub-agent's conversation. Update Ruimte there to read it.",
     "unreadable": "The conversation could not be read.",

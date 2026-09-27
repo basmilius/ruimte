@@ -14,7 +14,10 @@ import { useChatRow } from '@ruimte/agents-react/state/chats';
 export function ForkPill({ chatId }: { chatId: string }) {
     const { t } = useTranslation('chat');
     const forkOf = useChatRow(chatId, (row) => row?.info.forkOf);
-    const turn = useChatRow(chatId, (row) => (row && forkOf ? (forkPointOf(row.structure, row.order, forkOf.turnId)?.number ?? null) : null));
+    const turn = useChatRow(chatId, (row) => {
+        const point = row && forkOf ? forkPointOf(row.structure, row.order, forkOf.turnId, row.history === undefined) : null;
+        return point?.counted ? point.number : null;
+    });
     const original = useChatPlace(forkOf?.chatId ?? '');
     if (!forkOf) {
         return null;

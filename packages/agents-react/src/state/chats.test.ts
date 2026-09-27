@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem } from '@ruimte/agent-contracts';
-import { applyEvent, chatSink, useChats, type ChatState } from './chats';
+import { applyEvent, chatSink, prependPage, useChats, waitingRequestsOf, type ChatState } from './chats';
 
 const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
     chatId: 'chat-1',
@@ -171,5 +171,61 @@ describe('the statuses beside the threads', () => {
         chatSink((chatId) => `sink/${chatId}`).status('chat-1', info({ status: 'idle' }));
         expect(useChats.getState().statusByKey['sink/chat-1']?.info.status).toBe('idle');
         useChats.getState().forget('sink/chat-1');
+    });
+});
+
+describe('a thread held from its newest page', () => {
+    const question = (id: string, state: 'pending' | 'answered'): ChatItem => ({
+        id,
+        kind: 'question',
+        createdAt: 0,
+        turnId: null,
+        requestId: `request-${id}`,
+        questions: [],
+        answers: null,
+        state
+    });
+    const key = 'paged/chat-1';
+    const newest = [user('u3', 'third'), user('u4', 'fourth')];
+
+    const held = (): ChatState => {
+        useChats.getState().reset(key, info(), newest, { history: { start: 2, cursor: 'g:2' }, pending: [question('q0', 'pending')] });
+        const state = useChats.getState().byKey[key]!;
+        useChats.getState().forget(key);
+        return state;
+    };
+
+    test('keeps where it starts, and a request from before it that still waits outside the thread', () => {
+        const state = held();
+        expect(state.order).toEqual(['u3', 'u4']);
+        expect(state.history).toEqual({ start: 2, cursor: 'g:2' });
+        expect(waitingRequestsOf(state).map((item) => item.id)).toEqual(['q0']);
+    });
+
+    test('an item from before the page is left out, unless it is a request that waits or stops waiting', () => {
+        let state = held();
+        state = applyEvent(state, { type: 'item', item: user('u1', 'edited'), historyIndex: 0 });
+        expect(state.items.u1).toBeUndefined();
+
+        state = applyEvent(state, { type: 'item', item: question('q0', 'answered'), historyIndex: 1 });
+        expect(waitingRequestsOf(state)).toEqual([]);
+        expect(state.order).toEqual(['u3', 'u4']);
+
+        state = applyEvent(state, { type: 'item', item: user('u5', 'fifth'), historyIndex: 4 });
+        expect(state.order).toEqual(['u3', 'u4', 'u5']);
+    });
+
+    test('the page before goes in above, and the last one makes the thread whole', () => {
+        const page = { items: [user('u1', 'first'), question('q0', 'pending')], history: { start: 0, cursor: null } };
+        const state = prependPage(held(), 'g:2', page);
+        expect(state.order).toEqual(['u1', 'q0', 'u3', 'u4']);
+        expect(state.history).toBeUndefined();
+        expect(state.waitingBefore).toBeUndefined();
+        expect(waitingRequestsOf(state).map((item) => item.id)).toEqual(['q0']);
+    });
+
+    test('a page for a cursor the thread no longer has changes nothing', () => {
+        const state = held();
+        expect(prependPage(state, 'g:9', { items: [user('u1', 'first')], history: { start: 0, cursor: null } })).toBe(state);
     });
 });

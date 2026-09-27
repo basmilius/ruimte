@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bot } from 'lucide-react';
+import { Bot, LoaderCircle } from 'lucide-react';
 import { deriveTimelineRows } from '../logic/timeline';
 import { INITIAL_CONVERSATION, SubagentConversation, type SubagentConversationState } from '../subagent-conversation';
 import { useSubagentSupport } from '../subagent-support';
+import { firstRowInView, restoreAnchor, wantsEarlier, type ReadingAnchor } from '../timeline-scroll';
 import { EMPTY_TARGET, readTimelineTarget, type TimelineTarget } from '../logic/timeline-target';
 import { openBelow, useSubagentTrail, type SubagentStep } from '../subagent-view';
 import { Row } from './rows/Rows';
@@ -13,7 +14,7 @@ import { useToggleSet } from './useToggleSet';
 import { FileLinkContext } from './file-links';
 import { useChatRow } from '../../state/chats';
 import { useChatScope } from '../../scope';
-import { Button, EmptyState, ContextMenu } from '@basmilius/react-ui';
+import { EmptyState, ContextMenu, Icon } from '@basmilius/react-ui';
 
 const NO_TURNS = new Set<string>();
 
@@ -36,8 +37,9 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
     }, []);
     const groups = useToggleSet(stopFollowing);
     const subagents = useToggleSet(stopFollowing);
-    // The height before older rows went in above, so the rows being read stay where they were.
-    const heightBefore = useRef<number | null>(null);
+    // The row being read when an earlier page was asked for, so it stays where it was once that page is in.
+    const anchorRef = useRef<ReadingAnchor | null>(null);
+    const headRef = useRef<string | undefined>(undefined);
     const cwd = useChatRow(chatId, (row) => row?.info.cwd ?? null);
 
     useEffect(() => {
@@ -66,15 +68,36 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
         if (element === null) {
             return;
         }
-        if (heightBefore.current !== null) {
-            element.scrollTop += element.scrollHeight - heightBefore.current;
-            heightBefore.current = null;
-            return;
-        }
-        if (followRef.current) {
+        const head = state.items[0]?.id;
+        const moved = head !== headRef.current;
+        headRef.current = head;
+        if (moved && anchorRef.current !== null && !followRef.current) {
+            restoreAnchor(element, anchorRef.current);
+        } else if (followRef.current) {
             element.scrollTop = element.scrollHeight;
         }
-    }, [rows, state.live]);
+        if (moved) {
+            anchorRef.current = null;
+        }
+    }, [rows, state.live, state.items]);
+
+    const loadEarlier = useCallback(() => {
+        const element = scrollRef.current;
+        if (element === null || state.cursor === null || !wantsEarlier(element)) {
+            return;
+        }
+        // Taken on every call, since the reader may scroll on while a page is on its way.
+        anchorRef.current = firstRowInView(element);
+        void controller.current?.loadEarlier();
+    }, [state.cursor]);
+
+    // Close to the top, the page before goes in; again after each page that left too little above the reader.
+    // A page that failed changes no row, so it is asked for again only on the next scroll.
+    useEffect(() => {
+        if (state.status === 'ready') {
+            loadEarlier();
+        }
+    }, [rows, state.status, loadEarlier]);
 
     if (state.status === 'loading') {
         return <div className="chat-column-content px-4 pt-4 text-xs text-text-faint">{t('subagents.loading')}</div>;
@@ -87,19 +110,17 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
         show(openBelow(trail, step));
     };
 
-    const loadEarlier = (): void => {
-        heightBefore.current = scrollRef.current?.scrollHeight ?? null;
-        void controller.current?.loadEarlier();
-    };
-
     return (
         <FileLinkContext.Provider value={cwd}>
             <div
                 ref={scrollRef}
-                className="chat-thread h-full min-h-0 overflow-auto px-4 pt-4 pb-3"
+                className="chat-thread relative h-full min-h-0 overflow-auto px-4 pt-4 pb-3"
+                // The thread keeps its reader in place itself when a page goes in above.
+                style={{ overflowAnchor: 'none' }}
                 onScroll={(event) => {
                     const element = event.currentTarget;
                     followRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < FOLLOW_THRESHOLD_PX;
+                    loadEarlier();
                 }}
             >
                 {/* The same menu the chat's own thread has; this transcript is read-only, so the chat
@@ -110,11 +131,10 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
                         className="chat-column-content"
                         onContextMenu={(event) => setTarget(readTimelineTarget(event.target as HTMLElement, threadRef.current, rows))}
                     >
-                        {state.cursor !== null && (
-                            <div className="flex justify-center pb-2">
-                                <Button size="sm" disabled={state.loadingEarlier} onClick={loadEarlier}>
-                                    {state.loadingEarlier ? t('subagents.loadingEarlier') : t('subagents.loadEarlier')}
-                                </Button>
+                        {state.loadingEarlier && (
+                            <div className="pointer-events-none sticky top-0 z-10 flex h-0 justify-center" role="status">
+                                <Icon icon={LoaderCircle} size={16} className="animate-spin text-text-faint" />
+                                <span className="sr-only">{t('timeline.loadingEarlier')}</span>
                             </div>
                         )}
                         {rows.length === 0 && !state.live && <EmptyState icon={Bot}>{t('rows.subagent.nothingYet')}</EmptyState>}

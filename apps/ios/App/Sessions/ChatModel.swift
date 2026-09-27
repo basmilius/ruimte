@@ -31,6 +31,8 @@ final class ChatModel {
     var connected = false
     var loading = false
     private(set) var loadingHistory = false
+    /// A page that failed is not asked for again until the conversation is read again; a scroll asks on every frame.
+    @ObservationIgnored private var failedHistoryCursor: String?
     private(set) var history = ChatHistory()
     private var historyRevision = 0
     var sending = false
@@ -164,6 +166,7 @@ final class ChatModel {
     func replace(_ snapshot: JSONValue) {
         historyRevision += 1
         loadingHistory = false
+        failedHistoryCursor = nil
         history.replace(snapshot)
         info = snapshot["info"] ?? .null
         items = snapshot["items"]?.arrayValue ?? []
@@ -225,7 +228,13 @@ final class ChatModel {
         presentation.setForks(ChatForking.forks(chats: chats.list("chats"), chatID: chatID))
     }
 
-    func loadOlder() async {
+    /// The page before, unless one is on its way or there is none; cheap enough to ask on every scroll.
+    func loadOlderIfIdle() {
+        guard connected, !loading, !loadingHistory, let cursor = history.cursor, cursor != failedHistoryCursor else { return }
+        Task { await loadOlder() }
+    }
+
+    private func loadOlder() async {
         guard connected, !loading, !loadingHistory, let cursor = history.cursor else { return }
         let current = generation
         let currentHistory = historyRevision
@@ -250,6 +259,7 @@ final class ChatModel {
             if case MachineClientError.server(code: "history-expired", message: _) = error {
                 attach()
             } else {
+                failedHistoryCursor = cursor
                 self.error = error.localizedDescription
             }
         }

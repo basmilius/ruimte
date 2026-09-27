@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentEventType, AgentRequestType, ChatBookmark, ChatEvent, ChatInfo, ChatItem, ProviderInfo } from '@ruimte/agent-contracts';
-import type { ChatSink } from '../state/chats';
+import type { AgentEventType, AgentRequestType, ChatBookmark, ChatEvent, ChatHistoryResult, ChatInfo, ChatItem, ProviderInfo } from '@ruimte/agent-contracts';
+import type { ChatPage, ChatSink } from '../state/chats';
 import { ChatTransportError, type ChatEventMap, type ChatRequestMap, type ChatTransport, type ChatTransportStatus } from '../transport';
 import { ChatClient } from './chat-client';
 
@@ -30,6 +30,8 @@ class FakeTransport implements ChatTransport {
     chats: ChatInfo[] = [];
     // What `chat.attach` answers when a test wants more than the thread, such as a seq or the events after `since`.
     attachResult: ((payload: ChatRequestMap['chat.attach']['payload']) => Partial<ChatRequestMap['chat.attach']['result']>) | null = null;
+    // What `chat.history` answers, or the error it fails with.
+    history: ChatHistoryResult | ChatTransportError = { items: [], history: { start: 0, cursor: null } };
     private readonly statusHandlers = new Set<(status: ChatTransportStatus) => void>();
     private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
 
@@ -48,6 +50,8 @@ class FakeTransport implements ChatTransport {
                     items: this.items,
                     ...this.attachResult?.(payload as ChatRequestMap['chat.attach']['payload'])
                 } as ChatRequestMap[T]['result']);
+            case 'chat.history':
+                return this.history instanceof ChatTransportError ? Promise.reject(this.history) : Promise.resolve(this.history as ChatRequestMap[T]['result']);
             case 'chat.send':
                 return Promise.resolve({ queued: false, turnId: 'turn-test' } as ChatRequestMap[T]['result']);
             case 'chat.list':
@@ -99,14 +103,19 @@ class FakeTransport implements ChatTransport {
 }
 
 class FakeSink implements ChatSink {
-    readonly resets: Array<{ chatId: string; items: ChatItem[] }> = [];
+    readonly resets: Array<{ chatId: string; items: ChatItem[]; page?: ChatPage }> = [];
+    readonly prepended: Array<{ chatId: string; cursor: string; page: ChatHistoryResult }> = [];
     readonly events: Array<{ chatId: string; event: ChatEvent }> = [];
     readonly forgotten: string[] = [];
     readonly statuses: Array<{ chatId: string; info: ChatInfo }> = [];
     readonly bookmarked: Array<{ chatId: string; bookmarks: ChatBookmark[] }> = [];
 
-    reset(chatId: string, _info: ChatInfo, items: ChatItem[]): void {
-        this.resets.push({ chatId, items });
+    reset(chatId: string, _info: ChatInfo, items: ChatItem[], page?: ChatPage): void {
+        this.resets.push({ chatId, items, ...(page === undefined ? {} : { page }) });
+    }
+
+    prepend(chatId: string, cursor: string, page: ChatHistoryResult): void {
+        this.prepended.push({ chatId, cursor, page });
     }
 
     apply(chatId: string, event: ChatEvent): void {
@@ -168,7 +177,7 @@ describe('ChatClient', () => {
             selection: undefined,
             runtimeMode: 'auto'
         });
-        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'c' });
+        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'c', historyLimit: 60 });
         expect(sink.resets).toEqual([{ chatId: 'c', items: transport.items }]);
     });
 
@@ -217,7 +226,7 @@ describe('ChatClient', () => {
         transport.calls.length = 0;
         transport.setStatus('open');
         await flush();
-        expect(transport.of('chat.attach').map((c) => c.payload)).toEqual([{ chatId: 'a' }]);
+        expect(transport.of('chat.attach').map((c) => c.payload)).toEqual([{ chatId: 'a', historyLimit: 60 }]);
         expect(sink.resets.map((r) => r.chatId)).toEqual(['a', 'b', 'a']);
     });
 
@@ -226,23 +235,51 @@ describe('ChatClient', () => {
         const later: ChatEvent = { type: 'delta', itemId: 'a1', text: 'more' };
         transport.attachResult = (payload) => (payload.since === undefined ? { seq: 4 } : { items: [], seq: 6, events: [later] });
         await client.open('a', {});
-        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'a' });
+        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'a', historyLimit: 60 });
         transport.emit('chat.event', { chatId: 'a', event: { type: 'delta', itemId: 'a1', text: 'x' }, seq: 5 });
 
         transport.setStatus('closed');
         transport.setStatus('open');
         await flush();
-        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', since: 5 });
+        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', historyLimit: 60, since: 5 });
         expect(sink.resets).toHaveLength(1);
         expect(sink.events.at(-1)).toEqual({ chatId: 'a', event: later });
 
-        // The host no longer holds what came after the seq it was offered, so the whole thread comes instead.
+        // The host no longer holds what came after the seq it was offered, so the newest page comes instead.
         transport.attachResult = () => ({ seq: 9 });
         transport.setStatus('closed');
         transport.setStatus('open');
         await flush();
-        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', since: 6 });
+        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', historyLimit: 60, since: 6 });
         expect(sink.resets).toHaveLength(2);
+    });
+
+    test('the newest page comes with where it starts and every request that still waits', async () => {
+        const { transport, sink, client } = setup();
+        const waiting: ChatItem = { id: 'q1', kind: 'question', createdAt: 0, turnId: null, requestId: 'r1', questions: [], answers: null, state: 'pending' };
+        transport.attachResult = () => ({ history: { start: 40, cursor: 'g:40' }, pending: [waiting] });
+        await client.open('a', {});
+        expect(sink.resets[0]?.page).toEqual({ history: { start: 40, cursor: 'g:40' }, pending: [waiting] });
+    });
+
+    test('a page before is asked for once while it is on its way and handed to the store with its cursor', async () => {
+        const { transport, sink, client } = setup();
+        await client.open('a', {});
+        transport.history = { items: [{ id: 'u0', kind: 'user', createdAt: 0, turnId: null, text: 'first' }], history: { start: 0, cursor: null } };
+        await Promise.all([client.loadEarlier('a', 'g:40'), client.loadEarlier('a', 'g:40')]);
+        expect(transport.of('chat.history').map((call) => call.payload)).toEqual([{ chatId: 'a', cursor: 'g:40', limit: 60 }]);
+        expect(sink.prepended).toEqual([{ chatId: 'a', cursor: 'g:40', page: transport.history }]);
+    });
+
+    test('a cursor the host no longer knows reads the thread again from its end', async () => {
+        const { transport, sink, client } = setup();
+        transport.attachResult = () => ({ seq: 3 });
+        await client.open('a', {});
+        transport.history = new ChatTransportError('history-expired', 'The conversation changed.');
+        await client.loadEarlier('a', 'g:40');
+        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', historyLimit: 60 });
+        expect(sink.resets).toHaveLength(2);
+        expect(sink.prepended).toEqual([]);
     });
 
     test('letting go of the machine detaches every chat and kills none', async () => {

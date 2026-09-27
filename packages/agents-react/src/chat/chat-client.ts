@@ -11,7 +11,7 @@ import type {
 } from '@ruimte/agent-contracts';
 import { MountedRegistry, type MountedEntry } from '../mounted-registry';
 import type { ChatSink } from '../state/chats';
-import { isConnectionError, type ChatTransport, type ChatTransportStatus } from '../transport';
+import { errorCode, isConnectionError, type ChatTransport, type ChatTransportStatus } from '../transport';
 
 interface ChatOpenOptions {
     /* Which agent CLI answers; a chat that exists on the host keeps its own. */
@@ -41,6 +41,9 @@ interface Mounted extends ChatOpenOptions, MountedEntry {
     seq?: number;
 }
 
+/* How many items a chat reads at once, on attach and for every page before it. */
+const HISTORY_PAGE = 60;
+
 interface ProviderSink {
     setProviders(providers: ProviderInfo[]): void;
 }
@@ -57,6 +60,7 @@ export class ChatClient {
     private readonly providers: ProviderSink | null;
     private readonly mounted = new MountedRegistry<Mounted>();
     private readonly unsubscribe: Array<() => void> = [];
+    private readonly earlier = new Map<string, Promise<void>>();
     private preferences: ChatPreferencesPayload | null = null;
 
     constructor(transport: ChatTransport, sink: ChatSink, providers: ProviderSink | null = null) {
@@ -226,6 +230,31 @@ export class ChatClient {
         }
     }
 
+    /*
+     * The page before the oldest one this chat holds, one request per chat at a time. A cursor the
+     * host no longer knows means the thread changed under it, so the chat is read again from its end.
+     */
+    loadEarlier(chatId: string, cursor: string): Promise<void> {
+        const running = this.earlier.get(chatId);
+        if (running) {
+            return running;
+        }
+        const read = this.transport
+            .request('chat.history', { chatId, cursor, limit: HISTORY_PAGE })
+            .then((page) => this.sink.prepend(chatId, cursor, page))
+            .catch(async (e: unknown) => {
+                const entry = this.mounted.get(chatId);
+                if (errorCode(e) !== 'history-expired' || !entry) {
+                    throw e;
+                }
+                delete entry.seq;
+                await this.attach(chatId);
+            })
+            .finally(() => this.earlier.delete(chatId));
+        this.earlier.set(chatId, read);
+        return read;
+    }
+
     isMounted(chatId: string): boolean {
         return this.mounted.has(chatId);
     }
@@ -243,7 +272,8 @@ export class ChatClient {
 
     /*
      * A reattach offers the last seq the store holds. The host answers only what came after it when
-     * it still has all of that, and the whole thread otherwise, so a short drop costs a few events.
+     * it still has all of that, and the newest page of the thread otherwise, so a short drop costs a
+     * few events.
      */
     private async attach(chatId: string): Promise<void> {
         const entry = this.mounted.get(chatId);
@@ -257,7 +287,7 @@ export class ChatClient {
             runtimeMode: entry?.runtimeMode
         });
         const since = entry?.seq;
-        const result = await this.transport.request('chat.attach', { chatId, ...(since === undefined ? {} : { since }) });
+        const result = await this.transport.request('chat.attach', { chatId, historyLimit: HISTORY_PAGE, ...(since === undefined ? {} : { since }) });
         const current = this.mounted.get(chatId);
         if (!current) {
             return;
@@ -271,7 +301,8 @@ export class ChatClient {
                 this.sink.apply(chatId, event);
             }
         } else {
-            this.sink.reset(chatId, result.info, result.items);
+            const page = result.history === undefined ? undefined : { history: result.history, pending: result.pending ?? [] };
+            this.sink.reset(chatId, result.info, result.items, page);
         }
         // A host without bookmarks sends none, and then this chat has none.
         this.sink.bookmarks(chatId, result.bookmarks ?? []);

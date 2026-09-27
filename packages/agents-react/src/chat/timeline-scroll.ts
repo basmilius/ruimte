@@ -124,3 +124,34 @@ export const jumpToTimelineItem = (key: string, itemId: string): boolean => {
     jump(itemId);
     return true;
 };
+
+/* How near the top, in screens, the page before is asked for, so it is there before a reader reaches the edge. */
+const EARLIER_SCREENS = 1.5;
+
+export const wantsEarlier = (scroller: HTMLElement): boolean => scroller.clientHeight > 0 && scroller.scrollTop < scroller.clientHeight * EARLIER_SCREENS;
+
+/* A row being read and how far below the top of its scroller it starts, so a page going in above leaves it there. */
+export interface ReadingAnchor {
+    id: string;
+    offset: number;
+}
+
+/* The first row in view, found by the rows' `data-item-id`, for a thread that keeps every row in the document. */
+export const firstRowInView = (scroller: HTMLElement): ReadingAnchor | null => {
+    const top = scroller.getBoundingClientRect().top;
+    for (const row of scroller.querySelectorAll<HTMLElement>('[data-item-id]')) {
+        const rect = row.getBoundingClientRect();
+        if (rect.bottom > top) {
+            return { id: row.dataset.itemId!, offset: rect.top - top };
+        }
+    }
+    return null;
+};
+
+/* Puts the anchored row back where it was; nothing moves when that row is gone. */
+export const restoreAnchor = (scroller: HTMLElement, anchor: ReadingAnchor): void => {
+    const row = scroller.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(anchor.id)}"]`);
+    if (row !== null) {
+        scroller.scrollTop += row.getBoundingClientRect().top - scroller.getBoundingClientRect().top - anchor.offset;
+    }
+};

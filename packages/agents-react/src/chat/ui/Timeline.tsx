@@ -2,13 +2,21 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
+import { LoaderCircle } from 'lucide-react';
 import type { ChatBookmark } from '@ruimte/agent-contracts';
 import { useForkedTurns } from '../forks';
 import { bookmarkRows } from '../logic/bookmarks';
 import { deriveTimelineRows, findSubagentBranch, type TimelineRow } from '../logic/timeline';
 import { withThreadCards } from '../logic/thread-cards';
 import { openFromMain, useSubagentTrail, type SubagentStep } from '../subagent-view';
-import { registerItemJumper, registerMessageStepper, registerTimeline, setTimelineAtEnd } from '../timeline-scroll';
+import {
+    registerItemJumper,
+    registerMessageStepper,
+    registerTimeline,
+    setTimelineAtEnd,
+    wantsEarlier,
+    type ReadingAnchor
+} from '../timeline-scroll';
 import {
     SCRUBBER_MIN_TICKS,
     STRIP_INSET_PX,
@@ -39,7 +47,7 @@ import { useChatScope } from '../../scope';
 import { FileLinkContext } from './file-links';
 import { AgentIcon } from '../../agents/AgentIcon';
 import { useModelName } from '../../agents/model-name';
-import { ContextMenu, EmptyState, ErrorBoundary, SectionLabel } from '@basmilius/react-ui';
+import { ContextMenu, EmptyState, ErrorBoundary, Icon, SectionLabel } from '@basmilius/react-ui';
 
 const ESTIMATED_ROW_PX = 56;
 
@@ -108,7 +116,9 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     const bookmarks = useChatRow(chatId, (row) => row?.bookmarks);
     const forkedTurns = useForkedTurns(chatId);
     const info = useChatRow(chatId, (row) => row?.info ?? null);
-    const { id: scopeId, keyOf } = useChatScope();
+    const cursor = useChatRow(chatId, (row) => row?.history?.cursor ?? null);
+    const scope = useChatScope();
+    const { id: scopeId, keyOf } = scope;
     // Read when the menu opens rather than subscribed to, for the same reason the rows use the structure.
     const fullItems = () => useChats.getState().byKey[keyOf(chatId)]?.items;
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -137,6 +147,27 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     const composerRef = useRef<HTMLDivElement>(null);
     const [composerHeight, setComposerHeight] = useState(0);
     const [frame, setFrame] = useState({ width: 0, height: 0, column: false });
+    const [loadingEarlier, setLoadingEarlier] = useState(false);
+    const loadingEarlierRef = useRef(false);
+    // The row being read and where it stood, taken after every render, so a page going in above puts it back.
+    const anchorRef = useRef<ReadingAnchor | null>(null);
+    const headRef = useRef<string | undefined>(undefined);
+
+    const loadEarlier = useCallback(() => {
+        if (cursor === null || loadingEarlierRef.current) {
+            return;
+        }
+        loadingEarlierRef.current = true;
+        setLoadingEarlier(true);
+        // A page that failed is asked for again on the next scroll; the thread keeps what it has.
+        void scope.chats
+            .loadEarlier(chatId, cursor)
+            .catch(() => undefined)
+            .finally(() => {
+                loadingEarlierRef.current = false;
+                setLoadingEarlier(false);
+            });
+    }, [scope, chatId, cursor]);
 
     const threadRows = useMemo(() => {
         if (!order || !items) {
@@ -243,6 +274,35 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
         scrollGeometry.current = { top: element.scrollTop, height: element.scrollHeight, viewport: element.clientHeight };
     }, [rows.length, tail, totalSize, composerHeight, frame.height]);
 
+    // A page that went in above moves every row down by what it measures; the reader stays on the row they were on.
+    useLayoutEffect(() => {
+        const element = scrollRef.current;
+        const head = order?.[0];
+        const moved = head !== headRef.current;
+        headRef.current = head;
+        if (element === null) {
+            return;
+        }
+        const anchor = anchorRef.current;
+        const index = moved && anchor !== null && !followRef.current ? rows.findIndex((row) => row.id === anchor.id) : -1;
+        if (anchor !== null && index !== -1) {
+            // The total measures again what this commit's rows reported; the cache alone lags behind them.
+            virtualizer.getTotalSize();
+            element.scrollTop = virtualizer.measurementsCache[index]!.start - anchor.offset;
+            return;
+        }
+        const row = virtualizer.getVirtualItemForOffset(element.scrollTop);
+        anchorRef.current = row === undefined ? null : { id: String(row.key), offset: row.start - element.scrollTop };
+    });
+
+    // Close to the top, the page before goes in; again after each page that left too little above the reader.
+    useEffect(() => {
+        const element = scrollRef.current;
+        if (element !== null && wantsEarlier(element)) {
+            loadEarlier();
+        }
+    }, [rows, loadEarlier, frame.height]);
+
     // A sub-agent in the thread's place hides the thread, and the strip and the keyboard go with it.
     const onMainAgent = trail.length === 0;
     // A node on a canvas has no strip. It is too narrow to give up a column of its width.
@@ -289,6 +349,12 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
         stopFollowing
     });
     const searching = chatFind.open;
+    // A find covers the whole thread, so every page before this one comes in while it is open.
+    useEffect(() => {
+        if (searching) {
+            loadEarlier();
+        }
+    }, [searching, loadEarlier]);
     const found = useMemo(() => (searching ? ticksWithHits(ticks, chatFind.hitRows) : []), [searching, ticks, chatFind.hitRows]);
     const foundCurrent = chatFind.currentRow === null ? null : tickOfRow(ticks, chatFind.currentRow);
 
@@ -316,13 +382,18 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
             virtualizer.scrollToIndex(index, { align: 'start' });
             return;
         }
-        const turnId = items?.[seeking]?.turnId ?? null;
+        const item = items?.[seeking];
+        if (item === undefined && cursor !== null) {
+            loadEarlier();
+            return;
+        }
+        const turnId = item?.turnId ?? null;
         if (turnId !== null && !turns.ids.has(turnId)) {
             turns.add(turnId);
             return;
         }
         setSeeking(null);
-    }, [seeking, rows, items, turns, virtualizer]);
+    }, [seeking, rows, items, turns, virtualizer, cursor, loadEarlier]);
     useEffect(() => registerItemJumper(keyOf(chatId), setSeeking), [keyOf, chatId]);
     // The strip is memoized and draws on every scroll, so it gets one callback for its life.
     const jumpRef = useRef(jumpTo);
@@ -386,6 +457,8 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                         // No CSS scroll-padding here: Chromium counts the sticky composer's caret as hidden behind
                         // it and scrolls the thread toward the end on every keystroke.
                         className="chat-scroll min-h-0 grow overflow-auto"
+                        // The thread keeps its reader in place itself when a page goes in above.
+                        style={{ overflowAnchor: 'none' }}
                         onScrollCapture={(e) => {
                             const el = e.currentTarget;
                             // Capture the reader's movement before virtualization remeasures rows and shifts the scroll offset.
@@ -399,6 +472,9 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                             }
                             scrollGeometry.current = { top: el.scrollTop, height: el.scrollHeight, viewport: el.clientHeight };
                             setTimelineAtEnd(chatId, followRef.current);
+                            if (wantsEarlier(el)) {
+                                loadEarlier();
+                            }
                         }}
                     >
                         <div ref={contentRef} className="relative flex min-h-full flex-col">
@@ -465,6 +541,12 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                     </div>
                     <TimelineMenuPopup target={target} thread={threadRef} chatId={onMainAgent ? chatId : null} />
                 </ContextMenu.Root>
+                {loadingEarlier && (
+                    <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center" role="status">
+                        <Icon icon={LoaderCircle} size={16} className="animate-spin text-text-faint" />
+                        <span className="sr-only">{t('timeline.loadingEarlier')}</span>
+                    </div>
+                )}
                 {showsScrubber && (
                     <div className="absolute top-4" style={{ left: STRIP_INSET_PX, width: STRIP_WIDTH_PX, bottom: coveredHeight }}>
                         <ErrorBoundary label={t('timeline.stripFailed')} resetKeys={[ticks.length]}>

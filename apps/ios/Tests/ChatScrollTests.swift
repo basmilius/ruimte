@@ -5,13 +5,13 @@ import XCTest
 @testable import Ruimte
 
 final class ChatScrollTests: XCTestCase {
-    func testOlderMessagesAreOnlyOfferedAtTheTopEdge() {
+    func testEarlierMessagesAreAskedForWithinOneAndAHalfScreensOfTheTop() {
         let geometry = ChatViewportGeometry(contentHeight: 2_000, height: 600, topInset: 80, bottomInset: 120)
-        XCTAssertTrue(geometry.isAtTop(-100))
-        XCTAssertTrue(geometry.isAtTop(-80))
-        XCTAssertTrue(geometry.isAtTop(-79.5))
-        XCTAssertFalse(geometry.isAtTop(-78))
-        XCTAssertFalse(geometry.isAtTop(0))
+        XCTAssertTrue(geometry.isNearTop(-80))
+        XCTAssertTrue(geometry.isNearTop(0))
+        XCTAssertTrue(geometry.isNearTop(819))
+        XCTAssertFalse(geometry.isNearTop(820))
+        XCTAssertFalse(geometry.isNearTop(1_400))
     }
 
     func testExpansionRevealsOnlyWhatIsOutsideTheReadableViewport() {

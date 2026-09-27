@@ -278,7 +278,6 @@ struct SubagentConversationPage: View {
     let parent: ChatPresentation
     @State private var conversation: SubagentConversation
     @State private var presentation = ChatPresentation()
-    @State private var atConversationTop = false
     private let cwd: String
 
     init(client: any MachineRequesting, chatID: String, crumb: SubagentCrumb, cwd: String, parent: ChatPresentation) {
@@ -295,7 +294,8 @@ struct SubagentConversationPage: View {
         MobileScrollViewport(edges: .vertical) { insets in
             ChatTimeline(
                 presentation: presentation, client: client, chatID: chatID, topInset: insets.top,
-                bottomInset: insets.bottom, onAtTopChanged: { atConversationTop = $0 })
+                bottomInset: insets.bottom,
+                onNearTop: { if conversation.status == .ready { conversation.loadEarlier() } })
         }
         .overlay {
             switch conversation.status {
@@ -319,13 +319,10 @@ struct SubagentConversationPage: View {
             }
         }
         .overlay(alignment: .top) {
-            if conversation.cursor != nil && conversation.status == .ready && atConversationTop {
-                ChatOlderMessagesButton(
-                    loading: conversation.loadingEarlier, disabled: conversation.loadingEarlier
-                ) {
-                    conversation.loadEarlier()
-                }
-                .padding(.top, 8)
+            if conversation.loadingEarlier {
+                MobileLoadingRow("Loading earlier messages")
+                    .padding(.top, 8)
+                    .allowsHitTesting(false)
             }
         }
         .background(MobileStyle.surface.ignoresSafeArea())

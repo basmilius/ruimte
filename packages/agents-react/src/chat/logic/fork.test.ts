@@ -63,18 +63,23 @@ describe('fork', () => {
     });
 
     test('the point names the turn by its place and the first line of what was asked, or the label of a wake', () => {
-        const first = forkPointOf(items, order, 't1')!;
+        const first = forkPointOf(items, order, 't1', true)!;
         expect(first).toEqual({
             turnId: 't1',
             number: 1,
             total: 3,
+            counted: true,
             last: false,
             prompt: 'Make the lexer handle unicode identifiers everywhere it reads a name'
         });
         expect(forkPointLabel(first)).toBe('After turn 1 of 3: "Make the lexer handle unicode identifiers everywhere it rea…"');
-        expect(forkPointLabel(forkPointOf(items, order, 't3')!)).toBe('After the last turn');
-        expect(forkPointOf(items, order, 't2')!.prompt).toBe('Woken by 2 tasks');
-        expect(forkPointOf(items, order, 'missing')).toBeNull();
+        expect(forkPointLabel(forkPointOf(items, order, 't3', true)!)).toBe('After the last turn');
+        expect(forkPointOf(items, order, 't2', true)!.prompt).toBe('Woken by 2 tasks');
+        expect(forkPointOf(items, order, 'missing', true)).toBeNull();
+    });
+
+    test('a thread held only from its newest page names the turn without a number', () => {
+        expect(forkPointLabel(forkPointOf(items, order, 't2', false)!)).toBe('After this turn: "Woken by 2 tasks"');
     });
 });
 

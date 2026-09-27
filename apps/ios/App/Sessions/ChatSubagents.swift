@@ -368,6 +368,9 @@ final class SubagentConversation {
     @ObservationIgnored private var subscriptions: [() -> Void] = []
     @ObservationIgnored private var queue: Task<Void, Never>?
     @ObservationIgnored private var refreshWaiting = false
+    @ObservationIgnored private var earlierWaiting = false
+    /// A page that failed is not asked for again on its own; a scroll would ask on every frame.
+    @ObservationIgnored private var failedCursor: String?
     @ObservationIgnored private var holding = false
 
     init(client: any MachineRequesting, chatID: String, toolUseID: String, limit: Int = SubagentConversation.pageSize) {
@@ -399,6 +402,7 @@ final class SubagentConversation {
         subscriptions.forEach { $0() }
         subscriptions.removeAll()
         queue?.cancel()
+        earlierWaiting = false
         guard holding else { return }
         holding = false
         guard SubagentWatches.release(watchKey) else { return }
@@ -418,8 +422,12 @@ final class SubagentConversation {
         }
     }
 
+    /// The page before; calls that arrive while one waits or runs become that one, since a scroll asks on every frame.
     func loadEarlier() {
+        guard cursor != nil, cursor != failedCursor, !earlierWaiting else { return }
+        earlierWaiting = true
         enqueue {
+            defer { self.earlierWaiting = false }
             guard let cursor = self.cursor else { return }
             self.loadingEarlier = true
             defer { self.loadingEarlier = false }
@@ -438,6 +446,7 @@ final class SubagentConversation {
                 await self.readNewest(watch: false)
             } catch is CancellationError {
             } catch {
+                self.failedCursor = cursor
                 self.error = error.localizedDescription
             }
         }
@@ -456,6 +465,7 @@ final class SubagentConversation {
             live = page["live"]?.boolValue == true
             status = .ready
             error = nil
+            failedCursor = nil
             if merged.replaced {
                 onChange(.replaced(items))
             } else {

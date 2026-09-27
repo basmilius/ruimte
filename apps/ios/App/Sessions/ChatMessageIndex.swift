@@ -6,14 +6,16 @@ struct ChatMessageIndex: View {
     let marks: [ChatMessageMark]
     /// The timeline entries on screen when the index opened.
     let onScreen: Set<String>
-    let olderAvailable: Bool
-    let loadingOlder: Bool
+    /// Where the page before starts; nil once the whole conversation is here.
+    let olderCursor: String?
     let presentation: ChatPresentation
     let loadOlder: () -> Void
     let jump: (String) -> Void
     let fork: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
+    /// The first message before the page before went in, which the list goes back to once it has.
+    @State private var firstBeforeOlder: String?
 
     private var shown: [ChatMessageMark] {
         query.isEmpty ? marks : marks.filter { $0.text.localizedCaseInsensitiveContains(query) }
@@ -23,17 +25,16 @@ struct ChatMessageIndex: View {
         NavigationStack {
             ScrollViewReader { reader in
                 List {
-                    if olderAvailable && query.isEmpty {
-                        Button {
-                            loadOlder()
-                        } label: {
-                            if loadingOlder {
-                                ProgressView()
-                            } else {
-                                Label("Load older messages", lucideIcon: "arrow-up", iconSize: 14)
+                    if let olderCursor, query.isEmpty {
+                        MobileLoadingRow("Loading earlier messages")
+                            .frame(maxWidth: .infinity)
+                            .listRowSeparator(.hidden)
+                            .onAppear {
+                                firstBeforeOlder = marks.first?.id
+                                loadOlder()
                             }
-                        }
-                        .disabled(loadingOlder)
+                            // A new cursor is a new row, so a row still in view after a page asks for the next one.
+                            .id(olderCursor)
                     }
                     ForEach(shown) { mark in
                         row(mark)
@@ -49,6 +50,11 @@ struct ChatMessageIndex: View {
                     if let first = marks.last(where: { onScreen.contains($0.id) }) ?? marks.last {
                         reader.scrollTo(first.id, anchor: .center)
                     }
+                }
+                .onChange(of: marks.first?.id) {
+                    guard let first = firstBeforeOlder else { return }
+                    firstBeforeOlder = nil
+                    reader.scrollTo(first, anchor: .top)
                 }
             }
             .searchable(

@@ -78,7 +78,7 @@ import {
     Tooltip,
     useNow
 } from '@basmilius/react-ui';
-import { useChatRow } from '../../state/chats';
+import { useChatRow, waitingRequestsOf } from '../../state/chats';
 import { useProviders } from '../../state/providers';
 
 const SEARCH_DEBOUNCE_MS = 80;
@@ -118,21 +118,21 @@ interface ComposerProps {
 
 const usePendingRequests = (chatId: string) => {
     // The structure, which a delta leaves alone. The prompts and the requests are items of their own.
-    const items = useChatRow(chatId, (row) => row?.structure);
+    const structure = useChatRow(chatId, (row) => row?.structure);
     const order = useChatRow(chatId, (row) => row?.order);
+    const waitingBefore = useChatRow(chatId, (row) => row?.waitingBefore);
     return useMemo(() => {
         const approvals: ChatApprovalItem[] = [];
         const questions: ChatQuestionItem[] = [];
-        for (const id of order ?? []) {
-            const item = items?.[id];
-            if (item?.kind === 'approval' && item.decision === 'pending') {
+        for (const item of waitingRequestsOf(structure && order ? { structure, order, waitingBefore } : undefined)) {
+            if (item.kind === 'approval') {
                 approvals.push(item);
-            } else if (item?.kind === 'question' && item.state === 'pending') {
+            } else {
                 questions.push(item);
             }
         }
         return { approvals, questions };
-    }, [items, order]);
+    }, [structure, order, waitingBefore]);
 };
 
 /* The empty box names its sigils as key caps, so they read as keys to press rather than as punctuation. */

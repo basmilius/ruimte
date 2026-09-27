@@ -30,6 +30,7 @@
     },
     "point": {
       "afterLast": "Na de laatste turn",
+      "afterThis": "Na deze turn",
       "afterTurn": "Na turn {{number}} van {{total}}",
       "about": "{{where}}: \"{{prompt}}\""
     },
@@ -164,6 +165,7 @@
       "canRead": "Kan lezen",
       "worksIn": "Werkt in"
     },
+    "loadingEarlier": "Eerdere berichten laden",
     "stripFailed": "De berichtenstrip kon niet worden getekend",
     "cardFailed": "Deze kaart kon niet worden getekend",
     "actions": {
@@ -313,8 +315,6 @@
     "title": "Sub-agents",
     "backToMain": "Terug naar de main agent",
     "loading": "Gesprek laden…",
-    "loadEarlier": "Eerdere laden",
-    "loadingEarlier": "Laden…",
     "working": "Bezig…",
     "unsupported": "Deze machine kan het gesprek van een sub-agent niet openen. Werk Ruimte daar bij om het te lezen.",
     "unreadable": "Het gesprek kon niet worden gelezen.",

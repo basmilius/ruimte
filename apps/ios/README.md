@@ -117,7 +117,9 @@ a thumbnail opens the original through Quick Look.
 Text deltas update observable message records without rebuilding the timeline structure.
 Completed Markdown segments are cached, code highlighting processes the latest pending
 text at bounded intervals, and the collection keeps its existing reading anchors.
-History uses an optional 60-item first page and a Load older messages control. The daemon
+History uses an optional 60-item first page. The page before loads by itself once the reader
+is within one and a half screens of the top, and goes in when the finger lifts, so the row
+being read stays put. A page that fails is asked for again only after the next attach. The daemon
 uses a 512 KiB item budget per page; a larger atomic item travels alone, without truncation.
 Pending approvals and questions are included separately. Cursors expire after clear/reset,
 and history replies apply before the next stream event. Older daemons still return their

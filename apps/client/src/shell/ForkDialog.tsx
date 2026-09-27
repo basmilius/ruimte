@@ -66,6 +66,7 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
     const info = useChatRow(chatId, (row) => row?.info ?? null);
     const items = useChatRow(chatId, (row) => row?.structure);
     const order = useChatRow(chatId, (row) => row?.order);
+    const whole = useChatRow(chatId, (row) => row?.history === undefined);
     const origin = useDocument((s) => forkOriginIn(s.views, chatId)?.shape ?? 'node');
     const viewName = useDocument((s) => forkOriginIn(s.views, chatId)?.title);
     // A node's live editor names it before a save has brought the document up to date.
@@ -100,7 +101,7 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
         };
     }, [transport, chatId, turnId]);
 
-    const point = items && order ? forkPointOf(items, order, turnId) : null;
+    const point = items && order ? forkPointOf(items, order, turnId, whole) : null;
     const refusal = forkRefusal(info, items?.[turnId]);
     const worktree = folder?.repository === true && inWorktree;
     const branchName = branch ?? folder?.branch ?? '';

@@ -74,6 +74,7 @@ export class SubagentConversation {
     // One request at a time, so a refresh never lands under an older page that arrived after it.
     private queue: Promise<void> = Promise.resolve();
     private refreshWaiting = false;
+    private earlier: Promise<void> | null = null;
 
     constructor(transport: ChatTransport, chatId: string, toolUseId: string, onChange: (state: SubagentConversationState) => void) {
         this.transport = transport;
@@ -115,7 +116,8 @@ export class SubagentConversation {
     }
 
     loadEarlier(): Promise<void> {
-        return this.enqueue(async () => {
+        // A page on its way answers every call made meanwhile; a scroll asks for one on every frame.
+        this.earlier ??= this.enqueue(async () => {
             const cursor = this.state.cursor;
             if (cursor === null) {
                 return;
@@ -133,7 +135,10 @@ export class SubagentConversation {
                 }
                 this.set({ loadingEarlier: false, error: messageOf(error) });
             }
+        }).finally(() => {
+            this.earlier = null;
         });
+        return this.earlier;
     }
 
     dispose(): void {

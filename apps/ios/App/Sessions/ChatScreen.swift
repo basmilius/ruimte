@@ -23,7 +23,6 @@ struct ChatScreen: View {
     @State private var composerSelection = NSRange(location: 0, length: 0)
     @State private var composerHeight: CGFloat = 72
     @State private var messagesBelow = false
-    @State private var atConversationTop = false
     @State private var scrollToLatest = 0
     @State private var viewportWidth: CGFloat = 0
     @State private var showingIndex = false
@@ -62,7 +61,7 @@ struct ChatScreen: View {
                     presentation: model.presentation, client: model.client, chatID: model.chatID,
                     topInset: insets.top, bottomInset: composerHeight, dismissKeyboard: { composerFocused = false },
                     scrollToLatest: scrollToLatest, onMessagesBelowChanged: { messagesBelow = $0 },
-                    onAtTopChanged: { atConversationTop = $0 }
+                    onNearTop: { model.loadOlderIfIdle() }
                 )
             }
             .overlay {
@@ -79,13 +78,10 @@ struct ChatScreen: View {
                 }
             }
             .overlay(alignment: .top) {
-                if model.history.cursor != nil && !model.loading && atConversationTop {
-                    ChatOlderMessagesButton(
-                        loading: model.loadingHistory, disabled: model.loadingHistory || !model.connected
-                    ) {
-                        Task { await model.loadOlder() }
-                    }
-                    .padding(.top, 8)
+                if model.loadingHistory {
+                    MobileLoadingRow("Loading earlier messages")
+                        .padding(.top, 8)
+                        .allowsHitTesting(false)
                 }
             }
             .overlay(alignment: .bottom) {
@@ -181,9 +177,9 @@ struct ChatScreen: View {
                 // Anchored on the menu now that Messages lives inside it; a popover on iPad, a sheet on iPhone.
                 .popover(isPresented: $showingIndex) {
                     ChatMessageIndex(
-                        marks: messageMarks, onScreen: indexOnScreen, olderAvailable: model.history.cursor != nil,
-                        loadingOlder: model.loadingHistory, presentation: model.presentation,
-                        loadOlder: { Task { await model.loadOlder() } },
+                        marks: messageMarks, onScreen: indexOnScreen, olderCursor: model.history.cursor,
+                        presentation: model.presentation,
+                        loadOlder: { model.loadOlderIfIdle() },
                         jump: { model.presentation.reveal(entryID: $0) },
                         fork: { turnID in
                             forkAfterIndex = turnID

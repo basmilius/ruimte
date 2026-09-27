@@ -10,6 +10,8 @@ export interface ForkPoint {
     turnId: string;
     number: number;
     total: number;
+    /* False while the client holds only the newest part of the thread, so `number` and `total` count from there. */
+    counted: boolean;
     last: boolean;
     /* The first line of what the person asked in that turn, or the label of a turn nobody typed. */
     prompt: string | null;
@@ -78,7 +80,7 @@ export const forkedTurnIds = (infos: Iterable<ChatInfo>, chatId: string): Set<st
 export const lastSettledTurn = (items: Record<string, ChatItem>, order: readonly string[]): string | null =>
     turnsOf(items, order).findLast((turn) => turn.state !== 'running')?.id ?? null;
 
-export const forkPointOf = (items: Record<string, ChatItem>, order: readonly string[], turnId: string): ForkPoint | null => {
+export const forkPointOf = (items: Record<string, ChatItem>, order: readonly string[], turnId: string, whole: boolean): ForkPoint | null => {
     const turns = turnsOf(items, order);
     const index = turns.findIndex((turn) => turn.id === turnId);
     const turn = turns[index];
@@ -92,14 +94,16 @@ export const forkPointOf = (items: Record<string, ChatItem>, order: readonly str
             .split('\n')
             .find((line) => line.trim() !== '')
             ?.trim() ?? null;
-    return { turnId, number: index + 1, total: turns.length, last: index === turns.length - 1, prompt };
+    return { turnId, number: index + 1, total: turns.length, counted: whole, last: index === turns.length - 1, prompt };
 };
 
 /* The line at the top of the dialog: which turn, and what it was about. */
 export const forkPointLabel = (point: ForkPoint, maxPrompt = 60): string => {
     const where = point.last
         ? i18next.t('agent-chat:fork.point.afterLast')
-        : i18next.t('agent-chat:fork.point.afterTurn', { number: point.number, total: point.total });
+        : point.counted
+          ? i18next.t('agent-chat:fork.point.afterTurn', { number: point.number, total: point.total })
+          : i18next.t('agent-chat:fork.point.afterThis');
     if (point.prompt === null) {
         return where;
     }

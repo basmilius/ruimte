@@ -1,8 +1,8 @@
 import type { AgentKind, ComputerApproval } from '@ruimte/contracts';
-import { orderPrompts, type PendingPrompt } from '@ruimte/agents-react/prompts/logic/prompts';
+import { orderPrompts } from '@ruimte/agents-react/prompts/logic/prompts';
 import { isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '@ruimte/agents-react/prompts/logic/subjects';
 import type { CanvasNode } from '@/state/canvas';
-import type { ChatsById, ChatState } from '@ruimte/agents-react/state/chats';
+import { waitingRequestsOf, type ChatsById } from '@ruimte/agents-react/state/chats';
 import { endpointKey } from '@/state/keys';
 import { computerPrompt, ruimtePayloadOf, waitingPrompt } from '@/prompts/ruimte-prompts';
 import { nodeStatus, type SessionsByKey } from '@/state/sessions';
@@ -31,18 +31,6 @@ export interface CanvasPrompts {
     waitingSince: Map<string, number>;
 }
 
-/* The chat's pending requests, read from the structure a delta leaves alone. */
-export const pendingPromptsOf = (chat: Pick<ChatState, 'structure' | 'order'> | undefined): PendingPrompt[] => {
-    const pending: PendingPrompt[] = [];
-    for (const id of chat?.order ?? []) {
-        const item = chat?.structure[id];
-        if ((item?.kind === 'approval' && item.decision === 'pending') || (item?.kind === 'question' && item.state === 'pending')) {
-            pending.push(item);
-        }
-    }
-    return pending;
-};
-
 /*
  * Everything the chats and terminals on one canvas are asking, in the order the stack shows them:
  * blocking prompts first, optional questions after, each oldest first, the same rule a chat follows.
@@ -66,7 +54,7 @@ export const canvasPrompts = ({ nodes, endpointId, sessions, chats, computer, wa
         }
         if (node.kind === 'chat') {
             const chat = chats[key];
-            for (const item of pendingPromptsOf(chat)) {
+            for (const item of waitingRequestsOf(chat)) {
                 add(node, { kind: 'chat', nodeId: node.id, item }, chat?.info.provider ?? node.provider ?? null, 'chat');
             }
             continue;

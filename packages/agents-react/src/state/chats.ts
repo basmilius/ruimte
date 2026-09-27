@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChatBookmark, ChatEvent, ChatInfo, ChatItem } from '@ruimte/agent-contracts';
+import type { ChatApprovalItem, ChatBookmark, ChatEvent, ChatHistoryResult, ChatInfo, ChatItem, ChatQuestionItem } from '@ruimte/agent-contracts';
 import { useChatScope } from '../scope';
 
 export interface ChatState {
@@ -13,8 +13,24 @@ export interface ChatState {
      */
     structure: Record<string, ChatItem>;
     order: string[];
+    /* Where the part of the thread this client holds begins; absent when it holds the whole thread. */
+    history?: ChatHistoryPage;
+    /*
+     * Requests from before that part that still wait, oldest first. They are in `items` and
+     * `structure` but not in `order`, since the thread on screen does not reach back to them yet.
+     */
+    waitingBefore?: string[];
     /* The messages marked to come back to, as the host last said; absent until it said anything. */
     bookmarks?: ChatBookmark[];
+}
+
+export type ChatHistoryPage = ChatHistoryResult['history'];
+
+/* The newest part of a thread, as `chat.attach` hands it over with a `historyLimit`. */
+export interface ChatPage {
+    history: ChatHistoryPage;
+    /* Every request of the chat that still waits, wherever in the thread it is. */
+    pending: ChatItem[];
 }
 
 /* Rows keyed with the scope's `keyOf`, so a thread says which host it runs on. */
@@ -25,7 +41,10 @@ export type ChatStatuses = Record<string, Pick<ChatState, 'info'>>;
 
 /* What a chat client writes. It owns one host's link, so it speaks in chat ids alone. */
 export interface ChatSink {
-    reset(chatId: string, info: ChatInfo, items: ChatItem[]): void;
+    /* Without a page the items are the whole thread. */
+    reset(chatId: string, info: ChatInfo, items: ChatItem[], page?: ChatPage): void;
+    /* The page before the one the chat holds, read with `cursor`. */
+    prepend(chatId: string, cursor: string, page: ChatHistoryResult): void;
     apply(chatId: string, event: ChatEvent): void;
     /* What a chat is doing, for a thread nobody in this window has open. */
     status(chatId: string, info: ChatInfo): void;
@@ -37,7 +56,8 @@ interface ChatsStore {
     byKey: ChatsById;
     /* Replaced only when a chat's info is, never for a streamed word, so what reads the status alone is not redrawn by one. */
     statusByKey: ChatStatuses;
-    reset(key: string, info: ChatInfo, items: ChatItem[]): void;
+    reset(key: string, info: ChatInfo, items: ChatItem[], page?: ChatPage): void;
+    prepend(key: string, cursor: string, page: ChatHistoryResult): void;
     apply(key: string, event: ChatEvent): void;
     status(key: string, info: ChatInfo): void;
     bookmarks(key: string, bookmarks: ChatBookmark[]): void;
@@ -46,10 +66,60 @@ interface ChatsStore {
     forgetWhere(matches: (key: string) => boolean): void;
 }
 
-const stateOf = (info: ChatInfo, items: ChatItem[]): ChatState => {
+const isWaiting = (item: ChatItem | undefined): item is ChatApprovalItem | ChatQuestionItem =>
+    (item?.kind === 'approval' && item.decision === 'pending') || (item?.kind === 'question' && item.state === 'pending');
+
+const stateOf = (info: ChatInfo, items: ChatItem[], page?: ChatPage): ChatState => {
     const byId = Object.fromEntries(items.map((item) => [item.id, item]));
-    return { info, items: byId, structure: byId, order: items.map((item) => item.id) };
+    const order = items.map((item) => item.id);
+    if (page === undefined || page.history.cursor === null) {
+        return { info, items: byId, structure: byId, order };
+    }
+    const before = page.pending.filter((item) => !(item.id in byId));
+    for (const item of before) {
+        byId[item.id] = item;
+    }
+    return { info, items: byId, structure: byId, order, history: page.history, waitingBefore: before.map((item) => item.id) };
 };
+
+/* An older host names no place in the thread, and it always hands over the whole of it. */
+const isBeforePage = (state: ChatState, historyIndex: number | undefined): boolean =>
+    state.history !== undefined && historyIndex !== undefined && historyIndex < state.history.start;
+
+/* An item from before the page this client holds matters only as a request that waits, or one that stopped waiting. */
+const withEarlierItem = (state: ChatState, item: ChatItem): ChatState => {
+    const waiting = state.waitingBefore ?? [];
+    const held = waiting.includes(item.id);
+    if (isWaiting(item)) {
+        return { ...withItem(state, item), waitingBefore: held ? waiting : [...waiting, item.id] };
+    }
+    return held ? { ...withItem(state, item), waitingBefore: waiting.filter((id) => id !== item.id) } : state;
+};
+
+/* The page before the one a chat holds, unless the thread was read again since that page was asked for. */
+export const prependPage = (state: ChatState, cursor: string, page: ChatHistoryResult): ChatState => {
+    if (state.history?.cursor !== cursor) {
+        return state;
+    }
+    const held = new Set(state.order);
+    const older = page.items.filter((item) => !held.has(item.id));
+    const olderIds = new Set(older.map((item) => item.id));
+    const items = { ...state.items };
+    for (const item of older) {
+        items[item.id] = item;
+    }
+    const order = [...olderIds, ...state.order];
+    if (page.history.cursor === null) {
+        const { history: _history, waitingBefore: _waitingBefore, ...rest } = state;
+        return { ...rest, items, structure: items, order };
+    }
+    const waitingBefore = (state.waitingBefore ?? []).filter((id) => !olderIds.has(id));
+    return { ...state, items, structure: items, order, history: page.history, waitingBefore };
+};
+
+/* The requests that still wait, oldest first: those from before the page this client holds, then the thread's own. */
+export const waitingRequestsOf = (chat: Pick<ChatState, 'structure' | 'order' | 'waitingBefore'> | undefined): Array<ChatApprovalItem | ChatQuestionItem> =>
+    [...(chat?.waitingBefore ?? []), ...(chat?.order ?? [])].map((id) => chat?.structure[id]).filter(isWaiting);
 
 /* The state with one item replaced, in the thread and in the structure the rows come from. */
 const withItem = (state: ChatState, item: ChatItem): ChatState => {
@@ -70,6 +140,9 @@ const without = <T>(rows: Record<string, T>, matches: (key: string) => boolean):
 export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
     switch (event.type) {
         case 'item': {
+            if (isBeforePage(state, event.historyIndex)) {
+                return withEarlierItem(state, event.item);
+            }
             const known = event.item.id in state.items;
             return { ...withItem(state, event.item), order: known ? state.order : [...state.order, event.item.id] };
         }
@@ -100,17 +173,25 @@ export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
 export const useChats = create<ChatsStore>((set) => ({
     byKey: {},
     statusByKey: {},
-    reset(key, info, items) {
+    reset(key, info, items, page) {
         set((s) => {
             // The bookmarks are not part of the thread; they come in on their own and outlive a reset of it.
             const bookmarks = s.byKey[key]?.bookmarks;
+            const next = stateOf(info, items, page);
             return {
-                byKey: {
-                    ...s.byKey,
-                    [key]: bookmarks === undefined ? stateOf(info, items) : { ...stateOf(info, items), bookmarks }
-                },
+                byKey: { ...s.byKey, [key]: bookmarks === undefined ? next : { ...next, bookmarks } },
                 statusByKey: withStatus(s.statusByKey, key, info)
             };
+        });
+    },
+    prepend(key, cursor, page) {
+        set((s) => {
+            const current = s.byKey[key];
+            if (!current) {
+                return {};
+            }
+            const next = prependPage(current, cursor, page);
+            return next === current ? {} : { byKey: { ...s.byKey, [key]: next } };
         });
     },
     apply(key, event) {
@@ -166,7 +247,8 @@ export const useChats = create<ChatsStore>((set) => ({
 
 /* The sink of one host's chat client: it hands over chat ids, this puts them under the keys of its scope. */
 export const chatSink = (keyOf: (chatId: string) => string): ChatSink => ({
-    reset: (chatId, info, items) => useChats.getState().reset(keyOf(chatId), info, items),
+    reset: (chatId, info, items, page) => useChats.getState().reset(keyOf(chatId), info, items, page),
+    prepend: (chatId, cursor, page) => useChats.getState().prepend(keyOf(chatId), cursor, page),
     apply: (chatId, event) => useChats.getState().apply(keyOf(chatId), event),
     status: (chatId, info) => useChats.getState().status(keyOf(chatId), info),
     bookmarks: (chatId, bookmarks) => useChats.getState().bookmarks(keyOf(chatId), bookmarks),
