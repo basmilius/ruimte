@@ -212,3 +212,7 @@ export const isImageMime = (mime: string): boolean => (FS_IMAGE_MIMES as readonl
 export const FS_VIDEO_MIMES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska', 'video/ogg'] as const;
 
 export const isVideoMime = (mime: string): boolean => (FS_VIDEO_MIMES as readonly string[]).includes(mime);
+
+export const FS_AUDIO_MIMES = ['audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/flac', 'audio/ogg'] as const;
+
+export const isAudioMime = (mime: string): boolean => (FS_AUDIO_MIMES as readonly string[]).includes(mime);

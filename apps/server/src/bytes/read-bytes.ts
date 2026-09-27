@@ -8,7 +8,7 @@ export class BytesError extends CodedError<BytesErrorCode> {}
 
 /*
  * The lookups the HTTP routes make, and nothing more: an attachment only as a chat's thread names it,
- * a project icon only as the folder declares it, and a file only when it is an image or a video.
+ * a project icon only as the folder declares it, and a file only when it is an image, a video or sound.
  * Access itself was decided when the connection was let in, as `decideAccess` decides it per route.
  */
 export interface ByteSources {

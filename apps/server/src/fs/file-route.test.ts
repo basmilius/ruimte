@@ -60,12 +60,20 @@ describe('the file route', () => {
         expect(response.headers.get('content-security-policy')).toBe("default-src 'none'; style-src 'unsafe-inline'");
     });
 
-    test('serves nothing but the images and video the viewer draws', async () => {
+    test('serves nothing but the images, video and sound the viewer plays', async () => {
         await writeFile(join(root, 'notes.md'), '# hello');
         await writeFile(join(root, 'paper.pdf'), '%PDF-1.7\n');
         expect((await ask('notes.md')).status).toBe(404);
         expect((await ask('paper.pdf')).status).toBe(404);
         expect((await ask('nothing.png')).status).toBe(404);
+    });
+
+    test('sound comes typed and in ranges like a video', async () => {
+        await writeFile(join(root, 'voice.wav'), Buffer.concat([Buffer.from('RIFF\x24\x00\x00\x00WAVEfmt ', 'latin1'), Buffer.alloc(64)]));
+        const slice = await ask('voice.wav', '127.0.0.1', { headers: { range: 'bytes=0-11' } });
+        expect(slice.status).toBe(206);
+        expect(slice.headers.get('content-type')).toBe('audio/wav');
+        expect(Buffer.from(await slice.arrayBuffer()).toString('latin1')).toBe('RIFF\x24\x00\x00\x00WAVE');
     });
 
     test('a video comes with the ranges a player needs', async () => {

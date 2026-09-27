@@ -12,6 +12,8 @@ const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x20, 0x00, 0x00, 
 /* The head of an ISO base media file: a box length, `ftyp`, and the brand that says which flavor. */
 const isoMedia = (brand: string): Buffer => Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x20]), Buffer.from('ftyp'), Buffer.from(brand)]);
 
+const latin1 = (text: string): Uint8Array => new Uint8Array(Buffer.from(text, 'latin1'));
+
 const ebml = (docType: string): Buffer =>
     Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.from([0x42, 0x82]), Buffer.from(docType), Buffer.alloc(16)]);
 
@@ -57,11 +59,24 @@ describe('the binary sniff', () => {
         expect(sniffMime(new Uint8Array(isoMedia('mp42')))).toBe('video/mp4');
         expect(sniffMime(new Uint8Array(isoMedia('M4V ')))).toBe('video/mp4');
         expect(sniffMime(new Uint8Array(isoMedia('qt  ')))).toBe('video/quicktime');
-        // Sound in the same container is no video, and nothing the file route serves.
-        expect(sniffMime(new Uint8Array(isoMedia('M4A ')))).toBeNull();
+        // Sound in the same container is no video.
+        expect(sniffMime(new Uint8Array(isoMedia('M4A ')))).toBe('audio/mp4');
         expect(sniffMime(new Uint8Array(ebml('webm')))).toBe('video/webm');
         expect(sniffMime(new Uint8Array(ebml('matroska')))).toBe('video/x-matroska');
-        expect(sniffMime(new TextEncoder().encode('OggS\x00\x02'))).toBe('video/ogg');
+        expect(sniffMime(latin1('OggS\x00\x02' + '\x00'.repeat(22) + '\x80theora'))).toBe('video/ogg');
+    });
+
+    test('names sound by its container or its first frame', () => {
+        expect(sniffMime(latin1('ID3\x04\x00'))).toBe('audio/mpeg');
+        // An MP3 without a tag: MPEG-1 layer III, 128 kbit/s at 44.1 kHz.
+        expect(sniffMime(new Uint8Array([0xff, 0xfb, 0x90, 0x64]))).toBe('audio/mpeg');
+        expect(sniffMime(new Uint8Array([0xff, 0xf1, 0x50, 0x80]))).toBe('audio/aac');
+        expect(sniffMime(latin1('RIFF\x24\x00\x00\x00WAVEfmt '))).toBe('audio/wav');
+        expect(sniffMime(latin1('fLaC\x00\x00\x00\x22'))).toBe('audio/flac');
+        expect(sniffMime(latin1('OggS\x00\x02' + '\x00'.repeat(22) + '\x13OpusHead'))).toBe('audio/ogg');
+        expect(sniffMime(latin1('OggS\x00\x02' + '\x00'.repeat(22) + '\x01vorbis'))).toBe('audio/ogg');
+        // The sync bits alone, with a bitrate that does not exist, are no MP3.
+        expect(sniffMime(new Uint8Array([0xff, 0xfb, 0xf0, 0x00]))).toBeNull();
     });
 
     test('takes an SVG only when the file opens as one', () => {

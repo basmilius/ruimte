@@ -68,7 +68,7 @@ describe('readBytes', () => {
         expect(piece).toMatchObject({ mime: 'image/gif', size: picture.length, offset: 10 });
     });
 
-    test('a file that is not an image or a video is refused like the route refuses it', async () => {
+    test('a file that is not an image, a video or sound is refused like the route refuses it', async () => {
         const refused = readBytes(sources, { resource: { kind: 'file', path: join(folder, 'notes.txt') }, offset: 0, length: 10 });
         await expect(refused).rejects.toBeInstanceOf(BytesError);
         await expect(refused).rejects.toMatchObject({ code: 'not-found' });

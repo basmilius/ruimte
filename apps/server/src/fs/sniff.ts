@@ -21,6 +21,22 @@ const AUDIO_BRANDS = new Set(['M4A ', 'M4B ', 'M4P ']);
 
 const latin1 = (bytes: Uint8Array): string => new TextDecoder('latin1').decode(bytes);
 
+/*
+ * Raw MPEG audio has no header, only frames: eleven set bits of sync, then a version and a layer. Layer
+ * bits 00 are AAC in an ADTS frame, whose sync is twelve bits. An MP3 frame also has to name a bitrate
+ * and a sample rate that exist, which keeps other binaries that happen to start with the sync out.
+ */
+const frameSync = (bytes: Uint8Array): 'aac' | 'mpeg' | null => {
+    if (bytes.length < 3 || bytes[0] !== 0xff || (bytes[1] & 0xe0) !== 0xe0) {
+        return null;
+    }
+    if ((bytes[1] & 0x06) === 0) {
+        return (bytes[1] & 0x10) !== 0 ? 'aac' : null;
+    }
+    const known = (bytes[1] & 0x18) !== 0x08 && (bytes[2] & 0xf0) !== 0xf0 && (bytes[2] & 0x0c) !== 0x0c;
+    return known ? 'mpeg' : null;
+};
+
 /* The mime a file's first bytes claim, or null when nothing recognizes them. */
 export const sniffMime = (bytes: Uint8Array): string | null => {
     for (const { mime, signature } of MAGIC) {
@@ -28,16 +44,26 @@ export const sniffMime = (bytes: Uint8Array): string | null => {
             return mime;
         }
     }
-    // WebP is a RIFF container: the form type sits four bytes past the length.
+    // WebP and WAV are RIFF containers: the form type sits four bytes past the length.
     if (startsWith(bytes, ascii('RIFF')) && startsWith(bytes.subarray(8), ascii('WEBP'))) {
         return 'image/webp';
+    }
+    if (startsWith(bytes, ascii('RIFF')) && startsWith(bytes.subarray(8), ascii('WAVE'))) {
+        return 'audio/wav';
+    }
+    if (startsWith(bytes, ascii('fLaC'))) {
+        return 'audio/flac';
+    }
+    // An ID3 tag sits in front of MP3 frames.
+    if (startsWith(bytes, ascii('ID3'))) {
+        return 'audio/mpeg';
     }
     // An ISO base media file (MP4, M4V, MOV) names itself in an `ftyp` box four bytes in, and the
     // brand behind it says which flavor: QuickTime carries codecs no browser has to play.
     if (startsWith(bytes.subarray(4), ascii('ftyp'))) {
         const brand = latin1(bytes.subarray(8, 12));
         if (AUDIO_BRANDS.has(brand)) {
-            return null;
+            return 'audio/mp4';
         }
         return brand === 'qt  ' ? 'video/quicktime' : 'video/mp4';
     }
@@ -45,8 +71,13 @@ export const sniffMime = (bytes: Uint8Array): string | null => {
     if (startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3])) {
         return latin1(bytes.subarray(0, 64)).includes('webm') ? 'video/webm' : 'video/x-matroska';
     }
+    // The first page of an Ogg stream holds the header of its first codec; only Theora is a picture.
     if (startsWith(bytes, ascii('OggS'))) {
-        return 'video/ogg';
+        return latin1(bytes.subarray(0, 64)).includes('theora') ? 'video/ogg' : 'audio/ogg';
+    }
+    const frame = frameSync(bytes);
+    if (frame !== null) {
+        return frame === 'aac' ? 'audio/aac' : 'audio/mpeg';
     }
     return null;
 };

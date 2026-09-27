@@ -1,6 +1,6 @@
 import { lstat } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
-import { FS_READ_MAX_TEXT_BYTES, isImageMime, isVideoMime, type FsReadResult } from '@ruimte/contracts';
+import { FS_READ_MAX_TEXT_BYTES, isAudioMime, isImageMime, isVideoMime, type FsReadResult } from '@ruimte/contracts';
 import { CodedError } from '@ruimte/agents/coded-error';
 import { looksLikeSvg, sniffMime } from './sniff.ts';
 
@@ -195,10 +195,10 @@ export const readFile = async (path: string): Promise<FsReadResult> => {
     };
 };
 
-/* The same file as bytes, for the file route. Null for anything but the images and video it serves. */
+/* The same file as bytes, for the file route. Null for anything but the images, video and sound it serves. */
 export const readMedia = async (path: string): Promise<{ mime: string; size: number; bytes: Blob } | null> => {
     const { file, mime } = await inspect(path);
-    if (!mime || !(isImageMime(mime) || isVideoMime(mime))) {
+    if (!mime || !(isImageMime(mime) || isVideoMime(mime) || isAudioMime(mime))) {
         return null;
     }
     return { mime, size: file.size, bytes: Bun.file(file.path) };
