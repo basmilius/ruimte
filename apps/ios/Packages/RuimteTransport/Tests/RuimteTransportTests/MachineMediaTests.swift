@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import RuimtePulsar
 import Testing
@@ -10,6 +11,7 @@ import Testing
     var version = "1-1"
     var asked: [(offset: Int, length: Int)] = []
     init(size: Int) { bytes = Data((0..<size).map { UInt8($0 % 251) }) }
+    init(bytes: Data) { self.bytes = bytes }
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
         let offset = Int(payload["offset"]!.numberValue!)
         let length = Int(payload["length"]!.numberValue!)
@@ -101,6 +103,18 @@ import Testing
         }
         await #expect(throws: CancellationError.self) { try await task.value }
         #expect(machine.asked.count == 3)
+    }
+
+    /// AVFoundation calls an optional delegate method only when its name matches the SDK's exactly.
+    @Test func avFoundationReadsAVideoThroughTheLoader() async throws {
+        let url = try #require(Bundle.module.url(forResource: "clip", withExtension: "mp4", subdirectory: "Fixtures"))
+        let machine = MediaMachine(bytes: try Data(contentsOf: url))
+        let loader = MachineMediaLoader(client: machine, path: "/videos/clip.mp4")
+        let (duration, playable) = try await loader.asset().load(.duration, .isPlayable)
+        #expect(playable)
+        #expect(abs(duration.seconds - 1) < 0.2)
+        #expect(!machine.asked.isEmpty)
+        withExtendedLifetime(loader) {}
     }
 
     @Test func aRefusalFromTheMachineIsTheError() async throws {

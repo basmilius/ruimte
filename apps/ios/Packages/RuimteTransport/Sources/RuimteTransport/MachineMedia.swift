@@ -139,7 +139,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
     }
 
     nonisolated public func resourceLoader(
-        _ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOf loadingRequest: AVAssetResourceLoadingRequest
+        _ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest
     ) -> Bool {
         let request = LoadingRequest(value: loadingRequest)
         MainActor.assumeIsolated { start(request) }
