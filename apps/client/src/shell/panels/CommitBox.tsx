@@ -83,6 +83,7 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
                 </div>
             )}
             <TextArea
+                size="sm"
                 rows={3}
                 spellCheck={false}
                 placeholder={t('git.commit.placeholder')}

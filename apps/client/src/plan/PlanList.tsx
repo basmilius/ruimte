@@ -547,6 +547,7 @@ function NoteEditor({ initial, onDone }: { initial: string; onDone: (text: strin
         <TextArea
             // A note field that just opened is where the person is about to type, from a Failed as much as from the menu.
             autoFocus
+            size="sm"
             rows={2}
             maxLength={PLAN_LIMITS.note}
             value={text}

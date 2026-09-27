@@ -52,6 +52,7 @@ function TerminalControl({
             {draft !== null && (
                 <div className="flex flex-col gap-2 border-t border-border p-2">
                     <TextArea
+                        resize="vertical"
                         className="w-full"
                         aria-label={t('dictation.terminalDraft')}
                         value={draft}
