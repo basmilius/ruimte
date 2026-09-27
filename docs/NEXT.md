@@ -82,7 +82,8 @@ larger ones becomes a GitHub issue when it starts.
     (`apps/client/src/worker/bytes-worker.ts`, `docs/reports/2026-09-27-direct-media-streaming.html`),
     verified in a bare Electron but not yet in the app against a real direct machine; its throughput
     with one, two or three pieces on their way is unmeasured, and so is what that does to a terminal
-    on the same connection. The iPhone still loads a video whole, under the 32 MB ceiling.
+    on the same connection. The iPhone plays a video in ranges as well
+    (`MachineMediaLoader` in `RuimteTransport`), built and unit tested but not yet played on a device.
 13. **Devices** (`docs/reports/2026-09-13-devices.html`): the iOS Simulator, physical iPhones and
     iPads, and Android emulators and phones run as a panel, a view and a node, and an agent operates
     them with `ruimte-context device`. Left: typing on a physical iPhone (the simulator and Android

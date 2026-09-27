@@ -243,9 +243,13 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
       <li><strong>Houdt Chromium een worker in leven zolang een stream loopt?</strong> Niet getest over minuten. Met antwoorden van 8 MiB duurt één stream kort, dus de vraag doet er minder toe. Of 8 MiB de juiste grens is, blijft open tot stap 5.</li>
     </ul>
 
+    <h3>De iPhone</h3>
+    <p>De app laadt een video niet meer in zijn geheel. <code>MachineMediaLoader</code> in <code>RuimteTransport</code> is de delegate van een <code>AVAssetResourceLoader</code> op een eigen scheme (<code>ruimte-media://</code>), en beantwoordt de ranges van <code>AVPlayer</code> met <code>bytes.read</code>: twee stukken vooruit, begrensd op 8 MiB per request, en de versie vastgepind op het eerste stuk. Dat geldt over elke verbinding, want de app gebruikt altijd <code>bytes.read</code>. Het tijdelijke bestand en het plafond van 32 MB voor video zijn weg. Afbeeldingen blijven op <code>readResource</code>. Acht tests dekken de opdeling, het venster, het vooruit vragen, een gewijzigd bestand, afbreken en een weigering. De app bouwt voor het toestel. Of <code>AVPlayer</code> soepel zoekt op requests die korter worden afgesloten dan gevraagd, is nog niet gezien.</p>
+
     <h3>Wat nog moet</h3>
     <ol>
       <li>Open in de dev-app een video van ruim 32 MB op een machine met een directe verbinding. Controleer dat hij meteen start en dat zoeken werkt. Na de eerste keer registreert de worker zich; de eerste video in een nieuw venster kan nog via de blob-route gaan.</li>
+      <li>Speel op de iPhone een video van ruim 100 MB af, over een directe verbinding en over een socket, en zoek naar het einde.</li>
       <li>Meet stap 5 over een echte directe verbinding, met en zonder relay, met <code>ahead</code> op 1, 2 en 3 (<code>StreamOptions</code> in <code>bytes-stream.ts</code>). Houd daarbij een terminal op dezelfde verbinding in de gaten. Bij twee stukken onderweg is dat ongeveer 684 KB base64, onder de gate van 1 MB. Bij drie zit het er net boven.</li>
     </ol>
   </section>
