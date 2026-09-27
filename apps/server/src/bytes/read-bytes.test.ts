@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BYTES_CHUNK_MAX, type ByteResource } from '@ruimte/contracts';
@@ -84,9 +84,14 @@ describe('readBytes', () => {
         }
     });
 
-    test('a file over the cap is refused with its size rather than sent', async () => {
-        const refused = readBytes(sources, { resource: { kind: 'file', path: join(folder, 'picture.gif') }, offset: 0, length: 10 }, 1024);
-        await expect(refused).rejects.toMatchObject({ code: 'too-large', message: expect.stringContaining('1 MB') });
+    test('a piece deep inside a file of 100 MB is read without the rest of it', async () => {
+        const path = join(folder, 'long.gif');
+        await writeFile(path, 'GIF89a');
+        // Sparse, so the file costs no disk.
+        await truncate(path, 100 * 1024 * 1024);
+        const piece = await readBytes(sources, { resource: { kind: 'file', path }, offset: 90 * 1024 * 1024, length: 10 });
+        expect(piece).toMatchObject({ size: 100 * 1024 * 1024, offset: 90 * 1024 * 1024 });
+        expect(Buffer.from(piece.data, 'base64')).toHaveLength(10);
     });
 
     test('an offset past the end is refused', async () => {

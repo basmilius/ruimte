@@ -1,8 +1,8 @@
 import { stat } from 'node:fs/promises';
-import { BYTES_READ_MAX_BYTES, type BytesReadPayload, type BytesReadResult, type ByteResource, type ChatAttachment } from '@ruimte/contracts';
+import { type BytesReadPayload, type BytesReadResult, type ByteResource, type ChatAttachment } from '@ruimte/contracts';
 import { CodedError } from '@ruimte/agents/coded-error';
 
-type BytesErrorCode = 'not-found' | 'too-large' | 'bad-offset';
+type BytesErrorCode = 'not-found' | 'bad-offset';
 
 export class BytesError extends CodedError<BytesErrorCode> {}
 
@@ -16,10 +16,6 @@ export interface ByteSources {
     projectIcon(projectId: string, theme: 'light' | 'dark'): Promise<{ path: string; mime: string } | null>;
     media(path: string): Promise<{ mime: string } | null>;
 }
-
-const MIB = 1024 * 1024;
-
-const megabytes = (bytes: number): string => `${Math.ceil(bytes / MIB)} MB`;
 
 const locate = async (sources: ByteSources, resource: ByteResource): Promise<{ path: string; mime: string } | null> => {
     if (resource.kind === 'attachment') {
@@ -36,16 +32,14 @@ const locate = async (sources: ByteSources, resource: ByteResource): Promise<{ p
 /*
  * One piece of a resource. Every piece looks the resource up and stats it again, so the daemon holds
  * nothing between two pieces and a client that stops asking costs nothing; the version in each answer
- * is how the client notices a file that changed halfway.
+ * is how the client notices a file that changed halfway. A file of any size is served: a piece reads
+ * only its own slice, and a video player asks for the ranges it needs.
  */
-export const readBytes = async (sources: ByteSources, payload: BytesReadPayload, maxBytes: number = BYTES_READ_MAX_BYTES): Promise<BytesReadResult> => {
+export const readBytes = async (sources: ByteSources, payload: BytesReadPayload): Promise<BytesReadResult> => {
     const found = await locate(sources, payload.resource);
     const info = found ? await stat(found.path).catch(() => null) : null;
     if (!found || !info?.isFile()) {
         throw new BytesError('not-found', 'Not a file this machine serves');
-    }
-    if (info.size > maxBytes) {
-        throw new BytesError('too-large', `This file is ${megabytes(info.size)}; at most ${megabytes(maxBytes)} loads over a direct connection`);
     }
     if (payload.offset > info.size) {
         throw new BytesError('bad-offset', `Offset ${payload.offset} is past the end of a file of ${info.size} bytes`);

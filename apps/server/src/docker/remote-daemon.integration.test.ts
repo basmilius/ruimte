@@ -747,7 +747,13 @@ describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', 
             await expect(refused({ kind: 'file', path: '/etc/passwd' })).rejects.toThrow(/^not-found:/);
             await expect(refused({ kind: 'file', path: `${HOME}/endpoint.json` })).rejects.toThrow(/^not-found:/);
             await expect(refused({ kind: 'attachment', chatId: 'no-such-chat', attachmentId: 'nothing' })).rejects.toThrow(/^not-found:/);
-            await expect(refused({ kind: 'file', path: huge })).rejects.toThrow(/^too-large: This file is 40 MB/);
+            const deep = await client.request<BytesReadResult>('bytes.read', {
+                resource: { kind: 'file', path: huge },
+                offset: 39 * 1024 * 1024,
+                length: 1024
+            });
+            expect(deep.size).toBe(40 * 1024 * 1024);
+            expect(Buffer.from(deep.data, 'base64')).toHaveLength(1024);
         } finally {
             await inContainer(['rm', '-f', path, huge]);
         }
