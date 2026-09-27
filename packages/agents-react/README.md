@@ -1,8 +1,8 @@
 # @ruimte/agents-react
 
-Ruimte's AI chat for any React app that runs agent CLIs: the thread and its composer, the approval and question cards, the model and mode pickers, the providers settings pane and the usage page. React 19, Base UI, zustand, react-i18next and Tailwind 4, on top of `@ruimte/ui` and `@ruimte/agent-contracts`.
+Ruimte's AI chat for any React app that runs agent CLIs: the thread and its composer, the approval and question cards, the model and mode pickers, the providers settings pane and the usage page. React 19, Base UI, zustand, react-i18next and Tailwind 4, on top of `@basmilius/react-ui` and `@ruimte/agent-contracts`. The app brings `@basmilius/react-ui`, React, `react-dom`, i18next and `react-i18next` as peer dependencies.
 
-Import per file, the way `@ruimte/ui` does: `@ruimte/agents-react/chat/ui/Timeline`, `@ruimte/agents-react/transport`.
+Import per file: `@ruimte/agents-react/chat/ui/Timeline`, `@ruimte/agents-react/transport`.
 
 ## The seams
 
@@ -25,9 +25,8 @@ import { providerSinkFor } from '@ruimte/agents-react/state/providers';
 import { watchProviderAccounts } from '@ruimte/agents-react/state/provider-accounts';
 import { setChatHost } from '@ruimte/agents-react/host';
 import { AGENTS_LOCALES } from '@ruimte/agents-react/locales';
-import { setFormatSource } from '@ruimte/ui/format/locale';
-import { FORMAT_LANGUAGE } from '@ruimte/ui/format/regions';
-import { UI_LOCALES, UI_NAMESPACE } from '@ruimte/ui/locales';
+import { UIProvider } from '@basmilius/react-ui';
+import { FORMAT_LANGUAGE, type FormatSource } from '@basmilius/react-ui/format';
 
 // The port the utility process handed over, as the frames the chat speaks.
 const transport = portTransport({
@@ -50,18 +49,17 @@ const scope: ChatScope = {
 };
 watchProviderAccounts(scope.id, transport);
 
-setFormatSource({
+const formatSource: FormatSource = {
     language: () => i18next.language,
     region: () => FORMAT_LANGUAGE,
     subscribe: (onChange) => {
         i18next.on('languageChanged', onChange);
         return () => i18next.off('languageChanged', onChange);
     }
-});
+};
 setChatHost({ notify: (toast) => showToast(toast), openSettings: (section) => openSettings(section) });
 
-// The words: the ui namespace and the chat's own, in the language on screen.
-i18next.addResourceBundle(language, UI_NAMESPACE, (await UI_LOCALES[language]!()).default, true, true);
+// The chat's own words, in the language on screen. `UIProvider` adds the library's.
 for (const [namespace, words] of Object.entries(await AGENTS_LOCALES[language]!())) {
     i18next.addResourceBundle(language, namespace, words, true, true);
 }
@@ -105,18 +103,20 @@ function Chat({ chatId }: { chatId: string }) {
     );
 }
 
-<ChatScopeContext.Provider value={scope}>
-    <Chat chatId="chat-1" />
-</ChatScopeContext.Provider>;
+<UIProvider i18n={i18next} formatSource={formatSource}>
+    <ChatScopeContext.Provider value={scope}>
+        <Chat chatId="chat-1" />
+    </ChatScopeContext.Provider>
+</UIProvider>;
 ```
 
-The stylesheet goes right after the ui theme, and Tailwind scans the `dist` of both packages, which is what npm ships. The markdown of a thread builds on the typography plugin, and a few rules read the terminal colors (`--term-bg`, `--term-fg`, `--term-green`, `--term-red`) and the find colors (`--find-current`) an app defines:
+The stylesheet goes right after the theme of `@basmilius/react-ui`, and Tailwind scans the `dist` of both packages, which is what npm ships. The markdown of a thread builds on the typography plugin, and a few rules read the terminal colors (`--term-bg`, `--term-fg`, `--term-green`, `--term-red`) and the find colors (`--find-current`) an app defines:
 
 ```css
 @import "tailwindcss";
-@import "@ruimte/ui/theme.css";
+@import "@basmilius/react-ui/theme.css";
 @import "@ruimte/agents-react/theme.css";
-@source "<path to>/node_modules/@ruimte/ui/dist";
+@source "<path to>/node_modules/@basmilius/react-ui/dist";
 @source "<path to>/node_modules/@ruimte/agents-react/dist";
 @plugin "@tailwindcss/typography";
 ```
@@ -157,13 +157,13 @@ setChatHost({
 
 ## Settings and usage
 
-`settings/sections` describes the two sections this package brings to the settings dialog of `@ruimte/ui`; `settingsSection` makes the entry the dialog takes, with the pane the app hands it:
+`settings/sections` describes the two sections this package brings to the settings dialog of `@basmilius/react-ui`; `settingsSection` makes the entry the dialog takes, with the pane the app hands it:
 
 ```tsx
 import { ProvidersPane } from '@ruimte/agents-react/providers/ProvidersPane';
 import { PROVIDERS_SECTION, USAGE_SECTION, settingsSection } from '@ruimte/agents-react/settings/sections';
 import { UsagePane } from '@ruimte/agents-react/usage/UsagePane';
-import { SettingsDialog } from '@ruimte/ui/settings/SettingsDialog';
+import { SettingsDialog } from '@basmilius/react-ui/settings';
 
 <SettingsDialog
     groups={[{ label: null, sections: [settingsSection(PROVIDERS_SECTION, ProvidersPane), settingsSection(USAGE_SECTION, () => <UsagePane onOpenPage={openUsage} />)] }]}
