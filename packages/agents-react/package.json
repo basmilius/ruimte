@@ -192,13 +192,8 @@
     "react-dom": "^19.3.0",
     "react-i18next": "^17.0.15"
   },
-  "peerDependenciesMeta": {
-    "@basmilius/react-ui": {
-      "optional": true
-    }
-  },
   "devDependencies": {
-    "@basmilius/react-ui": "link:@basmilius/react-ui",
+    "@basmilius/react-ui": "^0.1.0",
     "i18next": "^26.4.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
