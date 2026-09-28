@@ -10,12 +10,27 @@ import Testing
     var bytes: Data
     var version = "1-1"
     var asked: [(offset: Int, length: Int)] = []
+    // How many of the next requests are refused.
+    var refuse = 0
+    // How many of the next requests fail on a dropped connection, which is back at the second look unless it stays down.
+    var disconnects = 0
+    var staysDown = false
+    private var connection: [Bool] = []
     init(size: Int) { bytes = Data((0..<size).map { UInt8($0 % 251) }) }
     init(bytes: Data) { self.bytes = bytes }
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
         let offset = Int(payload["offset"]!.numberValue!)
         let length = Int(payload["length"]!.numberValue!)
         asked.append((offset, length))
+        if disconnects > 0 {
+            disconnects -= 1
+            connection = staysDown ? [false, false] : [false, true]
+            throw MachineClientError.disconnected
+        }
+        if refuse > 0 {
+            refuse -= 1
+            throw MachineClientError.server(code: "busy", message: "Try again")
+        }
         guard offset <= bytes.count else { throw MachineClientError.server(code: "bad-offset", message: "Past the end") }
         let slice = bytes.subdata(in: offset..<min(offset + length, bytes.count))
         return .object([
@@ -24,6 +39,10 @@ import Testing
         ])
     }
     func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void {
+        handler(connection.isEmpty ? true : connection.removeFirst())
+        return {}
+    }
 }
 
 @MainActor struct MachineMediaTests {
@@ -45,8 +64,69 @@ import Testing
         let result = try await read(source, offset: 10, length: 20)
         #expect(result.data == machine.bytes.subdata(in: 10..<30))
         #expect(result.info == MachineMediaInfo(mime: "video/mp4", size: 100, version: "1-1"))
-        #expect(machine.asked.map(\.offset) == [10, 18, 26])
-        #expect(machine.asked.map(\.length) == [8, 8, 4])
+        #expect(machine.asked.map(\.offset) == [8, 16, 24])
+        #expect(machine.asked.map(\.length) == [8, 8, 8])
+    }
+
+    @Test func overlappingReadsShareThePiecesTheyHave() async throws {
+        let machine = MediaMachine(size: 100)
+        let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8)
+        let first = try await read(source, offset: 0, length: 40)
+        let again = try await read(source, offset: 12, length: 20)
+        #expect(first.data == machine.bytes.subdata(in: 0..<40))
+        #expect(again.data == machine.bytes.subdata(in: 12..<32))
+        #expect(machine.asked.map(\.offset) == [0, 8, 16, 24, 32])
+    }
+
+    @Test func aPieceThatFailedOnADroppedConnectionIsAskedAgainOnTheNextOne() async throws {
+        let machine = MediaMachine(size: 100)
+        machine.disconnects = 1
+        let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8)
+        let result = try await read(source, offset: 0, length: 16)
+        #expect(result.data == machine.bytes.subdata(in: 0..<16))
+        #expect(machine.asked.map(\.offset) == [0, 0, 8])
+    }
+
+    @Test func aConnectionThatStaysDownFailsTheRead() async throws {
+        let machine = MediaMachine(size: 100)
+        machine.disconnects = 1
+        machine.staysDown = true
+        let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8, reconnectWaitMs: 0)
+        await #expect(throws: MachineClientError.disconnected) {
+            _ = try await read(source, offset: 0, length: 8)
+        }
+    }
+
+    @Test func theSpoolGoesWithItsSource() async throws {
+        let machine = MediaMachine(size: 100)
+        var source: MachineMediaSource? = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8)
+        _ = try await read(source!, offset: 0, length: 32)
+        let url = try #require(source?.spoolURL)
+        #expect(FileManager.default.fileExists(atPath: url.path()))
+        source = nil
+        #expect(!FileManager.default.fileExists(atPath: url.path()))
+    }
+
+    @Test func theSourceReadsAheadOfThePlayerOnItsOwn() async throws {
+        let machine = MediaMachine(size: 100)
+        let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8, ahead: 2, readAheadPieces: 4)
+        _ = try await read(source, offset: 0, length: 16)
+        for _ in 0..<20 { await Task.yield() }
+        #expect(machine.asked.map(\.offset) == [0, 8, 16, 24, 32, 40])
+        let later = try await read(source, offset: 24, length: 24)
+        #expect(later.data == machine.bytes.subdata(in: 24..<48))
+        #expect(Set(machine.asked.map(\.offset)).count == machine.asked.count)
+    }
+
+    @Test func aPieceThatFailedIsAskedAgain() async throws {
+        let machine = MediaMachine(size: 100)
+        machine.refuse = 1
+        let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8)
+        await #expect(throws: MachineClientError.server(code: "busy", message: "Try again")) {
+            _ = try await read(source, offset: 0, length: 8)
+        }
+        let result = try await read(source, offset: 0, length: 8)
+        #expect(result.data == machine.bytes.subdata(in: 0..<8))
     }
 
     @Test func aReadToTheEndReadsTheRestOfTheFile() async throws {
@@ -117,10 +197,10 @@ import Testing
         withExtendedLifetime(loader) {}
     }
 
-    @Test func aRefusalFromTheMachineIsTheError() async throws {
+    @Test func aRangePastTheEndFails() async throws {
         let machine = MediaMachine(size: 100)
         let source = MachineMediaSource(client: machine, path: "/v.mp4")
-        await #expect(throws: MachineClientError.server(code: "bad-offset", message: "Past the end")) {
+        await #expect(throws: MachineClientError.invalid("The player asked past the end of the file.")) {
             _ = try await read(source, offset: 200, length: 8)
         }
     }
