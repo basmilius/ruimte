@@ -838,7 +838,17 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
         home = await mkdtemp(join(tmpdir(), 'ruimte-pool-'));
         // Its own home and no hooks. A test daemon must leave this machine's state and CLI settings alone.
         daemon = Bun.spawn(
-            ['bun', join(import.meta.dir, '../main.ts'), '--host', '127.0.0.1', '--port', String(LOCAL_PORT), '--no-hooks', '--no-price-fetch'],
+            [
+                'bun',
+                join(import.meta.dir, '../main.ts'),
+                '--host',
+                '127.0.0.1',
+                '--port',
+                String(LOCAL_PORT),
+                '--no-hooks',
+                '--no-price-fetch',
+                '--no-model-fetch'
+            ],
             { env: { ...process.env, RUIMTE_HOME: home }, stdout: 'ignore', stderr: 'inherit' }
         );
         await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
@@ -972,7 +982,17 @@ describe.skipIf(!ENABLED)('one id on two machines', () => {
     beforeAll(async () => {
         home = await mkdtemp(join(tmpdir(), 'ruimte-scope-'));
         daemon = Bun.spawn(
-            ['bun', join(import.meta.dir, '../main.ts'), '--host', '127.0.0.1', '--port', String(LOCAL_PORT), '--no-hooks', '--no-price-fetch'],
+            [
+                'bun',
+                join(import.meta.dir, '../main.ts'),
+                '--host',
+                '127.0.0.1',
+                '--port',
+                String(LOCAL_PORT),
+                '--no-hooks',
+                '--no-price-fetch',
+                '--no-model-fetch'
+            ],
             { env: { ...process.env, RUIMTE_HOME: home }, stdout: 'ignore', stderr: 'inherit' }
         );
         await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
@@ -1173,7 +1193,17 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
         home = await mkdtemp(join(tmpdir(), 'ruimte-side-'));
         folder = await mkdtemp(join(tmpdir(), 'ruimte-side-project-'));
         daemon = Bun.spawn(
-            ['bun', join(import.meta.dir, '../main.ts'), '--host', '127.0.0.1', '--port', String(LOCAL_PORT), '--no-hooks', '--no-price-fetch'],
+            [
+                'bun',
+                join(import.meta.dir, '../main.ts'),
+                '--host',
+                '127.0.0.1',
+                '--port',
+                String(LOCAL_PORT),
+                '--no-hooks',
+                '--no-price-fetch',
+                '--no-model-fetch'
+            ],
             { env: { ...process.env, RUIMTE_HOME: home }, stdout: 'ignore', stderr: 'inherit' }
         );
         await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));

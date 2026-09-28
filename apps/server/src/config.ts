@@ -18,6 +18,8 @@ export interface ServerConfig {
     allowedOrigins: string[];
     // Whether the daemon may ask LiteLLM for the price table; off leaves it on the bundled snapshot.
     priceFetch: boolean;
+    // Whether the daemon may ask the address book for newer model catalogs; off leaves the shipped ones.
+    modelFetch: boolean;
     // The STUN servers a direct connection gathers its public address from; empty announces the interfaces only.
     stun: string[];
     // The UDP ports a direct connection binds, for a firewall or a container that publishes a fixed range.
@@ -98,6 +100,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
             label: { type: 'string' },
             'allow-origin': { type: 'string', multiple: true, default: [] },
             'no-price-fetch': { type: 'boolean', default: false },
+            'no-model-fetch': { type: 'boolean', default: false },
             stun: { type: 'string', multiple: true, default: [] },
             'no-stun': { type: 'boolean', default: false },
             'direct-ports': { type: 'string' },
@@ -134,6 +137,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         label: values.label ?? env.RUIMTE_LABEL ?? hostname(),
         allowedOrigins: values['allow-origin'],
         priceFetch: !values['no-price-fetch'],
+        modelFetch: !values['no-model-fetch'],
         stun: values['no-stun'] ? [] : values.stun.length > 0 ? values.stun : [DEFAULT_STUN_SERVER],
         directPorts: values['direct-ports'] === undefined ? null : parsePortRange(values['direct-ports']),
         directHostAddresses: values['direct-host-address'],

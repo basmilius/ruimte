@@ -583,6 +583,279 @@ public struct ModelBenchmarksResult: Codable, Sendable, Equatable {
     }
 }
 
+public struct ModelCatalogsResult: Codable, Sendable, Equatable {
+    public let `catalogs`: [String: ModelCatalogsResultCatalogsValue]
+
+    public init(`catalogs`: [String: ModelCatalogsResultCatalogsValue]) {
+        self.`catalogs` = `catalogs`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("ModelCatalogsResultSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `catalogs` = try container.decode([String: ModelCatalogsResultCatalogsValue].self, forKey: .`catalogs`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`catalogs`, forKey: .`catalogs`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `catalogs` = "catalogs"
+    }
+}
+
+public struct ModelCatalogsResultCatalogsValue: Codable, Sendable, Equatable {
+    public let `updatedAt`: String
+    public let `defaultModel`: String
+    public let `profiles`: [String: ModelCatalogsResultCatalogsValueProfilesValue]
+    public let `models`: [ModelCatalogsResultCatalogsValueModelsItem]
+
+    public init(`updatedAt`: String, `defaultModel`: String, `profiles`: [String: ModelCatalogsResultCatalogsValueProfilesValue], `models`: [ModelCatalogsResultCatalogsValueModelsItem]) {
+        self.`updatedAt` = `updatedAt`
+        self.`defaultModel` = `defaultModel`
+        self.`profiles` = `profiles`
+        self.`models` = `models`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `updatedAt` = try container.decode(String.self, forKey: .`updatedAt`)
+        `defaultModel` = try container.decode(String.self, forKey: .`defaultModel`)
+        `profiles` = try container.decode([String: ModelCatalogsResultCatalogsValueProfilesValue].self, forKey: .`profiles`)
+        `models` = try container.decode([ModelCatalogsResultCatalogsValueModelsItem].self, forKey: .`models`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`updatedAt`, forKey: .`updatedAt`)
+        try container.encode(`defaultModel`, forKey: .`defaultModel`)
+        try container.encode(`profiles`, forKey: .`profiles`)
+        try container.encode(`models`, forKey: .`models`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `updatedAt` = "updatedAt"
+        case `defaultModel` = "defaultModel"
+        case `profiles` = "profiles"
+        case `models` = "models"
+    }
+}
+
+public struct ModelCatalogsResultCatalogsValueProfilesValue: Codable, Sendable, Equatable {
+    public let `options`: [ModelCatalogsResultCatalogsValueProfilesValueOptionsItem]
+    public let `contextWindowTokens`: [String: Int64]
+
+    public init(`options`: [ModelCatalogsResultCatalogsValueProfilesValueOptionsItem], `contextWindowTokens`: [String: Int64]) {
+        self.`options` = `options`
+        self.`contextWindowTokens` = `contextWindowTokens`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `options` = try container.decode([ModelCatalogsResultCatalogsValueProfilesValueOptionsItem].self, forKey: .`options`)
+        `contextWindowTokens` = try container.decode([String: Int64].self, forKey: .`contextWindowTokens`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`options`, forKey: .`options`)
+        try container.encode(`contextWindowTokens`, forKey: .`contextWindowTokens`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `options` = "options"
+        case `contextWindowTokens` = "contextWindowTokens"
+    }
+}
+
+public enum ModelCatalogsResultCatalogsValueProfilesValueOptionsItem: Codable, Sendable, Equatable {
+    case `select`(ModelCatalogsResultCatalogsValueProfilesValueOptionsItemVariant0)
+    case `boolean`(ModelCatalogsResultCatalogsValueProfilesValueOptionsItemVariant1)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        switch try container.decode(String.self, forKey: .value) {
+        case "select": self = .`select`(try ModelCatalogsResultCatalogsValueProfilesValueOptionsItemVariant0(from: decoder))
+        case "boolean": self = .`boolean`(try ModelCatalogsResultCatalogsValueProfilesValueOptionsItemVariant1(from: decoder))
+        default: throw WireValidationError.invalid("Unknown ModelCatalogsResultCatalogsValueProfilesValueOptionsItem tag")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`select`(let value): try value.encode(to: encoder)
+        case .`boolean`(let value): try value.encode(to: encoder)
+        }
+    }
+
+    private enum Tag: String, CodingKey { case value = "type" }
+}
+
+public struct ModelCatalogsResultCatalogsValueProfilesValueOptionsItemVariant0: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `label`: String
+    public let `type`: String
+    public let `choices`: [ModelCatalogsResultCatalogsValueProfilesValueOptionsItemVariant0ChoicesItem]
+    public let `defaultChoice`: String
+
+    public init(`id`: String, `label`: String, `type`: String = "select", `choices`: [ModelCatalogsResultCatalogsValueProfilesValueOptionsItemVariant0ChoicesItem], `defaultChoice`: String) {
+        self.`id` = `id`
+        self.`label` = `label`
+        self.`type` = `type`
+        self.`choices` = `choices`
+        self.`defaultChoice` = `defaultChoice`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+        `type` = try container.decode(String.self, forKey: .`type`)
+        `choices` = try container.decode([ModelCatalogsResultCatalogsValueProfilesValueOptionsItemVariant0ChoicesItem].self, forKey: .`choices`)
+        `defaultChoice` = try container.decode(String.self, forKey: .`defaultChoice`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`label`, forKey: .`label`)
+        try container.encode(`type`, forKey: .`type`)
+        try container.encode(`choices`, forKey: .`choices`)
+        try container.encode(`defaultChoice`, forKey: .`defaultChoice`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `label` = "label"
+        case `type` = "type"
+        case `choices` = "choices"
+        case `defaultChoice` = "defaultChoice"
+    }
+}
+
+public struct ModelCatalogsResultCatalogsValueProfilesValueOptionsItemVariant0ChoicesItem: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `label`: String
+    public let `description`: String?
+
+    public init(`id`: String, `label`: String, `description`: String? = nil) {
+        self.`id` = `id`
+        self.`label` = `label`
+        self.`description` = `description`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+        `description` = try container.decodeIfPresent(String.self, forKey: .`description`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`description`, forKey: .`description`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `label` = "label"
+        case `description` = "description"
+    }
+}
+
+public struct ModelCatalogsResultCatalogsValueProfilesValueOptionsItemVariant1: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `label`: String
+    public let `type`: String
+    public let `defaultValue`: Bool
+    public let `description`: String?
+
+    public init(`id`: String, `label`: String, `type`: String = "boolean", `defaultValue`: Bool, `description`: String? = nil) {
+        self.`id` = `id`
+        self.`label` = `label`
+        self.`type` = `type`
+        self.`defaultValue` = `defaultValue`
+        self.`description` = `description`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+        `type` = try container.decode(String.self, forKey: .`type`)
+        `defaultValue` = try container.decode(Bool.self, forKey: .`defaultValue`)
+        `description` = try container.decodeIfPresent(String.self, forKey: .`description`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`label`, forKey: .`label`)
+        try container.encode(`type`, forKey: .`type`)
+        try container.encode(`defaultValue`, forKey: .`defaultValue`)
+        try container.encodeIfPresent(`description`, forKey: .`description`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `label` = "label"
+        case `type` = "type"
+        case `defaultValue` = "defaultValue"
+        case `description` = "description"
+    }
+}
+
+public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equatable {
+    public let `slug`: String
+    public let `name`: String
+    public let `badge`: String?
+    public let `profile`: String
+    public let `aliases`: [String]?
+    public let `legacy`: Bool?
+
+    public init(`slug`: String, `name`: String, `badge`: String? = nil, `profile`: String, `aliases`: [String]? = nil, `legacy`: Bool? = nil) {
+        self.`slug` = `slug`
+        self.`name` = `name`
+        self.`badge` = `badge`
+        self.`profile` = `profile`
+        self.`aliases` = `aliases`
+        self.`legacy` = `legacy`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `slug` = try container.decode(String.self, forKey: .`slug`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `badge` = try container.decodeIfPresent(String.self, forKey: .`badge`)
+        `profile` = try container.decode(String.self, forKey: .`profile`)
+        `aliases` = try container.decodeIfPresent([String].self, forKey: .`aliases`)
+        `legacy` = try container.decodeIfPresent(Bool.self, forKey: .`legacy`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`slug`, forKey: .`slug`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`badge`, forKey: .`badge`)
+        try container.encode(`profile`, forKey: .`profile`)
+        try container.encodeIfPresent(`aliases`, forKey: .`aliases`)
+        try container.encodeIfPresent(`legacy`, forKey: .`legacy`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `slug` = "slug"
+        case `name` = "name"
+        case `badge` = "badge"
+        case `profile` = "profile"
+        case `aliases` = "aliases"
+        case `legacy` = "legacy"
+    }
+}
+
 public struct NativeAppleCompletePayload: Codable, Sendable, Equatable {
     public let `attempt`: String
     public let `identityToken`: String

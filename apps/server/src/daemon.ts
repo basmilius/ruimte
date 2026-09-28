@@ -121,6 +121,7 @@ import { DrawingStore } from './projects/drawing-store.ts';
 import { isTrackedPath } from './git/ignore.ts';
 import { ProjectStore } from './projects/project-store.ts';
 import { probeCodexNoDaemon, takesNoteOnLine } from './providers/launch.ts';
+import { ModelCatalogFeed } from './providers/model-catalogs.ts';
 import { ProviderRegistry } from './providers/registry.ts';
 import { ProviderAccountsService } from '@ruimte/agents/providers/accounts/service';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
@@ -243,7 +244,14 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     /* What a terminal's agent hears the moment it can: taken here, so whichever channel gets there first
        is the only one that delivers it. */
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
-    const providers = new ProviderRegistry({ appleEnabled: () => identity.appleFoundationEnabled });
+    const providers = new ProviderRegistry({ appleEnabled: () => identity.appleFoundationEnabled, onList: () => void modelCatalogs.refresh() });
+    const modelCatalogs = new ModelCatalogFeed({
+        home: config.home,
+        allowFetch: config.modelFetch,
+        catalogs: { claude: providers.catalogFor('claude'), codex: providers.catalogFor('codex') }
+    });
+    await modelCatalogs.load();
+    void modelCatalogs.refresh();
     // Before the managers, which start every CLI under the account its node or chat names.
     const providerAccounts = new ProviderAccountsService({
         home: config.home,

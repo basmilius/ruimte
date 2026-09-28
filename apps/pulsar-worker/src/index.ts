@@ -1,5 +1,6 @@
 import { ProviderIdSchema } from '@ruimte/pulsar';
 import { readBenchmarks, refreshBenchmarks } from './benchmarks.ts';
+import { readCatalogs } from './catalog.ts';
 import { changePushDevice, registerPushDevice, sendPush } from './push.ts';
 import { statementKeyOf } from './crypto.ts';
 import type { Env } from './env.ts';
@@ -62,6 +63,9 @@ const api = async (request: Request, env: Env, path: string): Promise<Response> 
     }
     if (path === '/v1/models/benchmarks' && method === 'GET') {
         return readBenchmarks(env);
+    }
+    if (path === '/v1/models/catalog' && method === 'GET') {
+        return readCatalogs();
     }
     if (path === '/v1/account' && method === 'GET') {
         return getAccount(request, env);

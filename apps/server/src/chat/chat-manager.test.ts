@@ -88,7 +88,7 @@ describe('ChatManager', () => {
             status: 'idle',
             agentSessionId: null,
             runtimeMode: 'full-access',
-            selection: { model: 'claude-sonnet-5', options: { effort: 'high', contextWindow: '200k' } },
+            selection: { model: 'claude-sonnet-5-5', options: { effort: 'high', contextWindow: '200k' } },
             usage: { contextWindow: 200000 }
         });
         expect(manager.get('chat-1')?.running).toBe(false);
@@ -113,7 +113,7 @@ describe('ChatManager', () => {
         expect(turn?.endedAt).not.toBeNull();
         expect(assistant[0]?.turnId).toBe(turn?.id ?? '');
         expect(recorder.info).toMatchObject({
-            model: 'claude-sonnet-5',
+            model: 'claude-sonnet-5-5',
             slashCommands: ['compact', 'review'],
             usage: { turns: 1, costUsd: 0.01, contextWindow: 200000, contextTokens: 1110 }
         });

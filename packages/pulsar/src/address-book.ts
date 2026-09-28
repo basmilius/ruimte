@@ -1,3 +1,4 @@
+import { ModelCatalogDataSchema } from '@ruimte/agent-contracts/model';
 import { z } from 'zod';
 import { MachineIdSchema, NonceSchema, PublicKeySchema, SignatureSchema } from './keys.ts';
 
@@ -213,6 +214,15 @@ export const ModelBenchmarksResultSchema = z.object({
     models: z.array(BenchmarkModelSchema).max(64)
 });
 export type ModelBenchmarksResult = z.infer<typeof ModelBenchmarksResultSchema>;
+
+/*
+ * `GET /v1/models/catalog`: the models each agent CLI offers, keyed by agent kind, so a machine picks
+ * up a new model without a release. An incompatible change to a catalog is a new route, never this one.
+ */
+export const ModelCatalogsResultSchema = z.object({
+    catalogs: z.record(z.string().max(32), ModelCatalogDataSchema)
+});
+export type ModelCatalogsResult = z.infer<typeof ModelCatalogsResultSchema>;
 
 // `POST /v1/account/link`: a signed-in client asks to add another provider to its account.
 export const IdentityLinkStartPayloadSchema = z.object({

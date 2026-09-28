@@ -61,6 +61,19 @@ export const BENCHMARK_MODELS: readonly BenchmarkSource[] = [
         ]
     },
     {
+        slug: 'claude-sonnet-5-5',
+        name: 'Claude Sonnet 5.5',
+        provider: 'claude',
+        legacy: false,
+        efforts: [
+            { effort: 'low', id: null, name: null },
+            { effort: 'medium', id: null, name: null },
+            { effort: 'high', id: null, name: null },
+            { effort: 'xhigh', id: null, name: null },
+            { effort: 'max', id: null, name: null }
+        ]
+    },
+    {
         slug: 'claude-sonnet-5',
         name: 'Claude Sonnet 5',
         provider: 'claude',

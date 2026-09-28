@@ -77,6 +77,14 @@
     "cache_read_input_token_cost": 3e-7,
     "cache_creation_input_token_cost": 0.00000375
   },
+  "claude-sonnet-5-5": {
+    "litellm_provider": "anthropic",
+    "mode": "chat",
+    "input_cost_per_token": 0.000002,
+    "output_cost_per_token": 0.00001,
+    "cache_read_input_token_cost": 2e-7,
+    "cache_creation_input_token_cost": 0.0000025
+  },
   "claude-sonnet-5": {
     "litellm_provider": "anthropic",
     "mode": "chat",

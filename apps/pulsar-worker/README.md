@@ -24,6 +24,7 @@ in `packages/pulsar/src/statement-key.ts`. The wire shapes live in `packages/pul
 | `DELETE /v1/session`                       | Sign out                                                                                   |
 | `GET /v1/providers`                        | The providers that are configured, so a client only offers those                           |
 | `GET /v1/models/benchmarks`                | Intelligence Index and cost per task per model and effort, for the model comparison        |
+| `GET /v1/models/catalog`                   | The shipped model catalogs per agent kind, for a machine to pick up a new model            |
 | `GET /v1/account`                          | The account and its identities                                                             |
 | `POST /v1/account/link`                    | A single-use link token for the start URL, bound to this session                           |
 | `POST /v1/account/identities`              | The code of a link login with its verifier, from the same session                          |
@@ -150,6 +151,15 @@ Without the GitHub pair, `/auth/github/start` answers `503` with `not-configured
 secrets exist. The private statement key is also kept in `~/.private/ruimte.secrets.env` as
 `PULSAR_STATEMENT_PRIVATE_KEY`.
 
+## Model catalogs
+
+`GET /v1/models/catalog` is public and answers `packages/agents/src/providers/claude-models.json` and
+`codex-models.json` as they are in this deploy, under `catalogs.claude` and `catalogs.codex`, cacheable
+for five minutes. A daemon takes a catalog only when it passes `ModelCatalogDataSchema` and is not older
+than the one it shipped with, so adding a model is an edit to those files (with a newer `updatedAt`), a row
+in `src/benchmark-models.ts` and a push to main, which deploys this Worker. A change a daemon of today
+could not read goes on a new route, never on this one.
+
 ## Model benchmarks
 
 `GET /v1/models/benchmarks` is public and feeds the model comparison in the app. The Worker reads the free
@@ -163,7 +173,7 @@ is there. Without the key the route answers `503` with `not-configured`, before 
 `503` with `no-benchmarks`.
 
 Which model of Artificial Analysis stands for which model and effort of Ruimte is `src/benchmark-models.ts`,
-looked up by id; a test holds it against the manifests in `apps/server/src/providers`. A new model is a row
+looked up by id; a test holds it against the manifests in `packages/agents/src/providers`. A new model is a row
 there and a deploy of this Worker, not a release of the app. `X-RateLimit-Remaining` and `X-RateLimit-Reset`
 on an answer say how much of the day is left.
 

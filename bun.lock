@@ -109,6 +109,7 @@
       "name": "@ruimte/pulsar-worker",
       "version": "0.0.0",
       "dependencies": {
+        "@ruimte/agents": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "zod": "^4.6.5",
       },
@@ -364,6 +365,7 @@
       "name": "@ruimte/pulsar",
       "version": "0.0.0",
       "dependencies": {
+        "@ruimte/agent-contracts": "workspace:*",
         "zod": "^4.6.5",
       },
       "devDependencies": {

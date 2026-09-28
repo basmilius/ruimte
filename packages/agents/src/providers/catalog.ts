@@ -1,55 +1,58 @@
-import type { ModelInfo, ModelOptionDescriptor, ModelSelection } from '@ruimte/agent-contracts';
+import type { ModelCatalogData, ModelCatalogProfile, ModelInfo, ModelSelection } from '@ruimte/agent-contracts';
 import manifest from './claude-models.json' with { type: 'json' };
 
-interface Profile {
-    options: ModelOptionDescriptor[];
-    // Context size per value of the `contextWindow` option, or `*` when the model has one size.
-    contextWindowTokens: Record<string, number>;
-}
+// What a host builds a catalog from; one that is never replaced needs no date.
+export type ModelCatalogInput = Omit<ModelCatalogData, 'updatedAt'> & { updatedAt?: string };
 
-interface ManifestModel {
-    slug: string;
-    name: string;
-    badge?: string;
-    profile: string;
-    aliases?: string[];
-    legacy?: boolean;
-}
+const timeOf = (data: ModelCatalogInput): number => (data.updatedAt === undefined ? 0 : Date.parse(data.updatedAt));
 
 /*
  * The models a provider offers and what each one can be asked for. Bundled as JSON so a new
- * model is a data change; a profile is only needed for a new combination of options.
+ * model is a data change; a profile is only needed for a new combination of options. A host may
+ * swap in a newer copy while it runs, never one older than the copy it was built with.
  */
 export class ModelCatalog {
-    readonly defaultModel: string;
-    private readonly profiles: Record<string, Profile>;
-    private readonly models: ManifestModel[];
+    private readonly shippedAt: number;
+    private data: ModelCatalogInput;
 
-    constructor(data: { defaultModel: string; profiles: Record<string, Profile>; models: ManifestModel[] } = manifest as never) {
-        this.defaultModel = data.defaultModel;
-        this.profiles = data.profiles;
-        this.models = data.models;
+    constructor(data: ModelCatalogInput = manifest as never) {
+        this.shippedAt = timeOf(data);
+        this.data = data;
+    }
+
+    get defaultModel(): string {
+        return this.data.defaultModel;
+    }
+
+    /* Takes a validated copy unless it is older than the shipped one; answers whether the models changed. */
+    replace(data: ModelCatalogData): boolean {
+        if (timeOf(data) < this.shippedAt) {
+            return false;
+        }
+        const changed = JSON.stringify(data) !== JSON.stringify(this.data);
+        this.data = data;
+        return changed;
     }
 
     list(): ModelInfo[] {
-        return this.models.map((model) => ({
+        return this.data.models.map((model) => ({
             slug: model.slug,
             name: model.name,
             badge: model.badge,
             legacy: model.legacy === true,
-            isDefault: model.slug === this.defaultModel,
+            isDefault: model.slug === this.data.defaultModel,
             options: this.profileOf(model.slug)?.options ?? []
         }));
     }
 
     /* What a person reads for a model, so an error in a thread names it the way the picker does. */
     nameOf(slug: string): string {
-        return this.models.find((entry) => entry.slug === slug)?.name ?? slug;
+        return this.data.models.find((entry) => entry.slug === slug)?.name ?? slug;
     }
 
     /* Accepts a slug or an alias; unknown models answer null so the caller can decide what to do. */
     resolveModel(name: string): string | null {
-        const model = this.models.find((entry) => entry.slug === name || entry.aliases?.includes(name));
+        const model = this.data.models.find((entry) => entry.slug === name || entry.aliases?.includes(name));
         return model?.slug ?? null;
     }
 
@@ -78,8 +81,8 @@ export class ModelCatalog {
         return (typeof chosen === 'string' ? profile.contextWindowTokens[chosen] : undefined) ?? profile.contextWindowTokens['*'] ?? null;
     }
 
-    private profileOf(slug: string): Profile | undefined {
-        const model = this.models.find((entry) => entry.slug === slug);
-        return model ? this.profiles[model.profile] : undefined;
+    private profileOf(slug: string): ModelCatalogProfile | undefined {
+        const model = this.data.models.find((entry) => entry.slug === slug);
+        return model ? this.data.profiles[model.profile] : undefined;
     }
 }

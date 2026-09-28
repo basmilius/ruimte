@@ -7,6 +7,7 @@ import {
     IdentityLinkStartResultSchema,
     MachineListResultSchema,
     ModelBenchmarksResultSchema,
+    ModelCatalogsResultSchema,
     ProvidersResultSchema,
     RegisterMachineResultSchema,
     SessionResultSchema,
@@ -21,6 +22,7 @@ import {
     type Machine,
     type MachineListResult,
     type ModelBenchmarksResult,
+    type ModelCatalogsResult,
     type RegisterMachinePayload,
     type SessionExchangePayload,
     type SessionRefreshPayload,
@@ -113,6 +115,10 @@ export class AddressBookClient {
 
     modelBenchmarks(): Promise<ModelBenchmarksResult> {
         return this.call({ method: 'GET', path: '/v1/models/benchmarks', schema: ModelBenchmarksResultSchema });
+    }
+
+    modelCatalogs(): Promise<ModelCatalogsResult> {
+        return this.call({ method: 'GET', path: '/v1/models/catalog', schema: ModelCatalogsResultSchema });
     }
 
     account(accessToken: string): Promise<AccountResult> {

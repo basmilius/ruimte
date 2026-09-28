@@ -45,6 +45,41 @@ export const ModelSelectionSchema = z.object({
 });
 export type ModelSelection = z.infer<typeof ModelSelectionSchema>;
 
+// A slug ends up on a CLI's command line, so it never starts with a dash and carries no brackets.
+const ModelSlugSchema = z.string().regex(/^[a-z0-9][a-z0-9._-]*$/, 'Expected a model slug');
+
+export const ModelCatalogProfileSchema = z.object({
+    options: z.array(ModelOptionDescriptorSchema),
+    // Context size per value of the `contextWindow` option, or `*` when the model has one size.
+    contextWindowTokens: z.record(z.string(), z.number().int().positive())
+});
+export type ModelCatalogProfile = z.infer<typeof ModelCatalogProfileSchema>;
+
+export const ModelCatalogEntrySchema = z.object({
+    slug: ModelSlugSchema,
+    name: z.string().min(1),
+    badge: z.string().optional(),
+    profile: z.string().min(1),
+    aliases: z.array(z.string().min(1)).optional(),
+    legacy: z.boolean().optional()
+});
+export type ModelCatalogEntry = z.infer<typeof ModelCatalogEntrySchema>;
+
+/*
+ * The models one provider offers, as a host ships them and as a catalog service hands out a newer
+ * copy. `updatedAt` orders the two, so a copy older than the one a host shipped with is never taken.
+ */
+export const ModelCatalogDataSchema = z
+    .object({
+        updatedAt: z.iso.datetime(),
+        defaultModel: ModelSlugSchema,
+        profiles: z.record(z.string(), ModelCatalogProfileSchema),
+        models: z.array(ModelCatalogEntrySchema).min(1)
+    })
+    .refine((data) => data.models.every((model) => data.profiles[model.profile] !== undefined), 'Every model needs a profile the catalog has')
+    .refine((data) => data.models.some((model) => model.slug === data.defaultModel), 'The default model has to be one of the models');
+export type ModelCatalogData = z.infer<typeof ModelCatalogDataSchema>;
+
 // The thread's permission policy, one vocabulary for every provider; each adapter maps it.
 export const RuntimeModeSchema = z.enum(['supervised', 'auto-accept-edits', 'auto', 'full-access']);
 export type RuntimeMode = z.infer<typeof RuntimeModeSchema>;

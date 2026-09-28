@@ -6,6 +6,9 @@ on:
     paths:
       - 'apps/pulsar-worker/**'
       - 'packages/pulsar/**'
+      - 'packages/agent-contracts/src/model.ts'
+      # The worker hands these out as the model catalogs.
+      - 'packages/agents/src/providers/*-models.json'
 
 # One deploy at a time, so two pushes never apply migrations over each other.
 concurrency:

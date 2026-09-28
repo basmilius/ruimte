@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ruimte/agent-contracts": "workspace:*",
     "zod": "^4.6.5"
   },
   "devDependencies": {

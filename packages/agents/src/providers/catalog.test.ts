@@ -1,13 +1,16 @@
 import { describe, expect, test } from 'bun:test';
+import { ModelCatalogDataSchema, type ModelCatalogData } from '@ruimte/agent-contracts';
 import { ModelCatalog } from './catalog.ts';
 import { claudeArgs, claudeEnv, promptPrefix } from './claude.ts';
+import claudeManifest from './claude-models.json' with { type: 'json' };
+import codexManifest from './codex-models.json' with { type: 'json' };
 
 const catalog = new ModelCatalog();
 
 describe('ModelCatalog', () => {
     test('lists models with their options and one default', () => {
         const models = catalog.list();
-        expect(models.filter((model) => model.isDefault).map((model) => model.slug)).toEqual(['claude-sonnet-5']);
+        expect(models.filter((model) => model.isDefault).map((model) => model.slug)).toEqual(['claude-sonnet-5-5']);
         expect(models.find((model) => model.slug === 'claude-fable-5-1')?.options.map((option) => option.id)).toEqual(['effort', 'contextWindow']);
         expect(models.find((model) => model.slug === 'claude-haiku-4-5')?.options[0]).toMatchObject({ type: 'boolean', defaultValue: true });
     });
@@ -25,8 +28,8 @@ describe('ModelCatalog', () => {
             model: 'claude-opus-5-5',
             options: { effort: 'max', contextWindow: '1m', fastMode: false }
         });
-        expect(catalog.normalize({ model: 'nope' }).model).toBe('claude-sonnet-5');
-        expect(catalog.normalize(undefined)).toEqual({ model: 'claude-sonnet-5', options: { effort: 'high', contextWindow: '200k' } });
+        expect(catalog.normalize({ model: 'nope' }).model).toBe('claude-sonnet-5-5');
+        expect(catalog.normalize(undefined)).toEqual({ model: 'claude-sonnet-5-5', options: { effort: 'high', contextWindow: '200k' } });
         expect(catalog.normalize({ model: 'sonnet', options: { effort: 'wrong' } }).options.effort).toBe('high');
     });
 
@@ -34,6 +37,38 @@ describe('ModelCatalog', () => {
         expect(catalog.contextWindowFor(catalog.normalize({ model: 'sonnet' }))).toBe(200000);
         expect(catalog.contextWindowFor(catalog.normalize({ model: 'sonnet', options: { contextWindow: '1m' } }))).toBe(1000000);
         expect(catalog.contextWindowFor(catalog.normalize({ model: 'haiku' }))).toBe(200000);
+    });
+});
+
+describe('a catalog swapped in while the host runs', () => {
+    const shipped = ModelCatalogDataSchema.parse(claudeManifest);
+    const withModel = (updatedAt: string): ModelCatalogData => ({
+        ...shipped,
+        updatedAt,
+        models: [...shipped.models, { slug: 'claude-next', name: 'Claude Next', profile: 'sonnet' }]
+    });
+
+    test('both shipped manifests are catalogs a service may hand out', () => {
+        expect(ModelCatalogDataSchema.safeParse(claudeManifest).success).toBe(true);
+        expect(ModelCatalogDataSchema.safeParse(codexManifest).success).toBe(true);
+    });
+
+    test('takes a newer copy and says the models changed', () => {
+        const live = new ModelCatalog();
+        expect(live.replace(withModel('2099-01-01T00:00:00Z'))).toBe(true);
+        expect(live.resolveModel('claude-next')).toBe('claude-next');
+        expect(live.replace(withModel('2099-01-01T00:00:00Z'))).toBe(false);
+    });
+
+    test('never goes back behind the copy it shipped with', () => {
+        const live = new ModelCatalog();
+        expect(live.replace(withModel('2000-01-01T00:00:00Z'))).toBe(false);
+        expect(live.resolveModel('claude-next')).toBeNull();
+    });
+
+    test('refuses a slug that would read as a flag on the command line', () => {
+        const bad = { ...shipped, models: [...shipped.models, { slug: '--dangerously-skip-permissions', name: 'x', profile: 'sonnet' }] };
+        expect(ModelCatalogDataSchema.safeParse(bad).success).toBe(false);
     });
 });
 
