@@ -6,10 +6,13 @@ import { useTranslation } from 'react-i18next';
 import {
     ChevronDown,
     ChevronRight,
+    CirclePower,
     CircleQuestionMark,
+    CircleX,
     FileText,
     GitBranch,
     Globe,
+    Hand,
     LayoutGrid,
     Link2,
     Maximize2,
@@ -19,18 +22,20 @@ import {
     StickyNote,
     Smartphone,
     Terminal,
-    X
+    X,
+    type LucideIcon
 } from 'lucide-react';
 import { focusNodeAction, renameNodeAction } from '@/actions/client-actions';
 import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
+import { WorkingMark } from '@/attention/WorkingMark';
 import { TaskMark } from '@/tasks/TaskMark';
 import { useChildTask } from '@/state/tasks';
 import { useUnseen } from '@/state/attention';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { useOptionalConnection } from '@/transport/context';
 import { isNodeActive, useCanvas, useCanvasStore, type AgentStatus } from '@/state/canvas';
-import { useNodeStatus } from '@/state/chats';
+import { useNodeStatus, useNodeWorking } from '@/state/chats';
 import { ProcessAlertMark } from '@/processes/ProcessAlertMark';
 import { useNodeAlerts } from '@/processes/use-node-alerts';
 import { useHasContextLinks } from '@/context/sources';
@@ -91,6 +96,13 @@ const STATUS_CLASS: Record<AgentStatus, string> = {
     exited: 'bg-text-faint'
 };
 
+/* A node at rest carries no mark. Running is `WorkingMark`, and only while an agent works, since an attached shell reads running too. */
+const STATUS_MARK: Partial<Record<AgentStatus, { icon: LucideIcon; className: string }>> = {
+    'needs-you': { icon: Hand, className: 'text-status-needs-you' },
+    error: { icon: CircleX, className: 'text-status-error' },
+    exited: { icon: CirclePower, className: 'text-text-faint' }
+};
+
 const RESIZE_EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;
 
 /* A group is a frame under its nodes: a faint tint of its accent, never a surface of its own. */
@@ -124,6 +136,24 @@ export function StatusDot({ status, className, plain = false }: { status: AgentS
         return dot;
     }
     return <Tooltip label={label}>{dot}</Tooltip>;
+}
+
+function StatusMark({ status, working }: { status: AgentStatus; working: boolean }) {
+    const { t } = useTranslation('canvas');
+    if (status === 'running') {
+        return working ? <WorkingMark /> : null;
+    }
+    const mark = STATUS_MARK[status];
+    if (mark === undefined) {
+        return null;
+    }
+    return (
+        <Tooltip label={t(`status.${status}`)}>
+            <span role="img" aria-label={t(`status.${status}`)} className={clsx('inline-flex shrink-0', mark.className)}>
+                <Icon icon={mark.icon} size={12} />
+            </span>
+        </Tooltip>
+    );
 }
 
 function Title({ id, title, editing, muted, onDone }: { id: string; title: string; editing: boolean; muted: boolean; onDone: () => void }) {
@@ -207,6 +237,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
     const [fileControls, setFileControls] = useState<HTMLElement | null>(null);
     const toolbarSlot = useMemo(() => fixedSlot(fileControls), [fileControls]);
     const status = useNodeStatus(node);
+    const working = useNodeWorking(node);
     const endpointId = useEndpointId();
     const unseen = useUnseen(id);
     const processAlerts = useNodeAlerts(id);
@@ -346,11 +377,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                             <Pill icon={<Icon icon={Link2} size={12} />}>{t('node.context.pill')}</Pill>
                         </Tooltip>
                     )}
-                    {status && !renaming && (
-                        <Pill className="gap-1.5" icon={<StatusDot status={status} plain />}>
-                            {t(`status.${status}`)}
-                        </Pill>
-                    )}
+                    {status && !renaming && <StatusMark status={status} working={working} />}
                     {/* Up close this is already gone, since looking clears it. It is for the canvas
                         zoomed out over everything and for the window standing beside another app. */}
                     {task && !renaming && <TaskMark task={task} />}

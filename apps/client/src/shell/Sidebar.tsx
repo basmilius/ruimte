@@ -22,10 +22,11 @@ import {
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
-import { isCanvasView, isSessionView, type AgentKind, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
+import { isCanvasView, isSessionView, type AgentKind, type AgentStatus, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction, renameNodeAction, renameViewAction } from '@/actions/client-actions';
 import { useDrafts } from '@ruimte/agents-react/chat/drafts';
+import { nodeWorking } from '@/state/agent-work';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
@@ -54,6 +55,7 @@ import {
 import { useSidebarSource } from '@/shell/sidebar-source';
 import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
+import { WorkingMark } from '@/attention/WorkingMark';
 import { TaskMark } from '@/tasks/TaskMark';
 import { childTask, useTasks } from '@/state/tasks';
 import { Favicon } from '@/browser/Favicon';
@@ -187,6 +189,16 @@ function RenameField({ value, onDone }: { value: string; onDone(next: string | n
     );
 }
 
+/* A row at rest carries no dot. A green one on every idle chat read as news that never went away,
+   while a turn that ended unseen has its own mark. */
+function RowStatus({ status, working }: { status: AgentStatus | null | undefined; working: boolean | undefined }) {
+    // Another project's rows cannot tell a working agent from a shell at its prompt, so they keep the dot.
+    if (status === 'running' && working !== undefined) {
+        return working ? <WorkingMark plain /> : null;
+    }
+    return status && status !== 'idle' ? <StatusDot status={status} plain /> : null;
+}
+
 /* A folded canvas still says one of its nodes has a warning, the way it says one needs you. */
 function ProcessWarningMark() {
     const { t } = useTranslation('shell');
@@ -286,7 +298,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow, snoozable }: RowProps & { ro
                         {node.finished && <UnseenMark />}
                         {node.alert && <ProcessWarningMark />}
                         {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
-                        {node.status && <StatusDot status={node.status} plain />}
+                        <RowStatus status={node.status} working={node.working} />
                     </span>
                 </ContextMenu.Trigger>
             </MaybeTooltip>
@@ -576,8 +588,9 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                     </Tooltip>
                 )}
                 {(view.self ? view.self.alert : view.nodes.some((node) => node.alert)) && <ProcessWarningMark />}
+                {view.self?.finished && <UnseenMark />}
                 {view.self?.snoozedUntil && <SnoozedMark until={view.self.snoozedUntil} />}
-                {row.status && <StatusDot status={row.status} plain />}
+                <RowStatus status={row.status} working={view.self ? view.self.working : view.nodes.some((node) => node.working)} />
                 {/* Last of the row, after every dot: where a view lives says something about the
                     project and not about what is happening in it, and the dots are the news. Only a
                     shared row is marked, since private is what a view is until someone says
@@ -732,7 +745,7 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: Ro
                             {row.type === 'node' && row.location && <span className="block truncate text-xs text-text-faint">{row.location}</span>}
                         </span>
                         <span className={SNOOZE_MARKS}>
-                            {status && group.state === 'ready' && <StatusDot status={status} plain />}
+                            {group.state === 'ready' && <RowStatus status={status} working={undefined} />}
                             {view?.shared && <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />}
                         </span>
                     </>
@@ -791,6 +804,7 @@ export function Sidebar() {
                     kind: node.kind,
                     provider: node.provider ?? null,
                     status: nodeStatus(node, sessions, chats, endpointId) ?? null,
+                    working: nodeWorking(node, sessions, chats, endpointId),
                     draft: node.kind === 'chat' && drafts.includes(node.id),
                     alert: (warnings[endpointId] ?? []).some((alert) => alert.nodeId === node.id),
                     finished: isUnseen(unseen, endpointId, node.id),

@@ -10,7 +10,7 @@ import { chatHost } from '../../../host';
 import { lazyNamed } from '../../../lazy';
 import { useChatActions } from '../../actions';
 import { formatClockDuration, formatElapsedShort } from '@basmilius/react-ui/format';
-import { Icon, useTickingText } from '@basmilius/react-ui';
+import { Icon, Spinner, useTickingText } from '@basmilius/react-ui';
 import { ROW_GUTTER, toolIcon } from '../icons';
 
 // The diff renderers carry shiki; they only load once a thread shows a file change.
@@ -379,8 +379,8 @@ export function WorkingRow({ startedAt }: { startedAt: number }) {
     const ref = useTickingText(() => formatClockDuration(Date.now() - startedAt));
     return (
         <div className="-mx-1 mb-0.5 flex h-7 items-center gap-2 px-1 text-xs text-text-muted">
-            <span className={`${ROW_GUTTER} text-accent`}>
-                <span className="h-2 w-2 rounded-full bg-status-running" />
+            <span className={`${ROW_GUTTER} text-status-running`}>
+                <Spinner size={12} />
             </span>
             <span className="chat-live-text">{t('work.workingFor')}</span>
             <span ref={ref} className="tabular-nums" />

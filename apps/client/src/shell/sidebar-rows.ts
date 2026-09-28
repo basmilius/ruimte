@@ -11,6 +11,8 @@ export interface SidebarNode {
     /* The CLI behind a chat or an agent terminal, whose mark the row wears instead of the kind's. */
     provider: AgentKind | null;
     status: AgentStatus | null;
+    /* An agent is in the middle of a turn, which `running` alone does not say of a terminal. Unknown for another project's rows. */
+    working?: boolean;
     /* A chat with something typed and never sent. */
     draft: boolean;
     /* The machine warns about the processes of this node. */
