@@ -10,9 +10,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
     var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
     var composer: AnyView?
-    /// How far below the composer's top the timeline starts to fade, so it keeps showing behind what stands above
-    /// the field.
-    var composerFadeStart: CGFloat = 0
+    var composerFade: ChatComposerFadeLink?
     var latestButton: AnyView?
     var status: AnyView?
     var onViewportHeightChanged: (CGFloat) -> Void = { _ in }
@@ -31,7 +29,8 @@ struct ChatTimeline: UIViewControllerRepresentable {
         controller.onMessagesBelowChanged = onMessagesBelowChanged
         controller.onNearTop = onNearTop
         controller.onViewportHeightChanged = onViewportHeightChanged
-        controller.setComposer(composer, latestButton: latestButton, fadeStart: composerFadeStart)
+        composerFade?.attach(controller)
+        controller.setComposer(composer, latestButton: latestButton)
         controller.setStatus(status)
         context.animate {
             controller.setViewportInsets(top: topInset, bottom: bottomInset)
@@ -40,6 +39,26 @@ struct ChatTimeline: UIViewControllerRepresentable {
         controller.askForEarlierNearTop()
         controller.scrollToLatest(command: scrollToLatest)
         controller.scrollToItem(presentation.requestedItemID, command: presentation.scrollRequest)
+    }
+}
+
+/// How far below the composer's top the timeline starts to fade, so it keeps showing behind what stands above the
+/// field. It goes straight to the controller: as view state it re-rendered the screen from inside the composer's own
+/// layout pass, which handed the composer a new root view and laid it out again, and the app hung in that loop.
+@MainActor final class ChatComposerFadeLink {
+    private weak var controller: ChatTimelineController?
+    private var start: CGFloat = 0
+
+    func update(_ start: CGFloat) {
+        guard abs(start - self.start) >= 0.5 else { return }
+        self.start = start
+        controller?.setComposerFadeStart(start)
+    }
+
+    fileprivate func attach(_ controller: ChatTimelineController) {
+        guard self.controller !== controller else { return }
+        self.controller = controller
+        controller.setComposerFadeStart(start)
     }
 }
 
@@ -310,6 +329,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     private var composerHost: UIHostingController<AnyView>?
     private var composerFade: ChatComposerFade?
     private var composerFadeTop: NSLayoutConstraint?
+    private var composerFadeStart: CGFloat = 0
     private var composerAboveHome: NSLayoutConstraint?
     private var latestButtonHost: UIHostingController<AnyView>?
     private var statusHost: UIHostingController<AnyView>?
@@ -453,7 +473,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         composerHost.map { max(0, collection.frame.maxY - $0.view.frame.minY) }
     }
 
-    func setComposer(_ content: AnyView?, latestButton: AnyView?, fadeStart: CGFloat = 0) {
+    func setComposer(_ content: AnyView?, latestButton: AnyView?) {
         loadViewIfNeeded()
         guard let content else {
             removeHost(&latestButtonHost)
@@ -498,7 +518,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
                 fade.bottomAnchor.constraint(equalTo: collection.bottomAnchor),
             ])
         }
-        composerFadeTop?.constant = fadeStart + ChatComposerFade.band
+        composerFadeTop?.constant = composerFadeStart + ChatComposerFade.band
         if let latestButton, let composerHost {
             if let latestButtonHost {
                 latestButtonHost.rootView = latestButton
@@ -594,6 +614,11 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
                 self.onViewportHeightChanged(self.reportedViewportHeight)
             }
         }
+    }
+
+    func setComposerFadeStart(_ start: CGFloat) {
+        composerFadeStart = start
+        composerFadeTop?.constant = start + ChatComposerFade.band
     }
 
     func scrollToLatest(command: Int) {

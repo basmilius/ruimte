@@ -15,7 +15,7 @@ struct ChatScreen: View {
     @State private var prompts = ChatPromptState()
     @State private var viewportHeight: CGFloat = 700
     @State private var composerFocused = false
-    @State private var composerFadeStart: CGFloat = 0
+    @State private var composerFade = ChatComposerFadeLink()
     @State private var resumeDraftFocus = false
     @State private var composerSheets = ChatComposerSheets()
     @State private var messagesBelow = false
@@ -56,7 +56,7 @@ struct ChatScreen: View {
             MobileScrollViewport(edges: .top) { insets in
                 ChatTimeline(
                     presentation: model.presentation, client: model.client, chatID: model.chatID,
-                    topInset: insets.top, composer: AnyView(composerDock), composerFadeStart: composerFadeStart,
+                    topInset: insets.top, composer: AnyView(composerDock), composerFade: composerFade,
                     latestButton: showScrollButton && !scrollButtonBesideComposer ? AnyView(scrollToBottomButton) : nil,
                     status: timelineStatus,
                     onViewportHeightChanged: { viewportHeight = $0 }, dismissKeyboard: { composerFocused = false },
@@ -369,7 +369,7 @@ struct ChatScreen: View {
                     $0.frame(in: .named(Self.composerDockSpace)).minY
                 } action: { top in
                     // From the dock's own top padding on, so chips and messages above the field stay out of the fade.
-                    composerFadeStart = max(0, top - 12)
+                    composerFade.update(max(0, top - 12))
                 }
                 if prompts.active == nil {
                     ChatComposerPills(model: model, sheets: composerSheets, focused: $composerFocused)
