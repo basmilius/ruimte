@@ -39,8 +39,11 @@ export const trailTo = (trail: SubagentTrail, depth: number): SubagentTrail => (
 
 export const stepBack = (trail: SubagentTrail): SubagentTrail => trailTo(trail, trail.length - 1);
 
-/* A sub-agent's conversation is read back, so there is nobody to write to. */
-export const showsComposer = (trail: SubagentTrail): boolean => trail.length === 0;
+/*
+ * A sub-agent's conversation is read back, so there is nobody to write to. The composer stays, since
+ * the chat's own approvals and questions are answered there.
+ */
+export const composerWrites = (trail: SubagentTrail): boolean => trail.length === 0;
 
 /* The crumbs after the chat's own title, which the bar draws as the first crumb and the way back. */
 export const breadcrumbOf = (trail: SubagentTrail): BreadcrumbStep[] =>
@@ -48,6 +51,10 @@ export const breadcrumbOf = (trail: SubagentTrail): BreadcrumbStep[] =>
 
 /* A row without a pointer of its own can only be opened by a machine that answers `chat.subagent` for it. */
 export const canOpenSubagent = (item: ChatSubagentItem, machineRefused: boolean): boolean => item.native !== undefined || !machineRefused;
+
+/* The row of the call that opened a conversation, a nested one included, since its row is in the thread too. */
+export const subagentOf = (structure: Readonly<Record<string, ChatItem>>, toolUseId: string): ChatSubagentItem | null =>
+    Object.values(structure).find((item): item is ChatSubagentItem => item.kind === 'subagent' && item.toolUseId === toolUseId) ?? null;
 
 /* The subagents a chat can open, in the order the thread has them. */
 export const openableSubagents = (order: readonly string[], structure: Record<string, ChatItem>, machineRefused: boolean): ChatSubagentItem[] =>
@@ -103,4 +110,9 @@ export const useOpenableSubagents = (chatId: string): ChatSubagentItem[] => {
     const order = useChatRow(chatId, (row) => row?.order);
     const structure = useChatRow(chatId, (row) => row?.structure);
     return useMemo(() => (structure === undefined ? [] : openableSubagents(order ?? NO_ITEMS, structure, refused)), [order, structure, refused]);
+};
+
+export const useSubagentItem = (chatId: string, toolUseId: string): ChatSubagentItem | null => {
+    const structure = useChatRow(chatId, (row) => row?.structure);
+    return useMemo(() => (structure === undefined ? null : subagentOf(structure, toolUseId)), [structure, toolUseId]);
 };

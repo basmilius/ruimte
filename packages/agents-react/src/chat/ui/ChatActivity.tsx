@@ -68,7 +68,7 @@ export function ChatActivity({ chatId }: { chatId: string }) {
     );
 }
 
-function StatusIcon({ word }: { word: StatusWord }) {
+export function StatusIcon({ word }: { word: StatusWord }) {
     const look = statusLookOf(word);
     return <Icon icon={look.icon} size={14} className={clsx('shrink-0', look.tone, look.spins && 'animate-spin')} />;
 }

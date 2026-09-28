@@ -290,6 +290,9 @@ export class ThreadProjector {
             case 'task.progress':
                 this.patchSubagentProgress(generation, event, events);
                 break;
+            case 'task.model':
+                this.patchSubagentModel(generation, event, events);
+                break;
             case 'task.done': {
                 // Keep one summary line for the next turn's header; the tool row already has the result. A nested
                 // agent reports to the agent that opened it, so it only names that turn when no row of the thread's own does.
@@ -620,6 +623,7 @@ export class ThreadProjector {
         const input = isRecord(event.input) ? event.input : {};
         const now = this.now();
         const parentToolUseId = previous?.parentToolUseId ?? parent?.toolUseId;
+        const model = previous?.model ?? (str(input.model) || undefined);
         const item: ChatSubagentItem = {
             id,
             kind: 'subagent',
@@ -628,6 +632,7 @@ export class ThreadProjector {
             toolUseId: event.ref,
             description: previous?.description || str(input.description) || '',
             subagentType: previous?.subagentType ?? str(input.subagent_type),
+            ...(model === undefined ? {} : { model }),
             prompt: previous?.prompt ?? str(input.prompt),
             background: previous?.background ?? input.run_in_background === true,
             status: previous?.status ?? 'running',
@@ -681,6 +686,13 @@ export class ThreadProjector {
                     : {})
             })
         );
+    }
+
+    private patchSubagentModel(generation: number, event: Extract<BackendEvent, { type: 'task.model' }>, events: ChatEvent[]): void {
+        const item = this.subagent(generation, event.ref);
+        if (item && item.model !== event.model) {
+            events.push(this.thread.upsert({ ...item, model: event.model }));
+        }
     }
 
     private patchSubagentProgress(generation: number, event: Extract<BackendEvent, { type: 'task.progress' }>, events: ChatEvent[]): void {

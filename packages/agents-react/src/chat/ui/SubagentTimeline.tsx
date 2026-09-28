@@ -8,6 +8,7 @@ import { firstRowInView, restoreAnchor, wantsEarlier, type ReadingAnchor } from 
 import { EMPTY_TARGET, readTimelineTarget, type TimelineTarget } from '../logic/timeline-target';
 import { openBelow, useSubagentTrail, type SubagentStep } from '../subagent-view';
 import { Row } from './rows/Rows';
+import { SubagentInfo } from './SubagentInfo';
 import { TimelineMenuPopup } from './TimelineMenu';
 import { FOLLOW_THRESHOLD_PX, rowRhythm } from './rows/row-rhythm';
 import { useToggleSet } from './useToggleSet';
@@ -99,66 +100,68 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
         }
     }, [rows, state.status, loadEarlier]);
 
-    if (state.status === 'loading') {
-        return <div className="chat-column-content px-4 pt-4 text-xs text-text-faint">{t('subagents.loading')}</div>;
-    }
-    if (state.status === 'failed') {
-        return <EmptyState icon={Bot}>{state.unsupported ? t('subagents.unsupported') : (state.error ?? t('subagents.unreadable'))}</EmptyState>;
-    }
-
     const openChild = (step: SubagentStep): void => {
         show(openBelow(trail, step));
     };
 
     return (
-        <FileLinkContext.Provider value={cwd}>
-            <div
-                ref={scrollRef}
-                className="chat-thread relative h-full min-h-0 overflow-auto px-4 pt-4 pb-3"
-                // The thread keeps its reader in place itself when a page goes in above.
-                style={{ overflowAnchor: 'none' }}
-                onScroll={(event) => {
-                    const element = event.currentTarget;
-                    followRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < FOLLOW_THRESHOLD_PX;
-                    loadEarlier();
-                }}
-            >
-                {/* The same menu the chat's own thread has; this transcript is read-only, so the chat
-                    it belongs to is not passed on and the fork item stays out. */}
-                <ContextMenu.Root>
-                    <ContextMenu.Trigger
-                        ref={threadRef}
-                        className="chat-column-content"
-                        onContextMenu={(event) => setTarget(readTimelineTarget(event.target as HTMLElement, threadRef.current, rows))}
+        <div className="flex h-full min-h-0 flex-col">
+            <SubagentInfo chatId={chatId} toolUseId={toolUseId} />
+            {state.status === 'loading' && <div className="chat-column-content px-4 pt-4 text-xs text-text-faint">{t('subagents.loading')}</div>}
+            {state.status === 'failed' && (
+                <EmptyState icon={Bot}>{state.unsupported ? t('subagents.unsupported') : (state.error ?? t('subagents.unreadable'))}</EmptyState>
+            )}
+            {state.status === 'ready' && (
+                <FileLinkContext.Provider value={cwd}>
+                    <div
+                        ref={scrollRef}
+                        className="chat-thread relative min-h-0 grow overflow-auto px-4 pt-4 pb-3"
+                        // The thread keeps its reader in place itself when a page goes in above.
+                        style={{ overflowAnchor: 'none' }}
+                        onScroll={(event) => {
+                            const element = event.currentTarget;
+                            followRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < FOLLOW_THRESHOLD_PX;
+                            loadEarlier();
+                        }}
                     >
-                        {state.loadingEarlier && (
-                            <div className="pointer-events-none sticky top-0 z-10 flex h-0 justify-center" role="status">
-                                <Icon icon={LoaderCircle} size={16} className="animate-spin text-text-faint" />
-                                <span className="sr-only">{t('timeline.loadingEarlier')}</span>
-                            </div>
-                        )}
-                        {rows.length === 0 && !state.live && <EmptyState icon={Bot}>{t('rows.subagent.nothingYet')}</EmptyState>}
-                        {rows.map((row, index) => {
-                            const previous = index > 0 ? rows[index - 1]! : null;
-                            return (
-                                <div key={row.id} data-item-id={row.id} className={rowRhythm(row, previous)}>
-                                    <Row
-                                        row={row}
-                                        chatId={chatId}
-                                        toggleGroup={groups.toggle}
-                                        toggleTurn={() => undefined}
-                                        toggleSubagent={subagents.toggle}
-                                        openSubagent={() => undefined}
-                                        openConversation={openChild}
-                                    />
-                                </div>
-                            );
-                        })}
-                        {state.live && <div className="chat-live-text pt-1 text-xs">{t('subagents.working')}</div>}
-                    </ContextMenu.Trigger>
-                    <TimelineMenuPopup target={target} thread={threadRef} />
-                </ContextMenu.Root>
-            </div>
-        </FileLinkContext.Provider>
+                        {/* The same menu the chat's own thread has; this transcript is read-only, so the chat
+                    it belongs to is not passed on and the fork item stays out. */}
+                        <ContextMenu.Root>
+                            <ContextMenu.Trigger
+                                ref={threadRef}
+                                className="chat-column-content"
+                                onContextMenu={(event) => setTarget(readTimelineTarget(event.target as HTMLElement, threadRef.current, rows))}
+                            >
+                                {state.loadingEarlier && (
+                                    <div className="pointer-events-none sticky top-0 z-10 flex h-0 justify-center" role="status">
+                                        <Icon icon={LoaderCircle} size={16} className="animate-spin text-text-faint" />
+                                        <span className="sr-only">{t('timeline.loadingEarlier')}</span>
+                                    </div>
+                                )}
+                                {rows.length === 0 && !state.live && <EmptyState icon={Bot}>{t('rows.subagent.nothingYet')}</EmptyState>}
+                                {rows.map((row, index) => {
+                                    const previous = index > 0 ? rows[index - 1]! : null;
+                                    return (
+                                        <div key={row.id} data-item-id={row.id} className={rowRhythm(row, previous)}>
+                                            <Row
+                                                row={row}
+                                                chatId={chatId}
+                                                toggleGroup={groups.toggle}
+                                                toggleTurn={() => undefined}
+                                                toggleSubagent={subagents.toggle}
+                                                openSubagent={() => undefined}
+                                                openConversation={openChild}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                                {state.live && <div className="chat-live-text pt-1 text-xs">{t('subagents.working')}</div>}
+                            </ContextMenu.Trigger>
+                            <TimelineMenuPopup target={target} thread={threadRef} />
+                        </ContextMenu.Root>
+                    </div>
+                </FileLinkContext.Provider>
+            )}
+        </div>
     );
 }

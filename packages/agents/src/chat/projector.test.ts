@@ -404,6 +404,22 @@ describe('subagents', () => {
         expect(thread.get('1:toolu_agent')).toMatchObject({ result: 'the bug is in a.ts' });
     });
 
+    test('a subagent carries the model its call asked for until its own answer names the real one', () => {
+        const { thread, project } = setup();
+        project({ type: 'tool.started', ref: 'toolu_agent', name: 'Agent', input: { description: 'Scan', model: 'haiku' }, parentRef: null });
+        expect(thread.get('1:toolu_agent')).toMatchObject({ model: 'haiku' });
+
+        project({ type: 'task.model', ref: 'toolu_agent', model: 'claude-haiku-4-5' });
+        project({ type: 'task.started', ref: 'toolu_agent', description: 'Scan', subagentType: 'Explore', prompt: null, background: false });
+        expect(thread.get('1:toolu_agent')).toMatchObject({ model: 'claude-haiku-4-5' });
+    });
+
+    test('a subagent whose call names no model has none until it answers', () => {
+        const { thread, project } = setup();
+        project({ type: 'tool.started', ref: 'toolu_agent', name: 'Agent', input: { description: 'Scan' }, parentRef: null });
+        expect(thread.get('1:toolu_agent')).not.toHaveProperty('model');
+    });
+
     test('the turn a background subagent outlives keeps it running, and the process taking it down fails it', () => {
         const { thread, project } = setup();
         project(

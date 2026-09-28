@@ -324,6 +324,8 @@ export const ChatSubagentItemSchema = z.object({
     toolUseId: z.string(),
     description: z.string(),
     subagentType: z.string().nullable(),
+    // The model it runs on: the one its call asked for, until the agent's own first answer names it.
+    model: z.string().optional(),
     prompt: z.string().nullable(),
     // Whether it runs beside the turn instead of blocking it, so the turn can end before it does.
     background: z.boolean(),

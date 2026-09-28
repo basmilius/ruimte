@@ -1,11 +1,23 @@
 import i18next from 'i18next';
 import type { ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
-import { formatMoment, formatElapsedShort } from '@basmilius/react-ui/format';
+import { formatMoment, formatElapsedShort, formatTokens } from '@basmilius/react-ui/format';
 import type { StatusWord } from '../agents/status-look';
 import type { SubagentTask } from '../host';
 
 export const subagentTitle = (item: ChatSubagentItem): string =>
     item.description || item.summary || item.subagentType || i18next.t('agent-chat:rows.subagent.label');
+
+/* What the bar over a sub-agent's conversation says of it beside its state and its time; the model is named by the caller, which has the catalog. */
+export const subagentFacts = (item: ChatSubagentItem, modelName: string | null): string[] =>
+    [
+        modelName,
+        item.subagentType,
+        item.background ? i18next.t('agent-chat:rows.subagent.background') : null,
+        item.usage !== null && item.usage.totalTokens > 0
+            ? i18next.t('agent-chat:subagents.info.tokens', { tokens: formatTokens(item.usage.totalTokens) })
+            : null,
+        item.usage !== null && item.usage.toolUses > 0 ? i18next.t('agent-chat:group.toolCalls', { count: item.usage.toolUses }) : null
+    ].filter((fact): fact is string => fact !== null && fact !== '');
 
 /* The task a row stands for, whose id the host wrote into the row's own. */
 export const taskIdOf = (item: ChatSubagentItem): string | null => (item.origin === 'ruimte' && item.id.startsWith('task-') ? item.id.slice(5) : null);

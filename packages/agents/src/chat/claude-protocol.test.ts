@@ -80,6 +80,17 @@ describe('ClaudeProtocol', () => {
         ]);
     });
 
+    test('a subagent frame names its model once, and again only when it changes', () => {
+        const protocol = new ClaudeProtocol();
+        const frame = (id: string, model: string) => ({ type: 'assistant', parent_tool_use_id: 'toolu_task', message: { id, model, content: [] } });
+        expect(protocol.handle(frame('msg_1', 'claude-sonnet-5'))).toEqual([{ type: 'task.model', ref: 'toolu_task', model: 'claude-sonnet-5' }]);
+        expect(protocol.handle(frame('msg_2', 'claude-sonnet-5'))).toEqual([]);
+        expect(protocol.handle(frame('msg_3', '<synthetic>'))).toEqual([]);
+        expect(protocol.handle(frame('msg_4', 'claude-haiku-4-5'))).toEqual([{ type: 'task.model', ref: 'toolu_task', model: 'claude-haiku-4-5' }]);
+        // The main agent's model is the chat's own, which the session already names.
+        expect(protocol.handle({ type: 'assistant', message: { id: 'msg_5', model: 'claude-opus-5-5', content: [] } })).toEqual([]);
+    });
+
     test('a delegation reports itself as a task, with what it is and what it spends', () => {
         const protocol = new ClaudeProtocol();
         expect(

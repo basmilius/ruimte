@@ -76,6 +76,7 @@
     "./chat/ui/RunSettings": "./src/chat/ui/RunSettings.tsx",
     "./chat/ui/Scrubber": "./src/chat/ui/Scrubber.tsx",
     "./chat/ui/SubagentControls": "./src/chat/ui/SubagentControls.tsx",
+    "./chat/ui/SubagentInfo": "./src/chat/ui/SubagentInfo.tsx",
     "./chat/ui/SubagentStopButton": "./src/chat/ui/SubagentStopButton.tsx",
     "./chat/ui/SubagentTimeline": "./src/chat/ui/SubagentTimeline.tsx",
     "./chat/ui/Timeline": "./src/chat/ui/Timeline.tsx",

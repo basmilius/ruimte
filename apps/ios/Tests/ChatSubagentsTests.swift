@@ -54,6 +54,22 @@ final class ChatSubagentsTests: XCTestCase {
         XCTAssertEqual(derived.derivations, 2)
     }
 
+    @MainActor func testTheBarNamesTheModelTheKindWhereItRunsAndWhatItSpent() {
+        let item = agent(
+            "a",
+            extra: [
+                "model": .string("claude-haiku-4-5"), "subagentType": .string("Explore"), "background": .bool(true),
+                "usage": .object(["totalTokens": .number(12_300), "toolUses": .number(8), "durationMs": .number(5_000)]),
+            ])
+        let locale = Locale(identifier: "en_US")
+        XCTAssertEqual(
+            ChatSubagents.facts(item, locale: locale),
+            ["Claude Haiku 4.5", "Explore", "background", "12K tokens", "8 tool calls"])
+        XCTAssertEqual(ChatSubagents.facts(agent("b", extra: ["usage": .null]), locale: locale), [])
+        let one = agent("c", extra: ["usage": .object(["totalTokens": .number(0), "toolUses": .number(1)])])
+        XCTAssertEqual(ChatSubagents.facts(one, locale: locale), ["1 tool call"])
+    }
+
     @MainActor func testOnlyARowWithAPointerOpensOnAMachineThatRefused() {
         let native = agent("n", extra: ["native": .object(["agentId": .string("x")])])
         XCTAssertTrue(ChatSubagents.canOpen(agent("a"), machineRefused: false))

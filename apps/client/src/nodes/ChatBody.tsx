@@ -1,12 +1,11 @@
 import { Suspense, useEffect, useState } from 'react';
 import i18next from 'i18next';
-import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import type { ChatSendExtras } from '@ruimte/agents-react/chat/chat-client';
 import { defaultProvider, readChatPreferences, selectionFor } from '@ruimte/agents-react/chat/preferences';
-import { showsComposer, useSubagentTrail } from '@ruimte/agents-react/chat/subagent-view';
+import { composerWrites, useSubagentTrail } from '@ruimte/agents-react/chat/subagent-view';
 import { deriveNodeTitle } from '@/chat/title';
 import { Composer } from '@ruimte/agents-react/chat/ui/Composer';
 import { SubagentTimeline } from '@ruimte/agents-react/chat/ui/SubagentTimeline';
@@ -98,34 +97,31 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
             )}
             <Suspense fallback={<div className="grow" />}>
                 <DiffPool>
-                    {/* Hidden rather than unmounted, so coming back finds the thread where it was left. */}
-                    <div className={clsx('relative flex min-h-0 grow flex-col', shown && 'invisible')} aria-hidden={shown ? true : undefined}>
-                        <Timeline
-                            chatId={id}
-                            composer={
-                                info &&
-                                showsComposer(trail) && (
-                                    <Composer
-                                        chatId={id}
-                                        info={info}
-                                        focused={focused}
-                                        answerPromptsElsewhere={onCanvas && !PROMPTS_IN_NODES ? () => bringPromptToFront(id) : undefined}
-                                        disabled={status !== 'open'}
-                                        providerFixed={providerFixed}
-                                        onSend={send}
-                                        onRetarget={retarget}
-                                    />
-                                )
-                            }
-                        />
-                    </div>
-                    {shown && (
-                        <div className="absolute inset-0 flex flex-col bg-surface">
-                            <ErrorBoundary key={shown.toolUseId} label={t('chat.conversationFailed')} resetKeys={[shown.toolUseId]}>
-                                <SubagentTimeline chatId={id} toolUseId={shown.toolUseId} />
-                            </ErrorBoundary>
-                        </div>
-                    )}
+                    <Timeline
+                        chatId={id}
+                        composer={
+                            info && (
+                                <Composer
+                                    chatId={id}
+                                    info={info}
+                                    focused={focused}
+                                    answerPromptsElsewhere={onCanvas && !PROMPTS_IN_NODES ? () => bringPromptToFront(id) : undefined}
+                                    disabled={status !== 'open'}
+                                    readOnly={!composerWrites(trail)}
+                                    providerFixed={providerFixed}
+                                    onSend={send}
+                                    onRetarget={retarget}
+                                />
+                            )
+                        }
+                        overlay={
+                            shown && (
+                                <ErrorBoundary key={shown.toolUseId} label={t('chat.conversationFailed')} resetKeys={[shown.toolUseId]}>
+                                    <SubagentTimeline chatId={id} toolUseId={shown.toolUseId} />
+                                </ErrorBoundary>
+                            )
+                        }
+                    />
                 </DiffPool>
             </Suspense>
         </div>

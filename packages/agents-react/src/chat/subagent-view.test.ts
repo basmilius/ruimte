@@ -3,12 +3,13 @@ import type { ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
 import {
     breadcrumbOf,
     canOpenSubagent,
+    composerWrites,
     MAIN_AGENT,
     openableSubagents,
     openBelow,
     openFromMain,
-    showsComposer,
     stepBack,
+    subagentOf,
     trailTo,
     useSubagentView,
     type SubagentStep
@@ -71,9 +72,9 @@ describe('subagent view', () => {
         expect(stepBack(MAIN_AGENT)).toBe(MAIN_AGENT);
     });
 
-    test('the composer is there only on the main agent', () => {
-        expect(showsComposer(MAIN_AGENT)).toBe(true);
-        expect(showsComposer([survey])).toBe(false);
+    test('the composer only writes on the main agent', () => {
+        expect(composerWrites(MAIN_AGENT)).toBe(true);
+        expect(composerWrites([survey])).toBe(false);
     });
 
     test('the store keeps a trail per chat and back answers whether it went anywhere', () => {
@@ -97,5 +98,12 @@ describe('subagent view', () => {
         expect(openableSubagents(['a', 'n', 'b'], structure, true)).toEqual([native]);
         expect(canOpenSubagent(task, true)).toBe(false);
         expect(openableSubagents([], structure, false)).toEqual([]);
+    });
+
+    test('the row behind a conversation is found by its call, a nested one included', () => {
+        const nested = subagent('c', { parentToolUseId: 'toolu_a' });
+        const structure: Record<string, ChatItem> = { a: subagent('a'), n: note('n'), c: nested };
+        expect(subagentOf(structure, 'toolu_c')).toBe(nested);
+        expect(subagentOf(structure, 'toolu_x')).toBeNull();
     });
 });

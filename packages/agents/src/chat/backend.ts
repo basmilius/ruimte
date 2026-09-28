@@ -108,6 +108,8 @@ export type BackendEvent =
           depth?: number;
       }
     | { type: 'task.progress'; ref: string; taskId?: string | null; summary: string | null; lastTool: string | null; usage: ChatSubagentUsage | null }
+    // The model a subagent's own answers came from, which its call may not have named.
+    | { type: 'task.model'; ref: string; model: string }
     // A task the CLI runs beside the turn (a background subagent, a backgrounded command) settled.
     // Its summary is what the CLI says came of it, and what a turn the CLI opens on its own is about.
     | {

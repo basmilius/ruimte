@@ -255,7 +255,8 @@
       "joiner": ", or",
       "commands": "commands",
       "files": "files",
-      "skills": "skills"
+      "skills": "skills",
+      "readOnly": "Go back to the main agent to write"
     },
     "jumpToEnd": "Jump to the end",
     "mentions": {
@@ -319,7 +320,13 @@
     "unsupported": "This machine cannot open a sub-agent's conversation. Update Ruimte there to read it.",
     "unreadable": "The conversation could not be read.",
     "noAnswer": "The machine did not answer",
-    "stopFailed": "The sub-agent could not be stopped"
+    "stopFailed": "The sub-agent could not be stopped",
+    "info": {
+      "label": "About this sub-agent",
+      "tokens": "{{tokens}} tokens",
+      "showTask": "Show its task",
+      "hideTask": "Hide its task"
+    }
   },
   "modes": {
     "supervised": {

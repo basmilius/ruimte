@@ -278,6 +278,52 @@ struct SubagentEntryTime: View {
     }
 }
 
+/// What a sub-agent is, over its conversation: its state and time, the model it runs on and what it spent, and the
+/// task it was given behind a disclosure.
+struct SubagentInfoBar: View {
+    let record: ChatItemState
+    @State private var showsTask = false
+
+    var body: some View {
+        let item = record.value
+        let facts = ChatSubagents.facts(item)
+        let prompt = item["prompt"]?.stringValue.flatMap { $0.isEmpty ? nil : $0 }
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                if let word = ChatSubagents.statusWord(item, task: nil) {
+                    SubagentStatusIcon(word: word, size: 14)
+                    Text(word.rawValue.capitalized).font(.footnote).foregroundStyle(MobileStyle.text)
+                }
+                SubagentEntryTime(item: item, task: nil)
+                Spacer(minLength: 0)
+                if prompt != nil {
+                    Button(showsTask ? "Hide task" : "Show task") { showsTask.toggle() }
+                        .font(.footnote)
+                }
+            }
+            if !facts.isEmpty {
+                Text(facts.joined(separator: " · ")).font(.footnote).foregroundStyle(MobileStyle.muted).lineLimit(2)
+            }
+            if showsTask, let prompt {
+                // A short task at its own height, a long one scrolling inside the bar.
+                ViewThatFits(in: .vertical) {
+                    taskText(prompt)
+                    ScrollView { taskText(prompt) }
+                }
+                .frame(maxHeight: 200)
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.bar)
+    }
+
+    private func taskText(_ prompt: String) -> some View {
+        Text(verbatim: prompt).font(.footnote).foregroundStyle(MobileStyle.text).textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 /// A sub-agent's conversation read back in place of the chat: there is nobody to write to, so there is no composer.
 struct SubagentConversationPage: View {
     let client: any MachineRequesting
@@ -304,6 +350,9 @@ struct SubagentConversationPage: View {
                 presentation: presentation, client: client, chatID: chatID, topInset: insets.top,
                 bottomInset: insets.bottom,
                 onNearTop: { if conversation.status == .ready { conversation.loadEarlier() } })
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let record = parent.subagent(toolUseID: crumb.toolUseID) { SubagentInfoBar(record: record) }
         }
         .overlay {
             switch conversation.status {

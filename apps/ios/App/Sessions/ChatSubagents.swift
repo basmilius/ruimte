@@ -307,6 +307,22 @@ enum ChatSubagents {
         return "\(end.formatted(day)) \(end.formatted(clock))"
     }
 
+    /// What the bar over a sub-agent's conversation says of it beside its state and its time.
+    static func facts(_ item: JSONValue, locale: Locale = .current) -> [String] {
+        var facts: [String] = []
+        if let model = item["model"]?.stringValue, !model.isEmpty { facts.append(ModelName.fromSlug(model)) }
+        if let type = item["subagentType"]?.stringValue, !type.isEmpty { facts.append(type) }
+        if item["background"]?.boolValue == true { facts.append("background") }
+        let usage = item["usage"]
+        if let tokens = usage?["totalTokens"]?.numberValue, tokens > 0 {
+            facts.append("\(Int(tokens).formatted(.number.notation(.compactName).locale(locale))) tokens")
+        }
+        if let calls = usage?["toolUses"]?.numberValue, calls > 0 {
+            facts.append(Int(calls) == 1 ? "1 tool call" : "\(Int(calls)) tool calls")
+        }
+        return facts
+    }
+
     static func stopsTaskWarning(_ agents: Int) -> String {
         "Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node "
             + "stays on the canvas." + (agents == 0 ? "" : " " + endsAgentsWarning(agents))

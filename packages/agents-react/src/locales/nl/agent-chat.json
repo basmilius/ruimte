@@ -255,7 +255,8 @@
       "joiner": ", of",
       "commands": "commando's",
       "files": "bestanden",
-      "skills": "skills"
+      "skills": "skills",
+      "readOnly": "Ga terug naar de main agent om te schrijven"
     },
     "jumpToEnd": "Naar het einde",
     "mentions": {
@@ -319,7 +320,13 @@
     "unsupported": "Deze machine kan het gesprek van een sub-agent niet openen. Werk Ruimte daar bij om het te lezen.",
     "unreadable": "Het gesprek kon niet worden gelezen.",
     "noAnswer": "De machine antwoordde niet",
-    "stopFailed": "De sub-agent kon niet worden gestopt"
+    "stopFailed": "De sub-agent kon niet worden gestopt",
+    "info": {
+      "label": "Over deze sub-agent",
+      "tokens": "{{tokens}} tokens",
+      "showTask": "Opdracht tonen",
+      "hideTask": "Opdracht verbergen"
+    }
   },
   "modes": {
     "supervised": {

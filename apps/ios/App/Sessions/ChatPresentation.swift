@@ -179,12 +179,13 @@ final class ChatPresentation {
         if !expandedSubagents.insert(id).inserted { expandedSubagents.remove(id) }
     }
 
+    /// The row of the sub-agent a call opened; a view that reads its value follows it as it changes.
+    func subagent(toolUseID: String) -> ChatItemState? {
+        records.values.first { $0.value.text("kind") == "subagent" && $0.value.text("toolUseId") == toolUseID }
+    }
+
     func openSubagent(toolUseID: String) {
-        guard
-            let agent = records.values.first(where: {
-                $0.value.text("kind") == "subagent" && $0.value.text("toolUseId") == toolUseID
-            })
-        else { return }
+        guard let agent = subagent(toolUseID: toolUseID) else { return }
         expandedSubagents.insert(agent.id)
         requestedItemID = agent.id
         scrollRequest += 1

@@ -9,14 +9,7 @@ import { bookmarkRows } from '../logic/bookmarks';
 import { deriveTimelineRows, findSubagentBranch, type TimelineRow } from '../logic/timeline';
 import { withThreadCards } from '../logic/thread-cards';
 import { openFromMain, useSubagentTrail, type SubagentStep } from '../subagent-view';
-import {
-    registerItemJumper,
-    registerMessageStepper,
-    registerTimeline,
-    setTimelineAtEnd,
-    wantsEarlier,
-    type ReadingAnchor
-} from '../timeline-scroll';
+import { registerItemJumper, registerMessageStepper, registerTimeline, setTimelineAtEnd, wantsEarlier, type ReadingAnchor } from '../timeline-scroll';
 import {
     SCRUBBER_MIN_TICKS,
     STRIP_INSET_PX,
@@ -107,7 +100,11 @@ function MarkableRow({ row, chatId, bookmark, children }: { row: TimelineRow; ch
     );
 }
 
-export function Timeline({ chatId, composer }: { chatId: string; composer?: ReactNode }) {
+/*
+ * `overlay` stands in the thread's place and ends where the composer starts, so the thread keeps
+ * where it was underneath and the composer stays in reach for the prompts it answers.
+ */
+export function Timeline({ chatId, composer, overlay }: { chatId: string; composer?: ReactNode; overlay?: ReactNode }) {
     const { t } = useTranslation('agent-chat');
     const order = useChatRow(chatId, (row) => row?.order);
     // The structure, not the items. A delta growing a reply must not derive every row again.
@@ -482,6 +479,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                 ref={threadRef}
                                 className="chat-thread flex grow flex-col px-4 pt-4"
                                 style={{ paddingLeft }}
+                                inert={overlay ? true : undefined}
                                 onContextMenu={(e) =>
                                     setTarget(readTimelineTarget(e.target as HTMLElement, threadRef.current, withCurrentText(rows, fullItems())))
                                 }
@@ -541,13 +539,13 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                     </div>
                     <TimelineMenuPopup target={target} thread={threadRef} chatId={onMainAgent ? chatId : null} />
                 </ContextMenu.Root>
-                {loadingEarlier && (
+                {loadingEarlier && !overlay && (
                     <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center" role="status">
                         <Icon icon={LoaderCircle} size={16} className="animate-spin text-text-faint" />
                         <span className="sr-only">{t('timeline.loadingEarlier')}</span>
                     </div>
                 )}
-                {showsScrubber && (
+                {showsScrubber && !overlay && (
                     <div className="absolute top-4" style={{ left: STRIP_INSET_PX, width: STRIP_WIDTH_PX, bottom: coveredHeight }}>
                         <ErrorBoundary label={t('timeline.stripFailed')} resetKeys={[ticks.length]}>
                             <Scrubber
@@ -560,6 +558,11 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                 foundCurrent={foundCurrent}
                             />
                         </ErrorBoundary>
+                    </div>
+                )}
+                {overlay && (
+                    <div className="absolute inset-0 z-5 flex flex-col bg-surface" style={{ paddingBottom: coveredHeight }}>
+                        {overlay}
                     </div>
                 )}
             </div>

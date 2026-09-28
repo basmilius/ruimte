@@ -129,6 +129,8 @@ export class ClaudeProtocol {
     private readonly workflows = new Map<string, string>();
     // The uuid of the last main-chain assistant frame of the turn, which is the line of the transcript the turn ends on.
     private lastUuid: string | null = null;
+    // The model each subagent last answered with, so a frame only reports one it had not named yet.
+    private readonly subagentModels = new Map<string, string>();
     // What this turn heard about a limit: the API error of a main-chain frame, and a window the plan refused, with its reset in seconds.
     private apiError: string | null = null;
     private refused: { resetsAt: number | null } | null = null;
@@ -448,6 +450,12 @@ export class ClaudeProtocol {
         }
         if (!parentRef && typeof frame.error === 'string') {
             this.apiError = frame.error;
+        }
+        const model = str(message.model);
+        // The CLI answers some frames itself and names them `<synthetic>`; no model wrote those.
+        if (parentRef && model && model !== '<synthetic>' && this.subagentModels.get(parentRef) !== model) {
+            this.subagentModels.set(parentRef, model);
+            events.push({ type: 'task.model', ref: parentRef, model });
         }
         for (const block of content) {
             if (!isRecord(block)) {

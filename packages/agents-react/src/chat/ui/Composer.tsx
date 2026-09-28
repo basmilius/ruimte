@@ -109,6 +109,8 @@ interface ComposerProps {
      */
     answerPromptsElsewhere?: () => void;
     disabled: boolean;
+    /* Nothing can be written, while the chat's own prompts are still answered here. */
+    readOnly?: boolean;
     /* Opened for one CLI from a menu. The model is the remembered one and there is nothing to pick. */
     providerFixed: boolean;
     onSend(text: string, extras: ChatSendExtras): void;
@@ -157,7 +159,7 @@ const splitPath = (path: string): { name: string; dir: string } => {
 };
 
 // Keep the editor mounted while a pending request takes over, so its selection and draft survive.
-export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabled, providerFixed, onSend, onRetarget }: ComposerProps) {
+export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabled, readOnly = false, providerFixed, onSend, onRetarget }: ComposerProps) {
     const { t } = useTranslation('agent-chat');
     const [draft, setDraft] = useState<ChatDraft>(() => readDraft(chatId));
     const [historyIndex, setHistoryIndex] = useState<number | null>(null);
@@ -191,6 +193,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
     const placeholderLead = chatHost().useComposerPlaceholder(scope.id, chatId);
 
     const pending = useMemo(() => [...approvals, ...questions], [approvals, questions]);
+    const writable = !disabled && !readOnly;
     const provider = providers.find((entry) => entry.kind === info.provider);
     // Absent until the host answered `provider.list`, so only an explicit false hides anything.
     const capabilities = provider?.capabilities;
@@ -562,7 +565,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
     };
 
     const insertIntoDraft = (added: string): void => {
-        if (!disabled) {
+        if (writable) {
             inputRef.current?.insert(added);
         }
     };
@@ -573,7 +576,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
 
     const submit = (): void => {
         const trimmed = text.trim();
-        if (isEmptyDraft(draft) || disabled || guard.tooLong) {
+        if (isEmptyDraft(draft) || !writable || guard.tooLong) {
             return;
         }
         // Recheck restored drafts and files that finished reading concurrently.
@@ -888,12 +891,15 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
         if (disabled) {
             return t('composer.placeholder.disconnected');
         }
+        if (readOnly) {
+            return t('composer.placeholder.readOnly');
+        }
         return hintedPlaceholder(placeholderLead ?? t('composer.placeholder.lead'), t('composer.placeholder.joiner'), [
             { key: '/', label: t('composer.placeholder.commands') },
             ...(mentionable ? [{ key: '@', label: t('composer.placeholder.files') }] : []),
             ...(hasSkills ? [{ key: '$', label: t('composer.placeholder.skills') }] : [])
         ]);
-    }, [disabled, placeholderLead, mentionable, hasSkills, t]);
+    }, [disabled, readOnly, placeholderLead, mentionable, hasSkills, t]);
     const attachable = capabilities?.attachments !== false;
     const Slot = chatHost().ComposerSlot;
 
@@ -901,7 +907,8 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
         <div className="chat-composer-content pointer-events-none relative z-10 w-full">
             {/* Only while there is something below the fold. It sits over the composer rather than
                 in the thread, because the composer is the one thing whose height it always clears. */}
-            {!atEnd && (
+            {/* A read-only composer sits under something that stands in the thread's place, whose end is not this one. */}
+            {!atEnd && !readOnly && (
                 <div className="absolute inset-x-0 bottom-full mb-2 flex justify-center">
                     <Tooltip label={t('composer.jumpToEnd')} name>
                         <Surface
@@ -925,7 +932,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                    of its own leaves it alone. */
                 data-takes-drop="all"
                 onDragOver={(e) => {
-                    if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes(MENTION_DRAG_TYPE)) {
+                    if (writable && (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes(MENTION_DRAG_TYPE))) {
                         e.preventDefault();
                         e.stopPropagation();
                         setDragging(true);
@@ -1149,7 +1156,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                         className="composer-input select-text text-sm leading-normal text-text"
                         value={text}
                         placeholder={placeholder}
-                        disabled={disabled}
+                        disabled={!writable}
                         tabbable={focused}
                         extensions={editorExtensions}
                         onChange={(value, selection, state) => {
@@ -1191,7 +1198,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                                 <button
                                     type="button"
                                     className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50"
-                                    disabled={disabled}
+                                    disabled={!writable}
                                     onClick={() => fileInputRef.current?.click()}
                                 >
                                     <Icon icon={Plus} size={16} />
@@ -1221,14 +1228,14 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                             onOption={(id, value) => configure({ selection: { ...info.selection, options: { ...info.selection.options, [id]: value } } })}
                             onMode={(runtimeMode) => configure({ runtimeMode })}
                             usage={info.usage}
-                            compactDisabled={busy || disabled}
+                            compactDisabled={busy || !writable}
                             onCompact={compact}
                             account={accountChoice === null ? null : { choice: accountChoice, started, onPick: chooseAccount }}
                         />
                         <StashPicker onRestore={restoreStashed} />
                         {Slot !== null && (
                             <ErrorBoundary label={t('composer.slotFailed')} resetKeys={[chatId]} compact className="relative rounded-lg">
-                                <Slot scopeId={scope.id} chatId={chatId} disabled={disabled} insert={insertIntoDraft} />
+                                <Slot scopeId={scope.id} chatId={chatId} disabled={!writable} insert={insertIntoDraft} />
                             </ErrorBoundary>
                         )}
                         <span className="grow" />
@@ -1249,7 +1256,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                                 <Tooltip label={busy ? t('composer.queueButton') : t('composer.send')} kbd={KEY_SHORTCUTS.modEnter} name>
                                     <button
                                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text hover:brightness-90 disabled:opacity-50 disabled:hover:brightness-100"
-                                        disabled={isEmptyDraft(draft) || disabled || guard.tooLong}
+                                        disabled={isEmptyDraft(draft) || !writable || guard.tooLong}
                                         onClick={submit}
                                     >
                                         <Icon icon={ArrowUp} size={16} />

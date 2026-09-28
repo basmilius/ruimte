@@ -9279,6 +9279,9 @@
                     "null"
                   ]
                 },
+                "model": {
+                  "type": "string"
+                },
                 "prompt": {
                   "type": [
                     "string",
@@ -10705,6 +10708,9 @@
                     "null"
                   ]
                 },
+                "model": {
+                  "type": "string"
+                },
                 "prompt": {
                   "type": [
                     "string",
@@ -11742,6 +11748,9 @@
                     "null"
                   ]
                 },
+                "model": {
+                  "type": "string"
+                },
                 "prompt": {
                   "type": [
                     "string",
@@ -12772,6 +12781,9 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "model": {
+                          "type": "string"
                         },
                         "prompt": {
                           "type": [
@@ -14551,6 +14563,9 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "model": {
+                            "type": "string"
                           },
                           "prompt": {
                             "type": [
@@ -17717,6 +17732,9 @@
                     "string",
                     "null"
                   ]
+                },
+                "model": {
+                  "type": "string"
                 },
                 "prompt": {
                   "type": [
@@ -36195,6 +36213,9 @@
                           "null"
                         ]
                       },
+                      "model": {
+                        "type": "string"
+                      },
                       "prompt": {
                         "type": [
                           "string",
@@ -37973,6 +37994,9 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "model": {
+                          "type": "string"
                         },
                         "prompt": {
                           "type": [
