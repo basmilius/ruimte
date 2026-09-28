@@ -92,7 +92,8 @@
       "actual": "Actual size (1:1)",
       "failed": "Could not show {{name}}. {{reason}}",
       "fit": "Fit",
-      "maybeChanged": "It may have changed while loading."
+      "maybeChanged": "It may have changed while loading.",
+      "notShown": "{{name}} is a {{format}} image, a format this app does not show."
     },
     "menu": {
       "copyPath": "Copy path",

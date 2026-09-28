@@ -19,6 +19,7 @@
     }
   },
   "image": {
-    "gone": "Dat bestand staat er niet meer"
+    "gone": "Dat bestand staat er niet meer",
+    "notShown": "Een {{format}}-afbeelding, een formaat dat deze app niet toont"
   }
 }

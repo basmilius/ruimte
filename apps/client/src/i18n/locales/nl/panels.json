@@ -92,7 +92,8 @@
       "actual": "Werkelijke grootte (1:1)",
       "failed": "Kon {{name}} niet tonen. {{reason}}",
       "fit": "Passend",
-      "maybeChanged": "Het bestand is misschien veranderd tijdens het laden."
+      "maybeChanged": "Het bestand is misschien veranderd tijdens het laden.",
+      "notShown": "{{name}} is een {{format}}-afbeelding, een formaat dat deze app niet toont."
     },
     "menu": {
       "copyPath": "Pad kopiëren",

@@ -19,6 +19,7 @@
     }
   },
   "image": {
-    "gone": "That file is no longer there"
+    "gone": "That file is no longer there",
+    "notShown": "A {{format}} image, a format this app does not show"
   }
 }
