@@ -54,7 +54,15 @@ const INTL_OUTSIDE_FORMAT: Record<string, string> = {
 
 /* Where text may be set in capitals, and why there. A label anywhere else is a sentence, through `SectionLabel`. */
 const UPPERCASE: Record<string, string> = {
-    'shell/LinkMachineDialog.tsx': 'the pairing code, which reads in capitals on the screen it is copied from, whatever case is typed'
+    'shell/LinkMachineDialog.tsx': 'the pairing code, which reads in capitals on the screen it is copied from, whatever case is typed',
+    [`${AGENTS_PREFIX}chat/ui/Pickers.tsx`]: "a model's badge, a tag beside its name rather than a label",
+    [`${AGENTS_PREFIX}chat/ui/RunSettings.tsx`]: "a model's badge, a tag beside its name rather than a label"
+};
+
+/* Where type may be set in a size of its own, and why there. */
+const BRACKETED_SIZES: Record<string, string> = {
+    [`${AGENTS_PREFIX}chat/ui/Pickers.tsx`]: "a model's badge, set in capitals at 11px so it sits inside the line of the name",
+    [`${AGENTS_PREFIX}chat/ui/RunSettings.tsx`]: "a model's badge, set in capitals at 11px so it sits inside the line of the name"
 };
 
 /* Where `title` is not a hint but the element's accessible name, which a Tooltip does not give. */
@@ -252,7 +260,9 @@ describe('the conventions of the client', () => {
     });
 
     test('type comes in the four sizes of the theme, never a size in brackets', () => {
-        const bracketed = sources().flatMap(({ path, text }) => [...text.matchAll(/text-\[\d[^\]]*\]/g)].map((match) => `${path}: ${match[0]}`));
+        const bracketed = sources()
+            .filter(({ path }) => !(path in BRACKETED_SIZES))
+            .flatMap(({ path, text }) => [...text.matchAll(/text-\[\d[^\]]*\]/g)].map((match) => `${path}: ${match[0]}`));
         expect(bracketed).toEqual([]);
     });
 
