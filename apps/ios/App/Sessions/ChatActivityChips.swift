@@ -49,11 +49,10 @@ struct ChatActivityChips: View {
                     ) {
                         SubagentStatusIcon(word: word, size: 13)
                     }
-                    .popover(isPresented: $showingSubagents) {
+                    .mobileSheet(isPresented: $showingSubagents) {
                         ChatSubagentActivity(model: model, tasks: tasks, items: subagents) {
                             showingSubagents = false
                         }
-                        .presentationCompactAdaptation(.popover)
                     }
                 }
                 if !background.isEmpty {
@@ -61,9 +60,8 @@ struct ChatActivityChips: View {
                     chip(ChatBackground.label(background), showing: $showingBackground) {
                         Image(lucide: shells > 0 ? "square-terminal" : "activity", size: 13)
                     }
-                    .popover(isPresented: $showingBackground) {
+                    .mobileSheet(isPresented: $showingBackground) {
                         ChatBackgroundActivity(model: model, tasks: background)
-                            .presentationCompactAdaptation(.popover)
                     }
                 }
                 Spacer(minLength: 0)
@@ -107,28 +105,22 @@ struct ChatActivityChips: View {
     }
 }
 
-/// Fits its rows while they fit and scrolls once they no longer do, since a popover takes its content's own height.
 private struct ChatActivityList<Rows: View>: View {
-    let heading: String?
+    let title: String
     @ViewBuilder let rows: () -> Rows
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        ViewThatFits(in: .vertical) {
-            list
-            ScrollView { list }
-        }
-        .frame(width: 320)
-    }
-
-    private var list: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let heading {
-                Text(heading).font(.footnote).foregroundStyle(MobileStyle.faint)
-                    .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 4)
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) { rows() }
+                    .padding(.horizontal, 10).padding(.vertical, 6)
             }
-            rows()
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
-        .padding(6)
+        .presentationDetents([.medium, .large])
     }
 }
 
@@ -141,7 +133,7 @@ private struct ChatSubagentActivity: View {
     @State private var failure: String?
 
     var body: some View {
-        ChatActivityList(heading: ChatBackground.counted(items.count, "sub-agent")) {
+        ChatActivityList(title: ChatBackground.counted(items.count, "sub-agent")) {
             ForEach(items, id: \.stableID) { item in
                 let task = ChatSubagents.taskID(item).flatMap { tasks?.task($0) }
                 let word = ChatSubagents.statusWord(item, task: task)
@@ -207,7 +199,7 @@ private struct ChatBackgroundActivity: View {
     @State private var failure: String?
 
     var body: some View {
-        ChatActivityList(heading: nil) {
+        ChatActivityList(title: ChatBackground.label(tasks)) {
             ForEach(tasks, id: \.stableID) { task in
                 let command = task["command"]?.stringValue ?? ""
                 let description = task.text("description")
