@@ -11,6 +11,7 @@ import { readResource } from '@/transport/byte-transfer';
 import { bytesWorkerReady } from '@/transport/bytes-worker-host';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
+import { readPiece } from '@/transport/piece';
 import { formatBytes } from '@/shell/panels/file-size';
 import { FileTextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { PDF_PAGE_GAP, pdfPageBox, pdfPageScale, pdfPageTops, pdfReadingPage, type PdfPageSize, type PdfZoom } from '@/shell/panels/pdf-layout';
@@ -55,7 +56,7 @@ function usePdfSource(path: string, read: FsReadBinary): Source | null {
             return;
         }
         let cancelled = false;
-        readResource((piece) => transport.request('bytes.read', piece), { kind: 'file', path })
+        readResource((piece) => readPiece(transport, piece), { kind: 'file', path })
             .then((blob) => blob.arrayBuffer())
             .then(
                 (data) => !cancelled && setHeld({ key, source: { kind: 'data', data } }),

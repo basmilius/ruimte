@@ -7,6 +7,7 @@ export type { SocketAddress } from './link-transport';
 /* The wire as it always travelled: one WebSocket per connection, the credential in its URL. */
 export const socketLink: LinkOpener = (url, events) => {
     const socket = new WebSocket(withProtocol(url));
+    socket.binaryType = 'arraybuffer';
     let refused = false;
     const gate = protocolGate({
         send: (data) => socket.send(data),
@@ -19,7 +20,8 @@ export const socketLink: LinkOpener = (url, events) => {
         }
     });
     socket.onopen = () => gate.opened();
-    socket.onmessage = (message) => gate.received(String(message.data));
+    socket.onmessage = (message: MessageEvent<string | ArrayBuffer>) =>
+        gate.received(typeof message.data === 'string' ? message.data : new Uint8Array(message.data));
     socket.onclose = (event) => {
         if (refused) {
             return;

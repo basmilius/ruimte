@@ -1,8 +1,8 @@
 import i18next from 'i18next';
-import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, type ByteResource, type BytesReadPayload, type BytesReadResult } from '@ruimte/contracts';
-import { blobTypeFor, decodeBase64 } from './piece';
+import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, type ByteResource, type BytesReadPayload } from '@ruimte/contracts';
+import { blobTypeFor, type BytesPiece } from './piece';
 
-export type ReadPiece = (payload: BytesReadPayload) => Promise<BytesReadResult>;
+export type ReadPiece = (payload: BytesReadPayload) => Promise<BytesPiece>;
 
 export interface ReadResourceOptions {
     chunkBytes?: number;
@@ -35,7 +35,7 @@ export const readResource = async (read: ReadPiece, resource: ByteResource, opti
                 changed = true;
                 break;
             }
-            const bytes = decodeBase64(piece.data);
+            const { bytes } = piece;
             parts.push(bytes);
             offset += bytes.length;
             if (offset >= first.size) {

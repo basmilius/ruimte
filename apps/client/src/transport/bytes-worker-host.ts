@@ -1,9 +1,10 @@
-import { BytesReadPayloadSchema, type BytesReadResult } from '@ruimte/contracts';
+import { BytesReadPayloadSchema } from '@ruimte/contracts';
 import { endpointById } from '@/state/endpoints';
 import { transportFor } from '@/transport';
 import { BYTES_WORKER_SCRIPT } from './bytes-stream';
+import { readPiece, type BytesPiece } from './piece';
 
-type PieceAnswer = { ok: true; result: BytesReadResult } | { ok: false; message: string };
+type PieceAnswer = { ok: true; result: BytesPiece } | { ok: false; message: string };
 
 let started = false;
 
@@ -17,7 +18,8 @@ const answer = (event: MessageEvent<unknown>): void => {
     if (!port || typeof event.data !== 'object' || event.data === null) {
         return;
     }
-    const reply = (message: PieceAnswer): void => port.postMessage(message);
+    // A piece's buffer is handed over rather than copied, since the page reads nothing of it afterwards.
+    const reply = (message: PieceAnswer): void => port.postMessage(message, message.ok ? [message.result.bytes.buffer] : []);
     const { machine, path, offset, length } = event.data as Record<string, unknown>;
     const payload = BytesReadPayloadSchema.safeParse({ resource: { kind: 'file', path }, offset, length });
     const transport = typeof machine === 'string' && endpointById(machine)?.direct === true ? transportFor(machine) : null;
@@ -25,7 +27,7 @@ const answer = (event: MessageEvent<unknown>): void => {
         reply({ ok: false, message: 'Not a file on a machine this page reaches directly' });
         return;
     }
-    transport.request('bytes.read', payload.data).then(
+    readPiece(transport, payload.data).then(
         (result) => reply({ ok: true, result }),
         (e: unknown) => reply({ ok: false, message: e instanceof Error ? e.message : String(e) })
     );

@@ -6,6 +6,7 @@ import { activeEndpoint, endpointById, useEndpoints } from '@/state/endpoints';
 import { transportFor } from '@/transport';
 import { BlobCache, type BlobLease, type BlobState } from './blob-cache';
 import { readResource } from './byte-transfer';
+import { readPiece } from './piece';
 import { bytesStreamUrl } from './bytes-stream';
 import { bytesWorkerReady } from './bytes-worker-host';
 import { useEndpointConnection } from './status';
@@ -109,7 +110,7 @@ export const useMachineUrl = (resource: MachineResource | null, endpointId?: str
             if (!transport) {
                 return Promise.reject(new Error(i18next.t('machines:connection.unknownMachine')));
             }
-            return readResource((piece) => transport.request('bytes.read', piece), payload);
+            return readResource((piece) => readPiece(transport, piece), payload);
         });
         const update = (): void => setHeld({ key, lease, state: lease.current() });
         update();

@@ -1,5 +1,6 @@
 import i18next from 'i18next';
-import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
+import type { BytesReadPayload, EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
+import { readPiece, type BytesPiece } from './piece';
 import { TransportError, type ConnectionState, type Transport, type TransportStatus } from './transport';
 
 /* What the facade needs of the pool: the socket of one endpoint, and word when any of them changes. */
@@ -58,6 +59,13 @@ export class ActiveTransport implements Transport {
             return Promise.reject(new TransportError('not-connected', i18next.t('machines:connection.notConnected')));
         }
         return this.bound.request(type, payload);
+    }
+
+    readBytes(payload: BytesReadPayload): Promise<BytesPiece> {
+        if (!this.bound) {
+            return Promise.reject(new TransportError('not-connected', i18next.t('machines:connection.notConnected')));
+        }
+        return readPiece(this.bound, payload);
     }
 
     on<E extends EventType>(event: E, handler: (payload: EventMap[E]) => void): () => void {

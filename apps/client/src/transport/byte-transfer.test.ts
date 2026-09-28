@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { BytesReadPayload, BytesReadResult } from '@ruimte/contracts';
+import type { BytesReadPayload } from '@ruimte/contracts';
+import type { BytesPiece } from './piece';
 import { readResource } from './byte-transfer';
 import { blobTypeFor } from './piece';
 
@@ -10,10 +11,10 @@ const daemon = (bytes: Uint8Array<ArrayBuffer>, mime = 'image/gif') => {
     const asked: BytesReadPayload[] = [];
     let version = '1-1';
     let content = bytes;
-    const read = async (payload: BytesReadPayload): Promise<BytesReadResult> => {
+    const read = async (payload: BytesReadPayload): Promise<BytesPiece> => {
         asked.push(payload);
         const slice = content.subarray(payload.offset, payload.offset + payload.length);
-        return { mime, size: content.length, version, offset: payload.offset, data: Buffer.from(slice).toString('base64') };
+        return { mime, size: content.length, version, offset: payload.offset, bytes: new Uint8Array(slice) };
     };
     return {
         read,

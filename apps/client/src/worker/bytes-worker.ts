@@ -1,5 +1,5 @@
-import type { BytesReadResult } from '@ruimte/contracts';
 import { BYTES_STREAM_PATH, answerRange, type PieceQuestion } from '../transport/bytes-stream';
+import type { BytesPiece } from '../transport/piece';
 
 /*
  * The service worker behind a video over a direct connection. A media element can only ask HTTP for
@@ -8,15 +8,15 @@ import { BYTES_STREAM_PATH, answerRange, type PieceQuestion } from '../transport
  */
 const worker = self as unknown as ServiceWorkerGlobalScope;
 
-type PieceAnswer = { ok: true; result: BytesReadResult } | { ok: false; message: string };
+type PieceAnswer = { ok: true; result: BytesPiece } | { ok: false; message: string };
 
-const askPage = async (clientId: string, question: PieceQuestion): Promise<BytesReadResult> => {
+const askPage = async (clientId: string, question: PieceQuestion): Promise<BytesPiece> => {
     const client = await worker.clients.get(clientId);
     if (!client) {
         throw new Error('The page that asked is gone');
     }
     const channel = new MessageChannel();
-    const answered = new Promise<BytesReadResult>((resolve, reject) => {
+    const answered = new Promise<BytesPiece>((resolve, reject) => {
         channel.port1.onmessage = (event: MessageEvent<PieceAnswer>) => {
             channel.port1.close();
             if (event.data.ok) {

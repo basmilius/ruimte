@@ -1,5 +1,4 @@
-import type { BytesReadResult } from '@ruimte/contracts';
-import { blobTypeFor, decodeBase64 } from './piece';
+import { blobTypeFor, type BytesPiece } from './piece';
 
 // At the root, since a service worker only controls the pages under the folder its script is in.
 export const BYTES_WORKER_SCRIPT = '/bytes-worker.js';
@@ -14,7 +13,8 @@ export const BYTES_STREAM_PATH = '/machine-bytes/file';
  */
 const WINDOW_BYTES = 8 * 1024 * 1024;
 
-const AHEAD = 2;
+// Three binary pieces are 768 KiB, under the daemon's 1 MB output gate, so a terminal on the same connection keeps flowing.
+const AHEAD = 3;
 
 // `BYTES_CHUNK_MAX`, which a test holds this to: importing the value would bring every schema into the worker.
 export const STREAM_PIECE_BYTES = 256 * 1024;
@@ -34,7 +34,7 @@ export interface PieceQuestion {
     length: number;
 }
 
-export type AskPiece = (question: PieceQuestion) => Promise<BytesReadResult>;
+export type AskPiece = (question: PieceQuestion) => Promise<BytesPiece>;
 
 export interface RangeRequest {
     url: string;
@@ -100,14 +100,14 @@ const messageOf = (e: unknown): string => (e instanceof Error ? e.message : Stri
  */
 const streamPieces = (
     file: StreamedFile,
-    first: BytesReadResult,
+    first: BytesPiece,
     start: number,
     last: number,
     ask: AskPiece,
     ahead: number
 ): ReadableStream<Uint8Array<ArrayBuffer>> => {
     const lengthAt = (offset: number): number => Math.min(STREAM_PIECE_BYTES, last + 1 - offset);
-    const pending: Promise<BytesReadResult>[] = [];
+    const pending: Promise<BytesPiece>[] = [];
     let next = start + lengthAt(start);
     let position = start;
     let cancelled = false;
@@ -122,11 +122,11 @@ const streamPieces = (
         }
     };
 
-    const take = (piece: BytesReadResult): Uint8Array<ArrayBuffer> => {
+    const take = (piece: BytesPiece): Uint8Array<ArrayBuffer> => {
         if (!sameVersion(piece.version, file) || piece.offset !== position) {
             throw new Error('The file changed while it played');
         }
-        const bytes = decodeBase64(piece.data);
+        const { bytes } = piece;
         if (bytes.length !== lengthAt(position)) {
             throw new Error('A piece came back short');
         }
@@ -134,7 +134,7 @@ const streamPieces = (
         return bytes;
     };
 
-    const push = (controller: ReadableStreamDefaultController<Uint8Array<ArrayBuffer>>, piece: BytesReadResult): void => {
+    const push = (controller: ReadableStreamDefaultController<Uint8Array<ArrayBuffer>>, piece: BytesPiece): void => {
         controller.enqueue(take(piece));
         if (position > last) {
             controller.close();
@@ -185,7 +185,7 @@ export const answerRange = async (request: RangeRequest, ask: AskPiece, options:
     const last =
         range === null ? file.size - 1 : Math.min(range.end ?? Number.POSITIVE_INFINITY, file.size - 1, start + (options.windowBytes ?? WINDOW_BYTES) - 1);
 
-    let first: BytesReadResult;
+    let first: BytesPiece;
     try {
         first = await ask({ machine: file.machine, path: file.path, offset: start, length: Math.min(STREAM_PIECE_BYTES, last + 1 - start) });
     } catch (e) {

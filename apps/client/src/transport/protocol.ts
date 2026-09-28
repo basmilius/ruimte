@@ -25,7 +25,7 @@ const parseFrame = (data: string): CheckFrame | null => {
 export interface ProtocolGateEvents {
     send(data: string): void;
     open(): void;
-    message(data: string): void;
+    message(data: string | Uint8Array): void;
     refuse(failure: string): void;
 }
 
@@ -37,17 +37,17 @@ export interface ProtocolGateEvents {
  */
 export const protocolGate = (events: ProtocolGateEvents, client: number = PROTOCOL_VERSION) => {
     let checked = false;
-    const held: string[] = [];
+    const held: Array<string | Uint8Array> = [];
     return {
         opened(): void {
             events.send(JSON.stringify({ id: CHECK_ID, type: 'endpoint.info', payload: {} }));
         },
-        received(data: string): void {
+        received(data: string | Uint8Array): void {
             if (checked) {
                 events.message(data);
                 return;
             }
-            const frame = parseFrame(data);
+            const frame = typeof data === 'string' ? parseFrame(data) : null;
             if (frame === null || frame.id !== CHECK_ID) {
                 held.push(data);
                 return;

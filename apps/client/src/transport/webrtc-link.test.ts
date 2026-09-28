@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import { channelBinding, PROTOCOL_VERSION, splitFrame, type DirectChallengeFrame } from '@ruimte/contracts';
+import { channelBinding, encodeBytesReply, PROTOCOL_VERSION, splitBinaryFrame, splitFrame, type DirectChallengeFrame } from '@ruimte/contracts';
 import type { LinkEvents } from './link-transport';
 import type { SignalingEvents } from './signaling';
 import { webRtcLink, type WebRtcLinkOptions } from './webrtc-link';
@@ -32,7 +32,7 @@ class FakeChannel {
     readonly sent: string[] = [];
     readyState = 'open';
     closed = false;
-    onmessage: ((message: { data: string }) => void) | null = null;
+    onmessage: ((message: { data: string | ArrayBuffer }) => void) | null = null;
     onclose: (() => void) | null = null;
 
     send(data: string): void {
@@ -54,6 +54,12 @@ class FakeChannel {
     deliver(frame: unknown): void {
         for (const piece of splitFrame(typeof frame === 'string' ? frame : JSON.stringify(frame))) {
             this.onmessage?.({ data: piece });
+        }
+    }
+
+    deliverBinary(frame: Uint8Array): void {
+        for (const piece of splitBinaryFrame(frame)) {
+            this.onmessage?.({ data: piece.buffer });
         }
     }
 }
@@ -134,7 +140,7 @@ const setup = (extra: Partial<WebRtcLinkOptions> = {}) => {
     const peer = new FakePeer();
     const proved: Array<{ challenge: DirectChallengeFrame; binding: string }> = [];
     const tickets: Array<string | null> = [];
-    const log: { opened: number; messages: string[]; closes: Array<string | null> } = { opened: 0, messages: [], closes: [] };
+    const log: { opened: number; messages: Array<string | Uint8Array>; closes: Array<string | null> } = { opened: 0, messages: [], closes: [] };
     const events: LinkEvents = {
         open: () => {
             log.opened += 1;
@@ -262,6 +268,26 @@ describe('webRtcLink', () => {
         const large = JSON.stringify({ id: '1', type: 'session.write', payload: { data: 'x'.repeat(40_000) } });
         link.send(large);
         expect(peer.channel.sent.slice(-3)).toEqual(splitFrame(large));
+    });
+
+    test('a binary reply arrives whole, and a text piece sent as binary still reads as text', async () => {
+        const { peer, log } = await negotiated();
+        peer.channel.deliver(CHALLENGE);
+        await tick();
+        peer.channel.deliver({ type: 'direct.accepted', ticket: null, expiresIn: 1000 });
+        await tick();
+        const reply = encodeBytesReply('4', { mime: 'video/mp4', size: 200_000, version: '1-200000', offset: 0 }, new Uint8Array(150_000).fill(7));
+        peer.channel.deliverBinary(reply);
+        expect(log.messages).toEqual([reply]);
+        peer.channel.onmessage?.({ data: new TextEncoder().encode('={"type":"event","event":"session.list-changed","payload":{}}').buffer });
+        expect(log.messages.at(-1)).toBe('{"type":"event","event":"session.list-changed","payload":{}}');
+    });
+
+    test('a binary piece before the handshake ends the link', async () => {
+        const { peer, log } = await negotiated();
+        peer.channel.deliverBinary(new Uint8Array([1, 2, 3]));
+        expect(log.closes).toHaveLength(1);
+        expect(log.opened).toBe(0);
     });
 
     test('a daemon from before versions is refused as older, before anything is proved', async () => {

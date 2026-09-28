@@ -1,5 +1,7 @@
 import i18next from 'i18next';
 import {
+    BinaryFrameAssembler,
+    BYTES_REPLY_MAX_BYTES,
     ChannelLiveness,
     channelBinding,
     DIRECT_PING_TICK_MS,
@@ -8,6 +10,7 @@ import {
     DirectChallengeFrameSchema,
     DirectVerdictFrameSchema,
     FrameAssembler,
+    isBinaryPiece,
     protocolMismatch,
     splitFrame,
     type DirectChallengeFrame,
@@ -71,6 +74,7 @@ export const webRtcLink =
     (url, events): Link => {
         const connectionId = connectionIdOf();
         const assembler = new FrameAssembler();
+        const binaryAssembler = new BinaryFrameAssembler();
         let ended = false;
         let authenticated = false;
         let offerSdp: string | null = null;
@@ -228,12 +232,28 @@ export const webRtcLink =
             events.open();
         };
 
+        // Only a reply that asked for binary comes this way, so nothing reads one before the handshake.
+        const onBinaryPiece = (piece: Uint8Array): void => {
+            const result = authenticated ? binaryAssembler.push(piece, BYTES_REPLY_MAX_BYTES) : ({ kind: 'invalid' } as const);
+            if (result.kind === 'invalid') {
+                end(i18next.t('machines:direct.badFrame'));
+                return;
+            }
+            if (result.kind === 'frame') {
+                events.message(result.frame);
+            }
+        };
+
         const onPiece = (data: unknown): void => {
             if (ended) {
                 return;
             }
             // Every piece is a sign of life, so a connection busy with a large frame is never pinged.
             liveness?.heard();
+            if (data instanceof ArrayBuffer && isBinaryPiece(new Uint8Array(data))) {
+                onBinaryPiece(new Uint8Array(data));
+                return;
+            }
             const piece = typeof data === 'string' ? data : new TextDecoder().decode(data as ArrayBuffer);
             const result = assembler.push(piece, authenticated ? FRAME_CHARS : HANDSHAKE_FRAME_CHARS);
             if (result.kind === 'invalid') {
@@ -256,6 +276,7 @@ export const webRtcLink =
             });
             peer = created;
             channel = created.createDataChannel(DIRECT_CHANNEL_LABEL, { ordered: true });
+            channel.binaryType = 'arraybuffer';
             channel.onmessage = (message) => onPiece(message.data);
             channel.onclose = () => end(i18next.t(authenticated ? 'machines:direct.channelClosed' : 'machines:direct.channelClosedEarly'));
             created.onconnectionstatechange = () => {

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { BYTES_CHUNK_MAX, type BytesReadResult } from '@ruimte/contracts';
+import { BYTES_CHUNK_MAX } from '@ruimte/contracts';
+import type { BytesPiece } from './piece';
 import { STREAM_PIECE_BYTES, answerRange, bytesStreamUrl, parseRange, type PieceQuestion, type RangeRequest } from './bytes-stream';
 
 const MTIME = 1_700_000_000_123;
@@ -12,13 +13,13 @@ const machine = (size: number, mime = 'video/mp4') => {
     }
     const asked: PieceQuestion[] = [];
     let version = `${MTIME - 1}-${size}`;
-    const ask = async (question: PieceQuestion): Promise<BytesReadResult> => {
+    const ask = async (question: PieceQuestion): Promise<BytesPiece> => {
         asked.push(question);
         if (question.offset > size) {
             throw new Error(`Offset ${question.offset} is past the end`);
         }
         const slice = bytes.subarray(question.offset, question.offset + question.length);
-        return { mime, size, version, offset: question.offset, data: Buffer.from(slice).toString('base64') };
+        return { mime, size, version, offset: question.offset, bytes: new Uint8Array(slice) };
     };
     return {
         bytes,

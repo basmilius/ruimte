@@ -19,6 +19,7 @@ import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { readResource } from '@/transport/byte-transfer';
+import { readPiece } from '@/transport/piece';
 import { useMachineUrl } from '@/transport/machine-url';
 import { prefetcher } from '@basmilius/react-ui';
 
@@ -80,7 +81,7 @@ export const connectChatHost = (): void => {
                 if (transport === null) {
                     throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
                 }
-                return readResource((piece) => transport.request('bytes.read', piece), { kind: 'attachment', chatId, attachmentId });
+                return readResource((piece) => readPiece(transport, piece), { kind: 'attachment', chatId, attachmentId });
             }
         },
         code: {

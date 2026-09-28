@@ -1,3 +1,6 @@
+import type { BytesReadHeader, BytesReadPayload } from '@ruimte/contracts';
+import type { Transport } from './transport';
+
 /*
  * What a URL on this page's origin may claim to be. Anything a browser would run when it is opened
  * (HTML, XML, JavaScript) is typed as a download instead. An SVG keeps its type, because an `<img>`
@@ -14,4 +17,18 @@ export const decodeBase64 = (data: string): Uint8Array<ArrayBuffer> => {
         bytes[i] = binary.charCodeAt(i);
     }
     return bytes;
+};
+
+/* A piece of a resource with its bytes as they are, however the machine sent them. */
+export interface BytesPiece extends BytesReadHeader {
+    bytes: Uint8Array<ArrayBuffer>;
+}
+
+/* A piece as a binary reply where the transport reads those, and as base64 in JSON everywhere else. */
+export const readPiece = async (transport: Pick<Transport, 'request' | 'readBytes'>, payload: BytesReadPayload): Promise<BytesPiece> => {
+    if (transport.readBytes) {
+        return transport.readBytes(payload);
+    }
+    const { data, ...header } = await transport.request('bytes.read', payload);
+    return { ...header, bytes: decodeBase64(data) };
 };

@@ -2,13 +2,17 @@ import i18next from 'i18next';
 import {
     EVENT_SCHEMAS,
     REQUEST_SCHEMAS,
+    decodeBytesReply,
     isEventType,
     parseServerFrame,
+    type BytesReadPayload,
+    type BytesReadResult,
     type EventMap,
     type EventType,
     type RequestMap,
     type RequestType
 } from '@ruimte/contracts';
+import { decodeBase64, type BytesPiece } from './piece';
 import type { PooledTransport } from './pool';
 import { TransportError, type ConnectionState, type TransportStatus } from './transport';
 
@@ -30,7 +34,8 @@ export interface Link {
 
 export interface LinkEvents {
     open(): void;
-    message(data: string): void;
+    /* A text frame, or a binary one (a `bytes.read` reply that asked for it). */
+    message(data: string | Uint8Array): void;
     /* The path of an open link changed: through a TURN relay or not. Only a direct connection says. */
     route?(relayed: boolean): void;
     /* The link is gone. `failure` says why when that is worth showing a person; null for an ordinary close. */
@@ -49,6 +54,8 @@ interface Pending {
     type: RequestType;
     resolve(result: unknown): void;
     reject(error: TransportError): void;
+    // Asked by `readBytes`, which resolves with a `BytesPiece` whether the machine answers in binary or, from before those, in JSON.
+    bytes?: true;
 }
 
 /*
@@ -160,6 +167,18 @@ export class LinkTransport implements PooledTransport {
             this.pending.set(id, { type, resolve: resolve as (result: unknown) => void, reject });
         });
         this.link.send(JSON.stringify({ id, type, payload }));
+        return promise;
+    }
+
+    readBytes(payload: BytesReadPayload): Promise<BytesPiece> {
+        if (this.status !== 'open' || !this.link) {
+            return Promise.reject(new TransportError('not-connected', i18next.t('machines:connection.notConnected')));
+        }
+        const id = String(this.nextId++);
+        const promise = new Promise<BytesPiece>((resolve, reject) => {
+            this.pending.set(id, { type: 'bytes.read', resolve: resolve as (result: unknown) => void, reject, bytes: true });
+        });
+        this.link.send(JSON.stringify({ id, type: 'bytes.read', payload: { ...payload, binary: true } }));
         return promise;
     }
 
@@ -286,7 +305,11 @@ export class LinkTransport implements PooledTransport {
         }
     }
 
-    private receive(raw: string): void {
+    private receive(raw: string | Uint8Array): void {
+        if (typeof raw !== 'string') {
+            this.receiveBytes(raw);
+            return;
+        }
         let json: unknown;
         try {
             json = JSON.parse(raw);
@@ -324,7 +347,26 @@ export class LinkTransport implements PooledTransport {
             entry.reject(new TransportError('bad-reply', i18next.t('machines:connection.badReply', { type: entry.type })));
             return;
         }
+        if (entry.bytes) {
+            const { data, ...header } = result.data as BytesReadResult;
+            entry.resolve({ ...header, bytes: decodeBase64(data) } satisfies BytesPiece);
+            return;
+        }
         entry.resolve(result.data);
+    }
+
+    private receiveBytes(raw: Uint8Array): void {
+        const reply = decodeBytesReply(raw);
+        if (reply === null) {
+            console.warn('Dropped a binary server frame this client cannot read');
+            return;
+        }
+        const entry = this.pending.get(reply.id);
+        if (!entry?.bytes) {
+            return;
+        }
+        this.pending.delete(reply.id);
+        entry.resolve({ ...reply.result, bytes: reply.bytes } satisfies BytesPiece);
     }
 
     private dispatchEvent(event: string, payload: unknown): void {

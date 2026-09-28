@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
+import { encodeBytesReply } from '@ruimte/contracts';
 import { LinkTransport, type Link, type LinkEvents } from './link-transport';
 import type { TransportStatus } from './transport';
 
@@ -53,6 +54,44 @@ const setup = (onOpen?: (events: LinkEvents) => void) => {
 };
 
 describe('LinkTransport', () => {
+    const piece = { mime: 'video/mp4', size: 3, version: '1-3', offset: 0 };
+    const resource = { kind: 'file', path: 'clip.mp4' } as const;
+
+    test('readBytes asks for a binary reply and resolves with the bytes it carries', async () => {
+        const { transport, links } = setup();
+        await tick();
+        links[0]!.events.open();
+        const read = transport.readBytes({ resource, offset: 0, length: 3 });
+        const frame = JSON.parse(links[0]!.sent[0]!) as { id: string; type: string; payload: { binary?: boolean } };
+        expect(frame).toMatchObject({ type: 'bytes.read', payload: { binary: true } });
+        links[0]!.events.message(encodeBytesReply(frame.id, piece, new Uint8Array([7, 8, 9])));
+        expect(await read).toEqual({ ...piece, bytes: new Uint8Array([7, 8, 9]) });
+    });
+
+    test('readBytes takes base64 in JSON from a machine that sends no binary replies', async () => {
+        const { transport, links } = setup();
+        await tick();
+        links[0]!.events.open();
+        const read = transport.readBytes({ resource, offset: 0, length: 3 });
+        const { id } = JSON.parse(links[0]!.sent[0]!) as { id: string };
+        links[0]!.events.message(JSON.stringify({ id, ok: true, result: { ...piece, data: Buffer.from([7, 8, 9]).toString('base64') } }));
+        expect(await read).toEqual({ ...piece, bytes: new Uint8Array([7, 8, 9]) });
+    });
+
+    test('a binary reply to a request that did not ask for one is dropped', async () => {
+        const { transport, links } = setup();
+        await tick();
+        links[0]!.events.open();
+        let settled = false;
+        void transport.request('bytes.read', { resource, offset: 0, length: 3 }).finally(() => {
+            settled = true;
+        });
+        const { id } = JSON.parse(links[0]!.sent[0]!) as { id: string };
+        links[0]!.events.message(encodeBytesReply(id, piece, new Uint8Array([7, 8, 9])));
+        await tick();
+        expect(settled).toBe(false);
+    });
+
     test('a request goes out on the link and its reply comes back', async () => {
         const { transport, links } = setup();
         await tick();
