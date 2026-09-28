@@ -88,8 +88,8 @@ larger ones becomes a GitHub issue when it starts.
     verified in the app against a real direct machine, with a small stutter that is acceptable. The
     iPhone plays video and sound in ranges as well (`MachineMediaLoader` in `RuimteTransport`,
     measured over a direct connection); a 56 Mbit/s video still stutters there at about 7 to 13 MB/s.
-    Next: binary frames instead of base64 in JSON, decided and still to be planned, a protocol change
-    with the iPhone app in it.
+    A piece of `bytes.read` now travels as a binary reply on the desktop and the iPhone (a quarter
+    fewer bytes than base64), and the desktop asks three pieces ahead; neither is measured yet.
 13. **Devices**: the iOS Simulator, physical iPhones and
     iPads, and Android emulators and phones run as a panel, a view and a node, and an agent operates
     them with `ruimte-context device`. Left: typing on a physical iPhone (the simulator and Android

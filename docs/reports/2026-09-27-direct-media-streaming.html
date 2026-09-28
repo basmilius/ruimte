@@ -185,7 +185,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   <p class="eyebrow">Ruimte / Plan / 27 september 2026</p>
   <h1>Grote video's over een directe verbinding</h1>
   <p class="intro">Een webserver op de daemon helpt niet: over een directe verbinding is geen TCP-poort bereikbaar. Wat wel werkt is een Service Worker in de client die zich voordoet als webserver. Hij vertaalt de range-requests van <code>&lt;video&gt;</code> naar <code>bytes.read</code> over het DataChannel dat er al is. Dan kan het plafond van 32 MB voor video weg, zonder wijziging aan de wire.</p>
-  <p class="status">Gebouwd en op 28 september door Bas in de app geverifieerd. Binaire frames volgen in een eigen plan.</p>
+  <p class="status">Gebouwd en op 28 september door Bas in de app geverifieerd. Binaire frames zijn gebouwd, maar nog niet gemeten.</p>
   <p class="caption">Gebaseerd op main op <code>d3775609</code>. Scope: de desktopclient en de station. De iPhone-app valt erbuiten.</p>
   <nav aria-label="Inhoud">
     <a href="#resultaat">Resultaat</a>
@@ -269,7 +269,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
       <li>Een video van ruim 32 MB over een directe verbinding start meteen in de dev-app, en zoeken werkt.</li>
       <li>Over een echte directe verbinding speelt een video met een kleine hapering. Dat is acceptabel. De doorvoer per waarde van <code>ahead</code> is niet in getallen vastgelegd, en <code>ahead</code> blijft op twee.</li>
       <li>De iPhone-meting liep over een directe verbinding. Een meting over een socket is niet nodig.</li>
-      <li>Binaire frames in plaats van base64 in JSON gaan door, als eigen plan met een wijziging van het protocol en de iPhone-app erbij.</li>
+      <li>Binaire frames in plaats van base64 in JSON gaan door. Ze zijn gebouwd zonder protocolbump: een verzoek met <code>binary</code> krijgt een binair antwoord, en een daemon van daarvoor antwoordt in base64. De desktop vraagt nu drie stukken vooruit, want drie binaire stukken blijven met 768 KB onder de gate van 1 MB. Doorvoer en haperen zijn daarna nog niet gemeten.</li>
     </ul>
 
     <h3>Wat nog moest</h3>

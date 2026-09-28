@@ -37,6 +37,8 @@ Bun workspaces (`bun install` at the root). Shared config at the root: `tsconfig
 
 One WebSocket (or the same frames over a WebRTC DataChannel), JSON frames validated with zod on both ends.
 
+- The one binary frame is a `bytes.read` reply to a request that set `binary`: a JSON header and the bytes as they are (`encodeBytesReply`, `packages/contracts/src/bytes.ts`), in binary pieces over a DataChannel (`splitBinaryFrame`). An error and every other frame stay JSON, and a daemon from before it answers the same request in base64.
+
 - Request: `{ id, type, payload }`. Reply: `{ id, ok: true, result }` or `{ id, ok: false, error: { code, message } }`. Event: `{ type: 'event', event, payload }`.
 - `REQUEST_SCHEMAS` and `EVENT_SCHEMAS` in `packages/contracts` are the tables both sides derive `RequestMap` and `EventMap` from.
 - `PROTOCOL_VERSION` (`packages/contracts/src/protocol.ts`) is bumped only for an incompatible change, and both ends refuse any other version.
