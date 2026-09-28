@@ -15,6 +15,7 @@ struct ChatScreen: View {
     @State private var prompts = ChatPromptState()
     @State private var viewportHeight: CGFloat = 700
     @State private var composerFocused = false
+    @State private var composerFadeStart: CGFloat = 0
     @State private var resumeDraftFocus = false
     @State private var composerSheets = ChatComposerSheets()
     @State private var messagesBelow = false
@@ -55,7 +56,7 @@ struct ChatScreen: View {
             MobileScrollViewport(edges: .top) { insets in
                 ChatTimeline(
                     presentation: model.presentation, client: model.client, chatID: model.chatID,
-                    topInset: insets.top, composer: AnyView(composerDock),
+                    topInset: insets.top, composer: AnyView(composerDock), composerFadeStart: composerFadeStart,
                     latestButton: showScrollButton && !scrollButtonBesideComposer ? AnyView(scrollToBottomButton) : nil,
                     status: timelineStatus,
                     onViewportHeightChanged: { viewportHeight = $0 }, dismissKeyboard: { composerFocused = false },
@@ -352,6 +353,8 @@ struct ChatScreen: View {
         .accessibilityIdentifier("chat.scroll-to-bottom")
     }
 
+    private static let composerDockSpace = "chat.composer.dock"
+
     private var composerDock: some View {
         HStack(alignment: .bottom, spacing: 16) {
             VStack(spacing: 0) {
@@ -359,11 +362,16 @@ struct ChatScreen: View {
                     ChatActivityChips(model: model, tasks: machineSession?.tasks)
                     ChatComposerAccessory(model: model, focused: $composerFocused, availableHeight: viewportHeight)
                 }
-                GlassEffectContainer(spacing: 8) {
-                    HStack(alignment: .bottom, spacing: 8) {
-                        promptComposer
-                        if model.working && prompts.active == nil { stopButton }
-                    }
+                ChatComposerRow(showsStop: model.working && prompts.active == nil) {
+                    promptComposer
+                } stop: {
+                    stopButton
+                }
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.frame(in: .named(Self.composerDockSpace)).minY
+                } action: { top in
+                    // From the dock's own top padding on, so chips and messages above the field stay out of the fade.
+                    composerFadeStart = max(0, top - 12)
                 }
                 if prompts.active == nil {
                     ChatComposerPills(model: model, sheets: composerSheets, focused: $composerFocused)
@@ -384,6 +392,7 @@ struct ChatScreen: View {
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
         .fixedSize(horizontal: false, vertical: true)
+        .coordinateSpace(.named(Self.composerDockSpace))
     }
 
     private var promptComposer: some View {
@@ -418,7 +427,6 @@ struct ChatScreen: View {
         .disabled(!model.connected)
         .accessibilityLabel("Stop")
         .accessibilityIdentifier("chat.stop")
-        .transition(.scale.combined(with: .opacity))
     }
 
     /// Stops the turn, ends every agent the chat opened and marks its CLI's own sub-agents stopped; asks first only
@@ -477,6 +485,36 @@ struct SessionErrorBanner: View {
 }
 
 /// "Fork of <original>" under a fork's title, and the title opens the ways back to the original.
+/// The composer with the stop button beside it. The dock reaches its host as a new root view, which drops the
+/// transaction that changed it, so the stop button animates from state of its own.
+private struct ChatComposerRow<Composer: View, Stop: View>: View {
+    let showsStop: Bool
+    @ViewBuilder let composer: () -> Composer
+    @ViewBuilder let stop: () -> Stop
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var stopShown: Bool
+
+    init(showsStop: Bool, @ViewBuilder composer: @escaping () -> Composer, @ViewBuilder stop: @escaping () -> Stop) {
+        self.showsStop = showsStop
+        self.composer = composer
+        self.stop = stop
+        _stopShown = State(initialValue: showsStop)
+    }
+
+    var body: some View {
+        GlassEffectContainer(spacing: 8) {
+            HStack(alignment: .bottom, spacing: 8) {
+                composer()
+                if stopShown { stop().transition(.scale.combined(with: .opacity)) }
+            }
+        }
+        .onChange(of: showsStop) { _, next in
+            // The composer's own morph runs this long, so the width settles with the height.
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.35)) { stopShown = next }
+        }
+    }
+}
+
 private struct ChatForkTitle<Items: View>: ViewModifier {
     let subtitle: String?
     @ViewBuilder let items: () -> Items

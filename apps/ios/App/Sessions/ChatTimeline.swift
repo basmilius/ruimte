@@ -10,6 +10,9 @@ struct ChatTimeline: UIViewControllerRepresentable {
     var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
     var composer: AnyView?
+    /// How far below the composer's top the timeline starts to fade, so it keeps showing behind what stands above
+    /// the field.
+    var composerFadeStart: CGFloat = 0
     var latestButton: AnyView?
     var status: AnyView?
     var onViewportHeightChanged: (CGFloat) -> Void = { _ in }
@@ -28,7 +31,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
         controller.onMessagesBelowChanged = onMessagesBelowChanged
         controller.onNearTop = onNearTop
         controller.onViewportHeightChanged = onViewportHeightChanged
-        controller.setComposer(composer, latestButton: latestButton)
+        controller.setComposer(composer, latestButton: latestButton, fadeStart: composerFadeStart)
         controller.setStatus(status)
         context.animate {
             controller.setViewportInsets(top: topInset, bottom: bottomInset)
@@ -305,6 +308,8 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     private var displayLink: CADisplayLink?
     private var applyingSnapshot = false
     private var composerHost: UIHostingController<AnyView>?
+    private var composerFade: ChatComposerFade?
+    private var composerFadeTop: NSLayoutConstraint?
     private var composerAboveHome: NSLayoutConstraint?
     private var latestButtonHost: UIHostingController<AnyView>?
     private var statusHost: UIHostingController<AnyView>?
@@ -448,11 +453,14 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         composerHost.map { max(0, collection.frame.maxY - $0.view.frame.minY) }
     }
 
-    func setComposer(_ content: AnyView?, latestButton: AnyView?) {
+    func setComposer(_ content: AnyView?, latestButton: AnyView?, fadeStart: CGFloat = 0) {
         loadViewIfNeeded()
         guard let content else {
             removeHost(&latestButtonHost)
             removeHost(&composerHost)
+            composerFade?.removeFromSuperview()
+            composerFade = nil
+            composerFadeTop = nil
             composerAboveHome = nil
             keyboardHeightConstraint.isActive = false
             fullHeightConstraint.isActive = true
@@ -474,13 +482,23 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             let aboveHome = host.view.bottomAnchor.constraint(
                 lessThanOrEqualTo: view.bottomAnchor, constant: -view.safeAreaInsets.bottom / 2)
             composerAboveHome = aboveHome
+            let fade = ChatComposerFade()
+            view.insertSubview(fade, aboveSubview: collection)
+            composerFade = fade
+            let fadeTop = fade.topAnchor.constraint(equalTo: host.view.topAnchor)
+            composerFadeTop = fadeTop
             NSLayoutConstraint.activate([
                 host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
                 host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
                 host.view.bottomAnchor.constraint(lessThanOrEqualTo: view.keyboardLayoutGuide.topAnchor),
                 aboveHome, onKeyboard,
+                fade.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                fade.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                fadeTop,
+                fade.bottomAnchor.constraint(equalTo: collection.bottomAnchor),
             ])
         }
+        composerFadeTop?.constant = fadeStart + ChatComposerFade.band
         if let latestButton, let composerHost {
             if let latestButtonHost {
                 latestButtonHost.rootView = latestButton
@@ -740,6 +758,38 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
 }
 
 @MainActor
+/// Covers the timeline under the composer and fades it out along the composer's top edge, so a message does not show
+/// through the glass. A cover rather than a mask on the timeline, which would render every scrolled frame offscreen.
+private final class ChatComposerFade: UIView {
+    static let band: CGFloat = 72
+    private let edge = UIView()
+    private let gradient = CAGradientLayer()
+
+    init() {
+        super.init(frame: .zero)
+        translatesAutoresizingMaskIntoConstraints = false
+        isUserInteractionEnabled = false
+        backgroundColor = MobileStyle.surfaceColor
+        edge.backgroundColor = MobileStyle.surfaceColor
+        // Eased, so a message stays readable well into the field before it goes.
+        gradient.colors = [0, 0.2, 0.55, 1].map { UIColor.black.withAlphaComponent($0).cgColor }
+        gradient.locations = [0, 0.4, 0.75, 1]
+        edge.layer.mask = gradient
+        addSubview(edge)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is unavailable") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        edge.frame = CGRect(x: 0, y: -Self.band, width: bounds.width, height: Self.band)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        gradient.frame = edge.bounds
+        CATransaction.commit()
+    }
+}
+
 final class ChatHostingCell: UICollectionViewListCell {
     private let hosting = UIHostingController(rootView: AnyView(EmptyView()))
     private var resizePending = false
