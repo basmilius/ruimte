@@ -121,6 +121,12 @@
       "unpin": "Unpin tab",
       "unstage": "Unstage this file"
     },
+    "pdf": {
+      "crashed": "The PDF viewer failed",
+      "failed": "Could not open {{name}}. {{reason}}",
+      "page": "Page {{page}} of {{total}}",
+      "password": "It is protected with a password, which this app does not ask for."
+    },
     "tooLarge": "{{name}} is {{size}}. Files over {{limit}} do not open here.",
     "audio": {
       "cannotPlay": "{{name}} ({{mime}}, {{size}}) cannot be played here."

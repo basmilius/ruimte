@@ -121,6 +121,12 @@
       "unpin": "Tab losmaken",
       "unstage": "Dit bestand unstagen"
     },
+    "pdf": {
+      "crashed": "De PDF-weergave liep vast",
+      "failed": "Kon {{name}} niet openen. {{reason}}",
+      "page": "Pagina {{page}} van {{total}}",
+      "password": "Het is beveiligd met een wachtwoord, en daar vraagt deze app niet om."
+    },
     "tooLarge": "{{name}} is {{size}}. Bestanden boven {{limit}} openen hier niet.",
     "audio": {
       "cannotPlay": "{{name}} ({{mime}}, {{size}}) kan hier niet afgespeeld worden."

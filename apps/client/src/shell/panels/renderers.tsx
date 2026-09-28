@@ -1,4 +1,4 @@
-import { isAudioMime, isImageMime, isVideoMime, type FsReadResult, type FsReadText } from '@ruimte/contracts';
+import { isAudioMime, isImageMime, isPdfMime, isVideoMime, type FsReadResult, type FsReadText } from '@ruimte/contracts';
 import { AudioFile } from '@/shell/panels/AudioFile';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { isHtmlName, isMarkdownName } from '@/shell/panels/file-kind';
@@ -6,6 +6,7 @@ import { HtmlFile } from '@/shell/panels/HtmlFile';
 import { ImageFile } from '@/shell/panels/ImageFile';
 import { MarkdownFile } from '@/shell/panels/MarkdownFile';
 import { UnsupportedFile } from '@/shell/panels/UnsupportedFile';
+import { PdfPreview } from '@/shell/panels/PdfPreview';
 import { VideoFile } from '@/shell/panels/VideoFile';
 
 export interface FileRendererProps {
@@ -53,6 +54,9 @@ export const renderFile = ({ path, name, read }: FileRendererProps): React.JSX.E
     }
     if (read.kind === 'binary' && isAudioMime(read.mime)) {
         return <AudioFile path={path} name={name} read={read} />;
+    }
+    if (read.kind === 'binary' && isPdfMime(read.mime)) {
+        return <PdfPreview path={path} name={name} read={read} />;
     }
     return <UnsupportedFile path={path} name={name} read={read} />;
 };

@@ -1,4 +1,6 @@
-import { realpathSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname, join, normalize } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -73,8 +75,47 @@ const bytesWorker = (): Plugin => {
     };
 };
 
+/*
+ * What pdf.js fetches by folder and file name while it reads a PDF: the wasm decoders, the standard
+ * fonts, the character maps and the color profile. Hashed names would break that lookup, so they keep
+ * their own under a folder named after the version, served in dev and written beside the chunks. The
+ * page builds the same path from pdf.js's `version` (`src/shell/panels/PdfFile.tsx`). QuickJS runs a
+ * PDF's own scripts, which this viewer never does, so it stays out.
+ */
+const pdfjsAssets = (): Plugin => {
+    const root = dirname(createRequire(import.meta.url).resolve('pdfjs-dist/package.json'));
+    const version = (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string }).version;
+    const base = `assets/pdfjs-${version}`;
+    const folders = ['cmaps', 'iccs', 'standard_fonts', 'wasm'];
+    const shipped = (name: string): boolean => !name.startsWith('quickjs');
+    return {
+        name: 'ruimte-pdfjs-assets',
+        configureServer: (server) => {
+            server.middlewares.use(`/${base}`, (request, response, next) => {
+                const relative = normalize(decodeURIComponent((request.url ?? '').split('?')[0] ?? '')).replace(/^[/\\]+/, '');
+                const [folder, name, ...rest] = relative.split('/');
+                const file = folder !== undefined && name !== undefined ? join(root, folder, name) : null;
+                if (file === null || rest.length > 0 || !folders.includes(folder ?? '') || !shipped(name ?? '') || !existsSync(file)) {
+                    next();
+                    return;
+                }
+                const type = file.endsWith('.wasm') ? 'application/wasm' : file.endsWith('.js') ? 'text/javascript' : 'application/octet-stream';
+                response.setHeader('content-type', type);
+                response.end(readFileSync(file));
+            });
+        },
+        generateBundle() {
+            for (const folder of folders) {
+                for (const name of readdirSync(join(root, folder)).filter(shipped)) {
+                    this.emitFile({ type: 'asset', fileName: `${base}/${folder}/${name}`, source: readFileSync(join(root, folder, name)) });
+                }
+            }
+        }
+    };
+};
+
 export default defineConfig(({ mode }) => ({
-    plugins: [react(), tailwindcss(), bytesWorker(), ...(mode === 'station' ? [stationHead()] : [])],
+    plugins: [react(), tailwindcss(), bytesWorker(), pdfjsAssets(), ...(mode === 'station' ? [stationHead()] : [])],
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))

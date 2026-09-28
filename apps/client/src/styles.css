@@ -307,6 +307,40 @@
        nested `env()` fallbacks are what keeps this out of a utility. */
     .toolbar-overlay-inset { padding-right: calc(100vw - env(titlebar-area-x, calc(100vw - 138px)) - env(titlebar-area-width, 0px)); }
 
+    /* ---------------------------------------------------------------- PDF */
+
+    /* The text of a PDF page over its canvas, so it can be selected and copied. pdf.js's `TextLayer`
+       places each run as a transparent span and sets the variables these rules size it with; the page
+       sets `--total-scale-factor`. A turned page turns its text the same way. */
+    .pdf-text-layer {
+        --scale-round-x: 1px;
+        --scale-round-y: 1px;
+        --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+        --min-font-size-inv: calc(1 / var(--min-font-size));
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        overflow: clip;
+        line-height: 1;
+        text-align: initial;
+        text-size-adjust: none;
+        forced-color-adjust: none;
+        transform-origin: 0 0;
+    }
+    .pdf-text-layer :is(span, br) { position: absolute; color: transparent; white-space: pre; cursor: text; transform-origin: 0 0; }
+    .pdf-text-layer > :not(.markedContent),
+    .pdf-text-layer .markedContent span:not(.markedContent) {
+        z-index: 1;
+        font-size: calc(var(--text-scale-factor) * var(--font-height, 0px));
+        transform: rotate(var(--rotate, 0deg)) scaleX(var(--scale-x, 1)) scale(var(--min-font-size-inv));
+    }
+    .pdf-text-layer .markedContent { display: contents; }
+    .pdf-text-layer ::selection { color: transparent; }
+    .pdf-text-layer br::selection { background: transparent; }
+    .pdf-text-layer[data-main-rotation="90"] { transform: rotate(90deg) translateY(-100%); }
+    .pdf-text-layer[data-main-rotation="180"] { transform: rotate(180deg) translate(-100%, -100%); }
+    .pdf-text-layer[data-main-rotation="270"] { transform: rotate(270deg) translateX(-100%); }
+
     /* ---------------------------------------------------------------- Terminal */
 
     /* xterm paints into a fixed-size box of its own; the box fills the node body and the body sets
