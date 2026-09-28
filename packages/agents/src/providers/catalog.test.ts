@@ -81,6 +81,17 @@ describe('claudeArgs', () => {
         expect(claudeEnv({ model: 'claude-haiku-4-5', options: { thinking: true } })).toEqual({});
     });
 
+    test('a 200k pick turns auto-compact on, in the one settings blob it shares with fast mode', () => {
+        const settingsOf = (options: Record<string, string | boolean>): string | undefined => {
+            const args = claudeArgs({ selection: { model: 'claude-opus-5-5', options }, runtimeMode: 'auto', resume: null });
+            expect(args.filter((arg) => arg === '--settings').length).toBeLessThanOrEqual(1);
+            return args.includes('--settings') ? args[args.indexOf('--settings') + 1] : undefined;
+        };
+        expect(settingsOf({ contextWindow: '200k' })).toBe('{"autoCompactEnabled":true}');
+        expect(settingsOf({ contextWindow: '200k', fastMode: true })).toBe('{"fastMode":true,"autoCompactEnabled":true}');
+        expect(settingsOf({ contextWindow: '1m' })).toBeUndefined();
+    });
+
     test('every mode lets the allowed tools through without a prompt, each in the form that swallows no argument', () => {
         const selection = { model: 'claude-sonnet-5', options: {} };
         for (const runtimeMode of ['supervised', 'auto-accept-edits', 'auto', 'full-access'] as const) {

@@ -49,9 +49,15 @@ export const claudeArgs = (launch: ClaudeLaunch): string[] => {
      * Fast mode has no flag of its own; the CLI reads it from the settings blob, which is also the
      * opt-in the init frame asks for (without it the frame answers `sdk_opt_in_required`). It only
      * takes on a model that offers it, so the catalog puts the option on those models alone.
+     * A 200k pick turns auto-compact on over the person's own setting, since `claudeEnv` only moves
+     * where it compacts and a CLI under `-p` never stops at a window (measured on Claude Code 2.1.283).
      */
-    if (launch.selection.options.fastMode === true) {
-        args.push('--settings', JSON.stringify({ fastMode: true }));
+    const settings = {
+        ...(launch.selection.options.fastMode === true ? { fastMode: true } : {}),
+        ...(launch.selection.options.contextWindow === '200k' ? { autoCompactEnabled: true } : {})
+    };
+    if (Object.keys(settings).length > 0) {
+        args.push('--settings', JSON.stringify(settings));
     }
     const permissionMode = PERMISSION_MODE[launch.runtimeMode];
     if (permissionMode) {
@@ -69,7 +75,8 @@ export const claudeArgs = (launch: ClaudeLaunch): string[] => {
 /*
  * Leaving out `[1m]` does not cap a model the CLI runs natively on 1M on a subscription (Fable,
  * Opus 5.5, Sonnet 5), and `autoCompactWindow` in `--settings` is ignored under `-p`: only this
- * variable holds a 200k pick (measured on Claude Code 2.1.280).
+ * variable holds a 200k pick (measured on Claude Code 2.1.280). It holds it only with auto-compact
+ * on, which `claudeArgs` sees to.
  */
 export const claudeEnv = (selection: ModelSelection): Record<string, string> =>
     selection.options.contextWindow === '200k' ? { CLAUDE_CODE_AUTO_COMPACT_WINDOW: '200000' } : {};
