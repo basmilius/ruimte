@@ -86,10 +86,13 @@ larger ones becomes a GitHub issue when it starts.
     unverified. A video over a direct connection streams through a service worker
     (`apps/client/src/worker/bytes-worker.ts`, `docs/reports/2026-09-27-direct-media-streaming.html`),
     verified in the app against a real direct machine, with a small stutter that is acceptable. The
-    iPhone plays video and sound in ranges as well (`MachineMediaLoader` in `RuimteTransport`,
-    measured over a direct connection); a 56 Mbit/s video still stutters there at about 7 to 13 MB/s.
-    A piece of `bytes.read` now travels as a binary reply on the desktop and the iPhone (a quarter
-    fewer bytes than base64), and the desktop asks three pieces ahead; neither is measured yet.
+    iPhone plays video and sound in ranges as well (`MachineMediaLoader` in `RuimteTransport`): each
+    piece crosses once into a spool file, the source reads ahead to the end of the file, and a piece
+    lost to a dropped connection is asked again on the next one. A piece of `bytes.read` travels as a
+    binary reply on the desktop and the iPhone, and werift is patched (`patches/`) to back off to 70%
+    on a lost packet and grow back four times as fast. A 56 Mbit/s video still stutters now and then
+    on the iPhone: its direct connection drops mid-video and comes back about 5 s later, for a reason
+    not yet known. The desktop does not spool or read ahead yet.
 13. **Devices**: the iOS Simulator, physical iPhones and
     iPads, and Android emulators and phones run as a panel, a view and a node, and an agent operates
     them with `ruimte-context device`. Left: typing on a physical iPhone (the simulator and Android
