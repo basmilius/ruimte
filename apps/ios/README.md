@@ -28,8 +28,13 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   `session.attach` uses `follow:true` so opening a phone never resizes the desktop PTY.
   A command from the project file that nobody on the machine has approved yet waits above the
   terminal as "Run bun dev?" until someone taps Run (`heldCommand`, `session.runHeld`).
-- File and media previews, filesystem updates, usage and machine access management.
-  Destructive actions require confirmation.
+- File previews. Pictures open in every format ImageIO reads, HEIC, HEIF, AVIF, TIFF, BMP and ICO
+  included, with pinch-zoom and a line with their dimensions, size and type. PDFs open in PDFKit. Sound
+  plays in a player of its own with a scrubber and video in AVKit's player, both read in pieces without
+  a size limit. Source is colored in the language the machine names, and a folder listing marks each
+  file with the icon of its type. A file without a view of its own opens in Quick Look and can be
+  shared to another app, once the machine serves it (images, video, sound and PDFs) and it fits in 32 MB.
+- Filesystem updates, usage and machine access management. Destructive actions require confirmation.
 - Git over every repository a project folder holds: the one the folder is in, its initialized
   submodules and the repositories beside it. Changes are grouped per state and named per repository,
   the staged files decide where a commit lands, and fetch, pull and push run over the whole folder.

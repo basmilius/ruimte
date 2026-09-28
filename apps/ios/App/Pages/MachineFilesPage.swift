@@ -1,4 +1,5 @@
 import AVKit
+import PDFKit
 import RuimtePulsar
 import RuimteTransport
 import SwiftUI
@@ -31,7 +32,7 @@ struct MachineFilesPage: View {
                         path: entry.text("path"), directory: entry.text("kind") == "directory")
                 } label: {
                     HStack(spacing: 10) {
-                        Image(lucide: entry.text("kind") == "directory" ? "folder" : "file-text", size: 20)
+                        Image(lucide: FileKinds.icon(name: entry.text("name"), kind: entry.text("kind")), size: 20)
                             .foregroundStyle(MobileStyle.muted)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(entry.text("name")).lineLimit(1).truncationMode(.tail)
@@ -100,16 +101,17 @@ struct FileContentPage: View {
     let path: String
     var initialLine: Int? = nil
     @State private var state = RemotePageState()
-    @State private var image: UIImage?
+    @State private var shown = FileShown()
+    @State private var pdfPage = 1
     // The player's asset holds its loader weakly, so the page keeps it.
     @State private var media: MachineMediaLoader?
     @State private var player: AVPlayer?
+    @State private var audio: FileAudioInfo?
     // The version of the file the player plays, as mtime and size.
     @State private var playerKey: String?
     @State private var mediaProblem: String?
     @State private var fullScreen = false
     @State private var showSource = false
-    @State private var svg: Data?
     var body: some View {
         ScrollViewReader { reader in
             Group {
@@ -125,15 +127,40 @@ struct FileContentPage: View {
                 } else if let value = state.value, isMedia(value) {
                     VStack(spacing: 0) {
                         RemotePageStatus(state: state) { Task { await load() } }
-                        mediaContents
+                        mediaContents(value)
                     }
-                    .task(id: mediaKey(value)) { await startPlayer(for: mediaKey(value)) }
+                    .task(id: versionKey(value)) { await startPlayer(for: versionKey(value), audio: isAudio(value)) }
+                } else if let value = state.value, let image = shown.image {
+                    VStack(spacing: 0) {
+                        RemotePageStatus(state: state) { Task { await load() } }
+                        FileImageView(image: image.image, name: name)
+                        FileFooter(items: [
+                            "\(image.pixelWidth) × \(image.pixelHeight)", mobileByteCount(value["size"]?.numberValue),
+                            value.text("mime"),
+                        ])
+                    }
+                } else if let value = state.value, let pdf = shown.pdf {
+                    VStack(spacing: 0) {
+                        RemotePageStatus(state: state) { Task { await load() } }
+                        FilePDFView(document: pdf, page: $pdfPage)
+                        FileFooter(items: [
+                            "Page \(pdfPage.formatted()) of \(pdf.pageCount.formatted())",
+                            mobileByteCount(value["size"]?.numberValue), value.text("mime"),
+                        ])
+                    }
+                } else if let value = state.value, value.text("kind") == "binary", shown.svg == nil {
+                    VStack(spacing: 0) {
+                        RemotePageStatus(state: state) { Task { await load() } }
+                        FileFallbackView(
+                            client: client, path: path, mime: value.text("mime"), size: value["size"]?.numberValue,
+                            reason: shown.unreadable ?? unsupportedReason(value))
+                    }
                 } else {
                     fileContents
                 }
             }
             .modifier(MobilePageSurface())
-            .navigationTitle(URL(fileURLWithPath: path).lastPathComponent)
+            .navigationTitle(name)
             .toolbar {
                 if initialLine == nil,
                     isHTML || ["md", "markdown"].contains(URL(fileURLWithPath: path).pathExtension.lowercased())
@@ -152,7 +179,6 @@ struct FileContentPage: View {
                             start: "fs.watch", stop: "fs.unwatch", payload: payload, stopPayload: payload)
                     }, load: load)
             }
-            // Only a pause: the page may come back (from full screen too) without reading the file again.
             // Only a pause, and not on the way into full screen: the page comes back without reading the file again.
             .onDisappear { if !fullScreen { player?.pause() } }
             .onChange(of: state.value) { _, _ in
@@ -160,6 +186,8 @@ struct FileContentPage: View {
             }
         }
     }
+    private var name: String { URL(fileURLWithPath: path).lastPathComponent }
+
     private var isHTML: Bool {
         ["html", "htm"].contains(URL(fileURLWithPath: path).pathExtension.lowercased())
     }
@@ -192,12 +220,11 @@ struct FileContentPage: View {
                                 }
                             }
                         } else {
-                            CodeMessage(text: value.text("text"), language: sourceLanguage)
+                            CodeMessage(
+                                text: value.text("text"),
+                                language: FileKinds.highlightLanguage(value["language"]?.stringValue))
                         }
-                    } else if let image {
-                        Image(uiImage: image).resizable().scaledToFit().accessibilityLabel(
-                            URL(fileURLWithPath: path).lastPathComponent)
-                    } else if let svg {
+                    } else if let svg = shown.svg {
                         SafeSVGPreview(data: svg).frame(minHeight: 360)
                     } else if value.text("kind") == "too-large" {
                         ContentUnavailableView(
@@ -205,21 +232,10 @@ struct FileContentPage: View {
                             description: Text(
                                 "This text file is \(mobileByteCount(value["size"]?.numberValue)). Open it on the machine."
                             ))
-                    } else if !state.loading {
-                        ContentUnavailableView(
-                            "Preview unavailable", lucideIcon: "file-text", description: Text(value.text("mime")))
                     }
                 }
             }.padding()
         }
-    }
-
-    private var sourceLanguage: String {
-        let ext = URL(fileURLWithPath: path).pathExtension.lowercased()
-        return [
-            "ts": "typescript", "tsx": "typescript", "js": "javascript", "jsx": "javascript", "py": "python",
-            "sh": "bash", "yml": "yaml", "md": "markdown", "vue": "xml", "html": "xml", "svg": "xml",
-        ][ext] ?? ext
     }
 
     private func isMedia(_ value: JSONValue) -> Bool {
@@ -227,23 +243,44 @@ struct FileContentPage: View {
         return value.text("kind") == "binary" && (mime.hasPrefix("video/") || mime.hasPrefix("audio/"))
     }
 
-    @ViewBuilder private var mediaContents: some View {
+    private func isAudio(_ value: JSONValue) -> Bool {
+        value.text("mime").hasPrefix("audio/")
+    }
+
+    private func unsupportedReason(_ value: JSONValue) -> String {
+        if !FileKinds.machineServes(mime: value.text("mime")) {
+            return "The machine only sends images, video, sound and PDFs to this app."
+        }
+        if !FileKinds.fitsInMemory(size: value["size"]?.numberValue) {
+            return "This app opens files up to \(mobileByteCount(WireConstants.bytesReadMaxBytes))."
+        }
+        return "This app has no preview for this file."
+    }
+
+    @ViewBuilder private func mediaContents(_ value: JSONValue) -> some View {
         if let player {
-            FilePlayerView(player: player, fullScreen: $fullScreen)
+            if let audio {
+                FileAudioPlayer(player: player, name: name, info: audio)
+                FileFooter(items: [mobileByteCount(value["size"]?.numberValue), value.text("mime")])
+            } else {
+                FilePlayerView(player: player, fullScreen: $fullScreen)
+            }
         } else if let mediaProblem {
-            ContentUnavailableView("Cannot play this file", lucideIcon: "file-play", description: Text(mediaProblem))
+            FileFallbackView(
+                client: client, path: path, mime: value.text("mime"), size: value["size"]?.numberValue,
+                reason: mediaProblem)
         } else {
             MobileLoadingRow("Loading").frame(maxHeight: .infinity)
         }
     }
 
-    private func mediaKey(_ value: JSONValue) -> String {
+    private func versionKey(_ value: JSONValue) -> String {
         "\(value["mtime"]?.numberValue ?? 0)-\(value["size"]?.numberValue ?? 0)"
     }
 
-    /// In the ranges the player asks for, so it starts at once and a video of any size plays. The asset is loaded
+    /// In the ranges the player asks for, so it starts at once and a file of any size plays. The asset is loaded
     /// before AVKit sees it: given one still loading, AVKit left its play button without effect.
-    private func startPlayer(for key: String) async {
+    private func startPlayer(for key: String, audio isAudio: Bool) async {
         guard key != playerKey else { return }
         cleanMedia()
         playerKey = key
@@ -251,11 +288,16 @@ struct FileContentPage: View {
         media = loader
         let asset = loader.asset()
         do {
-            let playable = try await asset.load(.isPlayable, .duration).0
+            let (playable, duration) = try await asset.load(.isPlayable, .duration)
             guard playerKey == key else { return }
             if playable {
-                // Sound through the silent switch, as a video does anywhere else on the phone.
-                try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
+                if isAudio {
+                    let info = await FileAudioInfo.load(from: asset, duration: duration)
+                    guard playerKey == key else { return }
+                    audio = info
+                }
+                // Sound through the silent switch, as a video or a song does anywhere else on the phone.
+                try? AVAudioSession.sharedInstance().setCategory(.playback, mode: isAudio ? .default : .moviePlayback)
                 player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             } else {
                 mediaProblem = "This device cannot play this file."
@@ -263,7 +305,7 @@ struct FileContentPage: View {
         } catch {
             guard playerKey == key else { return }
             if Task.isCancelled {
-                // The page went before the video loaded; it starts over when the page is back.
+                // The page went before the file loaded; it starts over when the page is back.
                 cleanMedia()
             } else {
                 mediaProblem = (loader.failure ?? error).localizedDescription
@@ -278,23 +320,62 @@ struct FileContentPage: View {
         media = nil
         playerKey = nil
         mediaProblem = nil
-        image = nil
-        svg = nil
+        audio = nil
     }
+
     private func load() async {
         await state.load {
             let result = try await client.request("fs.read", payload: .object(["path": .string(path)]))
             // A player starts with its page and keeps playing through a change elsewhere in the folder.
             if isMedia(result) { return result }
-            cleanMedia()
+            let binary = result.text("kind") == "binary"
+            let key = versionKey(result)
+            if binary, key == shown.version { return result }
+            // What is on screen stays until its successor is ready, so a reread never flashes the fallback.
+            let next = FileShown()
             let mime = result.text("mime")
-            if result.text("kind") == "binary", mime.hasPrefix("image/") {
+            if binary, mime.hasPrefix("image/") || mime == "application/pdf",
+                FileKinds.fitsInMemory(size: result["size"]?.numberValue)
+            {
                 let resource = try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]))
+                if mime == "image/svg+xml" {
+                    next.svg = resource.data
+                } else if mime == "application/pdf" {
+                    next.pdf = PDFDocument(data: resource.data)
+                    if next.pdf == nil { next.unreadable = "This PDF cannot be opened." }
+                } else {
+                    let data = resource.data
+                    next.image = await Task.detached(priority: .userInitiated) { FileImage.decode(data) }.value
+                    if next.image == nil { next.unreadable = "This device cannot show this picture." }
+                }
                 try Task.checkCancellation()
-                if mime == "image/svg+xml" { svg = resource.data } else { image = UIImage(data: resource.data) }
             }
+            next.version = binary ? key : nil
+            cleanMedia()
+            shown.replace(with: next)
+            pdfPage = 1
             return result
         }
+    }
+}
+
+/// What a file page shows beside the read itself. Observable like `RemotePageState`, so a read and the picture it
+/// brought land in one update: kept in `@State` fields instead, the page drew the fallback for a frame in between.
+@MainActor @Observable private final class FileShown {
+    var image: FileImage?
+    var pdf: PDFDocument?
+    var svg: Data?
+    /// Why a file whose bytes arrived still has no view of its own.
+    var unreadable: String?
+    /// The version on screen, as mtime and size, so a change elsewhere in the folder does not read the file again.
+    var version: String?
+
+    func replace(with next: FileShown) {
+        image = next.image
+        pdf = next.pdf
+        svg = next.svg
+        unreadable = next.unreadable
+        version = next.version
     }
 }
 
