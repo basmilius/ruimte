@@ -194,9 +194,7 @@ struct ChatScreen: View {
                 get: { model.presentation.conversationRequest },
                 set: { model.presentation.conversationRequest = $0 })
         ) { crumb in
-            SubagentConversationPage(
-                client: model.client, chatID: model.chatID, crumb: crumb, cwd: model.info.text("cwd"),
-                parent: model.presentation)
+            SubagentConversationPage(model: model, crumb: crumb)
         }
         .onAppear {
             visible = true
@@ -402,15 +400,7 @@ struct ChatScreen: View {
                 send: send)
         } prompt: { pending in
             ChatPromptCard(
-                prompts: prompts, item: pending, connected: model.connected && !model.loading,
-                hasDraft: hasDraft,
-                denyReason: model.providers.first(where: {
-                    $0["kind"] == model.info["provider"]
-                })?["capabilities"]?["denyReason"]?.boolValue == true,
-                availableHeight: viewportHeight
-            ) { action, values in
-                _ = try await model.client.request(action, payload: model.target(values))
-            }
+                prompts: prompts, item: pending, model: model, hasDraft: hasDraft, availableHeight: viewportHeight)
         }
     }
 

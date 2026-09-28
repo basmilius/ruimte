@@ -56,9 +56,7 @@ struct SubagentListPage: View {
         .navigationTitle("Sub-agents")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $opened) { crumb in
-            SubagentConversationPage(
-                client: model.client, chatID: model.chatID, crumb: crumb, cwd: model.info.text("cwd"),
-                parent: model.presentation)
+            SubagentConversationPage(model: model, crumb: crumb)
         }
         .endingAgentsConfirmation($ending)
         .alert(
@@ -324,24 +322,25 @@ struct SubagentInfoBar: View {
     }
 }
 
-/// A sub-agent's conversation read back in place of the chat: there is nobody to write to, so there is no composer.
+/// A sub-agent's conversation read back in place of the chat. There is nobody to write to, but the chat's composer
+/// stays under it for the approvals and questions the chat asks meanwhile.
 struct SubagentConversationPage: View {
-    let client: any MachineRequesting
-    let chatID: String
+    let model: ChatModel
     let crumb: SubagentCrumb
-    let parent: ChatPresentation
     @State private var conversation: SubagentConversation
     @State private var presentation = ChatPresentation()
-    private let cwd: String
+    @State private var prompts = ChatPromptState()
+    @State private var viewportHeight: CGFloat = 700
 
-    init(client: any MachineRequesting, chatID: String, crumb: SubagentCrumb, cwd: String, parent: ChatPresentation) {
-        self.client = client
-        self.chatID = chatID
+    private var client: any MachineRequesting { model.client }
+    private var chatID: String { model.chatID }
+    private var parent: ChatPresentation { model.presentation }
+
+    init(model: ChatModel, crumb: SubagentCrumb) {
+        self.model = model
         self.crumb = crumb
-        self.cwd = cwd
-        self.parent = parent
         _conversation = State(
-            initialValue: SubagentConversation(client: client, chatID: chatID, toolUseID: crumb.toolUseID))
+            initialValue: SubagentConversation(client: model.client, chatID: model.chatID, toolUseID: crumb.toolUseID))
     }
 
     var body: some View {
@@ -353,6 +352,17 @@ struct SubagentConversationPage: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if let record = parent.subagent(toolUseID: crumb.toolUseID) { SubagentInfoBar(record: record) }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            SubagentComposerDock(model: model, prompts: prompts, availableHeight: viewportHeight)
+        }
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.height
+        } action: {
+            viewportHeight = $0
+        }
+        .onChange(of: model.pending, initial: true) { _, requests in
+            prompts.update(requests)
         }
         .overlay {
             switch conversation.status {
@@ -387,12 +397,13 @@ struct SubagentConversationPage: View {
         .navigationTitle(crumb.description)
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $presentation.conversationRequest) { nested in
-            SubagentConversationPage(client: client, chatID: chatID, crumb: nested, cwd: cwd, parent: parent)
+            SubagentConversationPage(model: model, crumb: nested)
         }
         .onChange(of: conversation.unsupported) { _, unsupported in
             if unsupported { parent.subagentsRefused = true }
         }
         .onAppear {
+            let cwd = model.info.text("cwd")
             presentation.subagentsRefused = parent.subagentsRefused
             presentation.setInfo(.object(["cwd": .string(cwd)]))
             conversation.onChange = { [presentation] change in
@@ -405,5 +416,36 @@ struct SubagentConversationPage: View {
             conversation.start()
         }
         .onDisappear { conversation.stop() }
+    }
+}
+
+/// The chat's composer under a sub-agent's conversation. Nothing is written to a sub-agent, so the field only says
+/// where to go to write, while the chat's approvals and questions come up and are answered here as under the chat.
+private struct SubagentComposerDock: View {
+    let model: ChatModel
+    let prompts: ChatPromptState
+    let availableHeight: CGFloat
+
+    var body: some View {
+        ChatComposerMorph(request: prompts.active) {
+            HStack(alignment: .bottom, spacing: 6) {
+                Text("Go back to the main agent to write")
+                    .foregroundStyle(MobileStyle.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 15)
+                Image(lucide: "arrow-up", size: 19)
+                    .frame(width: 40, height: 40)
+                    .modifier(ChatComposerAction(prompt: false, enabled: false, emphasized: false))
+                    .padding(.vertical, 6)
+                    .accessibilityHidden(true)
+            }
+            .padding(.leading, 20).padding(.trailing, 6)
+        } prompt: { pending in
+            ChatPromptCard(
+                prompts: prompts, item: pending, model: model, hasDraft: false, availableHeight: availableHeight)
+        }
+        .frame(maxWidth: 760)
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
     }
 }

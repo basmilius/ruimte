@@ -352,3 +352,18 @@ struct ChatPromptCard: View {
         }
     }
 }
+
+extension ChatPromptCard {
+    /// A card that answers through the chat's own model, the same under the chat and under one of its sub-agents.
+    init(prompts: ChatPromptState, item: JSONValue, model: ChatModel, hasDraft: Bool, availableHeight: CGFloat) {
+        self.init(
+            prompts: prompts, item: item, connected: model.connected && !model.loading, hasDraft: hasDraft,
+            denyReason: model.providers.first(where: {
+                $0["kind"] == model.info["provider"]
+            })?["capabilities"]?["denyReason"]?.boolValue == true,
+            availableHeight: availableHeight
+        ) { action, values in
+            _ = try await model.client.request(action, payload: model.target(values))
+        }
+    }
+}

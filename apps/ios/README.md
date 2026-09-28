@@ -70,7 +70,9 @@ A chat with sub-agents offers Sub-agents in the conversation menu. It opens a li
 sections, most recently updated first, each entry with its state, the latest tool call or
 reply (or the report a sub-agent handed back) and its running time or end time. An entry, or a
 subagent row in the timeline, opens that conversation read-only on its own page; Back returns
-one level. Swipe or long-press an active entry to stop a task (after a confirmation that counts
+one level. A bar over it names the agent's state, time, model, kind, tokens and tool calls, with its task
+behind Show task. The chat's composer stays under it with its field switched off, so an approval or a
+question the chat asks meanwhile is answered there. Swipe or long-press an active entry to stop a task (after a confirmation that counts
 what ends) or mark a sub-agent of the CLI's own as stopped. Long-press the composer's Stop for
 Stop with sub-agents. Task marks appear on the nodes a task opened, wake turns say how many
 tasks woke them, and a failed task or a wake the machine gave up on leaves an unseen mark.
