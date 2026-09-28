@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Bestandsvoorbeelden op web en iOS</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+.handoff-prompt { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.handoff-prompt code { overflow-wrap: anywhere; }
+.step > div { min-width: 0; }
+.accept { margin-top: 12px; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#summary">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">Ruimte / Verkenning / 27 september 2026</p>
+  <h1>Bestandsvoorbeelden op web en iOS</h1>
+  <p class="intro">Beide clients tonen tekst, beeld en video, maar audio en PDF niet. De daemon herkent audio niet eens: MP3 en WAV worden <code>octet-stream</code>, en een Ogg-geluidsbestand speelt op het web als zwart videovlak. Vier werkpakketten dichten dat gat. Het vijfde is iOS bijtrekken naar het web.</p>
+  <p class="status">Besloten. Audio is gebouwd (28 september), de rest nog niet.</p>
+  <p class="note">audio is al gebouwd, in f663c1b8 (daemon), 99e49db8 (web) en 5289603f (iOS). De sniffer herkent MP3, AAC, WAV, FLAC, M4A en Ogg-audio, readMedia levert audio uit, FS_AUDIO_MIMES en isAudioMime staan in contracts, AudioFile.tsx speelt audio op het web (ook via de streaming-worker), en iOS speelt video en audio via MachineMediaLoader (een AVAssetResourceLoaderDelegate over bytes.read) in AVPlayerViewController, zonder plafond van 32 MB en zonder tijdelijk bestand. Sla die delen over. Van pakket 1 blijven beeld, PDF en het projecticoon; pakket 2 is af op de controle in de Electron dev app na. Audio op iOS heeft nog geen eigen weergave: het speelt in dezelfde speler als video.</p>
+  <p class="caption">Omvang: <code>apps/client</code> (file viewer), <code>apps/ios</code> (<code>FileContentPage</code>), <code>apps/server/src/fs</code> en <code>packages/contracts/src/fs.ts</code>. Gelezen op commit <code>d3775609</code>. Het streamen van grote video over een direct kanaal valt erbuiten: daar werkt een andere agent aan (<a href="2026-09-27-direct-media-streaming.html">rapport</a>).</p>
+  <nav aria-label="Inhoud">
+    <a href="#summary">Besluit</a>
+    <a href="#now">Huidige stand</a>
+    <a href="#findings">Bevindingen</a>
+    <a href="#work">Werkpakketten</a>
+    <a href="#later">Later</a>
+    <a href="#handoff">Startprompt</a>
+  </nav>
+</header>
+<main>
+  <section id="summary" class="recommendation">
+    <h2>Besluit</h2>
+    <p>Bas heeft ingestemd met audio, PDF, meer beeldformaten en iOS-pariteit. De daemon gaat eerst: die herkent de formaten en levert ze uit. Daarna volgen het web en iOS. De wire krijgt alleen nieuwe mime-waarden in velden die al een string zijn, dus er komen geen nieuwe requests en er is geen bump van <code>PROTOCOL_VERSION</code> nodig.</p>
+    <p>Grote video via een direct kanaal zit bij een andere agent: een Service Worker die range-requests van de speler vertaalt naar <code>bytes.read</code>. Dit plan gaat ervan uit dat dat op het web straks werkt. Die worker kiest alleen voor video, dus audio moet daar later bij. Het plan voor streaming raakt iOS niet, dus daar blijft de grens van 32 MB voorlopig staan. Audio op iOS volgt hetzelfde pad als video, zodat het een latere oplossing vanzelf erft.</p>
+    <p>PDF op het web gaat via pdf.js, lazy geladen; Bas heeft daarmee ingestemd. De ingebouwde viewer van Chromium valt af: die vraagt een ruimere CSP voor de hele app, plugins in Electron, en hangt op de station af van de browser.</p>
+  </section>
+
+  <section id="now">
+    <h2>Huidige stand</h2>
+    <p>Op het web tekent <code>FileBody</code> elk bestand, of het nu in een tab, een canvas-node of een losse view staat. Wat daar bijkomt, verschijnt dus op alle drie tegelijk. iOS heeft één pagina, <code>FileContentPage</code>.</p>
+    <div class="table">
+      <table class="wide">
+        <caption>Wat elk deel nu met een bestandssoort doet</caption>
+        <thead><tr><th scope="col">Soort</th><th scope="col">Daemon</th><th scope="col">Web</th><th scope="col">iOS</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Code en tekst</th><td>Tekst plus <code>language</code></td><td><span class="badge confirmed">ja</span> Shiki en editor</td><td><span class="badge warning">deels</span> eigen tabel van 11 extensies</td></tr>
+          <tr><th scope="row">Markdown, HTML</th><td>Tekst</td><td><span class="badge confirmed">ja</span></td><td><span class="badge confirmed">ja</span></td></tr>
+          <tr><th scope="row">PNG, JPEG, GIF, WebP, SVG</th><td>Herkend en uitgeleverd</td><td><span class="badge confirmed">ja</span> passend of ware grootte, voetregel</td><td><span class="badge warning">deels</span> geen zoom, geen voetregel</td></tr>
+          <tr><th scope="row">MP4, MOV, WebM, MKV</th><td>Herkend en uitgeleverd</td><td><span class="badge confirmed">ja</span> met <code>canPlayType</code></td><td><span class="badge confirmed">ja</span> <code>VideoPlayer</code></td></tr>
+          <tr><th scope="row">Audio</th><td><span class="badge danger">nee</span> <code>octet-stream</code> of <code>video/ogg</code></td><td><span class="badge danger">nee</span></td><td><span class="badge danger">nee</span></td></tr>
+          <tr><th scope="row">PDF</th><td><span class="badge warning">deels</span> herkend, niet uitgeleverd</td><td><span class="badge danger">nee</span></td><td><span class="badge danger">nee</span></td></tr>
+          <tr><th scope="row">AVIF, HEIC</th><td><span class="badge danger">fout</span> als <code>video/mp4</code></td><td><span class="badge danger">nee</span></td><td><span class="badge danger">nee</span></td></tr>
+          <tr><th scope="row">ICO, BMP, TIFF</th><td><span class="badge danger">nee</span> <code>octet-stream</code></td><td><span class="badge danger">nee</span></td><td><span class="badge danger">nee</span></td></tr>
+          <tr><th scope="row">Overige binaire bestanden</th><td>Mime alleen</td><td>Melding plus "Show in Finder"</td><td>"Preview unavailable" plus mime</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="findings">
+    <h2>Bevindingen</h2>
+    <p>Alles hieronder is in de code gelezen, niet uitgeprobeerd in een draaiende app.</p>
+    <ol>
+      <li><strong>Audio blijft steken in de sniffer.</strong> <code>sniff.ts</code> kent geen ID3, WAV of FLAC. De merken van M4A in <code>AUDIO_BRANDS</code> geven bewust <code>null</code>, waarna <code>inspect</code> er <code>octet-stream</code> van maakt. Elke Ogg wordt <code>video/ogg</code>, dus een Opus- of Vorbis-bestand opent op het web in <code>VideoFile</code>.</li>
+      <li><strong>Foto's van een iPhone worden video.</strong> Elk <code>ftyp</code>-merk dat geen audio is en niet <code>qt&nbsp;&nbsp;</code>, wordt <code>video/mp4</code>. Dat geldt ook voor <code>heic</code>, <code>mif1</code> en <code>avif</code>. Zo'n foto opent nu als een video die niet speelt.</li>
+      <li><strong>Eén poort voor bytes.</strong> <code>readMedia</code> (<code>apps/server/src/fs/read.ts:199</code>) beslist voor zowel <code>GET /fs/file</code> als <code>bytes.read</code> wat de daemon uitlevert. Daar hoort audio en PDF bij te komen.</li>
+      <li><strong>Het projecticoon leunt op dezelfde lijst.</strong> <code>project-identity.ts:92</code> accepteert elk <code>isImageMime</code>. Als <code>FS_IMAGE_MIMES</code> groeit met HEIC of TIFF, kan een projecticoon een formaat krijgen dat het web niet tekent. Het icoon heeft dus een eigen, kortere lijst nodig.</li>
+      <li><strong>De CSP sluit PDF in een frame uit.</strong> In <code>packages/csp/src/index.ts</code> staan <code>frame-src</code> en <code>object-src</code> op <code>'none'</code>, en <code>font-src</code> kent geen <code>blob:</code>. Daarmee valt de ingebouwde PDF-viewer van Chromium af, tenzij de beveiligingsgrens verschuift. pdf.js past binnen <code>worker-src 'self' blob:</code>.</li>
+      <li><strong>Chromium tekent niet alles.</strong> AVIF, ICO en BMP wel; HEIC en TIFF niet. Voor die twee vuurt <code>ImageFile</code> nu <code>onError</code> af met "maybe changed", en dat klopt dan niet. iOS tekent alle vijf via ImageIO.</li>
+      <li><strong>iOS gooit informatie weg.</strong> De daemon stuurt <code>language</code> mee, maar <code>sourceLanguage</code> in <code>MachineFilesPage.swift</code> raadt zelf uit 11 extensies. In de lijst krijgt elk bestand het icoon <code>file-text</code> (<code>MachineFilesPage.swift:34</code>). QuickLook wordt al in de chat gebruikt (<code>ChatContent.swift:197</code>), maar nog niet voor bestanden.</li>
+      <li><strong>Audio verliest zijn type over een direct kanaal.</strong> <code>DRAWABLE</code> in <code>apps/client/src/transport/byte-transfer.ts:18</code> laat beeld, video, PDF en platte tekst door en maakt van al het andere <code>application/octet-stream</code>. Audio hoort daarbij, en nieuwe beeldmimes moeten de namen van die regex volgen (<code>image/x-icon</code>, <code>image/bmp</code>, <code>image/avif</code>). Dat bestand ligt in het gebied van de streaming-agent. Het gaat om één regel, dus even afstemmen.</li>
+      <li><strong>Oudere clients blijven werken.</strong> Een oud web ziet een onbekende mime en toont de bestaande melding. Een oude iOS-app probeert <code>image/*</code> via <code>UIImage</code> en laat <code>audio/*</code> vallen op "Preview unavailable". Geen van beide breekt.</li>
+    </ol>
+  </section>
+
+  <section id="work">
+    <h2>Werkpakketten</h2>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Daemon: herkennen en uitleveren</h3>
+        <p>De sniffer herkent MP3, WAV, FLAC, AAC en M4A (als <code>audio/mp4</code>). Ogg wordt opgesplitst naar <code>audio/ogg</code> en <code>video/ogg</code>. AVIF en HEIC/HEIF komen uit het <code>ftyp</code>-merk, en ICO, BMP en TIFF krijgen een eigen signatuur. In contracts komen <code>FS_AUDIO_MIMES</code> en een uitgebreidere <code>FS_IMAGE_MIMES</code>. <code>readMedia</code> levert audio en PDF uit, met ranges. Het projecticoon krijgt een eigen lijst.</p>
+        <p class="accept"><strong>Klaar als</strong> er per formaat een test is, een HEIC-foto niet meer als <code>video/mp4</code> binnenkomt, en de file-route audio en PDF met ranges levert.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Web: audio</h3>
+        <p>Een <code>AudioFile</code> naar het voorbeeld van <code>VideoFile</code>: vooraf <code>canPlayType</code>, dan het native element, een voetregel met duur, grootte en mime, en dezelfde terugval. Audio komt erbij in <code>DRAWABLE</code>. Staat de worker voor streaming er dan al, dan kiest die ook voor audio.</p>
+        <p class="accept"><strong>Klaar als</strong> MP3, M4A, WAV, FLAC en Opus spelen in de Electron dev app, via de socket en via een direct kanaal, en een bestand dat de runtime niet speelt de terugval toont.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Web: beeld</h3>
+        <p>AVIF, ICO en BMP werken zodra de mimes er zijn. HEIC en TIFF zeggen vooraf dat deze app ze niet toont, met "Show in Finder" erbij. Ze wachten niet eerst op een fout van de browser.</p>
+        <p class="accept"><strong>Klaar als</strong> elk nieuw beeldformaat óf getekend wordt, óf direct een eerlijke melding geeft.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Web: PDF</h3>
+        <p>pdf.js (<code>pdfjs-dist</code>), lazy geladen via <code>lazyNamed</code> in een eigen <code>ErrorBoundary</code>, met <code>isEvalSupported: false</code>. De eerste versie tekent de pagina's onder elkaar op canvas (alleen de zichtbare) met een tekstlaag voor selecteren en kopiëren. Paginanummer en aantal staan in de voetregel, en er is passend of ware grootte zoals bij beeld. Via de socket leest pdf.js met ranges van <code>/fs/file</code>, dus een grote PDF toont de eerste pagina meteen. De CSP blijft zoals hij is.</p>
+        <p class="accept"><strong>Klaar als</strong> een PDF opent in een tab, een canvas-node en een losse view, zowel in de dev app als op de station, zonder dat de chunk van de werkruimte groter wordt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>iOS: pariteit en nieuwe formaten</h3>
+        <p>Audio krijgt een eigen weergave via <code>AVPlayer</code>, PDF gaat via PDFKit, en beeld via ImageIO, met pinch-zoom en een voetregel. Syntaxkleuring leest <code>read.language</code>. De lijst krijgt iconen per bestandstype, en voor alles wat overblijft is er QuickLook met delen en openen in een andere app.</p>
+        <p class="accept"><strong>Klaar als</strong> de iOS-tests en <code>bun run check</code> slagen en elk formaat hierboven op de simulator is geopend.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="later">
+    <h2>Later, niet in dit plan</h2>
+    <ul>
+      <li>CSV en TSV als tabel, met een schakelaar naar de bron zoals bij markdown.</li>
+      <li>Een voorbeeld van lettertypes (ttf, otf, woff, woff2). Let op <code>font-src</code> in de CSP.</li>
+      <li>Een afbeeldingsdiff in de git-diff, die nu alleen "binary omitted" zegt.</li>
+      <li>Het begin van een tekstbestand boven de 2 MB, in plaats van niets.</li>
+      <li>Een hexweergave voor onbekende binaire bestanden.</li>
+      <li>Zoeken in een PDF (via <code>use-preview-find</code>) en een zijbalk met miniaturen.</li>
+      <li>Een <code>PDFDataRangeTransport</code> over <code>bytes.read</code> met <code>offset</code>, zodat een grote PDF ook via een direct kanaal zonder de grens van 32 MB opent.</li>
+      <li>HEIC en TIFF op het web via conversie op de daemon. Voorlopig blijft het bij een eerlijke melding.</li>
+      <li>Grote audio en video op iOS, boven de 32 MB. Dat vraagt een <code>AVAssetResourceLoaderDelegate</code> over <code>bytes.read</code>, en valt ook buiten het plan voor streaming.</li>
+    </ul>
+  </section>
+
+  <section id="handoff">
+    <h2>Startprompt voor een schone agent</h2>
+    <p>Deze prompt bevat de stand, de afbakening ten opzichte van het werk aan streaming, de werkpakketten en de huisregels. <a href="2026-09-27-file-previews-startprompt.txt" download>Download de startprompt als tekst</a>.</p>
+    <pre class="handoff-prompt" tabindex="0" aria-label="Kopieerbare startprompt"><code>Breid de bestandsvoorbeelden van Ruimte uit, op het web (apps/client) en op iOS (apps/ios). Werk vanuit /Users/bas/Development/Projects/ruimte. Je hebt de chat waarin dit is uitgezocht niet nodig; het rapport en de code zijn je bron.
+
+Lees eerst:
+- CLAUDE.md, en de CLAUDE.md naast elke map die je aanraakt.
+- docs/reports/2026-09-27-file-previews.html: huidige stand, bevindingen, werkpakketten met hun "klaar als", en wat buiten scope valt.
+- apps/client/src/shell/panels/renderers.tsx, ImageFile.tsx, VideoFile.tsx en UnsupportedFile.tsx.
+- apps/server/src/fs/sniff.ts, apps/server/src/fs/read.ts (inspect, readFile, readMedia) en packages/contracts/src/fs.ts (FS_IMAGE_MIMES, FS_VIDEO_MIMES).
+- apps/ios/App/Pages/MachineFilesPage.swift (FileContentPage) en apps/ios/README.md.
+
+Werkwijze:
+- Controleer git status. Er werkt tegelijk een andere agent in deze checkout aan het streamen van grote video over een direct kanaal: een Service Worker die range-requests vertaalt naar bytes.read (docs/reports/2026-09-27-direct-media-streaming.html). Blijf van apps/server/src/bytes, apps/client/src/transport/machine-url.ts, blob-cache.ts en die worker, en van de manier waarop iOS bytes binnenhaalt (readResource en het tijdelijke bestand voor AVPlayer). Ga ervan uit dat grote video op het web straks werkt. Laat audio op iOS hetzelfde pad als video volgen, zodat het een latere streamingoplossing vanzelf erft. Het plan voor streaming raakt iOS niet, dus daar blijft de grens van 32 MB voorlopig staan.
+- Eén uitzondering in de transportlaag: DRAWABLE in apps/client/src/transport/byte-transfer.ts typeert alles wat geen beeld, video, PDF of platte tekst is als octet-stream. Voeg audio toe, en gebruik voor nieuwe beeldformaten dezelfde namen als die regex (image/avif, image/bmp, image/x-icon). Kijk eerst met git diff of de andere agent dat bestand al heeft aangepast, en stage alleen jouw regel.
+- De worker van de andere agent kiest alleen voor video en weigert een andere mime. Staat hij er al als je aan audio begint, neem audio dan mee in die keuze en in de test die een andere mime weigert. Staat hij er nog niet, meld dat dan in je oplevering.
+- Stage alleen je eigen bestanden. Nooit git stash, reset, restore, clean of het herschrijven van commits. Geen Co-Authored-By of andere attributie in commits.
+- Commit elk werkpakket apart op main (conventional commits, Engels), pas nadat bun run format en bun run check slagen en de tests van dat pakket groen zijn. Niet pushen.
+- De wire krijgt alleen nieuwe mime-waarden in bestaande string-velden. Geen nieuwe requests, geen nieuwe velden, geen PROTOCOL_VERSION-bump.
+- Elke tekst in de UI in het Engels en het Nederlands (apps/client/src/i18n, namespace panels); locales.test.ts moet slagen. Getallen, duur en grootte via @basmilius/react-ui/format.
+- Kijk of apps/site/src/components/features of film een scène van de bestandsviewer heeft; zo ja, laat die meebewegen.
+
+Werkpakketten, in deze volgorde:
+
+Stand 28 september: audio is al gebouwd, in f663c1b8 (daemon), 99e49db8 (web) en 5289603f (iOS). De sniffer herkent MP3, AAC, WAV, FLAC, M4A en Ogg-audio, readMedia levert audio uit, FS_AUDIO_MIMES en isAudioMime staan in contracts, AudioFile.tsx speelt audio op het web (ook via de streaming-worker), en iOS speelt video en audio via MachineMediaLoader (een AVAssetResourceLoaderDelegate over bytes.read) in AVPlayerViewController, zonder plafond van 32 MB en zonder tijdelijk bestand. Sla die delen over. Van pakket 1 blijven beeld, PDF en het projecticoon; pakket 2 is af op de controle in de Electron dev app na. Audio op iOS heeft nog geen eigen weergave: het speelt in dezelfde speler als video.
+
+1. Daemon: herkennen en uitleveren.
+   - sniff.ts: MP3 (ID3 of een MPEG-framesync), WAV (RIFF met WAVE), FLAC (fLaC), AAC (ADTS), M4A als audio/mp4 (de merken in AUDIO_BRANDS geven nu null), Ogg gesplitst naar audio/ogg (Opus, Vorbis) en video/ogg (Theora). Beeld: AVIF en HEIC/HEIF uit het ftyp-merk (worden nu video/mp4), ICO, BMP, TIFF.
+   - contracts: FS_AUDIO_MIMES en isAudioMime, FS_IMAGE_MIMES uitgebreid, en PDF als uitleverbaar type.
+   - readMedia serveert beeld, video, audio en PDF, met ranges zoals nu.
+   - project-identity.ts gebruikt isImageMime voor het projecticoon. Houd daar een eigen lijst van formaten die elke client tekent (geen HEIC of TIFF).
+   - Klaar als: een test per formaat in de sniff- en readtests, een HEIC-foto is geen video/mp4 meer, en de file-route levert audio en PDF met ranges.
+
+2. Web: audio.
+   - AudioFile.tsx naar het voorbeeld van VideoFile: canPlayType vooraf, native audio-element, voetregel met duur, grootte en mime, dezelfde terugval met "Show in Finder".
+   - Klaar als: MP3, M4A, WAV, FLAC en Opus spelen in de Electron dev app, via de socket en via een direct kanaal; een audiobestand dat de runtime niet kan spelen, toont de terugval en geen leeg element.
+
+3. Web: beeld.
+   - AVIF, ICO en BMP werken zodra de mimes er zijn; controleer dat.
+   - HEIC en TIFF tekent Chromium niet. Toon daarvoor vooraf een duidelijke melding met "Show in Finder", niet de huidige foutmelding "maybe changed" uit onError.
+   - Klaar als: elk nieuw beeldformaat óf getekend wordt, óf direct eerlijk zegt dat deze app het niet toont.
+
+4. Web: PDF.
+   - De CSP van de client heeft frame-src en object-src op 'none' (packages/csp). Versoepel die niet; dat is een beveiligingsgrens.
+   - Besloten: pdf.js (pdfjs-dist, de huidige major), lazy geladen via lazyNamed in een eigen ErrorBoundary, zodat de prefetcher hem pas ophaalt als een werkruimte stilstaat. De worker komt van de eigen origin. Zet isEvalSupported op false.
+   - Eerste versie: de pagina's onder elkaar op canvas, alleen de zichtbare getekend; een tekstlaag, zodat je tekst kunt selecteren en kopiëren; paginanummer en aantal in de voetregel; passend en ware grootte zoals ImageFile; de FileToolbar en het contextmenu zoals bij elke andere renderer.
+   - Laad via useMachineUrl, zodat pdf.js via de socket ranges leest van /fs/file. Geen eigen range-transport over bytes.read; dat komt later.
+   - Niet doen: formulieren, annotaties, ondertekenen, zoeken en een zijbalk met miniaturen.
+   - Klaar als: een PDF opent in tab, canvas-node en losse view, in de dev app én de station, en de werkruimte-chunk wordt er niet groter van.
+
+5. iOS: pariteit en nieuwe formaten.
+   - Audio met een eigen weergave (titel, duur, afspeelknop, scrubber) via AVPlayer, niet VideoPlayer.
+   - PDF met PDFKit (PDFView).
+   - Beeld via ImageIO (UIImage), dus ook HEIC, AVIF, TIFF, BMP en ICO; pinch-zoom; een voetregel met afmetingen, grootte en mime.
+   - Gebruik read.language van de daemon voor syntaxkleuring in plaats van de eigen tabel in sourceLanguage.
+   - Iconen per bestandstype in de lijst in plaats van altijd file-text.
+   - Voor alles wat daarna overblijft: QuickLook als terugval (zoals ChatContent.swift het al gebruikt), met delen en openen in een andere app.
+   - Klaar als: de iOS-tests en bun run check slagen (ook de gegenereerde modellen), en elk formaat hierboven is op de simulator geopend.
+
+Buiten scope: zoeken in een PDF, miniaturen, een PDFDataRangeTransport over bytes.read, CSV als tabel, lettertypevoorbeeld, afbeeldingsdiff in de git-diff, het begin van te grote tekstbestanden, hexweergave, en alles rond het streamen van grote media.
+
+Lever op: per werkpakket een korte samenvatting met de commit, wat je hebt gecontroleerd en hoe, en wat niet gelukt of niet gecontroleerd is.</code></pre>
+  </section>
+</main>
+<footer><p>Gebaseerd op het lezen van de code op <code>d3775609</code>. Niets is uitgeprobeerd in de app of op de simulator. Welke codecs Chromium ondersteunt, is algemene kennis en niet in deze build gemeten.</p></footer>
+</body>
+</html>

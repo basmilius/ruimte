@@ -85,7 +85,7 @@ larger ones becomes a GitHub issue when it starts.
     on the same connection. The iPhone plays video and sound in ranges as well (`MachineMediaLoader`
     in `RuimteTransport`); a 56 Mbit/s video still stutters there at about 7 to 13 MB/s, which binary
     frames instead of base64 in JSON would help, at the price of a protocol change.
-13. **Devices** (`docs/reports/2026-09-13-devices.html`): the iOS Simulator, physical iPhones and
+13. **Devices**: the iOS Simulator, physical iPhones and
     iPads, and Android emulators and phones run as a panel, a view and a node, and an agent operates
     them with `ruimte-context device`. Left: typing on a physical iPhone (the simulator and Android
     have it), and the iPhone app, which knows a device from the generated schema and draws none of
@@ -96,10 +96,12 @@ larger ones becomes a GitHub issue when it starts.
     alternative, plugins that only feed context to agents, is still to be weighed. Unproven: whether
     a compiled binary can `import()` plugin code; ad-hoc compiled binaries get SIGKILL on this Mac,
     so test it in the signed app and never as an agent experiment (one hung for four hours).
-15. **Several accounts per CLI** (`docs/reports/2026-09-10-accounts.html`, not decided): one config
-    folder per login passed as `CLAUDE_CONFIG_DIR` or `CODEX_HOME` at spawn, the CLI logs in
-    itself and Ruimte never writes credentials. The account choice belongs in the local file, not
-    in `project.json`.
+15. **Account leftovers** (`docs/reports/2026-09-25-provider-accounts.html`). Several accounts per
+    CLI are built: a config folder per login, passed as `CLAUDE_CONFIG_DIR` or `CODEX_HOME` at
+    spawn, and the CLI logs in itself. Unmeasured: two Claude folders keeping their own login after
+    a restart, and a Codex chat continuing on another account through its shadow home. Open: logging
+    in from the iPhone or the station, and an extra Claude account not seeing the skills, `CLAUDE.md`
+    and settings in `~/.claude`.
 16. **Orchestration leftovers** (`docs/reports/2026-09-24-orchestration-upstream.html`). Built and
     tested end to end in the dev app: limits and overload with a resume a person turns on, notes for
     a child waiting on input and `ruimte-context answer`, nested subagents, Codex spawned agents, a
