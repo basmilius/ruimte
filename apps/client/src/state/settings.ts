@@ -93,7 +93,7 @@ export interface Settings {
     codeThemeLight: string;
     /* The same while the app is dark. */
     codeThemeDark: string;
-    /* Whether a long line of code wraps in the viewer and the editor. A diff keeps its own switch. */
+    /* Whether a long line of code wraps in the viewer, the editor and a diff. */
     codeWrap: boolean;
     /* Whether a diff draws the two sides next to each other or one patch under the other. */
     diffLayout: 'stacked' | 'split';

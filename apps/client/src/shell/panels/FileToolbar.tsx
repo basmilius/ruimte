@@ -16,14 +16,14 @@ import { cameThroughPortal, IconButton, Separator, Menu, TextMenu, ContextMenu }
  * carries a bar already (`file-toolbar-slot.ts`) the controls go up into that one instead, since a
  * second row under it would say the same thing twice.
  */
-export function FileToolbar({ children }: { children?: ReactNode }) {
+export function FileToolbar({ children, menu }: { children?: ReactNode; menu?: ReactNode }) {
     const { host } = useFileToolbarSlot();
     const controls = (
         <>
             {children}
             {/* With no controls the menu is the only group there is, and a line would divide nothing. */}
             {children !== undefined && <Separator />}
-            <FileMenu />
+            <FileMenu extra={menu} />
         </>
     );
     if (host !== null) {
@@ -71,13 +71,14 @@ export function FileToolbarToggle({ icon, label, active, disabled = false, onCli
  * Everything the file can be asked, in one menu at the end of the bar. On a tab the items are the
  * ones a right click on it offers as well; a node and a view of its own have no tab to pin or
  * close, so they get the half that is about the file. The file comes from `FileBody` through
- * `useFileActions`, so no renderer has to hand it over.
+ * `useFileActions`, so no renderer has to hand it over. `extra` is how the renderer draws the file,
+ * above those items, for settings that change too rarely to earn a button in the bar.
  */
-function FileMenu() {
+function FileMenu({ extra }: { extra?: ReactNode }) {
     const { t } = useTranslation('common');
     const actions = useFileActions();
 
-    if (!actions) {
+    if (!actions && extra === undefined) {
         return null;
     }
 
@@ -85,7 +86,9 @@ function FileMenu() {
         <Menu.Root>
             <IconButton icon={MoreHorizontal} size="sm" label={t('action.more')} render={<Menu.Trigger />} />
             <Menu.Popup align="end">
-                <FileMenuRows actions={actions} />
+                {extra}
+                {extra !== undefined && actions && <Menu.Separator />}
+                {actions && <FileMenuRows actions={actions} />}
             </Menu.Popup>
         </Menu.Root>
     );

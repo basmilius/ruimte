@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Columns2, FileDiff, FileWarning, GitBranch, GitCompare, LoaderCircle, RefreshCw, Rows2, Space, WrapText } from 'lucide-react';
+import { Columns2, FileWarning, GitCompare, LoaderCircle, RefreshCw, Rows2 } from 'lucide-react';
 import type { ActionInput } from '@ruimte/actions';
 import type { GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
@@ -15,7 +15,7 @@ import { useGit } from '@/state/git';
 import { useGitSignal } from '@/state/git-watch';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
-import { ButtonGroup, EmptyState, Separator, lazyNamed } from '@basmilius/react-ui';
+import { ButtonGroup, EmptyState, Menu, Separator, lazyNamed } from '@basmilius/react-ui';
 
 const UnifiedDiff = lazyNamed(() => import('@ruimte/agents-react/chat/ui/UnifiedDiff'), 'default');
 
@@ -44,7 +44,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
     const { t } = useTranslation('panels');
     const layout = useSettings((s) => s.diffLayout);
     const whitespace = useSettings((s) => s.diffWhitespace);
-    const [wrap, setWrap] = useState(true);
+    const wrap = useSettings((s) => s.codeWrap);
     const [nonce, setNonce] = useState(0);
     /* Goes up whenever the checkout moved, which is the tab reading itself again. */
     const signal = useGitSignal(view.cwd);
@@ -97,45 +97,25 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
     return (
         <FileActionsContext.Provider value={actions}>
             <div className="flex min-h-0 min-w-0 grow flex-col">
-                <FileToolbar>
-                    <ButtonGroup render={<span />}>
-                        <FileToolbarToggle
-                            icon={FileDiff}
-                            label={t('diff.scope.worktree')}
-                            active={view.scope === 'worktree'}
-                            onClick={() => setScope('worktree')}
-                        />
-                        <FileToolbarToggle icon={GitBranch} label={t('diff.scope.base')} active={view.scope === 'base'} onClick={() => setScope('base')} />
-                    </ButtonGroup>
-                    <Separator />
-                    <ButtonGroup render={<span />}>
-                        <FileToolbarToggle
-                            icon={Rows2}
-                            label={t('diff.layout.stacked')}
-                            active={layout === 'stacked'}
-                            onClick={() => useSettings.getState().update({ diffLayout: 'stacked' })}
-                        />
-                        <FileToolbarToggle
-                            icon={Columns2}
-                            label={t('diff.layout.split')}
-                            active={layout === 'split'}
-                            onClick={() => useSettings.getState().update({ diffLayout: 'split' })}
-                        />
-                    </ButtonGroup>
-                    <Separator />
-                    <FileToolbarToggle
-                        icon={Space}
-                        label={whitespace ? t('diff.whitespace.ignore') : t('diff.whitespace.show')}
-                        active={whitespace}
-                        onClick={() => useSettings.getState().update({ diffWhitespace: !whitespace })}
-                    />
-                    <FileToolbarToggle
-                        icon={WrapText}
-                        label={wrap ? t('file.code.unwrap') : t('file.code.wrap')}
-                        active={wrap}
-                        onClick={() => setWrap(!wrap)}
-                    />
-                </FileToolbar>
+                <FileToolbar
+                    menu={
+                        <>
+                            <Menu.RadioGroup value={view.scope} onValueChange={(scope: GitDiffScope) => setScope(scope)}>
+                                <Menu.RadioItem value="worktree">{t('diff.scope.worktree')}</Menu.RadioItem>
+                                <Menu.RadioItem value="base">{t('diff.scope.base')}</Menu.RadioItem>
+                            </Menu.RadioGroup>
+                            <Menu.Separator />
+                            <Menu.RadioGroup value={layout} onValueChange={(diffLayout: 'stacked' | 'split') => useSettings.getState().update({ diffLayout })}>
+                                <Menu.RadioItem value="stacked">{t('diff.layout.stacked')}</Menu.RadioItem>
+                                <Menu.RadioItem value="split">{t('diff.layout.split')}</Menu.RadioItem>
+                            </Menu.RadioGroup>
+                            <Menu.Separator />
+                            <Menu.CheckboxItem checked={whitespace} onCheckedChange={(diffWhitespace) => useSettings.getState().update({ diffWhitespace })}>
+                                {t('diff.whitespace.show')}
+                            </Menu.CheckboxItem>
+                        </>
+                    }
+                />
                 <DiffBody state={state} wrap={wrap} layout={layout} relative={relative} />
             </div>
         </FileActionsContext.Provider>
@@ -198,7 +178,7 @@ type CommitState = { status: 'loading' } | { status: 'error'; message: string } 
 function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string; commit?: string; base?: string | null }) {
     const { t } = useTranslation('panels');
     const layout = useSettings((s) => s.diffLayout);
-    const [wrap, setWrap] = useState(true);
+    const wrap = useSettings((s) => s.codeWrap);
     const [now] = useState(() => Math.floor(Date.now() / 1000));
     const [nonce, setNonce] = useState(0);
     /* A commit never changes, so only the changes of a checkout follow the tree. */
@@ -265,8 +245,6 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
                         onClick={() => useSettings.getState().update({ diffLayout: 'split' })}
                     />
                 </ButtonGroup>
-                <Separator />
-                <FileToolbarToggle icon={WrapText} label={wrap ? t('file.code.unwrap') : t('file.code.wrap')} active={wrap} onClick={() => setWrap(!wrap)} />
             </div>
             {state.status === 'loading' && (
                 <div className="file-diff grid min-h-0 grow place-items-center">

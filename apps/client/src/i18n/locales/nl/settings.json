@@ -63,7 +63,7 @@
             "preview": "Voorbeeld van {{theme}}",
             "wrap": {
                 "label": "Lange regels afbreken",
-                "description": "In bestanden en de editor. Een diff heeft een eigen knop."
+                "description": "In bestanden, de editor en diffs."
             }
         },
         "sidebar": {

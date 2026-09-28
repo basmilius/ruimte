@@ -63,7 +63,7 @@
             "preview": "Preview of {{theme}}",
             "wrap": {
                 "label": "Wrap long lines",
-                "description": "In files and the editor. A diff keeps its own switch."
+                "description": "In files, the editor and diffs."
             }
         },
         "sidebar": {

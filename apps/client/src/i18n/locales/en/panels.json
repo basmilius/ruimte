@@ -66,7 +66,6 @@
     "since": "Since {{base}}",
     "sinceSummary": "Commits, uncommitted changes and new files since {{base}}.",
     "whitespace": {
-      "ignore": "Ignore whitespace changes",
       "show": "Show whitespace changes"
     }
   },
@@ -75,10 +74,6 @@
   },
   "file": {
     "cannotShow": "{{name}} ({{mime}}, {{size}}) cannot be shown here.",
-    "code": {
-      "unwrap": "Stop wrapping long lines",
-      "wrap": "Wrap long lines"
-    },
     "empty": {
       "findInFiles": "Find in files",
       "hint": "A file opens here from the Files panel or a link in a chat.",
