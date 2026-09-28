@@ -41,6 +41,12 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         description: 'settings:appearance.interface.dock.description'
     },
     { id: 'appearance.sidebar', section: 'appearance', label: 'settings:appearance.sidebar.label', description: 'settings:appearance.sidebar.description' },
+    {
+        id: 'appearance.needsYou',
+        section: 'appearance',
+        label: 'settings:appearance.needsYou.label',
+        description: 'settings:appearance.needsYou.description'
+    },
     { id: 'appearance.language', section: 'appearance', label: 'settings:appearance.language.label', description: 'settings:appearance.language.description' },
     { id: 'appearance.region', section: 'appearance', label: 'settings:appearance.region.label', description: 'settings:appearance.region.description' },
     {

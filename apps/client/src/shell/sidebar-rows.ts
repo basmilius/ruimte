@@ -72,7 +72,6 @@ export interface SidebarViewRow {
 
 export interface SidebarNodeRow {
     target?: SidebarTarget;
-    location?: string;
     type: 'node';
     rowId: string;
     node: SidebarNode;
@@ -83,6 +82,14 @@ export interface SidebarNodeRow {
 
 export type SidebarRow = SidebarViewRow | SidebarNodeRow;
 
+/* One project's share of "Needs you", under a heading with its name. */
+export interface SidebarWaitingGroup {
+    key: string;
+    /* Null while the project on screen is the only one waiting, which is how the block read before it spanned projects. */
+    label: string | null;
+    rows: SidebarRow[];
+}
+
 export interface SidebarSection {
     group?: SidebarGroup;
     id: string;
@@ -90,6 +97,8 @@ export interface SidebarSection {
     /* Null for the list of views, which is the only list of its kind and needs no heading. */
     label: string | null;
     rows: SidebarRow[];
+    /* How "Needs you" splits its rows over projects, in the order they are drawn. Absent on the list of views. */
+    waiting?: SidebarWaitingGroup[];
     /* How many views the list holds, which is the gap a drop under the last row lands in. */
     viewCount: number;
 }
@@ -141,7 +150,7 @@ export const buildSidebar = ({ project, expandedIds }: SidebarInput): SidebarSec
         }
     }
     if (waiting.length > 0) {
-        sections.push({ id: 'needs-you', kind: 'needs-you', label: i18next.t('shell:sidebar.needsYou'), rows: waiting, viewCount: 0 });
+        sections.push(needsYou([{ key: 'current', label: null, rows: waiting }]));
     }
 
     const rows: SidebarRow[] = [];
@@ -201,37 +210,90 @@ export interface SidebarGroup {
     state: 'ready' | 'loading' | 'offline' | 'error' | 'unsupported';
 }
 
+const needsYou = (waiting: SidebarWaitingGroup[]): SidebarSection => ({
+    id: 'needs-you',
+    kind: 'needs-you',
+    label: i18next.t('shell:sidebar.needsYou'),
+    rows: waiting.flatMap((group) => group.rows),
+    waiting,
+    viewCount: 0
+});
+
+/* A row of another project's list, keyed apart from the same ids on another machine and pointing at where it lives. */
+const qualify = (group: SidebarGroup, row: SidebarRow): SidebarRow => ({
+    ...row,
+    rowId: `${group.key}:${row.rowId}`,
+    target: {
+        endpointId: group.endpointId,
+        projectId: group.summary.projectId,
+        viewId: row.type === 'view' ? row.view.id : row.viewId,
+        ...(row.type === 'node' ? { nodeId: row.node.id } : {})
+    }
+});
+
+const waitingIn = (group: SidebarGroup): SidebarRow[] => {
+    const own = buildSidebar({ project: group.project, expandedIds: new Set() });
+    const seen = new Set<string>();
+    const rows: SidebarRow[] = [];
+    for (const row of own.find((section) => section.kind === 'needs-you')?.rows ?? []) {
+        if (row.type !== 'node' || seen.has(row.node.id)) {
+            continue;
+        }
+        seen.add(row.node.id);
+        rows.push(qualify(group, row));
+    }
+    return rows;
+};
+
+/*
+ * "Needs you" over every project, one heading per project: the one on screen first, the others in
+ * the sidebar's order. A project the machine could not read right now says nothing, since its
+ * statuses are from before.
+ */
+export const needsYouSection = (groups: readonly SidebarGroup[], onScreen?: readonly SidebarRow[]): SidebarSection | null => {
+    const waiting: (SidebarWaitingGroup & { group: SidebarGroup })[] = [];
+    for (const group of [...groups.filter((group) => group.active), ...groups.filter((group) => !group.active)]) {
+        if (group.state !== 'ready') {
+            continue;
+        }
+        const rows = group.active && onScreen ? [...onScreen] : waitingIn(group);
+        if (rows.length > 0) {
+            waiting.push({ key: group.key, label: group.summary.name, rows, group });
+        }
+    }
+    if (waiting.length === 0) {
+        return null;
+    }
+    const machines = new Set(waiting.map(({ group }) => group.endpointId)).size;
+    const alone = waiting.length === 1 && waiting[0]!.group.active;
+    return needsYou(
+        waiting.map(({ key, label, rows, group }) => ({
+            key,
+            label: alone ? null : machines > 1 ? `${label} · ${group.machineLabel}` : label,
+            rows
+        }))
+    );
+};
+
 export const buildCombinedSidebar = (groups: readonly SidebarGroup[]): SidebarSection[] => {
-    const waiting: SidebarRow[] = [];
     const sections: SidebarSection[] = [];
     for (const group of groups) {
-        const own = buildSidebar({ project: group.project, expandedIds: group.expandedIds });
-        const qualify = (row: SidebarRow): SidebarRow => ({
-            ...row,
-            rowId: `${group.key}:${row.rowId}`,
-            target: {
-                endpointId: group.endpointId,
-                projectId: group.summary.projectId,
-                viewId: row.type === 'view' ? row.view.id : row.viewId,
-                ...(row.type === 'node' ? { nodeId: row.node.id } : {})
-            },
-            ...(row.type === 'node' && row.viewName !== null ? { location: `${group.summary.name} · ${row.viewName} · ${group.machineLabel}` } : {})
-        });
-        if (group.state === 'ready') {
-            const seen = new Set<string>();
-            for (const row of own.find((section) => section.kind === 'needs-you')?.rows ?? []) {
-                if (row.type !== 'node' || seen.has(row.node.id)) {
-                    continue;
-                }
-                seen.add(row.node.id);
-                waiting.push(qualify(row));
-            }
-        }
-        const views = own.find((section) => section.kind === 'views')!;
-        sections.push({ ...views, id: group.key, group, rows: group.collapsed ? [] : views.rows.map(qualify) });
+        const views = buildSidebar({ project: group.project, expandedIds: group.expandedIds }).find((section) => section.kind === 'views')!;
+        sections.push({ ...views, id: group.key, group, rows: group.collapsed ? [] : views.rows.map((row) => qualify(group, row)) });
     }
-    return [
-        ...(waiting.length ? [{ id: 'needs-you', kind: 'needs-you' as const, label: i18next.t('shell:sidebar.needsYou'), rows: waiting, viewCount: 0 }] : []),
-        ...sections
-    ];
+    const waiting = needsYouSection(groups);
+    return waiting ? [waiting, ...sections] : sections;
+};
+
+/* The list of the project on screen, with "Needs you" drawn from every open project. The project on
+   screen keeps its own rows, read live and revealed in place; until it is among the groups, the
+   block keeps to what this window knows itself. */
+export const buildSidebarEverywhere = (input: SidebarInput, groups: readonly SidebarGroup[]): SidebarSection[] => {
+    const own = buildSidebar(input);
+    if (!groups.some((group) => group.active)) {
+        return own;
+    }
+    const views = own.filter((section) => section.kind !== 'needs-you');
+    const waiting = needsYouSection(groups, own.find((section) => section.kind === 'needs-you')?.rows ?? []);
+    return waiting ? [waiting, ...views] : views;
 };

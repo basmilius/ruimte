@@ -71,6 +71,10 @@
             "description": "Choose which projects appear in the sidebar and Needs attention, across all your machines.",
             "current": "Current project",
             "all-open": "All open projects"
+        },
+        "needsYou": {
+            "label": "Needs you from every open project",
+            "description": "Also list what waits for you in your other open projects, grouped by project."
         }
     },
     "sections": {

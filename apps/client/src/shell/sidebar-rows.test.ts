@@ -4,6 +4,7 @@ import {
     buildCombinedSidebar,
     type SidebarGroup,
     buildSidebar,
+    buildSidebarEverywhere,
     heaviestStatus,
     isSessionKind,
     rowAfterArrow,
@@ -238,7 +239,6 @@ describe('combined sidebar', () => {
         expect(new Set(rows.map((row) => row.rowId)).size).toBe(rows.length);
         expect(rows[0]!.target).toEqual({ endpointId: 'one', projectId: 'project', viewId: 'main', nodeId: 'same-node' });
         expect(rows[1]!.target?.endpointId).toBe('two');
-        expect(rows[0]!.type === 'node' && rows[0]!.location).toContain('one');
     });
 
     test('offline and failed projects never count cached waiting statuses as current', () => {
@@ -254,5 +254,41 @@ describe('combined sidebar', () => {
         const project = group('one');
         project.project.views = [view('main', [node('error', 'error'), node('running', 'running'), node('done', 'idle')])];
         expect(buildCombinedSidebar([project]).some((section) => section.kind === 'needs-you')).toBe(false);
+    });
+});
+
+describe('needs you over every project', () => {
+    const on = (endpointId: string, projectId: string, active = false): SidebarGroup => {
+        const base = group(endpointId);
+        return { ...base, key: JSON.stringify([endpointId, projectId]), active, summary: { ...base.summary, projectId, name: projectId } };
+    };
+
+    test('each project gets its own heading, the one on screen first', () => {
+        const [waiting] = buildCombinedSidebar([on('mac', 'site'), on('mac', 'app', true)]);
+        expect(waiting!.waiting!.map((part) => part.label)).toEqual(['app', 'site']);
+        expect(waiting!.rows.map((row) => row.rowId)).toEqual(waiting!.waiting!.flatMap((part) => part.rows.map((row) => row.rowId)));
+    });
+
+    test('a heading names the machine only when more than one machine has something waiting', () => {
+        const [waiting] = buildCombinedSidebar([on('mac', 'site'), on('linux', 'site')]);
+        expect(waiting!.waiting!.map((part) => part.label)).toEqual(['site · mac', 'site · linux']);
+    });
+
+    test('the project on screen alone reads as it always did, without a heading', () => {
+        const [waiting] = buildCombinedSidebar([on('mac', 'app', true), { ...on('mac', 'site'), project: project([frontend], null) }]);
+        expect(waiting!.waiting).toHaveLength(1);
+        expect(waiting!.waiting![0]!.label).toBeNull();
+    });
+
+    test('the project on screen keeps its own rows beside what waits elsewhere', () => {
+        const sections = buildSidebarEverywhere({ project: project([backend], null), expandedIds: new Set() }, [on('mac', 'app', true), on('mac', 'site')]);
+        expect(sections[0]!.rows.map((row) => row.rowId)).toEqual(['needs:claude', `${on('mac', 'site').key}:needs:same-node`]);
+        expect(sections[0]!.rows[0]!.target).toBeUndefined();
+        expect(sections[1]!.kind).toBe('views');
+    });
+
+    test('until the project on screen is among the groups, only its own rows show', () => {
+        const sections = buildSidebarEverywhere({ project: project([backend], null), expandedIds: new Set() }, [on('mac', 'site')]);
+        expect(sections[0]!.rows.map((row) => row.rowId)).toEqual(['needs:claude']);
     });
 });

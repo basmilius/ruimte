@@ -19,6 +19,8 @@
         "activeProject": "Actief",
         "waitingCount": "{{count}} wachtend",
         "newViewIn": "Nieuwe view in {{project}}",
+        "promptLoading": "Lezen wat het vraagt…",
+        "promptFailed": "Kon niet lezen wat het vraagt. Open het om te antwoorden.",
         "incomplete": "Needs attention is onvolledig.",
         "targetGone": "Deze view of sessie bestaat niet meer.",
         "source": {

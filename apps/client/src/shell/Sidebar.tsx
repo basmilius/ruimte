@@ -86,7 +86,8 @@ import { useServers } from '@/state/server';
 import { useSidebarGroups } from './sidebar-groups';
 import { useSidebarProjects } from './sidebar-projects';
 import { openSidebarTarget } from './sidebar-navigation';
-import { buildCombinedSidebar, type SidebarRow, type SidebarGroup } from './sidebar-rows';
+import { buildCombinedSidebar, buildSidebarEverywhere, type SidebarRow, type SidebarGroup } from './sidebar-rows';
+import { NeedsYouCard } from './NeedsYouCard';
 import { useUnsavedStoredPath } from '@/shell/panels/use-unsaved';
 
 /* How wide the list is when it is open. The inner column keeps this width while the wrapper
@@ -261,47 +262,42 @@ function NodeRow({ row, tabbable, onFocus, onArrow, snoozable }: RowProps & { ro
     }
     const menu = (
         <ContextMenu.Root>
-            <MaybeTooltip label={row.location}>
-                <ContextMenu.Trigger
-                    render={<ListRow variant="inset" render={<button />} />}
-                    data-sidebar-row={row.rowId}
-                    aria-current={selected ? 'true' : undefined}
-                    tabIndex={tabbable ? 0 : -1}
-                    className={clsx(ROW, row.viewName === null && 'pl-6', row.location && 'h-auto min-h-10', selected ? ROW_SELECTED : ROW_PLAIN)}
-                    onFocus={onFocus}
-                    onClick={() => (row.target ? void openSidebarTarget(row.target) : revealNode(node.id))}
-                    onDoubleClick={() => setRenaming(true)}
-                    onKeyDown={(e) => {
-                        arrowStep(e, onArrow);
-                        if (e.key === 'F2') {
-                            e.preventDefault();
-                            setRenaming(true);
-                        }
-                    }}
-                >
-                    <span className={ICON_SLOT}>
-                        <RowIcon id={node.id} kind={node.kind} provider={node.provider} />
-                    </span>
-                    <span className="min-w-0 truncate">
-                        <span className="block truncate">{node.kind === 'browser' ? title : node.title}</span>
-                        {row.location && <span className="block truncate text-xs text-text-faint">{row.location}</span>}
-                    </span>
-                    {!row.location && row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
-                    <span className="grow" />
-                    <span className={SNOOZE_MARKS}>
-                        {node.draft && (
-                            <Tooltip label={t('sidebar.unsentDraft')}>
-                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
-                            </Tooltip>
-                        )}
-                        {node.task && <TaskMark task={node.task} />}
-                        {node.finished && <UnseenMark />}
-                        {node.alert && <ProcessWarningMark />}
-                        {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
-                        <RowStatus status={node.status} working={node.working} />
-                    </span>
-                </ContextMenu.Trigger>
-            </MaybeTooltip>
+            <ContextMenu.Trigger
+                render={<ListRow variant="inset" render={<button />} />}
+                data-sidebar-row={row.rowId}
+                aria-current={selected ? 'true' : undefined}
+                tabIndex={tabbable ? 0 : -1}
+                className={clsx(ROW, row.viewName === null && 'pl-6', selected ? ROW_SELECTED : ROW_PLAIN)}
+                onFocus={onFocus}
+                onClick={() => (row.target ? void openSidebarTarget(row.target) : revealNode(node.id))}
+                onDoubleClick={() => setRenaming(true)}
+                onKeyDown={(e) => {
+                    arrowStep(e, onArrow);
+                    if (e.key === 'F2') {
+                        e.preventDefault();
+                        setRenaming(true);
+                    }
+                }}
+            >
+                <span className={ICON_SLOT}>
+                    <RowIcon id={node.id} kind={node.kind} provider={node.provider} />
+                </span>
+                <span className="min-w-0 truncate">{node.kind === 'browser' ? title : node.title}</span>
+                {row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
+                <span className="grow" />
+                <span className={SNOOZE_MARKS}>
+                    {node.draft && (
+                        <Tooltip label={t('sidebar.unsentDraft')}>
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
+                        </Tooltip>
+                    )}
+                    {node.task && <TaskMark task={node.task} />}
+                    {node.finished && <UnseenMark />}
+                    {node.alert && <ProcessWarningMark />}
+                    {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
+                    <RowStatus status={node.status} working={node.working} />
+                </span>
+            </ContextMenu.Trigger>
             <NodeMenuPopup
                 id={node.id}
                 onRename={() => setRenaming(true)}
@@ -682,7 +678,7 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: Ro
     const label = view?.name ?? item?.title ?? '';
     const status = row.type === 'view' ? row.status : row.node.status;
     const button = (
-        <MaybeTooltip label={row.type === 'node' ? row.location : label}>
+        <MaybeTooltip label={row.type === 'node' ? null : label}>
             <ListRow
                 variant="inset"
                 render={<button type="button" />}
@@ -709,8 +705,7 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: Ro
                     ROW,
                     'focus-visible:outline-2 focus-visible:outline-accent',
                     inert ? 'cursor-default text-text-faint' : ROW_PLAIN,
-                    row.type === 'node' && row.viewName === null && 'pl-6',
-                    row.type === 'node' && row.location && 'h-auto min-h-10'
+                    row.type === 'node' && row.viewName === null && 'pl-6'
                 )}
             >
                 {view?.kind === 'separator' ? (
@@ -740,10 +735,9 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: Ro
                                 <RowIcon id={item.id} kind={item.kind} provider={item.provider} />
                             ) : null}
                         </span>
-                        <span className="min-w-0 grow">
-                            <span className="block truncate">{label || t('sidebar.noViews')}</span>
-                            {row.type === 'node' && row.location && <span className="block truncate text-xs text-text-faint">{row.location}</span>}
-                        </span>
+                        <span className="min-w-0 truncate">{label || t('sidebar.noViews')}</span>
+                        {row.type === 'node' && row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
+                        <span className="grow" />
                         <span className={SNOOZE_MARKS}>
                             {group.state === 'ready' && <RowStatus status={status} working={undefined} />}
                             {view?.shared && <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />}
@@ -766,6 +760,7 @@ export function Sidebar() {
     const { t } = useTranslation('shell');
     const source = useSidebarSource();
     const combined = useSettings((s) => s.sidebarScope === 'all-open');
+    const everywhere = useSettings((s) => s.needsYouAllProjects);
     const currentProject = useProject((s) => s.current);
     const shared = useDocument(useShallow((state) => state.shared));
     const flags = useDocument((state) => state.flags);
@@ -841,8 +836,12 @@ export function Sidebar() {
             useUi.getState().setSidebarExpanded([activeViewId]);
         }
     }, [expanded, activeViewId]);
-    const { groups, incomplete } = useSidebarGroups(combined, project, expandedIds);
-    const sections = combined ? buildCombinedSidebar(groups) : buildSidebar({ project, expandedIds });
+    const { groups, incomplete } = useSidebarGroups(combined || everywhere, project, expandedIds);
+    const sections = combined
+        ? buildCombinedSidebar(groups)
+        : everywhere
+          ? buildSidebarEverywhere({ project, expandedIds }, groups)
+          : buildSidebar({ project, expandedIds });
     const rows = rowOrder(sections);
     const roving = rovingId !== null && rows.includes(rovingId) ? rovingId : (rows[0] ?? null);
     const empty = !combined && project.views.length === 0;
@@ -898,6 +897,25 @@ export function Sidebar() {
         void newFileViewsAfter(paths, after);
     };
 
+    const waitingRow = (row: SidebarRow): ReactNode => {
+        if (row.type !== 'node') {
+            return null;
+        }
+        const target = row.target;
+        const owner = target ? groups.find((group) => group.endpointId === target.endpointId && group.summary.projectId === target.projectId) : undefined;
+        const common = { row, snoozable: true, tabbable: row.rowId === roving, onFocus: () => setRovingId(row.rowId), onArrow: moveFocus };
+        return (
+            <NeedsYouCard
+                key={row.rowId}
+                endpointId={target?.endpointId ?? endpointId}
+                node={row.node}
+                onOpen={() => (target ? void openSidebarTarget(target) : revealNode(row.node.id))}
+            >
+                {owner && !owner.active ? <BackgroundRow {...common} group={owner} /> : <NodeRow {...common} />}
+            </NeedsYouCard>
+        );
+    };
+
     const moveFocus = (delta: -1 | 1): void => {
         const next = rowAfterArrow(rows, roving, delta);
         if (next === null) {
@@ -934,7 +952,7 @@ export function Sidebar() {
                         listHadFocus.current = event.currentTarget.contains(event.relatedTarget as Node | null);
                     }}
                 >
-                    {combined && incomplete.length > 0 && (
+                    {(combined || everywhere) && incomplete.length > 0 && (
                         <div className="mb-3 px-2 text-xs text-text-muted" role="status">
                             <p>{t('sidebar.incomplete')}</p>
                             {incomplete.map(({ label, state }) => (
@@ -1028,72 +1046,80 @@ export function Sidebar() {
                                             <span className="ml-auto tabular-nums">{section.rows.length}</span>
                                         </SectionLabel>
                                     )}
-                                    {section.rows.map((row) => {
-                                        const owner = row.target
-                                            ? groups.find(
-                                                  (group) => group.endpointId === row.target!.endpointId && group.summary.projectId === row.target!.projectId
-                                              )
-                                            : undefined;
-                                        if (owner && !owner.active) {
-                                            return (
-                                                <BackgroundRow
-                                                    key={row.rowId}
-                                                    row={row}
-                                                    group={owner}
-                                                    snoozable={section.kind === 'needs-you'}
-                                                    tabbable={row.rowId === roving}
-                                                    onFocus={() => setRovingId(row.rowId)}
-                                                    onArrow={moveFocus}
-                                                />
-                                            );
-                                        }
-                                        if (row.type === 'node') {
-                                            return (
-                                                <NodeRow
-                                                    key={row.rowId}
-                                                    row={row}
-                                                    snoozable={section.kind === 'needs-you'}
-                                                    tabbable={row.rowId === roving}
-                                                    onFocus={() => setRovingId(row.rowId)}
-                                                    onArrow={moveFocus}
-                                                />
-                                            );
-                                        }
-                                        const shared = {
-                                            row,
-                                            tabbable: row.rowId === roving,
-                                            onFocus: () => setRovingId(row.rowId),
-                                            onArrow: moveFocus,
-                                            onDelete: () => askDeleteView(row.view.id),
-                                            onDrag: (viewId: string | null, transfer?: DataTransfer) =>
-                                                onDrag(viewId === null ? null : { sectionId: section.id, viewId }, transfer)
-                                        };
-                                        return (
-                                            <Fragment key={row.rowId}>
-                                                {takesDrop && insertAt === row.index && <div className={INSERT_LINE} />}
-                                                {row.view.kind === 'separator' ? (
-                                                    <SeparatorRow {...shared} />
-                                                ) : row.view.kind === 'subheader' ? (
-                                                    <SubheaderRow {...shared} />
-                                                ) : row.view.kind === 'unknown' ? (
-                                                    <UnknownViewRow {...shared} />
-                                                ) : (
-                                                    <ViewRow
-                                                        {...shared}
-                                                        onToggle={() => {
-                                                            const next = new Set(expandedIds);
-                                                            if (row.expanded) {
-                                                                next.delete(row.view.id);
-                                                            } else {
-                                                                next.add(row.view.id);
-                                                            }
-                                                            useUi.getState().setSidebarExpanded([...next]);
-                                                        }}
-                                                    />
-                                                )}
-                                            </Fragment>
-                                        );
-                                    })}
+                                    {section.waiting
+                                        ? section.waiting.map((part) => (
+                                              <Fragment key={part.key}>
+                                                  {part.label !== null && <div className="truncate px-2 pt-2 pb-0.5 text-xs text-text-muted">{part.label}</div>}
+                                                  {part.rows.map(waitingRow)}
+                                              </Fragment>
+                                          ))
+                                        : section.rows.map((row) => {
+                                              const owner = row.target
+                                                  ? groups.find(
+                                                        (group) =>
+                                                            group.endpointId === row.target!.endpointId && group.summary.projectId === row.target!.projectId
+                                                    )
+                                                  : undefined;
+                                              if (owner && !owner.active) {
+                                                  return (
+                                                      <BackgroundRow
+                                                          key={row.rowId}
+                                                          row={row}
+                                                          group={owner}
+                                                          snoozable={false}
+                                                          tabbable={row.rowId === roving}
+                                                          onFocus={() => setRovingId(row.rowId)}
+                                                          onArrow={moveFocus}
+                                                      />
+                                                  );
+                                              }
+                                              if (row.type === 'node') {
+                                                  return (
+                                                      <NodeRow
+                                                          key={row.rowId}
+                                                          row={row}
+                                                          snoozable={false}
+                                                          tabbable={row.rowId === roving}
+                                                          onFocus={() => setRovingId(row.rowId)}
+                                                          onArrow={moveFocus}
+                                                      />
+                                                  );
+                                              }
+                                              const shared = {
+                                                  row,
+                                                  tabbable: row.rowId === roving,
+                                                  onFocus: () => setRovingId(row.rowId),
+                                                  onArrow: moveFocus,
+                                                  onDelete: () => askDeleteView(row.view.id),
+                                                  onDrag: (viewId: string | null, transfer?: DataTransfer) =>
+                                                      onDrag(viewId === null ? null : { sectionId: section.id, viewId }, transfer)
+                                              };
+                                              return (
+                                                  <Fragment key={row.rowId}>
+                                                      {takesDrop && insertAt === row.index && <div className={INSERT_LINE} />}
+                                                      {row.view.kind === 'separator' ? (
+                                                          <SeparatorRow {...shared} />
+                                                      ) : row.view.kind === 'subheader' ? (
+                                                          <SubheaderRow {...shared} />
+                                                      ) : row.view.kind === 'unknown' ? (
+                                                          <UnknownViewRow {...shared} />
+                                                      ) : (
+                                                          <ViewRow
+                                                              {...shared}
+                                                              onToggle={() => {
+                                                                  const next = new Set(expandedIds);
+                                                                  if (row.expanded) {
+                                                                      next.delete(row.view.id);
+                                                                  } else {
+                                                                      next.add(row.view.id);
+                                                                  }
+                                                                  useUi.getState().setSidebarExpanded([...next]);
+                                                              }}
+                                                          />
+                                                      )}
+                                                  </Fragment>
+                                              );
+                                          })}
                                     {takesDrop && insertAt === section.viewCount && <div className={INSERT_LINE} />}
                                 </div>
                             );

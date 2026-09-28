@@ -19,6 +19,8 @@
         "activeProject": "Active",
         "waitingCount": "{{count}} waiting",
         "newViewIn": "New view in {{project}}",
+        "promptLoading": "Reading what it asks…",
+        "promptFailed": "Could not read what it asks. Open it to answer.",
         "incomplete": "Needs attention is incomplete.",
         "targetGone": "This view or session no longer exists.",
         "source": {

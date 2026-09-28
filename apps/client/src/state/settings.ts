@@ -72,6 +72,8 @@ export const FILES_TAB_LIMIT_RANGE = { min: 1, max: 20, step: 1 } as const;
 
 export interface Settings {
     sidebarScope: 'current' | 'all-open';
+    /* "Needs you" lists what waits in every open project, not only the one on screen. The combined sidebar always does. */
+    needsYouAllProjects: boolean;
     /* One of the node accents. Blue is the brand's own and the one a fresh client starts on. */
     accent: AccentId;
     font: MonoFontId;
@@ -162,6 +164,7 @@ interface SettingsStore extends Settings {
 
 const DEFAULT_SETTINGS: Settings = {
     sidebarScope: 'current',
+    needsYouAllProjects: true,
     accent: 'blue',
     font: 'system',
     fontSize: 13,
@@ -207,6 +210,7 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     ...DEFAULT_SETTINGS,
     ...stored,
     sidebarScope: stored.sidebarScope === 'all-open' ? 'all-open' : 'current',
+    needsYouAllProjects: stored.needsYouAllProjects !== false,
     fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
     interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize),
     filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
@@ -293,6 +297,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
         update(patch) {
             const {
                 sidebarScope,
+                needsYouAllProjects,
                 accent,
                 font,
                 fontSize,
@@ -326,6 +331,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
             } = get();
             const next: Settings = {
                 sidebarScope,
+                needsYouAllProjects,
                 accent,
                 font,
                 fontSize,

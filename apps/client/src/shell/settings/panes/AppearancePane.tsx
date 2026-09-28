@@ -178,6 +178,7 @@ export function AppearancePane() {
     const fontSize = useSettings((s) => s.fontSize);
     const interfaceFontSize = useSettings((s) => s.interfaceFontSize);
     const sidebarScope = useSettings((s) => s.sidebarScope);
+    const needsYouAllProjects = useSettings((s) => s.needsYouAllProjects);
     const dockAutoHide = useSettings((s) => s.dockAutoHide);
     const update = useSettings((s) => s.update);
 
@@ -237,6 +238,20 @@ export function AppearancePane() {
                         />
                     }
                 />
+                {sidebarScope === 'current' && (
+                    <SettingsRow
+                        searchId="appearance.needsYou"
+                        label={t('appearance.needsYou.label')}
+                        description={t('appearance.needsYou.description')}
+                        control={
+                            <Switch
+                                checked={needsYouAllProjects}
+                                onCheckedChange={(checked) => update({ needsYouAllProjects: checked })}
+                                label={t('appearance.needsYou.label')}
+                            />
+                        }
+                    />
+                )}
             </SettingsSection>
             <SettingsSection title={t('appearance.languageRegion.title')}>
                 <LanguageRow />

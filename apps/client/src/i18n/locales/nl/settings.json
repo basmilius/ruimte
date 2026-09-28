@@ -71,6 +71,10 @@
             "description": "Kies welke projecten de sidebar en Needs attention tonen, over al je machines.",
             "current": "Huidig project",
             "all-open": "Alle open projecten"
+        },
+        "needsYou": {
+            "label": "Wacht op jou uit elk open project",
+            "description": "Toon ook wat in je andere open projecten op je wacht, gegroepeerd per project."
         }
     },
     "sections": {
