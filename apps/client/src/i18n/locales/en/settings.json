@@ -16,10 +16,6 @@
         },
         "interface": {
             "title": "Interface",
-            "fontSize": {
-                "label": "Interface font size",
-                "description": "Scales text and spacing everywhere except terminals and code."
-            },
             "dock": {
                 "label": "Hide the dock",
                 "description": "The bar under a canvas or drawing hides until the pointer nears the bottom edge."
@@ -39,15 +35,28 @@
         "languageRegion": {
             "title": "Language and region"
         },
-        "terminal": {
-            "title": "Terminal",
-            "font": {
-                "label": "Font",
+        "font": {
+            "title": "Font",
+            "interface": {
+                "label": "Interface font",
                 "description": "Falls back to the system font if it is not installed.",
                 "system": "System"
             },
-            "fontSize": {
-                "label": "Font size"
+            "interfaceSize": {
+                "label": "Interface font size",
+                "description": "Scales text and spacing everywhere except terminals and code."
+            },
+            "mono": {
+                "label": "Monospace font",
+                "description": "For terminals and code. Falls back to the system font if it is not installed.",
+                "system": "System"
+            },
+            "terminalSize": {
+                "label": "Terminal font size"
+            },
+            "ligatures": {
+                "label": "Ligatures",
+                "description": "Draws => and !== as one symbol in files, the editor, diffs and chats."
             }
         },
         "code": {

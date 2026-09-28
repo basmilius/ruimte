@@ -18,6 +18,16 @@ export const MONO_FONTS = [
 
 export type MonoFontId = (typeof MONO_FONTS)[number]['id'];
 
+/* Installed faces only: Geist is bundled for the wordmark alone. */
+export const INTERFACE_FONTS = [
+    { id: 'system', label: 'System', stack: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif' },
+    { id: 'inter', label: 'Inter', stack: '"Inter", "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+    { id: 'plex', label: 'IBM Plex Sans', stack: '"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+    { id: 'helvetica', label: 'Helvetica Neue', stack: '"Helvetica Neue", Helvetica, Arial, sans-serif' }
+] as const;
+
+export type InterfaceFontId = (typeof INTERFACE_FONTS)[number]['id'];
+
 const WORKTREE_MERGE_STRATEGIES: readonly WorktreeMergeStrategy[] = WorktreeMergeStrategySchema.options;
 
 /*
@@ -76,6 +86,7 @@ export interface Settings {
     needsYouAllProjects: boolean;
     /* One of the node accents. Blue is the brand's own and the one a fresh client starts on. */
     accent: AccentId;
+    interfaceFont: InterfaceFontId;
     font: MonoFontId;
     /* Terminal font size in px; every terminal refits when it changes. */
     fontSize: number;
@@ -97,6 +108,8 @@ export interface Settings {
     codeThemeDark: string;
     /* Whether a long line of code wraps in the viewer, the editor and a diff. */
     codeWrap: boolean;
+    /* Whether a font draws `=>` or `!==` as one glyph. Off sets the whole document, since the diffs draw in a shadow root that only inheritance reaches. */
+    codeLigatures: boolean;
     /* Whether a diff draws the two sides next to each other or one patch under the other. */
     diffLayout: 'stacked' | 'split';
     /* Whether a diff counts and shows changes that are whitespace alone. */
@@ -166,6 +179,7 @@ const DEFAULT_SETTINGS: Settings = {
     sidebarScope: 'current',
     needsYouAllProjects: true,
     accent: 'blue',
+    interfaceFont: 'system',
     font: 'system',
     fontSize: 13,
     interfaceFontSize: 15,
@@ -175,6 +189,7 @@ const DEFAULT_SETTINGS: Settings = {
     codeThemeLight: 'ruimte-light',
     codeThemeDark: 'ruimte-dark',
     codeWrap: false,
+    codeLigatures: true,
     diffLayout: 'stacked',
     diffWhitespace: true,
     worktreeMergeStrategy: 'squash',
@@ -219,6 +234,7 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     codeThemeLight: codeThemeFrom(stored.codeThemeLight, 'light', DEFAULT_SETTINGS.codeThemeLight),
     codeThemeDark: codeThemeFrom(stored.codeThemeDark, 'dark', DEFAULT_SETTINGS.codeThemeDark),
     codeWrap: stored.codeWrap === true,
+    codeLigatures: stored.codeLigatures !== false,
     // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
     accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
     // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
@@ -280,11 +296,22 @@ const apply = (settings: Settings): void => {
         root.setProperty('--accent-soft', `color-mix(in srgb, ${accent} 16%, var(--surface))`);
         root.setProperty('--term-cursor', accent);
     }
+    const interfaceFont = INTERFACE_FONTS.find((entry) => entry.id === settings.interfaceFont);
+    if (interfaceFont && interfaceFont.id !== 'system') {
+        root.setProperty('--font-sans', interfaceFont.stack);
+    } else {
+        root.removeProperty('--font-sans');
+    }
     const font = MONO_FONTS.find((entry) => entry.id === settings.font);
     if (font && font.id !== 'system') {
         root.setProperty('--font-mono', font.stack);
     } else {
         root.removeProperty('--font-mono');
+    }
+    if (settings.codeLigatures) {
+        root.removeProperty('font-variant-ligatures');
+    } else {
+        root.setProperty('font-variant-ligatures', 'none');
     }
 };
 
@@ -299,6 +326,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 sidebarScope,
                 needsYouAllProjects,
                 accent,
+                interfaceFont,
                 font,
                 fontSize,
                 interfaceFontSize,
@@ -308,6 +336,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeThemeLight,
                 codeThemeDark,
                 codeWrap,
+                codeLigatures,
                 diffLayout,
                 diffWhitespace,
                 worktreeMergeStrategy,
@@ -333,6 +362,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 sidebarScope,
                 needsYouAllProjects,
                 accent,
+                interfaceFont,
                 font,
                 fontSize,
                 interfaceFontSize,
@@ -342,6 +372,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeThemeLight,
                 codeThemeDark,
                 codeWrap,
+                codeLigatures,
                 diffLayout,
                 diffWhitespace,
                 worktreeMergeStrategy,

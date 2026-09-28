@@ -2,13 +2,14 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentColor, accentLabel } from '@/canvas/accents';
 import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@basmilius/react-ui/format';
-import { AccentSwatches, Stepper, Switch, Select } from '@basmilius/react-ui';
+import { AccentSwatches, Switch, Select } from '@basmilius/react-ui';
 import { SettingsRow } from '@basmilius/react-ui/settings';
 import { chooseLanguage, chooseRegion } from '@/i18n';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
 import { CodeSection } from '@/shell/settings/panes/CodeSection';
+import { FontSection } from '@/shell/settings/panes/FontSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings } from '@/state/settings';
+import { useSettings } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
 
 /* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */
@@ -91,20 +92,6 @@ function AccentRow() {
     );
 }
 
-function TerminalPreview({ fontSize }: { fontSize: number }) {
-    return (
-        <div
-            className="overflow-x-auto rounded-lg bg-term-bg px-3.5 py-3 font-mono leading-normal whitespace-pre text-term-fg"
-            style={{ fontSize: `${fontSize}px` }}
-            aria-hidden
-        >
-            <span className="text-term-green">~/Development/ruimte</span> <span className="text-term-blue">main</span> ❯ bun run dev
-            {'\n'}
-            <span className="text-term-dim">ready in 412 ms</span>
-        </div>
-    );
-}
-
 /* The language the interface is written in. A language Ruimte does not speak yet is not on the
    list, so what the system asks for falls back to English rather than to half a translation. */
 function LanguageRow() {
@@ -174,9 +161,6 @@ function RegionRow() {
 
 export function AppearancePane() {
     const { t } = useTranslation('settings');
-    const font = useSettings((s) => s.font);
-    const fontSize = useSettings((s) => s.fontSize);
-    const interfaceFontSize = useSettings((s) => s.interfaceFontSize);
     const sidebarScope = useSettings((s) => s.sidebarScope);
     const needsYouAllProjects = useSettings((s) => s.needsYouAllProjects);
     const dockAutoHide = useSettings((s) => s.dockAutoHide);
@@ -196,22 +180,6 @@ export function AppearancePane() {
                 />
             </SettingsSection>
             <SettingsSection title={t('appearance.interface.title')}>
-                <SettingsRow
-                    searchId="appearance.interface.fontSize"
-                    label={t('appearance.interface.fontSize.label')}
-                    description={t('appearance.interface.fontSize.description')}
-                    control={
-                        <Stepper
-                            value={interfaceFontSize}
-                            min={INTERFACE_FONT_SIZE_RANGE.min}
-                            max={INTERFACE_FONT_SIZE_RANGE.max}
-                            step={INTERFACE_FONT_SIZE_RANGE.step}
-                            unit=" px"
-                            label={t('appearance.interface.fontSize.label')}
-                            onValueChange={(value) => update({ interfaceFontSize: value })}
-                        />
-                    }
-                />
                 <SettingsRow
                     searchId="appearance.interface.dock"
                     label={t('appearance.interface.dock.label')}
@@ -257,38 +225,7 @@ export function AppearancePane() {
                 <LanguageRow />
                 <RegionRow />
             </SettingsSection>
-            <SettingsSection title={t('appearance.terminal.title')}>
-                <SettingsRow
-                    searchId="appearance.terminal.font"
-                    label={t('appearance.terminal.font.label')}
-                    description={t('appearance.terminal.font.description')}
-                    control={
-                        <>
-                            <Select
-                                value={font}
-                                label={t('appearance.terminal.font.label')}
-                                align="end"
-                                items={MONO_FONTS.map((entry) => ({
-                                    value: entry.id,
-                                    label: entry.id === 'system' ? t('appearance.terminal.font.system') : entry.label
-                                }))}
-                                onValueChange={(value) => update({ font: value })}
-                            />
-                            <Stepper
-                                value={fontSize}
-                                min={FONT_SIZE_RANGE.min}
-                                max={FONT_SIZE_RANGE.max}
-                                step={FONT_SIZE_RANGE.step}
-                                unit=" px"
-                                label={t('appearance.terminal.fontSize.label')}
-                                onValueChange={(value) => update({ fontSize: value })}
-                            />
-                        </>
-                    }
-                >
-                    <TerminalPreview fontSize={fontSize} />
-                </SettingsRow>
-            </SettingsSection>
+            <FontSection />
             <CodeSection />
         </>
     );

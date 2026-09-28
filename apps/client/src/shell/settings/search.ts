@@ -29,12 +29,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     { id: 'appearance.theme', section: 'appearance', label: 'settings:appearance.theme.label', description: 'settings:appearance.theme.description' },
     { id: 'appearance.accent', section: 'appearance', label: 'settings:appearance.accent.label', description: 'settings:appearance.accent.description' },
     {
-        id: 'appearance.interface.fontSize',
-        section: 'appearance',
-        label: 'settings:appearance.interface.fontSize.label',
-        description: 'settings:appearance.interface.fontSize.description'
-    },
-    {
         id: 'appearance.interface.dock',
         section: 'appearance',
         label: 'settings:appearance.interface.dock.label',
@@ -50,10 +44,29 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     { id: 'appearance.language', section: 'appearance', label: 'settings:appearance.language.label', description: 'settings:appearance.language.description' },
     { id: 'appearance.region', section: 'appearance', label: 'settings:appearance.region.label', description: 'settings:appearance.region.description' },
     {
-        id: 'appearance.terminal.font',
+        id: 'appearance.font.interface',
         section: 'appearance',
-        label: 'settings:appearance.terminal.font.label',
-        description: 'settings:appearance.terminal.font.description'
+        label: 'settings:appearance.font.interface.label',
+        description: 'settings:appearance.font.interface.description'
+    },
+    {
+        id: 'appearance.font.interfaceSize',
+        section: 'appearance',
+        label: 'settings:appearance.font.interfaceSize.label',
+        description: 'settings:appearance.font.interfaceSize.description'
+    },
+    {
+        id: 'appearance.font.mono',
+        section: 'appearance',
+        label: 'settings:appearance.font.mono.label',
+        description: 'settings:appearance.font.mono.description'
+    },
+    { id: 'appearance.font.terminalSize', section: 'appearance', label: 'settings:appearance.font.terminalSize.label' },
+    {
+        id: 'appearance.font.ligatures',
+        section: 'appearance',
+        label: 'settings:appearance.font.ligatures.label',
+        description: 'settings:appearance.font.ligatures.description'
     },
     {
         id: 'appearance.code.light',

@@ -49,6 +49,7 @@ export interface EditorFont {
     fontFamily?: string;
     fontSize?: number;
     lineHeight?: number;
+    fontLigatures?: boolean;
 }
 
 const hex = (value: number): string => value.toString(16).padStart(2, '0');
@@ -90,13 +91,14 @@ const pixels = (style: CSSStyleDeclaration, token: string): number | undefined =
     return Number.isFinite(value) ? value : undefined;
 };
 
-/* The viewer's code face: `--font-mono`, which the terminal font setting overrides, at `--text-code`. */
+/* The viewer's code face: `--font-mono`, which the terminal font setting overrides, at `--text-code`, with ligatures unless the page turned them off. */
 export const readEditorFont = (element: HTMLElement): EditorFont => {
     const style = getComputedStyle(element);
     const family = style.getPropertyValue('--font-mono').trim();
     return {
         fontFamily: family === '' ? undefined : family,
         fontSize: pixels(style, '--text-code'),
-        lineHeight: pixels(style, '--text-code--line-height')
+        lineHeight: pixels(style, '--text-code--line-height'),
+        fontLigatures: style.fontVariantLigatures !== 'none'
     };
 };

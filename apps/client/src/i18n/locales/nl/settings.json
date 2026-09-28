@@ -16,10 +16,6 @@
         },
         "interface": {
             "title": "Interface",
-            "fontSize": {
-                "label": "Tekstgrootte interface",
-                "description": "Schaalt tekst en ruimte overal, behalve in terminals en code."
-            },
             "dock": {
                 "label": "Dock verbergen",
                 "description": "De balk onder een canvas of tekening blijft weg tot de muis de onderrand nadert."
@@ -39,15 +35,28 @@
         "languageRegion": {
             "title": "Taal en regio"
         },
-        "terminal": {
-            "title": "Terminal",
-            "font": {
-                "label": "Lettertype",
+        "font": {
+            "title": "Lettertype",
+            "interface": {
+                "label": "Lettertype interface",
                 "description": "Valt terug op het systeemlettertype als het niet is geïnstalleerd.",
                 "system": "Systeem"
             },
-            "fontSize": {
-                "label": "Tekstgrootte"
+            "interfaceSize": {
+                "label": "Tekstgrootte interface",
+                "description": "Schaalt tekst en ruimte overal, behalve in terminals en code."
+            },
+            "mono": {
+                "label": "Monospace-lettertype",
+                "description": "Voor terminals en code. Valt terug op het systeemlettertype als het niet is geïnstalleerd.",
+                "system": "Systeem"
+            },
+            "terminalSize": {
+                "label": "Tekstgrootte terminal"
+            },
+            "ligatures": {
+                "label": "Ligaturen",
+                "description": "Tekent => en !== als één teken in bestanden, de editor, diffs en chats."
             }
         },
         "code": {
