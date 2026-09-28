@@ -14,7 +14,7 @@ export const SOCKET_BACKPRESSURE_LIMIT = 16 * 1_048_576;
 
 export interface BackpressuredSocket {
     // Bun answers 0 when the frame was dropped, -1 when it was queued under backpressure, else the byte count.
-    send(data: string): number;
+    send(data: string | Uint8Array): number;
     getBufferedAmount(): number;
 }
 
@@ -96,6 +96,11 @@ export class OutputGate {
         this.write(frame, sessionId);
     }
 
+    /* A binary reply is never dropped, as no reply is. */
+    sendBinary(frame: Uint8Array): void {
+        this.write(frame, null);
+    }
+
     /* Bun's `drain`: the socket has room again, so the sessions that lost output get their screen. */
     onDrain(): void {
         if (!this.paused || this.socket.getBufferedAmount() > this.lowWaterMark) {
@@ -160,8 +165,8 @@ export class OutputGate {
         }
     }
 
-    private write(frame: ServerFrame, sessionId: string | null): number {
-        const status = this.socket.send(JSON.stringify(frame));
+    private write(frame: ServerFrame | Uint8Array, sessionId: string | null): number {
+        const status = this.socket.send(frame instanceof Uint8Array ? frame : JSON.stringify(frame));
         if (status === 0 && sessionId !== null) {
             // Dropped rather than queued, so this session has a hole again whatever the queue does next.
             this.stale.add(sessionId);

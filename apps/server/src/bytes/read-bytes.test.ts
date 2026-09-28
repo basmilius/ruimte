@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { BYTES_CHUNK_MAX, type ByteResource } from '@ruimte/contracts';
+import { BYTES_CHUNK_MAX, decodeBytesReply, type ByteResource } from '@ruimte/contracts';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
 import { readMedia } from '../fs/read.ts';
 import { registerBytesHandlers } from '../handlers/bytes.ts';
@@ -43,7 +43,7 @@ const readAll = async (resource: ByteResource): Promise<Uint8Array> => {
         const piece = await readBytes(sources, { resource, offset, length: BYTES_CHUNK_MAX });
         size = piece.size;
         versions.add(piece.version);
-        const bytes = Buffer.from(piece.data, 'base64');
+        const bytes = Buffer.from(piece.bytes);
         parts.push(bytes);
         offset += bytes.length;
     }
@@ -64,7 +64,7 @@ describe('readBytes', () => {
 
     test('a piece is no larger than asked and says what it is', async () => {
         const piece = await readBytes(sources, { resource: { kind: 'file', path: join(folder, 'picture.gif') }, offset: 10, length: 100 });
-        expect(Buffer.from(piece.data, 'base64')).toEqual(Buffer.from(picture.subarray(10, 110)));
+        expect(Buffer.from(piece.bytes)).toEqual(Buffer.from(picture.subarray(10, 110)));
         expect(piece).toMatchObject({ mime: 'image/gif', size: picture.length, offset: 10 });
     });
 
@@ -91,7 +91,7 @@ describe('readBytes', () => {
         await truncate(path, 100 * 1024 * 1024);
         const piece = await readBytes(sources, { resource: { kind: 'file', path }, offset: 90 * 1024 * 1024, length: 10 });
         expect(piece).toMatchObject({ size: 100 * 1024 * 1024, offset: 90 * 1024 * 1024 });
-        expect(Buffer.from(piece.data, 'base64')).toHaveLength(10);
+        expect(Buffer.from(piece.bytes)).toHaveLength(10);
     });
 
     test('an offset past the end is refused', async () => {
@@ -110,5 +110,43 @@ describe('readBytes', () => {
             JSON.stringify({ id: '1', type: 'bytes.read', payload: { resource: { kind: 'file', path: join(folder, 'notes.txt') }, offset: 0, length: 10 } })
         );
         expect(frames[0]).toMatchObject({ id: '1', ok: false, error: { code: 'not-found' } });
+    });
+
+    const readRequest = (binary?: boolean): string =>
+        JSON.stringify({
+            id: '2',
+            type: 'bytes.read',
+            payload: { resource: { kind: 'file', path: join(folder, 'picture.gif') }, offset: 10, length: 100, binary }
+        });
+
+    test('a client that asks for a binary reply gets the bytes as they are, with the header in front', async () => {
+        const dispatcher = new Dispatcher();
+        registerBytesHandlers(dispatcher, sources);
+        const frames: unknown[] = [];
+        const binary: Uint8Array[] = [];
+        const client: ClientConnection = { id: 'c1', send: (frame) => frames.push(frame), sendBinary: (frame) => binary.push(frame) };
+        await dispatcher.handle(client, readRequest(true));
+        expect(frames).toEqual([]);
+        const reply = decodeBytesReply(binary[0]!);
+        expect(reply).toMatchObject({ id: '2', result: { mime: 'image/gif', size: picture.length, offset: 10 } });
+        expect(reply?.bytes).toEqual(picture.slice(10, 110));
+    });
+
+    test('a client that did not ask, or a channel without binary frames, gets base64 in JSON', async () => {
+        const dispatcher = new Dispatcher();
+        registerBytesHandlers(dispatcher, sources);
+        for (const [binary, sendBinary] of [
+            [undefined, true],
+            [true, false]
+        ] as const) {
+            const frames: Array<{ result?: { data?: string } }> = [];
+            const client: ClientConnection = {
+                id: 'c1',
+                send: (frame) => frames.push(frame as (typeof frames)[number]),
+                ...(sendBinary ? { sendBinary: () => undefined } : {})
+            };
+            await dispatcher.handle(client, readRequest(binary));
+            expect(Buffer.from(frames[0]?.result?.data ?? '', 'base64')).toEqual(Buffer.from(picture.subarray(10, 110)));
+        }
     });
 });

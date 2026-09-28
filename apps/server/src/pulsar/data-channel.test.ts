@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { DIRECT_PIECE_CHARS, splitFrame } from '@ruimte/contracts';
+import { BinaryFrameAssembler, DIRECT_BINARY_PIECE_BYTES, DIRECT_PIECE_CHARS, splitFrame } from '@ruimte/contracts';
 import { LOW_WATER_MARK } from '../backpressure.ts';
 import { AUTHENTICATED_FRAME_CHARS, directChannel, type RawDataChannel } from './data-channel.ts';
 
@@ -8,19 +8,19 @@ class FakeRawChannel implements RawDataChannel {
     readyState: RawDataChannel['readyState'] = 'open';
     bufferedAmount = 0;
     bufferedAmountLowThreshold = 0;
-    readonly sent: string[] = [];
+    readonly sent: Array<string | Uint8Array> = [];
     closeCalls = 0;
     throwOnSend = false;
     private readonly messageListeners: Array<(data: string | Uint8Array) => void> = [];
     private readonly stateListeners: Array<(state: RawDataChannel['readyState']) => void> = [];
     private readonly lowListeners: Array<() => void> = [];
 
-    send(data: string): void {
+    send(data: string | Uint8Array): void {
         if (this.throwOnSend) {
             throw new Error('Transport closed');
         }
         this.sent.push(data);
-        this.bufferedAmount += Buffer.byteLength(data);
+        this.bufferedAmount += typeof data === 'string' ? Buffer.byteLength(data) : data.byteLength;
     }
 
     close(): void {
@@ -66,6 +66,17 @@ class FakeRawChannel implements RawDataChannel {
 }
 
 describe('directChannel', () => {
+    test('a binary frame goes out in binary pieces the peer joins again, and counts its bytes', () => {
+        const raw = new FakeRawChannel();
+        const channel = directChannel(raw);
+        const frame = Uint8Array.from({ length: DIRECT_BINARY_PIECE_BYTES * 2 }, (_, index) => index % 251);
+        expect(channel.send(frame)).toBe(frame.byteLength);
+        expect(raw.sent).toHaveLength(3);
+        const assembler = new BinaryFrameAssembler();
+        const joined = raw.sent.map((piece) => assembler.push(piece as Uint8Array, Number.MAX_SAFE_INTEGER)).at(-1);
+        expect(joined).toEqual({ kind: 'frame', frame });
+    });
+
     test('send answers the bytes of the whole frame, never the undefined a DataChannel returns', () => {
         const raw = new FakeRawChannel();
         const channel = directChannel(raw);

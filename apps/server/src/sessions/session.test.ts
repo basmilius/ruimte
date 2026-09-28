@@ -77,7 +77,7 @@ describe('Session.snapshotFor', () => {
         const socket: BackpressuredSocket & { buffered: number } = {
             buffered: 0,
             send(data) {
-                frames.push(JSON.parse(data) as SessionEvent);
+                frames.push(JSON.parse(String(data)) as SessionEvent);
                 return 1;
             },
             getBufferedAmount() {

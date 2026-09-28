@@ -443,7 +443,7 @@ beforeAll(async () => {
         ...channel,
         send: (data) => {
             const status = channel.send(data);
-            if (status !== 0 && data.startsWith('{"type":"event","event":"session.output"')) {
+            if (status !== 0 && typeof data === 'string' && data.startsWith('{"type":"event","event":"session.output"')) {
                 outputFrames.set(name, (outputFrames.get(name) ?? 0) + 1);
             }
             if (status <= 0 && !pushedBackAt.has(name)) {

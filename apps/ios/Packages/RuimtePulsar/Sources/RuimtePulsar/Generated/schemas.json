@@ -28938,6 +28938,9 @@
         "type": "integer",
         "exclusiveMinimum": 0,
         "maximum": 262144
+      },
+      "binary": {
+        "type": "boolean"
       }
     },
     "required": [

@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises';
-import { type BytesReadPayload, type BytesReadResult, type ByteResource, type ChatAttachment } from '@ruimte/contracts';
+import { type BytesReadHeader, type BytesReadPayload, type ByteResource, type ChatAttachment } from '@ruimte/contracts';
 import { CodedError } from '@ruimte/agents/coded-error';
 
 type BytesErrorCode = 'not-found' | 'bad-offset';
@@ -29,13 +29,17 @@ const locate = async (sources: ByteSources, resource: ByteResource): Promise<{ p
     return media ? { path: resource.path, mime: media.mime } : null;
 };
 
+export interface BytesPieceRead extends BytesReadHeader {
+    bytes: Uint8Array;
+}
+
 /*
  * One piece of a resource. Every piece looks the resource up and stats it again, so the daemon holds
  * nothing between two pieces and a client that stops asking costs nothing; the version in each answer
  * is how the client notices a file that changed halfway. A file of any size is served: a piece reads
  * only its own slice, and a video player asks for the ranges it needs.
  */
-export const readBytes = async (sources: ByteSources, payload: BytesReadPayload): Promise<BytesReadResult> => {
+export const readBytes = async (sources: ByteSources, payload: BytesReadPayload): Promise<BytesPieceRead> => {
     const found = await locate(sources, payload.resource);
     const info = found ? await stat(found.path).catch(() => null) : null;
     if (!found || !info?.isFile()) {
@@ -45,12 +49,11 @@ export const readBytes = async (sources: ByteSources, payload: BytesReadPayload)
         throw new BytesError('bad-offset', `Offset ${payload.offset} is past the end of a file of ${info.size} bytes`);
     }
     const end = Math.min(payload.offset + payload.length, info.size);
-    const bytes = await Bun.file(found.path).slice(payload.offset, end).arrayBuffer();
     return {
         mime: found.mime,
         size: info.size,
         version: `${Math.trunc(info.mtimeMs)}-${info.size}`,
         offset: payload.offset,
-        data: Buffer.from(bytes).toString('base64')
+        bytes: new Uint8Array(await Bun.file(found.path).slice(payload.offset, end).arrayBuffer())
     };
 };

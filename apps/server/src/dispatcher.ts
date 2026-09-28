@@ -23,16 +23,27 @@ export interface ClientConnection {
     readonly id: string;
     readonly access?: ClientAccess;
     send(frame: ServerFrame): void;
+    // A channel that carries binary frames; a reply that asked for one goes out this way.
+    sendBinary?(frame: Uint8Array): void;
 }
 
 export const sendEvent = <E extends EventType>(client: ClientConnection, event: E, payload: EventMap[E]): void => {
     client.send({ type: 'event', event, payload });
 };
 
+/* A result that goes out as one binary frame, which only a handler whose client has `sendBinary` hands back. */
+export class BinaryReply {
+    readonly encode: (id: string) => Uint8Array;
+
+    constructor(encode: (id: string) => Uint8Array) {
+        this.encode = encode;
+    }
+}
+
 type Handler<T extends RequestType> = (
     payload: RequestMap[T]['payload'],
     client: ClientConnection
-) => RequestMap[T]['result'] | Promise<RequestMap[T]['result']>;
+) => RequestMap[T]['result'] | BinaryReply | Promise<RequestMap[T]['result'] | BinaryReply>;
 
 // Thrown by a handler to answer with a specific error code instead of a generic failure.
 export class RequestError extends CodedError {}
@@ -103,6 +114,10 @@ export class Dispatcher {
 
         try {
             const result = await handler(payloadParse.data, client);
+            if (result instanceof BinaryReply && client.sendBinary) {
+                client.sendBinary(result.encode(id));
+                return;
+            }
             client.send({ id, ok: true, result });
         } catch (e) {
             if (e instanceof RequestError) {

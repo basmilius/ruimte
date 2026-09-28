@@ -162,3 +162,64 @@ export class FrameAssembler {
         return { kind: 'frame', frame };
     }
 }
+
+/*
+ * A binary frame goes in pieces the same way, with its mark in the first byte. The marks are bytes no
+ * text piece starts with, so a text piece that arrives as a binary message still reads as text. A
+ * piece is at most 64 KiB, the least a peer of ours accepts.
+ */
+export const DIRECT_BINARY_PIECE_BYTES = 64 * 1024;
+
+const BINARY_MORE = 0x01;
+const BINARY_LAST = 0x02;
+
+export const isBinaryPiece = (piece: Uint8Array): boolean => piece[0] === BINARY_MORE || piece[0] === BINARY_LAST;
+
+export const splitBinaryFrame = (data: Uint8Array, pieceBytes: number = DIRECT_BINARY_PIECE_BYTES): Uint8Array<ArrayBuffer>[] => {
+    const bodyBytes = pieceBytes - 1;
+    const pieces: Uint8Array<ArrayBuffer>[] = [];
+    let start = 0;
+    do {
+        const end = Math.min(start + bodyBytes, data.byteLength);
+        const piece = new Uint8Array(1 + end - start);
+        piece[0] = end === data.byteLength ? BINARY_LAST : BINARY_MORE;
+        piece.set(data.subarray(start, end), 1);
+        pieces.push(piece);
+        start = end;
+    } while (start < data.byteLength);
+    return pieces;
+};
+
+export type AssembledBinaryPiece = { kind: 'frame'; frame: Uint8Array<ArrayBuffer> } | { kind: 'partial' } | { kind: 'invalid' };
+
+/* Joins the pieces of one binary frame again; a frame past `maxBytes` or a piece without its mark is invalid. */
+export class BinaryFrameAssembler {
+    private parts: Uint8Array[] = [];
+    private length = 0;
+
+    push(piece: Uint8Array, maxBytes: number): AssembledBinaryPiece {
+        if (!isBinaryPiece(piece)) {
+            return { kind: 'invalid' };
+        }
+        const body = piece.subarray(1);
+        this.length += body.byteLength;
+        if (this.length > maxBytes) {
+            this.parts = [];
+            this.length = 0;
+            return { kind: 'invalid' };
+        }
+        this.parts.push(body);
+        if (piece[0] === BINARY_MORE) {
+            return { kind: 'partial' };
+        }
+        const frame = new Uint8Array(this.length);
+        let offset = 0;
+        for (const part of this.parts) {
+            frame.set(part, offset);
+            offset += part.byteLength;
+        }
+        this.parts = [];
+        this.length = 0;
+        return { kind: 'frame', frame };
+    }
+}

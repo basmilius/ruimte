@@ -2,7 +2,7 @@ import { createCipheriv, createPrivateKey, createPublicKey, diffieHellman, hkdfS
 import { CameraSchema, CanvasNodeSchema, NodeKindSchema, PROJECT_VIEW_KINDS, ProjectViewSchema, ProjectCanvasViewSchema } from '../src/project.ts';
 import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
 import { RuntimeModeSchema } from '../src/model.ts';
-import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES } from '../src/bytes.ts';
+import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, BYTES_REPLY_KIND, BYTES_REPLY_MAX_BYTES } from '../src/bytes.ts';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { z } from 'zod';
@@ -201,6 +201,7 @@ for (const [name, schema] of Object.entries(schemas)) {
         declarations.set(clean, `public typealias ${clean} = ${type}`);
     }
 }
+const INT_CONSTANTS = new Set(['directPieceChars', 'directBinaryPieceBytes', 'bytesReplyKind', 'bytesReplyMaxBytes']);
 const constants = {
     protocolVersion: PROTOCOL_VERSION,
     bytesChunkMax: BYTES_CHUNK_MAX,
@@ -208,8 +209,11 @@ const constants = {
     pushMaxClockSkewMs: push.PUSH_MAX_CLOCK_SKEW_MS,
     pushHKDFSalt: push.PUSH_HKDF_SALT,
     bytesReadMaxBytes: BYTES_READ_MAX_BYTES,
+    bytesReplyKind: BYTES_REPLY_KIND,
+    bytesReplyMaxBytes: BYTES_REPLY_MAX_BYTES,
     directChannelLabel: direct.DIRECT_CHANNEL_LABEL,
     directPieceChars: direct.DIRECT_PIECE_CHARS,
+    directBinaryPieceBytes: direct.DIRECT_BINARY_PIECE_BYTES,
     directPingIdleMs: liveness.DIRECT_PING_IDLE_MS,
     directPingTimeoutMs: liveness.DIRECT_PING_TIMEOUT_MS,
     directPingTickMs: liveness.DIRECT_PING_TICK_MS,
@@ -220,7 +224,7 @@ const constants = {
 const constantSource = Object.entries(constants)
     .map(
         ([name, value]) =>
-            `    public static let ${name}: ${Array.isArray(value) ? '[String]' : typeof value === 'string' ? 'String' : name === 'protocolVersion' ? 'Int64' : name === 'directPieceChars' ? 'Int' : 'Double'} = ${JSON.stringify(value)}`
+            `    public static let ${name}: ${Array.isArray(value) ? '[String]' : typeof value === 'string' ? 'String' : name === 'protocolVersion' ? 'Int64' : INT_CONSTANTS.has(name) ? 'Int' : 'Double'} = ${JSON.stringify(value)}`
     )
     .join('\n');
 /*

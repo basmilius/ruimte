@@ -10,7 +10,7 @@ import type { SessionSink } from './sessions/manager.ts';
  */
 export interface ClientChannel {
     // Answers like Bun's `ServerWebSocket.send`: 0 when the frame was dropped, -1 when it was queued under backpressure, else the byte count.
-    send(data: string): number;
+    send(data: string | Uint8Array): number;
     // Bytes written but not yet on the wire; the output gate pauses a client above its high-water mark.
     bufferedAmount(): number;
     close(code: number, reason: string): void;
@@ -98,6 +98,9 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             access,
             send(frame: ServerFrame) {
                 gate.send(frame);
+            },
+            sendBinary(frame: Uint8Array) {
+                gate.sendBinary(frame);
             }
         };
         const sink: SessionSink = ({ event, payload }) => sendEvent(client, event, payload);

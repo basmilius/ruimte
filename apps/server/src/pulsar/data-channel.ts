@@ -1,4 +1,4 @@
-import { FrameAssembler, splitFrame } from '@ruimte/contracts';
+import { FrameAssembler, splitBinaryFrame, splitFrame } from '@ruimte/contracts';
 import type { RTCDataChannel } from 'werift';
 import { LOW_WATER_MARK } from '../backpressure.ts';
 import type { ClientChannel } from '../connection.ts';
@@ -10,7 +10,7 @@ export interface RawDataChannel {
     readonly readyState: 'connecting' | 'open' | 'closing' | 'closed';
     readonly bufferedAmount: number;
     bufferedAmountLowThreshold: number;
-    send(data: string): void;
+    send(data: string | Uint8Array): void;
     close(): void;
     onMessage(listener: (data: string | Uint8Array) => void): void;
     onState(listener: (state: RawDataChannel['readyState']) => void): void;
@@ -33,7 +33,7 @@ export const fromWerift = (channel: RTCDataChannel): RawDataChannel => ({
     set bufferedAmountLowThreshold(value: number) {
         channel.bufferedAmountLowThreshold = value;
     },
-    send: (data) => channel.send(data),
+    send: (data) => channel.send(typeof data === 'string' ? data : Buffer.from(data.buffer, data.byteOffset, data.byteLength)),
     close: () => channel.close(),
     onMessage: (listener) => {
         channel.onMessage.subscribe((data) => listener(data));
@@ -62,7 +62,7 @@ export interface DirectChannel extends ClientChannel {
 
 /*
  * A frame is split into pieces below the peer's max-message-size and joined again on arrival (see
- * `splitFrame`). The rest is shaped after Bun's socket, because the output gate reads it that way:
+ * `splitFrame` and `splitBinaryFrame`). The rest is shaped after Bun's socket, because the output gate reads it that way:
  * `send` answers the bytes of the whole frame once every piece is queued and 0 when the frame did
  * not go out, `bufferedAmount` is the channel's own, and a drain is the channel's
  * `bufferedamountlow`, which fires at the gate's low-water mark.
@@ -153,7 +153,7 @@ export const directChannel = (raw: RawDataChannel): DirectChannel => {
                 return 0;
             }
             try {
-                for (const piece of splitFrame(data)) {
+                for (const piece of typeof data === 'string' ? splitFrame(data) : splitBinaryFrame(data)) {
                     raw.send(piece);
                 }
             } catch (e) {
@@ -164,7 +164,7 @@ export const directChannel = (raw: RawDataChannel): DirectChannel => {
                 close();
                 return 0;
             }
-            return Buffer.byteLength(data);
+            return typeof data === 'string' ? Buffer.byteLength(data) : data.byteLength;
         },
         bufferedAmount: () => raw.bufferedAmount,
         // A DataChannel has no close code or reason on the wire; the peer only sees the channel end.

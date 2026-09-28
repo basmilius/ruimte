@@ -1,5 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { channelBinding, DIRECT_PIECE_CHARS, DirectProofFrameSchema, FrameAssembler, sdpFingerprints, splitFrame } from './direct.ts';
+import {
+    BinaryFrameAssembler,
+    channelBinding,
+    DIRECT_PIECE_CHARS,
+    DirectProofFrameSchema,
+    FrameAssembler,
+    isBinaryPiece,
+    sdpFingerprints,
+    splitBinaryFrame,
+    splitFrame
+} from './direct.ts';
 
 const reassemble = (pieces: string[], maxChars = Number.MAX_SAFE_INTEGER): string[] => {
     const assembler = new FrameAssembler();
@@ -71,4 +81,38 @@ test('a proof is either a key signature or a secret proof, nothing else', () => 
     expect(DirectProofFrameSchema.safeParse({ type: 'direct.key', challenge: 'c', publicKey: 'k', signature: 's' }).success).toBe(true);
     expect(DirectProofFrameSchema.safeParse({ type: 'direct.secret', challenge: 'c', proof: 'p' }).success).toBe(true);
     expect(DirectProofFrameSchema.safeParse({ type: 'direct.token', token: 't' }).success).toBe(false);
+});
+
+describe('binary pieces', () => {
+    const reassembleBinary = (pieces: Uint8Array[], maxBytes = Number.MAX_SAFE_INTEGER): Uint8Array[] => {
+        const assembler = new BinaryFrameAssembler();
+        return pieces.flatMap((piece) => {
+            const result = assembler.push(piece, maxBytes);
+            return result.kind === 'frame' ? [result.frame] : [];
+        });
+    };
+
+    test('a frame comes back whole, and no piece is longer than the limit', () => {
+        const data = Uint8Array.from({ length: 100 }, (_, index) => index);
+        const pieces = splitBinaryFrame(data, 16);
+        expect(pieces).toHaveLength(7);
+        expect(pieces.every((piece) => piece.byteLength <= 16)).toBe(true);
+        expect(reassembleBinary(pieces)).toEqual([data]);
+    });
+
+    test('an empty frame is one piece', () => {
+        expect(reassembleBinary(splitBinaryFrame(new Uint8Array()))).toEqual([new Uint8Array()]);
+    });
+
+    test('no binary piece reads as a text piece, and no text piece as a binary one', () => {
+        expect(splitBinaryFrame(new Uint8Array([0x2b, 0x3d]), 2).every(isBinaryPiece)).toBe(true);
+        expect(splitFrame('+=').map((piece) => isBinaryPiece(new TextEncoder().encode(piece)))).toEqual([false]);
+    });
+
+    test('a frame past the limit is invalid, and the next one reads again', () => {
+        const assembler = new BinaryFrameAssembler();
+        const [first] = splitBinaryFrame(new Uint8Array(20), 64);
+        expect(assembler.push(first!, 10).kind).toBe('invalid');
+        expect(assembler.push(splitBinaryFrame(new Uint8Array(5))[0]!, 10).kind).toBe('frame');
+    });
 });
