@@ -115,23 +115,30 @@ struct SubagentListPage: View {
     }
 
     private func askBeforeStoppingTask(_ item: JSONValue) {
-        guard let childID = item["childId"]?.stringValue else { return }
-        Task {
-            let agents = await ChatSubagents.agentsEnded(with: [childID], client: model.client)
-            ending = EndingAgents(
-                title: "Stop \(ChatSubagents.title(item))?", message: ChatSubagents.stopsTaskWarning(agents)
-            ) { await stop(item) }
-        }
+        Task { ending = await model.stopTaskQuestion(item) { await stop(item) } }
     }
 
     private func stop(_ item: JSONValue) async {
         do {
-            _ = try await model.client.request(
-                "chat.stopSubagent",
-                payload: .object(["chatId": .string(model.chatID), "toolUseId": .string(item.text("toolUseId"))]))
+            try await model.stopSubagent(item)
         } catch {
             failure = error.localizedDescription
         }
+    }
+}
+
+extension ChatModel {
+    func stopSubagent(_ item: JSONValue) async throws {
+        _ = try await client.request(
+            "chat.stopSubagent", payload: target(["toolUseId": .string(item.text("toolUseId"))]))
+    }
+
+    /// The question before a task stops, since that ends the agent working on it and every agent that one opened.
+    func stopTaskQuestion(_ item: JSONValue, run: @escaping () async -> Void) async -> EndingAgents? {
+        guard let childID = item["childId"]?.stringValue else { return nil }
+        let agents = await ChatSubagents.agentsEnded(with: [childID], client: client)
+        return EndingAgents(
+            title: "Stop \(ChatSubagents.title(item))?", message: ChatSubagents.stopsTaskWarning(agents), run: run)
     }
 }
 
@@ -229,24 +236,25 @@ private struct SubagentEntryRow: View {
 
 struct SubagentStatusIcon: View {
     let word: SubagentStatusWord
+    var size: CGFloat = 16
 
     var body: some View {
         Group {
             switch word {
             case .running: ProgressView().controlSize(.mini).tint(word.look.color)
-            case .done: Image(lucide: "circle-check", size: 16)
-            case .failed: Image(lucide: "circle-x", size: 16)
-            case .cancelled: Image(lucide: "circle-slash", size: 16)
+            case .done: Image(lucide: "circle-check", size: size)
+            case .failed: Image(lucide: "circle-x", size: size)
+            case .cancelled: Image(lucide: "circle-slash", size: size)
             }
         }
         .foregroundStyle(word.look.color)
-        .frame(width: 18, height: 18)
+        .frame(width: size + 2, height: size + 2)
         .accessibilityHidden(true)
     }
 }
 
 /// How long a running entry has run, ticking each second while it is on screen, or when a settled one ended.
-private struct SubagentEntryTime: View {
+struct SubagentEntryTime: View {
     let item: JSONValue
     let task: JSONValue?
     @Environment(\.scenePhase) private var scenePhase

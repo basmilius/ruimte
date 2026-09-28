@@ -48,7 +48,6 @@ final class ChatModel {
         get { composition.deliveryUncertain }
         set { composition.deliveryUncertain = newValue }
     }
-    var queuedNotice = false
     var queueBusy = false
     var queueProblem: String?
     var settingsProblem: String?
@@ -329,7 +328,6 @@ final class ChatModel {
         guard canSend else { return }
         sending = true
         sendProblem = nil
-        queuedNotice = false
         defer { sending = false }
         let snapshot = composition.record
         let uploads = attachments
@@ -350,7 +348,7 @@ final class ChatModel {
             // An interrupted or killed client cannot know whether the machine accepted this request.
             sendUncertain = true
             await composition.flush()
-            let result = try await client.request(
+            _ = try await client.request(
                 "chat.send",
                 payload: target([
                     "text": .string(snapshot.text),
@@ -364,7 +362,6 @@ final class ChatModel {
                     "attachments": .array(payloads),
                 ]))
             sendUncertain = false
-            queuedNotice = result["queued"]?.boolValue == true
             if draft == snapshot.text && mentions == snapshot.mentions && skills == snapshot.skills
                 && composition.chats == snapshot.chats
             {

@@ -1,58 +1,62 @@
 import RuimtePulsar
 import SwiftUI
 
+/// The permission modes as the desktop names them, from the one that asks most to the one that never asks.
+enum ChatRuntimeMode {
+    static let all = ["supervised", "auto-accept-edits", "auto", "full-access"]
+
+    static func label(_ mode: String) -> String {
+        switch mode {
+        case "auto-accept-edits": "Auto-accept edits"
+        case "auto": "Auto"
+        case "full-access": "Full access"
+        default: "Supervised"
+        }
+    }
+
+    static func short(_ mode: String) -> String {
+        switch mode {
+        case "auto-accept-edits": "Edits"
+        case "auto": "Auto"
+        case "full-access": "Full access"
+        default: "Ask"
+        }
+    }
+
+    static func hint(_ mode: String) -> String {
+        switch mode {
+        case "auto-accept-edits": "File edits go through, commands still ask"
+        case "auto": "The agent reviews routine actions itself"
+        case "full-access": "Never asks for approval"
+        default: "Asks before commands and file changes"
+        }
+    }
+
+    static func icon(_ mode: String) -> String {
+        switch mode {
+        case "auto-accept-edits": "file-pen"
+        case "auto": "shield"
+        case "full-access": "shield-alert"
+        default: "hand"
+        }
+    }
+}
+
+/// Everything that decides how the next turn runs, as one form: what `/model` opens, and what the model pill leads to
+/// for the account, the model's own options and the context.
 struct ChatRunSettings: View {
     @Bindable var model: ChatModel
-    @Binding var presented: Bool
+    @Environment(\.dismiss) private var dismiss
 
-    private var selection: JSONValue { model.info["selection"] ?? .null }
-    private var selected: JSONValue { model.models.first { $0["slug"] == selection["model"] } ?? .null }
-    private var mode: String { model.info.text("runtimeMode", fallback: "supervised") }
-    private var account: ProviderAccountEntry? {
-        let kind = model.info.text("provider")
-        guard let accounts = model.accounts, accounts.hasChoice(kind) else { return nil }
-        let id = model.info["account"]?.stringValue ?? kind
-        return accounts.entries.first { $0.kind == kind && $0.id == id }
-    }
+    private var selection: JSONValue { model.selection }
+    private var selected: JSONValue { model.selectedModel }
+    private var mode: String { model.runtimeMode }
     private var label: String {
         let slug = selection.text("model")
         return slug.isEmpty ? "Choose model" : ModelName.of(slug, in: model.models)
     }
 
     var body: some View {
-        Button {
-            presented = true
-        } label: {
-            HStack(spacing: 6) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(label).lineLimit(1).truncationMode(.middle)
-                    if let account {
-                        HStack(spacing: 4) {
-                            AccountDot(color: account.color, size: 6)
-                            Text(account.name(provider: usageProviderName(model.info.text("provider"))))
-                                .font(.caption2).foregroundStyle(MobileStyle.muted).lineLimit(1)
-                        }
-                    }
-                }
-                Image(lucide: mode == "full-access" ? "shield-off" : "chevron-down", size: 13)
-            }
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(MobileStyle.text)
-            .padding(.horizontal, 12).frame(minHeight: 36)
-            .background(MobileStyle.inset.opacity(0.65), in: Capsule())
-            .frame(minHeight: 44).contentShape(Rectangle())
-        }
-        .buttonStyle(ChatComposerButtonStyle())
-        .accessibilityLabel("Run settings, \(label)")
-        .accessibilityValue(
-            [account?.name(provider: usageProviderName(model.info.text("provider"))), Self.modeName(mode)].compactMap {
-                $0
-            }.joined(separator: ", ")
-        )
-        .mobileSheet(isPresented: $presented) { settings }
-    }
-
-    private var settings: some View {
         NavigationStack {
             Form {
                 if let error = model.settingsProblem {
@@ -63,9 +67,7 @@ struct ChatRunSettings: View {
                         "Model",
                         selection: Binding(
                             get: { selection.text("model") },
-                            set: { slug in
-                                updateSelection(.object(["model": .string(slug), "options": .object([:])]))
-                            })
+                            set: { model.chooseModel($0) })
                     ) {
                         if model.models.isEmpty { Text(label).tag(selection.text("model")) }
                         ForEach(Array(model.models.enumerated()), id: \.offset) { _, option in
@@ -106,17 +108,10 @@ struct ChatRunSettings: View {
                     Picker(
                         "Permissions",
                         selection: Binding(
-                            get: { mode },
-                            set: { value in
-                                Task {
-                                    if await model.configure(["runtimeMode": .string(value)]) {
-                                        ChatPreferences.shared.rememberRuntimeMode(value)
-                                    }
-                                }
-                            })
+                            get: { mode }, set: { model.chooseMode($0) })
                     ) {
-                        ForEach(["supervised", "auto-accept-edits", "auto", "full-access"], id: \.self) { value in
-                            Text(Self.modeName(value)).tag(value)
+                        ForEach(ChatRuntimeMode.all, id: \.self) { value in
+                            Text(ChatRuntimeMode.label(value)).tag(value)
                         }
                     }
                 } header: {
@@ -148,7 +143,7 @@ struct ChatRunSettings: View {
             .disabled(!model.connected || model.loading || model.configuring || model.sending)
             .navigationTitle("Run settings")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { presented = false } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }
 
@@ -182,28 +177,44 @@ struct ChatRunSettings: View {
         }
     }
 
-    private func updateOption(_ id: String, value: JSONValue) {
+    private func updateOption(_ id: String, value: JSONValue) { model.chooseOption(id, value: value) }
+
+    private func updateSelection(_ selection: JSONValue) { model.chooseSelection(selection) }
+}
+
+extension ChatModel {
+    var selection: JSONValue { info["selection"] ?? .null }
+    var runtimeMode: String { info.text("runtimeMode", fallback: "supervised") }
+    var canConfigure: Bool { connected && !loading && !configuring && !sending }
+
+    /// The model the chat runs on, with its own options.
+    var selectedModel: JSONValue { models.first { $0["slug"] == selection["model"] } ?? .null }
+
+    func chooseModel(_ slug: String) {
+        chooseSelection(.object(["model": .string(slug), "options": .object([:])]))
+    }
+
+    func chooseOption(_ id: String, value: JSONValue) {
         var values = selection.objectValue ?? [:]
         var options = values["options"]?.objectValue ?? [:]
         options[id] = value
         values["options"] = .object(options)
-        updateSelection(.object(values))
+        chooseSelection(.object(values))
     }
 
-    private func updateSelection(_ selection: JSONValue) {
+    func chooseSelection(_ selection: JSONValue) {
         Task {
-            if await model.configure(["selection": selection]) {
-                ChatPreferences.shared.rememberSelection(selection, provider: model.info.text("provider"))
+            if await configure(["selection": selection]) {
+                ChatPreferences.shared.rememberSelection(selection, provider: info.text("provider"))
             }
         }
     }
 
-    static func modeName(_ value: String) -> String {
-        switch value {
-        case "auto-accept-edits": "Accept edits"
-        case "auto": "Automatic"
-        case "full-access": "Full access"
-        default: "Ask for approval"
+    func chooseMode(_ mode: String) {
+        Task {
+            if await configure(["runtimeMode": .string(mode)]) {
+                ChatPreferences.shared.rememberRuntimeMode(mode)
+            }
         }
     }
 }

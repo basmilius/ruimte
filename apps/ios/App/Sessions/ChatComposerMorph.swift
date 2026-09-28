@@ -77,7 +77,8 @@ struct ChatComposerMorph<Draft: View, Prompt: View>: View {
         _retained = State(initialValue: request)
     }
 
-    private var shape: ConcentricRectangle { ConcentricRectangle(corners: .concentric(minimum: 24)) }
+    // Half the field's single-line height, so an empty field is a capsule and a longer draft a rounded card.
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 26, style: .continuous) }
     private var animation: Animation { .smooth(duration: 0.35) }
     private var target: CGFloat { request == nil ? 0 : 1 }
     private var height: CGFloat { draftHeight + (max(draftHeight, promptHeight) - draftHeight) * progress }
@@ -145,7 +146,8 @@ struct ChatComposerMorph<Draft: View, Prompt: View>: View {
             }
         }
         .clipShape(shape)
-        .glassEffect(.regular, in: shape)
+        // Only the field answers a touch; a prompt card's own buttons do, so the card itself stays still.
+        .glassEffect(request == nil ? .regular.interactive() : .regular, in: shape)
         .onPreferenceChange(ChatPromptHeightKey.self) { measured in
             guard let measured, measured.requestID == request?.text("requestId"), measured.height > 0 else { return }
             measuredRequestID = measured.requestID

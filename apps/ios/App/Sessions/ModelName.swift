@@ -27,4 +27,15 @@ enum ModelName {
         models.first { $0.text("slug") == slug }?["name"]?.stringValue ?? fromSlug(slug)
     }
 
+    /// A name without the leading words every model of its catalog shares, so a pill says `Opus 5.5` where the CLI
+    /// says `Claude Opus 5.5`. Whole words only, and never all of a name.
+    static func short(_ name: String, in models: [JSONValue]) -> String {
+        let names = models.map { $0.text("name").split(separator: " ").map(String.init) }
+        guard names.count >= 2, let first = names.first else { return name }
+        var count = 0
+        while names.allSatisfy({ $0.count > count + 1 && $0[count] == first[count] }) { count += 1 }
+        let prefix = first.prefix(count).joined(separator: " ") + " "
+        return count > 0 && name.hasPrefix(prefix) ? String(name.dropFirst(prefix.count)) : name
+    }
+
 }

@@ -73,7 +73,7 @@ targets:
         BGTaskSchedulerPermittedIdentifiers: [app.ruimte.mobile.usage-widget]
         NSSupportsLiveActivities: true
         ITSAppUsesNonExemptEncryption: false
-        NSCameraUsageDescription: Ruimte does not access your camera. Camera support is included in the connection framework.
+        NSCameraUsageDescription: Ruimte uses the camera when you take a photo to attach to a message.
         NSLocalNetworkUsageDescription: Connect directly to your machines on the same Wi-Fi network.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsInWebContent: true

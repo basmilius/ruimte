@@ -5,7 +5,6 @@ struct ChatComposerAccessory: View {
     @Bindable var model: ChatModel
     @Binding var focused: Bool
     let availableHeight: CGFloat
-    @State private var showingQueue = false
     @State private var dismissedQuery: ChatDraftQuery?
 
     private var query: ChatDraftQuery? {
@@ -16,7 +15,7 @@ struct ChatComposerAccessory: View {
     private var hasContent: Bool {
         (query != nil && query != dismissedQuery) || model.sendProblem != nil || model.composition.validation != nil
             || model.composition.storageProblem != nil || model.composition.problem != nil || !model.connected
-            || model.loading || !model.queue.isEmpty || model.queuedNotice || model.draft.utf16.count >= 100_000
+            || model.loading || model.draft.utf16.count >= 100_000
     }
 
     var body: some View {
@@ -96,88 +95,14 @@ struct ChatComposerAccessory: View {
                 )
                 .font(.caption).foregroundStyle(MobileStyle.muted).padding(.horizontal, 8)
             }
-            if !model.queue.isEmpty || model.queuedNotice || model.draft.utf16.count >= 100_000 {
-                HStack(spacing: 12) {
-                    if !model.queue.isEmpty {
-                        Button {
-                            focused = false
-                            showingQueue = true
-                        } label: {
-                            Label("\(model.queue.count) queued", lucideIcon: "list-ordered", iconSize: 14)
-                                .font(.footnote.weight(.medium)).padding(.horizontal, 12).frame(minHeight: 44)
-                                .background(.regularMaterial, in: Capsule())
-                        }.buttonStyle(ChatComposerButtonStyle())
-                    } else if model.queuedNotice {
-                        Text("Added to queue").font(.caption).foregroundStyle(MobileStyle.muted).padding(.horizontal, 8)
-                    }
-                    Spacer(minLength: 0)
-                    if model.draft.utf16.count >= 100_000 {
-                        Text("\(model.draft.utf16.count.formatted()) / 120,000").font(.caption).monospacedDigit()
-                            .foregroundStyle(MobileStyle.muted)
-                    }
-                }
+            if model.draft.utf16.count >= 100_000 {
+                Text("\(model.draft.utf16.count.formatted()) / 120,000").font(.caption).monospacedDigit()
+                    .foregroundStyle(MobileStyle.muted).frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
         .padding(.bottom, hasContent ? 8 : 0)
         .task(id: query) {
             if let query { await model.search(query.kind, query: query.text) }
-        }
-        .task(id: model.queuedNotice) {
-            guard model.queuedNotice else { return }
-            do {
-                try await Task.sleep(for: .seconds(3))
-                model.queuedNotice = false
-            } catch {}
-        }
-        .mobileSheet(isPresented: $showingQueue) { queueSheet }
-    }
-
-    private var queueSheet: some View {
-        NavigationStack {
-            List {
-                if let error = model.queueProblem { Text(error).foregroundStyle(MobileStyle.statusError) }
-                if model.queue.isEmpty { Text("No messages waiting").foregroundStyle(MobileStyle.muted) }
-                ForEach(Array(model.queue.enumerated()), id: \.offset) { _, message in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(message.text("text", fallback: "Attachments")).font(.body).lineLimit(6)
-                        if !message.list("attachments").isEmpty {
-                            Text("\(message.list("attachments").count) attachments").font(.caption).foregroundStyle(
-                                MobileStyle.muted)
-                        }
-                        HStack {
-                            Button("Edit") {
-                                Task {
-                                    await model.queueAction(message, edit: true)
-                                    if model.queueProblem == nil {
-                                        showingQueue = false
-                                        focused = true
-                                    }
-                                }
-                            }
-                            Spacer()
-                            Menu {
-                                Button("Stop current turn and send now", lucideIcon: "fast-forward") {
-                                    Task { await model.queueAction(message, sendNow: true) }
-                                }
-                                Button("Remove from queue", lucideIcon: "trash", role: .destructive) {
-                                    Task { await model.queueAction(message) }
-                                }
-                            } label: {
-                                Image(lucide: "ellipsis").frame(width: 44, height: 44)
-                            }
-                            .accessibilityLabel("Queued message actions")
-                        }.buttonStyle(.borderless).frame(minHeight: 44)
-                    }.disabled(!model.connected || model.queueBusy || model.sending || model.composition.importing)
-                }
-            }
-            .overlay {
-                if model.queueBusy {
-                    ProgressView().padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                }
-            }
-            .navigationTitle("Message queue")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showingQueue = false } } }
         }
     }
 }

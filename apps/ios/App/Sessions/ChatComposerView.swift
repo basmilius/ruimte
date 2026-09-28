@@ -13,54 +13,36 @@ struct ChatComposerButtonStyle: ButtonStyle {
 
 struct ChatComposerView: View {
     @Bindable var model: ChatModel
+    @Bindable var sheets: ChatComposerSheets
     @Binding var focused: Bool
-    @Binding var settingsPresented: Bool
     let availableHeight: CGFloat
     let send: () -> Void
-    let stopWithSubagents: () -> Void
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
-    @State private var showingFiles = false
-    @State private var showingPhotos = false
     @State private var photos: [PhotosPickerItem] = []
-    @State private var pickerKind: String?
     @State private var preview: URL?
-    @State private var expanded = false
     @State private var expandedFocus = false
     @State private var pastedText: String?
     @AccessibilityFocusState private var editorAccessible: Bool
 
-    private var wideControls: Bool { dynamicTypeSize.isAccessibilitySize }
     private var maximumHeight: CGFloat { max(44, min(200, availableHeight * 0.3)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if !model.composition.chats.isEmpty || !model.attachments.isEmpty || !model.composition.imports.isEmpty {
-                contextStrip.padding(.top, 12)
+                contextStrip.padding(.top, 10)
             }
-            editor(maximumHeight: maximumHeight, focus: $focused)
-                .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 4)
-                .accessibilityFocused($editorAccessible)
-            if wideControls {
-                ChatRunSettings(model: model, presented: $settingsPresented)
-                    .padding(.horizontal, 16).disabled(model.queueBusy)
+            HStack(alignment: .bottom, spacing: 6) {
+                editor(maximumHeight: maximumHeight, focus: $focused)
+                    .padding(.vertical, 15)
+                    .accessibilityFocused($editorAccessible)
+                sendButton.padding(.vertical, 6)
             }
-            HStack(spacing: 4) {
-                addMenu
-                if !wideControls {
-                    ChatRunSettings(model: model, presented: $settingsPresented)
-                        .frame(maxWidth: 200, alignment: .leading).disabled(model.queueBusy)
-                }
-                Spacer(minLength: 0)
-                if model.working { stopButton }
-                sendButton
-            }
-            .padding(.horizontal, 8).padding(.bottom, 8)
+            .padding(.leading, 20).padding(.trailing, 6)
         }
         .background {
             // Keep the focus gesture behind controls and UIKit's text selection gestures.
             Color.clear
-                .contentShape(ConcentricRectangle(corners: .concentric(minimum: 24)))
+                .contentShape(RoundedRectangle(cornerRadius: 26))
                 .onTapGesture { focused = true }
                 .allowsHitTesting(!model.queueBusy)
                 .accessibilityHidden(true)
@@ -75,7 +57,7 @@ struct ChatComposerView: View {
             importProviders(providers)
             return true
         }
-        .fileImporter(isPresented: $showingFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) {
+        .fileImporter(isPresented: $sheets.files, allowedContentTypes: [.item], allowsMultipleSelection: true) {
             result in
             switch result {
             case .success(let urls): importFiles(urls)
@@ -83,7 +65,8 @@ struct ChatComposerView: View {
             }
         }
         .photosPicker(
-            isPresented: $showingPhotos, selection: $photos, maxSelectionCount: ChatDraftLimits.files, matching: .images
+            isPresented: $sheets.photos, selection: $photos, maxSelectionCount: ChatDraftLimits.files,
+            matching: .images
         )
         .onChange(of: photos) { _, selected in
             guard !selected.isEmpty else { return }
@@ -106,15 +89,18 @@ struct ChatComposerView: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $sheets.camera) {
+            ChatCameraPicker(capture: importCapture).ignoresSafeArea()
+        }
         .quickLookPreview($preview)
-        .mobileSheet(isPresented: Binding(get: { pickerKind != nil }, set: { if !$0 { pickerKind = nil } })) {
-            ChatContextPicker(model: model, kind: pickerKind ?? "@") { suggestion in
+        .mobileSheet(isPresented: Binding(get: { sheets.picker != nil }, set: { if !$0 { sheets.picker = nil } })) {
+            ChatContextPicker(model: model, kind: sheets.picker ?? "@") { suggestion in
                 model.chooseSuggestion(suggestion)
-                pickerKind = nil
+                sheets.picker = nil
                 focused = true
             }
         }
-        .mobileSheet(isPresented: $expanded) {
+        .mobileSheet(isPresented: $sheets.expanded) {
             NavigationStack {
                 editor(maximumHeight: 10_000, focus: $expandedFocus)
                     .padding(20).frame(maxHeight: .infinity, alignment: .top)
@@ -123,7 +109,7 @@ struct ChatComposerView: View {
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Done") {
-                                expanded = false
+                                sheets.expanded = false
                                 focused = true
                             }
                         }
@@ -159,75 +145,29 @@ struct ChatComposerView: View {
         return RichChatComposer(
             text: $model.draft, selection: selection,
             mentions: model.mentions, skills: model.skills, focused: focus,
+            placeholder: model.working ? "Add to queue…" : "Message the agent…",
             maximumHeight: maximumHeight,
             importItems: importAction, pasteLongText: pasteAction
         )
         .disabled(model.queueBusy)
     }
 
-    private var addMenu: some View {
-        Menu {
-            if model.canAttach {
-                Button("Photos", lucideIcon: "image") {
-                    focused = false
-                    showingPhotos = true
-                }
-                Button("Files", lucideIcon: "paperclip") {
-                    focused = false
-                    showingFiles = true
-                }
-            }
-            Section {
-                Button("Mention a file or conversation", lucideIcon: "at-sign") { openPicker("@") }.disabled(
-                    !model.connected)
-                Button("Use a skill", lucideIcon: "sparkles") { openPicker("$") }.disabled(!model.connected)
-                Button("Command", lucideIcon: "circle-slash") { openPicker("/") }.disabled(!model.connected)
-            }
-            Button("Expand editor", lucideIcon: "maximize-2") {
-                focused = false
-                expanded = true
-            }
-        } label: {
-            Image(lucide: "plus", size: 20).foregroundStyle(MobileStyle.muted)
-                .frame(width: 44, height: 44).contentShape(Circle())
-        }
-        .disabled(model.queueBusy)
-        .accessibilityLabel("Add context or expand editor")
-    }
-
     private var sendButton: some View {
         Button(action: send) {
             Image(lucide: model.working ? "list-plus" : "arrow-up", size: 19)
-                .frame(width: 36, height: 36)
+                .frame(width: 40, height: 40)
                 .modifier(
                     ChatComposerAction(
                         prompt: false, icon: model.working ? "list-plus" : "arrow-up",
                         loading: model.sending, enabled: model.canSend, emphasized: model.composition.hasContent)
                 )
-                .frame(width: 44, height: 44).contentShape(Rectangle())
+                .contentShape(Circle())
         }
         .buttonStyle(ChatComposerButtonStyle())
         .disabled(!model.canSend)
         .accessibilityLabel(model.working ? "Add message to queue" : "Send message")
         .accessibilityHint(model.composition.importing ? "Wait for attachments to finish importing." : "")
         .keyboardShortcut(.return, modifiers: .command)
-    }
-
-    private var stopButton: some View {
-        Button {
-            Task { await model.perform("chat.cancel") }
-        } label: {
-            Image(lucide: "square", size: 15).foregroundStyle(MobileStyle.text)
-                .frame(width: 36, height: 36).background(MobileStyle.inset, in: Circle())
-                .frame(width: 44, height: 44).contentShape(Rectangle())
-        }
-        .buttonStyle(ChatComposerButtonStyle()).disabled(!model.connected)
-        .accessibilityLabel("Stop turn")
-        .contextMenu {
-            Button("Stop turn", lucideIcon: "square") { Task { await model.perform("chat.cancel") } }
-            Button("Stop with sub-agents", lucideIcon: "square", role: .destructive, action: stopWithSubagents)
-        }
-        .accessibilityAction(named: "Stop with sub-agents", stopWithSubagents)
     }
 
     private var contextStrip: some View {
@@ -269,13 +209,8 @@ struct ChatComposerView: View {
                     }.font(.footnote).padding(.leading, 12).background(
                         MobileStyle.inset, in: RoundedRectangle(cornerRadius: 12))
                 }
-            }.padding(.horizontal, 16)
+            }.padding(.horizontal, 12)
         }.scrollIndicators(.hidden).disabled(model.queueBusy)
-    }
-
-    private func openPicker(_ kind: String) {
-        focused = false
-        pickerKind = kind
     }
 
     private func insertText(_ text: String) {
@@ -285,6 +220,18 @@ struct ChatComposerView: View {
             location: location, length: min(model.composition.selection.length, source.length - location))
         model.draft = source.replacingCharacters(in: range, with: text)
         model.composition.selection = NSRange(location: location + (text as NSString).length, length: 0)
+    }
+
+    private func importCapture(_ image: UIImage) {
+        let name = "Photo \(model.attachments.count + model.composition.imports.count + 1).jpg"
+        guard let id = model.composition.reserve(name) else { return }
+        Task {
+            guard let data = await Task.detached(operation: { image.jpegData(compressionQuality: 0.85) }).value else {
+                model.composition.failImport(id, error: DraftFailure("Could not read this photo."))
+                return
+            }
+            await model.composition.finishImport(id, data: data, name: name, mime: "image/jpeg")
+        }
     }
 
     private func importFiles(_ urls: [URL]) {
@@ -343,6 +290,39 @@ struct ChatComposerView: View {
                 } catch { model.composition.failImport(id, error: error) }
             }
         }
+    }
+}
+
+/// The camera through UIKit, since SwiftUI has no picker of its own for it.
+private struct ChatCameraPicker: UIViewControllerRepresentable {
+    let capture: (UIImage) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ picker: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: ChatCameraPicker
+
+        init(_ parent: ChatCameraPicker) { self.parent = parent }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            if let image = info[.originalImage] as? UIImage { parent.capture(image) }
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { parent.dismiss() }
     }
 }
 

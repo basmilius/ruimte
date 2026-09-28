@@ -8,6 +8,7 @@ struct RichChatComposer: UIViewRepresentable {
     let mentions: [String]
     let skills: [String]
     @Binding var focused: Bool
+    var placeholder = "Message the agent…"
     var maximumHeight: CGFloat = 144
     var importItems: (([NSItemProvider]) -> Void)?
     var pasteLongText: ((String) -> Void)?
@@ -41,6 +42,7 @@ struct RichChatComposer: UIViewRepresentable {
         context.coordinator.parent = self
         view.importItems = importItems
         view.pasteLongText = pasteLongText
+        if view.placeholder.text != placeholder { view.placeholder.text = placeholder }
         context.coordinator.updating = true
         defer { context.coordinator.updating = false }
         if view.isEditable != isEnabled { view.isEditable = isEnabled }
@@ -156,7 +158,6 @@ final class ComposerTextView: UITextView {
 
     override init(frame: CGRect, textContainer: NSTextContainer?) {
         super.init(frame: frame, textContainer: textContainer)
-        placeholder.text = "Message the agent…"
         placeholder.textColor = .placeholderText
         placeholder.isUserInteractionEnabled = false
         placeholder.isAccessibilityElement = false

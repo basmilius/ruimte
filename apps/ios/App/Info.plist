@@ -41,7 +41,7 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Ruimte does not access your camera. Camera support is included in the connection framework.</string>
+	<string>Ruimte uses the camera when you take a photo to attach to a message.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Connect directly to your machines on the same Wi-Fi network.</string>
 	<key>NSSupportsLiveActivities</key>

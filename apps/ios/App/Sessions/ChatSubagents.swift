@@ -76,6 +76,36 @@ enum ChatSubagents {
         items.filter { canOpen($0, machineRefused: machineRefused) }
     }
 
+    /// The sub-agents the composer's chip speaks for, as the desktop's `flyoutSubagents` picks them: every running
+    /// one, the ones since the person last wrote, and the rest of a turn that still has one running.
+    static func activity(_ items: [JSONValue]) -> [JSONValue] {
+        let lastMessage = items.lastIndex { $0.text("kind") == "user" } ?? -1
+        let lastMessageAt = lastMessage < 0 ? nil : items[lastMessage]["createdAt"]?.numberValue
+        let rows = items.enumerated().filter { $0.element.text("kind") == "subagent" }
+        let turns = Set(
+            rows.compactMap { row in
+                row.element.text("status") == "running" ? row.element["turnId"]?.stringValue : nil
+            })
+        return rows.filter { index, item in
+            if item.text("status") == "running" || index > lastMessage { return true }
+            if let lastMessageAt, let finishedAt = item["finishedAt"]?.numberValue, finishedAt > lastMessageAt {
+                return true
+            }
+            return item["turnId"]?.stringValue.map(turns.contains) ?? false
+        }.map(\.element)
+    }
+
+    /// The one state the chip shows for all of them: work in progress first, then whatever went wrong.
+    static func summaryWord(_ words: [SubagentStatusWord?]) -> SubagentStatusWord {
+        [.running, .failed, .cancelled].first { words.contains($0) } ?? .done
+    }
+
+    /// The number on the chip: the ones still at work, and all of them once none is.
+    static func badgeCount(_ words: [SubagentStatusWord?]) -> Int {
+        let active = words.filter { $0 == .running }.count
+        return active > 0 ? active : words.count
+    }
+
     /// The task a row stands for, whose id the daemon wrote into the row's own.
     static func taskID(_ item: JSONValue) -> String? {
         let id = item.text("id")

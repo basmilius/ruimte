@@ -176,6 +176,37 @@ final class ChatSubagentsTests: XCTestCase {
         XCTAssertEqual(machine.payloads.last?["watch"], .bool(false))
         XCTAssertEqual(machine.payloads.filter { $0["watch"] == .bool(false) }.count, 1)
     }
+
+    @MainActor func testTheChipCountsWhatRunsAndWhatSettledSinceThePersonLastWrote() {
+        let user: (String, Double) -> JSONValue = { id, created in
+            .object(["id": .string(id), "kind": .string("user"), "createdAt": .number(created)])
+        }
+        let items = [
+            agent("old", status: "done", finished: 5, extra: ["turnId": .string("t1")]),
+            agent("running-turn", status: "done", finished: 6, extra: ["turnId": .string("t2")]),
+            agent("still", extra: ["turnId": .string("t2")]),
+            user("u", 10),
+            agent("late", status: "failed", finished: 12),
+            agent("new", status: "done", finished: 20),
+        ]
+        XCTAssertEqual(
+            ChatSubagents.activity(items).map { $0.text("id") }, ["running-turn", "still", "late", "new"])
+    }
+
+    func testTheChipShowsWorkFirstAndCountsWhatStillRuns() {
+        XCTAssertEqual(ChatSubagents.summaryWord([.done, .failed, .running]), .running)
+        XCTAssertEqual(ChatSubagents.summaryWord([.done, .cancelled, .failed]), .failed)
+        XCTAssertEqual(ChatSubagents.summaryWord([.done, nil]), .done)
+        XCTAssertEqual(ChatSubagents.badgeCount([.running, .done, .running]), 2)
+        XCTAssertEqual(ChatSubagents.badgeCount([.done, .failed, nil]), 3)
+    }
+
+    func testTheBackgroundChipNamesOnlyTheKindsThatRun() {
+        let task: (String) -> JSONValue = { .object(["kind": .string($0)]) }
+        XCTAssertEqual(ChatBackground.label([task("shell"), task("monitor")]), "1 shell · 1 monitor")
+        XCTAssertEqual(ChatBackground.label([task("monitor"), task("monitor")]), "2 monitors")
+        XCTAssertEqual(ChatBackground.label([task("shell")]), "1 shell")
+    }
 }
 
 @MainActor private final class SubagentMachine: MachineRequesting {

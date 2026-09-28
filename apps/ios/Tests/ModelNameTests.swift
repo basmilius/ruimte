@@ -25,4 +25,16 @@ final class ModelNameTests: XCTestCase {
         XCTAssertEqual(ModelName.of("gpt-5.5", in: models), "GPT 5.5")
         XCTAssertEqual(ModelName.of("claude-opus-5", in: []), "Claude Opus 5")
     }
+
+    func testAShortNameDropsOnlyTheWholeWordsEveryModelShares() {
+        let claude: [JSONValue] = [
+            .object(["name": .string("Claude Opus 5.5")]), .object(["name": .string("Claude Sonnet 5")]),
+        ]
+        XCTAssertEqual(ModelName.short("Claude Opus 5.5", in: claude), "Opus 5.5")
+        XCTAssertEqual(
+            ModelName.short(
+                "GPT-6", in: [.object(["name": .string("GPT-6")]), .object(["name": .string("GPT-6 Mini")])]), "GPT-6")
+        XCTAssertEqual(
+            ModelName.short("Claude Opus 5.5", in: [.object(["name": .string("Claude Opus 5.5")])]), "Claude Opus 5.5")
+    }
 }

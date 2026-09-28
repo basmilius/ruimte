@@ -305,6 +305,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     private var displayLink: CADisplayLink?
     private var applyingSnapshot = false
     private var composerHost: UIHostingController<AnyView>?
+    private var composerAboveHome: NSLayoutConstraint?
     private var latestButtonHost: UIHostingController<AnyView>?
     private var statusHost: UIHostingController<AnyView>?
     private var statusContainer: UIView?
@@ -431,7 +432,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
 
     private func updateViewportInsets() {
         var insets = viewportInsets
-        if let composerHost { insets.bottom = composerHost.view.bounds.height }
+        if let composerCover { insets.bottom = composerCover }
         statusTopConstraint?.constant = insets.top
         statusBottomConstraint?.constant = -insets.bottom
         guard collection.contentInset != insets else { return }
@@ -442,11 +443,17 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         collection.layoutIfNeeded()
     }
 
+    /// How much of the timeline's bottom the composer covers, the gap under it included.
+    private var composerCover: CGFloat? {
+        composerHost.map { max(0, collection.frame.maxY - $0.view.frame.minY) }
+    }
+
     func setComposer(_ content: AnyView?, latestButton: AnyView?) {
         loadViewIfNeeded()
         guard let content else {
             removeHost(&latestButtonHost)
             removeHost(&composerHost)
+            composerAboveHome = nil
             keyboardHeightConstraint.isActive = false
             fullHeightConstraint.isActive = true
             view.keyboardLayoutGuide.keyboardDismissPadding = 0
@@ -460,10 +467,18 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             // One UIKit layout owns both frames, including interactive keyboard movement.
             fullHeightConstraint.isActive = false
             keyboardHeightConstraint.isActive = true
+            // On the keyboard while it is up, and half the home indicator's area up while it is down, which sits the
+            // pills close to the edge without meeting its corners. The timeline keeps running behind the composer.
+            let onKeyboard = host.view.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor)
+            onKeyboard.priority = .defaultHigh
+            let aboveHome = host.view.bottomAnchor.constraint(
+                lessThanOrEqualTo: view.bottomAnchor, constant: -view.safeAreaInsets.bottom / 2)
+            composerAboveHome = aboveHome
             NSLayoutConstraint.activate([
                 host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
                 host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-                host.view.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor),
+                host.view.bottomAnchor.constraint(lessThanOrEqualTo: view.keyboardLayoutGuide.topAnchor),
+                aboveHome, onKeyboard,
             ])
         }
         if let latestButton, let composerHost {
@@ -544,10 +559,15 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         host = nil
     }
 
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        composerAboveHome?.constant = -view.safeAreaInsets.bottom / 2
+    }
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateViewportInsets()
-        if let composerHost { view.keyboardLayoutGuide.keyboardDismissPadding = composerHost.view.bounds.height }
+        if let composerCover { view.keyboardLayoutGuide.keyboardDismissPadding = composerCover }
         let height = max(0, collection.bounds.height - viewportInsets.top)
         if height != reportedViewportHeight {
             reportedViewportHeight = height
@@ -879,7 +899,8 @@ struct ChatEntryView: View {
                             HStack(spacing: 8) {
                                 Image(
                                     lucide: presentation.expandedTurns.contains(
-                                        turn.value.text("turnId", fallback: turn.id)) ? "chevron-down" : "chevron-right",
+                                        turn.value.text("turnId", fallback: turn.id))
+                                        ? "chevron-down" : "chevron-right",
                                     size: 12)
                                 Text(ChatPresentation.turnLabel(turn.value, items: entry.items.map(\.value)))
                                     .layoutPriority(1)

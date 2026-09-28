@@ -168,11 +168,17 @@ are cached in the app. Live Activities also use Lucide. System-provided controls
 their native icons, and provider logos and custom project SVGs remain separate.
 The package and upstream ISC notices are in `App/Design/Lucide-LICENSE.txt`.
 
-In writing mode the composer has one Add menu, a model and account capsule, and separate
-Stop and Send actions. Run settings shows selected model options, permissions and context
-usage. Large accessibility text moves settings onto their own row. The editor grows with
-the available height and can open in a sheet for longer messages. Typing `@`, `$` or `/`
-offers files and project conversations, skills or usable commands at the cursor.
+In writing mode the composer is three rows of glass. Over the field sit chips for what the
+chat keeps working on beside the thread: its sub-agents, with the state of all of them in one
+icon, and the shells and monitors its CLI runs in the background. Each chip opens a popover
+with a row per entry, its time and a Stop. The field holds the draft and Send; a running turn
+puts a separate Stop beside it, whose menu can also stop the sub-agents. Under the field a
+scrolling row of pills: Add (photos, camera, files, mentions, skills, commands and the expanded
+editor), the queue while it holds a message, the model, its effort when the model has one, and
+the permission mode. The model's menu leads to Run settings for the account, the model's other
+options and context usage, which is also what `/model` opens. The editor grows with the available
+height and can open in a sheet for longer messages. Typing `@`, `$` or `/` offers files and
+project conversations, skills or usable commands at the cursor.
 
 Each machine and chat has a local draft containing text, references, attachments and selection.
 Metadata saves after a short debounce; attachment bytes live in separate files. Legacy text
@@ -181,7 +187,7 @@ show progress and errors before sending, with limits of eight files and 10 MiB c
 Photos support multiple selection; images can be pasted or dropped, and long pasted text can
 be attached as a file. Attachment previews and removal are separate actions.
 
-During a turn, Send adds to the queue. The queue sheet can edit, remove or send a waiting
+During a turn, Send adds to the queue and the field says so. The queue sheet can edit, remove or send a waiting
 message immediately; sending immediately stops the current turn. Editing merges the queued
 message into the current draft. A lost send acknowledgement keeps the draft and asks the
 person to check the conversation before retrying, including after reopening the app. Text
@@ -196,10 +202,12 @@ can be dismissed. Failed submissions retain their input, and sending disables re
 The glass container interpolates between measured composer and prompt heights, anchored at
 its bottom edge. The editor stays mounted while its content fades and blurs; a shared action
 shape grows from the send circle into the prompt button. The send button remains mounted and
-disabled for an empty draft; a running turn puts Stop beside it. Prompt actions sit in a bottom
+disabled for an empty draft. Prompt actions sit in a bottom
 safe-area bar with a soft scroll-edge blur. Reduce Motion switches states directly.
-The shape uses concentric corners with a minimum 24-point radius away from screen edges.
-The composer and timeline share a UIKit container anchored to `UIKeyboardLayoutGuide`.
+The shape has a 26-point radius, a capsule while the draft is one line. Its glass answers a touch
+like the buttons around it, except while a prompt card fills it.
+The composer and timeline share a UIKit container anchored to `UIKeyboardLayoutGuide`; with the
+keyboard down the composer stands half the bottom safe area up while the timeline runs on behind it.
 SwiftUI keyboard avoidance is disabled on that screen so it cannot resize the timeline
 ahead of the native keyboard animation. The container measures the composer's inset in
 the same layout pass; dragging the keyboard remains interactive.

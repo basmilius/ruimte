@@ -16,7 +16,7 @@ struct ChatScreen: View {
     @State private var viewportHeight: CGFloat = 700
     @State private var composerFocused = false
     @State private var resumeDraftFocus = false
-    @State private var settingsPresented = false
+    @State private var composerSheets = ChatComposerSheets()
     @State private var messagesBelow = false
     @State private var scrollToLatest = 0
     @State private var viewportWidth: CGFloat = 0
@@ -179,6 +179,7 @@ struct ChatScreen: View {
                 ContentUnavailableView("This chat is no longer in the project", lucideIcon: "square-x")
             }
         }
+        .mobileSheet(isPresented: $composerSheets.settings) { ChatRunSettings(model: model) }
         .mobileSheet(isPresented: $showingPlans) {
             if let plans = machineSession?.plans {
                 PlanSheet(store: plans, chatID: model.chatID, chatTitle: title, model: model)
@@ -355,9 +356,19 @@ struct ChatScreen: View {
         HStack(alignment: .bottom, spacing: 16) {
             VStack(spacing: 0) {
                 if prompts.active == nil {
+                    ChatActivityChips(model: model, tasks: machineSession?.tasks)
                     ChatComposerAccessory(model: model, focused: $composerFocused, availableHeight: viewportHeight)
                 }
-                GlassEffectContainer(spacing: 8) { promptComposer }
+                GlassEffectContainer(spacing: 8) {
+                    HStack(alignment: .bottom, spacing: 8) {
+                        promptComposer
+                        if model.working && prompts.active == nil { stopButton }
+                    }
+                }
+                if prompts.active == nil {
+                    ChatComposerPills(model: model, sheets: composerSheets, focused: $composerFocused)
+                        .padding(.top, 4)
+                }
             }
             .frame(maxWidth: 760)
             if scrollButtonBesideComposer {
@@ -369,7 +380,7 @@ struct ChatScreen: View {
             }
         }
         .frame(maxWidth: scrollButtonBesideComposer ? 820 : 760)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
         .fixedSize(horizontal: false, vertical: true)
@@ -378,8 +389,8 @@ struct ChatScreen: View {
     private var promptComposer: some View {
         ChatComposerMorph(request: prompts.active) {
             ChatComposerView(
-                model: model, focused: $composerFocused, settingsPresented: $settingsPresented,
-                availableHeight: viewportHeight, send: send, stopWithSubagents: stopWithSubagents)
+                model: model, sheets: composerSheets, focused: $composerFocused, availableHeight: viewportHeight,
+                send: send)
         } prompt: { pending in
             ChatPromptCard(
                 prompts: prompts, item: pending, connected: model.connected && !model.loading,
@@ -392,6 +403,22 @@ struct ChatScreen: View {
                 _ = try await model.client.request(action, payload: model.target(values))
             }
         }
+    }
+
+    private var stopButton: some View {
+        Menu {
+            Button("Stop turn", lucideIcon: "square") { Task { await model.perform("chat.cancel") } }
+            Button("Stop with sub-agents", lucideIcon: "square", role: .destructive, action: stopWithSubagents)
+        } label: {
+            RoundedRectangle(cornerRadius: 4).fill(MobileStyle.text).frame(width: 16, height: 16)
+                .frame(width: 52, height: 52)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .contentShape(Circle())
+        }
+        .disabled(!model.connected)
+        .accessibilityLabel("Stop")
+        .accessibilityIdentifier("chat.stop")
+        .transition(.scale.combined(with: .opacity))
     }
 
     /// Stops the turn, ends every agent the chat opened and marks its CLI's own sub-agents stopped; asks first only
@@ -416,7 +443,8 @@ struct ChatScreen: View {
         let snapshot = model.draft
         switch snapshot.trimmingCharacters(in: .whitespacesAndNewlines) {
         case "/model":
-            settingsPresented = true
+            composerFocused = false
+            composerSheets.settings = true
             model.draft = ""
         case "/clear":
             clearDraft = snapshot
