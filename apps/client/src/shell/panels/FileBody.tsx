@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileWarning, LoaderCircle } from 'lucide-react';
+import { FileWarning } from 'lucide-react';
 import type { FileSurfaceKind } from '@/shell/panels/FileActionItems';
 import { FileActionsContext } from '@/shell/panels/file-actions';
 import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
@@ -33,9 +33,7 @@ export function FileBody({ path, name, on, tabKey }: { path: string; name: strin
         if (state.status === 'loading') {
             return (
                 <WithoutRenderer>
-                    <EmptyState icon={LoaderCircle} spin>
-                        {t('file.reading', { name })}
-                    </EmptyState>
+                    <EmptyState busy>{t('file.reading', { name })}</EmptyState>
                 </WithoutRenderer>
             );
         }

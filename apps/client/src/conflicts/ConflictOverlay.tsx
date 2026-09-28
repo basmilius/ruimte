@@ -426,7 +426,7 @@ export function ConflictOverlay() {
                                 {operation === null ? t('empty.plain') : t(`empty.${operation}`)}
                             </EmptyState>
                         ) : file === null ? (
-                            <EmptyState className="grow" icon={loading ? LoaderCircle : undefined} spin>
+                            <EmptyState className="grow" busy={loading}>
                                 {loading ? t('loading') : t('list.pick')}
                             </EmptyState>
                         ) : file.whole ? (

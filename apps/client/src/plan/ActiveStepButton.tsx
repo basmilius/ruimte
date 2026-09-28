@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { CirclePause, LoaderCircle } from 'lucide-react';
+import { CirclePause } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Plan } from '@ruimte/contracts';
 import { useHeld } from '@/plan/hold';
@@ -47,13 +47,5 @@ export function ActiveStepButton({ chatId, plan, planKey }: { chatId: string; pl
         revealPlanStep(planKey, plan, target);
     };
 
-    return (
-        <IconButton
-            label={label}
-            onClick={go}
-            icon={working ? LoaderCircle : CirclePause}
-            spin={working}
-            iconClassName={working ? 'text-accent' : 'text-text-muted'}
-        />
-    );
+    return <IconButton label={label} onClick={go} icon={CirclePause} busy={working} iconClassName={working ? 'text-accent' : 'text-text-muted'} />;
 }

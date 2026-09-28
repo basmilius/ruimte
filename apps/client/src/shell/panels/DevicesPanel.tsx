@@ -184,8 +184,8 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                 <ButtonGroup>
                     {device.state === 'shutdown' && device.capabilities.boot && (
                         <IconButton
-                            icon={changing === 'boot' ? LoaderCircle : Power}
-                            spin={changing === 'boot'}
+                            icon={Power}
+                            busy={changing === 'boot'}
                             size="sm"
                             label={changing === 'boot' ? t('devices.starting') : t('devices.start')}
                             disabled={changing !== null}
@@ -194,8 +194,8 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                     )}
                     {device.state === 'booted' && device.capabilities.shutdown && (
                         <IconButton
-                            icon={changing === 'shutdown' ? LoaderCircle : PowerOff}
-                            spin={changing === 'shutdown'}
+                            icon={PowerOff}
+                            busy={changing === 'shutdown'}
                             size="sm"
                             label={t('devices.shutdown')}
                             disabled={changing !== null}
@@ -348,13 +348,7 @@ function DevicePanelToolbar({ device, onClose }: { device: DeviceInfo; onClose: 
                 <DeviceToolsFlyout device={device} />
                 <DevicePlacementMenu device={device} />
                 {device.state === 'booted' && device.capabilities.shutdown && (
-                    <IconButton
-                        icon={shuttingDown ? LoaderCircle : Power}
-                        spin={shuttingDown}
-                        label={t('devices.shutdown')}
-                        disabled={shuttingDown}
-                        onClick={shutDown}
-                    />
+                    <IconButton icon={Power} busy={shuttingDown} label={t('devices.shutdown')} disabled={shuttingDown} onClick={shutDown} />
                 )}
             </ButtonGroup>
         </div>
@@ -415,8 +409,8 @@ export function DevicesPanel() {
             <span className="min-w-0 truncate text-xs text-text-muted">{machineName}</span>
             <span className="grow" />
             <IconButton
-                icon={row.loading ? LoaderCircle : RefreshCw}
-                spin={row.loading}
+                icon={RefreshCw}
+                busy={row.loading}
                 label={t('devices.refresh')}
                 disabled={row.loading}
                 onClick={() =>
@@ -448,7 +442,7 @@ export function DevicesPanel() {
     }
     if (row.loading && row.devices.length === 0) {
         return (
-            <PanelEmpty header={listHeader} icon={LoaderCircle} spin>
+            <PanelEmpty header={listHeader} busy>
                 {t('devices.finding')}
             </PanelEmpty>
         );

@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Columns2, FileWarning, GitCompare, LoaderCircle, RefreshCw, Rows2 } from 'lucide-react';
+import { Columns2, FileWarning, GitCompare, RefreshCw, Rows2 } from 'lucide-react';
 import type { ActionInput } from '@ruimte/actions';
 import type { GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
@@ -127,9 +127,7 @@ function DiffBody({ state, wrap, layout, relative }: { state: DiffState; wrap: b
     if (state.status === 'loading') {
         return (
             <div className="file-diff grid min-h-0 grow place-items-center">
-                <EmptyState icon={LoaderCircle} spin>
-                    {t('diff.reading', { path: relative })}
-                </EmptyState>
+                <EmptyState busy>{t('diff.reading', { path: relative })}</EmptyState>
             </div>
         );
     }
@@ -248,9 +246,7 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
             </div>
             {state.status === 'loading' && (
                 <div className="file-diff grid min-h-0 grow place-items-center">
-                    <EmptyState icon={LoaderCircle} spin>
-                        {commit === undefined ? t('diff.readingChanges') : t('diff.readingCommit')}
-                    </EmptyState>
+                    <EmptyState busy>{commit === undefined ? t('diff.readingChanges') : t('diff.readingCommit')}</EmptyState>
                 </div>
             )}
             {state.status === 'error' && (

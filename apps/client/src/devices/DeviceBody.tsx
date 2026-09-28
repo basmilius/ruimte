@@ -121,7 +121,7 @@ export function DeviceBody({ id }: { id: string }) {
     }
     if (!device) {
         if (loading) {
-            return <DeviceMessage icon={LoaderCircle} spin message={t('device.finding', { name: reference.name })} />;
+            return <DeviceMessage icon={Smartphone} busy message={t('device.finding', { name: reference.name })} />;
         }
         return (
             <DeviceMessage
@@ -146,9 +146,9 @@ export function DevicePlate({ id }: { id: string }) {
     );
 }
 
-function DeviceMessage({ icon, spin = false, message, action }: { icon: LucideIcon; spin?: boolean; message: string; action?: ReactNode }) {
+function DeviceMessage({ icon, busy = false, message, action }: { icon: LucideIcon; busy?: boolean; message: string; action?: ReactNode }) {
     return (
-        <PanelEmpty icon={icon} spin={spin} action={action} sunken fill="full">
+        <PanelEmpty icon={icon} busy={busy} action={action} sunken fill="full">
             {message}
         </PanelEmpty>
     );

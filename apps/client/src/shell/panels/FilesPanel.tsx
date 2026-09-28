@@ -24,7 +24,6 @@ import {
     Folder,
     FolderOpen,
     Frame,
-    LoaderCircle,
     MoreHorizontal,
     RefreshCw,
     Search
@@ -444,11 +443,7 @@ export function FilesPanel() {
             return matches.length > 0 ? null : <EmptyState icon={Search}>{t('files.noMatch')}</EmptyState>;
         }
         if (!cache.has(folder)) {
-            return (
-                <EmptyState icon={LoaderCircle} spin>
-                    {t('files.reading', { name: basenameOf(folder) })}
-                </EmptyState>
-            );
+            return <EmptyState busy>{t('files.reading', { name: basenameOf(folder) })}</EmptyState>;
         }
         if (treeInput.paths.length > 0) {
             return null;

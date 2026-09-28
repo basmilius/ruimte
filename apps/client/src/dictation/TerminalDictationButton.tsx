@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { CircleAlert, LoaderCircle, Mic, Square } from 'lucide-react';
+import { CircleAlert, Mic, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useEndpointId } from '@/state/keys';
 import { ErrorBoundary, IconButton } from '@basmilius/react-ui';
@@ -32,8 +32,8 @@ function Control({ terminalId }: { terminalId: string | null }) {
     const label = error || (working ? t(`dictation.${phase}`) : recording ? t('dictation.stop') : t('dictation.start'));
     return (
         <IconButton
-            icon={working ? LoaderCircle : recording ? Square : error ? CircleAlert : Mic}
-            spin={working}
+            icon={recording ? Square : error ? CircleAlert : Mic}
+            busy={working}
             label={label}
             kbd={CANVAS_SHORTCUTS.dictation}
             className={error ? 'text-status-error' : recording ? 'text-accent' : undefined}

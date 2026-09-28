@@ -232,7 +232,7 @@ export function UsagePage({ pickers, notice }: UsagePageProps) {
                         onValueChange={(id) => useUsageStore.getState().setMetric(id)}
                         label={t('dialog.metric')}
                     />
-                    <IconButton icon={RefreshCw} label={t('dialog.rescan')} spin={loading} onClick={reload} disabled={loading || !answering} />
+                    <IconButton icon={RefreshCw} label={t('dialog.rescan')} busy={loading} onClick={reload} disabled={loading || !answering} />
                     <CloseButton label={t('dialog.close')} dialog />
                 </div>
             </header>
