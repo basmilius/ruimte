@@ -5,13 +5,16 @@ What is still open, roughly in the order that makes sense.
 The one open issue first, then the rest. Sizes are rough: hours, a day, several days. Each of the
 larger ones becomes a GitHub issue when it starts.
 
-1. **#15**: Windows, which can wait. The daemon on Bun's Windows PTY or Node with node-pty, the
-   shell and a release build (`docs/research/windows.md` is the design for a project in its own
-   window, not for the platform). Linux runs, with its own list in `docs/LINUX.md`; the signed and
-   notarized macOS build, the icon and the update path are done, see `docs/RELEASE.md`.
-2. **A third chat provider** (Gemini, Copilot or opencode) as the proof that the backend seam
-   holds: a provider value, a backend and a protocol mapper. `AgentKind` already names `gemini` and
-   `copilot`, which today only launch in a terminal; opencode would be one more literal. Hooks for
+1. **#15**: Windows, which can wait. The PTY is the one hard block: Bun opens one only on POSIX,
+   and `docs/reports/2026-09-24-cross-platform.html` proposes a Rust helper on ConPTY, with the
+   POSIX assumptions around it, the shell and an unsigned release build
+   (`docs/research/windows.md` is the design for a project in its own window, not for the
+   platform). Linux runs, with its own list in `docs/LINUX.md`; the signed and notarized macOS
+   build, the icon and the update path are done, see `docs/RELEASE.md`.
+2. **Copilot and Gemini as chat providers**, after Claude, Codex and Apple Foundation Models
+   (`docs/reports/2026-09-25-provider-research.html`: Copilot through its TypeScript SDK, Gemini
+   through `gemini --acp`): a provider value, a backend and a protocol mapper each. `AgentKind`
+   already names `gemini` and `copilot`, which today only launch in a terminal. Hooks for
    Gemini and Copilot are a day per CLI on top, approvals included, the way Claude Code and Codex
    answer theirs. Two things come before it. The iPhone app with open enums (`AgentKind`, `RuntimeMode` and `AgentStatus` are `x-open-enum` in `schemas.json`, since
    1a42876c) has to be out in an iOS release first, since an older build refuses a whole answer over
@@ -51,13 +54,16 @@ larger ones becomes a GitHub issue when it starts.
    into a branch checked out nowhere is refused (`target-not-checked-out`) rather than offered as a
    ref-only merge.
 8. **Around the editor.** A text file opens in the editor (`packages/editor`) in the files panel
-   and in a file node from a zoom of 0.6, and saves over the mtime it was read at. Left: a PDF
-   renderer; a diff node that reuses the git panel's scopes (the files preview has a diff tab with
-   them, there is no node kind); a line number in a file node's path (`file.preview` already takes
-   one); and "open in editor": an editor probe and preference, `fs.open` with `path:line`, used from
-   menus, diff rows and paths in terminal output. Still unmeasured: what a canvas of ten file nodes
-   on the largest files of a repository costs, now that the plate and the highlighting cap are the
-   two things standing between it and the thirty-node goal.
+   and in a file node from a zoom of 0.6, and saves over the mtime it was read at. Left: a diff
+   node that reuses the git panel's scopes (the files preview has a diff tab with them, there is
+   no node kind); a line number in a file node's path (`file.preview` already takes one); "open in
+   editor": an editor probe and preference, `fs.open` with `path:line`, used from menus, diff rows
+   and paths in terminal output; and language servers on the machine, so the editor knows the
+   rest of the project (`docs/reports/2026-09-23-language-servers.html`, designed, not built).
+   Still unmeasured: what a canvas of ten file nodes on the largest files of a repository costs,
+   now that the plate and the highlighting cap are the two things standing between it and the
+   thirty-node goal. Audio playing on the web is not yet checked in the Electron dev app, over the
+   socket and over a direct connection.
 9. **A test floor**: a dev-only 30-node palette command and whatever it finds; a DOM setup for
    `bun test` with first specs for the composer and the canvas wiring.
 10. **More than one window**: a window shows a start screen or one project, and two projects side by
@@ -65,8 +71,7 @@ larger ones becomes a GitHub issue when it starts.
     `docs/research/windows.md` is the design and none of it is built. The empty states that stay a
     sentence: the Files and Git panels of a project without a folder, since linking a folder to a
     project needs a request the wire does not have.
-11. **Smaller ones**: the ruimte.app landing page, which gets an issue when it starts;
-    a color or an arrowhead per plain line; a note's title as the first heading
+11. **Smaller ones**: a color or an arrowhead per plain line; a note's title as the first heading
     of its body; "Clear" in a chat node's menu (`chat.clear` exists, only the composer offers it);
     what happens to a chat's background subagents on a clear (the CLI goes and `background` is
     emptied, but the subagents are not marked stopped the way a cancel does); splitting the

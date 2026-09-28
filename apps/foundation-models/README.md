@@ -274,7 +274,7 @@ The targeted Edit recovery test passed: a rejected match, a fresh Read, then a
 successful exact replacement verified on disk. The complete workday evaluation
 is still not passing. The latest long native smoke failed on a memory answer, so the
 full long-running scenario is not claimed as passing. See the
-[recorded evidence](../../docs/reports/2026-09-25-apple-foundation-verification.json).
+[recorded evidence](verification.json).
 
 The real-model smoke creates temporary project fixtures and a separate state
 folder. It exercises memory, file listing, reading, search, editing, new-file

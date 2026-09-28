@@ -60,14 +60,13 @@ The `linux` job in `.github/workflows/release.yml` builds x64 on `ubuntu-22.04` 
 
 1. **A Linux line in `.github/workflows/ci.yml`.** It runs on `macos-latest` only, so nothing
    catches a Linux regression before a tag.
-2. **Fonts with a Linux face.** `--font-sans` and `--font-mono` in `apps/client/src/styles.css`
-   name Apple, Microsoft and web faces only, so both fall through to the generic on a Linux
+2. **Fonts with a Linux face.** `--font-sans` and `--font-mono` in `@basmilius/react-ui/theme.css`
+   name Apple, Microsoft and web faces only (an issue for that library, not a patch here), so both fall through to the generic on a Linux
    desktop. Cantarell, Ubuntu and Noto Sans for the first, DejaVu Sans Mono, Liberation Mono and
    Noto Sans Mono for the second. `DEFAULT_FONT_STACKS` in `packages/drawing/src/text.ts` has the
    same gap, and its `hand` stack names nothing a stock Linux box ships.
 3. **Wayland.** The app runs under XWayland by default, which is blurry on fractional scaling.
    Whether to pass `--ozone-platform-hint=auto` is a choice, not a bug.
-4. **`site/index.html`** says Linux ships as AppImage and deb, and leaves the rpm out.
 
 Unverified: the deb (never built, and the `deb.depends` list in `apps/desktop/electron-builder.yml`
 names `libgtk-3-0` and `libxss1`, both renamed or dropped in the t64 transition, so install it on

@@ -3,6 +3,8 @@
 State of the working tree on 2026-09-11, `4c5d417`, with only `.ruimte/project.json` modified. Every
 path is relative to `/Users/bas/Development/Projects/ruimte`. Line numbers are from the working
 tree. Nothing here is implemented; this is the document an implementation agent executes.
+Paths and line numbers have drifted since (a few files were renamed or removed), so check each
+reference against main before acting on it.
 
 Phase 6 of the multiple daemons work made two workspaces possible: the four stores of an
 open project are factories behind a React context (`apps/client/src/state/workspace.ts`,
