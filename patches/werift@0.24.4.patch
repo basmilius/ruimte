@@ -1,0 +1,24 @@
+diff --git a/lib/sctp/src/sctp.js b/lib/sctp/src/sctp.js
+index 45d5e3ce415add4a686b7da8bcbd89fa330d0b6e..4c25f90fa373f0c682d1c13d04d73c0a0c592aba 100644
+--- a/lib/sctp/src/sctp.js
++++ b/lib/sctp/src/sctp.js
+@@ -1101,15 +1101,17 @@ class SCTP {
+                     this.cwnd += Math.min(doneBytes, USERDATA_MAX_LENGTH);
+                 }
+                 else {
++                    // Ruimte: four chunks per window acked instead of one, so a window cut on a lossy link is back within a second.
+                     this.partialBytesAcked += doneBytes;
+                     if (this.partialBytesAcked >= this.cwnd) {
+                         this.partialBytesAcked -= this.cwnd;
+-                        this.cwnd += USERDATA_MAX_LENGTH;
++                        this.cwnd += 4 * USERDATA_MAX_LENGTH;
+                     }
+                 }
+             }
+             if (loss) {
+-                this.ssthresh = Math.max(Math.floor(this.cwnd / 2), 4 * USERDATA_MAX_LENGTH);
++                // Ruimte: back off to 70% instead of half, as CUBIC does, since one lost Wi-Fi frame halved a stream that had room.
++                this.ssthresh = Math.max(Math.floor(this.cwnd * 0.7), 4 * USERDATA_MAX_LENGTH);
+                 this.cwnd = this.ssthresh;
+                 this.partialBytesAcked = 0;
+                 this.fastRecoveryExit = this.sentQueue[this.sentQueue.length - 1].tsn;

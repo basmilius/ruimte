@@ -31,5 +31,8 @@
   },
   "trustedDependencies": [
     "electron"
-  ]
+  ],
+  "patchedDependencies": {
+    "werift@0.24.4": "patches/werift@0.24.4.patch"
+  }
 }
