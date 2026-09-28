@@ -212,7 +212,7 @@
             "right": "De cel naar rechts splitsen",
             "down": "De cel naar beneden splitsen",
             "focusNeighbor": "De cel ernaast focussen (elke pijltoets)",
-            "maximize": "De gefocuste cel maximaliseren of de splitsing herstellen",
+            "maximize": "De geselecteerde node of de gefocuste cel maximaliseren, of herstellen",
             "close": "De gefocuste cel sluiten"
         },
         "drawing": {

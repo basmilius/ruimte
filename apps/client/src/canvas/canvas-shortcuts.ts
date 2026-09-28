@@ -27,7 +27,7 @@ import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/pr
 import { useSubagentView } from '@ruimte/agents-react/chat/subagent-view';
 import { stepTimelineMessage } from '@ruimte/agents-react/chat/timeline-scroll';
 import { openFocusedFind } from '@/find/hosts';
-import { focusedCanvas } from '@/state/canvas';
+import { focusedCanvas, maximizeTargetOf } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { drawingHasSomethingToClear, focusedDrawing } from '@/state/drawing';
 import { focusViewRow } from '@/shell/sidebar-focus';
@@ -192,8 +192,15 @@ export const useCanvasShortcuts = (): void => {
                 splitAction(is(CANVAS_SHORTCUTS.splitDown) ? 'down' : 'right');
                 return;
             }
-            // With one cell and nothing maximized the key is let go, since there is nothing to fill.
+            /* A node on the canvas goes first (`maximizeTargetOf`); without one the key is the grid's,
+               and with one cell and nothing maximized it is let go, since there is nothing to fill. */
             if (is(CANVAS_SHORTCUTS.maximizeCell)) {
+                const node = onStandaloneView() ? null : maximizeTargetOf(s);
+                if (node !== null) {
+                    e.preventDefault();
+                    s.toggleMaximizedNode(node);
+                    return;
+                }
                 const state = useDocument.getState();
                 if (state.maximized !== null || (state.layout !== null && cellCount(state.layout) > 1)) {
                     e.preventDefault();

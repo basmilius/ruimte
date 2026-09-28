@@ -21,7 +21,7 @@ import { openFocusedFind } from '@/find/hosts';
 import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubheaderView } from '@/project/views';
 import { copyDiagram, exportDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { copyDrawing, exportDrawing } from '@/drawing/drawing-actions';
-import { focusedCanvas, type CanvasState } from '@/state/canvas';
+import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, type CanvasState } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { focusedDrawing } from '@/state/drawing';
 import { activeViewOf, useDocument } from '@/state/document';
@@ -134,6 +134,7 @@ export const appCommands = (): Command[] => {
     /* A row that writes into a canvas is offered only while one is on screen. In a chat or a
        terminal view "New note" and "Zoom to fit" would act on a surface nobody is looking at. */
     const onCanvas = activeView !== null && isCanvasView(activeView);
+    const maximizeTarget = onCanvas ? maximizeTargetOf(canvas) : null;
     /* The start screen is outside every project, so only the rows about the window are offered there. */
     const inWorkspace = windowWorkspace() !== null;
     return [
@@ -215,7 +216,8 @@ export const appCommands = (): Command[] => {
                             {
                                 id: 'cell-maximize',
                                 label: i18next.t(filling ? 'shell:viewMenu.restoreSplit' : 'shell:viewMenu.maximizeCell'),
-                                shortcut: CANVAS_SHORTCUTS.maximizeCell,
+                                // The key goes to a node first, so this row only shows it when no node would take it.
+                                ...(maximizeTarget === null ? { shortcut: CANVAS_SHORTCUTS.maximizeCell } : {}),
                                 run: () => useDocument.getState().toggleMaximized()
                             },
                             {
@@ -356,6 +358,16 @@ export const appCommands = (): Command[] => {
                                 label: i18next.t('shell:palette.commands.zoomReset'),
                                 shortcut: CANVAS_SHORTCUTS.zoomReset,
                                 run: () => zoomTarget().zoomTo(1)
+                            }
+                        ]
+                      : []),
+                  ...(maximizeTarget !== null
+                      ? [
+                            {
+                                id: 'node-maximize',
+                                label: i18next.t(maximizedNodeOf(canvas) === null ? 'canvas:node.maximize' : 'canvas:node.restore'),
+                                shortcut: CANVAS_SHORTCUTS.maximizeCell,
+                                run: () => focusedCanvas().getState().toggleMaximizedNode(maximizeTarget)
                             }
                         ]
                       : []),

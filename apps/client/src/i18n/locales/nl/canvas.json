@@ -53,6 +53,8 @@
   "node": {
     "failed": "Deze node kon niet worden getekend",
     "zoomTo": "Naar node zoomen",
+    "maximize": "Node maximaliseren",
+    "restore": "Node herstellen",
     "close": "Node sluiten",
     "context": {
       "tooltip": "Gekoppelde context. De agent leest die met ruimte-context.",

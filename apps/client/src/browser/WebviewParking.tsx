@@ -7,7 +7,7 @@ import { nodesOverBrowsers } from '@/canvas/stacking';
 import { pageClipPath, type PageHole } from '@/browser/page-clip';
 import { cellElement, subscribeCells } from '@/shell/cell-rects';
 import { viewIdsIn } from '@/shell/split';
-import { GROUP_HEADER_PX, isNodeActive, liveCanvas, subscribeCanvases, type CanvasState } from '@/state/canvas';
+import { GROUP_HEADER_PX, isNodeActive, liveCanvas, maximizedNodeOf, subscribeCanvases, type CanvasState } from '@/state/canvas';
 import { splitKey } from '@/state/keys';
 import { useDocument } from '@/state/document';
 
@@ -120,12 +120,27 @@ function DesktopWebviewParking() {
                 delete host.dataset.square;
                 const canvas = liveCanvas(view.viewId);
                 const node = canvas?.nodes[nodeId];
-                const shown = canvas !== null && node !== undefined && node.kind === 'browser' && !canvas.hidden.has(nodeId);
+                const maximized = canvas === null ? null : maximizedNodeOf(canvas);
+                // A page is always over the canvas, so the node maximized in front of it would sit under it.
+                const shown =
+                    canvas !== null &&
+                    node !== undefined &&
+                    node.kind === 'browser' &&
+                    !canvas.hidden.has(nodeId) &&
+                    (maximized === null || maximized === nodeId);
                 host.style.visibility = shown ? 'visible' : 'hidden';
                 /* Only the active node hands the pointer to its page, and never while a gesture runs.
                    A page that always took it would swallow the wheel, and panning over it would stop. */
                 host.style.pointerEvents = shown && isNodeActive(canvas!.bodyFocusId, nodeId) && !canvas!.gesturing ? 'auto' : 'none';
                 if (!shown) {
+                    continue;
+                }
+                // Maximized, the node fills the canvas at actual size and nothing stands on it.
+                if (maximized === nodeId) {
+                    host.style.width = `${rect.width}px`;
+                    host.style.height = `${Math.max(1, rect.height - GROUP_HEADER_PX - TOOLBAR_PX)}px`;
+                    host.style.transform = `translate(0px, ${GROUP_HEADER_PX + TOOLBAR_PX}px)`;
+                    host.style.clipPath = '';
                     continue;
                 }
                 const { camera } = canvas!;

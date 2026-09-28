@@ -66,6 +66,10 @@ describe('what a person can read on a canvas', () => {
         expect(readableNodes(canvas)).toEqual(['a']);
     });
 
+    test('only the maximized node, wherever it stands and however far the camera is out', () => {
+        expect(readableNodes({ ...canvas, camera: { x: 0, y: 0, zoom: 0.1 }, maximized: 'b' })).toEqual(['b']);
+    });
+
     test('nothing at all while the editor has no size, since it has drawn nothing yet', () => {
         expect(readableNodes({ ...canvas, viewport: { w: 0, h: 0 } })).toEqual([]);
     });

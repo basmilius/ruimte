@@ -126,6 +126,7 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     'split-right': PanelRight,
     'split-down': PanelBottom,
     'cell-maximize': Expand,
+    'node-maximize': Expand,
     'cell-close-others': ListX,
     'cell-close-right': ArrowRightToLine,
     fit: Maximize2,

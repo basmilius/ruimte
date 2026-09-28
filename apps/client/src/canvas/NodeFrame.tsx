@@ -1,6 +1,6 @@
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import type { CanvasNodeKind } from '@ruimte/contracts';
-import { memo, useMemo, useState, type ReactNode } from 'react';
+import { memo, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,6 +18,7 @@ import {
     Maximize2,
     MessageSquare,
     PenTool,
+    Shrink,
     Workflow,
     StickyNote,
     Smartphone,
@@ -34,7 +35,7 @@ import { useChildTask } from '@/state/tasks';
 import { useUnseen } from '@/state/attention';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { useOptionalConnection } from '@/transport/context';
-import { isNodeActive, useCanvas, useCanvasStore, type AgentStatus } from '@/state/canvas';
+import { isNodeActive, maximizedNodeOf, useCanvas, useCanvasStore, type AgentStatus } from '@/state/canvas';
 import { useNodeStatus, useNodeWorking } from '@/state/chats';
 import { ProcessAlertMark } from '@/processes/ProcessAlertMark';
 import { useNodeAlerts } from '@/processes/use-node-alerts';
@@ -196,6 +197,25 @@ function Title({ id, title, editing, muted, onDone }: { id: string; title: strin
 }
 
 /*
+ * Where a maximized node stands: over the whole canvas at actual size. It stays inside the camera's
+ * transform and undoes it, since moving it out would remount its session or its page.
+ */
+const useMaximizedPlace = (id: string): CSSProperties | null => {
+    const camera = useCanvas((s) => (maximizedNodeOf(s) === id ? s.camera : null));
+    const viewport = useCanvas((s) => (maximizedNodeOf(s) === id ? s.viewport : null));
+    if (camera === null || viewport === null) {
+        return null;
+    }
+    return {
+        left: -camera.x / camera.zoom,
+        top: -camera.y / camera.zoom,
+        width: viewport.w,
+        height: viewport.h,
+        transform: `scale(${1 / camera.zoom})`
+    };
+};
+
+/*
  * The rev is read here and not in the frame, so a save re-renders one boundary per node and not
  * every frame; the children it hands through are the same elements and React skips them.
  */
@@ -227,9 +247,11 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
     const takesKeyboard = active && cellHasFocus;
     const resizable = useCanvas((s) => !s.locks.resize);
     const resizing = useCanvas((s) => s.resizing === id);
+    const maximizedPlace = useMaximizedPlace(id);
+    const maximized = maximizedPlace !== null;
     const inViewport = useNodeInViewport(id);
-    const live = useHeldWhileVisible(inViewport);
-    const readable = useReadableZoom();
+    const live = useHeldWhileVisible(inViewport || maximized);
+    const readable = useReadableZoom() || maximized;
     const [renaming, setRenaming] = useState(false);
     const subagentTrail = useSubagentTrail(id).trail;
     /* Where a file node's controls go: its own header, so the body draws no second bar under it.
@@ -272,9 +294,14 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                 data-node-id={id}
                 className={clsx(
                     // isolate: xterm's layers carry z-indexes; without a stacking context they would paint over a node added later.
-                    'absolute isolate flex flex-col overflow-hidden rounded-xl border focus-visible:outline-none',
-                    isGroup ? GROUP_FRAME : isNote ? clsx('shadow-node', noteColorClass(node.color)) : 'bg-surface shadow-node',
-                    (selected || linkTarget) && 'node-selected',
+                    'absolute isolate flex flex-col overflow-hidden focus-visible:outline-none',
+                    maximized ? 'origin-top-left' : 'rounded-xl border',
+                    isGroup
+                        ? GROUP_FRAME
+                        : isNote
+                          ? clsx(!maximized && 'shadow-node', noteColorClass(node.color))
+                          : clsx('bg-surface', !maximized && 'shadow-node'),
+                    (selected || linkTarget) && !maximized && 'node-selected',
                     /* The border stays under the selection ring, which is drawn outside it: a
                        transparent border would show a line of bare canvas now that a surface is
                        clipped to its padding box. A group's is its color, which is what tells one
@@ -286,6 +313,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     top: node.y,
                     width: node.w,
                     height: node.h,
+                    ...maximizedPlace,
                     zIndex: z,
                     ...(isGroup && accent ? { '--group-accent': accent } : {})
                 }}
@@ -391,7 +419,16 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     {node.kind === 'file' && <ButtonGroup ref={setFileControls} render={<span />} className="shrink-0" />}
                     {node.kind === 'device' && <DeviceToolbar id={id} />}
                     <ButtonGroup className="shrink-0">
-                        <IconButton icon={Maximize2} size="sm" label={t('node.zoomTo')} onClick={() => focusNodeAction(canvasStore.getState().viewId, id)} />
+                        {maximized ? (
+                            <IconButton icon={Shrink} size="sm" label={t('node.restore')} onClick={() => canvasStore.getState().toggleMaximizedNode(id)} />
+                        ) : (
+                            <IconButton
+                                icon={Maximize2}
+                                size="sm"
+                                label={t('node.zoomTo')}
+                                onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}
+                            />
+                        )}
                         <IconButton icon={X} size="sm" label={t('node.close')} onClick={remove} />
                     </ButtonGroup>
                 </header>
@@ -433,6 +470,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     selection unlocks. They carry no paint, so an idle node looks no different. */}
                 {resizable &&
                     !collapsed &&
+                    !maximized &&
                     RESIZE_EDGES.map((edge) => <div key={edge} data-resize={edge} className={clsx('absolute z-10', EDGE_STYLE[edge])} />)}
                 {resizing && (
                     <div className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-accent px-2 py-0.5 font-mono text-xs tabular-nums text-accent-text shadow-float">

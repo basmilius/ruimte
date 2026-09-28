@@ -199,7 +199,7 @@
         "drag": "{{name}}, sleep om hem naar een andere cel te verplaatsen",
         "moreActions": "Meer acties",
         "closeCell": "Deze cel sluiten",
-        "maximized": "gemaximaliseerd",
+        "maximized": "Gemaximaliseerd",
         "hidden_one": "{{count}} cel verborgen",
         "hidden_other": "{{count}} cellen verborgen",
         "restore": "De splitsing herstellen"
@@ -632,6 +632,7 @@
         "splitRight": "Naar rechts splitsen",
         "splitDown": "Naar beneden splitsen",
         "maximizeCell": "Cel maximaliseren",
+        "maximizeNode": "Node maximaliseren",
         "zoomToFit": "Alles in beeld",
         "zoomToSelection": "Selectie in beeld",
         "actualSize": "Ware grootte",

@@ -2,7 +2,7 @@ import { isCanvasView, isSessionView } from '@ruimte/contracts';
 import { READABLE_ZOOM } from '@/canvas/culling';
 import { intersects, isMeasured, visibleRect, type Camera, type Rect } from '@/canvas/math';
 import { viewIdsIn } from '@/shell/split';
-import { liveCanvas, type CanvasState } from '@/state/canvas';
+import { liveCanvas, maximizedNodeOf, type CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 
 /*
@@ -18,6 +18,8 @@ export interface CanvasSight {
     nodes: readonly (Rect & { id: string })[];
     /* Node ids inside a collapsed group. They are in the project and on nobody's screen. */
     hidden?: ReadonlySet<string>;
+    /* The node maximized over the canvas at actual size, which covers everything else on it. */
+    maximized?: string | null;
 }
 
 /*
@@ -27,7 +29,13 @@ export interface CanvasSight {
  * the node's own title and content rather than the pixels, so a zoomed-out canvas is not blind to it.
  */
 export const visibleNodes = (canvas: CanvasSight, { readable }: { readable: boolean }): string[] => {
-    if (!isMeasured(canvas.viewport) || (readable && canvas.camera.zoom < READABLE_ZOOM)) {
+    if (!isMeasured(canvas.viewport)) {
+        return [];
+    }
+    if (canvas.maximized) {
+        return [canvas.maximized];
+    }
+    if (readable && canvas.camera.zoom < READABLE_ZOOM) {
         return [];
     }
     const rect = visibleRect(canvas.camera, canvas.viewport);
@@ -41,7 +49,8 @@ export const sightOf = (canvas: CanvasState): CanvasSight => ({
     camera: canvas.camera,
     viewport: canvas.viewport,
     nodes: canvas.order.map((id) => canvas.nodes[id]!),
-    hidden: canvas.hidden
+    hidden: canvas.hidden,
+    maximized: maximizedNodeOf(canvas)
 });
 
 /* What the window has in front of a person: nothing at all while another window has the focus. */

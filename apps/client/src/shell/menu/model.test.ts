@@ -33,6 +33,8 @@ const context = (patch: Partial<MenuContext> = {}): MenuContext => ({
     cells: 1,
     split: { right: true, down: true },
     maximized: false,
+    nodeMaximizable: false,
+    nodeMaximized: false,
     closesRight: false,
     panel: null,
     sidebar: true,
@@ -166,6 +168,15 @@ describe('the menus', () => {
         expect(find(menuModel(context({ cells: 1 })), 'cell-maximize')?.enabled).toBe(false);
         const two = find(menuModel(context({ cells: 2, maximized: true })), 'cell-maximize');
         expect(two).toMatchObject({ enabled: true, checked: true, accelerator: 'CommandOrControl+Shift+Enter' });
+    });
+
+    test('the maximize key moves to the node item while a node on the canvas is what it acts on', () => {
+        const idle = menuModel(context({ cells: 2 }));
+        expect(find(idle, 'node-maximize')).toMatchObject({ enabled: false });
+        expect(find(idle, 'node-maximize')?.accelerator).toBeUndefined();
+        const node = menuModel(context({ cells: 2, nodeMaximizable: true, nodeMaximized: true }));
+        expect(find(node, 'node-maximize')).toMatchObject({ enabled: true, checked: true, accelerator: 'CommandOrControl+Shift+Enter' });
+        expect(find(node, 'cell-maximize')?.accelerator).toBeUndefined();
     });
 
     test('closing the other cells or those to the right sits under Close, greyed while there is nothing to close', () => {

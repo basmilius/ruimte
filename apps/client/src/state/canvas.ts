@@ -124,6 +124,8 @@ export interface CanvasState extends CameraSlice {
      * focus, and a node keeps it while it is dragged by its own header.
      */
     bodyFocusId: string | null;
+    /* The node drawn over the whole canvas at actual size. Where it stands and how big it is stay as they were. */
+    maximizedId: string | null;
     editingTextId: string | null;
     locks: Locks;
     /* Node currently under a resize handle, so it can show its size. Transient. */
@@ -151,6 +153,8 @@ export interface CanvasState extends CameraSlice {
     /* Puts a node on top, selects it and hands its content the keyboard: what a click in a body does. */
     activateNode(id: string): void;
     setBodyFocus(id: string | null): void;
+    /* Maximizing hands the node the keyboard as well, since it is all there is to type in. */
+    toggleMaximizedNode(id: string): void;
 
     /* `first` marks the first step of a drag, the moment worth remembering for undo. */
     moveSelected(dx: number, dy: number, first?: boolean): void;
@@ -347,6 +351,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         hidden: new Set(),
         selection: [],
         bodyFocusId: null,
+        maximizedId: null,
         editingTextId: null,
         locks: { pan: false, zoom: false, move: false, resize: false },
         resizing: null,
@@ -357,7 +362,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         future: [],
 
         goToNode(id) {
-            const { nodes, viewport, camera } = get();
+            const { nodes, viewport, camera, maximizedId } = get();
             const node = nodes[id];
             if (!node) {
                 return;
@@ -367,6 +372,8 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                runs on one frame old, so it waits for the size rather than landing in the corner. */
             set({
                 ...(next === null ? { pendingCamera: { kind: 'node', id } } : { camera: next, pendingCamera: null }),
+                // Another node would land under the maximized one.
+                ...(maximizedId !== id ? { maximizedId: null } : {}),
                 selection: [id]
             });
         },
@@ -395,6 +402,14 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         },
         setBodyFocus(id) {
             set({ bodyFocusId: id });
+        },
+        toggleMaximizedNode(id) {
+            if (maximizedNodeOf(get()) === id) {
+                set({ maximizedId: null });
+                return;
+            }
+            get().activateNode(id);
+            set({ maximizedId: id });
         },
 
         moveSelected(dx, dy, first = false) {
@@ -698,6 +713,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 hidden: hiddenIn(nodes),
                 selection: [],
                 bodyFocusId: null,
+                maximizedId: null,
                 editingTextId: null,
                 resizing: null,
                 past: [],
@@ -881,6 +897,24 @@ export const revealWhenItLands = (viewId: string, nodeId: string): void => {
 
 /* Every canvas on screen, which is what a watcher about the whole project walks over. */
 export const liveCanvases = (): [string, CanvasState][] => defaultCanvases.live().map(([viewId, store]) => [viewId, store.getState()]);
+
+/* The maximized node, while it is still on the canvas and not folded away in a group. */
+export const maximizedNodeOf = (s: Pick<CanvasState, 'maximizedId' | 'nodes' | 'hidden'>): string | null =>
+    s.maximizedId !== null && s.nodes[s.maximizedId] !== undefined && !s.hidden.has(s.maximizedId) ? s.maximizedId : null;
+
+/*
+ * The node the maximize shortcut acts on: the maximized one, else the one with the keyboard, else the
+ * one selected alone. A group has no content to fill the canvas with. Null leaves the key to the grid.
+ */
+export const maximizeTargetOf = (s: Pick<CanvasState, 'maximizedId' | 'nodes' | 'hidden' | 'bodyFocusId' | 'selection'>): string | null => {
+    const maximized = maximizedNodeOf(s);
+    if (maximized !== null) {
+        return maximized;
+    }
+    const id = s.bodyFocusId ?? (s.selection.length === 1 ? s.selection[0]! : null);
+    const node = id === null ? undefined : s.nodes[id];
+    return node !== undefined && node.kind !== 'group' && !s.hidden.has(node.id) ? node.id : null;
+};
 
 /* A node's content has the keyboard, which is what a page, a terminal and the wheel all read. */
 export const isNodeActive = (bodyFocusId: string | null, id: string): boolean => bodyFocusId === id;

@@ -39,6 +39,10 @@ export interface MenuContext {
     split: { right: boolean; down: boolean };
     /* A cell fills the grid for now. */
     maximized: boolean;
+    /* The maximize key acts on a node of the canvas with the focus (`maximizeTargetOf`), not on the cell. */
+    nodeMaximizable: boolean;
+    /* A node fills that canvas for now. */
+    nodeMaximized: boolean;
     /* Columns stand right of the focused cell. */
     closesRight: boolean;
     /* The open panel, or null while none is. */
@@ -274,9 +278,14 @@ export const menuModel = (context: MenuContext): MenuSpec => {
                 command('split-right', t('splitRight'), { shortcut: CANVAS_SHORTCUTS.splitRight, enabled: context.split.right }),
                 command('split-down', t('splitDown'), { shortcut: CANVAS_SHORTCUTS.splitDown, enabled: context.split.down }),
                 command('cell-maximize', t('maximizeCell'), {
-                    shortcut: CANVAS_SHORTCUTS.maximizeCell,
+                    shortcut: context.nodeMaximizable ? undefined : CANVAS_SHORTCUTS.maximizeCell,
                     enabled: context.cells > 1,
                     checked: context.maximized
+                }),
+                command('node-maximize', t('maximizeNode'), {
+                    shortcut: context.nodeMaximizable ? CANVAS_SHORTCUTS.maximizeCell : undefined,
+                    enabled: context.nodeMaximizable,
+                    checked: context.nodeMaximized
                 }),
                 separator,
                 command('fit', t('zoomToFit'), { shortcut: CANVAS_SHORTCUTS.fitAll, enabled: zoomable }),

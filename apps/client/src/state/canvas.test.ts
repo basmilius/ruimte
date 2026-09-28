@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { groupFrame, ProjectCanvasViewSchema, type ProjectCanvasView } from '@ruimte/contracts';
 import { toWorld } from '@/canvas/math';
 import type { CanvasPatch } from '@/project/merge';
-import { carriedByGroups, createCanvasStore, focusedCanvas, isNodeActive, patchSnapshot, type CanvasNode } from './canvas';
+import { carriedByGroups, createCanvasStore, focusedCanvas, isNodeActive, maximizedNodeOf, maximizeTargetOf, patchSnapshot, type CanvasNode } from './canvas';
 
 /* Every test here is about one editor, and with no workspace open that is the module's own. */
 const canvas = () => focusedCanvas().getState();
@@ -522,5 +522,37 @@ describe('patchSnapshot', () => {
         expect(patched.order).toEqual(['kept', 'fresh']);
         expect(patched.edges.map((edge) => edge.id)).toEqual(['new-line']);
         expect(snapshot.order).toEqual(['kept', 'gone']);
+    });
+});
+
+describe('a maximized node', () => {
+    const nodes = { a: node('a', 0, 0), b: node('b', 400, 0), g: node('g', 0, 400, 'group') };
+
+    test('the key acts on the maximized node, else the one with the keyboard, else the one selected alone', () => {
+        const base = { nodes, hidden: new Set<string>(), maximizedId: null, bodyFocusId: null, selection: [] };
+        expect(maximizeTargetOf({ ...base, selection: ['a'] })).toBe('a');
+        expect(maximizeTargetOf({ ...base, selection: ['a', 'b'] })).toBeNull();
+        expect(maximizeTargetOf({ ...base, selection: ['a'], bodyFocusId: 'b' })).toBe('b');
+        expect(maximizeTargetOf({ ...base, selection: ['a'], maximizedId: 'b' })).toBe('b');
+        // A group holds nothing to fill the canvas with, so the key stays the grid's.
+        expect(maximizeTargetOf({ ...base, selection: ['g'] })).toBeNull();
+    });
+
+    test('maximizing hands the node the keyboard, and the same call puts it back', () => {
+        const store = createCanvasStore();
+        store.setState({ nodes, order: ['a', 'b', 'g'] });
+        store.getState().toggleMaximizedNode('a');
+        expect(store.getState()).toMatchObject({ maximizedId: 'a', bodyFocusId: 'a', selection: ['a'] });
+        store.getState().toggleMaximizedNode('a');
+        expect(store.getState().maximizedId).toBeNull();
+    });
+
+    test('going to another node restores the canvas, and a node that left or folded away is no longer maximized', () => {
+        const store = createCanvasStore();
+        store.setState({ nodes, order: ['a', 'b', 'g'], maximizedId: 'a' });
+        store.getState().goToNode('b');
+        expect(store.getState().maximizedId).toBeNull();
+        expect(maximizedNodeOf({ nodes, hidden: new Set(['a']), maximizedId: 'a' })).toBeNull();
+        expect(maximizedNodeOf({ nodes: { b: nodes.b }, hidden: new Set(), maximizedId: 'a' })).toBeNull();
     });
 });

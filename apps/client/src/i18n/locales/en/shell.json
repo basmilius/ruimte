@@ -199,7 +199,7 @@
         "drag": "{{name}}, drag to move it to another cell",
         "moreActions": "More actions",
         "closeCell": "Close this cell",
-        "maximized": "maximized",
+        "maximized": "Maximized",
         "hidden_one": "{{count}} cell hidden",
         "hidden_other": "{{count}} cells hidden",
         "restore": "Restore the split"
@@ -632,6 +632,7 @@
         "splitRight": "Split Right",
         "splitDown": "Split Down",
         "maximizeCell": "Maximize Cell",
+        "maximizeNode": "Maximize Node",
         "zoomToFit": "Zoom to Fit",
         "zoomToSelection": "Zoom to Selection",
         "actualSize": "Actual Size",

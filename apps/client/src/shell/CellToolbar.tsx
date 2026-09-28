@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Files, MoreHorizontal } from 'lucide-react';
+import { Expand, Files, MoreHorizontal } from 'lucide-react';
 import { viewIconOf } from '@ruimte/contracts';
 import { closeCellAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
@@ -14,7 +14,7 @@ import { useHasViewToolbar, useShowsSubagents, useViewToolbarLeads } from '@/she
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import { type CellAt } from '@/shell/split';
-import { CloseButton, Icon, IconButton, Separator, ContextMenu, Popover } from '@basmilius/react-ui';
+import { CloseButton, Icon, IconButton, Separator, ContextMenu, Popover, Tooltip } from '@basmilius/react-ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
 /* What the bar holds that is not the bar: a press on one of these is not the start of a drag. */
@@ -127,6 +127,13 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                     {/* The title is what gives way: it truncates down to its glyph before anything else
                     in the bar has to move. */}
                     <span className={clsx('flex min-w-5 items-center gap-2 pl-1', folded || !hasViewToolbar ? 'grow' : 'shrink')}>
+                        {maximized && (
+                            <Tooltip label={t('cellToolbar.maximized')}>
+                                <span role="img" aria-label={t('cellToolbar.maximized')} className="inline-flex shrink-0 text-text-muted">
+                                    <Icon icon={Expand} size={14} />
+                                </span>
+                            </Tooltip>
+                        )}
                         {/* The tabs beside it say which files are open, so the glyph stands alone:
                             a name here would take the room the strip needs. */}
                         {files ? (
@@ -145,7 +152,6 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                                 </SubagentTitleCrumb>
                             </>
                         )}
-                        {maximized && <span className="shrink-0 text-text-faint">{t('cellToolbar.maximized')}</span>}
                     </span>
                     {hasViewToolbar && !folded && (
                         <>

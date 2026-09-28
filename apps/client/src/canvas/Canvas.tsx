@@ -15,7 +15,7 @@ import { resizedText } from '@/canvas/text-resize';
 import { framePressHandsKeyboard } from '@/canvas/frame-press';
 import { stackingOrder } from '@/canvas/stacking';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
-import { carriedByGroups, isNodeActive, NODE_SIZE, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { carriedByGroups, isNodeActive, maximizedNodeOf, NODE_SIZE, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
 import { createTextAction } from '@/actions/client-actions';
 import { showFileOnCanvas } from '@/project/views';
@@ -111,6 +111,7 @@ export function Canvas() {
        may not happen. */
     const drawIds = useMemo(() => [...order].sort(), [order]);
     const stacking = useMemo(() => stackingOrder(nodes, order), [order, nodes]);
+    const maximizedId = useCanvas(maximizedNodeOf);
 
     useLayoutEffect(() => {
         const gesture = gestureRef.current;
@@ -179,14 +180,19 @@ export function Canvas() {
     }, [canvasStore]);
 
     useWheelCamera(rootRef, canvasStore, {
-        locks: () => canvasStore.getState().locks,
+        // The maximized node stays where it is, so a camera moving behind it would only be lost.
+        locks: () => {
+            const s = canvasStore.getState();
+            return maximizedNodeOf(s) === null ? s.locks : { pan: true, zoom: true };
+        },
         /* The active node owns the wheel inside its body, and a pinch that reaches the canvas is the
            camera's. A pinch over a page that owns the pointer goes nowhere: Chromium applies the page
            scale only in the top-most widget, never in a `<webview>` guest, and the canvas never sees
            the event. Two fingers over a node nobody is working in pan the canvas. */
         defer: (e, zooming) => {
             const ownerId = (e.target as HTMLElement).closest('[data-node-body]')?.closest('[data-node-id]')?.getAttribute('data-node-id');
-            return !zooming && ownerId !== null && ownerId !== undefined && isNodeActive(canvasStore.getState().bodyFocusId, ownerId);
+            const s = canvasStore.getState();
+            return !zooming && ownerId !== null && ownerId !== undefined && (isNodeActive(s.bodyFocusId, ownerId) || maximizedNodeOf(s) === ownerId);
         }
     });
 
@@ -329,7 +335,7 @@ export function Canvas() {
                 return;
             }
             s.bringToFront(nodeId);
-            if (target.closest('button')) {
+            if (target.closest('button') || maximizedNodeOf(s) === nodeId) {
                 return;
             }
             startGesture(
@@ -594,15 +600,15 @@ export function Canvas() {
                         transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`
                     }}
                 >
-                    <EdgeLayer />
+                    {maximizedId === null && <EdgeLayer />}
                     {textIds.map((id) => (
                         <TextElementView key={id} id={id} />
                     ))}
                     {drawIds.map((id) => (
-                        <NodeFrame key={id} id={id} z={stacking[id] ?? 1} />
+                        <NodeFrame key={id} id={id} z={id === maximizedId ? drawIds.length + 1 : (stacking[id] ?? 1)} />
                     ))}
                     {/* Over the nodes, so a port beside one is never covered by the node standing next to it. */}
-                    <PortHints rootRef={rootRef} />
+                    {maximizedId === null && <PortHints rootRef={rootRef} />}
                 </div>
                 {drawIds.length === 0 && textIds.length === 0 && <EmptyCanvas />}
                 {/* Over the pages, which the canvas itself cannot draw over. */}

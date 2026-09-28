@@ -7,7 +7,7 @@ import { viewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
 import { nodesInSight, seenNodes, type CanvasSight } from '@/state/in-sight';
 import { seePushNotifications, clearPushNotification, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
-import { liveCanvas, subscribeCanvases } from '@/state/canvas';
+import { liveCanvas, maximizedNodeOf, subscribeCanvases } from '@/state/canvas';
 import { useChats, type ChatStatuses } from '@ruimte/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
@@ -54,7 +54,8 @@ export const chatsInSight = (workspace: ChatSightWorkspace, { planWidth }: { pla
         }
         const rect = visibleRect(canvas.camera, { w: canvas.viewport.w + planWidth, h: canvas.viewport.h });
         for (const node of canvas.nodes) {
-            if (node.kind === 'chat' && canvas.hidden?.has(node.id) !== true && intersects(node, rect)) {
+            const inFront = canvas.maximized ? node.id === canvas.maximized : canvas.hidden?.has(node.id) !== true && intersects(node, rect);
+            if (node.kind === 'chat' && inFront) {
                 chats.add(node.id);
             }
         }
@@ -72,7 +73,13 @@ export const liveChatSight = (): ChatSightWorkspace => {
             const canvas = liveCanvas(viewId);
             return canvas === null
                 ? null
-                : { camera: canvas.camera, viewport: canvas.viewport, nodes: canvas.order.map((id) => canvas.nodes[id]!), hidden: canvas.hidden };
+                : {
+                      camera: canvas.camera,
+                      viewport: canvas.viewport,
+                      nodes: canvas.order.map((id) => canvas.nodes[id]!),
+                      hidden: canvas.hidden,
+                      maximized: maximizedNodeOf(canvas)
+                  };
         }
     };
 };

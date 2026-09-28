@@ -64,6 +64,7 @@ export const PALETTE_IDS = [
     'zoom-selection',
     'zoom-reset',
     'cell-maximize',
+    'node-maximize',
     'cell-close-others',
     'cell-close-right',
     'diagram-open-json',

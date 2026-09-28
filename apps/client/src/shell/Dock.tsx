@@ -1,13 +1,14 @@
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
 import { useDictation } from '@/dictation/controller';
 import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
 import { Globe, LayoutGrid, LayoutTemplate, Lock, LockOpen, MessageSquare, Plus, Save, StickyNote, Terminal, Type, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { isCanvasView } from '@ruimte/contracts';
 import { applyLayoutAction, createNodeAction, createTextAction, deleteLayoutAction, fitAction, setLocksAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
-import { useCanvas, useCanvasStore } from '@/state/canvas';
+import { maximizedNodeOf, useCanvas, useCanvasStore } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { StatusSummary } from '@/shell/StatusSummary';
@@ -44,10 +45,19 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
         return id && s.nodes[id]?.kind === 'terminal' && !s.hidden.has(id) ? id : null;
     });
     const dockAutoHide = useSettings((s) => s.dockAutoHide);
+    // A maximized node is all the canvas shows, so the controls for the rest of it step aside.
+    const maximized = useCanvas((s) => maximizedNodeOf(s) !== null);
     const anyLocked = Object.values(locks).some(Boolean);
     const allLocked = Object.values(locks).every(Boolean);
 
-    if (!onCanvas) {
+    // The shell says so while it is mounted; gone, the stack of prompts above it has to hear it from here.
+    useEffect(() => {
+        if (maximized) {
+            onHiddenChange?.(true);
+        }
+    }, [maximized, onHiddenChange]);
+
+    if (!onCanvas || maximized) {
         return null;
     }
     return (

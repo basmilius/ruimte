@@ -4,6 +4,7 @@ import {
     ChevronsDownUp,
     ChevronsUpDown,
     Copy,
+    Expand,
     ExternalLink,
     Frame,
     GitBranch,
@@ -13,6 +14,7 @@ import {
     MessageSquare,
     Palette,
     Pencil,
+    Shrink,
     Sparkles,
     Terminal,
     Trash
@@ -31,7 +33,7 @@ import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
-import { useCanvas, useCanvasStore } from '@/state/canvas';
+import { maximizedNodeOf, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
@@ -53,6 +55,7 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const node = useCanvas((s) => s.nodes[id]);
+    const maximized = useCanvas((s) => maximizedNodeOf(s) === id);
     const agent = useSessionRow(id, (row) => row?.agent);
     const sessionAccount = useSessionRow(id, (row) => row?.account);
     const chatSession = useChatRow(id, (row) => row?.info.agentSessionId);
@@ -144,6 +147,12 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
             <ContextMenu.Item onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}>
                 <Icon icon={Maximize2} size={14} /> {t('node.zoomTo')}
             </ContextMenu.Item>
+            {node.kind !== 'group' && (
+                <ContextMenu.Item onClick={() => canvasStore.getState().toggleMaximizedNode(id)}>
+                    <Icon icon={maximized ? Shrink : Expand} size={14} /> {t(maximized ? 'node.restore' : 'node.maximize')}{' '}
+                    <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} />
+                </ContextMenu.Item>
+            )}
             <ContextMenu.Item onClick={() => canvasStore.getState().startLink(id)}>
                 <Icon icon={Link2} size={14} /> {t('menu.connect')}
                 <ContextMenu.Hint>{t('menu.connectHint')}</ContextMenu.Hint>

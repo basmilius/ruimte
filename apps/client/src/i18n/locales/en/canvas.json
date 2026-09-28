@@ -53,6 +53,8 @@
   "node": {
     "failed": "This node failed to render",
     "zoomTo": "Zoom to node",
+    "maximize": "Maximize node",
+    "restore": "Restore node",
     "close": "Close node",
     "context": {
       "tooltip": "Linked context. The agent reads it with ruimte-context.",
