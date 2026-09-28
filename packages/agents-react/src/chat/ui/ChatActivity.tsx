@@ -43,17 +43,21 @@ export function ChatActivity({ chatId }: { chatId: string }) {
         return null;
     }
     const { shells, monitors } = backgroundCounts(background);
+    const Slot = chatHost().SubagentSlot;
     return (
         <div className="mb-3 flex flex-wrap items-center gap-2">
-            {subagents.length > 0 && (
-                <Flyout
-                    icon={<StatusIcon word={summaryWordOf(words)} />}
-                    label={t('activity.subagents', { count: badgeCountOf(words) })}
-                    heading={t('activity.subagents', { count: subagents.length })}
-                >
-                    <SubagentRows chatId={chatId} items={subagents} />
-                </Flyout>
-            )}
+            {subagents.length > 0 &&
+                (Slot === null ? (
+                    <Flyout
+                        icon={<StatusIcon word={summaryWordOf(words)} />}
+                        label={t('activity.subagents', { count: badgeCountOf(words) })}
+                        heading={t('activity.subagents', { count: subagents.length })}
+                    >
+                        <SubagentRows chatId={chatId} items={subagents} />
+                    </Flyout>
+                ) : (
+                    <Slot chatId={chatId} items={subagents} />
+                ))}
             {background.length > 0 && (
                 <Flyout
                     icon={<Icon icon={shells > 0 ? SquareTerminal : Activity} size={14} />}

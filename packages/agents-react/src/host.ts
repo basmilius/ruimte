@@ -2,7 +2,7 @@ import type { ComponentProps, ComponentType, ReactNode, RefObject } from 'react'
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { ThemeRegistration } from 'shiki';
-import type { AgentKind, ChatCheckpointDiff, ChatConfigurePayload, ChatItem } from '@ruimte/agent-contracts';
+import type { AgentKind, ChatCheckpointDiff, ChatConfigurePayload, ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
 import { isApplePlatform } from '@basmilius/react-ui';
 import type { TimelineRow } from './chat/logic/timeline';
 import type { FindReveal } from './chat/ui/find-reveal';
@@ -136,6 +136,13 @@ export interface ComposerSlotProps {
     insert(text: string): void;
 }
 
+/* What an app's own chips for a chat's sub-agents get, in place of the one flyout over the composer. */
+export interface SubagentSlotProps {
+    chatId: string;
+    /* Never empty: without rows the slot is not drawn. */
+    items: readonly ChatSubagentItem[];
+}
+
 /* A card of the app's own between the messages of a thread. */
 export interface ThreadCard {
     /* Unique within the chat; the thread keys its row by it, so the same card keeps its place and its measure. */
@@ -245,6 +252,8 @@ export interface ChatHost {
     useComposerPlaceholder(scopeId: string, chatId: string): string | null;
     /* The app's own control in the composer's row, after the pickers; null draws none. */
     ComposerSlot: ComponentType<ComposerSlotProps> | null;
+    /* The app's own chips for a chat's sub-agents over the composer; null draws the one flyout. */
+    SubagentSlot: ComponentType<SubagentSlotProps> | null;
     /* Cards of the app's own in a thread, in any order. Hand back the same array while none changed, or the thread lays out its rows again on every render. */
     useThreadCards(scopeId: string, chatId: string): readonly ThreadCard[];
     /* A header over every reply with its author and how long ago it began; null names the agent for a screen reader only. */
@@ -288,6 +297,7 @@ const DEFAULT_HOST: ChatHost = {
     useResumeAtReset: () => true,
     useComposerPlaceholder: () => null,
     ComposerSlot: null,
+    SubagentSlot: null,
     useThreadCards: () => NO_CARDS,
     useReplyAuthor: () => null
 };
