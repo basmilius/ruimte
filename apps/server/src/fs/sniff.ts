@@ -13,13 +13,67 @@ const MAGIC: readonly { mime: string; signature: readonly number[] }[] = [
     { mime: 'image/jpeg', signature: [0xff, 0xd8, 0xff] },
     { mime: 'image/gif', signature: ascii('GIF87a') },
     { mime: 'image/gif', signature: ascii('GIF89a') },
+    { mime: 'image/tiff', signature: [0x49, 0x49, 0x2a, 0x00] },
+    { mime: 'image/tiff', signature: [0x4d, 0x4d, 0x00, 0x2a] },
     { mime: 'application/pdf', signature: ascii('%PDF-') }
 ];
 
 // Brands an `ftyp` box can carry that hold sound and no picture; the container is the same as MP4's.
 const AUDIO_BRANDS = new Set(['M4A ', 'M4B ', 'M4P ']);
 
+// AVIF and HEIF pictures borrow the same container; `mif1` and `msf1` only say HEIF in general.
+const IMAGE_BRANDS: ReadonlyMap<string, string> = new Map([
+    ['avif', 'image/avif'],
+    ['avis', 'image/avif'],
+    ['heic', 'image/heic'],
+    ['heix', 'image/heic'],
+    ['heim', 'image/heic'],
+    ['heis', 'image/heic'],
+    ['hevc', 'image/heic'],
+    ['hevx', 'image/heic']
+]);
+const HEIF_BRANDS = new Set(['mif1', 'msf1']);
+
+// The sizes of the DIB headers a BMP can carry, from the OS/2 one to BITMAPV5HEADER.
+const BMP_HEADER_SIZES = new Set([12, 40, 52, 56, 64, 108, 124]);
+
 const latin1 = (bytes: Uint8Array): string => new TextDecoder('latin1').decode(bytes);
+
+const uint32 = (bytes: Uint8Array, offset: number, littleEndian: boolean): number =>
+    new DataView(bytes.buffer, bytes.byteOffset + offset, 4).getUint32(0, littleEndian);
+
+/*
+ * The picture an `ftyp` box names, if any. A picture often names the generic HEIF brand first and
+ * the brand of its codec further on, so the compatible brands count as much as the major one.
+ */
+const imageBrand = (bytes: Uint8Array): string | null => {
+    const end = Math.min(uint32(bytes, 0, false), bytes.length);
+    const brands = [latin1(bytes.subarray(8, 12))];
+    for (let offset = 16; offset + 4 <= end; offset += 4) {
+        brands.push(latin1(bytes.subarray(offset, offset + 4)));
+    }
+    const specific = brands.find((brand) => IMAGE_BRANDS.has(brand));
+    if (specific) {
+        return IMAGE_BRANDS.get(specific) ?? null;
+    }
+    return brands.some((brand) => HEIF_BRANDS.has(brand)) ? 'image/heif' : null;
+};
+
+/*
+ * An ICO and a BMP open with four and two bytes that plenty of other files share, so the header
+ * behind them has to hold up too: an icon names at least one image and a zero reserved byte in its
+ * first entry, a bitmap has zeroed reserved bytes and a DIB header of a size that exists.
+ */
+const isIcon = (bytes: Uint8Array): boolean =>
+    bytes.length >= 22 &&
+    startsWith(bytes, [0x00, 0x00, 0x01, 0x00]) &&
+    (bytes[4] | (bytes[5] << 8)) > 0 &&
+    bytes[9] === 0 &&
+    bytes[11] === 0 &&
+    bytes[10] <= 1;
+
+const isBitmap = (bytes: Uint8Array): boolean =>
+    bytes.length >= 18 && startsWith(bytes, ascii('BM')) && uint32(bytes, 6, true) === 0 && BMP_HEADER_SIZES.has(uint32(bytes, 14, true));
 
 /*
  * Raw MPEG audio has no header, only frames: eleven set bits of sync, then a version and a layer. Layer
@@ -44,6 +98,12 @@ export const sniffMime = (bytes: Uint8Array): string | null => {
             return mime;
         }
     }
+    if (isIcon(bytes)) {
+        return 'image/x-icon';
+    }
+    if (isBitmap(bytes)) {
+        return 'image/bmp';
+    }
     // WebP and WAV are RIFF containers: the form type sits four bytes past the length.
     if (startsWith(bytes, ascii('RIFF')) && startsWith(bytes.subarray(8), ascii('WEBP'))) {
         return 'image/webp';
@@ -58,9 +118,13 @@ export const sniffMime = (bytes: Uint8Array): string | null => {
     if (startsWith(bytes, ascii('ID3'))) {
         return 'audio/mpeg';
     }
-    // An ISO base media file (MP4, M4V, MOV) names itself in an `ftyp` box four bytes in, and the
-    // brand behind it says which flavor: QuickTime carries codecs no browser has to play.
+    // An ISO base media file (MP4, M4V, MOV, AVIF, HEIC) names itself in an `ftyp` box four bytes in,
+    // and the brands in it say which flavor: QuickTime carries codecs no browser has to play.
     if (startsWith(bytes.subarray(4), ascii('ftyp'))) {
+        const image = imageBrand(bytes);
+        if (image) {
+            return image;
+        }
         const brand = latin1(bytes.subarray(8, 12));
         if (AUDIO_BRANDS.has(brand)) {
             return 'audio/mp4';

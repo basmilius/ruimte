@@ -3,7 +3,7 @@ import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES } from '@ruimte/contracts';
-import { ReadError, languageOf, looksBinary, readFile } from './read.ts';
+import { ReadError, languageOf, looksBinary, readFile, readMedia } from './read.ts';
 import { looksLikeSvg, sniffMime } from './sniff.ts';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
@@ -11,6 +11,16 @@ const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x20, 0x00, 0x00, 
 
 /* The head of an ISO base media file: a box length, `ftyp`, and the brand that says which flavor. */
 const isoMedia = (brand: string): Buffer => Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x20]), Buffer.from('ftyp'), Buffer.from(brand)]);
+
+/* An `ftyp` box whose length covers the major brand, a minor version and the compatible brands. */
+const ftyp = (major: string, ...compatible: string[]): Buffer => {
+    const length = 16 + compatible.length * 4;
+    return Buffer.concat([Buffer.from([0x00, 0x00, 0x00, length]), Buffer.from(`ftyp${major}`), Buffer.alloc(4), Buffer.from(compatible.join(''))]);
+};
+
+// An icon directory with one 16 by 16 entry, and a bitmap file header in front of a BITMAPINFOHEADER.
+const ICO = Buffer.from([0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x10, 0x10, 0x00, 0x00, 0x01, 0x00, 0x20, 0x00, ...new Array(8).fill(0)]);
+const BMP = Buffer.concat([Buffer.from('BM'), Buffer.from([0x46, 0x00, 0x00, 0x00, 0, 0, 0, 0, 0x36, 0, 0, 0, 0x28, 0, 0, 0]), Buffer.alloc(8)]);
 
 const latin1 = (text: string): Uint8Array => new Uint8Array(Buffer.from(text, 'latin1'));
 
@@ -52,6 +62,27 @@ describe('the binary sniff', () => {
         expect(sniffMime(new Uint8Array(WEBP))).toBe('image/webp');
         expect(sniffMime(new TextEncoder().encode('%PDF-1.7'))).toBe('application/pdf');
         expect(sniffMime(new TextEncoder().encode('hello'))).toBeNull();
+    });
+
+    test('names a picture in the ISO container by its brands, never as video', () => {
+        // What an iPhone writes: the codec's brand first, the generic HEIF one behind it.
+        expect(sniffMime(new Uint8Array(ftyp('heic', 'mif1', 'heic')))).toBe('image/heic');
+        // The generic brand first and the codec's brand among the compatible ones.
+        expect(sniffMime(new Uint8Array(ftyp('mif1', 'mif1', 'heic')))).toBe('image/heic');
+        expect(sniffMime(new Uint8Array(ftyp('mif1', 'mif1', 'miaf')))).toBe('image/heif');
+        expect(sniffMime(new Uint8Array(ftyp('avif', 'mif1', 'avif', 'miaf')))).toBe('image/avif');
+        expect(sniffMime(new Uint8Array(ftyp('avis', 'msf1', 'avis')))).toBe('image/avif');
+        expect(sniffMime(new Uint8Array(ftyp('isom', 'isom', 'avc1', 'mp41')))).toBe('video/mp4');
+    });
+
+    test('names the pictures with a signature of their own', () => {
+        expect(sniffMime(new Uint8Array(ICO))).toBe('image/x-icon');
+        expect(sniffMime(new Uint8Array(BMP))).toBe('image/bmp');
+        expect(sniffMime(latin1('II*\x00\x08\x00\x00\x00'))).toBe('image/tiff');
+        expect(sniffMime(latin1('MM\x00*\x00\x00\x00\x08'))).toBe('image/tiff');
+        // The same few bytes with a header that does not hold up are no picture.
+        expect(sniffMime(new Uint8Array([0x00, 0x00, 0x01, 0x00, 0x00, 0x00, ...new Array(16).fill(0)]))).toBeNull();
+        expect(sniffMime(latin1('BM hello, this is a note'))).toBeNull();
     });
 
     test('names a video by its container and tells the flavors apart', () => {
@@ -117,6 +148,27 @@ describe('fs.read', () => {
             kind: 'binary',
             mime: 'application/octet-stream'
         });
+    });
+
+    test('reads a picture in the ISO container as that picture', async () => {
+        const path = await write('IMG_0001.HEIC', Buffer.concat([ftyp('heic', 'mif1', 'heic'), Buffer.alloc(64)]));
+        expect(await readFile(path)).toMatchObject({ kind: 'binary', mime: 'image/heic' });
+    });
+
+    test('hands the file route every picture, sound and PDF, and no other binary', async () => {
+        const served = {
+            'photo.heic': ftyp('heic', 'mif1', 'heic'),
+            'photo.heif': ftyp('mif1', 'mif1', 'miaf'),
+            'photo.avif': ftyp('avif', 'mif1', 'avif'),
+            'favicon.ico': ICO,
+            'picture.bmp': BMP,
+            'scan.tiff': Buffer.from('II*\x00\x08\x00\x00\x00', 'latin1'),
+            'paper.pdf': Buffer.from('%PDF-1.7\n')
+        };
+        const mimes = await Promise.all(Object.entries(served).map(async ([name, bytes]) => (await readMedia(await write(name, bytes)))?.mime));
+        expect(mimes).toEqual(['image/heic', 'image/heif', 'image/avif', 'image/x-icon', 'image/bmp', 'image/tiff', 'application/pdf']);
+        expect(await readMedia(await write('a.out', Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x01])))).toBeNull();
+        expect(await readMedia(await write('notes.md', '# hello'))).toBeNull();
     });
 
     test('answers a text file past the cap with its size alone', async () => {

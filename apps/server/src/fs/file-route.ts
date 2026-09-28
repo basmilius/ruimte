@@ -6,8 +6,8 @@ import { readMedia } from './read.ts';
 export const FS_FILE_PATH = '/fs/file';
 
 /*
- * Serve only authenticated image and video bytes; other readable files stay on the socket. Video
- * supports ranges so media elements can seek.
+ * Serve only authenticated image, video, sound and PDF bytes; other readable files stay on the socket.
+ * Ranges let a media element seek and a PDF reader fetch one page at a time.
  */
 export const handleFsFileRequest = async (request: Request, url: URL, remoteAddress: string, auth: AuthStore, options: AccessOptions): Promise<Response> => {
     if (url.pathname !== FS_FILE_PATH) {

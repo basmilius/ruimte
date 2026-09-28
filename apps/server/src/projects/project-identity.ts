@@ -1,6 +1,5 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, isAbsolute, relative, resolve, sep } from 'node:path';
-import { isImageMime } from '@ruimte/contracts';
 import { looksLikeSvg, sniffMime } from '../fs/sniff.ts';
 import { PROJECT_DIR } from './project-files.ts';
 
@@ -78,10 +77,12 @@ export interface DerivedIdentity {
 
 const EMPTY: DerivedIdentity = { icon: null, unresolved: false };
 
+// Only what every client draws as it is: the file viewer also knows HEIC and TIFF, which a browser does not.
+const ICON_MIMES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml']);
+
 /*
- * What a folder may declare as its icon. The general sniff knows the image formats a browser paints;
- * the icon format below is only trusted here, on a file a folder pointed at by name, since its
- * signature is four bytes and two of them are zero.
+ * What a folder may declare as its icon. An .ico is taken here on its four-byte signature alone,
+ * looser than the general sniff, since the folder pointed at this file by name.
  */
 export const sniffIconMime = (bytes: Uint8Array): string | null => {
     // An .ico with image type 1; type 2 is a cursor, which is not an icon we want to serve.
@@ -89,7 +90,7 @@ export const sniffIconMime = (bytes: Uint8Array): string | null => {
         return 'image/vnd.microsoft.icon';
     }
     const mime = sniffMime(bytes) ?? (looksLikeSvg(bytes) ? 'image/svg+xml' : null);
-    return mime !== null && isImageMime(mime) ? mime : null;
+    return mime !== null && ICON_MIMES.has(mime) ? mime : null;
 };
 
 /* True while `path` stays inside `folder`, symlinks resolved. */

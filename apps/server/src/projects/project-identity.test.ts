@@ -43,6 +43,12 @@ describe('sniffIconMime', () => {
         expect(sniffIconMime(Buffer.from([0x00, 0x00, 0x02, 0x00, 0x01, 0x00]))).toBeNull();
         expect(sniffIconMime(Buffer.from('#!/bin/sh\necho hi\n'))).toBeNull();
     });
+
+    test('takes no picture a browser leaves to the platform', () => {
+        const heic = Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x18]), Buffer.from('ftypheic'), Buffer.alloc(4), Buffer.from('mif1heic')]);
+        expect(sniffIconMime(heic)).toBeNull();
+        expect(sniffIconMime(Buffer.from('II*\x00\x08\x00\x00\x00', 'latin1'))).toBeNull();
+    });
 });
 
 describe('faviconHref', () => {

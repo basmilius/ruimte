@@ -60,12 +60,27 @@ describe('the file route', () => {
         expect(response.headers.get('content-security-policy')).toBe("default-src 'none'; style-src 'unsafe-inline'");
     });
 
-    test('serves nothing but the images, video and sound the viewer plays', async () => {
+    test('serves nothing but the images, video, sound and PDFs the viewer shows', async () => {
         await writeFile(join(root, 'notes.md'), '# hello');
-        await writeFile(join(root, 'paper.pdf'), '%PDF-1.7\n');
+        await writeFile(join(root, 'a.out'), Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x01]));
         expect((await ask('notes.md')).status).toBe(404);
-        expect((await ask('paper.pdf')).status).toBe(404);
+        expect((await ask('a.out')).status).toBe(404);
         expect((await ask('nothing.png')).status).toBe(404);
+    });
+
+    test('a PDF comes typed and in ranges, so a reader can fetch a page at a time', async () => {
+        const pdf = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(100, 0x2a)]);
+        await writeFile(join(root, 'paper.pdf'), pdf);
+        const whole = await ask('paper.pdf');
+        expect(whole.status).toBe(200);
+        expect(whole.headers.get('content-type')).toBe('application/pdf');
+        expect(whole.headers.get('accept-ranges')).toBe('bytes');
+        expect(whole.headers.get('x-content-type-options')).toBe('nosniff');
+
+        const slice = await ask('paper.pdf', '127.0.0.1', { headers: { range: 'bytes=0-7' } });
+        expect(slice.status).toBe(206);
+        expect(slice.headers.get('content-range')).toBe(`bytes 0-7/${pdf.length}`);
+        expect(Buffer.from(await slice.arrayBuffer()).toString('latin1')).toBe('%PDF-1.7');
     });
 
     test('sound comes typed and in ranges like a video', async () => {

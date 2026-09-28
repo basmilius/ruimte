@@ -204,7 +204,20 @@ export const FsWriteResultSchema = z.object({
 export type FsWriteResult = z.infer<typeof FsWriteResultSchema>;
 
 // What `GET /fs/file` serves; a read result names one of these before the client asks for the bytes.
-export const FS_IMAGE_MIMES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'] as const;
+// Not every client draws every one: HEIC and TIFF are left to the platform's own decoder.
+export const FS_IMAGE_MIMES = [
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'image/webp',
+    'image/avif',
+    'image/heic',
+    'image/heif',
+    'image/bmp',
+    'image/x-icon',
+    'image/tiff',
+    'image/svg+xml'
+] as const;
 
 export const isImageMime = (mime: string): boolean => (FS_IMAGE_MIMES as readonly string[]).includes(mime);
 
@@ -216,3 +229,7 @@ export const isVideoMime = (mime: string): boolean => (FS_VIDEO_MIMES as readonl
 export const FS_AUDIO_MIMES = ['audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/flac', 'audio/ogg'] as const;
 
 export const isAudioMime = (mime: string): boolean => (FS_AUDIO_MIMES as readonly string[]).includes(mime);
+
+export const FS_PDF_MIME = 'application/pdf';
+
+export const isPdfMime = (mime: string): boolean => mime === FS_PDF_MIME;

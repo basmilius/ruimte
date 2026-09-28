@@ -3,7 +3,7 @@
  * (HTML, XML, JavaScript) is typed as a download instead. An SVG keeps its type, because an `<img>`
  * does not draw one without it and runs nothing inside it.
  */
-const DRAWABLE = /^(image\/(png|jpeg|gif|webp|avif|bmp|x-icon|svg\+xml)|(video|audio)\/[\w.+-]+|application\/pdf|text\/plain)$/;
+const DRAWABLE = /^(image\/(png|jpeg|gif|webp|avif|heic|heif|bmp|x-icon|tiff|svg\+xml)|(video|audio)\/[\w.+-]+|application\/pdf|text\/plain)$/;
 
 export const blobTypeFor = (mime: string): string => (DRAWABLE.test(mime) ? mime : 'application/octet-stream');
 
