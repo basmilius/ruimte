@@ -172,7 +172,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                     <Menu.Check kind="radio" checked={chosen} />
                                     <span className="min-w-0 truncate">{entry.model.name}</span>
                                     {entry.model.badge && (
-                                        <span className="rounded bg-accent-soft px-1 text-xs font-medium text-accent">{entry.model.badge}</span>
+                                        <span className="rounded bg-accent-soft px-1 text-[11px] leading-5 font-medium uppercase text-accent">{entry.model.badge}</span>
                                     )}
                                     <span className="grow" />
                                     {entry.model.legacy && <span className="text-xs text-text-faint">{t('pickers.model.legacy')}</span>}

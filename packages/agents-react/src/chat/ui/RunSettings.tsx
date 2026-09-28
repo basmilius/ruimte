@@ -154,7 +154,7 @@ export function RunSettings({
                     <Menu.RadioItem key={row.slug} value={modelValue(entry.kind, row.slug)} closeOnClick>
                         <AgentIcon kind={entry.kind} size={14} className="shrink-0" />
                         <span className="min-w-0 truncate">{row.name}</span>
-                        {row.badge && <span className="rounded bg-accent-soft px-1 text-xs font-medium text-accent">{row.badge}</span>}
+                        {row.badge && <span className="rounded bg-accent-soft px-1 text-[11px] leading-5 font-medium uppercase text-accent">{row.badge}</span>}
                     </Menu.RadioItem>
                 ))}
             </Menu.Group>
