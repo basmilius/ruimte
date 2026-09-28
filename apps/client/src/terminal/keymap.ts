@@ -24,6 +24,14 @@ export const isLeaveNodeShortcut = (event: KeyLike, apple: boolean): boolean => 
 export const isClearShortcut = (event: KeyLike, apple: boolean): boolean => matchesShortcut(platformShortcut(CLEAR_SHORTCUT, apple), event, apple);
 
 /*
+ * Off macOS Ctrl+V pastes this machine's clipboard. Written as ^V it reaches the program instead, and a CLI
+ * that reads ^V as paste (Claude Code, Codex, PowerShell) pastes the clipboard of the machine it runs on.
+ * The letter the layout types, not the physical key, the way the browser's own paste reads it.
+ */
+export const isTerminalPaste = (event: KeyLike, apple: boolean): boolean =>
+    !apple && event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === 'v';
+
+/*
  * The shortcuts a focused terminal hands back to the app, the ones that move between views, cells, panels
  * and settings, so you never have to leave the terminal to reach another view. Every other shortcut is the
  * program's, which is why Cmd+K clears the screen here instead of opening the palette.

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import type { KeyLike, Shortcut } from '@basmilius/react-ui';
-import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, isShellShortcut, macMotionSequence, TERMINAL_HANDED_BACK } from './keymap.ts';
+import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, isShellShortcut, isTerminalPaste, macMotionSequence, TERMINAL_HANDED_BACK } from './keymap.ts';
 
 const shortcut = (key: string, modifiers: Partial<Omit<KeyLike, 'key'>> = {}): KeyLike => ({
     key,
@@ -219,5 +219,23 @@ describe('what a terminal hands back', () => {
         expect(isAppShortcut({ ...eventFor(CANVAS_SHORTCUTS.nextView, true), ctrlKey: true }, true)).toBe(false);
         expect(isAppShortcut({ ...eventFor(CANVAS_SHORTCUTS.nextView, true), altKey: true }, true)).toBe(false);
         expect(isLeaveNodeShortcut({ key: 'Escape', code: 'Escape', metaKey: true, shiftKey: true, ctrlKey: false, altKey: false }, true)).toBe(false);
+    });
+});
+
+describe('isTerminalPaste', () => {
+    test('off macOS Ctrl+V pastes instead of writing ^V', () => {
+        expect(isTerminalPaste(shortcut('v', { code: 'KeyV', ctrlKey: true }), false)).toBe(true);
+        expect(isTerminalPaste(shortcut('V', { code: 'KeyV', ctrlKey: true }), false)).toBe(true);
+    });
+
+    test('macOS keeps Ctrl+V for the program, since Cmd+V pastes there', () => {
+        expect(isTerminalPaste(shortcut('v', { code: 'KeyV', ctrlKey: true }), true)).toBe(false);
+    });
+
+    test('another modifier or another letter is never a paste', () => {
+        expect(isTerminalPaste(shortcut('V', { code: 'KeyV', ctrlKey: true, shiftKey: true }), false)).toBe(false);
+        expect(isTerminalPaste(shortcut('v', { code: 'KeyV', ctrlKey: true, altKey: true }), false)).toBe(false);
+        expect(isTerminalPaste(shortcut('v', { code: 'KeyV' }), false)).toBe(false);
+        expect(isTerminalPaste(shortcut('k', { code: 'KeyV', ctrlKey: true }), false)).toBe(false);
     });
 });

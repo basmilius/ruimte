@@ -15,7 +15,7 @@ import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { isApplePlatform } from '@/desktop/bridge';
 import { sessionClient } from '@/terminal';
-import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, macMotionSequence } from '@/terminal/keymap';
+import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, isTerminalPaste, macMotionSequence } from '@/terminal/keymap';
 import { osc52Text } from '@/terminal/osc52';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
@@ -173,6 +173,10 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             if (isClearShortcut(e, apple)) {
                 e.preventDefault();
                 clearTerminalAction(id);
+                return false;
+            }
+            // Neither written nor prevented, so the browser's own paste lands in xterm's textarea.
+            if (isTerminalPaste(e, apple)) {
                 return false;
             }
             if (apple) {
