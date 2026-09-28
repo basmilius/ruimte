@@ -20,6 +20,7 @@ import RuimtePulsar
     private var channel: RTCDataChannel?
     private var relayIDs = Set<String>()
     private var assembler = FrameAssembler()
+    private var binaryAssembler = BinaryFrameAssembler()
     private var liveness: ChannelLiveness?
     private var receivedBytes: Double?
     private var relayed: Bool?
@@ -265,6 +266,23 @@ import RuimtePulsar
         }
     }
 
+    // Only a reply that asked for binary comes this way, so nothing reads one before the handshake.
+    private func receiveBinaryPiece(_ piece: Data) {
+        guard !ended else { return }
+        liveness?.heard(now: now)
+        guard authenticated else {
+            end(TransportFailure.invalid("The machine sent a binary message before the handshake."))
+            return
+        }
+        switch binaryAssembler.push(piece, maxBytes: WireConstants.bytesReplyMaxBytes) {
+        case .invalid:
+            trace("invalid binary piece")
+            end(TransportFailure.invalid("The machine sent an invalid message fragment."))
+        case .partial: break
+        case .frame(let frame): events.binary(frame)
+        }
+    }
+
     private func handshake(_ frame: JSONValue) throws {
         trace("handshake frame")
         if !proofSent {
@@ -412,6 +430,10 @@ extension NativeWebRTCLink: RTCPeerConnectionDelegate, RTCDataChannelDelegate {
     }
     nonisolated public func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
         Task { @MainActor [weak self] in
+            if buffer.isBinary, BinaryFrameAssembler.isBinaryPiece(buffer.data) {
+                self?.receiveBinaryPiece(buffer.data)
+                return
+            }
             guard let text = String(data: buffer.data, encoding: .utf8) else {
                 self?.end(TransportFailure.invalid("The data channel sent invalid UTF-8.")); return
             }

@@ -76,6 +76,36 @@ public struct FrameAssembler {
     }
 }
 
+public enum BinaryFramePiece: Equatable {
+    case partial
+    case frame(Data)
+    case invalid
+}
+
+/// Joins the pieces of a binary frame (`splitBinaryFrame` in the contracts), whose first byte says whether more follow.
+/// No text piece starts with those bytes, so a text piece that arrives as binary still reads as text.
+public struct BinaryFrameAssembler {
+    private static let more: UInt8 = 0x01
+    private static let last: UInt8 = 0x02
+    private var parts = Data()
+
+    public init() {}
+
+    public static func isBinaryPiece(_ piece: Data) -> Bool { piece.first == more || piece.first == last }
+
+    public mutating func push(_ piece: Data, maxBytes: Int) -> BinaryFramePiece {
+        guard Self.isBinaryPiece(piece), parts.count + piece.count - 1 <= maxBytes else {
+            parts = Data()
+            return .invalid
+        }
+        parts.append(piece.dropFirst())
+        if piece.first == Self.more { return .partial }
+        let frame = parts
+        parts = Data()
+        return .frame(frame)
+    }
+}
+
 public struct ChannelLiveness {
     public enum Action: Equatable {
         case none

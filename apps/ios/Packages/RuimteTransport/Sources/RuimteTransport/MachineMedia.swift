@@ -19,8 +19,8 @@ public struct MachineMediaInfo: Sendable, Equatable {
     private let ahead: Int
     public private(set) var info: MachineMediaInfo?
 
-    /// `ahead` pieces on their way at once. Two stay under the daemon's output gate of 1 MB; above it, a terminal on the
-    /// same connection loses output until it resyncs.
+    /// `ahead` pieces on their way at once. Three binary replies stay under the daemon's output gate of 1 MB; above it,
+    /// a terminal on the same connection loses output until it resyncs.
     public init(
         client: any MachineRequesting, path: String, chunkBytes: Int = Int(WireConstants.bytesChunkMax), ahead: Int = 2
     ) {
@@ -42,13 +42,13 @@ public struct MachineMediaInfo: Sendable, Equatable {
         let last = offset + min(info.size - offset, wanted) - 1
         guard offset <= last else { return }
 
-        var pending: [Task<JSONValue, any Error>] = []
+        var pending: [Task<BytesPiece, any Error>] = []
         defer { pending.forEach { $0.cancel() } }
-        var next = offset + first.bytes.count
+        var next = offset + first.data.count
         var position = offset
         var current = first
         while true {
-            let bytes = current.bytes.prefix(last + 1 - position)
+            let bytes = current.data.prefix(last + 1 - position)
             guard !bytes.isEmpty else { throw MachineClientError.invalid("The machine sent an empty piece.") }
             deliver(Data(bytes))
             position += bytes.count
@@ -60,46 +60,33 @@ public struct MachineMediaInfo: Sendable, Equatable {
                 next += size
             }
             try Task.checkCancellation()
-            let reply = try await pending.removeFirst().value
-            current = try parse(reply, at: position)
+            current = try check(try await pending.removeFirst().value, at: position)
             guard current.version == info.version, current.size == info.size else {
                 throw MachineClientError.invalid("The file changed while it played.")
             }
         }
     }
 
-    private struct Piece {
-        let mime: String
-        let size: Int
-        let version: String
-        let bytes: Data
-    }
-
-    private func request(at offset: Int, length: Int) async throws -> JSONValue {
-        let reply = try await client.request(
-            .bytesRead,
-            payload: .object([
+    private func request(at offset: Int, length: Int) async throws -> BytesPiece {
+        try await client.readBytes(
+            .object([
                 "resource": .object(["kind": .string("file"), "path": .string(path)]),
                 "offset": .number(Double(offset)), "length": .number(Double(length)),
             ]))
-        return try WireRequest.bytesRead.validateResult(reply)
     }
 
-    private func piece(at offset: Int, length: Int) async throws -> Piece {
-        try parse(try await request(at: offset, length: length), at: offset)
+    private func piece(at offset: Int, length: Int) async throws -> BytesPiece {
+        try check(try await request(at: offset, length: length), at: offset)
     }
 
-    private func parse(_ reply: JSONValue, at offset: Int) throws -> Piece {
-        guard let size = reply["size"]?.numberValue, let version = reply["version"]?.stringValue,
-            reply["offset"]?.numberValue == Double(offset), let encoded = reply["data"]?.stringValue,
-            let bytes = Data(base64Encoded: encoded), bytes.count <= chunkBytes
-        else {
+    private func check(_ piece: BytesPiece, at offset: Int) throws -> BytesPiece {
+        guard piece.offset == offset, piece.data.count <= chunkBytes else {
             throw MachineClientError.invalid("The machine sent an invalid piece of the file.")
         }
-        return Piece(mime: reply["mime"]?.stringValue ?? "application/octet-stream", size: Int(size), version: version, bytes: bytes)
+        return piece
     }
 
-    private func pin(_ first: Piece) throws -> MachineMediaInfo {
+    private func pin(_ first: BytesPiece) throws -> MachineMediaInfo {
         let info = MachineMediaInfo(mime: first.mime, size: first.size, version: first.version)
         if let pinned = self.info, pinned.version != info.version || pinned.size != info.size {
             throw MachineClientError.invalid("The file changed while it played.")

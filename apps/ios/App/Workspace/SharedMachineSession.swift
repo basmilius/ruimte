@@ -65,6 +65,7 @@ final class SharedMachineSession {
                     rpc.connected()
                 }
             }, message: { [weak self] text in self?.rpc.receiveInOrder(text) },
+            binary: { [weak self] frame in self?.rpc.receiveBinaryInOrder(frame) },
             closed: { [weak self] error in
                 guard let self else { return }
                 linkEpoch += 1

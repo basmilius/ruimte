@@ -10,14 +10,17 @@ import RuimtePulsar
 @MainActor public struct LinkEvents {
     public var opened: () -> Void
     public var message: (String) -> Void
+    /// A binary frame, which only a `bytes.read` that asked for one gets.
+    public var binary: (Data) -> Void
     public var closed: (Error?) -> Void
     public var route: (Bool?) -> Void
     public init(
-        opened: @escaping () -> Void, message: @escaping (String) -> Void, closed: @escaping (Error?) -> Void,
-        route: @escaping (Bool?) -> Void = { _ in }
+        opened: @escaping () -> Void, message: @escaping (String) -> Void, binary: @escaping (Data) -> Void = { _ in },
+        closed: @escaping (Error?) -> Void, route: @escaping (Bool?) -> Void = { _ in }
     ) {
         self.opened = opened
         self.message = message
+        self.binary = binary
         self.closed = closed
         self.route = route
     }
@@ -232,6 +235,10 @@ import RuimtePulsar
             message: { [weak entry] text in
                 guard valid(), let entry else { return }
                 for member in Array(entry.members.values) { member.message(text) }
+            },
+            binary: { [weak entry] frame in
+                guard valid(), let entry else { return }
+                for member in Array(entry.members.values) { member.binary(frame) }
             },
             closed: { [weak self, weak entry] error in
                 guard valid(), let self, let entry else { return }

@@ -14,6 +14,8 @@ import os
         -> MachineSubscription
     func acquireAttachment(_ type: String, id: String) -> MachineAttachment
     func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void
+    /// One piece of `bytes.read`, as a binary reply where the machine sends those.
+    func readBytes(_ payload: JSONValue) async throws -> BytesPiece
 }
 
 @MainActor public final class MachineSubscription {
@@ -105,6 +107,9 @@ import os
     public func subscribeRejected(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
         -> () -> Void
     { {} }
+    public func readBytes(_ payload: JSONValue) async throws -> BytesPiece {
+        try BytesPiece(json: try WireRequest.bytesRead.validateResult(try await request(.bytesRead, payload: payload)))
+    }
 }
 
 public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
@@ -142,6 +147,8 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         let type: WireRequest
         let continuation: CheckedContinuation<JSONValue, Error>
         let onResult: (@MainActor @Sendable (JSONValue) -> Void)?
+        // Asked by `readBytes`, which alone takes a binary reply.
+        var binary = false
         var cancelTimeout: () -> Void = {}
     }
     private struct Subscription {
@@ -156,6 +163,8 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     private let scheduler: any TransportScheduling
     private let timeoutMilliseconds: Double
     private var pending: [String: Pending] = [:]
+    // The bytes of a binary reply, held from its arrival until `readBytes` resumes and takes them.
+    private var binaryBodies: [String: Data] = [:]
     private var attachments: [String: Set<UUID>] = [:]
     private var subscribers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
     private var rejectedSubscribers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
@@ -211,8 +220,19 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         try await routedRequest(type, payload: payload, onResult: onResult)
     }
 
+    public func readBytes(_ payload: JSONValue) async throws -> BytesPiece {
+        guard case .object(var fields) = payload else { throw MachineClientError.invalid("Invalid bytes request") }
+        fields["binary"] = .bool(true)
+        let id = UUID().uuidString
+        let result = try await routedRequest(
+            WireRequest.bytesRead.rawValue, payload: .object(fields), onResult: nil, id: id, binary: true)
+        if let data = binaryBodies.removeValue(forKey: id) { return try BytesPiece(header: result, data: data) }
+        return try BytesPiece(json: result)
+    }
+
     private func routedRequest(
-        _ type: String, payload: JSONValue, onResult: (@MainActor @Sendable (JSONValue) -> Void)?
+        _ type: String, payload: JSONValue, onResult: (@MainActor @Sendable (JSONValue) -> Void)?,
+        id: String = UUID().uuidString, binary: Bool = false
     ) async throws -> JSONValue {
         try Task.checkCancellation()
         guard isConnected else { throw MachineClientError.disconnected }
@@ -220,7 +240,6 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
             throw MachineClientError.invalid("Unknown request: \(type)")
         }
         let checked = try requestType.validatePayload(payload)
-        let id = UUID().uuidString
         let frame = JSONValue.object(["id": .string(id), "type": .string(type), "payload": checked])
         let text = String(decoding: try frame.encoded(), as: UTF8.self)
         return try await withTaskCancellationHandler {
@@ -229,7 +248,7 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
                     continuation.resume(throwing: CancellationError())
                     return
                 }
-                pending[id] = Pending(type: requestType, continuation: continuation, onResult: onResult)
+                pending[id] = Pending(type: requestType, continuation: continuation, onResult: onResult, binary: binary)
                 if Self.timedRequests.contains(requestType) {
                     let cancel = scheduler.after(milliseconds: timeoutMilliseconds) { [weak self] in
                         self?.finish(id, result: .failure(MachineClientError.timeout(type)))
@@ -345,6 +364,28 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         return task
     }
 
+    @discardableResult public func receiveBinaryInOrder(_ frame: Data) -> Task<Void, Never> {
+        guard isConnected else { return Task {} }
+        let previous = incoming
+        let generation = connectionGeneration
+        let task = Task.detached(priority: .userInitiated) { [weak self] in
+            await previous?.value
+            guard !Task.isCancelled, let reply = BytesReply(frame) else { return }
+            await self?.receive(reply, generation: generation)
+        }
+        incoming = task
+        return task
+    }
+
+    private func receive(_ reply: BytesReply, generation: Int) {
+        guard generation == connectionGeneration, isConnected, pending[reply.id]?.binary == true else { return }
+        do {
+            _ = try BytesPiece(header: reply.header, data: reply.data)
+            binaryBodies[reply.id] = reply.data
+            finish(reply.id, result: .success(reply.header))
+        } catch { finish(reply.id, result: .failure(error)) }
+    }
+
     private func receive(_ frame: JSONValue, generation: Int) {
         guard generation == connectionGeneration else { return }
         receive(frame)
@@ -412,36 +453,31 @@ public struct MachineResource: Sendable, Equatable {
         let limit = min(maxBytes, Int(WireConstants.bytesReadMaxBytes))
         for attempt in 0...min(restarts, 3) {
             var data = Data()
-            var first: JSONValue?
+            var first: BytesPiece?
             var changed = false
             repeat {
                 try Task.checkCancellation()
-                let reply = try await request(
-                    .bytesRead,
-                    payload: .object([
+                let piece = try await readBytes(
+                    .object([
                         "resource": resource, "offset": .number(Double(data.count)), "length": .number(Double(length)),
                     ]))
-                let piece = try WireRequest.bytesRead.validateResult(reply)
-                guard let size = piece["size"]?.numberValue, size <= Double(limit) else {
+                guard piece.size <= limit else {
                     throw MachineClientError.invalid("This resource exceeds the direct connection size limit.")
                 }
                 if first == nil { first = piece }
-                if piece["version"] != first?["version"] || piece["size"] != first?["size"]
-                    || piece["mime"] != first?["mime"] || piece["offset"] != .number(Double(data.count))
+                if piece.version != first?.version || piece.size != first?.size || piece.mime != first?.mime
+                    || piece.offset != data.count
                 {
                     changed = true
                     break
                 }
-                guard let encoded = piece["data"]?.stringValue,
-                    encoded.utf8.count <= ((length + 2) / 3) * 4,
-                    let bytes = Data(base64Encoded: encoded), bytes.count <= length,
-                    Double(data.count + bytes.count) <= size
-                else {
+                let bytes = piece.data
+                guard bytes.count <= length, data.count + bytes.count <= piece.size else {
                     throw MachineClientError.invalid("The machine sent an invalid resource piece.")
                 }
                 data.append(bytes)
-                if Double(data.count) == size {
-                    return MachineResource(data: data, mime: piece["mime"]?.stringValue ?? "application/octet-stream")
+                if data.count == piece.size {
+                    return MachineResource(data: data, mime: piece.mime)
                 }
                 if bytes.isEmpty {
                     throw MachineClientError.invalid("The machine sent an empty piece before the end of the resource.")
