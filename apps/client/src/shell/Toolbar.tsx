@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowDownToLine, Search } from 'lucide-react';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
+import { LaunchChip } from '@/launches/LaunchChip';
 import { PanelControls } from '@/shell/PanelControls';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { ViewMenu } from '@/shell/ViewMenu';
@@ -87,6 +88,7 @@ export function Toolbar() {
             {leads && !inSubagents && <Separator />}
             {!split && <ViewToolbar view={view} focused={bodyFocused} chatTitle={sidebarOpen ? (view?.name ?? undefined) : undefined} />}
             {hasViewToolbar && <Separator />}
+            <LaunchChip />
             <ButtonGroup>
                 <PanelControls />
             </ButtonGroup>

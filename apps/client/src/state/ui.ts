@@ -3,11 +3,13 @@ import { create } from 'zustand';
 
 export type SettingsSectionId = 'appearance' | 'keyboard' | 'views' | 'files' | 'providers' | 'voice' | 'computer' | 'agents' | 'usage' | 'machines' | 'about';
 
-export type PanelKind = ProjectPanelKind;
+/* Launches is a kind the project's file does not know, so it is stored beside `panel` (`launchesPanel`). */
+export type PanelKind = ProjectPanelKind | 'launches';
 
 const PANEL_KINDS: readonly PanelKind[] = ['files', 'git', 'processes', 'devices'];
 
 const SIDEBAR_STORAGE_KEY = 'ruimte.sidebar';
+const CHOSEN_LAUNCH_STORAGE_KEY = 'ruimte.launches.chosen';
 
 /* The keys the panels lived in before they became a per-project thing. They are read once, as what
    a project that has never had panels of its own starts from, and never written again. */
@@ -19,6 +21,23 @@ const readSidebarOpen = (): boolean => {
         return localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'closed';
     } catch {
         return true;
+    }
+};
+
+const readChosenLaunches = (): Record<string, string> => {
+    try {
+        const stored: unknown = JSON.parse(localStorage.getItem(CHOSEN_LAUNCH_STORAGE_KEY) ?? '{}');
+        return stored !== null && typeof stored === 'object' && !Array.isArray(stored) ? (stored as Record<string, string>) : {};
+    } catch {
+        return {};
+    }
+};
+
+const persistChosenLaunches = (chosen: Record<string, string>): void => {
+    try {
+        localStorage.setItem(CHOSEN_LAUNCH_STORAGE_KEY, JSON.stringify(chosen));
+    } catch {
+        // Storage that refuses keeps the choice for this session only.
     }
 };
 
@@ -174,6 +193,10 @@ interface UiStore {
     renamingViewId: string | null;
     /* The application menu asks for the open project's settings; the project menu owns that dialog. */
     projectSettingsAsked: boolean;
+    /* The launch the toolbar's chip shows, by `endpointKey(endpointId, projectId)`. This client's
+       choice, so it stays in this client's storage and never in a project file. */
+    chosenLaunches: Record<string, string>;
+    chooseLaunch(projectKey: string, launchId: string): void;
     setUsageOpen(open: boolean): void;
     setModelsOpen(open: boolean): void;
     askProjectSettings(asked: boolean): void;
@@ -239,6 +262,15 @@ export const useUi = create<UiStore>((set, get) => ({
     viewDialog: null,
     renamingViewId: null,
     projectSettingsAsked: false,
+    chosenLaunches: readChosenLaunches(),
+    chooseLaunch(projectKey, launchId) {
+        if (get().chosenLaunches[projectKey] === launchId) {
+            return;
+        }
+        const chosenLaunches = { ...get().chosenLaunches, [projectKey]: launchId };
+        persistChosenLaunches(chosenLaunches);
+        set({ chosenLaunches });
+    },
     setUsageOpen(open) {
         set({ usageOpen: open });
     },

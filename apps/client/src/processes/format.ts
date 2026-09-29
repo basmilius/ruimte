@@ -70,6 +70,10 @@ export const alertActions = (alert: ProcessAlert): AlertAction[] => {
 export const actionLabel = (action: AlertAction): string => i18next.t(`processes:action.${action}`);
 
 export const groupTitle = (group: ProcessGroup, titles: ReadonlyMap<string, string>): { title: string; known: boolean } => {
+    // A session no node stands for, such as a launch, is named by the daemon.
+    if (group.label !== undefined) {
+        return { title: group.label, known: true };
+    }
     const title = group.nodeId === null ? undefined : titles.get(group.nodeId);
     return title === undefined ? { title: i18next.t(`processes:group.${group.kind}`), known: group.nodeId === null } : { title, known: true };
 };

@@ -5,6 +5,7 @@ import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
 import { connectWorkspaceChatHost } from '@/chat/workspace-host';
 import { useCanvasShortcuts } from '@/canvas/canvas-shortcuts';
 import { CellOverlayLayer } from '@/shell/CellOverlay';
+import { startLaunchWatch } from '@/launches/watch';
 import { ForkDialog } from '@/shell/ForkDialog';
 import { LayoutDialog } from '@/shell/LayoutDialog';
 import { LeaveConflictDialog } from '@/shell/LeaveConflictDialog';
@@ -34,6 +35,7 @@ import { VoicePanel } from '@/voice/VoicePanel';
 
 connectWorkspaceChatHost();
 startBytesWorker();
+startLaunchWatch();
 
 const ConflictOverlay = lazyDialog(
     () => import('@/conflicts/ConflictOverlay'),

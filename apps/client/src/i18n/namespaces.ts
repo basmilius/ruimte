@@ -23,7 +23,8 @@ export const NAMESPACES = [
     'agents',
     'conflicts',
     'computer',
-    'state'
+    'state',
+    'launches'
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];

@@ -1,0 +1,42 @@
+{
+    "phase": {
+        "idle": "At rest",
+        "held": "needs approval",
+        "starting": "starting",
+        "running": "Running",
+        "stopping": "stopping",
+        "passed": "passed",
+        "failed": "failed"
+    },
+    "exit": "exit {{code}}",
+    "ended": "{{outcome}} {{ago}}",
+    "others_one": "+{{count}}",
+    "others_other": "+{{count}}",
+    "start": "Launch {{name}}",
+    "restart": "Restart {{name}}",
+    "stop": "Stop {{name}}",
+    "forceStop": "Force stop {{name}}",
+    "showOutput": "Show output",
+    "menu": {
+        "open": "Launches",
+        "new": "New launch…",
+        "edit": "Edit launches…"
+    },
+    "approve": {
+        "title": "Run a command from the project file?",
+        "description": "This launch comes from .ruimte/launches.json. Nothing from it runs on this machine until you approve it here.",
+        "cancel": "Cancel",
+        "confirm": "Launch"
+    },
+    "busy": {
+        "title": "Port {{port}} is in use",
+        "description": "{{other}} uses port {{port}}. Stop it and launch {{name}}?",
+        "confirm": "Stop and launch"
+    },
+    "failed": {
+        "title": "{{name}} stopped",
+        "description": "Exit code {{code}} after {{duration}}"
+    },
+    "startFailed": "Could not launch {{name}}",
+    "stopFailed": "Could not stop {{name}}"
+}

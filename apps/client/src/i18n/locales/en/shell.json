@@ -50,7 +50,8 @@
             "files": "Files",
             "git": "Git",
             "devices": "Devices",
-            "processes": "Processes"
+            "processes": "Processes",
+            "launches": "Launches"
         }
     },
     "layoutDialog": {

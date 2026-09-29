@@ -37,7 +37,7 @@ export const parsePanels = (stored: ProjectPanels | undefined, defaults: PanelsS
     /* A tab that is not among them would leave the viewer pointing at nothing. */
     const active = tabs.some((tab) => tab.key === stored?.activeTab) ? (stored?.activeTab ?? null) : (tabs[0]?.key ?? null);
     return {
-        panel: stored?.panel ?? defaults.panel,
+        panel: stored?.panel === undefined ? defaults.panel : { open: stored.panel.open, kind: stored.launchesPanel === true ? 'launches' : stored.panel.kind },
         panelWidth: width(stored?.panelWidth, defaults.panelWidth),
         planAnchor: stored?.plan ?? defaults.planAnchor,
         planWidth: width(stored?.planWidth, defaults.planWidth),
@@ -55,7 +55,9 @@ export const parsePanels = (stored: ProjectPanels | undefined, defaults: PanelsS
 
 /* The other way, for the machine-local file. A width nobody dragged stays out of it. */
 export const serializePanels = (state: PanelsState): ProjectPanels => ({
-    panel: state.panel,
+    // A client from before launches reads the files panel in its place.
+    panel: state.panel.kind === 'launches' ? { open: state.panel.open, kind: 'files' } : { open: state.panel.open, kind: state.panel.kind },
+    ...(state.panel.kind === 'launches' ? { launchesPanel: true } : {}),
     ...(state.panelWidth === null ? {} : { panelWidth: Math.round(state.panelWidth) }),
     ...(state.planAnchor === null ? {} : { plan: state.planAnchor }),
     ...(state.planWidth === null ? {} : { planWidth: Math.round(state.planWidth) }),

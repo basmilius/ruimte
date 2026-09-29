@@ -389,7 +389,7 @@ export function ProcessesPanel() {
                     const open = isOpen(group);
                     const { title, known } = groupTitle(group, titles);
                     const root = group.processes[0];
-                    const reveal = group.nodeId !== null && known ? group.nodeId : null;
+                    const reveal = group.nodeId !== null && known && group.label === undefined ? group.nodeId : null;
                     const here = placed.get(group.id) ?? [];
                     const groupRow = (
                         <ListRow variant="flat" className="gap-1.5 pr-3 pl-1 hover:bg-surface-hover">

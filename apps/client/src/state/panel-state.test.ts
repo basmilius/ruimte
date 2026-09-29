@@ -54,6 +54,13 @@ describe('panels in the machine-local file', () => {
         expect(parsePanels({ panel: { open: false, kind: 'files' } }, other)).toEqual({ ...other, panel: { open: false, kind: 'files' } });
     });
 
+    test('the launches panel rides beside a kind an older client reads', () => {
+        const launches: PanelsState = { ...defaults, panel: { open: true, kind: 'launches' } };
+        expect(serializePanels(launches)).toMatchObject({ panel: { open: true, kind: 'files' }, launchesPanel: true });
+        expect(parsePanels(serializePanels(launches), defaults).panel).toEqual({ open: true, kind: 'launches' });
+        expect(serializePanels(defaults)).not.toHaveProperty('launchesPanel');
+    });
+
     test('a folder where nothing is hidden writes no list of hidden repositories', () => {
         expect(serializePanels(defaults).git?.hiddenRepos).toBeUndefined();
     });

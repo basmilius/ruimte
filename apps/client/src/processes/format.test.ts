@@ -77,5 +77,6 @@ describe('the warnings', () => {
         expect(groupTitle(group({}), new Map([['node-1', 'dev server']]))).toEqual({ title: 'dev server', known: true });
         expect(groupTitle(group({}), new Map())).toEqual({ title: 'Terminal', known: false });
         expect(groupTitle(group({ kind: 'daemon', nodeId: null }), new Map())).toEqual({ title: 'Machine tasks', known: true });
+        expect(groupTitle(group({ nodeId: 'launch-1', label: 'Run server' }), new Map())).toEqual({ title: 'Run server', known: true });
     });
 });

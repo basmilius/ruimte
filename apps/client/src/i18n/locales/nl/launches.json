@@ -1,0 +1,42 @@
+{
+    "phase": {
+        "idle": "In rust",
+        "held": "goedkeuring nodig",
+        "starting": "start op",
+        "running": "Draait",
+        "stopping": "stopt",
+        "passed": "geslaagd",
+        "failed": "mislukt"
+    },
+    "exit": "exit {{code}}",
+    "ended": "{{outcome}} {{ago}}",
+    "others_one": "+{{count}}",
+    "others_other": "+{{count}}",
+    "start": "{{name}} starten",
+    "restart": "{{name}} herstarten",
+    "stop": "{{name}} stoppen",
+    "forceStop": "{{name}} geforceerd stoppen",
+    "showOutput": "Output tonen",
+    "menu": {
+        "open": "Launches",
+        "new": "Nieuwe launch…",
+        "edit": "Launches bewerken…"
+    },
+    "approve": {
+        "title": "Een commando uit het projectbestand uitvoeren?",
+        "description": "Deze launch komt uit .ruimte/launches.json. Er draait niets van op deze machine tot je hem hier goedkeurt.",
+        "cancel": "Annuleren",
+        "confirm": "Starten"
+    },
+    "busy": {
+        "title": "Poort {{port}} is bezet",
+        "description": "{{other}} gebruikt poort {{port}}. Stoppen en {{name}} starten?",
+        "confirm": "Stoppen en starten"
+    },
+    "failed": {
+        "title": "{{name}} is gestopt",
+        "description": "Exitcode {{code}} na {{duration}}"
+    },
+    "startFailed": "{{name}} starten lukte niet",
+    "stopFailed": "{{name}} stoppen lukte niet"
+}
