@@ -136,6 +136,19 @@ export const BENCHMARK_MODELS: readonly BenchmarkSource[] = [
         ]
     },
     {
+        slug: 'gpt-6.1-sol',
+        name: 'GPT-6.1 Sol',
+        provider: 'codex',
+        legacy: false,
+        efforts: [
+            { effort: 'low', id: null, name: null },
+            { effort: 'medium', id: null, name: null },
+            { effort: 'high', id: null, name: null },
+            { effort: 'xhigh', id: null, name: null },
+            { effort: 'max', id: null, name: null }
+        ]
+    },
+    {
         slug: 'gpt-6-sol',
         name: 'GPT-6 Sol',
         provider: 'codex',
