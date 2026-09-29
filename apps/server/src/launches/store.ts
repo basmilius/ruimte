@@ -11,6 +11,7 @@ import {
     type LaunchConfigOverlay,
     type LaunchFileEntry,
     type LaunchesDocument,
+    type LaunchSuggestion,
     type LaunchesPrivateFile,
     type LaunchesSharedFile
 } from '@ruimte/contracts';
@@ -18,6 +19,7 @@ import { CodedError } from '@ruimte/agents/coded-error';
 import { Serializer } from '@ruimte/agents/serializer';
 import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@ruimte/agents/watch-seam';
 import { isInside } from '../canvas/project-paths.ts';
+import { listRepos } from '../git/repos.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import {
@@ -32,6 +34,7 @@ import {
     type JsonDocumentRead
 } from '../projects/project-files.ts';
 import type { SessionSink } from '../sessions/manager.ts';
+import { detectLaunches } from './detect.ts';
 
 export const LAUNCHES_FILE = 'launches.json';
 
@@ -249,6 +252,19 @@ export class LaunchStore {
     /* Every launch of a project as it would run here, in the order of the menu. */
     resolveAll(projectId: string): Promise<ResolvedLaunch[]> {
         return this.writes.run(async () => this.resolvedAll(projectId, await this.load(projectId)));
+    }
+
+    /* What the project's own files describe, in the folder and each checkout the git panel knows. */
+    async detect(projectId: string): Promise<LaunchSuggestion[]> {
+        const folder = this.projects.folderOf(projectId);
+        if (folder === null) {
+            throw new LaunchError('project-not-found', `No project ${projectId} on this machine`);
+        }
+        const { repos } = await listRepos(folder).catch(() => ({ repos: [] }));
+        return detectLaunches(
+            folder,
+            repos.map((repo) => repo.path)
+        );
     }
 
     async resolve(projectId: string, launchId: string): Promise<ResolvedLaunch> {

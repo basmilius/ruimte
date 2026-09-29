@@ -8,6 +8,8 @@ export const registerLaunchHandlers = (dispatcher: Dispatcher, store: LaunchStor
 
     dispatcher.register('launches.save', (payload) => translate(async () => ({ rev: await store.save(payload.projectId, payload.baseRev, payload.launches) })));
 
+    dispatcher.register('launches.detect', (payload) => translate(async () => ({ suggestions: await store.detect(payload.projectId) })));
+
     dispatcher.register('launch.start', (payload) =>
         translate(() => runner.start(payload.projectId, payload.launchId, { actor: 'person', approve: payload.approve, replace: payload.replace }))
     );
