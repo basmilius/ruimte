@@ -26,7 +26,7 @@ const leave = async (storage: LoginStorage, now = 1_000, confirm?: boolean) => {
 describe('signing in on the web', () => {
     test('only an origin the address book sends a login back to gets a redirect', () => {
         expect(webRedirectUriFor('https://station.ruimte.app')).toBe(REDIRECT);
-        expect(webRedirectUriFor('http://localhost:5173')).toBe('http://localhost:5173/pulsar/callback');
+        expect(webRedirectUriFor('http://localhost:4212')).toBe('http://localhost:4212/pulsar/callback');
         expect(webRedirectUriFor('https://evil.example.com')).toBeNull();
         expect(webRedirectUriFor('http://192.168.1.20:4210')).toBeNull();
     });
