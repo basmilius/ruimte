@@ -1,12 +1,12 @@
 {
-  "machineNote": {
-    "unnamed": "This machine",
-    "disconnected": "{{machine}} is not connected.",
-    "connecting": "Connecting to {{machine}}…",
-    "silent": "{{machine}} is not answering.",
-    "stale": "These are the numbers of the last scan that reached it."
-  },
-  "dialog": {
-    "machine": "Machine"
-  }
+    "machineNote": {
+        "unnamed": "This machine",
+        "disconnected": "{{machine}} is not connected.",
+        "connecting": "Connecting to {{machine}}…",
+        "silent": "{{machine}} is not answering.",
+        "stale": "These are the numbers of the last scan that reached it."
+    },
+    "dialog": {
+        "machine": "Machine"
+    }
 }

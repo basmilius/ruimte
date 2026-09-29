@@ -1,34 +1,34 @@
 {
-  "error": {
-    "machineGone": "That machine is no longer in the list",
-    "machineDisconnected": "That machine is no longer connected",
-    "openFailed": "That project could not be opened",
-    "couldNotOpen": "That could not be opened",
-    "projectNotSaved": "The project could not be saved",
-    "reopenFailed": "The project could not be opened again"
-  },
-  "close": {
-    "idle": "Nothing in this project is running. It moves to Recent just as you left it.",
-    "ending_one": "Closing ends its running session. A terminal loses its scrollback and an agent stops. The rest moves to Recent as you left it.",
-    "ending_other": "Closing ends its {{count}} running sessions. A terminal loses its scrollback and an agent stops. The rest moves to Recent as you left it.",
-    "held_one": "Another client still has this project open, so nothing stops running. It moves to Recent here only.",
-    "held_other": "{{count}} other clients still have this project open, so nothing stops running. It moves to Recent here only."
-  },
-  "showView": {
-    "someone": "An agent",
-    "alreadyThere": "{{agent}} pointed at {{view}}, which you were already looking at",
-    "follow": "{{agent}} showed {{view}} in the cell you were working in",
-    "go": "{{agent}} asked you to look at {{view}}"
-  },
-  "diagram": {
-    "draft": "Fill the empty diagram \"{{name}}\" with `ruimte-context view diagram {{viewId}}`. It should show "
-  },
-  "view": {
-    "fallbackName": "this view"
-  },
-  "flag": {
-    "menu": "Flag",
-    "remove": "Remove flag",
-    "flagged": "Flagged {{color}}"
-  }
+    "error": {
+        "machineGone": "That machine is no longer in the list",
+        "machineDisconnected": "That machine is no longer connected",
+        "openFailed": "That project could not be opened",
+        "couldNotOpen": "That could not be opened",
+        "projectNotSaved": "The project could not be saved",
+        "reopenFailed": "The project could not be opened again"
+    },
+    "close": {
+        "idle": "Nothing in this project is running. It moves to Recent just as you left it.",
+        "ending_one": "Closing ends its running session. A terminal loses its scrollback and an agent stops. The rest moves to Recent as you left it.",
+        "ending_other": "Closing ends its {{count}} running sessions. A terminal loses its scrollback and an agent stops. The rest moves to Recent as you left it.",
+        "held_one": "Another client still has this project open, so nothing stops running. It moves to Recent here only.",
+        "held_other": "{{count}} other clients still have this project open, so nothing stops running. It moves to Recent here only."
+    },
+    "showView": {
+        "someone": "An agent",
+        "alreadyThere": "{{agent}} pointed at {{view}}, which you were already looking at",
+        "follow": "{{agent}} showed {{view}} in the cell you were working in",
+        "go": "{{agent}} asked you to look at {{view}}"
+    },
+    "diagram": {
+        "draft": "Fill the empty diagram \"{{name}}\" with `ruimte-context view diagram {{viewId}}`. It should show "
+    },
+    "view": {
+        "fallbackName": "this view"
+    },
+    "flag": {
+        "menu": "Flag",
+        "remove": "Remove flag",
+        "flagged": "Flagged {{color}}"
+    }
 }

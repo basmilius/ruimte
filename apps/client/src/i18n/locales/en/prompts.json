@@ -1,23 +1,23 @@
 {
-  "computer": {
-    "heading": "Let an agent use {{app}}?",
-    "body": "{{node}} in {{project}} wants to see and operate {{app}} on this machine.",
-    "bodyNoProject": "{{node}} wants to see and operate {{app}} on this machine.",
-    "unnamed": "An agent",
-    "scope": "This time lasts until the agent's turn ends. Always lets every agent on this machine use {{app}}.",
-    "ruimte": "In Ruimte an agent can do anything you can, at your own risk.",
-    "once": "Allow this time",
-    "always": "Always allow",
-    "deny": "Deny"
-  },
-  "waiting": {
-    "heading": "Waiting for you in its terminal",
-    "body": "This question can only be answered in the terminal.",
-    "goToTerminal": "Go to terminal"
-  },
-  "error": {
-    "expired": "This request was already answered or has expired",
-    "terminalOnly": "This prompt can only be answered in its terminal",
-    "notConnected": "Not connected to the machine"
-  }
+    "computer": {
+        "heading": "Let an agent use {{app}}?",
+        "body": "{{node}} in {{project}} wants to see and operate {{app}} on this machine.",
+        "bodyNoProject": "{{node}} wants to see and operate {{app}} on this machine.",
+        "unnamed": "An agent",
+        "scope": "This time lasts until the agent's turn ends. Always lets every agent on this machine use {{app}}.",
+        "ruimte": "In Ruimte an agent can do anything you can, at your own risk.",
+        "once": "Allow this time",
+        "always": "Always allow",
+        "deny": "Deny"
+    },
+    "waiting": {
+        "heading": "Waiting for you in its terminal",
+        "body": "This question can only be answered in the terminal.",
+        "goToTerminal": "Go to terminal"
+    },
+    "error": {
+        "expired": "This request was already answered or has expired",
+        "terminalOnly": "This prompt can only be answered in its terminal",
+        "notConnected": "Not connected to the machine"
+    }
 }

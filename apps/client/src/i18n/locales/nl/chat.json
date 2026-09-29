@@ -1,25 +1,25 @@
 {
-  "fork": {
-    "pill": {
-      "label": "Fork",
-      "of": "Fork van {{title}}",
-      "when": "Geforkt, {{at}}",
-      "whenTurn": "Geforkt na turn {{turn}}, {{at}}",
-      "orphaned": "{{when}}. Het origineel zit niet meer in dit project."
+    "fork": {
+        "pill": {
+            "label": "Fork",
+            "of": "Fork van {{title}}",
+            "when": "Geforkt, {{at}}",
+            "whenTurn": "Geforkt na turn {{turn}}, {{at}}",
+            "orphaned": "{{when}}. Het origineel zit niet meer in dit project."
+        },
+        "menu": {
+            "fork": "Gesprek forken…",
+            "summarize": "Samenvatten voor het origineel",
+            "summarizeFor": "Samenvatten voor {{title}}",
+            "showOriginal": "Origineel tonen",
+            "summaryFailed": "De samenvatting kon niet worden gevraagd"
+        },
+        "refusal": {
+            "originalGone": "Het origineel zit niet meer in dit project"
+        }
     },
-    "menu": {
-      "fork": "Gesprek forken…",
-      "summarize": "Samenvatten voor het origineel",
-      "summarizeFor": "Samenvatten voor {{title}}",
-      "showOriginal": "Origineel tonen",
-      "summaryFailed": "De samenvatting kon niet worden gevraagd"
-    },
-    "refusal": {
-      "originalGone": "Het origineel zit niet meer in dit project"
+    "image": {
+        "gone": "Dat bestand staat er niet meer",
+        "notShown": "Een {{format}}-afbeelding, een formaat dat deze app niet toont"
     }
-  },
-  "image": {
-    "gone": "Dat bestand staat er niet meer",
-    "notShown": "Een {{format}}-afbeelding, een formaat dat deze app niet toont"
-  }
 }

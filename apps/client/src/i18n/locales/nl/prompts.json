@@ -1,23 +1,23 @@
 {
-  "computer": {
-    "heading": "Mag een agent {{app}} gebruiken?",
-    "body": "{{node}} in {{project}} wil {{app}} op deze machine zien en bedienen.",
-    "bodyNoProject": "{{node}} wil {{app}} op deze machine zien en bedienen.",
-    "unnamed": "Een agent",
-    "scope": "Deze keer geldt tot de turn van de agent klaar is. Altijd laat elke agent op deze machine {{app}} gebruiken.",
-    "ruimte": "In Ruimte kan een agent alles wat jij kunt, op eigen risico.",
-    "once": "Deze keer toestaan",
-    "always": "Altijd toestaan",
-    "deny": "Weigeren"
-  },
-  "waiting": {
-    "heading": "Wacht op jou in de terminal",
-    "body": "Deze vraag kan alleen in de terminal beantwoord worden.",
-    "goToTerminal": "Ga naar de terminal"
-  },
-  "error": {
-    "expired": "Dit verzoek is al beantwoord of verlopen",
-    "terminalOnly": "Deze prompt kan alleen in de terminal beantwoord worden",
-    "notConnected": "Geen verbinding met de machine"
-  }
+    "computer": {
+        "heading": "Mag een agent {{app}} gebruiken?",
+        "body": "{{node}} in {{project}} wil {{app}} op deze machine zien en bedienen.",
+        "bodyNoProject": "{{node}} wil {{app}} op deze machine zien en bedienen.",
+        "unnamed": "Een agent",
+        "scope": "Deze keer geldt tot de turn van de agent klaar is. Altijd laat elke agent op deze machine {{app}} gebruiken.",
+        "ruimte": "In Ruimte kan een agent alles wat jij kunt, op eigen risico.",
+        "once": "Deze keer toestaan",
+        "always": "Altijd toestaan",
+        "deny": "Weigeren"
+    },
+    "waiting": {
+        "heading": "Wacht op jou in de terminal",
+        "body": "Deze vraag kan alleen in de terminal beantwoord worden.",
+        "goToTerminal": "Ga naar de terminal"
+    },
+    "error": {
+        "expired": "Dit verzoek is al beantwoord of verlopen",
+        "terminalOnly": "Deze prompt kan alleen in de terminal beantwoord worden",
+        "notConnected": "Geen verbinding met de machine"
+    }
 }

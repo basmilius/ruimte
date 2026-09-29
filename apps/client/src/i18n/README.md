@@ -24,7 +24,7 @@ it freely, add to it only when a word is genuinely shared, never to park a strin
 ```tsx
 const { t } = useTranslation('settings');
 // ...
-<SettingsRow label={t('appearance.region.label')} description={t('appearance.region.description', { example })} />
+<SettingsRow label={t('appearance.region.label')} description={t('appearance.region.description', { example })} />;
 ```
 
 Keys are nested and named after the surface, not after the sentence: `appearance.region.label`, not

@@ -1,25 +1,25 @@
 {
-  "fork": {
-    "pill": {
-      "label": "Fork",
-      "of": "Fork of {{title}}",
-      "when": "Forked, {{at}}",
-      "whenTurn": "Forked after turn {{turn}}, {{at}}",
-      "orphaned": "{{when}}. The original is no longer in this project."
+    "fork": {
+        "pill": {
+            "label": "Fork",
+            "of": "Fork of {{title}}",
+            "when": "Forked, {{at}}",
+            "whenTurn": "Forked after turn {{turn}}, {{at}}",
+            "orphaned": "{{when}}. The original is no longer in this project."
+        },
+        "menu": {
+            "fork": "Fork conversation…",
+            "summarize": "Summarize for the original",
+            "summarizeFor": "Summarize for {{title}}",
+            "showOriginal": "Show original",
+            "summaryFailed": "The summary could not be asked for"
+        },
+        "refusal": {
+            "originalGone": "The original is no longer in this project"
+        }
     },
-    "menu": {
-      "fork": "Fork conversation…",
-      "summarize": "Summarize for the original",
-      "summarizeFor": "Summarize for {{title}}",
-      "showOriginal": "Show original",
-      "summaryFailed": "The summary could not be asked for"
-    },
-    "refusal": {
-      "originalGone": "The original is no longer in this project"
+    "image": {
+        "gone": "That file is no longer there",
+        "notShown": "A {{format}} image, a format this app does not show"
     }
-  },
-  "image": {
-    "gone": "That file is no longer there",
-    "notShown": "A {{format}} image, a format this app does not show"
-  }
 }
