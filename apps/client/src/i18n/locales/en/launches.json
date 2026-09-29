@@ -45,5 +45,82 @@
         "notRun": "{{name}} has not run since the machine started.",
         "stopped": "stopped",
         "attachFailed": "Could not show the output."
+    },
+    "found": {
+        "title": "Found in this project",
+        "searching": "Looking for run configurations…",
+        "runFiles_one": "{{count}} run configuration in {{place}}",
+        "runFiles_other": "{{count}} run configurations in {{place}}",
+        "scripts_one": "{{count}} script in {{place}}",
+        "scripts_other": "{{count}} scripts in {{place}}",
+        "folders_one": "{{count}} folder",
+        "folders_other": "{{count}} folders",
+        "files_one": "{{count}} file",
+        "files_other": "{{count}} files",
+        "one": "{{first}}.",
+        "both": "{{first}} and {{second}}.",
+        "review": "Review and import…"
+    },
+    "edit": {
+        "title": "Launches",
+        "description": "The launches of this project. Saving a launch approves its command on this machine.",
+        "new": "New launch",
+        "untitled": "Untitled",
+        "find": "Find in this project…",
+        "name": "Name",
+        "kind": "Kind",
+        "kinds": {
+            "service": "Service",
+            "task": "Task",
+            "group": "Group"
+        },
+        "kindHint": {
+            "service": "Keeps running, such as a web server. With an address it is running once the port answers.",
+            "task": "Runs until it is done, such as the tests or a build.",
+            "group": "Starts the launches checked below together."
+        },
+        "directory": "Directory",
+        "projectFolder": "Project folder",
+        "subfolder": "Subfolder",
+        "command": "Command",
+        "address": "Address",
+        "environment": "Environment",
+        "envKey": "Name",
+        "envValue": "Value",
+        "addVariable": "Add variable",
+        "removeVariable": "Remove {{key}}",
+        "members": "Launches",
+        "noMembers": "Add a service or a task first.",
+        "autostart": "Launch when the project opens",
+        "autostartHint": "Only once it is approved on this machine.",
+        "share": "Share with the team",
+        "shareHint": "Shared launches go in .ruimte/launches.json and into git. Keep secrets out of the environment above.",
+        "overlay": "This machine lays its own folder or variables over this launch; they stay as they are.",
+        "empty": "No launches yet.",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "save": "Save",
+        "problem": {
+            "name": "Give this launch a name.",
+            "command": "A service or a task needs a command.",
+            "members": "Check at least one launch for this group."
+        },
+        "conflict": "The launches changed elsewhere while you edited them.",
+        "startOver": "Start over from the latest",
+        "failed": "Could not save the launches."
+    },
+    "import": {
+        "title": "Import launches",
+        "description": "Nothing is saved until you import. What you import counts as your approval on this machine.",
+        "searching": "Looking for run configurations and scripts…",
+        "nothing": "Found nothing to import in this project.",
+        "failed": "Could not look through the project.",
+        "unsupported": "Not supported: {{reason}}",
+        "private": "Stays on this machine: it names a path outside the project.",
+        "pick": "Import {{name}}",
+        "share": "Share with the team in .ruimte/launches.json",
+        "cancel": "Cancel",
+        "confirm_one": "Import {{count}}",
+        "confirm_other": "Import {{count}}"
     }
 }

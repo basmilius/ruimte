@@ -45,5 +45,82 @@
         "notRun": "{{name}} liep nog niet sinds de machine startte.",
         "stopped": "gestopt",
         "attachFailed": "Kon de output niet tonen."
+    },
+    "found": {
+        "title": "Gevonden in dit project",
+        "searching": "Zoekt naar run-configuraties…",
+        "runFiles_one": "{{count}} run-configuratie in {{place}}",
+        "runFiles_other": "{{count}} run-configuraties in {{place}}",
+        "scripts_one": "{{count}} script in {{place}}",
+        "scripts_other": "{{count}} scripts in {{place}}",
+        "folders_one": "{{count}} map",
+        "folders_other": "{{count}} mappen",
+        "files_one": "{{count}} bestand",
+        "files_other": "{{count}} bestanden",
+        "one": "{{first}}.",
+        "both": "{{first}} en {{second}}.",
+        "review": "Bekijken en importeren…"
+    },
+    "edit": {
+        "title": "Launches",
+        "description": "De launches van dit project. Wie een launch opslaat, keurt zijn commando goed op deze machine.",
+        "new": "Nieuwe launch",
+        "untitled": "Naamloos",
+        "find": "Zoeken in dit project…",
+        "name": "Naam",
+        "kind": "Soort",
+        "kinds": {
+            "service": "Service",
+            "task": "Task",
+            "group": "Groep"
+        },
+        "kindHint": {
+            "service": "Blijft draaien, zoals een webserver. Met een adres draait hij pas als de poort antwoordt.",
+            "task": "Loopt tot hij klaar is, zoals de tests of een build.",
+            "group": "Start de launches die hieronder aangevinkt staan samen."
+        },
+        "directory": "Map",
+        "projectFolder": "Projectmap",
+        "subfolder": "Submap",
+        "command": "Commando",
+        "address": "Adres",
+        "environment": "Omgeving",
+        "envKey": "Naam",
+        "envValue": "Waarde",
+        "addVariable": "Variabele toevoegen",
+        "removeVariable": "{{key}} verwijderen",
+        "members": "Launches",
+        "noMembers": "Voeg eerst een service of een task toe.",
+        "autostart": "Starten als het project opent",
+        "autostartHint": "Pas als hij op deze machine is goedgekeurd.",
+        "share": "Delen met het team",
+        "shareHint": "Gedeelde launches komen in .ruimte/launches.json en in git. Houd geheimen uit de omgeving hierboven.",
+        "overlay": "Deze machine legt een eigen map of eigen variabelen over deze launch; die blijven zoals ze zijn.",
+        "empty": "Nog geen launches.",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "save": "Opslaan",
+        "problem": {
+            "name": "Geef deze launch een naam.",
+            "command": "Een service of een task heeft een commando nodig.",
+            "members": "Vink minstens één launch aan voor deze groep."
+        },
+        "conflict": "De launches zijn elders gewijzigd terwijl je ze bewerkte.",
+        "startOver": "Opnieuw beginnen vanaf de nieuwste",
+        "failed": "Kon de launches niet opslaan."
+    },
+    "import": {
+        "title": "Launches importeren",
+        "description": "Er wordt niets opgeslagen tot je importeert. Wat je importeert, telt als jouw goedkeuring op deze machine.",
+        "searching": "Zoekt naar run-configuraties en scripts…",
+        "nothing": "Niets gevonden om te importeren in dit project.",
+        "failed": "Kon het project niet doorzoeken.",
+        "unsupported": "Niet ondersteund: {{reason}}",
+        "private": "Blijft op deze machine: hij noemt een pad buiten het project.",
+        "pick": "{{name}} importeren",
+        "share": "Delen met het team in .ruimte/launches.json",
+        "cancel": "Annuleren",
+        "confirm_one": "{{count}} importeren",
+        "confirm_other": "{{count}} importeren"
     }
 }

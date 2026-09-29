@@ -6,6 +6,7 @@ import { connectWorkspaceChatHost } from '@/chat/workspace-host';
 import { useCanvasShortcuts } from '@/canvas/canvas-shortcuts';
 import { CellOverlayLayer } from '@/shell/CellOverlay';
 import { startLaunchWatch } from '@/launches/watch';
+import { useLaunches } from '@/launches/state';
 import { ForkDialog } from '@/shell/ForkDialog';
 import { LayoutDialog } from '@/shell/LayoutDialog';
 import { LeaveConflictDialog } from '@/shell/LeaveConflictDialog';
@@ -36,6 +37,13 @@ import { VoicePanel } from '@/voice/VoicePanel';
 connectWorkspaceChatHost();
 startBytesWorker();
 startLaunchWatch();
+
+const LaunchDialogs = lazyDialog(
+    () => import('@/launches/LaunchDialogs'),
+    'LaunchDialogs',
+    useLaunches,
+    (s) => s.dialog !== null
+);
 
 const ConflictOverlay = lazyDialog(
     () => import('@/conflicts/ConflictOverlay'),
@@ -128,6 +136,9 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
             </ErrorBoundary>
             <ErrorBoundary label={failed('conflicts')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                 <ConflictOverlay />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <LaunchDialogs />
             </ErrorBoundary>
             <ForkDialog />
         </ConnectionProvider>

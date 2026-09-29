@@ -1,14 +1,15 @@
 import { useMemo, useRef } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Play, Plus, Rocket, SquareTerminal } from 'lucide-react';
-import type { LaunchConfigEntry } from '@ruimte/contracts';
+import { Pencil, Play, Plus, Rocket, Search, SquareTerminal } from 'lucide-react';
+import type { LaunchConfigEntry, LaunchesDocument } from '@ruimte/contracts';
 import { Button, ButtonGroup, Icon, Menu, Popover, PromptDialog, useNow } from '@basmilius/react-ui';
 import { formatAgo } from '@basmilius/react-ui/format';
 import { chooseLaunch, chosenLaunchId, openLaunchAddress, showLaunchOutput, startLaunch } from '@/launches/actions';
 import { LaunchButtons, LaunchDot } from '@/launches/LaunchControls';
+import { foundText, newSuggestions } from '@/launches/editing';
 import { chosenLaunch, launchSections, othersOf, shortAddress, type LaunchView } from '@/launches/model';
-import { useAddressReachable, useLaunches, useProjectLaunches } from '@/launches/state';
+import { useAddressReachable, useLaunches, useLaunchSuggestions, useProjectLaunches } from '@/launches/state';
 import { useProjectRepos } from '@/state/git-repos';
 import { useUi } from '@/state/ui';
 
@@ -156,6 +157,7 @@ function LaunchMenu() {
 
     return (
         <>
+            {document !== null && document.launches.length === 0 && <FoundInProject document={document} />}
             {sections.map((section, index) => (
                 <Menu.Group key={section.label ?? ''}>
                     {index > 0 && section.label === null && <Menu.Separator />}
@@ -180,6 +182,32 @@ function LaunchMenu() {
                     <Icon icon={Pencil} size={14} /> {t('menu.edit')}
                 </Menu.Item>
             )}
+        </>
+    );
+}
+
+/* A project without launches offers what the machine finds in it, so the first ones need no typing. */
+function FoundInProject({ document }: { document: LaunchesDocument }) {
+    const { t } = useTranslation('launches');
+    const { projectId } = useProjectLaunches();
+    const { suggestions } = useLaunchSuggestions(projectId);
+    const text = useMemo(() => (suggestions === null ? null : foundText(newSuggestions(suggestions, document))), [suggestions, document]);
+
+    if (suggestions !== null && text === null) {
+        return null;
+    }
+    return (
+        <>
+            <Menu.Group>
+                <Menu.GroupLabel>{t('found.title')}</Menu.GroupLabel>
+                <p className="max-w-72 px-2 pb-1.5 text-xs text-text-muted">{text ?? t('found.searching')}</p>
+                {text !== null && (
+                    <Menu.Item onClick={() => useLaunches.getState().setDialog({ kind: 'import' })}>
+                        <Icon icon={Search} size={14} /> {t('found.review')}
+                    </Menu.Item>
+                )}
+            </Menu.Group>
+            <Menu.Separator />
         </>
     );
 }

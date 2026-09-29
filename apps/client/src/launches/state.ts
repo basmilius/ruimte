@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
-import type { LaunchBusy, LaunchesDocument, LaunchHeld, LaunchStatus } from '@ruimte/contracts';
+import { useEffect, useMemo, useState } from 'react';
+import type { LaunchBusy, LaunchesDocument, LaunchHeld, LaunchStatus, LaunchSuggestion } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { EMPTY_DOCUMENT, launchViews, type LaunchView } from '@/launches/model';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { dropEndpoint, endpointKey, isOfEndpoint, useEndpointId } from '@/state/keys';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useProject } from '@/state/project';
+import { useTransport } from '@/transport/context';
 
 /* A start that came back with a question for the person who asked. */
 export type LaunchAsk =
@@ -94,4 +95,40 @@ export const useProjectLaunches = (): ProjectLaunches => {
 export const useAddressReachable = (): boolean => {
     const endpointId = useEndpointId();
     return endpointId === LOCAL_ENDPOINT_ID && hasLocalMachine();
+};
+
+export interface LaunchSuggestions {
+    /* Null while the machine looks. */
+    suggestions: readonly LaunchSuggestion[] | null;
+    failed: boolean;
+}
+
+/* What the machine finds in the project to import, asked again each time a surface that shows it mounts. */
+export const useLaunchSuggestions = (projectId: string | null): LaunchSuggestions => {
+    const transport = useTransport();
+    const [found, setFound] = useState<{ projectId: string; suggestions: readonly LaunchSuggestion[] | null; failed: boolean } | null>(null);
+
+    useEffect(() => {
+        if (projectId === null) {
+            return;
+        }
+        let cancelled = false;
+        transport
+            .request('launches.detect', { projectId })
+            .then((result) => {
+                if (!cancelled) {
+                    setFound({ projectId, suggestions: result.suggestions, failed: false });
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setFound({ projectId, suggestions: [], failed: true });
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [transport, projectId]);
+
+    return found === null || found.projectId !== projectId ? { suggestions: null, failed: false } : found;
 };
