@@ -179,7 +179,7 @@ function CardBody({ endpointId, node, onOpen, onEmpty }: { endpointId: string; n
                 sending={session.sending}
                 error={session.errorOf(active.id)}
                 top={
-                    <div className="flex min-w-0 items-center gap-2 border-b border-dashed border-border px-3 py-1.5 text-xs text-text-muted">
+                    <div className="flex h-[39px] min-w-0 shrink-0 items-center gap-2 border-b border-dashed border-border pl-2.5 pr-1 text-xs text-text-muted">
                         <button type="button" className="min-w-0 truncate font-medium text-text hover:underline" onClick={onOpen}>
                             {node.title}
                         </button>
@@ -188,7 +188,7 @@ function CardBody({ endpointId, node, onOpen, onEmpty }: { endpointId: string; n
                             <ButtonGroup render={<span />} className="shrink-0">
                                 <IconButton
                                     icon={ChevronLeft}
-                                    size="xs"
+                                    size="sm"
                                     label={t('canvas:promptStack.previous')}
                                     disabled={index === 0}
                                     onClick={() => step(-1)}
@@ -196,7 +196,7 @@ function CardBody({ endpointId, node, onOpen, onEmpty }: { endpointId: string; n
                                 <span className="px-1 tabular-nums">{t('canvas:promptStack.position', { index: index + 1, count: waiting.length })}</span>
                                 <IconButton
                                     icon={ChevronRight}
-                                    size="xs"
+                                    size="sm"
                                     label={t('canvas:promptStack.next')}
                                     disabled={index === waiting.length - 1}
                                     onClick={() => step(1)}
