@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { OctagonX, Play, RotateCw, Square } from 'lucide-react';
-import { IconButton, Menu } from '@basmilius/react-ui';
+import { IconButton, Menu, Spinner, type IconButtonSize } from '@basmilius/react-ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { startLaunch, stopLaunch } from '@/launches/actions';
 import type { LaunchView } from '@/launches/model';
@@ -17,7 +17,7 @@ const dotClass = (view: LaunchView): string => {
             return 'bg-status-needs-you';
         case 'starting':
         case 'stopping':
-            return 'animate-pulse bg-status-running';
+            return 'bg-status-running';
         case 'running':
             return 'bg-positive';
         case 'failed':
@@ -29,6 +29,9 @@ const dotClass = (view: LaunchView): string => {
 
 export function LaunchDot({ view }: { view: LaunchView }) {
     const { t } = useTranslation('launches');
+    if (view.phase === 'starting' || view.phase === 'stopping') {
+        return <Spinner size={12} label={t(`phase.${view.phase}`)} className="shrink-0 text-status-running" />;
+    }
     return <span role="img" aria-label={t(`phase.${view.phase}`)} className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', dotClass(view))} />;
 }
 
@@ -36,7 +39,17 @@ export function LaunchDot({ view }: { view: LaunchView }) {
  * In a menu row each button is an item of its own, so the arrow keys reach it and a press leaves the menu open.
  * `chosen` is the launch on the chip, the one the shortcuts act on.
  */
-export function LaunchButtons({ view, inMenu = false, chosen = false }: { view: LaunchView; inMenu?: boolean; chosen?: boolean }) {
+export function LaunchButtons({
+    view,
+    inMenu = false,
+    chosen = false,
+    size = 'sm'
+}: {
+    view: LaunchView;
+    inMenu?: boolean;
+    chosen?: boolean;
+    size?: IconButtonSize;
+}) {
     const { t } = useTranslation('launches');
     const { launch, phase } = view;
     const render = inMenu ? <Menu.Item unstyled closeOnClick={false} /> : undefined;
@@ -46,9 +59,9 @@ export function LaunchButtons({ view, inMenu = false, chosen = false }: { view: 
         return (
             <IconButton
                 icon={OctagonX}
-                size="sm"
+                size={size}
                 label={t('forceStop', { name: launch.name })}
-                className="text-status-error"
+                iconClassName="text-status-error"
                 render={render}
                 onClick={() => void stopLaunch(launch.id, true)}
             />
@@ -59,7 +72,7 @@ export function LaunchButtons({ view, inMenu = false, chosen = false }: { view: 
             <>
                 <IconButton
                     icon={RotateCw}
-                    size="sm"
+                    size={size}
                     label={t('restart', { name: launch.name })}
                     kbd={runKeys}
                     render={render}
@@ -67,7 +80,8 @@ export function LaunchButtons({ view, inMenu = false, chosen = false }: { view: 
                 />
                 <IconButton
                     icon={Square}
-                    size="sm"
+                    size={size}
+                    iconClassName="fill-current text-status-error"
                     label={t('stop', { name: launch.name })}
                     kbd={stopKeys}
                     render={render}
@@ -77,6 +91,14 @@ export function LaunchButtons({ view, inMenu = false, chosen = false }: { view: 
         );
     }
     return (
-        <IconButton icon={Play} size="sm" label={t('start', { name: launch.name })} kbd={runKeys} render={render} onClick={() => void startLaunch(launch.id)} />
+        <IconButton
+            icon={Play}
+            size={size}
+            iconClassName="fill-current text-positive"
+            label={t('start', { name: launch.name })}
+            kbd={runKeys}
+            render={render}
+            onClick={() => void startLaunch(launch.id)}
+        />
     );
 }

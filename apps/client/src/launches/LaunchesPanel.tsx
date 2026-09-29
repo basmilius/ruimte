@@ -1,20 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import type { Terminal } from '@xterm/xterm';
-import { Play, Plus, Rocket } from 'lucide-react';
-import type { LaunchConfigEntry } from '@ruimte/contracts';
-import { Button, ButtonGroup, Icon, PanelEmpty, useNow } from '@basmilius/react-ui';
+import { ChevronDown, ExternalLink, Play, Plus, Rocket } from 'lucide-react';
+import { Button, ButtonGroup, Icon, Menu, PanelEmpty, useNow } from '@basmilius/react-ui';
 import { formatAgo, formatDuration } from '@basmilius/react-ui/format';
 import { isApplePlatform } from '@/desktop/bridge';
-import { chooseLaunch, openLaunchAddress, startLaunch } from '@/launches/actions';
+import { openLaunchAddress, startLaunch } from '@/launches/actions';
+import { LaunchMenu } from '@/launches/LaunchChip';
 import { LaunchButtons, LaunchDot } from '@/launches/LaunchControls';
-import { chosenLaunch, outputOf, shortAddress, type LaunchView } from '@/launches/model';
+import { chosenLaunch, othersOf, outputOf, shortAddress, type LaunchView } from '@/launches/model';
 import { useAddressReachable, useLaunches, useProjectLaunches } from '@/launches/state';
 import { NodeNotice } from '@/nodes/NodeNotice';
+import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
@@ -27,14 +28,14 @@ const RESIZE_DEBOUNCE_MS = 50;
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
-/* What a row says after the name: how long it runs and where, or how it ended. */
-const rowDetail = (view: LaunchView, all: readonly LaunchConfigEntry[], now: number, t: Translate): string => {
-    const { launch, phase, status } = view;
+/* What the picker says after the name: how long it runs and where, or how it ended. */
+const pickerDetail = (view: LaunchView, now: number, t: Translate): string => {
+    const { phase, status } = view;
     if (phase === 'held') {
         return t('phase.held');
     }
     if (status === null) {
-        return launch.kind === 'group' ? (launch.launches ?? []).flatMap((id) => all.find((candidate) => candidate.id === id)?.name ?? []).join(' + ') : '';
+        return '';
     }
     const ran = (status.endedAt ?? now) - status.startedAt;
     if (phase === 'starting' || phase === 'stopping') {
@@ -46,7 +47,12 @@ const rowDetail = (view: LaunchView, all: readonly LaunchConfigEntry[], now: num
     if (phase === 'passed' || phase === 'failed') {
         return [phase === 'passed' ? t('phase.passed') : t('exit', { code: status.exitCode ?? '?' }), formatDuration(ran)].join(' · ');
     }
-    return status.endedAt === null ? '' : t('ended', { outcome: t('panel.stopped'), ago: formatAgo(now - status.endedAt) });
+    return status.endedAt === null
+        ? ''
+        : t('ended', {
+              outcome: t('panel.stopped'),
+              ago: formatAgo(now - status.endedAt)
+          });
 };
 
 /*
@@ -78,48 +84,56 @@ export function LaunchesPanel() {
     }
 
     const chosen = chosenLaunch(document, chosenId);
+    const view = chosen === null ? null : (views.get(chosen.id) ?? null);
     const output = chosen === null ? null : outputOf(views, chosen);
 
     return (
         <div className="flex min-h-0 grow flex-col">
-            <div className="max-h-[40%] shrink-0 overflow-y-auto border-b border-border py-1">
-                {document.launches.map((launch) => {
-                    const view = views.get(launch.id);
-                    return view === undefined ? null : (
-                        <LaunchListRow key={launch.id} view={view} all={document.launches} selected={launch.id === chosen?.id} />
-                    );
-                })}
-            </div>
+            {view !== null && <LaunchPicker view={view} />}
             {output === null ? null : <LaunchOutput view={output} />}
         </div>
     );
 }
 
-function LaunchListRow({ view, all, selected }: { view: LaunchView; all: readonly LaunchConfigEntry[]; selected: boolean }) {
+/* The chosen launch with its buttons, in the panel's header; the others are one click away in the same menu as the chip's. */
+function LaunchPicker({ view }: { view: LaunchView }) {
     const { t } = useTranslation('launches');
     const now = useNow(1_000);
-    const { launch } = view;
-    const detail = rowDetail(view, all, now, t);
+    const { views } = useProjectLaunches();
+    const others = useMemo(() => othersOf(views, view.launch), [views, view.launch]);
+    const detail = pickerDetail(view, now, t);
 
     return (
-        <div
-            data-selected={selected || undefined}
-            className="group flex h-8 min-w-0 items-center gap-1 pr-1 text-xs hover:bg-surface-hover data-[selected]:bg-surface-active"
-        >
-            <button
-                type="button"
-                aria-current={selected}
-                className="flex h-full min-w-0 grow items-center gap-2 pl-3 text-left"
-                onClick={() => chooseLaunch(launch.id)}
-            >
-                <LaunchDot view={view} />
-                <span className="min-w-0 truncate text-text">{launch.name}</span>
-                <span className={clsx('min-w-0 truncate', view.phase === 'held' ? 'text-status-needs-you' : 'text-text-faint')}>{detail}</span>
-            </button>
-            <ButtonGroup className="shrink-0">
-                <LaunchButtons view={view} />
+        <PanelHeaderSlot>
+            <Menu.Root>
+                <Menu.Trigger
+                    aria-label={t('menu.open')}
+                    className="flex h-7 min-w-0 items-center gap-1.5 rounded-md pr-1.5 pl-2 text-left text-xs hover:bg-surface-hover data-[popup-open]:bg-surface-active"
+                >
+                    <LaunchDot view={view} />
+                    <span className="min-w-0 truncate text-text">{view.launch.name}</span>
+                    {detail !== '' && (
+                        <span className={clsx('min-w-0 shrink-[4] truncate', view.phase === 'held' ? 'text-status-needs-you' : 'text-text-faint')}>
+                            {detail}
+                        </span>
+                    )}
+                    {others.count > 0 && (
+                        <span
+                            className={clsx('shrink-0 rounded-sm bg-surface-active px-1 tabular-nums', others.failed ? 'text-status-error' : 'text-text-muted')}
+                        >
+                            {t('others', { count: others.count })}
+                        </span>
+                    )}
+                    <Icon icon={ChevronDown} size={12} className="shrink-0 text-text-faint" />
+                </Menu.Trigger>
+                <Menu.Popup className="min-w-72">
+                    <LaunchMenu showOutput={false} />
+                </Menu.Popup>
+            </Menu.Root>
+            <ButtonGroup className="ml-auto shrink-0">
+                <LaunchButtons view={view} size="xs" />
             </ButtonGroup>
-        </div>
+        </PanelHeaderSlot>
     );
 }
 
@@ -140,10 +154,11 @@ function LaunchOutput({ view }: { view: LaunchView }) {
                     (reachable ? (
                         <button
                             type="button"
-                            className="shrink-0 underline-offset-2 hover:text-text hover:underline"
+                            className="flex shrink-0 items-center gap-1 text-accent hover:underline"
                             onClick={() => openLaunchAddress(address)}
                         >
                             {shortAddress(address)}
+                            <Icon icon={ExternalLink} size={12} />
                         </button>
                     ) : (
                         <span className="shrink-0">{shortAddress(address)}</span>

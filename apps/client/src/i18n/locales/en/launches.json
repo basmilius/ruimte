@@ -35,7 +35,8 @@
     },
     "failed": {
         "title": "{{name}} stopped",
-        "description": "Exit code {{code}} after {{duration}}"
+        "description": "Exit code {{code}} after {{duration}}",
+        "again": "Start again"
     },
     "startFailed": "Could not launch {{name}}",
     "stopFailed": "Could not stop {{name}}",
@@ -95,6 +96,8 @@
         "autostartHint": "Only once it is approved on this machine.",
         "share": "Share with the team",
         "shareHint": "Shared launches go in .ruimte/launches.json and into git. Keep secrets out of the environment above.",
+        "shared": "Shared with the team",
+        "private": "Only on this machine",
         "overlay": "This machine lays its own folder or variables over this launch; they stay as they are.",
         "empty": "No launches yet.",
         "delete": "Delete",

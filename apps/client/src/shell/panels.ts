@@ -11,5 +11,5 @@ export const PANELS: { kind: PanelKind; icon: LucideIcon; minWidth: number; tool
     { kind: 'git', icon: GitBranch, minWidth: 240, toolbar: true },
     { kind: 'devices', icon: TabletSmartphone, minWidth: 320, toolbar: true },
     { kind: 'processes', icon: Activity, minWidth: 420, toolbar: false },
-    { kind: 'launches', icon: Rocket, minWidth: 320, toolbar: false }
+    { kind: 'launches', icon: Rocket, minWidth: 480, toolbar: false }
 ];

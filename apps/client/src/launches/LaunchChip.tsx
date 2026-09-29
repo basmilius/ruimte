@@ -1,15 +1,15 @@
 import { useMemo, useRef } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Play, Plus, Rocket, Search, SquareTerminal } from 'lucide-react';
-import type { LaunchConfigEntry, LaunchesDocument } from '@ruimte/contracts';
+import { ChevronDown, Pencil, Play, Plus, Rocket, Search, SquareTerminal } from 'lucide-react';
+import type { LaunchesDocument } from '@ruimte/contracts';
 import { Button, ButtonGroup, Icon, Menu, Popover, PromptDialog, useNow } from '@basmilius/react-ui';
 import { formatAgo } from '@basmilius/react-ui/format';
-import { chooseLaunch, chosenLaunchId, openLaunchAddress, showLaunchOutput, startLaunch } from '@/launches/actions';
+import { chooseLaunch, chosenLaunchId, showLaunchOutput, startLaunch } from '@/launches/actions';
 import { LaunchButtons, LaunchDot } from '@/launches/LaunchControls';
 import { foundText, newSuggestions } from '@/launches/editing';
-import { chosenLaunch, launchSections, othersOf, shortAddress, type LaunchView } from '@/launches/model';
-import { useAddressReachable, useLaunches, useLaunchSuggestions, useProjectLaunches } from '@/launches/state';
+import { chosenLaunch, launchSections, othersOf, type LaunchView } from '@/launches/model';
+import { useLaunches, useLaunchSuggestions, useProjectLaunches } from '@/launches/state';
 import { useProjectRepos } from '@/state/git-repos';
 import { useUi } from '@/state/ui';
 
@@ -59,15 +59,16 @@ export function LaunchChip() {
         <div
             ref={anchor}
             data-active={pressed ? 'true' : undefined}
-            className="flex h-8 min-w-0 shrink items-center rounded-md border border-border bg-clip-padding data-[active=true]:bg-surface-active"
+            className="flex h-7 min-w-0 shrink items-center gap-px rounded-md border border-border bg-clip-padding p-px text-xs data-[active=true]:bg-surface-active"
         >
             <Menu.Root>
                 <Menu.Trigger
                     aria-label={t('menu.open')}
-                    className="flex h-full min-w-0 shrink items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active"
+                    className="flex h-full min-w-0 shrink items-center gap-1.5 rounded-sm pr-1.5 pl-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active"
                 >
-                    <Icon icon={Rocket} size={14} className="shrink-0" />
-                    {view !== null && (
+                    {view === null ? (
+                        <Icon icon={Rocket} size={14} className="shrink-0" />
+                    ) : (
                         <>
                             <LaunchDot view={view} />
                             <span className="min-w-0 truncate text-text">{view.launch.name}</span>
@@ -79,18 +80,24 @@ export function LaunchChip() {
                         </>
                     )}
                     {others.count > 0 && (
-                        <span className={clsx('shrink-0', others.failed ? 'text-status-error' : 'text-text-faint')}>
+                        <span
+                            className={clsx(
+                                'shrink-0 rounded-sm bg-surface-active px-1 text-xs tabular-nums',
+                                others.failed ? 'text-status-error' : 'text-text-muted'
+                            )}
+                        >
                             {t('others', { count: others.count })}
                         </span>
                     )}
+                    <Icon icon={ChevronDown} size={12} className="shrink-0 text-text-faint" />
                 </Menu.Trigger>
                 <Menu.Popup className="min-w-72">
                     <LaunchMenu />
                 </Menu.Popup>
             </Menu.Root>
             {view !== null && (
-                <ButtonGroup className="shrink-0 pr-0.5">
-                    <LaunchButtons view={view} chosen />
+                <ButtonGroup className="h-full shrink-0 items-center border-l border-border pl-px">
+                    <LaunchButtons view={view} chosen size="xs" />
                 </ButtonGroup>
             )}
 
@@ -120,7 +127,11 @@ export function LaunchChip() {
                             onClick={() => {
                                 if (ask?.kind === 'held') {
                                     useLaunches.getState().setAsk(null);
-                                    void startLaunch(ask.launchId, { restart: ask.restart, approve: true, replace: ask.replace });
+                                    void startLaunch(ask.launchId, {
+                                        restart: ask.restart,
+                                        approve: true,
+                                        replace: ask.replace
+                                    });
                                 }
                             }}
                         >
@@ -132,14 +143,24 @@ export function LaunchChip() {
 
             <PromptDialog
                 open={ask?.kind === 'busy'}
-                title={t('busy.title', { port: ask?.kind === 'busy' ? ask.busy.port : '' })}
-                description={t('busy.description', { other: busyName, port: ask?.kind === 'busy' ? ask.busy.port : '', name: askedName })}
+                title={t('busy.title', {
+                    port: ask?.kind === 'busy' ? ask.busy.port : ''
+                })}
+                description={t('busy.description', {
+                    other: busyName,
+                    port: ask?.kind === 'busy' ? ask.busy.port : '',
+                    name: askedName
+                })}
                 confirmLabel={t('busy.confirm')}
                 confirmIcon={Play}
                 onConfirm={() => {
                     if (ask?.kind === 'busy') {
                         useLaunches.getState().setAsk(null);
-                        void startLaunch(ask.launchId, { restart: ask.restart, approve: ask.approve, replace: true });
+                        void startLaunch(ask.launchId, {
+                            restart: ask.restart,
+                            approve: ask.approve,
+                            replace: true
+                        });
                     }
                 }}
                 onOpenChange={() => useLaunches.getState().setAsk(null)}
@@ -148,8 +169,8 @@ export function LaunchChip() {
     );
 }
 
-/* Mounted while the menu is open, so the checkouts are only asked for then. */
-function LaunchMenu() {
+/* Mounted while the menu is open, so the checkouts are only asked for then. The panel shows the output itself, so it leaves that item out. */
+export function LaunchMenu({ showOutput = true }: { showOutput?: boolean }) {
     const { t } = useTranslation('launches');
     const { document, folder, views } = useProjectLaunches();
     const { repos } = useProjectRepos(folder);
@@ -164,12 +185,12 @@ function LaunchMenu() {
                     {section.label !== null && <Menu.GroupLabel>{section.label}</Menu.GroupLabel>}
                     {section.launches.map((launch) => {
                         const view = views.get(launch.id);
-                        return view === undefined ? null : <LaunchRow key={launch.id} view={view} document={document?.launches ?? []} />;
+                        return view === undefined ? null : <LaunchRow key={launch.id} view={view} />;
                     })}
                 </Menu.Group>
             ))}
             {sections.length > 0 && <Menu.Separator />}
-            {sections.length > 0 && (
+            {sections.length > 0 && showOutput && (
                 <Menu.Item onClick={() => showLaunchOutput()}>
                     <Icon icon={SquareTerminal} size={14} /> {t('showOutput')}
                 </Menu.Item>
@@ -178,7 +199,14 @@ function LaunchMenu() {
                 <Icon icon={Plus} size={14} /> {t('menu.new')}
             </Menu.Item>
             {sections.length > 0 && (
-                <Menu.Item onClick={() => useLaunches.getState().setDialog({ kind: 'edit', launchId: chosenLaunchId() })}>
+                <Menu.Item
+                    onClick={() =>
+                        useLaunches.getState().setDialog({
+                            kind: 'edit',
+                            launchId: chosenLaunchId()
+                        })
+                    }
+                >
                     <Icon icon={Pencil} size={14} /> {t('menu.edit')}
                 </Menu.Item>
             )}
@@ -212,9 +240,9 @@ function FoundInProject({ document }: { document: LaunchesDocument }) {
     );
 }
 
-/* What a row says beside the name when there is no address to follow. */
-const rowHint = (view: LaunchView, all: readonly LaunchConfigEntry[], now: number, t: (key: string, options?: Record<string, unknown>) => string): string => {
-    const { launch, phase, status } = view;
+/* What a row says beside the name: only a state worth a look, never what the launch runs. */
+const rowHint = (view: LaunchView, now: number, t: (key: string, options?: Record<string, unknown>) => string): string | null => {
+    const { phase, status } = view;
     if (phase === 'held') {
         return t('phase.held');
     }
@@ -225,34 +253,22 @@ const rowHint = (view: LaunchView, all: readonly LaunchConfigEntry[], now: numbe
     if (phase === 'starting' || phase === 'stopping') {
         return t(`phase.${phase}`);
     }
-    if (launch.kind === 'group') {
-        return (launch.launches ?? []).flatMap((id) => all.find((candidate) => candidate.id === id)?.name ?? []).join(' + ');
-    }
-    return launch.url === undefined ? (launch.command ?? '') : shortAddress(launch.url);
+    return null;
 };
 
-function LaunchRow({ view, document }: { view: LaunchView; document: readonly LaunchConfigEntry[] }) {
+function LaunchRow({ view }: { view: LaunchView }) {
     const { t } = useTranslation('launches');
     const now = useNow(30_000);
     const { launch } = view;
-    const reachable = useAddressReachable();
-    const address = view.phase === 'running' && launch.url !== undefined ? launch.url : null;
+    const hint = rowHint(view, now, t);
 
     return (
         <div className="flex min-w-0 items-stretch" role="group">
             <Menu.Item className="min-w-0 flex-1" onClick={() => chooseLaunch(launch.id)}>
                 <LaunchDot view={view} />
                 <span className="min-w-0 truncate">{launch.name}</span>
-                {address === null && <Menu.Hint className="max-w-48 truncate">{rowHint(view, document, now, t)}</Menu.Hint>}
+                {hint !== null && <Menu.Hint className="max-w-48 truncate">{hint}</Menu.Hint>}
             </Menu.Item>
-            {address !== null &&
-                (reachable ? (
-                    <Menu.Item className="shrink-0 text-xs text-text-faint underline-offset-2 hover:underline" onClick={() => openLaunchAddress(address)}>
-                        {shortAddress(address)}
-                    </Menu.Item>
-                ) : (
-                    <span className="flex shrink-0 items-center px-2 text-xs text-text-faint">{shortAddress(address)}</span>
-                ))}
             <span className="flex shrink-0 items-center">
                 <LaunchButtons view={view} inMenu />
             </span>

@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Plus, Rocket, Search, X } from 'lucide-react';
+import { Lock, Plus, Rocket, Search, Users, X } from 'lucide-react';
 import type { LaunchConfigEntry, LaunchConfigKind, LaunchesDocument, LaunchSuggestion } from '@ruimte/contracts';
 import {
     Button,
+    Checkbox,
     CloseButton,
     Dialog,
     ErrorBoundary,
@@ -15,9 +16,11 @@ import {
     IconButton,
     Input,
     PanelEmpty,
+    SectionLabel,
     Segmented,
     Select,
-    Switch
+    TextArea,
+    Tooltip
 } from '@basmilius/react-ui';
 import {
     draftOf,
@@ -35,6 +38,8 @@ import {
     type EnvRow,
     type LaunchDraft
 } from '@/launches/editing';
+import { LAUNCH_KIND_ICON } from '@/launches/icons';
+import { launchSections } from '@/launches/model';
 import { useLaunches, useLaunchSuggestions, useProjectLaunches } from '@/launches/state';
 import { useProjectRepos } from '@/state/git-repos';
 import { useTransport } from '@/transport/context';
@@ -87,7 +92,12 @@ export function LaunchDialogs() {
 type Failure = { conflict: true } | { conflict: false; message: string };
 
 const failureOf = (e: unknown, fallback: string): Failure =>
-    e instanceof TransportError && e.code === 'rev-conflict' ? { conflict: true } : { conflict: false, message: e instanceof Error ? e.message : fallback };
+    e instanceof TransportError && e.code === 'rev-conflict'
+        ? { conflict: true }
+        : {
+              conflict: false,
+              message: e instanceof Error ? e.message : fallback
+          };
 
 /*
  * Every launch of the project at once, a list on the left and the chosen one on the right, saved as a
@@ -150,7 +160,11 @@ function EditForm({ projectId, document, launchId }: { projectId: string; docume
         setBusy(true);
         setFailure(null);
         try {
-            await transport.request('launches.save', { projectId, baseRev, launches: savedLaunches(drafts) });
+            await transport.request('launches.save', {
+                projectId,
+                baseRev,
+                launches: savedLaunches(drafts)
+            });
             close();
         } catch (e) {
             setFailure(failureOf(e, t('edit.failed')));
@@ -165,20 +179,7 @@ function EditForm({ projectId, document, launchId }: { projectId: string; docume
                 <div className="flex w-56 shrink-0 flex-col border-r border-border">
                     <div className="min-h-0 grow overflow-y-auto p-2">
                         {drafts.length === 0 && <p className="px-2 py-1.5 text-xs text-text-faint">{t('edit.empty')}</p>}
-                        {drafts.map((draft) => (
-                            <button
-                                key={draft.entry.id}
-                                type="button"
-                                aria-current={draft.entry.id === selectedId}
-                                className="flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover aria-[current=true]:bg-surface-active"
-                                onClick={() => setSelectedId(draft.entry.id)}
-                            >
-                                <span className={clsx('min-w-0 grow truncate', draft.entry.name.trim() === '' ? 'text-text-faint italic' : 'text-text')}>
-                                    {draft.entry.name.trim() === '' ? t('edit.untitled') : draft.entry.name}
-                                </span>
-                                <span className="shrink-0 text-xs text-text-faint">{t(`edit.kinds.${draft.entry.kind}`)}</span>
-                            </button>
-                        ))}
+                        <DraftList drafts={drafts} selectedId={selectedId} onSelect={setSelectedId} />
                     </div>
                     <div className="flex flex-col gap-1 border-t border-border p-2">
                         <Button variant="ghost" size="sm" className="justify-start" onClick={add}>
@@ -230,6 +231,65 @@ function EditForm({ projectId, document, launchId }: { projectId: string; docume
     );
 }
 
+/* Grouped by checkout like the chip's menu, since two checkouts often have a launch of the same name. */
+function DraftList({ drafts, selectedId, onSelect }: { drafts: readonly LaunchDraft[]; selectedId: string | null; onSelect(id: string): void }) {
+    const { folder } = useProjectLaunches();
+    const { repos } = useProjectRepos(folder);
+    const sections = useMemo(
+        () =>
+            folder === null
+                ? [
+                      {
+                          label: null,
+                          launches: drafts.map((draft) => draft.entry)
+                      }
+                  ]
+                : launchSections(
+                      drafts.map((draft) => draft.entry),
+                      folder,
+                      repos
+                  ),
+        [drafts, folder, repos]
+    );
+
+    return sections.map((section) => (
+        <div key={section.label ?? ''} className="flex flex-col not-first:mt-2">
+            {section.label !== null && <SectionLabel className="flex h-7 items-center px-2">{section.label}</SectionLabel>}
+            {section.launches.map((entry) => {
+                const draft = drafts.find((candidate) => candidate.entry.id === entry.id);
+                return draft === undefined ? null : (
+                    <DraftRow key={entry.id} draft={draft} selected={entry.id === selectedId} onSelect={() => onSelect(entry.id)} />
+                );
+            })}
+        </div>
+    ));
+}
+
+function DraftRow({ draft, selected, onSelect }: { draft: LaunchDraft; selected: boolean; onSelect(): void }) {
+    const { t } = useTranslation('launches');
+    const { entry } = draft;
+    const untitled = entry.name.trim() === '';
+
+    return (
+        <button
+            type="button"
+            aria-current={selected}
+            className="flex h-8 w-full min-w-0 shrink-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover aria-[current=true]:bg-surface-active"
+            onClick={onSelect}
+        >
+            <Icon icon={LAUNCH_KIND_ICON[entry.kind]} size={14} className="shrink-0 text-text-muted" />
+            <span className={clsx('min-w-0 grow truncate', untitled ? 'text-text-faint italic' : 'text-text')}>
+                {untitled ? t('edit.untitled') : entry.name}
+            </span>
+            <Tooltip label={entry.shared ? t('edit.shared') : t('edit.private')}>
+                <span className="flex shrink-0 text-text-faint">
+                    <Icon icon={entry.shared ? Users : Lock} size={14} />
+                </span>
+            </Tooltip>
+        </button>
+    );
+}
+
 function LaunchForm({
     draft,
     drafts,
@@ -247,7 +307,11 @@ function LaunchForm({
     const roots = useMemo(() => folderRoots(repos), [repos]);
     const [place, setPlace] = useState(() => splitFolder(draft.entry.cwd, roots));
     const { entry } = draft;
-    const set = (fields: Partial<LaunchConfigEntry>): void => onChange((current) => ({ ...current, entry: { ...current.entry, ...fields } }));
+    const set = (fields: Partial<LaunchConfigEntry>): void =>
+        onChange((current) => ({
+            ...current,
+            entry: { ...current.entry, ...fields }
+        }));
     const setEnv = (env: EnvRow[]): void => onChange((current) => ({ ...current, env }));
     const moveTo = (root: string, sub: string): void => {
         setPlace({ root, sub });
@@ -262,27 +326,30 @@ function LaunchForm({
     }));
 
     return (
-        <div className="flex flex-col gap-4">
-            <Field label={t('edit.name')} error={problem === 'name' ? t('edit.problem.name') : undefined}>
+        <div className="flex flex-col gap-3">
+            <Field orientation="horizontal" label={t('edit.name')} error={problem === 'name' ? t('edit.problem.name') : undefined}>
                 <Input value={entry.name} autoFocus={entry.name === ''} onChange={(e) => set({ name: e.target.value })} />
             </Field>
-            <Field label={t('edit.kind')} hint={t(`edit.kindHint.${entry.kind}`)}>
+            <Field orientation="horizontal" group label={t('edit.kind')} hint={t(`edit.kindHint.${entry.kind}`)}>
                 <Segmented<LaunchConfigKind>
                     label={t('edit.kind')}
                     value={entry.kind}
                     onValueChange={(kind) => set({ kind })}
-                    options={(['service', 'task', 'group'] as const).map((kind) => ({ id: kind, label: t(`edit.kinds.${kind}`) }))}
+                    options={(['service', 'task', 'group'] as const).map((kind) => ({
+                        id: kind,
+                        label: t(`edit.kinds.${kind}`)
+                    }))}
                 />
             </Field>
             {entry.kind === 'group' ? (
-                <Field label={t('edit.members')} error={problem === 'members' ? t('edit.problem.members') : undefined} group>
-                    {members.length === 0 && <FieldHint>{t('edit.noMembers')}</FieldHint>}
+                <Field orientation="horizontal" group label={t('edit.members')} error={problem === 'members' ? t('edit.problem.members') : undefined}>
+                    {members.length === 0 && <p className="flex h-8 items-center text-xs text-text-muted">{t('edit.noMembers')}</p>}
                     {members.map((member) => {
                         const name = member.entry.name.trim() === '' ? t('edit.untitled') : member.entry.name;
                         const checked = (entry.launches ?? []).includes(member.entry.id);
                         return (
-                            <label key={member.entry.id} className="flex h-8 items-center gap-3">
-                                <Switch
+                            <label key={member.entry.id} className="flex h-8 items-center gap-2.5">
+                                <Checkbox
                                     label={name}
                                     checked={checked}
                                     onCheckedChange={(on) =>
@@ -293,18 +360,22 @@ function LaunchForm({
                                         })
                                     }
                                 />
-                                <span className="text-text">{name}</span>
+                                <Icon icon={LAUNCH_KIND_ICON[member.entry.kind]} size={14} className="text-text-muted" />
+                                <span className="min-w-0 truncate text-text">{name}</span>
+                                {member.entry.cwd !== undefined && member.entry.cwd !== '' && (
+                                    <span className="min-w-0 truncate font-mono text-xs text-text-faint">{member.entry.cwd}</span>
+                                )}
                             </label>
                         );
                     })}
                 </Field>
             ) : (
                 <>
-                    <Field label={t('edit.directory')} group>
+                    <Field orientation="horizontal" group label={t('edit.directory')}>
                         <div className="flex gap-2">
                             <Select<string>
                                 label={t('edit.directory')}
-                                className="w-48 shrink-0"
+                                className="w-44 shrink-0"
                                 value={place.root === '' ? PROJECT_FOLDER : place.root}
                                 items={rootItems}
                                 onValueChange={(root) => moveTo(root === PROJECT_FOLDER ? '' : root, place.sub)}
@@ -319,67 +390,109 @@ function LaunchForm({
                             />
                         </div>
                     </Field>
-                    <Field label={t('edit.command')} error={problem === 'command' ? t('edit.problem.command') : undefined}>
-                        <Input mono value={entry.command ?? ''} onChange={(e) => set({ command: e.target.value })} />
+                    <Field orientation="horizontal" label={t('edit.command')} error={problem === 'command' ? t('edit.problem.command') : undefined}>
+                        {/* Grows with what it holds, since a command with its flags rarely fits on one line. */}
+                        <TextArea
+                            mono
+                            rows={2}
+                            className="field-sizing-content"
+                            value={entry.command ?? ''}
+                            onChange={(e) => set({ command: e.target.value })}
+                        />
                     </Field>
                     {entry.kind === 'service' && (
-                        <Field label={t('edit.address')}>
+                        <Field orientation="horizontal" label={t('edit.address')}>
                             <Input mono placeholder="http://localhost:8000" value={entry.url ?? ''} onChange={(e) => set({ url: e.target.value })} />
                         </Field>
                     )}
-                    <Field label={t('edit.environment')} group>
-                        {draft.env.map((row) => (
-                            <div key={row.id} className="flex items-center gap-2">
-                                <Input
-                                    mono
-                                    size="sm"
-                                    className="w-48 shrink-0"
-                                    aria-label={t('edit.envKey')}
-                                    placeholder={t('edit.envKey')}
-                                    value={row.key}
-                                    onChange={(e) => setEnv(draft.env.map((other) => (other.id === row.id ? { ...other, key: e.target.value } : other)))}
-                                />
-                                <Input
-                                    mono
-                                    size="sm"
-                                    className="grow"
-                                    aria-label={t('edit.envValue')}
-                                    placeholder={t('edit.envValue')}
-                                    value={row.value}
-                                    onChange={(e) => setEnv(draft.env.map((other) => (other.id === row.id ? { ...other, value: e.target.value } : other)))}
-                                />
-                                <IconButton
-                                    icon={X}
-                                    size="sm"
-                                    label={t('edit.removeVariable', { key: row.key })}
-                                    onClick={() => setEnv(draft.env.filter((other) => other.id !== row.id))}
-                                />
+                    <Field orientation="horizontal" group label={t('edit.environment')}>
+                        <div className="flex flex-col gap-2">
+                            {draft.env.map((row) => (
+                                <div key={row.id} className="flex items-center gap-2">
+                                    <Input
+                                        mono
+                                        className="w-44 shrink-0"
+                                        aria-label={t('edit.envKey')}
+                                        placeholder={t('edit.envKey')}
+                                        value={row.key}
+                                        onChange={(e) =>
+                                            setEnv(
+                                                draft.env.map((other) =>
+                                                    other.id === row.id
+                                                        ? {
+                                                              ...other,
+                                                              key: e.target.value
+                                                          }
+                                                        : other
+                                                )
+                                            )
+                                        }
+                                    />
+                                    <Input
+                                        mono
+                                        className="grow"
+                                        aria-label={t('edit.envValue')}
+                                        placeholder={t('edit.envValue')}
+                                        value={row.value}
+                                        onChange={(e) =>
+                                            setEnv(
+                                                draft.env.map((other) =>
+                                                    other.id === row.id
+                                                        ? {
+                                                              ...other,
+                                                              value: e.target.value
+                                                          }
+                                                        : other
+                                                )
+                                            )
+                                        }
+                                    />
+                                    <IconButton
+                                        icon={X}
+                                        size="sm"
+                                        label={t('edit.removeVariable', {
+                                            key: row.key
+                                        })}
+                                        onClick={() => setEnv(draft.env.filter((other) => other.id !== row.id))}
+                                    />
+                                </div>
+                            ))}
+                            <div className="flex h-8 items-center">
+                                <Button variant="ghost" size="sm" className="-ml-2" onClick={() => setEnv([...draft.env, emptyRow(draft.env)])}>
+                                    <Icon icon={Plus} size={14} /> {t('edit.addVariable')}
+                                </Button>
                             </div>
-                        ))}
-                        <div>
-                            <Button variant="ghost" size="sm" onClick={() => setEnv([...draft.env, emptyRow(draft.env)])}>
-                                <Icon icon={Plus} size={14} /> {t('edit.addVariable')}
-                            </Button>
                         </div>
                     </Field>
                 </>
             )}
-            <label className="flex items-start gap-3">
-                <Switch label={t('edit.autostart')} checked={entry.autostart === true} onCheckedChange={(autostart) => set({ autostart })} />
-                <span className="flex flex-col">
-                    <span className="text-text">{t('edit.autostart')}</span>
-                    <FieldHint>{t('edit.autostartHint')}</FieldHint>
-                </span>
-            </label>
-            <label className="flex items-start gap-3">
-                <Switch label={t('edit.share')} checked={entry.shared} onCheckedChange={(shared) => set({ shared })} />
-                <span className="flex flex-col">
-                    <span className="text-text">{t('edit.share')}</span>
-                    <FieldHint>{t('edit.shareHint')}</FieldHint>
-                </span>
-            </label>
-            {entry.shared && hasOverlay && <FieldHint>{t('edit.overlay')}</FieldHint>}
+            <Field orientation="horizontal" group>
+                <div className="flex flex-col gap-3 pt-1">
+                    <CheckboxRow
+                        label={t('edit.autostart')}
+                        hint={t('edit.autostartHint')}
+                        checked={entry.autostart === true}
+                        onCheckedChange={(autostart) => set({ autostart })}
+                    />
+                    <CheckboxRow label={t('edit.share')} hint={t('edit.shareHint')} checked={entry.shared} onCheckedChange={(shared) => set({ shared })} />
+                    {entry.shared && hasOverlay && <FieldHint>{t('edit.overlay')}</FieldHint>}
+                </div>
+            </Field>
         </div>
+    );
+}
+
+function CheckboxRow({ label, hint, checked, onCheckedChange }: { label: string; hint: string; checked: boolean; onCheckedChange(checked: boolean): void }) {
+    return (
+        <label className="flex items-start gap-2.5">
+            <span className="flex h-5 items-center">
+                <Checkbox label={label} checked={checked} onCheckedChange={onCheckedChange} />
+            </span>
+            <span className="flex min-w-0 flex-col">
+                <span className="text-text">{label}</span>
+                <span className="text-xs text-text-muted">{hint}</span>
+            </span>
+        </label>
     );
 }
 
@@ -400,7 +513,11 @@ function ImportForm({ projectId, document }: { projectId: string; document: Laun
         setFailure(null);
         try {
             const launches = [...document.launches, ...importedLaunches(picked, share, document)];
-            await transport.request('launches.save', { projectId, baseRev: document.rev, launches });
+            await transport.request('launches.save', {
+                projectId,
+                baseRev: document.rev,
+                launches
+            });
             close();
         } catch (e) {
             setFailure(failureOf(e, t('edit.failed')));
@@ -442,8 +559,8 @@ function ImportForm({ projectId, document }: { projectId: string; document: Laun
             <p className="border-b border-border px-5 py-3 text-xs text-text-muted">{t('import.description')}</p>
             {body}
             <div className="flex items-center gap-3 border-t border-border px-5 py-3">
-                <label className="flex min-w-0 items-center gap-3">
-                    <Switch label={t('import.share')} checked={share} onCheckedChange={setShare} />
+                <label className="flex min-w-0 items-center gap-2.5">
+                    <Checkbox label={t('import.share')} checked={share} onCheckedChange={setShare} />
                     <span className="min-w-0 truncate text-text">{t('import.share')}</span>
                 </label>
                 <span className="min-w-0 grow">
@@ -464,13 +581,15 @@ function SuggestionRow({ suggestion, checked, onCheckedChange }: { suggestion: L
     const unsupported = suggestion.unsupported !== undefined;
 
     return (
-        <label className={clsx('flex items-start gap-3 px-5 py-2', unsupported && 'opacity-60')}>
-            <Switch
-                label={t('import.pick', { name: launch.name })}
-                checked={checked && !unsupported}
-                disabled={unsupported}
-                onCheckedChange={onCheckedChange}
-            />
+        <label className={clsx('flex items-start gap-2.5 px-5 py-2', unsupported && 'opacity-60')}>
+            <span className="flex h-5 items-center">
+                <Checkbox
+                    label={t('import.pick', { name: launch.name })}
+                    checked={checked && !unsupported}
+                    disabled={unsupported}
+                    onCheckedChange={onCheckedChange}
+                />
+            </span>
             <span className="flex min-w-0 grow flex-col gap-0.5">
                 <span className="flex min-w-0 items-baseline gap-2">
                     <span className="shrink-0 text-text">{launch.name}</span>
@@ -482,7 +601,13 @@ function SuggestionRow({ suggestion, checked, onCheckedChange }: { suggestion: L
                         {launch.command}
                     </code>
                 )}
-                {unsupported && <span className="text-xs text-text-faint">{t('import.unsupported', { reason: suggestion.unsupported })}</span>}
+                {unsupported && (
+                    <span className="text-xs text-text-faint">
+                        {t('import.unsupported', {
+                            reason: suggestion.unsupported
+                        })}
+                    </span>
+                )}
                 {!unsupported && suggestion.private && <span className="text-xs text-text-faint">{t('import.private')}</span>}
             </span>
         </label>

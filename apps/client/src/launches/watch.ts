@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import { formatDuration } from '@basmilius/react-ui/format';
 import type { LaunchStatus } from '@ruimte/contracts';
-import { showLaunchOutput } from '@/launches/actions';
+import { showLaunchOutput, startLaunch } from '@/launches/actions';
 import { useLaunches } from '@/launches/state';
 import { defaultProjectStore } from '@/state/project';
 import { useToasts } from '@/state/toasts';
@@ -32,19 +32,36 @@ const announceFailure = (endpointId: string, previous: LaunchStatus | undefined,
     if (!failed || open === null || open.endpointId !== endpointId || open.projectId !== status.projectId) {
         return;
     }
-    const title = i18next.t('launches:failed.title', { name: launchName(endpointId, status) });
+    const title = i18next.t('launches:failed.title', {
+        name: launchName(endpointId, status)
+    });
     const description = i18next.t('launches:failed.description', {
         code: status.exitCode ?? '?',
         duration: formatDuration((status.endedAt ?? Date.now()) - status.startedAt)
     });
+    const id = `launch-failed:${status.launchId}`;
     const show = (): void => showLaunchOutput(status.launchId);
-    useToasts
-        .getState()
-        .show({ id: `launch-failed:${status.launchId}`, kind: 'error', title, description, action: { label: i18next.t('launches:showOutput'), run: show } });
+    const again = (): void => {
+        useToasts.getState().dismiss(id);
+        void startLaunch(status.launchId);
+    };
+    useToasts.getState().show({
+        id,
+        kind: 'error',
+        title,
+        description,
+        actions: [
+            { label: i18next.t('launches:showOutput'), run: show },
+            { label: i18next.t('launches:failed.again'), run: again }
+        ]
+    });
     if (document.hasFocus() || !('Notification' in window) || Notification.permission !== 'granted') {
         return;
     }
-    const notification = new Notification(title, { body: description, tag: `ruimte-launch-${endpointId}-${status.launchId}` });
+    const notification = new Notification(title, {
+        body: description,
+        tag: `ruimte-launch-${endpointId}-${status.launchId}`
+    });
     notification.onclick = () => {
         window.focus();
         show();

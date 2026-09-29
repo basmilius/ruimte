@@ -48,6 +48,8 @@ export const startLaunch = async (launchId: string, options: StartOptions = {}):
     if (at === null || link === null) {
         return;
     }
+    // The chip shows the launch a person used last.
+    useUi.getState().chooseLaunch(at.key, launchId);
     const restart = options.restart === true;
     const payload = { projectId: at.projectId, launchId, approve: options.approve, replace: options.replace };
     try {

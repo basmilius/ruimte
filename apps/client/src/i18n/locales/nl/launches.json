@@ -35,7 +35,8 @@
     },
     "failed": {
         "title": "{{name}} is gestopt",
-        "description": "Exitcode {{code}} na {{duration}}"
+        "description": "Exitcode {{code}} na {{duration}}",
+        "again": "Opnieuw starten"
     },
     "startFailed": "{{name}} starten lukte niet",
     "stopFailed": "{{name}} stoppen lukte niet",
@@ -95,6 +96,8 @@
         "autostartHint": "Pas als hij op deze machine is goedgekeurd.",
         "share": "Delen met het team",
         "shareHint": "Gedeelde launches komen in .ruimte/launches.json en in git. Houd geheimen uit de omgeving hierboven.",
+        "shared": "Gedeeld met het team",
+        "private": "Alleen op deze machine",
         "overlay": "Deze machine legt een eigen map of eigen variabelen over deze launch; die blijven zoals ze zijn.",
         "empty": "Nog geen launches.",
         "delete": "Verwijderen",
