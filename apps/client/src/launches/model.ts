@@ -92,6 +92,23 @@ export const membersOf = (launch: LaunchConfigEntry, document: LaunchesDocument)
 export const chosenLaunch = (document: LaunchesDocument, chosenId: string | undefined): LaunchConfigEntry | null =>
     document.launches.find((launch) => launch.id === chosenId) ?? document.launches[0] ?? null;
 
+/* Failing outranks what waits on a person, which outranks what is busy; green, and then nothing, count least. */
+const PHASE_RANK: Record<LaunchPhase, number> = { failed: 5, held: 4, starting: 3, stopping: 3, running: 2, passed: 1, idle: 0 };
+
+/*
+ * The state of the whole project in one view: the launch in the worst phase, so the chip shows what
+ * needs a look. A group counts through its members, and the first launch wins a tie.
+ */
+export const headlineOf = (views: ReadonlyMap<string, LaunchView>): LaunchView | null => {
+    let headline: LaunchView | null = null;
+    for (const view of views.values()) {
+        if (view.launch.kind !== 'group' && (headline === null || PHASE_RANK[view.phase] > PHASE_RANK[headline.phase])) {
+            headline = view;
+        }
+    }
+    return headline;
+};
+
 /*
  * What runs beside the launch on the chip, or ended badly: the `+1`. A group counts through its
  * members, so a launch is never counted twice.
@@ -115,7 +132,7 @@ export const othersOf = (views: ReadonlyMap<string, LaunchView>, chosen: LaunchC
 };
 
 export interface LaunchSection {
-    /* The checkout the launches run in; null for the ones in the project folder itself, which go first. */
+    /* The checkout the launches run in, by the name it declares or else its folder; null for the ones in the project folder itself, which go first. */
     label: string | null;
     launches: LaunchConfigEntry[];
 }
@@ -158,7 +175,7 @@ export const launchSections = (launches: readonly LaunchConfigEntry[], folder: s
     for (const repo of repos) {
         const found = byRepo.get(repo.path);
         if (found !== undefined) {
-            sections.push({ label: repo.label, launches: found });
+            sections.push({ label: repo.name ?? repo.label, launches: found });
         }
     }
     if (sections.length === 1) {

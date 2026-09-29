@@ -16,6 +16,7 @@
     "restart": "{{name}} herstarten",
     "stop": "{{name}} stoppen",
     "forceStop": "{{name}} geforceerd stoppen",
+    "editLaunch": "{{name}} bewerken",
     "showOutput": "Output tonen",
     "menu": {
         "open": "Launches",

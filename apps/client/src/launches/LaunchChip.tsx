@@ -1,39 +1,20 @@
 import { useMemo, useRef } from 'react';
-import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Pencil, Play, Plus, Rocket, Search, SquareTerminal } from 'lucide-react';
+import { ChevronDown, OctagonX, Pencil, Play, Plus, RotateCw, Search, Square, SquareTerminal, type LucideIcon } from 'lucide-react';
 import type { GitRepo, LaunchesDocument } from '@ruimte/contracts';
-import { Button, ButtonGroup, Icon, Menu, Popover, PromptDialog, useNow } from '@basmilius/react-ui';
+import { Button, Icon, IconButton, Menu, Popover, PromptDialog, Tooltip, useNow } from '@basmilius/react-ui';
 import { formatAgo } from '@basmilius/react-ui/format';
-import { chooseLaunch, chosenLaunchId, showLaunchOutput, startLaunch } from '@/launches/actions';
-import { LaunchButtons, LaunchDot } from '@/launches/LaunchControls';
+import { chooseLaunch, showLaunchOutput, startLaunch, stopLaunch } from '@/launches/actions';
+import { LaunchDot, LaunchStatusIcon } from '@/launches/LaunchControls';
 import { foundText, newSuggestions } from '@/launches/editing';
-import { chosenLaunch, launchSections, othersOf, type LaunchView } from '@/launches/model';
+import { headlineOf, launchSections, type LaunchView } from '@/launches/model';
 import { useLaunches, useLaunchSuggestions, useProjectLaunches } from '@/launches/state';
 import { useProjectRepos } from '@/state/git-repos';
 import { useUi } from '@/state/ui';
 
-/* What the chip says after the name: the port it answers on, or why it is not running. */
-const chipDetail = (view: LaunchView, t: (key: string, options?: Record<string, unknown>) => string): string | null => {
-    switch (view.phase) {
-        case 'held':
-            return t('phase.held');
-        case 'starting':
-        case 'stopping':
-        case 'passed':
-            return t(`phase.${view.phase}`);
-        case 'running':
-            return view.port === null ? null : `:${view.port}`;
-        case 'failed':
-            return view.exitCode === null ? t('phase.failed') : t('exit', { code: view.exitCode });
-        default:
-            return null;
-    }
-};
-
 /*
- * The launches of the project on screen: the one this client chose, with its state and the button
- * that starts or stops it, and a menu with all of them. It sits in the application's bar and not in
+ * The launches of the project on screen: one button, sized like the icon buttons beside it, that
+ * opens a menu with all of them. The dot on it is the worst state among them. It sits in the application's bar and not in
  * a view's, since a launch belongs to the project.
  */
 export function LaunchChip() {
@@ -41,66 +22,36 @@ export function LaunchChip() {
     const anchor = useRef<HTMLDivElement>(null);
     const { key, document, folder, views } = useProjectLaunches();
     const { repos } = useProjectRepos(folder);
-    const chosenId = useUi((s) => (key === null ? undefined : s.chosenLaunches[key]));
     const pressed = useUi((s) => s.panel.open && s.panel.kind === 'launches');
     const ask = useLaunches((s) => s.ask);
-    const chosen = document === null ? null : chosenLaunch(document, chosenId);
-    const view = chosen === null ? null : (views.get(chosen.id) ?? null);
-    const others = useMemo(() => othersOf(views, chosen), [views, chosen]);
+    const view = useMemo(() => headlineOf(views), [views]);
 
     if (key === null) {
         return null;
     }
 
-    const detail = view === null ? null : chipDetail(view, t);
     const askedName = ask === null ? '' : (document?.launches.find((launch) => launch.id === ask.launchId)?.name ?? '');
     const busyName = ask?.kind === 'busy' ? (document?.launches.find((launch) => launch.id === ask.busy.launchId)?.name ?? '') : '';
 
     return (
-        <div
-            ref={anchor}
-            data-active={pressed ? 'true' : undefined}
-            className="flex h-7 min-w-0 shrink items-center gap-px rounded-md border border-border bg-clip-padding p-px text-xs data-[active=true]:bg-surface-active"
-        >
+        <div ref={anchor} className="flex shrink-0">
             <Menu.Root>
-                <Menu.Trigger
-                    aria-label={t('menu.open')}
-                    className="flex h-full min-w-0 shrink items-center gap-1.5 rounded-sm pr-1.5 pl-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active"
+                <IconButton
+                    render={<Menu.Trigger />}
+                    label={t('menu.open')}
+                    active={pressed}
+                    className="w-auto gap-1 px-2 aria-expanded:bg-surface-active aria-expanded:text-text"
                 >
-                    {view === null ? (
-                        <Icon icon={Rocket} size={14} className="shrink-0" />
-                    ) : (
-                        <>
-                            <LaunchDot view={view} />
-                            <span className="min-w-0 truncate text-text">{view.launch.name}</span>
-                            {detail !== null && (
-                                <span className={clsx('min-w-0 shrink-[4] truncate', view.phase === 'held' ? 'text-status-needs-you' : 'text-text-faint')}>
-                                    {detail}
-                                </span>
-                            )}
-                        </>
-                    )}
-                    {others.count > 0 && (
-                        <span
-                            className={clsx(
-                                'shrink-0 rounded-sm bg-surface-active px-1 text-xs tabular-nums',
-                                others.failed ? 'text-status-error' : 'text-text-muted'
-                            )}
-                        >
-                            {t('others', { count: others.count })}
-                        </span>
-                    )}
-                    <Icon icon={ChevronDown} size={12} className="shrink-0 text-text-faint" />
-                </Menu.Trigger>
+                    <span className="relative flex">
+                        <Icon icon={Play} size={16} />
+                        {view !== null && <LaunchDot view={view} className="pointer-events-none absolute -top-0.5 -right-1" />}
+                    </span>
+                    <Icon icon={ChevronDown} size={12} />
+                </IconButton>
                 <Menu.Popup className="min-w-72">
                     <LaunchMenu repos={repos} />
                 </Menu.Popup>
             </Menu.Root>
-            {view !== null && (
-                <ButtonGroup className="h-full shrink-0 items-center border-l border-border pl-px">
-                    <LaunchButtons view={view} chosen size="xs" />
-                </ButtonGroup>
-            )}
 
             <Popover.Root
                 open={ask?.kind === 'held'}
@@ -201,18 +152,6 @@ export function LaunchMenu({ repos, showOutput = true }: { repos: readonly GitRe
             <Menu.Item onClick={() => useLaunches.getState().setDialog({ kind: 'edit', launchId: null })}>
                 <Icon icon={Plus} size={14} /> {t('menu.new')}
             </Menu.Item>
-            {sections.length > 0 && (
-                <Menu.Item
-                    onClick={() =>
-                        useLaunches.getState().setDialog({
-                            kind: 'edit',
-                            launchId: chosenLaunchId()
-                        })
-                    }
-                >
-                    <Icon icon={Pencil} size={14} /> {t('menu.edit')}
-                </Menu.Item>
-            )}
         </>
     );
 }
@@ -266,15 +205,55 @@ function LaunchRow({ view }: { view: LaunchView }) {
     const hint = rowHint(view, now, t);
 
     return (
-        <div className="flex min-w-0 items-stretch" role="group">
+        <div className="project-menu-row flex min-w-0 items-stretch" role="group">
             <Menu.Item className="min-w-0 flex-1" onClick={() => chooseLaunch(launch.id)}>
-                <LaunchDot view={view} />
+                <LaunchStatusIcon view={view} size={14} />
                 <span className="min-w-0 truncate">{launch.name}</span>
                 {hint !== null && <Menu.Hint className="max-w-48 truncate">{hint}</Menu.Hint>}
             </Menu.Item>
-            <span className="flex shrink-0 items-center">
-                <LaunchButtons view={view} inMenu />
-            </span>
+            {view.phase === 'stopping' ? (
+                <RowAction icon={OctagonX} label={t('forceStop', { name: launch.name })} keepOpen onClick={() => void stopLaunch(launch.id, true)} />
+            ) : view.live ? (
+                <>
+                    <RowAction
+                        icon={RotateCw}
+                        label={t('restart', { name: launch.name })}
+                        keepOpen
+                        onClick={() => void startLaunch(launch.id, { restart: true })}
+                    />
+                    <RowAction icon={Square} label={t('stop', { name: launch.name })} keepOpen fill onClick={() => void stopLaunch(launch.id)} />
+                </>
+            ) : (
+                <RowAction icon={Play} label={t('start', { name: launch.name })} keepOpen fill onClick={() => void startLaunch(launch.id)} />
+            )}
+            <RowAction
+                icon={Pencil}
+                label={t('editLaunch', { name: launch.name })}
+                onClick={() => useLaunches.getState().setDialog({ kind: 'edit', launchId: launch.id })}
+            />
         </div>
+    );
+}
+
+/* A button at the end of a row, an item of the menu like the row itself so the whole reads as one and the arrow keys reach it. */
+function RowAction({
+    icon,
+    label,
+    fill = false,
+    keepOpen = false,
+    onClick
+}: {
+    icon: LucideIcon;
+    label: string;
+    fill?: boolean;
+    keepOpen?: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <Tooltip label={label}>
+            <Menu.Item className="project-menu-actions shrink-0" aria-label={label} closeOnClick={!keepOpen} onClick={onClick}>
+                <Icon icon={icon} size={14} className={fill ? 'fill-current' : undefined} />
+            </Menu.Item>
+        </Tooltip>
     );
 }

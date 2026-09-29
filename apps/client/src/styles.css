@@ -244,6 +244,7 @@
 
     .project-menu-row { gap: 1px; }
     .project-menu-row > .menu-item:first-child { border-radius: 6px 0 0 6px; }
+    .project-menu-row > .project-menu-actions:not(:last-child) { border-radius: 0; }
     .project-menu-actions {
         width: calc(var(--text-sm--line-height) + 12px);
         padding: 0;

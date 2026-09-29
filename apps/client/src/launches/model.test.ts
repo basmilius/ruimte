@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitRepo, LaunchConfigEntry, LaunchesDocument, LaunchStatus } from '@ruimte/contracts';
-import { chosenLaunch, launchFolder, launchSections, launchViews, othersOf, outputOf, shortAddress } from './model.ts';
+import { chosenLaunch, headlineOf, launchFolder, launchSections, launchViews, othersOf, outputOf, shortAddress } from './model.ts';
 
 const launch = (id: string, overrides: Partial<LaunchConfigEntry> = {}): LaunchConfigEntry => ({
     id,
@@ -85,6 +85,23 @@ describe('the chip', () => {
     });
 });
 
+describe('the chip headline', () => {
+    const document = doc([launch('a'), launch('b'), launch('c'), launch('g', { kind: 'group', launches: ['a', 'b'] })]);
+    const headline = (statuses: Record<string, LaunchStatus>) => headlineOf(launchViews(document, statuses))?.launch.id;
+
+    test('is the launch in the worst phase, error first and running last', () => {
+        expect(headline({ a: status('a'), b: status('b', { state: 'exited', exitCode: 1 }), c: status('c', { state: 'starting' }) })).toBe('b');
+        expect(headline({ a: status('a'), c: status('c', { state: 'starting' }) })).toBe('c');
+        expect(headline({ a: status('a', { state: 'exited', exitCode: 0 }), b: status('b') })).toBe('b');
+    });
+
+    test('takes the first launch on a tie, skips groups and is null without launches', () => {
+        expect(headline({ a: status('a'), b: status('b') })).toBe('a');
+        expect(headline({})).toBe('a');
+        expect(headlineOf(launchViews(doc([]), {}))).toBeNull();
+    });
+});
+
 describe('the panel', () => {
     test('shows a group through the member that runs, else the one that failed', () => {
         const document = doc([launch('a'), launch('b'), launch('g', { kind: 'group', launches: ['a', 'b'] })]);
@@ -115,6 +132,12 @@ describe('the menu', () => {
             ['backend', ['server', 'tests']],
             ['frontend', ['dev']]
         ]);
+    });
+
+    test('a checkout heading is the name it declares, else its folder', () => {
+        const named = [repos[0]!, { ...repos[1]!, name: 'Backend API' }, repos[2]!];
+        const launches = [launch('server', { cwd: 'backend' }), launch('dev', { cwd: 'frontend' })];
+        expect(launchSections(launches, '/p', named).map((section) => section.label)).toEqual(['Backend API', 'frontend']);
     });
 
     test('a folder with one checkout has no headings', () => {

@@ -11,7 +11,7 @@ import { formatAgo, formatDuration } from '@basmilius/react-ui/format';
 import { isApplePlatform } from '@/desktop/bridge';
 import { openLaunchAddress, startLaunch } from '@/launches/actions';
 import { LaunchMenu } from '@/launches/LaunchChip';
-import { LaunchButtons, LaunchDot } from '@/launches/LaunchControls';
+import { LaunchButtons, LaunchStatusIcon } from '@/launches/LaunchControls';
 import { chosenLaunch, othersOf, outputOf, shortAddress, type LaunchView } from '@/launches/model';
 import { useAddressReachable, useLaunches, useProjectLaunches } from '@/launches/state';
 import { NodeNotice } from '@/nodes/NodeNotice';
@@ -112,7 +112,7 @@ function LaunchPicker({ view }: { view: LaunchView }) {
                     aria-label={t('menu.open')}
                     className="flex h-7 min-w-0 items-center gap-1.5 rounded-md pr-1.5 pl-2 text-left text-xs hover:bg-surface-hover data-[popup-open]:bg-surface-active"
                 >
-                    <LaunchDot view={view} />
+                    <LaunchStatusIcon view={view} size={14} />
                     <span className="min-w-0 truncate text-text">{view.launch.name}</span>
                     {detail !== '' && (
                         <span className={clsx('min-w-0 shrink-[4] truncate', view.phase === 'held' ? 'text-status-needs-you' : 'text-text-faint')}>

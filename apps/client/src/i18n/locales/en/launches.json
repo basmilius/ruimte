@@ -16,6 +16,7 @@
     "restart": "Restart {{name}}",
     "stop": "Stop {{name}}",
     "forceStop": "Force stop {{name}}",
+    "editLaunch": "Edit {{name}}",
     "showOutput": "Show output",
     "menu": {
         "open": "Launches",

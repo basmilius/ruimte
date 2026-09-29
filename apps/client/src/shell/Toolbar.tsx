@@ -89,6 +89,7 @@ export function Toolbar() {
             {!split && <ViewToolbar view={view} focused={bodyFocused} chatTitle={sidebarOpen ? (view?.name ?? undefined) : undefined} />}
             {hasViewToolbar && <Separator />}
             <LaunchChip />
+            <Separator />
             <ButtonGroup>
                 <PanelControls />
             </ButtonGroup>
