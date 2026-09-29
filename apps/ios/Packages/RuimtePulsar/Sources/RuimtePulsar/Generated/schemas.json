@@ -30732,6 +30732,9 @@
             "label": {
               "type": "string"
             },
+            "name": {
+              "type": "string"
+            },
             "kind": {
               "type": "string",
               "enum": [

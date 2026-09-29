@@ -1,6 +1,8 @@
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { basename, join, relative } from 'node:path';
 import type { GitRepo, GitReposResult } from '@ruimte/contracts';
+import { parseSharedFile, PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
+import { readIdeaName } from '../projects/project-identity.ts';
 import { ignoredPaths } from './ignore.ts';
 import { git } from './run.ts';
 
@@ -41,6 +43,20 @@ export const parseSubmodulePaths = (output: string): string[] => {
         }
     }
     return paths;
+};
+
+/* The name a checkout declares: the name of the Ruimte project in it, else its `.idea/.name`. */
+const declaredName = async (path: string): Promise<string | undefined> => {
+    try {
+        // Parsed in place: reading it through the store would set a corrupt file aside, in a folder that is not open.
+        const read = parseSharedFile(await readFile(join(path, PROJECT_DIR, PROJECT_FILE), 'utf8'));
+        if (read.kind === 'ok') {
+            return read.document.file.name;
+        }
+    } catch {
+        // No project file, or one that cannot be read: the editor's name is next.
+    }
+    return (await readIdeaName(path)) ?? undefined;
 };
 
 /* The folder's own repository first, then the rest by the name a person reads. */
@@ -149,5 +165,11 @@ export const listRepos = async (folder: string): Promise<GitReposResult> => {
     await addSubmodules(folder, nested, add);
 
     const ordered = inOrder(repos);
-    return { repos: ordered.slice(0, MAX_REPOS), truncated: ordered.length > MAX_REPOS };
+    const named = await Promise.all(
+        ordered.slice(0, MAX_REPOS).map(async (repo) => {
+            const name = await declaredName(repo.path);
+            return name === undefined ? repo : { ...repo, name };
+        })
+    );
+    return { repos: named, truncated: ordered.length > MAX_REPOS };
 };

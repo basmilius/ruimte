@@ -117,6 +117,9 @@ export const GitRepoSchema = z.object({
     // What a person reads and what a hidden repository is remembered under: the path under the project
     // folder, or the folder's own name for the repository the folder itself is in.
     label: z.string(),
+    // What the checkout calls itself (`.idea/.name`, or the name of a Ruimte project in it), for a
+    // heading that reads better than its folder. Absent when it declares none; never an identity.
+    name: z.string().optional(),
     kind: GitRepoKindSchema
 });
 export type GitRepo = z.infer<typeof GitRepoSchema>;

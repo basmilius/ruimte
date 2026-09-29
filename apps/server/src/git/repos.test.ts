@@ -75,6 +75,22 @@ describe('listRepos', () => {
         ]);
     });
 
+    test('a checkout that declares a name carries it beside its label, the Ruimte project over the editor', async () => {
+        const dir = await workspace.copy();
+        const folder = join(dir, 'workspace');
+        await mkdir(join(folder, 'alpha', '.idea'), { recursive: true });
+        await writeFile(join(folder, 'alpha', '.idea', '.name'), 'Alpha app\n');
+        await mkdir(join(folder, 'beta', '.idea'), { recursive: true });
+        await writeFile(join(folder, 'beta', '.idea', '.name'), 'Beta editor\n');
+        await mkdir(join(folder, 'beta', '.ruimte'), { recursive: true });
+        await writeFile(join(folder, 'beta', '.ruimte', 'project.json'), JSON.stringify({ version: 3, name: 'Beta project', color: '#000', views: [] }));
+        const { repos } = await listRepos(folder);
+        expect(repos.map((repo) => [repo.label, repo.name])).toEqual([
+            ['alpha', 'Alpha app'],
+            ['beta', 'Beta project']
+        ]);
+    });
+
     test('the folder itself comes first, then its submodules', async () => {
         const dir = await parent.copy();
         const folder = join(dir, 'parent');
