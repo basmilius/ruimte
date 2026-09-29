@@ -14,6 +14,7 @@ import { diagramAction } from './diagram-verb.ts';
 import { flagVerb } from './flag-verb.ts';
 import { nodeEditAction } from './edit-verb.ts';
 import { groupAction } from './group-verb.ts';
+import { LAUNCHES_ACTIONS, LAUNCHES_DETAIL, LAUNCHES_SUMMARY } from './launch-verb.ts';
 import { linkDeleteAction, linkListAction, linkNewAction } from './link-verb.ts';
 import { notifyVerb } from './notify-verb.ts';
 import { openAction } from './open-verb.ts';
@@ -133,6 +134,13 @@ const viewNoun = defineNoun({
     actions: [...VIEW_ACTIONS, openAction, diagramAction]
 });
 
+const launchesNoun = defineNoun({
+    name: 'launches',
+    summary: LAUNCHES_SUMMARY,
+    detail: LAUNCHES_DETAIL,
+    actions: [...LAUNCHES_ACTIONS]
+});
+
 const taskNoun = defineNoun({
     name: 'task',
     summary:
@@ -165,6 +173,7 @@ export const VERBS: readonly VerbEntry[] = [
     planVerb,
     worktreeVerb,
     operationVerb,
+    launchesNoun,
     computerNoun
 ];
 

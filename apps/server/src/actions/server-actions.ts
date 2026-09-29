@@ -8,6 +8,7 @@ import { contextActions } from './context-actions.ts';
 import { deviceActions } from './device-actions.ts';
 import { diagramActions } from './diagram-actions.ts';
 import { flagActions } from './flag-actions.ts';
+import { launchActions } from './launch-actions.ts';
 import { linkActions } from './link-actions.ts';
 import { nodeActions } from './node-actions.ts';
 import { operationActions } from './operation-actions.ts';
@@ -38,6 +39,7 @@ export const serverActions = new ActionRegistry<ServerActionContext>(
         ...computerActions,
         ...deviceActions,
         ...worktreeActions,
+        ...launchActions,
         ...contextActions
     },
     {

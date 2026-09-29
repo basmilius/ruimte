@@ -6,6 +6,9 @@ import {
     type BrowserDriveAction,
     type DiagramContent,
     type GitDiffResult,
+    type LaunchConfigKind,
+    type LaunchStartResult,
+    type LaunchStatus,
     type ProjectCanvasView,
     type ProjectContent,
     type RuntimeMode,
@@ -127,6 +130,35 @@ export interface CanvasHost {
     devices?: DeviceDriveHost;
     /* What a person linked into a session, which `list` and `read` answer with. */
     context?: ContextHost;
+    /* The launches of a project, as an agent may see and run them; absent on a host that runs none. */
+    launches?: LaunchHost;
+}
+
+/* A launch of a project as an agent sees it: what it is, whether a person approved it here, and what runs of it now. */
+export interface LaunchReading {
+    launchId: string;
+    name: string;
+    kind: LaunchConfigKind;
+    /* A group counts as approved once every launch it starts is. */
+    approved: boolean;
+    url: string | null;
+    port: number | null;
+    members: string[];
+    /* Null for one that has not run since the daemon started, and for a group. */
+    status: LaunchStatus | null;
+}
+
+/*
+ * The launches of a project. Every start through here is an agent's, so only a launch a person
+ * approved on this machine starts, and a stop is Ctrl+C and then SIGTERM, never a kill.
+ */
+export interface LaunchHost {
+    list(projectId: string): Promise<LaunchReading[]>;
+    /* The screen and scrollback of the launch's terminal; null when it has not run since the daemon started. */
+    text(projectId: string, launchId: string): Promise<string | null>;
+    start(projectId: string, launchId: string, restart: boolean): Promise<LaunchStartResult>;
+    /* How many of its launches ran and are being stopped. */
+    stop(projectId: string, launchId: string): Promise<number>;
 }
 
 export interface ContextHost {
@@ -228,7 +260,7 @@ export const { defineVerb, defineAction, defineNoun, defineHelp, dryRunVerbNames
 
 /* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
 export const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, alert, answer and worktree are the project itself, and plan is the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, alert, answer, worktree and launches are the project itself, and plan is the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
 
 /* What `help` says of the last row of every list of the project file. */
 export const REVISION_ROW = `revision\tThe last row is revision and the revision of the project file; --${REVISION_FLAG} on a write that follows refuses it once the project moved on`;

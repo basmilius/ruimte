@@ -13,8 +13,11 @@ import {
     Minus,
     PanelLeftClose,
     Plus,
+    Rocket,
+    RotateCw,
     Search,
     Settings,
+    Square,
     TabletSmartphone,
     Laptop,
     X,
@@ -122,7 +125,25 @@ export function Sidebar({ waiting, rows }: { readonly waiting: readonly SidebarR
     );
 }
 
-/** `shell/Toolbar.tsx`: the project menu, then the panel toggles and search. */
+/** `launches/LaunchChip.tsx`: the chosen launch, running on its port, with restart and stop beside it. */
+function LaunchChip() {
+    return (
+        <span className="flex h-8 shrink-0 items-center rounded-md border border-border bg-clip-padding">
+            <span className="flex h-full items-center gap-2 px-2">
+                <Rocket size={14} strokeWidth={1.75} />
+                <span className="size-2 shrink-0 rounded-full bg-status-idle" />
+                <span className="text-text">dev</span>
+                <span className="text-text-faint">:5173</span>
+            </span>
+            <span className="inline-flex items-center gap-px pr-0.5">
+                <IconButton icon={RotateCw} size="sm" />
+                <IconButton icon={Square} size="sm" />
+            </span>
+        </span>
+    );
+}
+
+/** `shell/Toolbar.tsx`: the project menu, then the launch chip, the panel toggles and search. */
 export function Toolbar({ project = 'acme-web', panel }: { readonly project?: string; readonly panel?: 'git' | 'files' }) {
     return (
         <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface pr-2 pl-2 text-[13px] text-text-muted">
@@ -133,7 +154,7 @@ export function Toolbar({ project = 'acme-web', panel }: { readonly project?: st
                 <ChevronDown size={14} strokeWidth={1.75} />
             </span>
             <span className="grow" />
-            <Separator />
+            <LaunchChip />
             <span className="inline-flex items-center gap-px">
                 <IconButton icon={Folder} active={panel === 'files'} />
                 <IconButton icon={GitBranch} active={panel === 'git'} />

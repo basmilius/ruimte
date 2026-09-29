@@ -34,6 +34,8 @@ import {
     GitResolveAiResultSchema,
     GitResolveResultSchema,
     GitStatusSchema,
+    LaunchConfigKindSchema,
+    LaunchStateSchema,
     ModelSelectionSchema,
     NodeKindSchema,
     NODE_ACCENT_NAMES,
@@ -364,6 +366,9 @@ const gitRunsOutput = z.object({
 /* How a branch that moved on both sides comes together; only a person decides that, so without it a pull only fast-forwards. */
 const pullStrategy = forActors(PERSON, z.enum(['merge', 'rebase'])).describe('How a branch that moved on both sides comes together');
 const PERSON_VOICE_AND_AGENT: readonly ActionActorKind[] = ['person', 'voice', 'agent'];
+
+const launchName = z.string().trim().min(1).describe('The id of a launch, or its name when no other launch of the project carries that name');
+const launchStarted = z.object({ launchId: z.string(), name: z.string(), kind: LaunchConfigKindSchema, members: z.array(z.string()) });
 
 const projectMachine = z.string().min(1).describe('The machine, by the endpointId project.list gives');
 const listedProjectId = z.string().min(1).describe('The project, by the projectId project.list gives');
@@ -2771,6 +2776,73 @@ export const ACTION_DEFINITIONS = {
         }),
         // Where a deleted branch pointed, so git branch <name> <commit> brings it back until git collects it.
         output: z.object({ branch: z.string(), branchDeleted: z.boolean().nullable(), branchCommit: z.string().nullable() })
+    },
+    'launch.list': {
+        title: 'List launches',
+        description: 'Lists the launches of the project with what runs of each on this machine and whether a person approved it here.',
+        agentDescription: 'Lists the launches of the project: id, name, kind, state, approved, port, url',
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({
+            launches: z.array(
+                z.object({
+                    launchId: z.string(),
+                    name: z.string(),
+                    kind: LaunchConfigKindSchema,
+                    // Null for one that has not run since the machine started, and for a group, whose members each have one.
+                    state: LaunchStateSchema.nullable(),
+                    exitCode: z.number().int().nullable(),
+                    approved: z.boolean(),
+                    port: z.number().int().nullable(),
+                    url: z.string().nullable(),
+                    // The launches a group starts; empty for any other kind.
+                    members: z.array(z.string())
+                })
+            )
+        })
+    },
+    'launch.read': {
+        title: 'Read a launch',
+        description: 'Prints the output of a launch, whole or its last lines, as its terminal shows it now.',
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({
+            launch: launchName,
+            tail: z.number().int().min(1).nullable().describe('Only the last this many lines; without it the whole output')
+        }),
+        // Null when it has not run since the machine started.
+        output: z.object({ launchId: z.string(), name: z.string(), text: z.string().nullable() })
+    },
+    'launch.start': {
+        title: 'Start a launch',
+        description: 'Starts a launch a person approved on this machine as it stands now; one that already runs is left running.',
+        effect: 'external',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({ launch: launchName }),
+        output: launchStarted
+    },
+    'launch.restart': {
+        title: 'Restart a launch',
+        description: 'Stops a launch a person approved on this machine and starts it again, or starts it when it did not run.',
+        effect: 'external',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({ launch: launchName }),
+        output: launchStarted
+    },
+    'launch.stop': {
+        title: 'Stop a launch',
+        description: 'Stops a launch, or every launch of a group, with Ctrl+C and SIGTERM after a grace period; only a person kills one.',
+        effect: 'external',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({ launch: launchName }),
+        // How many of its launches ran and are being stopped.
+        output: z.object({ launchId: z.string(), name: z.string(), stopping: z.number().int() })
     },
     'file.list': {
         title: 'List a folder',

@@ -93,6 +93,7 @@ import { readMedia } from './fs/read.ts';
 import { registerGitHandlers } from './handlers/git.ts';
 import { registerDiagramHandlers } from './handlers/diagram.ts';
 import { registerLaunchHandlers } from './handlers/launches.ts';
+import { agentLaunches } from './launches/agent-host.ts';
 import { LaunchRunner } from './launches/runner.ts';
 import { managerSessions } from './launches/sessions.ts';
 import { LaunchStore } from './launches/store.ts';
@@ -582,6 +583,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         agents: agentStates({ outbox, lineage, chats, sessions: manager }),
         requests: chatRequests(chats),
         computer,
+        launches: agentLaunches(launchStore, launches, (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null)),
         context: {
             list: (targetId: string) => context.list(targetId),
             read: (targetId: string, sourceId: string, tail: number | null, subagent: string | null) => context.answer(targetId, sourceId, tail, subagent)
